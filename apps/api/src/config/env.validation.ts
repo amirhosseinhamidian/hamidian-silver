@@ -8,4 +8,5 @@ export const envValidationSchema = Joi.object({
   DATABASE_URL: Joi.string()
     .uri({ scheme: ['postgresql', 'postgres'] })
     .required(),
+  OTP_PEPPER: Joi.string().min(32).required(),
 });

@@ -79,3 +79,25 @@ model RolePermission {
   @@index([permissionId])
   @@map("role_permissions")
 }
+
+enum OtpPurpose {
+  AUTHENTICATION
+}
+
+model OtpChallenge {
+  id            String     @id @default(uuid()) @db.Uuid
+  phone         String     @db.VarChar(20)
+  purpose       OtpPurpose
+  codeHash      String     @db.VarChar(64)
+  expiresAt     DateTime   @db.Timestamptz(3)
+  attempts      Int        @default(0)
+  maxAttempts   Int        @default(5)
+  consumedAt    DateTime?  @db.Timestamptz(3)
+  invalidatedAt DateTime?  @db.Timestamptz(3)
+  createdAt     DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime   @updatedAt @db.Timestamptz(3)
+
+  @@index([phone, purpose, createdAt])
+  @@index([expiresAt])
+  @@map("otp_challenges")
+}
