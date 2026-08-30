@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
 import {
+  OrderCostEntryType,
   PaymentRefundStatus,
   SupplierCreditStatus,
   SupplierPayableStatus,
@@ -171,6 +172,102 @@ export class FinancialReportingService {
       },
       netOperatingCashflowToman:
         customerGrossCollectedToman - confirmedRefundToman - supplierCashPaidToman,
+    };
+  }
+
+  async contribution(query: FinancePeriodQueryDto) {
+    const period = this.buildDateTimeFilter(query.from, query.to);
+    const [finance, refunds, costGroups] = await Promise.all([
+      this.prisma.orderFinanceSnapshot.aggregate({
+        where: period ? { paidAt: period } : {},
+        _count: {
+          _all: true,
+        },
+        _sum: {
+          grossMarginBeforeServiceCostsToman: true,
+        },
+      }),
+      this.prisma.paymentRefund.aggregate({
+        where: {
+          status: PaymentRefundStatus.CONFIRMED,
+          confirmedAt: period,
+        },
+        _sum: {
+          amountToman: true,
+        },
+        _count: {
+          _all: true,
+        },
+      }),
+      this.prisma.orderCostEntry.groupBy({
+        by: ['type'],
+        where: {
+          occurredAt: period,
+        },
+        _sum: {
+          amountToman: true,
+        },
+        _count: {
+          _all: true,
+        },
+      }),
+    ]);
+
+    let paymentGatewayFeeToman = 0;
+    let shippingProviderCostToman = 0;
+    let platingServiceCostToman = 0;
+    let manualCostAdjustmentToman = 0;
+    let costEntryCount = 0;
+
+    for (const group of costGroups) {
+      const amount = group._sum.amountToman ?? 0;
+      costEntryCount += group._count._all;
+
+      switch (group.type) {
+        case OrderCostEntryType.PAYMENT_GATEWAY_FEE:
+          paymentGatewayFeeToman += amount;
+          break;
+        case OrderCostEntryType.SHIPPING_PROVIDER:
+          shippingProviderCostToman += amount;
+          break;
+        case OrderCostEntryType.PLATING_SERVICE:
+          platingServiceCostToman += amount;
+          break;
+        case OrderCostEntryType.MANUAL_ADJUSTMENT:
+          manualCostAdjustmentToman += amount;
+          break;
+      }
+    }
+
+    const operatingServiceCostToman =
+      paymentGatewayFeeToman +
+      shippingProviderCostToman +
+      platingServiceCostToman +
+      manualCostAdjustmentToman;
+    const grossProfitBeforeServiceCostsToman = finance._sum.grossMarginBeforeServiceCostsToman ?? 0;
+    const confirmedRefundToman = refunds._sum.amountToman ?? 0;
+    const contributionMarginToman = grossProfitBeforeServiceCostsToman - operatingServiceCostToman;
+
+    return {
+      period: {
+        from: query.from ?? null,
+        to: query.to ?? null,
+      },
+      salesScope: 'PAID_AT_PERIOD',
+      costScope: 'OCCURRED_AT_PERIOD',
+      refundScope: 'CONFIRMED_AT_PERIOD',
+      paidOrderCount: finance._count._all,
+      grossProfitBeforeServiceCostsToman,
+      paymentGatewayFeeToman,
+      shippingProviderCostToman,
+      platingServiceCostToman,
+      manualCostAdjustmentToman,
+      operatingServiceCostToman,
+      costEntryCount,
+      confirmedRefundToman,
+      confirmedRefundCount: refunds._count._all,
+      contributionMarginToman,
+      contributionAfterRefundsToman: contributionMarginToman - confirmedRefundToman,
     };
   }
 

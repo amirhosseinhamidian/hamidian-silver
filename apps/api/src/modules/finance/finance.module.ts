@@ -2,6 +2,8 @@ import { Global, Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
 import { FinancialReportingController } from './financial-reporting.controller';
 import { FinancialReportingService } from './financial-reporting.service';
+import { OrderCostsController } from './order-costs.controller';
+import { OrderCostsService } from './order-costs.service';
 import { PaymentRefundsController } from './payment-refunds.controller';
 import { PaymentRefundsService } from './payment-refunds.service';
 import { OrderFinanceController } from './order-finance.controller';
@@ -23,6 +25,7 @@ import { SupplierSettlementsService } from './supplier-settlements.service';
     PaymentRefundsController,
     SupplierCreditsController,
     FinancialReportingController,
+    OrderCostsController,
   ],
   providers: [
     SupplierPayablesService,
@@ -31,6 +34,7 @@ import { SupplierSettlementsService } from './supplier-settlements.service';
     PaymentRefundsService,
     SupplierCreditsService,
     FinancialReportingService,
+    OrderCostsService,
   ],
   exports: [OrderFinanceService],
 })

@@ -43,6 +43,7 @@ model User {
   supplierCreditsCreated            SupplierCredit[]            @relation("SupplierCreditCreator")
   supplierCreditApplicationsApplied SupplierCreditApplication[] @relation("SupplierCreditApplicationApplier")
   supplierCreditApplicationsRemoved SupplierCreditApplication[] @relation("SupplierCreditApplicationRemover")
+  orderCostEntriesCreated           OrderCostEntry[]            @relation("OrderCostEntryCreator")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -562,6 +563,7 @@ model Order {
   financeSnapshot       OrderFinanceSnapshot?
   returns               OrderReturn[]
   supplierCredits       SupplierCredit[]
+  costEntries           OrderCostEntry[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -886,6 +888,37 @@ model PaymentReconciliation {
   @@index([provider, createdAt])
   @@index([resolvedByUserId])
   @@map("payment_reconciliations")
+}
+
+enum OrderCostEntryType {
+  PAYMENT_GATEWAY_FEE
+  SHIPPING_PROVIDER
+  PLATING_SERVICE
+  MANUAL_ADJUSTMENT
+}
+
+model OrderCostEntry {
+  id                String             @id @default(uuid()) @db.Uuid
+  orderId           String             @db.Uuid
+  type              OrderCostEntryType
+  amountToman       Int
+  source            String             @db.VarChar(64)
+  externalReference String?            @db.VarChar(255)
+  description       String?            @db.VarChar(1000)
+  idempotencyKey    String             @unique @db.VarChar(120)
+  occurredAt        DateTime           @db.Timestamptz(3)
+  createdByUserId   String?            @db.Uuid
+  reversalOfId      String?            @unique @db.Uuid
+  createdAt         DateTime           @default(now()) @db.Timestamptz(3)
+  order             Order              @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  createdBy         User?              @relation("OrderCostEntryCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  reversalOf        OrderCostEntry?    @relation("OrderCostEntryReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversal          OrderCostEntry?    @relation("OrderCostEntryReversal")
+
+  @@index([orderId, occurredAt])
+  @@index([type, occurredAt])
+  @@index([createdByUserId])
+  @@map("order_cost_entries")
 }
 
 model OrderFinanceSnapshot {

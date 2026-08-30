@@ -20,6 +20,12 @@ export class FinancialReportingController {
     return this.financialReportingService.suppliers(query);
   }
 
+  @Get('dashboard/contribution')
+  @RequirePermissions(PERMISSION_CODES.FINANCE_READ)
+  contribution(@Query() query: FinancePeriodQueryDto) {
+    return this.financialReportingService.contribution(query);
+  }
+
   @Get('cashflow')
   @RequirePermissions(PERMISSION_CODES.FINANCE_READ)
   cashflow(@Query() query: FinancePeriodQueryDto) {
