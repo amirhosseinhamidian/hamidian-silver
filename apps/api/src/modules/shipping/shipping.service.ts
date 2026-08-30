@@ -17,6 +17,7 @@ import {
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { OrderCostsService } from '../finance/order-costs.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
+import { buildFulfillmentReadiness } from '../orders/fulfillment-readiness';
 import { SelectShippingRateDto } from './dto/select-shipping-rate.dto';
 import { ResetShipmentProviderCreationDto } from './dto/reset-shipment-provider-creation.dto';
 import { UpdateShipmentStatusDto } from './dto/update-shipment-status.dto';
@@ -207,6 +208,11 @@ export class ShippingService {
         order: {
           include: {
             shippingAddress: true,
+            platingFulfillment: {
+              select: {
+                status: true,
+              },
+            },
           },
         },
       },
@@ -231,6 +237,32 @@ export class ShippingService {
 
     if (shipment.providerShipmentId) {
       return this.getShipment(orderId);
+    }
+
+    const readiness = buildFulfillmentReadiness({
+      id: shipment.order.id,
+      orderNumber: shipment.order.orderNumber,
+      status: shipment.order.status,
+      paidAt: shipment.order.paidAt,
+      platingTotalToman: shipment.order.platingTotalToman,
+      platingFulfillment: shipment.order.platingFulfillment,
+      shipment: {
+        id: shipment.id,
+        status: shipment.status,
+        provider: shipment.provider,
+        providerCreationState: shipment.providerCreationState,
+        providerShipmentId: shipment.providerShipmentId,
+        providerCreateError: shipment.providerCreateError,
+        creationAttemptedAt: shipment.creationAttemptedAt,
+      },
+    });
+
+    if (!readiness.readyForShipmentCreation) {
+      throw new ConflictException(
+        `Order is not ready for provider shipment creation: ${readiness.blockers
+          .map(({ code }) => code)
+          .join(', ')}`,
+      );
     }
 
     if (
@@ -616,7 +648,15 @@ export class ShippingService {
           orderId,
         },
         include: {
-          order: true,
+          order: {
+            include: {
+              platingFulfillment: {
+                select: {
+                  status: true,
+                },
+              },
+            },
+          },
         },
       });
 
@@ -630,6 +670,38 @@ export class ShippingService {
 
       if (!this.isAllowedTransition(shipment.status, dto.status)) {
         throw new BadRequestException('This shipment status transition is not allowed.');
+      }
+
+      if (
+        dto.status === ShipmentStatus.HANDED_OVER ||
+        dto.status === ShipmentStatus.IN_TRANSIT ||
+        dto.status === ShipmentStatus.DELIVERED
+      ) {
+        const readiness = buildFulfillmentReadiness({
+          id: shipment.order.id,
+          orderNumber: shipment.order.orderNumber,
+          status: shipment.order.status,
+          paidAt: shipment.order.paidAt,
+          platingTotalToman: shipment.order.platingTotalToman,
+          platingFulfillment: shipment.order.platingFulfillment,
+          shipment: {
+            id: shipment.id,
+            status: shipment.status,
+            provider: shipment.provider,
+            providerCreationState: shipment.providerCreationState,
+            providerShipmentId: shipment.providerShipmentId,
+            providerCreateError: shipment.providerCreateError,
+            creationAttemptedAt: shipment.creationAttemptedAt,
+          },
+        });
+
+        if (!readiness.readyForHandoff) {
+          throw new ConflictException(
+            `Order is not ready for shipment handoff: ${readiness.handoffBlockers
+              .map(({ code }) => code)
+              .join(', ')}`,
+          );
+        }
       }
 
       if (
