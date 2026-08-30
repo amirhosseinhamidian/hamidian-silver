@@ -7,6 +7,7 @@ import { AuthenticationGuard } from './modules/auth/authentication.guard';
 import { PermissionsGuard } from './modules/authorization/permissions.guard';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { HealthModule } from './modules/health/health.module';
     AuthModule,
     CatalogModule,
     HealthModule,
+    InventoryModule,
   ],
   providers: [
     {
