@@ -35,6 +35,7 @@ export type CreateProviderShipmentInput = {
 export type CreateProviderShipmentResult = {
   providerShipmentId: string;
   trackingCode?: string;
+  actualCostToman?: number;
 };
 
 export type TrackProviderShipmentInput = {

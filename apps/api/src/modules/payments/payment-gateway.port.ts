@@ -23,6 +23,7 @@ export type VerifyGatewayPaymentResult =
   | {
       success: true;
       referenceId: string;
+      actualFeeToman?: number;
     }
   | {
       success: false;

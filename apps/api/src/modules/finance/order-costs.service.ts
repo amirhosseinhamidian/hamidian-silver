@@ -5,9 +5,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
-import { OrderCostEntryType, PaymentRefundStatus } from '../../generated/prisma/enums';
+import {
+  OrderCostEntryType,
+  PaymentAttemptStatus,
+  PaymentRefundStatus,
+} from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CreateOrderCostDto } from './dto/create-order-cost.dto';
+import { ListCostReconciliationQueryDto } from './dto/list-cost-reconciliation-query.dto';
 import { ListOrderCostsQueryDto } from './dto/list-order-costs-query.dto';
 import { ReverseOrderCostDto } from './dto/reverse-order-cost.dto';
 
@@ -197,6 +202,204 @@ export class OrderCostsService {
     }
   }
 
+  async recordActualCost(
+    transaction: Prisma.TransactionClient,
+    input: {
+      orderId: string;
+      type: OrderCostEntryType;
+      amountToman: number;
+      source: string;
+      externalReference?: string | null;
+      idempotencyKey: string;
+      occurredAt: Date;
+      description?: string;
+    },
+  ) {
+    if (!Number.isSafeInteger(input.amountToman) || input.amountToman < 0 || !input.source.trim()) {
+      throw new ConflictException('Provider actual cost is invalid.');
+    }
+
+    const existing = await transaction.orderCostEntry.findUnique({
+      where: {
+        idempotencyKey: input.idempotencyKey,
+      },
+    });
+
+    if (existing) {
+      if (
+        existing.orderId !== input.orderId ||
+        existing.type !== input.type ||
+        existing.amountToman !== input.amountToman ||
+        existing.source !== input.source ||
+        existing.externalReference !== (input.externalReference ?? null)
+      ) {
+        throw new ConflictException('Provider actual cost idempotency key is already in use.');
+      }
+
+      return existing;
+    }
+
+    await transaction.orderCostEntry.createMany({
+      data: [
+        {
+          orderId: input.orderId,
+          type: input.type,
+          amountToman: input.amountToman,
+          source: input.source,
+          externalReference: input.externalReference,
+          description: input.description,
+          idempotencyKey: input.idempotencyKey,
+          occurredAt: input.occurredAt,
+          createdByUserId: null,
+        },
+      ],
+      skipDuplicates: true,
+    });
+
+    const recorded = await transaction.orderCostEntry.findUniqueOrThrow({
+      where: {
+        idempotencyKey: input.idempotencyKey,
+      },
+    });
+
+    if (
+      recorded.orderId !== input.orderId ||
+      recorded.type !== input.type ||
+      recorded.amountToman !== input.amountToman ||
+      recorded.source !== input.source ||
+      recorded.externalReference !== (input.externalReference ?? null)
+    ) {
+      throw new ConflictException('Provider actual cost idempotency key is already in use.');
+    }
+
+    return recorded;
+  }
+
+  async reconciliation(query: ListCostReconciliationQueryDto) {
+    const paidAt = this.buildDateTimeFilter(query.from, query.to);
+    const limit = query.limit ?? 50;
+    const commonWhere: Prisma.OrderWhereInput = {
+      financeSnapshot: {
+        isNot: null,
+      },
+      ...(paidAt
+        ? {
+            paidAt,
+          }
+        : {}),
+    };
+
+    const [paymentOrders, shippingOrders, platingOrders] = await Promise.all([
+      this.prisma.order.findMany({
+        where: {
+          ...commonWhere,
+          payment: {
+            is: {
+              attempts: {
+                some: {
+                  status: PaymentAttemptStatus.VERIFIED,
+                },
+              },
+            },
+          },
+          costEntries: {
+            none: {
+              type: OrderCostEntryType.PAYMENT_GATEWAY_FEE,
+            },
+          },
+        },
+        take: limit,
+        orderBy: {
+          paidAt: 'desc',
+        },
+        select: this.reconciliationSelect(),
+      }),
+      this.prisma.order.findMany({
+        where: {
+          ...commonWhere,
+          shipment: {
+            is: {
+              providerShipmentId: {
+                not: null,
+              },
+            },
+          },
+          costEntries: {
+            none: {
+              type: OrderCostEntryType.SHIPPING_PROVIDER,
+            },
+          },
+        },
+        take: limit,
+        orderBy: {
+          paidAt: 'desc',
+        },
+        select: this.reconciliationSelect(),
+      }),
+      this.prisma.order.findMany({
+        where: {
+          ...commonWhere,
+          platingTotalToman: {
+            gt: 0,
+          },
+          costEntries: {
+            none: {
+              type: OrderCostEntryType.PLATING_SERVICE,
+            },
+          },
+        },
+        take: limit,
+        orderBy: {
+          paidAt: 'desc',
+        },
+        select: this.reconciliationSelect(),
+      }),
+    ]);
+
+    const byOrder = new Map<string, ReturnType<OrderCostsService['buildReconciliationRow']>>();
+
+    for (const order of [...paymentOrders, ...shippingOrders, ...platingOrders]) {
+      byOrder.set(order.id, this.buildReconciliationRow(order));
+    }
+
+    const rows = [...byOrder.values()]
+      .filter((row) => row.missingCosts.length > 0)
+      .sort((a, b) => {
+        const aTime = a.paidAt?.getTime() ?? 0;
+        const bTime = b.paidAt?.getTime() ?? 0;
+        return bTime - aTime;
+      })
+      .slice(0, limit);
+
+    return {
+      period: {
+        from: query.from ?? null,
+        to: query.to ?? null,
+      },
+      count: rows.length,
+      orders: rows,
+    };
+  }
+
+  async orderReconciliation(orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: {
+        id: orderId,
+      },
+      select: this.reconciliationSelect(),
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order was not found.');
+    }
+
+    if (!order.financeSnapshot) {
+      throw new ConflictException('Order finance snapshot is required for cost reconciliation.');
+    }
+
+    return this.buildReconciliationRow(order);
+  }
+
   async contribution(orderId: string) {
     const snapshot = await this.prisma.orderFinanceSnapshot.findUnique({
       where: {
@@ -313,6 +516,155 @@ export class OrderCostsService {
       operatingServiceCostToman: totalToman,
       costEntryCount: entryCount,
       totalToman,
+    };
+  }
+
+  private reconciliationSelect() {
+    return {
+      id: true,
+      orderNumber: true,
+      status: true,
+      paidAt: true,
+      platingTotalToman: true,
+      financeSnapshot: {
+        select: {
+          id: true,
+        },
+      },
+      payment: {
+        select: {
+          attempts: {
+            where: {
+              status: PaymentAttemptStatus.VERIFIED,
+            },
+            orderBy: {
+              verifiedAt: 'desc' as const,
+            },
+            take: 1,
+            select: {
+              id: true,
+              provider: true,
+              providerReference: true,
+              verifiedAt: true,
+            },
+          },
+        },
+      },
+      shipment: {
+        select: {
+          id: true,
+          provider: true,
+          providerShipmentId: true,
+          status: true,
+          shippingCostToman: true,
+          creationAttemptedAt: true,
+        },
+      },
+      costEntries: {
+        select: {
+          id: true,
+          type: true,
+          amountToman: true,
+          source: true,
+          externalReference: true,
+          occurredAt: true,
+          reversalOfId: true,
+        },
+        orderBy: {
+          occurredAt: 'asc' as const,
+        },
+      },
+    } satisfies Prisma.OrderSelect;
+  }
+
+  private buildReconciliationRow(order: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    paidAt: Date | null;
+    platingTotalToman: number;
+    financeSnapshot: { id: string } | null;
+    payment: {
+      attempts: Array<{
+        id: string;
+        provider: string;
+        providerReference: string | null;
+        verifiedAt: Date | null;
+      }>;
+    } | null;
+    shipment: {
+      id: string;
+      provider: string;
+      providerShipmentId: string | null;
+      status: string;
+      shippingCostToman: number;
+      creationAttemptedAt: Date | null;
+    } | null;
+    costEntries: Array<{
+      id: string;
+      type: OrderCostEntryType;
+      amountToman: number;
+      source: string;
+      externalReference: string | null;
+      occurredAt: Date;
+      reversalOfId: string | null;
+    }>;
+  }) {
+    const costTypes = new Set(order.costEntries.map((entry) => entry.type));
+    const verifiedAttempt = order.payment?.attempts[0];
+    const missingCosts: Array<{
+      code:
+        | 'PAYMENT_GATEWAY_FEE_MISSING'
+        | 'SHIPPING_PROVIDER_COST_MISSING'
+        | 'PLATING_SERVICE_COST_MISSING';
+      source?: string;
+      externalReference?: string | null;
+    }> = [];
+
+    if (verifiedAttempt && !costTypes.has(OrderCostEntryType.PAYMENT_GATEWAY_FEE)) {
+      missingCosts.push({
+        code: 'PAYMENT_GATEWAY_FEE_MISSING',
+        source: verifiedAttempt.provider,
+        externalReference: verifiedAttempt.providerReference,
+      });
+    }
+
+    if (
+      order.shipment?.providerShipmentId &&
+      !costTypes.has(OrderCostEntryType.SHIPPING_PROVIDER)
+    ) {
+      missingCosts.push({
+        code: 'SHIPPING_PROVIDER_COST_MISSING',
+        source: order.shipment.provider,
+        externalReference: order.shipment.providerShipmentId,
+      });
+    }
+
+    if (order.platingTotalToman > 0 && !costTypes.has(OrderCostEntryType.PLATING_SERVICE)) {
+      missingCosts.push({
+        code: 'PLATING_SERVICE_COST_MISSING',
+      });
+    }
+
+    return {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      orderStatus: order.status,
+      paidAt: order.paidAt,
+      financeSnapshotReady: Boolean(order.financeSnapshot),
+      expected: {
+        paymentGatewayFee: Boolean(verifiedAttempt),
+        shippingProviderCost: Boolean(order.shipment?.providerShipmentId),
+        platingServiceCost: order.platingTotalToman > 0,
+      },
+      evidence: {
+        verifiedPaymentAttempt: verifiedAttempt ?? null,
+        shipment: order.shipment,
+        platingChargedToman: order.platingTotalToman,
+      },
+      costEntries: order.costEntries,
+      missingCosts,
+      reconciled: missingCosts.length === 0,
     };
   }
 

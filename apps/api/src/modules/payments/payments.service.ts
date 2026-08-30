@@ -4,18 +4,21 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   InventoryMovementType,
   NotificationOutboxEventType,
+  OrderCostEntryType,
   OrderStatus,
   PaymentAttemptStatus,
   PaymentReconciliationStatus,
   PaymentStatus,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { OrderCostsService } from '../finance/order-costs.service';
 import { OrderFinanceService } from '../finance/order-finance.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
@@ -50,6 +53,9 @@ export class PaymentsService {
     private readonly outbox?: NotificationOutboxService,
     @Inject(OrderFinanceService)
     private readonly orderFinance: OrderFinanceService | undefined = undefined,
+    @Optional()
+    @Inject(OrderCostsService)
+    private readonly orderCosts: OrderCostsService | undefined = undefined,
   ) {
     this.callbackBaseUrl = this.config.get<string>(
       'PAYMENT_CALLBACK_URL',
@@ -303,7 +309,12 @@ export class PaymentsService {
     }
 
     try {
-      return await this.finalizeVerifiedPayment(attempt.id, authority, verification.referenceId);
+      return await this.finalizeVerifiedPayment(
+        attempt.id,
+        authority,
+        verification.referenceId,
+        verification.actualFeeToman,
+      );
     } catch (error) {
       if (!(error instanceof ConflictException)) {
         throw error;
@@ -490,7 +501,12 @@ export class PaymentsService {
     });
   }
 
-  private async finalizeVerifiedPayment(attemptId: string, authority: string, referenceId: string) {
+  private async finalizeVerifiedPayment(
+    attemptId: string,
+    authority: string,
+    referenceId: string,
+    actualFeeToman?: number,
+  ) {
     return this.prisma.$transaction(async (transaction) => {
       const attempt = await transaction.paymentAttempt.findUnique({
         where: {
@@ -628,6 +644,19 @@ export class PaymentsService {
         grandTotalToman: order.grandTotalToman,
         items: order.items,
       });
+
+      if (actualFeeToman !== undefined) {
+        await this.orderCosts?.recordActualCost(transaction, {
+          orderId: order.id,
+          type: OrderCostEntryType.PAYMENT_GATEWAY_FEE,
+          amountToman: actualFeeToman,
+          source: attempt.provider,
+          externalReference: referenceId,
+          idempotencyKey: `payment-attempt:${attempt.id}:gateway-fee`,
+          occurredAt: paidAt,
+          description: 'Actual payment gateway fee reported during verification',
+        });
+      }
 
       await this.outbox?.enqueueOrderEvent(transaction, {
         type: NotificationOutboxEventType.PAYMENT_VERIFIED,

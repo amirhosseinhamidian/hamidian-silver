@@ -36,6 +36,6 @@ import { SupplierSettlementsService } from './supplier-settlements.service';
     FinancialReportingService,
     OrderCostsService,
   ],
-  exports: [OrderFinanceService],
+  exports: [OrderFinanceService, OrderCostsService],
 })
 export class FinanceModule {}

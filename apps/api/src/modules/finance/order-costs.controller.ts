@@ -4,6 +4,7 @@ import type { AuthenticatedPrincipal } from '../authorization/authorization.type
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CreateOrderCostDto } from './dto/create-order-cost.dto';
+import { ListCostReconciliationQueryDto } from './dto/list-cost-reconciliation-query.dto';
 import { ListOrderCostsQueryDto } from './dto/list-order-costs-query.dto';
 import { ReverseOrderCostDto } from './dto/reverse-order-cost.dto';
 import { OrderCostsService } from './order-costs.service';
@@ -42,6 +43,21 @@ export class OrderCostsController {
     @CurrentPrincipal() principal: AuthenticatedPrincipal,
   ) {
     return this.orderCostsService.reverse(costId, principal.userId, dto);
+  }
+
+  @Get('cost-reconciliation')
+  @RequirePermissions(PERMISSION_CODES.FINANCE_READ)
+  reconciliation(@Query() query: ListCostReconciliationQueryDto) {
+    return this.orderCostsService.reconciliation(query);
+  }
+
+  @Get('orders/:orderId/cost-reconciliation')
+  @RequirePermissions(PERMISSION_CODES.FINANCE_READ)
+  orderReconciliation(
+    @Param('orderId', new ParseUUIDPipe({ version: '4' }))
+    orderId: string,
+  ) {
+    return this.orderCostsService.orderReconciliation(orderId);
   }
 
   @Get('orders/:orderId/contribution')

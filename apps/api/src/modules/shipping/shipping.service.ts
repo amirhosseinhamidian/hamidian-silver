@@ -4,15 +4,18 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   NotificationOutboxEventType,
+  OrderCostEntryType,
   OrderStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { OrderCostsService } from '../finance/order-costs.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { SelectShippingRateDto } from './dto/select-shipping-rate.dto';
 import { ResetShipmentProviderCreationDto } from './dto/reset-shipment-provider-creation.dto';
@@ -50,6 +53,9 @@ export class ShippingService {
     @Inject(SHIPPING_PROVIDER) private readonly provider: ShippingProvider,
     @Inject(NotificationOutboxService)
     private readonly outbox?: NotificationOutboxService,
+    @Optional()
+    @Inject(OrderCostsService)
+    private readonly orderCosts: OrderCostsService | undefined = undefined,
   ) {}
 
   async quoteOrder(userId: string, orderId: string) {
@@ -337,6 +343,19 @@ export class ShippingService {
             reason: 'Shipment created with shipping provider',
           },
         });
+
+        if (created.actualCostToman !== undefined) {
+          await this.orderCosts?.recordActualCost(transaction, {
+            orderId: shipment.orderId,
+            type: OrderCostEntryType.SHIPPING_PROVIDER,
+            amountToman: created.actualCostToman,
+            source: shipment.provider,
+            externalReference: created.providerShipmentId,
+            idempotencyKey: `shipment:${shipment.id}:provider-cost`,
+            occurredAt: now,
+            description: 'Actual shipping provider cost reported during shipment creation',
+          });
+        }
 
         if (created.trackingCode) {
           await this.outbox?.enqueueOrderEvent(transaction, {
