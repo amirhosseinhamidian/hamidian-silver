@@ -1,0 +1,18 @@
+{
+  "name": "hamidian-silver",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=24.9.0 <25",
+    "pnpm": ">=11.9.0 <12"
+  },
+  "scripts": {
+    "api:dev": "pnpm --filter api start:dev",
+    "api:test": "pnpm --filter api test",
+    "api:test:e2e": "pnpm --filter api test:e2e",
+    "api:build": "pnpm --filter api build",
+    "api:lint": "pnpm --filter api lint",
+    "verify:api": "pnpm api:test && pnpm api:test:e2e && pnpm api:build && pnpm api:lint"
+  }
+}

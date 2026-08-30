@@ -40,3 +40,6 @@ Thumbs.db
 
 # Misc
 *.local
+
+# Local patch files
+*.patch
