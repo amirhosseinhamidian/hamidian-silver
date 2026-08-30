@@ -1,8 +1,4 @@
-import {
-  INestApplication,
-  ValidationPipe,
-  VersioningType,
-} from '@nestjs/common';
+import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 
@@ -20,9 +16,7 @@ function parseCorsOrigins(value: string): string[] {
 
 export function configureApp(app: INestApplication): void {
   const config = app.get(ConfigService);
-  const corsOrigins = parseCorsOrigins(
-    config.getOrThrow<string>('CORS_ORIGINS'),
-  );
+  const corsOrigins = parseCorsOrigins(config.getOrThrow<string>('CORS_ORIGINS'));
 
   app.use(helmet());
 

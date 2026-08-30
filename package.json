@@ -13,11 +13,23 @@
     "api:test:e2e": "pnpm --filter api test:e2e",
     "api:build": "pnpm --filter api build",
     "api:lint": "pnpm --filter api lint",
-    "verify:api": "pnpm api:test && pnpm api:test:e2e && pnpm api:build && pnpm api:lint",
+    "db:generate": "prisma generate",
+    "db:validate": "prisma validate",
+    "db:format": "prisma format",
+    "db:studio": "prisma studio",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify:api": "pnpm db:generate && pnpm api:test && pnpm api:test:e2e && pnpm api:build && pnpm api:lint",
+    "verify": "pnpm format:check && pnpm verify:api",
     "infra:config": "docker compose config --quiet",
     "infra:up": "docker compose up -d --wait",
     "infra:down": "docker compose down",
     "infra:logs": "docker compose logs -f",
     "infra:ps": "docker compose ps"
+  },
+  "devDependencies": {
+    "dotenv": "^17.4.2",
+    "prettier": "3.9.6",
+    "prisma": "7.10.0"
   }
 }

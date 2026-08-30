@@ -43,3 +43,6 @@ Thumbs.db
 
 # Local patch files
 *.patch
+
+# Generated Prisma Client
+apps/api/src/generated/prisma/

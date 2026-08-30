@@ -19,13 +19,10 @@ describe('HealthController (e2e)', () => {
   });
 
   it('/api/v1/health (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/api/v1/health')
-      .expect(200)
-      .expect({
-        status: 'ok',
-        service: 'hamidian-silver-api',
-      });
+    return request(app.getHttpServer()).get('/api/v1/health').expect(200).expect({
+      status: 'ok',
+      service: 'hamidian-silver-api',
+    });
   });
 
   afterEach(async () => {
