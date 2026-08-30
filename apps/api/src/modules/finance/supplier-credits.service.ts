@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { SupplierCreditApplicationStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { ListSupplierCreditsQueryDto } from './dto/list-supplier-credits-query.dto';
 
@@ -48,6 +49,17 @@ export class SupplierCreditsService {
             lastName: true,
           },
         },
+        applications: {
+          where: {
+            status: SupplierCreditApplicationStatus.ACTIVE,
+          },
+          select: {
+            id: true,
+            settlementId: true,
+            amountToman: true,
+            createdAt: true,
+          },
+        },
       },
     });
   }
@@ -77,6 +89,39 @@ export class SupplierCreditsService {
             phone: true,
             firstName: true,
             lastName: true,
+          },
+        },
+        applications: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+          include: {
+            settlement: {
+              select: {
+                id: true,
+                status: true,
+                totalAmountToman: true,
+                creditAppliedToman: true,
+                paidAmountToman: true,
+                paidAt: true,
+              },
+            },
+            appliedBy: {
+              select: {
+                id: true,
+                phone: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+            removedBy: {
+              select: {
+                id: true,
+                phone: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
       },

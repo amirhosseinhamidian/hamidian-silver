@@ -9,38 +9,40 @@ datasource db {
 }
 
 model User {
-  id                             String                  @id @default(uuid()) @db.Uuid
-  phone                          String                  @unique @db.VarChar(20)
-  firstName                      String?                 @db.VarChar(100)
-  lastName                       String?                 @db.VarChar(100)
-  isActive                       Boolean                 @default(true)
-  phoneVerifiedAt                DateTime?               @db.Timestamptz(3)
-  lastLoginAt                    DateTime?               @db.Timestamptz(3)
-  createdAt                      DateTime                @default(now()) @db.Timestamptz(3)
-  updatedAt                      DateTime                @updatedAt @db.Timestamptz(3)
-  deletedAt                      DateTime?               @db.Timestamptz(3)
-  roles                          UserRole[]
-  sessions                       AuthSession[]
-  inventoryMovements             InventoryMovement[]     @relation("InventoryMovementActor")
-  priceChanges                   ProductPriceHistory[]   @relation("ProductPriceHistoryActor")
-  platingRateChanges             PlatingRateHistory[]    @relation("PlatingRateHistoryActor")
-  orders                         Order[]
-  orderStatusChanges             OrderStatusHistory[]    @relation("OrderStatusHistoryActor")
-  addresses                      UserAddress[]
-  shipmentStatusChanges          ShipmentStatusHistory[] @relation("ShipmentStatusHistoryActor")
-  paymentGatewaySettingChanges   PaymentGatewaySetting[] @relation("PaymentGatewaySettingUpdater")
-  paymentReconciliationsResolved PaymentReconciliation[] @relation("PaymentReconciliationResolver")
-  supplierPayablesSettled        SupplierPayable[]       @relation("SupplierPayableSettler")
-  supplierSettlementsCreated     SupplierSettlement[]    @relation("SupplierSettlementCreator")
-  supplierSettlementsPaid        SupplierSettlement[]    @relation("SupplierSettlementPayer")
-  supplierSettlementsCancelled   SupplierSettlement[]    @relation("SupplierSettlementCanceller")
-  paymentRefundsRequested        PaymentRefund[]         @relation("PaymentRefundRequester")
-  paymentRefundsConfirmed        PaymentRefund[]         @relation("PaymentRefundConfirmer")
-  paymentRefundsCancelled        PaymentRefund[]         @relation("PaymentRefundCanceller")
-  orderReturnsRequested          OrderReturn[]           @relation("OrderReturnRequester")
-  orderReturnsReceived           OrderReturn[]           @relation("OrderReturnReceiver")
-  orderReturnsCancelled          OrderReturn[]           @relation("OrderReturnCanceller")
-  supplierCreditsCreated         SupplierCredit[]        @relation("SupplierCreditCreator")
+  id                                String                      @id @default(uuid()) @db.Uuid
+  phone                             String                      @unique @db.VarChar(20)
+  firstName                         String?                     @db.VarChar(100)
+  lastName                          String?                     @db.VarChar(100)
+  isActive                          Boolean                     @default(true)
+  phoneVerifiedAt                   DateTime?                   @db.Timestamptz(3)
+  lastLoginAt                       DateTime?                   @db.Timestamptz(3)
+  createdAt                         DateTime                    @default(now()) @db.Timestamptz(3)
+  updatedAt                         DateTime                    @updatedAt @db.Timestamptz(3)
+  deletedAt                         DateTime?                   @db.Timestamptz(3)
+  roles                             UserRole[]
+  sessions                          AuthSession[]
+  inventoryMovements                InventoryMovement[]         @relation("InventoryMovementActor")
+  priceChanges                      ProductPriceHistory[]       @relation("ProductPriceHistoryActor")
+  platingRateChanges                PlatingRateHistory[]        @relation("PlatingRateHistoryActor")
+  orders                            Order[]
+  orderStatusChanges                OrderStatusHistory[]        @relation("OrderStatusHistoryActor")
+  addresses                         UserAddress[]
+  shipmentStatusChanges             ShipmentStatusHistory[]     @relation("ShipmentStatusHistoryActor")
+  paymentGatewaySettingChanges      PaymentGatewaySetting[]     @relation("PaymentGatewaySettingUpdater")
+  paymentReconciliationsResolved    PaymentReconciliation[]     @relation("PaymentReconciliationResolver")
+  supplierPayablesSettled           SupplierPayable[]           @relation("SupplierPayableSettler")
+  supplierSettlementsCreated        SupplierSettlement[]        @relation("SupplierSettlementCreator")
+  supplierSettlementsPaid           SupplierSettlement[]        @relation("SupplierSettlementPayer")
+  supplierSettlementsCancelled      SupplierSettlement[]        @relation("SupplierSettlementCanceller")
+  paymentRefundsRequested           PaymentRefund[]             @relation("PaymentRefundRequester")
+  paymentRefundsConfirmed           PaymentRefund[]             @relation("PaymentRefundConfirmer")
+  paymentRefundsCancelled           PaymentRefund[]             @relation("PaymentRefundCanceller")
+  orderReturnsRequested             OrderReturn[]               @relation("OrderReturnRequester")
+  orderReturnsReceived              OrderReturn[]               @relation("OrderReturnReceiver")
+  orderReturnsCancelled             OrderReturn[]               @relation("OrderReturnCanceller")
+  supplierCreditsCreated            SupplierCredit[]            @relation("SupplierCreditCreator")
+  supplierCreditApplicationsApplied SupplierCreditApplication[] @relation("SupplierCreditApplicationApplier")
+  supplierCreditApplicationsRemoved SupplierCreditApplication[] @relation("SupplierCreditApplicationRemover")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -643,8 +645,14 @@ enum OrderReturnDisposition {
 
 enum SupplierCreditStatus {
   AVAILABLE
+  PARTIALLY_APPLIED
   APPLIED
   VOIDED
+}
+
+enum SupplierCreditApplicationStatus {
+  ACTIVE
+  REMOVED
 }
 
 model OrderReturn {
@@ -693,25 +701,27 @@ model OrderReturnItem {
 }
 
 model SupplierCredit {
-  id                     String               @id @default(uuid()) @db.Uuid
-  orderId                String               @db.Uuid
-  orderItemId            String               @db.Uuid
-  returnItemId           String               @unique @db.Uuid
-  supplierIdSnapshot     String               @db.Uuid
-  supplierNameSnapshot   String               @db.VarChar(150)
+  id                     String                      @id @default(uuid()) @db.Uuid
+  orderId                String                      @db.Uuid
+  orderItemId            String                      @db.Uuid
+  returnItemId           String                      @unique @db.Uuid
+  supplierIdSnapshot     String                      @db.Uuid
+  supplierNameSnapshot   String                      @db.VarChar(150)
   quantity               Int
   unitSupplierPriceToman Int
   amountToman            Int
-  status                 SupplierCreditStatus @default(AVAILABLE)
-  createdByUserId        String?              @db.Uuid
-  appliedAt              DateTime?            @db.Timestamptz(3)
-  voidedAt               DateTime?            @db.Timestamptz(3)
-  createdAt              DateTime             @default(now()) @db.Timestamptz(3)
-  updatedAt              DateTime             @updatedAt @db.Timestamptz(3)
-  order                  Order                @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  orderItem              OrderItem            @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
-  returnItem             OrderReturnItem      @relation(fields: [returnItemId], references: [id], onDelete: Restrict)
-  createdBy              User?                @relation("SupplierCreditCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  appliedAmountToman     Int                         @default(0)
+  status                 SupplierCreditStatus        @default(AVAILABLE)
+  createdByUserId        String?                     @db.Uuid
+  appliedAt              DateTime?                   @db.Timestamptz(3)
+  voidedAt               DateTime?                   @db.Timestamptz(3)
+  createdAt              DateTime                    @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime                    @updatedAt @db.Timestamptz(3)
+  order                  Order                       @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  orderItem              OrderItem                   @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  returnItem             OrderReturnItem             @relation(fields: [returnItemId], references: [id], onDelete: Restrict)
+  createdBy              User?                       @relation("SupplierCreditCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  applications           SupplierCreditApplication[]
 
   @@index([supplierIdSnapshot, status, createdAt])
   @@index([orderId, createdAt])
@@ -933,26 +943,29 @@ model SupplierPayable {
 }
 
 model SupplierSettlement {
-  id                   String                   @id @default(uuid()) @db.Uuid
-  supplierIdSnapshot   String                   @db.Uuid
-  supplierNameSnapshot String                   @db.VarChar(150)
-  status               SupplierSettlementStatus @default(DRAFT)
+  id                   String                      @id @default(uuid()) @db.Uuid
+  supplierIdSnapshot   String                      @db.Uuid
+  supplierNameSnapshot String                      @db.VarChar(150)
+  status               SupplierSettlementStatus    @default(DRAFT)
   totalAmountToman     Int
+  creditAppliedToman   Int                         @default(0)
+  paidAmountToman      Int?
   payableCount         Int
-  createdByUserId      String?                  @db.Uuid
-  paidByUserId         String?                  @db.Uuid
-  cancelledByUserId    String?                  @db.Uuid
-  note                 String?                  @db.VarChar(1000)
-  paymentReference     String?                  @db.VarChar(255)
-  paidAt               DateTime?                @db.Timestamptz(3)
-  cancelledAt          DateTime?                @db.Timestamptz(3)
-  createdAt            DateTime                 @default(now()) @db.Timestamptz(3)
-  updatedAt            DateTime                 @updatedAt @db.Timestamptz(3)
-  payables             SupplierPayable[]        @relation("SupplierPayableSettlement")
+  createdByUserId      String?                     @db.Uuid
+  paidByUserId         String?                     @db.Uuid
+  cancelledByUserId    String?                     @db.Uuid
+  note                 String?                     @db.VarChar(1000)
+  paymentReference     String?                     @db.VarChar(255)
+  paidAt               DateTime?                   @db.Timestamptz(3)
+  cancelledAt          DateTime?                   @db.Timestamptz(3)
+  createdAt            DateTime                    @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime                    @updatedAt @db.Timestamptz(3)
+  payables             SupplierPayable[]           @relation("SupplierPayableSettlement")
   items                SupplierSettlementItem[]
-  createdBy            User?                    @relation("SupplierSettlementCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  paidBy               User?                    @relation("SupplierSettlementPayer", fields: [paidByUserId], references: [id], onDelete: SetNull)
-  cancelledBy          User?                    @relation("SupplierSettlementCanceller", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+  creditApplications   SupplierCreditApplication[]
+  createdBy            User?                       @relation("SupplierSettlementCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  paidBy               User?                       @relation("SupplierSettlementPayer", fields: [paidByUserId], references: [id], onDelete: SetNull)
+  cancelledBy          User?                       @relation("SupplierSettlementCanceller", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
   @@index([supplierIdSnapshot, status, createdAt])
@@ -960,6 +973,31 @@ model SupplierSettlement {
   @@index([paidByUserId])
   @@index([cancelledByUserId])
   @@map("supplier_settlements")
+}
+
+model SupplierCreditApplication {
+  id               String                          @id @default(uuid()) @db.Uuid
+  settlementId     String                          @db.Uuid
+  supplierCreditId String                          @db.Uuid
+  idempotencyKey   String                          @unique @db.VarChar(120)
+  amountToman      Int
+  status           SupplierCreditApplicationStatus @default(ACTIVE)
+  appliedByUserId  String?                         @db.Uuid
+  removedByUserId  String?                         @db.Uuid
+  removalReason    String?                         @db.VarChar(1000)
+  removedAt        DateTime?                       @db.Timestamptz(3)
+  createdAt        DateTime                        @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime                        @updatedAt @db.Timestamptz(3)
+  settlement       SupplierSettlement              @relation(fields: [settlementId], references: [id], onDelete: Restrict)
+  supplierCredit   SupplierCredit                  @relation(fields: [supplierCreditId], references: [id], onDelete: Restrict)
+  appliedBy        User?                           @relation("SupplierCreditApplicationApplier", fields: [appliedByUserId], references: [id], onDelete: SetNull)
+  removedBy        User?                           @relation("SupplierCreditApplicationRemover", fields: [removedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([settlementId, status, createdAt])
+  @@index([supplierCreditId, status, createdAt])
+  @@index([appliedByUserId])
+  @@index([removedByUserId])
+  @@map("supplier_credit_applications")
 }
 
 model SupplierSettlementItem {

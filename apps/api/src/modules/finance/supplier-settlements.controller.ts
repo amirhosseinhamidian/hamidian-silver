@@ -3,10 +3,12 @@ import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import type { AuthenticatedPrincipal } from '../authorization/authorization.types';
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
+import { ApplySupplierCreditDto } from './dto/apply-supplier-credit.dto';
 import { CancelSupplierSettlementDto } from './dto/cancel-supplier-settlement.dto';
 import { CreateSupplierSettlementDto } from './dto/create-supplier-settlement.dto';
 import { ListSupplierSettlementsQueryDto } from './dto/list-supplier-settlements-query.dto';
 import { PaySupplierSettlementDto } from './dto/pay-supplier-settlement.dto';
+import { RemoveSupplierCreditApplicationDto } from './dto/remove-supplier-credit-application.dto';
 import { SupplierSettlementsService } from './supplier-settlements.service';
 
 @Controller('finance/supplier-settlements')
@@ -35,6 +37,35 @@ export class SupplierSettlementsController {
     @CurrentPrincipal() principal: AuthenticatedPrincipal,
   ) {
     return this.supplierSettlementsService.create(principal.userId, dto);
+  }
+
+  @Post(':settlementId/credits')
+  @RequirePermissions(PERMISSION_CODES.FINANCE_WRITE)
+  applyCredit(
+    @Param('settlementId', new ParseUUIDPipe({ version: '4' }))
+    settlementId: string,
+    @Body() dto: ApplySupplierCreditDto,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ) {
+    return this.supplierSettlementsService.applyCredit(settlementId, principal.userId, dto);
+  }
+
+  @Post(':settlementId/credits/:applicationId/remove')
+  @RequirePermissions(PERMISSION_CODES.FINANCE_WRITE)
+  removeCredit(
+    @Param('settlementId', new ParseUUIDPipe({ version: '4' }))
+    settlementId: string,
+    @Param('applicationId', new ParseUUIDPipe({ version: '4' }))
+    applicationId: string,
+    @Body() dto: RemoveSupplierCreditApplicationDto,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ) {
+    return this.supplierSettlementsService.removeCredit(
+      settlementId,
+      applicationId,
+      principal.userId,
+      dto,
+    );
   }
 
   @Post(':settlementId/pay')
