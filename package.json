@@ -16,6 +16,7 @@
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
     "db:format": "prisma format",
+    "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -30,6 +31,7 @@
   "devDependencies": {
     "dotenv": "^17.4.2",
     "prettier": "3.9.6",
-    "prisma": "7.10.0"
+    "prisma": "7.10.0",
+    "tsx": "^4.23.12"
   }
 }
