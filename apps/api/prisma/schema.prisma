@@ -34,6 +34,13 @@ model User {
   supplierSettlementsCreated     SupplierSettlement[]    @relation("SupplierSettlementCreator")
   supplierSettlementsPaid        SupplierSettlement[]    @relation("SupplierSettlementPayer")
   supplierSettlementsCancelled   SupplierSettlement[]    @relation("SupplierSettlementCanceller")
+  paymentRefundsRequested        PaymentRefund[]         @relation("PaymentRefundRequester")
+  paymentRefundsConfirmed        PaymentRefund[]         @relation("PaymentRefundConfirmer")
+  paymentRefundsCancelled        PaymentRefund[]         @relation("PaymentRefundCanceller")
+  orderReturnsRequested          OrderReturn[]           @relation("OrderReturnRequester")
+  orderReturnsReceived           OrderReturn[]           @relation("OrderReturnReceiver")
+  orderReturnsCancelled          OrderReturn[]           @relation("OrderReturnCanceller")
+  supplierCreditsCreated         SupplierCredit[]        @relation("SupplierCreditCreator")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -551,6 +558,8 @@ model Order {
   shipment              Shipment?
   supplierPayables      SupplierPayable[]
   financeSnapshot       OrderFinanceSnapshot?
+  returns               OrderReturn[]
+  supplierCredits       SupplierCredit[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -572,29 +581,33 @@ model OrderAddress {
 }
 
 model OrderItem {
-  id                     String           @id @default(uuid()) @db.Uuid
-  orderId                String           @db.Uuid
-  variantId              String           @db.Uuid
-  quantity               Int
-  productNameSnapshot    String           @db.VarChar(200)
-  variantNameSnapshot    String?          @db.VarChar(150)
-  skuSnapshot            String           @db.VarChar(100)
-  sizeLabelSnapshot      String?          @db.VarChar(100)
-  unitSalePriceToman     Int
-  unitSupplierPriceToman Int?
-  supplierIdSnapshot     String?          @db.Uuid
-  supplierNameSnapshot   String?          @db.VarChar(150)
-  platingType            PlatingType?
-  platingWeightGrams     Decimal?         @db.Decimal(10, 3)
-  platingRateToman       Int?
-  unitPlatingPriceToman  Int              @default(0)
-  platingLeadTimeDays    Int?
-  unitWeightGrams        Decimal?         @db.Decimal(10, 3)
-  lineTotalToman         Int
-  createdAt              DateTime         @default(now()) @db.Timestamptz(3)
-  order                  Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  variant                ProductVariant   @relation(fields: [variantId], references: [id], onDelete: Restrict)
-  supplierPayable        SupplierPayable?
+  id                      String            @id @default(uuid()) @db.Uuid
+  orderId                 String            @db.Uuid
+  variantId               String            @db.Uuid
+  quantity                Int
+  productNameSnapshot     String            @db.VarChar(200)
+  variantNameSnapshot     String?           @db.VarChar(150)
+  skuSnapshot             String            @db.VarChar(100)
+  sizeLabelSnapshot       String?           @db.VarChar(100)
+  unitSalePriceToman      Int
+  unitSupplierPriceToman  Int?
+  supplierIdSnapshot      String?           @db.Uuid
+  supplierNameSnapshot    String?           @db.VarChar(150)
+  platingType             PlatingType?
+  platingWeightGrams      Decimal?          @db.Decimal(10, 3)
+  platingRateToman        Int?
+  unitPlatingPriceToman   Int               @default(0)
+  platingLeadTimeDays     Int?
+  unitWeightGrams         Decimal?          @db.Decimal(10, 3)
+  lineTotalToman          Int
+  returnAllocatedQuantity Int               @default(0)
+  returnedQuantity        Int               @default(0)
+  createdAt               DateTime          @default(now()) @db.Timestamptz(3)
+  order                   Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant                 ProductVariant    @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  supplierPayable         SupplierPayable?
+  returnItems             OrderReturnItem[]
+  supplierCredits         SupplierCredit[]
 
   @@index([orderId])
   @@index([variantId])
@@ -615,6 +628,96 @@ model OrderStatusHistory {
   @@index([orderId, createdAt])
   @@index([actorUserId])
   @@map("order_status_history")
+}
+
+enum OrderReturnStatus {
+  REQUESTED
+  RECEIVED
+  CANCELLED
+}
+
+enum OrderReturnDisposition {
+  RESTOCK
+  RETURN_TO_SUPPLIER
+}
+
+enum SupplierCreditStatus {
+  AVAILABLE
+  APPLIED
+  VOIDED
+}
+
+model OrderReturn {
+  id                String            @id @default(uuid()) @db.Uuid
+  orderId           String            @db.Uuid
+  status            OrderReturnStatus @default(REQUESTED)
+  reason            String?           @db.VarChar(1000)
+  receiveNote       String?           @db.VarChar(1000)
+  cancelReason      String?           @db.VarChar(1000)
+  requestedByUserId String?           @db.Uuid
+  receivedByUserId  String?           @db.Uuid
+  cancelledByUserId String?           @db.Uuid
+  receivedAt        DateTime?         @db.Timestamptz(3)
+  cancelledAt       DateTime?         @db.Timestamptz(3)
+  createdAt         DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime          @updatedAt @db.Timestamptz(3)
+  order             Order             @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  items             OrderReturnItem[]
+  requestedBy       User?             @relation("OrderReturnRequester", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  receivedBy        User?             @relation("OrderReturnReceiver", fields: [receivedByUserId], references: [id], onDelete: SetNull)
+  cancelledBy       User?             @relation("OrderReturnCanceller", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt])
+  @@index([status, createdAt])
+  @@index([requestedByUserId])
+  @@index([receivedByUserId])
+  @@index([cancelledByUserId])
+  @@map("order_returns")
+}
+
+model OrderReturnItem {
+  id             String                  @id @default(uuid()) @db.Uuid
+  returnId       String                  @db.Uuid
+  orderItemId    String                  @db.Uuid
+  quantity       Int
+  disposition    OrderReturnDisposition?
+  createdAt      DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime                @updatedAt @db.Timestamptz(3)
+  orderReturn    OrderReturn             @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  orderItem      OrderItem               @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  supplierCredit SupplierCredit?
+
+  @@unique([returnId, orderItemId])
+  @@index([orderItemId])
+  @@map("order_return_items")
+}
+
+model SupplierCredit {
+  id                     String               @id @default(uuid()) @db.Uuid
+  orderId                String               @db.Uuid
+  orderItemId            String               @db.Uuid
+  returnItemId           String               @unique @db.Uuid
+  supplierIdSnapshot     String               @db.Uuid
+  supplierNameSnapshot   String               @db.VarChar(150)
+  quantity               Int
+  unitSupplierPriceToman Int
+  amountToman            Int
+  status                 SupplierCreditStatus @default(AVAILABLE)
+  createdByUserId        String?              @db.Uuid
+  appliedAt              DateTime?            @db.Timestamptz(3)
+  voidedAt               DateTime?            @db.Timestamptz(3)
+  createdAt              DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime             @updatedAt @db.Timestamptz(3)
+  order                  Order                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  orderItem              OrderItem            @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  returnItem             OrderReturnItem      @relation(fields: [returnItemId], references: [id], onDelete: Restrict)
+  createdBy              User?                @relation("SupplierCreditCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([supplierIdSnapshot, status, createdAt])
+  @@index([orderId, createdAt])
+  @@index([orderItemId])
+  @@index([createdByUserId])
+  @@map("supplier_credits")
 }
 
 enum NotificationOutboxEventType {
@@ -646,9 +749,17 @@ enum SupplierSettlementStatus {
 enum PaymentStatus {
   PENDING
   PAID
+  PARTIALLY_REFUNDED
   CANCELLED
   RECONCILIATION_REQUIRED
   REFUNDED
+}
+
+enum PaymentRefundStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  FAILED
 }
 
 enum PaymentAttemptStatus {
@@ -661,18 +772,53 @@ enum PaymentAttemptStatus {
 }
 
 model Payment {
-  id          String           @id @default(uuid()) @db.Uuid
-  orderId     String           @unique @db.Uuid
-  status      PaymentStatus    @default(PENDING)
-  amountToman Int
-  paidAt      DateTime?        @db.Timestamptz(3)
-  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime         @updatedAt @db.Timestamptz(3)
-  order       Order            @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  attempts    PaymentAttempt[]
+  id                   String           @id @default(uuid()) @db.Uuid
+  orderId              String           @unique @db.Uuid
+  status               PaymentStatus    @default(PENDING)
+  amountToman          Int
+  refundedAmountToman  Int              @default(0)
+  refundAllocatedToman Int              @default(0)
+  paidAt               DateTime?        @db.Timestamptz(3)
+  createdAt            DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime         @updatedAt @db.Timestamptz(3)
+  order                Order            @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  attempts             PaymentAttempt[]
+  refunds              PaymentRefund[]
 
   @@index([status, createdAt])
   @@map("payments")
+}
+
+model PaymentRefund {
+  id                                String              @id @default(uuid()) @db.Uuid
+  paymentId                         String              @db.Uuid
+  idempotencyKey                    String              @unique @db.VarChar(120)
+  status                            PaymentRefundStatus @default(PENDING)
+  amountToman                       Int
+  providerSnapshot                  String?             @db.VarChar(64)
+  originalProviderReferenceSnapshot String?             @db.VarChar(255)
+  externalReference                 String?             @db.VarChar(255)
+  requestNote                       String?             @db.VarChar(1000)
+  resolutionNote                    String?             @db.VarChar(1000)
+  requestedByUserId                 String?             @db.Uuid
+  confirmedByUserId                 String?             @db.Uuid
+  cancelledByUserId                 String?             @db.Uuid
+  confirmedAt                       DateTime?           @db.Timestamptz(3)
+  cancelledAt                       DateTime?           @db.Timestamptz(3)
+  createdAt                         DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt                         DateTime            @updatedAt @db.Timestamptz(3)
+  payment                           Payment             @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  requestedBy                       User?               @relation("PaymentRefundRequester", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  confirmedBy                       User?               @relation("PaymentRefundConfirmer", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  cancelledBy                       User?               @relation("PaymentRefundCanceller", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+
+  @@index([paymentId, createdAt])
+  @@index([status, createdAt])
+  @@index([confirmedAt])
+  @@index([requestedByUserId])
+  @@index([confirmedByUserId])
+  @@index([cancelledByUserId])
+  @@map("payment_refunds")
 }
 
 model PaymentAttempt {

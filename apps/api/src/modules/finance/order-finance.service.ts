@@ -1,6 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
-import { PaymentStatus, SupplierPayableStatus } from '../../generated/prisma/enums';
+import {
+  PaymentRefundStatus,
+  PaymentStatus,
+  SupplierPayableStatus,
+} from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { BackfillFinanceSnapshotsDto } from './dto/backfill-finance-snapshots.dto';
 import { FinancePeriodQueryDto } from './dto/finance-period-query.dto';
@@ -42,7 +46,8 @@ export class OrderFinanceService {
 
   async dashboard(query: FinancePeriodQueryDto) {
     const where = this.buildSnapshotWhere(query.from, query.to);
-    const [finance, payableGroups] = await Promise.all([
+    const refundConfirmedAt = this.buildDateTimeFilter(query.from, query.to);
+    const [finance, payableGroups, refunds] = await Promise.all([
       this.prisma.orderFinanceSnapshot.aggregate({
         where,
         _count: {
@@ -70,6 +75,18 @@ export class OrderFinanceService {
           _all: true,
         },
       }),
+      this.prisma.paymentRefund.aggregate({
+        where: {
+          status: PaymentRefundStatus.CONFIRMED,
+          confirmedAt: refundConfirmedAt,
+        },
+        _sum: {
+          amountToman: true,
+        },
+        _count: {
+          _all: true,
+        },
+      }),
     ]);
 
     let openSupplierPayablesToman = 0;
@@ -90,6 +107,9 @@ export class OrderFinanceService {
       }
     }
 
+    const successfulRefundToman = refunds._sum.amountToman ?? 0;
+    const customerTotalToman = finance._sum.customerTotalToman ?? 0;
+
     return {
       period: {
         from: query.from ?? null,
@@ -101,7 +121,10 @@ export class OrderFinanceService {
       discountToman: finance._sum.discountToman ?? 0,
       shippingChargedToman: finance._sum.shippingChargedToman ?? 0,
       taxToman: finance._sum.taxToman ?? 0,
-      customerTotalToman: finance._sum.customerTotalToman ?? 0,
+      customerTotalToman,
+      successfulRefundToman,
+      successfulRefundCount: refunds._count._all,
+      netCollectedRevenueToman: customerTotalToman - successfulRefundToman,
       supplierCostToman: finance._sum.supplierCostToman ?? 0,
       grossSalesToman: finance._sum.grossSalesToman ?? 0,
       netSalesToman: finance._sum.netSalesToman ?? 0,
@@ -126,6 +149,14 @@ export class OrderFinanceService {
             id: true,
             orderNumber: true,
             status: true,
+            payment: {
+              select: {
+                status: true,
+                amountToman: true,
+                refundedAmountToman: true,
+                refundAllocatedToman: true,
+              },
+            },
             user: {
               select: {
                 id: true,
@@ -152,6 +183,15 @@ export class OrderFinanceService {
             supplierPayables: {
               orderBy: {
                 createdAt: 'asc',
+              },
+            },
+            payment: {
+              include: {
+                refunds: {
+                  orderBy: {
+                    createdAt: 'asc',
+                  },
+                },
               },
             },
           },
@@ -290,6 +330,12 @@ export class OrderFinanceService {
   }
 
   private buildSnapshotWhere(from?: string, to?: string): Prisma.OrderFinanceSnapshotWhereInput {
+    const paidAt = this.buildDateTimeFilter(from, to);
+
+    return paidAt ? { paidAt } : {};
+  }
+
+  private buildDateTimeFilter(from?: string, to?: string): Prisma.DateTimeFilter | undefined {
     const fromDate = from ? new Date(from) : undefined;
     const toDate = to ? new Date(to) : undefined;
 
@@ -298,14 +344,12 @@ export class OrderFinanceService {
     }
 
     if (!fromDate && !toDate) {
-      return {};
+      return undefined;
     }
 
     return {
-      paidAt: {
-        ...(fromDate ? { gte: fromDate } : {}),
-        ...(toDate ? { lte: toDate } : {}),
-      },
+      ...(fromDate ? { gte: fromDate } : {}),
+      ...(toDate ? { lte: toDate } : {}),
     };
   }
 }

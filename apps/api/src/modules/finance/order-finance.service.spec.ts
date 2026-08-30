@@ -122,6 +122,16 @@ describe('OrderFinanceService', () => {
           },
         ]),
       },
+      paymentRefund: {
+        aggregate: jest.fn().mockResolvedValue({
+          _sum: {
+            amountToman: 0,
+          },
+          _count: {
+            _all: 0,
+          },
+        }),
+      },
     };
     const service = new OrderFinanceService(prisma as unknown as PrismaService);
 

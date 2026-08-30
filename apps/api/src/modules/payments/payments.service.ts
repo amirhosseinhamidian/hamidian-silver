@@ -341,6 +341,20 @@ export class PaymentsService {
             createdAt: true,
           },
         },
+        refunds: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          select: {
+            id: true,
+            status: true,
+            amountToman: true,
+            externalReference: true,
+            confirmedAt: true,
+            cancelledAt: true,
+            createdAt: true,
+          },
+        },
       },
     });
 

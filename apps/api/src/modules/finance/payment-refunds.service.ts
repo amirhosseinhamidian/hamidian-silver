@@ -1,0 +1,429 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import type { Prisma } from '../../generated/prisma/client';
+import {
+  PaymentAttemptStatus,
+  PaymentRefundStatus,
+  PaymentStatus,
+} from '../../generated/prisma/enums';
+import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { CancelPaymentRefundDto } from './dto/cancel-payment-refund.dto';
+import { ConfirmPaymentRefundDto } from './dto/confirm-payment-refund.dto';
+import { CreatePaymentRefundDto } from './dto/create-payment-refund.dto';
+import { ListPaymentRefundsQueryDto } from './dto/list-payment-refunds-query.dto';
+
+@Injectable()
+export class PaymentRefundsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  list(query: ListPaymentRefundsQueryDto) {
+    const createdAt = this.buildDateRange(query.from, query.to);
+
+    return this.prisma.paymentRefund.findMany({
+      where: {
+        status: query.status,
+        payment: query.orderId
+          ? {
+              orderId: query.orderId,
+            }
+          : undefined,
+        createdAt,
+      },
+      take: query.limit ?? 50,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: this.refundInclude(),
+    });
+  }
+
+  async get(refundId: string) {
+    const refund = await this.prisma.paymentRefund.findUnique({
+      where: {
+        id: refundId,
+      },
+      include: this.refundInclude(),
+    });
+
+    if (!refund) {
+      throw new NotFoundException('Payment refund was not found.');
+    }
+
+    return refund;
+  }
+
+  async create(actorUserId: string, dto: CreatePaymentRefundDto) {
+    try {
+      return await this.prisma.$transaction(async (transaction) => {
+        const payment = await transaction.payment.findUnique({
+          where: {
+            orderId: dto.orderId,
+          },
+          include: {
+            order: {
+              select: {
+                id: true,
+                orderNumber: true,
+                financeSnapshot: {
+                  select: {
+                    id: true,
+                  },
+                },
+              },
+            },
+            attempts: {
+              where: {
+                status: PaymentAttemptStatus.VERIFIED,
+              },
+              orderBy: {
+                verifiedAt: 'desc',
+              },
+              take: 1,
+              select: {
+                provider: true,
+                providerReference: true,
+              },
+            },
+          },
+        });
+
+        if (!payment) {
+          throw new NotFoundException('Payment was not found.');
+        }
+
+        const existing = await transaction.paymentRefund.findUnique({
+          where: {
+            idempotencyKey: dto.idempotencyKey,
+          },
+        });
+
+        if (existing) {
+          if (existing.paymentId !== payment.id || existing.amountToman !== dto.amountToman) {
+            throw new ConflictException('Refund idempotency key is already in use.');
+          }
+
+          return existing;
+        }
+
+        if (!payment.order.financeSnapshot) {
+          throw new ConflictException(
+            'Order finance snapshot is required before recording a customer refund.',
+          );
+        }
+
+        if (
+          payment.status !== PaymentStatus.PAID &&
+          payment.status !== PaymentStatus.PARTIALLY_REFUNDED
+        ) {
+          throw new ConflictException('Payment is not refundable from its current status.');
+        }
+
+        const remainingAllocatable = payment.amountToman - payment.refundAllocatedToman;
+
+        if (dto.amountToman > remainingAllocatable) {
+          throw new ConflictException(
+            'Refund amount exceeds the remaining refundable payment amount.',
+          );
+        }
+
+        const claimed = await transaction.payment.updateMany({
+          where: {
+            id: payment.id,
+            status: {
+              in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+            },
+            refundAllocatedToman: {
+              lte: payment.amountToman - dto.amountToman,
+            },
+          },
+          data: {
+            refundAllocatedToman: {
+              increment: dto.amountToman,
+            },
+          },
+        });
+
+        if (claimed.count !== 1) {
+          throw new ConflictException('Payment refund capacity changed; reload and retry.');
+        }
+
+        const verifiedAttempt = payment.attempts[0];
+
+        return transaction.paymentRefund.create({
+          data: {
+            paymentId: payment.id,
+            idempotencyKey: dto.idempotencyKey,
+            amountToman: dto.amountToman,
+            providerSnapshot: verifiedAttempt?.provider,
+            originalProviderReferenceSnapshot: verifiedAttempt?.providerReference,
+            requestNote: dto.note,
+            requestedByUserId: actorUserId,
+          },
+          include: this.refundInclude(),
+        });
+      });
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
+      }
+
+      const existing = await this.prisma.paymentRefund.findUnique({
+        where: {
+          idempotencyKey: dto.idempotencyKey,
+        },
+      });
+
+      if (!existing) {
+        throw error;
+      }
+
+      const payment = await this.prisma.payment.findUnique({
+        where: {
+          orderId: dto.orderId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (
+        !payment ||
+        existing.paymentId !== payment.id ||
+        existing.amountToman !== dto.amountToman
+      ) {
+        throw new ConflictException('Refund idempotency key is already in use.');
+      }
+
+      return existing;
+    }
+  }
+
+  async confirm(refundId: string, actorUserId: string, dto: ConfirmPaymentRefundDto) {
+    return this.prisma.$transaction(async (transaction) => {
+      const refund = await transaction.paymentRefund.findUnique({
+        where: {
+          id: refundId,
+        },
+      });
+
+      if (!refund) {
+        throw new NotFoundException('Payment refund was not found.');
+      }
+
+      if (refund.status === PaymentRefundStatus.CONFIRMED) {
+        return transaction.paymentRefund.findUniqueOrThrow({
+          where: {
+            id: refund.id,
+          },
+          include: this.refundInclude(),
+        });
+      }
+
+      if (refund.status !== PaymentRefundStatus.PENDING) {
+        throw new ConflictException('Only pending payment refunds can be confirmed.');
+      }
+
+      const confirmedAt = new Date();
+      const claimed = await transaction.paymentRefund.updateMany({
+        where: {
+          id: refund.id,
+          status: PaymentRefundStatus.PENDING,
+        },
+        data: {
+          status: PaymentRefundStatus.CONFIRMED,
+          externalReference: dto.externalReference,
+          resolutionNote: dto.note,
+          confirmedByUserId: actorUserId,
+          confirmedAt,
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new ConflictException('Payment refund state changed; reload and retry.');
+      }
+
+      const updatedPayment = await transaction.payment.update({
+        where: {
+          id: refund.paymentId,
+        },
+        data: {
+          refundedAmountToman: {
+            increment: refund.amountToman,
+          },
+        },
+      });
+
+      if (
+        updatedPayment.refundedAmountToman > updatedPayment.refundAllocatedToman ||
+        updatedPayment.refundedAmountToman > updatedPayment.amountToman
+      ) {
+        throw new ConflictException('Payment refund totals are inconsistent.');
+      }
+
+      const nextPaymentStatus =
+        updatedPayment.refundedAmountToman === updatedPayment.amountToman
+          ? PaymentStatus.REFUNDED
+          : PaymentStatus.PARTIALLY_REFUNDED;
+
+      if (updatedPayment.status !== nextPaymentStatus) {
+        await transaction.payment.update({
+          where: {
+            id: updatedPayment.id,
+          },
+          data: {
+            status: nextPaymentStatus,
+          },
+        });
+      }
+
+      return transaction.paymentRefund.findUniqueOrThrow({
+        where: {
+          id: refund.id,
+        },
+        include: this.refundInclude(),
+      });
+    });
+  }
+
+  async cancel(refundId: string, actorUserId: string, dto: CancelPaymentRefundDto) {
+    return this.prisma.$transaction(async (transaction) => {
+      const refund = await transaction.paymentRefund.findUnique({
+        where: {
+          id: refundId,
+        },
+      });
+
+      if (!refund) {
+        throw new NotFoundException('Payment refund was not found.');
+      }
+
+      if (refund.status === PaymentRefundStatus.CANCELLED) {
+        return transaction.paymentRefund.findUniqueOrThrow({
+          where: {
+            id: refund.id,
+          },
+          include: this.refundInclude(),
+        });
+      }
+
+      if (refund.status !== PaymentRefundStatus.PENDING) {
+        throw new ConflictException('Only pending payment refunds can be cancelled.');
+      }
+
+      const cancelledAt = new Date();
+      const claimed = await transaction.paymentRefund.updateMany({
+        where: {
+          id: refund.id,
+          status: PaymentRefundStatus.PENDING,
+        },
+        data: {
+          status: PaymentRefundStatus.CANCELLED,
+          resolutionNote: dto.reason,
+          cancelledByUserId: actorUserId,
+          cancelledAt,
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new ConflictException('Payment refund state changed; reload and retry.');
+      }
+
+      const released = await transaction.payment.updateMany({
+        where: {
+          id: refund.paymentId,
+          refundAllocatedToman: {
+            gte: refund.amountToman,
+          },
+        },
+        data: {
+          refundAllocatedToman: {
+            decrement: refund.amountToman,
+          },
+        },
+      });
+
+      if (released.count !== 1) {
+        throw new ConflictException('Payment refund allocation is inconsistent.');
+      }
+
+      return transaction.paymentRefund.findUniqueOrThrow({
+        where: {
+          id: refund.id,
+        },
+        include: this.refundInclude(),
+      });
+    });
+  }
+
+  private refundInclude() {
+    return {
+      payment: {
+        select: {
+          id: true,
+          orderId: true,
+          status: true,
+          amountToman: true,
+          refundedAmountToman: true,
+          refundAllocatedToman: true,
+          order: {
+            select: {
+              id: true,
+              orderNumber: true,
+              status: true,
+            },
+          },
+        },
+      },
+      requestedBy: {
+        select: {
+          id: true,
+          phone: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+      confirmedBy: {
+        select: {
+          id: true,
+          phone: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+      cancelledBy: {
+        select: {
+          id: true,
+          phone: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+    } satisfies Prisma.PaymentRefundInclude;
+  }
+
+  private buildDateRange(from?: string, to?: string): Prisma.DateTimeFilter | undefined {
+    const fromDate = from ? new Date(from) : undefined;
+    const toDate = to ? new Date(to) : undefined;
+
+    if (fromDate && toDate && fromDate > toDate) {
+      throw new BadRequestException('Refund report start date must be before the end date.');
+    }
+
+    if (!fromDate && !toDate) {
+      return undefined;
+    }
+
+    return {
+      ...(fromDate ? { gte: fromDate } : {}),
+      ...(toDate ? { lte: toDate } : {}),
+    };
+  }
+
+  private isUniqueConstraintError(error: unknown): boolean {
+    return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002';
+  }
+}
