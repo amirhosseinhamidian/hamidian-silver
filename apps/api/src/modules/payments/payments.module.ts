@@ -1,30 +1,34 @@
 import { Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
-import { DisabledPaymentGateway } from './adapters/disabled-payment.gateway';
 import { ZarinpalPaymentGateway } from './adapters/zarinpal-payment.gateway';
-import { PAYMENT_GATEWAY, type PaymentGateway } from './payment-gateway.port';
+import { ZibalPaymentGateway } from './adapters/zibal-payment.gateway';
+import { PAYMENT_GATEWAY } from './payment-gateway.port';
+import { PaymentGatewaySettingsController } from './payment-gateway-settings.controller';
+import { PAYMENT_GATEWAY_REGISTRY, PaymentGatewayRegistry } from './payment-gateway.registry';
+import './payment-gateway.dto-metadata';
 import { PaymentsController } from './payments.controller';
+import { ZibalPaymentCallbackController } from './zibal-payment-callback.controller';
 import { PaymentsService } from './payments.service';
 
 @Module({
   imports: [DatabaseModule],
-  controllers: [PaymentsController],
+  controllers: [
+    PaymentsController,
+    PaymentGatewaySettingsController,
+    ZibalPaymentCallbackController,
+  ],
   providers: [
     PaymentsService,
-    DisabledPaymentGateway,
     ZarinpalPaymentGateway,
+    ZibalPaymentGateway,
+    PaymentGatewayRegistry,
+    {
+      provide: PAYMENT_GATEWAY_REGISTRY,
+      useExisting: PaymentGatewayRegistry,
+    },
     {
       provide: PAYMENT_GATEWAY,
-      inject: [ConfigService, DisabledPaymentGateway, ZarinpalPaymentGateway],
-      useFactory: (
-        config: ConfigService,
-        disabledGateway: DisabledPaymentGateway,
-        zarinpalGateway: ZarinpalPaymentGateway,
-      ): PaymentGateway =>
-        config.get<string>('PAYMENT_PROVIDER', 'disabled') === 'zarinpal'
-          ? zarinpalGateway
-          : disabledGateway,
+      useExisting: PaymentGatewayRegistry,
     },
   ],
 })

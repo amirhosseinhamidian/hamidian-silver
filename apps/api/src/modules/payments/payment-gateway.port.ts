@@ -1,6 +1,7 @@
 export const PAYMENT_GATEWAY = Symbol('PAYMENT_GATEWAY');
 
 export type InitiateGatewayPaymentInput = {
+  provider?: string;
   attemptId: string;
   orderNumber: string;
   amountRial: string;
@@ -13,6 +14,7 @@ export type InitiateGatewayPaymentResult = {
 };
 
 export type VerifyGatewayPaymentInput = {
+  provider?: string;
   authority: string;
   amountRial: string;
 };

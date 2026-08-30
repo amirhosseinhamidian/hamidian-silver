@@ -15,7 +15,13 @@ import {
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
-import { PAYMENT_GATEWAY, type PaymentGateway } from './payment-gateway.port';
+import { PAYMENT_GATEWAY_CODES } from './payment-gateway.constants';
+import {
+  PAYMENT_GATEWAY,
+  type InitiateGatewayPaymentInput,
+  type PaymentGateway,
+  type VerifyGatewayPaymentInput,
+} from './payment-gateway.port';
 
 type InitiationContext = {
   attemptId: string;
@@ -24,6 +30,7 @@ type InitiationContext = {
   authority?: string | null;
   paymentUrl?: string | null;
   status: PaymentAttemptStatus;
+  provider: string;
   isNew: boolean;
 };
 
@@ -43,10 +50,15 @@ export class PaymentsService {
   }
 
   async initiateOrderPayment(userId: string, orderId: string, dto: InitiatePaymentDto) {
+    const requestedProvider = dto.provider;
+    const provider =
+      this.gateway.providerCode === 'registry'
+        ? (requestedProvider ?? PAYMENT_GATEWAY_CODES.ZARINPAL)
+        : this.gateway.providerCode;
     let context: InitiationContext;
 
     try {
-      context = await this.createOrLoadAttempt(userId, orderId, dto.idempotencyKey);
+      context = await this.createOrLoadAttempt(userId, orderId, dto.idempotencyKey, provider);
     } catch (error) {
       if (!this.isUniqueConstraintError(error)) {
         throw error;
@@ -74,7 +86,8 @@ export class PaymentsService {
       if (
         !existing ||
         existing.payment.order.id !== orderId ||
-        existing.payment.order.userId !== userId
+        existing.payment.order.userId !== userId ||
+        (existing.provider && existing.provider !== provider)
       ) {
         throw new ConflictException('Idempotency key is already in use.');
       }
@@ -86,6 +99,7 @@ export class PaymentsService {
         authority: existing.authority,
         paymentUrl: existing.paymentUrl,
         status: existing.status,
+        provider: existing.provider ?? provider,
         isNew: false,
       };
     }
@@ -120,12 +134,18 @@ export class PaymentsService {
     const callbackUrl = `${this.callbackBaseUrl}/${context.attemptId}`;
 
     try {
-      const initiated = await this.gateway.initiate({
+      const gatewayInput: InitiateGatewayPaymentInput = {
         attemptId: context.attemptId,
         orderNumber: context.orderNumber,
         amountRial: this.tomanToRial(context.amountToman),
         callbackUrl,
-      });
+      };
+
+      if (this.gateway.providerCode === 'registry') {
+        gatewayInput.provider = context.provider;
+      }
+
+      const initiated = await this.gateway.initiate(gatewayInput);
 
       const updated = await this.prisma.paymentAttempt.update({
         where: {
@@ -195,10 +215,16 @@ export class PaymentsService {
       throw new BadRequestException('Payment authority does not match.');
     }
 
-    const verification = await this.gateway.verify({
+    const gatewayInput: VerifyGatewayPaymentInput = {
       authority,
       amountRial: this.tomanToRial(attempt.amountToman),
-    });
+    };
+
+    if (this.gateway.providerCode === 'registry') {
+      gatewayInput.provider = attempt.provider;
+    }
+
+    const verification = await this.gateway.verify(gatewayInput);
 
     if (!verification.success) {
       await this.prisma.paymentAttempt.updateMany({
@@ -259,6 +285,7 @@ export class PaymentsService {
     userId: string,
     orderId: string,
     idempotencyKey: string,
+    provider: string,
   ): Promise<InitiationContext> {
     return this.prisma.$transaction(async (transaction) => {
       const order = await transaction.order.findFirst({
@@ -300,6 +327,7 @@ export class PaymentsService {
             authority: paidAttempt.authority,
             paymentUrl: paidAttempt.paymentUrl,
             status: paidAttempt.status,
+            provider: paidAttempt.provider ?? provider,
             isNew: false,
           };
         }
@@ -337,7 +365,10 @@ export class PaymentsService {
       });
 
       if (existing) {
-        if (existing.paymentId !== payment.id) {
+        if (
+          existing.paymentId !== payment.id ||
+          (existing.provider && existing.provider !== provider)
+        ) {
           throw new ConflictException('Idempotency key is already in use.');
         }
 
@@ -348,6 +379,7 @@ export class PaymentsService {
           authority: existing.authority,
           paymentUrl: existing.paymentUrl,
           status: existing.status,
+          provider: existing.provider ?? provider,
           isNew: false,
         };
       }
@@ -356,7 +388,7 @@ export class PaymentsService {
         data: {
           paymentId: payment.id,
           idempotencyKey,
-          provider: this.gateway.providerCode,
+          provider,
           amountToman: payment.amountToman,
         },
       });
@@ -368,6 +400,7 @@ export class PaymentsService {
         authority: attempt.authority,
         paymentUrl: attempt.paymentUrl,
         status: attempt.status,
+        provider,
         isNew: true,
       };
     });
