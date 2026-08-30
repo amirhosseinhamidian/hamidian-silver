@@ -9,19 +9,20 @@ datasource db {
 }
 
 model User {
-  id                 String              @id @default(uuid()) @db.Uuid
-  phone              String              @unique @db.VarChar(20)
-  firstName          String?             @db.VarChar(100)
-  lastName           String?             @db.VarChar(100)
-  isActive           Boolean             @default(true)
-  phoneVerifiedAt    DateTime?           @db.Timestamptz(3)
-  lastLoginAt        DateTime?           @db.Timestamptz(3)
-  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime            @updatedAt @db.Timestamptz(3)
-  deletedAt          DateTime?           @db.Timestamptz(3)
+  id                 String                @id @default(uuid()) @db.Uuid
+  phone              String                @unique @db.VarChar(20)
+  firstName          String?               @db.VarChar(100)
+  lastName           String?               @db.VarChar(100)
+  isActive           Boolean               @default(true)
+  phoneVerifiedAt    DateTime?             @db.Timestamptz(3)
+  lastLoginAt        DateTime?             @db.Timestamptz(3)
+  createdAt          DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime              @updatedAt @db.Timestamptz(3)
+  deletedAt          DateTime?             @db.Timestamptz(3)
   roles              UserRole[]
   sessions           AuthSession[]
-  inventoryMovements InventoryMovement[] @relation("InventoryMovementActor")
+  inventoryMovements InventoryMovement[]   @relation("InventoryMovementActor")
+  priceChanges       ProductPriceHistory[] @relation("ProductPriceHistoryActor")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -230,23 +231,26 @@ model Size {
 }
 
 model Product {
-  id               String            @id @default(uuid()) @db.Uuid
-  name             String            @db.VarChar(200)
-  slug             String            @unique @db.VarChar(220)
+  id               String                @id @default(uuid()) @db.Uuid
+  name             String                @db.VarChar(200)
+  slug             String                @unique @db.VarChar(220)
   shortDescription String?
   description      String?
-  status           ProductStatus     @default(DRAFT)
-  sizeMode         SizeMode          @default(NONE)
-  brandId          String?           @db.Uuid
-  countryId        String?           @db.Uuid
-  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
-  deletedAt        DateTime?         @db.Timestamptz(3)
-  brand            Brand?            @relation(fields: [brandId], references: [id], onDelete: SetNull)
-  country          Country?          @relation(fields: [countryId], references: [id], onDelete: SetNull)
+  status           ProductStatus         @default(DRAFT)
+  sizeMode         SizeMode              @default(NONE)
+  brandId          String?               @db.Uuid
+  countryId        String?               @db.Uuid
+  salePriceToman   Int?
+  createdAt        DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime              @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?             @db.Timestamptz(3)
+  brand            Brand?                @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  country          Country?              @relation(fields: [countryId], references: [id], onDelete: SetNull)
   categories       ProductCategory[]
   variants         ProductVariant[]
   media            ProductMedia[]
+  suppliers        ProductSupplier[]
+  priceHistory     ProductPriceHistory[]
 
   @@index([brandId])
   @@index([countryId])
@@ -369,4 +373,55 @@ model InventoryMovement {
   @@index([actorUserId])
   @@index([referenceType, referenceId])
   @@map("inventory_movements")
+}
+
+model Supplier {
+  id          String            @id @default(uuid()) @db.Uuid
+  code        String            @unique @db.VarChar(64)
+  name        String            @db.VarChar(150)
+  contactName String?           @db.VarChar(150)
+  phone       String?           @db.VarChar(20)
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime          @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?         @db.Timestamptz(3)
+  products    ProductSupplier[]
+
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("suppliers")
+}
+
+model ProductSupplier {
+  productId          String   @db.Uuid
+  supplierId         String   @db.Uuid
+  supplierPriceToman Int
+  markupPercent      Decimal? @db.Decimal(7, 3)
+  isPreferred        Boolean  @default(false)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  supplier           Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+
+  @@id([productId, supplierId])
+  @@index([supplierId, isActive])
+  @@index([productId, isPreferred])
+  @@map("product_suppliers")
+}
+
+model ProductPriceHistory {
+  id                 String   @id @default(uuid()) @db.Uuid
+  productId          String   @db.Uuid
+  changedByUserId    String?  @db.Uuid
+  previousPriceToman Int?
+  newPriceToman      Int
+  reason             String?  @db.VarChar(500)
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  changedBy          User?    @relation("ProductPriceHistoryActor", fields: [changedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([productId, createdAt])
+  @@index([changedByUserId])
+  @@map("product_price_history")
 }

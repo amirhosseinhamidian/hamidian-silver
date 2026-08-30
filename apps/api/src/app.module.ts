@@ -8,6 +8,7 @@ import { PermissionsGuard } from './modules/authorization/permissions.guard';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
+import { PricingModule } from './modules/pricing/pricing.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
     CatalogModule,
     HealthModule,
     InventoryModule,
+    PricingModule,
   ],
   providers: [
     {
