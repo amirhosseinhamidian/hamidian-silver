@@ -722,26 +722,40 @@ enum ShipmentStatus {
   CANCELLED
 }
 
+enum ShipmentProviderCreationState {
+  NOT_STARTED
+  IN_PROGRESS
+  CREATED
+  UNKNOWN
+}
+
 model Shipment {
-  id                    String                  @id @default(uuid()) @db.Uuid
-  orderId               String                  @unique @db.Uuid
-  provider              String                  @db.VarChar(64)
-  providerServiceCode   String                  @db.VarChar(120)
-  providerServiceName   String?                 @db.VarChar(200)
-  status                ShipmentStatus          @default(PENDING)
-  shippingCostToman     Int
-  totalWeightGrams      Decimal                 @db.Decimal(12, 3)
-  estimatedDeliveryDays Int?
-  providerShipmentId    String?                 @db.VarChar(255)
-  trackingCode          String?                 @db.VarChar(255)
-  shippedAt             DateTime?               @db.Timestamptz(3)
-  deliveredAt           DateTime?               @db.Timestamptz(3)
-  createdAt             DateTime                @default(now()) @db.Timestamptz(3)
-  updatedAt             DateTime                @updatedAt @db.Timestamptz(3)
-  order                 Order                   @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  statusHistory         ShipmentStatusHistory[]
+  id                      String                        @id @default(uuid()) @db.Uuid
+  orderId                 String                        @unique @db.Uuid
+  provider                String                        @db.VarChar(64)
+  providerServiceCode     String                        @db.VarChar(120)
+  providerServiceName     String?                       @db.VarChar(200)
+  status                  ShipmentStatus                @default(PENDING)
+  providerCreationState   ShipmentProviderCreationState @default(NOT_STARTED)
+  shippingCostToman       Int
+  totalWeightGrams        Decimal                       @db.Decimal(12, 3)
+  estimatedDeliveryDays   Int?
+  providerShipmentId      String?                       @db.VarChar(255)
+  trackingCode            String?                       @db.VarChar(255)
+  providerCreateError     String?                       @db.VarChar(500)
+  creationAttemptedAt     DateTime?                     @db.Timestamptz(3)
+  lastProviderStatus      String?                       @db.VarChar(255)
+  lastProviderDescription String?                       @db.VarChar(500)
+  lastTrackingSyncAt      DateTime?                     @db.Timestamptz(3)
+  shippedAt               DateTime?                     @db.Timestamptz(3)
+  deliveredAt             DateTime?                     @db.Timestamptz(3)
+  createdAt               DateTime                      @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime                      @updatedAt @db.Timestamptz(3)
+  order                   Order                         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  statusHistory           ShipmentStatusHistory[]
 
   @@index([status, createdAt])
+  @@index([providerCreationState, creationAttemptedAt])
   @@index([provider, providerShipmentId])
   @@index([trackingCode])
   @@map("shipments")

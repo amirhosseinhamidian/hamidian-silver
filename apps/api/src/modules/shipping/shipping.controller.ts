@@ -4,6 +4,7 @@ import type { AuthenticatedPrincipal } from '../authorization/authorization.type
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { SelectShippingRateDto } from './dto/select-shipping-rate.dto';
+import { ResetShipmentProviderCreationDto } from './dto/reset-shipment-provider-creation.dto';
 import { UpdateShipmentStatusDto } from './dto/update-shipment-status.dto';
 import { ShippingService } from './shipping.service';
 
@@ -40,6 +41,31 @@ export class ShippingController {
   @RequirePermissions(PERMISSION_CODES.ORDERS_READ)
   getShipment(@Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string) {
     return this.shippingService.getShipment(orderId);
+  }
+
+  @Post('orders/:orderId/create')
+  @RequirePermissions(PERMISSION_CODES.ORDERS_TRACKING_WRITE)
+  createProviderShipment(
+    @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ) {
+    return this.shippingService.createProviderShipment(orderId, principal.userId);
+  }
+
+  @Post('orders/:orderId/track')
+  @RequirePermissions(PERMISSION_CODES.ORDERS_TRACKING_WRITE)
+  syncTracking(@Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string) {
+    return this.shippingService.syncTracking(orderId);
+  }
+
+  @Post('orders/:orderId/provider-creation/reset')
+  @RequirePermissions(PERMISSION_CODES.ORDERS_TRACKING_WRITE)
+  resetProviderCreation(
+    @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
+    @Body() dto: ResetShipmentProviderCreationDto,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ) {
+    return this.shippingService.resetProviderCreation(orderId, dto, principal.userId);
   }
 
   @Patch('orders/:orderId/status')

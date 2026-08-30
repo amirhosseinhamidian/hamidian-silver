@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import type {
   CreateProviderShipmentInput,
   CreateProviderShipmentResult,
+  ProviderShipmentTrackingStatus,
   ShippingAddressSnapshot,
   ShippingProvider,
   ShippingQuoteInput,
@@ -303,7 +304,30 @@ export class PostexShippingProvider implements ShippingProvider {
     return {
       providerStatus,
       description: [location, eventDate, eventTime].filter(Boolean).join(' | ') || undefined,
+      normalizedStatus: this.normalizeProviderTrackingStatus(providerStatus),
     };
+  }
+
+  private normalizeProviderTrackingStatus(
+    value: string,
+  ): ProviderShipmentTrackingStatus | undefined {
+    const normalized = value
+      .trim()
+      .toUpperCase()
+      .replace(/[\s-]+/g, '_');
+
+    switch (normalized) {
+      case 'HANDED_OVER':
+        return 'HANDED_OVER';
+      case 'IN_TRANSIT':
+        return 'IN_TRANSIT';
+      case 'DELIVERED':
+        return 'DELIVERED';
+      case 'FAILED':
+        return 'FAILED';
+      default:
+        return undefined;
+    }
   }
 
   private async resolveDestinationCityCode(destination: ShippingAddressSnapshot): Promise<number> {

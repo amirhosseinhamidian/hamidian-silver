@@ -6,7 +6,12 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Prisma } from '../../generated/prisma/client';
-import { OrderStatus, PlatingType, ProductStatus } from '../../generated/prisma/enums';
+import {
+  OrderStatus,
+  PlatingType,
+  ProductStatus,
+  ShipmentStatus,
+} from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { normalizeIranianMobile } from '../auth/phone-normalizer';
 import { CancelOrderDto } from './dto/cancel-order.dto';
@@ -280,6 +285,9 @@ export class OrdersService {
         where: {
           id: orderId,
         },
+        include: {
+          shipment: true,
+        },
       });
 
       if (!order) {
@@ -298,6 +306,30 @@ export class OrdersService {
 
       if (allowedNextStatus[order.status] !== dto.status) {
         throw new BadRequestException('This order status transition is not allowed.');
+      }
+
+      if (dto.status === OrderStatus.SHIPPED) {
+        if (
+          !order.shipment ||
+          !new Set<ShipmentStatus>([
+            ShipmentStatus.HANDED_OVER,
+            ShipmentStatus.IN_TRANSIT,
+            ShipmentStatus.DELIVERED,
+          ]).has(order.shipment.status)
+        ) {
+          throw new ConflictException(
+            'Order cannot be marked as shipped before the shipment is handed over.',
+          );
+        }
+      }
+
+      if (
+        dto.status === OrderStatus.DELIVERED &&
+        order.shipment?.status !== ShipmentStatus.DELIVERED
+      ) {
+        throw new ConflictException(
+          'Order cannot be marked as delivered before the shipment is delivered.',
+        );
       }
 
       const updated = await transaction.order.update({

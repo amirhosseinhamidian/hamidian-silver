@@ -42,9 +42,12 @@ export type TrackProviderShipmentInput = {
   trackingCode?: string;
 };
 
+export type ProviderShipmentTrackingStatus = 'HANDED_OVER' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED';
+
 export type TrackProviderShipmentResult = {
   providerStatus: string;
   description?: string;
+  normalizedStatus?: ProviderShipmentTrackingStatus;
 };
 
 export interface ShippingProvider {
