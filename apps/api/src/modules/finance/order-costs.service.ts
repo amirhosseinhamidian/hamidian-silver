@@ -213,6 +213,7 @@ export class OrderCostsService {
       idempotencyKey: string;
       occurredAt: Date;
       description?: string;
+      createdByUserId?: string | null;
     },
   ) {
     if (!Number.isSafeInteger(input.amountToman) || input.amountToman < 0 || !input.source.trim()) {
@@ -250,7 +251,7 @@ export class OrderCostsService {
           description: input.description,
           idempotencyKey: input.idempotencyKey,
           occurredAt: input.occurredAt,
-          createdByUserId: null,
+          createdByUserId: input.createdByUserId ?? null,
         },
       ],
       skipDuplicates: true,

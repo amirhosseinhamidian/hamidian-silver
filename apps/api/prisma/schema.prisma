@@ -44,6 +44,9 @@ model User {
   supplierCreditApplicationsApplied SupplierCreditApplication[] @relation("SupplierCreditApplicationApplier")
   supplierCreditApplicationsRemoved SupplierCreditApplication[] @relation("SupplierCreditApplicationRemover")
   orderCostEntriesCreated           OrderCostEntry[]            @relation("OrderCostEntryCreator")
+  platingFulfillmentsStarted        OrderPlatingFulfillment[]   @relation("OrderPlatingFulfillmentStarter")
+  platingFulfillmentsCompleted      OrderPlatingFulfillment[]   @relation("OrderPlatingFulfillmentCompleter")
+  platingFulfillmentsCancelled      OrderPlatingFulfillment[]   @relation("OrderPlatingFulfillmentCanceller")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -477,6 +480,13 @@ enum PlatingType {
   RHODIUM
 }
 
+enum PlatingFulfillmentStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
 model PlatingRate {
   id                String                 @id @default(uuid()) @db.Uuid
   type              PlatingType            @unique
@@ -524,6 +534,35 @@ model ProductPlatingOption {
   @@map("product_plating_options")
 }
 
+model OrderPlatingFulfillment {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  orderId            String                   @unique @db.Uuid
+  status             PlatingFulfillmentStatus @default(PENDING)
+  actualCostToman    Int?
+  externalReference  String?                  @db.VarChar(255)
+  startNote          String?                  @db.VarChar(1000)
+  completionNote     String?                  @db.VarChar(1000)
+  cancellationReason String?                  @db.VarChar(1000)
+  startedByUserId    String?                  @db.Uuid
+  completedByUserId  String?                  @db.Uuid
+  cancelledByUserId  String?                  @db.Uuid
+  startedAt          DateTime?                @db.Timestamptz(3)
+  completedAt        DateTime?                @db.Timestamptz(3)
+  cancelledAt        DateTime?                @db.Timestamptz(3)
+  createdAt          DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                 @updatedAt @db.Timestamptz(3)
+  order              Order                    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  startedBy          User?                    @relation("OrderPlatingFulfillmentStarter", fields: [startedByUserId], references: [id], onDelete: SetNull)
+  completedBy        User?                    @relation("OrderPlatingFulfillmentCompleter", fields: [completedByUserId], references: [id], onDelete: SetNull)
+  cancelledBy        User?                    @relation("OrderPlatingFulfillmentCanceller", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([startedByUserId])
+  @@index([completedByUserId])
+  @@index([cancelledByUserId])
+  @@map("order_plating_fulfillments")
+}
+
 enum OrderStatus {
   PENDING_PAYMENT
   PAID
@@ -535,25 +574,25 @@ enum OrderStatus {
 }
 
 model Order {
-  id                    String                @id @default(uuid()) @db.Uuid
-  orderNumber           String                @unique @db.VarChar(32)
-  userId                String                @db.Uuid
-  warehouseId           String                @db.Uuid
-  status                OrderStatus           @default(PENDING_PAYMENT)
+  id                    String                   @id @default(uuid()) @db.Uuid
+  orderNumber           String                   @unique @db.VarChar(32)
+  userId                String                   @db.Uuid
+  warehouseId           String                   @db.Uuid
+  status                OrderStatus              @default(PENDING_PAYMENT)
   merchandiseTotalToman Int
-  platingTotalToman     Int                   @default(0)
-  discountTotalToman    Int                   @default(0)
-  shippingTotalToman    Int                   @default(0)
-  taxTotalToman         Int                   @default(0)
+  platingTotalToman     Int                      @default(0)
+  discountTotalToman    Int                      @default(0)
+  shippingTotalToman    Int                      @default(0)
+  taxTotalToman         Int                      @default(0)
   grandTotalToman       Int
-  reservationExpiresAt  DateTime              @db.Timestamptz(3)
-  paidAt                DateTime?             @db.Timestamptz(3)
-  cancelledAt           DateTime?             @db.Timestamptz(3)
-  deliveredAt           DateTime?             @db.Timestamptz(3)
-  createdAt             DateTime              @default(now()) @db.Timestamptz(3)
-  updatedAt             DateTime              @updatedAt @db.Timestamptz(3)
-  user                  User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
-  warehouse             Warehouse             @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  reservationExpiresAt  DateTime                 @db.Timestamptz(3)
+  paidAt                DateTime?                @db.Timestamptz(3)
+  cancelledAt           DateTime?                @db.Timestamptz(3)
+  deliveredAt           DateTime?                @db.Timestamptz(3)
+  createdAt             DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime                 @updatedAt @db.Timestamptz(3)
+  user                  User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  warehouse             Warehouse                @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
   shippingAddress       OrderAddress?
   items                 OrderItem[]
   statusHistory         OrderStatusHistory[]
@@ -564,6 +603,7 @@ model Order {
   returns               OrderReturn[]
   supplierCredits       SupplierCredit[]
   costEntries           OrderCostEntry[]
+  platingFulfillment    OrderPlatingFulfillment?
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
