@@ -10,6 +10,7 @@ import { HealthModule } from './modules/health/health.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { PlatingModule } from './modules/plating/plating.module';
+import { OrdersModule } from './modules/orders/orders.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { PlatingModule } from './modules/plating/plating.module';
     InventoryModule,
     PricingModule,
     PlatingModule,
+    OrdersModule,
   ],
   providers: [
     {
