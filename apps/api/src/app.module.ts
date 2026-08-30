@@ -5,6 +5,7 @@ import { envValidationSchema } from './config/env.validation';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthenticationGuard } from './modules/auth/authentication.guard';
 import { PermissionsGuard } from './modules/authorization/permissions.guard';
+import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
 
 @Module({
@@ -21,6 +22,7 @@ import { HealthModule } from './modules/health/health.module';
       },
     }),
     AuthModule,
+    CatalogModule,
     HealthModule,
   ],
   providers: [
