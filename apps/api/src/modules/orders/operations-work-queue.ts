@@ -30,7 +30,13 @@ export type OperationsWorkQueueInput = FulfillmentReadinessInput & {
   platingFulfillment: {
     status: PlatingFulfillmentStatus;
     startedAt: Date | null;
+    cancelledAt: Date | null;
   } | null;
+  shipment:
+    | (NonNullable<FulfillmentReadinessInput['shipment']> & {
+        updatedAt: Date;
+      })
+    | null;
 };
 
 export type OperationsWorkItem = {
@@ -148,6 +154,8 @@ function addPlatingWork(items: OperationsWorkItem[], input: OperationsWorkQueueI
       context: {
         phase: 'CANCELLED',
         maxLeadTimeDays,
+        incidentAt:
+          input.platingFulfillment?.cancelledAt?.toISOString() ?? anchor?.toISOString() ?? null,
       },
     });
     return;
@@ -267,6 +275,9 @@ function addShippingWork(
         providerCreationState: shipment.providerCreationState,
         providerShipmentId: shipment.providerShipmentId,
         providerCreateError: shipment.providerCreateError,
+        incidentAt:
+          (shipment.creationAttemptedAt ?? shipment.updatedAt ?? input.paidAt)?.toISOString() ??
+          null,
       },
     });
     return;
@@ -290,6 +301,7 @@ function addShippingWork(
           providerCreationState: shipment.providerCreationState,
           providerCreateError: shipment.providerCreateError,
           reason: 'MISSING_CREATION_ATTEMPT_TIMESTAMP',
+          incidentAt: (shipment.updatedAt ?? input.paidAt)?.toISOString() ?? null,
         },
       });
       return;

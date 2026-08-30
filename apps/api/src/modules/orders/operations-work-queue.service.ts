@@ -16,10 +16,7 @@ export class OperationsWorkQueueService {
 
   async list(query: OperationsWorkQueueQueryDto) {
     const now = new Date();
-    const orders = await this.loadOperationalOrders();
-    const allItems = sortOperationsWorkItems(
-      orders.flatMap((order) => buildOperationsWorkItems(order as OperationsWorkQueueInput, now)),
-    );
+    const allItems = await this.snapshot(now);
     const filtered = allItems.filter(
       (item) =>
         (!query.type || item.workType === query.type) &&
@@ -39,15 +36,20 @@ export class OperationsWorkQueueService {
 
   async summary() {
     const now = new Date();
-    const orders = await this.loadOperationalOrders();
-    const items = orders.flatMap((order) =>
-      buildOperationsWorkItems(order as OperationsWorkQueueInput, now),
-    );
+    const items = await this.snapshot(now);
 
     return {
       generatedAt: now,
       ...summarizeOperationsWorkItems(items),
     };
+  }
+
+  async snapshot(now = new Date()) {
+    const orders = await this.loadOperationalOrders();
+
+    return sortOperationsWorkItems(
+      orders.flatMap((order) => buildOperationsWorkItems(order as OperationsWorkQueueInput, now)),
+    );
   }
 
   private loadOperationalOrders() {
@@ -90,6 +92,7 @@ export class OperationsWorkQueueService {
         select: {
           status: true,
           startedAt: true,
+          cancelledAt: true,
         },
       },
       shipment: {
@@ -101,6 +104,7 @@ export class OperationsWorkQueueService {
           providerShipmentId: true,
           providerCreateError: true,
           creationAttemptedAt: true,
+          updatedAt: true,
         },
       },
     } satisfies Prisma.OrderSelect;

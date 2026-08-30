@@ -9,44 +9,45 @@ datasource db {
 }
 
 model User {
-  id                                String                      @id @default(uuid()) @db.Uuid
-  phone                             String                      @unique @db.VarChar(20)
-  firstName                         String?                     @db.VarChar(100)
-  lastName                          String?                     @db.VarChar(100)
-  isActive                          Boolean                     @default(true)
-  phoneVerifiedAt                   DateTime?                   @db.Timestamptz(3)
-  lastLoginAt                       DateTime?                   @db.Timestamptz(3)
-  createdAt                         DateTime                    @default(now()) @db.Timestamptz(3)
-  updatedAt                         DateTime                    @updatedAt @db.Timestamptz(3)
-  deletedAt                         DateTime?                   @db.Timestamptz(3)
+  id                                String                        @id @default(uuid()) @db.Uuid
+  phone                             String                        @unique @db.VarChar(20)
+  firstName                         String?                       @db.VarChar(100)
+  lastName                          String?                       @db.VarChar(100)
+  isActive                          Boolean                       @default(true)
+  phoneVerifiedAt                   DateTime?                     @db.Timestamptz(3)
+  lastLoginAt                       DateTime?                     @db.Timestamptz(3)
+  createdAt                         DateTime                      @default(now()) @db.Timestamptz(3)
+  updatedAt                         DateTime                      @updatedAt @db.Timestamptz(3)
+  deletedAt                         DateTime?                     @db.Timestamptz(3)
   roles                             UserRole[]
   sessions                          AuthSession[]
-  inventoryMovements                InventoryMovement[]         @relation("InventoryMovementActor")
-  priceChanges                      ProductPriceHistory[]       @relation("ProductPriceHistoryActor")
-  platingRateChanges                PlatingRateHistory[]        @relation("PlatingRateHistoryActor")
+  inventoryMovements                InventoryMovement[]           @relation("InventoryMovementActor")
+  priceChanges                      ProductPriceHistory[]         @relation("ProductPriceHistoryActor")
+  platingRateChanges                PlatingRateHistory[]          @relation("PlatingRateHistoryActor")
   orders                            Order[]
-  orderStatusChanges                OrderStatusHistory[]        @relation("OrderStatusHistoryActor")
+  orderStatusChanges                OrderStatusHistory[]          @relation("OrderStatusHistoryActor")
   addresses                         UserAddress[]
-  shipmentStatusChanges             ShipmentStatusHistory[]     @relation("ShipmentStatusHistoryActor")
-  paymentGatewaySettingChanges      PaymentGatewaySetting[]     @relation("PaymentGatewaySettingUpdater")
-  paymentReconciliationsResolved    PaymentReconciliation[]     @relation("PaymentReconciliationResolver")
-  supplierPayablesSettled           SupplierPayable[]           @relation("SupplierPayableSettler")
-  supplierSettlementsCreated        SupplierSettlement[]        @relation("SupplierSettlementCreator")
-  supplierSettlementsPaid           SupplierSettlement[]        @relation("SupplierSettlementPayer")
-  supplierSettlementsCancelled      SupplierSettlement[]        @relation("SupplierSettlementCanceller")
-  paymentRefundsRequested           PaymentRefund[]             @relation("PaymentRefundRequester")
-  paymentRefundsConfirmed           PaymentRefund[]             @relation("PaymentRefundConfirmer")
-  paymentRefundsCancelled           PaymentRefund[]             @relation("PaymentRefundCanceller")
-  orderReturnsRequested             OrderReturn[]               @relation("OrderReturnRequester")
-  orderReturnsReceived              OrderReturn[]               @relation("OrderReturnReceiver")
-  orderReturnsCancelled             OrderReturn[]               @relation("OrderReturnCanceller")
-  supplierCreditsCreated            SupplierCredit[]            @relation("SupplierCreditCreator")
-  supplierCreditApplicationsApplied SupplierCreditApplication[] @relation("SupplierCreditApplicationApplier")
-  supplierCreditApplicationsRemoved SupplierCreditApplication[] @relation("SupplierCreditApplicationRemover")
-  orderCostEntriesCreated           OrderCostEntry[]            @relation("OrderCostEntryCreator")
-  platingFulfillmentsStarted        OrderPlatingFulfillment[]   @relation("OrderPlatingFulfillmentStarter")
-  platingFulfillmentsCompleted      OrderPlatingFulfillment[]   @relation("OrderPlatingFulfillmentCompleter")
-  platingFulfillmentsCancelled      OrderPlatingFulfillment[]   @relation("OrderPlatingFulfillmentCanceller")
+  shipmentStatusChanges             ShipmentStatusHistory[]       @relation("ShipmentStatusHistoryActor")
+  paymentGatewaySettingChanges      PaymentGatewaySetting[]       @relation("PaymentGatewaySettingUpdater")
+  paymentReconciliationsResolved    PaymentReconciliation[]       @relation("PaymentReconciliationResolver")
+  supplierPayablesSettled           SupplierPayable[]             @relation("SupplierPayableSettler")
+  supplierSettlementsCreated        SupplierSettlement[]          @relation("SupplierSettlementCreator")
+  supplierSettlementsPaid           SupplierSettlement[]          @relation("SupplierSettlementPayer")
+  supplierSettlementsCancelled      SupplierSettlement[]          @relation("SupplierSettlementCanceller")
+  paymentRefundsRequested           PaymentRefund[]               @relation("PaymentRefundRequester")
+  paymentRefundsConfirmed           PaymentRefund[]               @relation("PaymentRefundConfirmer")
+  paymentRefundsCancelled           PaymentRefund[]               @relation("PaymentRefundCanceller")
+  orderReturnsRequested             OrderReturn[]                 @relation("OrderReturnRequester")
+  orderReturnsReceived              OrderReturn[]                 @relation("OrderReturnReceiver")
+  orderReturnsCancelled             OrderReturn[]                 @relation("OrderReturnCanceller")
+  supplierCreditsCreated            SupplierCredit[]              @relation("SupplierCreditCreator")
+  supplierCreditApplicationsApplied SupplierCreditApplication[]   @relation("SupplierCreditApplicationApplier")
+  supplierCreditApplicationsRemoved SupplierCreditApplication[]   @relation("SupplierCreditApplicationRemover")
+  orderCostEntriesCreated           OrderCostEntry[]              @relation("OrderCostEntryCreator")
+  platingFulfillmentsStarted        OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentStarter")
+  platingFulfillmentsCompleted      OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentCompleter")
+  platingFulfillmentsCancelled      OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentCanceller")
+  operationalAlertRecipients        OperationalAlertOutboxEvent[] @relation("OperationalAlertRecipient")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -574,25 +575,25 @@ enum OrderStatus {
 }
 
 model Order {
-  id                    String                   @id @default(uuid()) @db.Uuid
-  orderNumber           String                   @unique @db.VarChar(32)
-  userId                String                   @db.Uuid
-  warehouseId           String                   @db.Uuid
-  status                OrderStatus              @default(PENDING_PAYMENT)
+  id                    String                        @id @default(uuid()) @db.Uuid
+  orderNumber           String                        @unique @db.VarChar(32)
+  userId                String                        @db.Uuid
+  warehouseId           String                        @db.Uuid
+  status                OrderStatus                   @default(PENDING_PAYMENT)
   merchandiseTotalToman Int
-  platingTotalToman     Int                      @default(0)
-  discountTotalToman    Int                      @default(0)
-  shippingTotalToman    Int                      @default(0)
-  taxTotalToman         Int                      @default(0)
+  platingTotalToman     Int                           @default(0)
+  discountTotalToman    Int                           @default(0)
+  shippingTotalToman    Int                           @default(0)
+  taxTotalToman         Int                           @default(0)
   grandTotalToman       Int
-  reservationExpiresAt  DateTime                 @db.Timestamptz(3)
-  paidAt                DateTime?                @db.Timestamptz(3)
-  cancelledAt           DateTime?                @db.Timestamptz(3)
-  deliveredAt           DateTime?                @db.Timestamptz(3)
-  createdAt             DateTime                 @default(now()) @db.Timestamptz(3)
-  updatedAt             DateTime                 @updatedAt @db.Timestamptz(3)
-  user                  User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
-  warehouse             Warehouse                @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  reservationExpiresAt  DateTime                      @db.Timestamptz(3)
+  paidAt                DateTime?                     @db.Timestamptz(3)
+  cancelledAt           DateTime?                     @db.Timestamptz(3)
+  deliveredAt           DateTime?                     @db.Timestamptz(3)
+  createdAt             DateTime                      @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime                      @updatedAt @db.Timestamptz(3)
+  user                  User                          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  warehouse             Warehouse                     @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
   shippingAddress       OrderAddress?
   items                 OrderItem[]
   statusHistory         OrderStatusHistory[]
@@ -604,6 +605,7 @@ model Order {
   supplierCredits       SupplierCredit[]
   costEntries           OrderCostEntry[]
   platingFulfillment    OrderPlatingFulfillment?
+  operationalAlerts     OperationalAlertOutboxEvent[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -785,6 +787,11 @@ enum NotificationOutboxStatus {
   PROCESSING
   SENT
   FAILED
+}
+
+enum OperationalAlertLevel {
+  INITIAL
+  ESCALATION
 }
 
 enum SupplierPayableStatus {
@@ -1107,6 +1114,37 @@ model NotificationOutboxEvent {
   @@index([aggregateType, aggregateId, createdAt])
   @@index([claimedAt])
   @@map("notification_outbox_events")
+}
+
+model OperationalAlertOutboxEvent {
+  id                  String                   @id @default(uuid()) @db.Uuid
+  orderId             String                   @db.Uuid
+  recipientUserId     String?                  @db.Uuid
+  recipientPhone      String                   @db.VarChar(20)
+  code                String                   @db.VarChar(80)
+  level               OperationalAlertLevel
+  priority            String                   @db.VarChar(16)
+  incidentFingerprint String                   @db.VarChar(180)
+  deduplicationKey    String                   @unique @db.VarChar(255)
+  dueAt               DateTime?                @db.Timestamptz(3)
+  payload             Json
+  status              NotificationOutboxStatus @default(PENDING)
+  attempts            Int                      @default(0)
+  nextAttemptAt       DateTime                 @default(now()) @db.Timestamptz(3)
+  claimedAt           DateTime?                @db.Timestamptz(3)
+  processedAt         DateTime?                @db.Timestamptz(3)
+  lastError           String?                  @db.VarChar(1000)
+  createdAt           DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime                 @updatedAt @db.Timestamptz(3)
+  order               Order                    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  recipient           User?                    @relation("OperationalAlertRecipient", fields: [recipientUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, nextAttemptAt])
+  @@index([orderId, code, createdAt])
+  @@index([recipientUserId, createdAt])
+  @@index([incidentFingerprint])
+  @@index([claimedAt])
+  @@map("operational_alert_outbox_events")
 }
 
 model PaymentGatewaySetting {
