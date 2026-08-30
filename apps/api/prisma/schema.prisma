@@ -26,6 +26,7 @@ model User {
   platingRateChanges PlatingRateHistory[]  @relation("PlatingRateHistoryActor")
   orders             Order[]
   orderStatusChanges OrderStatusHistory[]  @relation("OrderStatusHistoryActor")
+  addresses          UserAddress[]
 
   @@index([isActive])
   @@index([deletedAt])
@@ -120,6 +121,27 @@ model AuthSession {
   @@index([userId, revokedAt])
   @@index([expiresAt])
   @@map("auth_sessions")
+}
+
+model UserAddress {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
+  title         String    @db.VarChar(100)
+  recipientName String    @db.VarChar(150)
+  phone         String    @db.VarChar(20)
+  province      String    @db.VarChar(100)
+  city          String    @db.VarChar(100)
+  addressLine   String    @db.VarChar(1000)
+  postalCode    String    @db.VarChar(20)
+  isDefault     Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt     DateTime? @db.Timestamptz(3)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isDefault])
+  @@index([userId, deletedAt])
+  @@map("user_addresses")
 }
 
 enum SizeMode {

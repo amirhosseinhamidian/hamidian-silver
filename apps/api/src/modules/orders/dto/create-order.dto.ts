@@ -3,7 +3,6 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
-  IsDefined,
   IsEnum,
   IsInt,
   IsOptional,
@@ -58,10 +57,14 @@ export class CreateOrderItemDto {
 }
 
 export class CreateOrderDto {
-  @IsDefined()
+  @IsOptional()
+  @IsUUID('4')
+  userAddressId?: string;
+
+  @IsOptional()
   @ValidateNested()
   @Type(() => CreateOrderAddressDto)
-  shippingAddress!: CreateOrderAddressDto;
+  shippingAddress?: CreateOrderAddressDto;
 
   @IsArray()
   @ArrayMinSize(1)

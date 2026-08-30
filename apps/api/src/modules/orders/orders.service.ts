@@ -10,7 +10,7 @@ import { OrderStatus, PlatingType, ProductStatus } from '../../generated/prisma/
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { normalizeIranianMobile } from '../auth/phone-normalizer';
 import { CancelOrderDto } from './dto/cancel-order.dto';
-import { CreateOrderDto, CreateOrderItemDto } from './dto/create-order.dto';
+import { CreateOrderAddressDto, CreateOrderDto, CreateOrderItemDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
@@ -43,6 +43,8 @@ export class OrdersService {
     this.assertUniqueItemSelections(dto.items);
 
     return this.prisma.$transaction(async (transaction) => {
+      const shippingAddress = await this.resolveShippingAddress(transaction, userId, dto);
+
       const warehouse = await transaction.warehouse.findFirst({
         where: {
           isDefault: true,
@@ -150,14 +152,7 @@ export class OrdersService {
           grandTotalToman,
           reservationExpiresAt,
           shippingAddress: {
-            create: {
-              recipientName: dto.shippingAddress.recipientName,
-              phone: normalizeIranianMobile(dto.shippingAddress.phone),
-              province: dto.shippingAddress.province,
-              city: dto.shippingAddress.city,
-              addressLine: dto.shippingAddress.addressLine,
-              postalCode: dto.shippingAddress.postalCode,
-            },
+            create: shippingAddress,
           },
           items: {
             create: preparedItems.map((item) => ({
@@ -425,6 +420,58 @@ export class OrdersService {
 
       return cancelled;
     });
+  }
+
+  private async resolveShippingAddress(
+    transaction: Prisma.TransactionClient,
+    userId: string,
+    dto: CreateOrderDto,
+  ): Promise<CreateOrderAddressDto> {
+    const hasSavedAddress = dto.userAddressId !== undefined;
+    const hasInlineAddress = dto.shippingAddress !== undefined;
+
+    if (hasSavedAddress === hasInlineAddress) {
+      throw new BadRequestException('Provide exactly one of userAddressId or shippingAddress.');
+    }
+
+    if (dto.userAddressId) {
+      const address = await transaction.userAddress.findFirst({
+        where: {
+          id: dto.userAddressId,
+          userId,
+          deletedAt: null,
+        },
+        select: {
+          recipientName: true,
+          phone: true,
+          province: true,
+          city: true,
+          addressLine: true,
+          postalCode: true,
+        },
+      });
+
+      if (!address) {
+        throw new NotFoundException('Saved address was not found.');
+      }
+
+      return address;
+    }
+
+    const address = dto.shippingAddress;
+
+    if (!address) {
+      throw new BadRequestException('Shipping address is required.');
+    }
+
+    return {
+      recipientName: address.recipientName,
+      phone: normalizeIranianMobile(address.phone),
+      province: address.province,
+      city: address.city,
+      addressLine: address.addressLine,
+      postalCode: address.postalCode,
+    };
   }
 
   private prepareOrderItem(
