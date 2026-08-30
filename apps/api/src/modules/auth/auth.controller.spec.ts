@@ -12,6 +12,7 @@ describe('AuthController', () => {
     verifyOtp: jest.fn(),
     getCurrentUser: jest.fn(),
     logout: jest.fn(),
+    logoutAll: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -98,5 +99,19 @@ describe('AuthController', () => {
 
     await expect(controller.logout(principal)).resolves.toBeUndefined();
     expect(authService.logout).toHaveBeenCalledWith(principal.sessionId);
+  });
+
+  it('logs out every session for the current user', async () => {
+    const principal: AuthenticatedPrincipal = {
+      sessionId: '20000000-0000-4000-8000-000000000001',
+      userId: '10000000-0000-4000-8000-000000000001',
+      phone: '+989123456789',
+      roleCodes: [ROLE_CODES.USER],
+      permissionCodes: [],
+    };
+    authService.logoutAll.mockResolvedValue(undefined);
+
+    await expect(controller.logoutAll(principal)).resolves.toBeUndefined();
+    expect(authService.logoutAll).toHaveBeenCalledWith(principal.userId);
   });
 });

@@ -34,4 +34,10 @@ export class AuthController {
   async logout(@CurrentPrincipal() principal: AuthenticatedPrincipal): Promise<void> {
     await this.authService.logout(principal.sessionId);
   }
+
+  @Post('logout-all')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async logoutAll(@CurrentPrincipal() principal: AuthenticatedPrincipal): Promise<void> {
+    await this.authService.logoutAll(principal.userId);
+  }
 }

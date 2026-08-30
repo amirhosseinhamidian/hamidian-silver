@@ -193,4 +193,20 @@ describe('AuthService', () => {
       },
     });
   });
+
+  it('revokes every active session for a user', async () => {
+    prisma.authSession.updateMany.mockResolvedValue({ count: 3 });
+
+    await service.logoutAll('10000000-0000-4000-8000-000000000001');
+
+    expect(prisma.authSession.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: '10000000-0000-4000-8000-000000000001',
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: expect.any(Date),
+      },
+    });
+  });
 });

@@ -137,6 +137,18 @@ export class AuthService {
     });
   }
 
+  async logoutAll(userId: string): Promise<void> {
+    await this.prisma.authSession.updateMany({
+      where: {
+        userId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+  }
+
   private async createSession(phone: string): Promise<LoginResult> {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + this.sessionTtlMs);
