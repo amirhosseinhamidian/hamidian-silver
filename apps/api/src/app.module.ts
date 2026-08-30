@@ -14,6 +14,7 @@ import { PlatingModule } from './modules/plating/plating.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ProfileModule } from './modules/profile/profile.module';
+import { ShippingModule } from './modules/shipping/shipping.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ProfileModule } from './modules/profile/profile.module';
     OrdersModule,
     PaymentsModule,
     ProfileModule,
+    ShippingModule,
   ],
   providers: [
     {

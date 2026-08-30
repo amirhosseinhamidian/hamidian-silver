@@ -32,6 +32,7 @@ type PreparedOrderItem = {
   platingRateToman?: number;
   unitPlatingPriceToman: number;
   platingLeadTimeDays?: number;
+  unitWeightGrams?: string;
   lineTotalToman: number;
 };
 
@@ -171,6 +172,7 @@ export class OrdersService {
               platingRateToman: item.platingRateToman,
               unitPlatingPriceToman: item.unitPlatingPriceToman,
               platingLeadTimeDays: item.platingLeadTimeDays,
+              unitWeightGrams: item.unitWeightGrams,
               lineTotalToman: item.lineTotalToman,
             })),
           },
@@ -557,6 +559,7 @@ export class OrdersService {
       platingRateToman,
       unitPlatingPriceToman,
       platingLeadTimeDays,
+      unitWeightGrams: variant.weightGrams?.toString(),
       lineTotalToman,
     };
   }
