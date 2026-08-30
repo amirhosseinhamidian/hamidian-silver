@@ -9,4 +9,17 @@ export const envValidationSchema = Joi.object({
     .uri({ scheme: ['postgresql', 'postgres'] })
     .required(),
   OTP_PEPPER: Joi.string().min(32).required(),
+  SMS_PROVIDER: Joi.string().valid('disabled', 'kavenegar').default('disabled'),
+  KAVENEGAR_API_KEY: Joi.when('SMS_PROVIDER', {
+    is: 'kavenegar',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string().min(10).required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
+  KAVENEGAR_OTP_TEMPLATE: Joi.when('SMS_PROVIDER', {
+    is: 'kavenegar',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string().min(1).required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
 });
