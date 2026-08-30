@@ -66,6 +66,11 @@ export class OrderExpirationService {
           warehouseId: true,
           status: true,
           reservationExpiresAt: true,
+          payment: {
+            select: {
+              status: true,
+            },
+          },
           items: {
             select: {
               variantId: true,
@@ -79,6 +84,13 @@ export class OrderExpirationService {
         !order ||
         order.status !== OrderStatus.PENDING_PAYMENT ||
         order.reservationExpiresAt > now
+      ) {
+        return false;
+      }
+
+      if (
+        order.payment?.status === PaymentStatus.PAID ||
+        order.payment?.status === PaymentStatus.RECONCILIATION_REQUIRED
       ) {
         return false;
       }

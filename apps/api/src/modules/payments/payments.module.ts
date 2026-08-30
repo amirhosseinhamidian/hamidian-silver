@@ -9,6 +9,8 @@ import { PAYMENT_GATEWAY_REGISTRY, PaymentGatewayRegistry } from './payment-gate
 import './payment-gateway.dto-metadata';
 import { MellatPaymentCallbackController } from './mellat-payment-callback.controller';
 import { MellatPaymentRedirectController } from './mellat-payment-redirect.controller';
+import { PaymentReconciliationController } from './payment-reconciliation.controller';
+import { PaymentReconciliationService } from './payment-reconciliation.service';
 import { PaymentsController } from './payments.controller';
 import { ZibalPaymentCallbackController } from './zibal-payment-callback.controller';
 import { PaymentsService } from './payments.service';
@@ -21,6 +23,7 @@ import { PaymentsService } from './payments.service';
     ZibalPaymentCallbackController,
     MellatPaymentCallbackController,
     MellatPaymentRedirectController,
+    PaymentReconciliationController,
   ],
   providers: [
     PaymentsService,
@@ -28,6 +31,7 @@ import { PaymentsService } from './payments.service';
     ZibalPaymentGateway,
     MellatPaymentGateway,
     PaymentGatewayRegistry,
+    PaymentReconciliationService,
     {
       provide: PAYMENT_GATEWAY_REGISTRY,
       useExisting: PaymentGatewayRegistry,

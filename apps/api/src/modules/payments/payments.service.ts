@@ -11,6 +11,7 @@ import {
   InventoryMovementType,
   OrderStatus,
   PaymentAttemptStatus,
+  PaymentReconciliationStatus,
   PaymentStatus,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
@@ -109,6 +110,22 @@ export class PaymentsService {
         attemptId: context.attemptId,
         status: context.status,
         alreadyPaid: true,
+      };
+    }
+
+    if (context.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED) {
+      return {
+        attemptId: context.attemptId,
+        status: context.status,
+        reconciliationRequired: true,
+      };
+    }
+
+    if (context.status === PaymentAttemptStatus.RECONCILED) {
+      return {
+        attemptId: context.attemptId,
+        status: context.status,
+        reconciled: true,
       };
     }
 
@@ -215,6 +232,30 @@ export class PaymentsService {
       };
     }
 
+    if (
+      attempt.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED ||
+      attempt.payment.status === PaymentStatus.RECONCILIATION_REQUIRED
+    ) {
+      return {
+        success: true,
+        reconciliationRequired: true,
+        orderId: attempt.payment.orderId,
+        referenceId: attempt.providerReference,
+      };
+    }
+
+    if (
+      attempt.status === PaymentAttemptStatus.RECONCILED ||
+      attempt.payment.status === PaymentStatus.REFUNDED
+    ) {
+      return {
+        success: true,
+        reconciled: true,
+        orderId: attempt.payment.orderId,
+        referenceId: attempt.providerReference,
+      };
+    }
+
     if (!attempt.authority || attempt.authority !== authority) {
       throw new BadRequestException('Payment authority does not match.');
     }
@@ -254,7 +295,19 @@ export class PaymentsService {
       throw new BadRequestException('Payment verification failed.');
     }
 
-    return this.finalizeVerifiedPayment(attempt.id, authority, verification.referenceId);
+    try {
+      return await this.finalizeVerifiedPayment(attempt.id, authority, verification.referenceId);
+    } catch (error) {
+      if (!(error instanceof ConflictException)) {
+        throw error;
+      }
+
+      return this.recordPaymentReconciliation(
+        attempt.id,
+        verification.referenceId,
+        this.conflictMessage(error),
+      );
+    }
   }
 
   async getOrderPayment(userId: string, orderId: string) {
@@ -459,7 +512,12 @@ export class PaymentsService {
       }
 
       if (order.status !== OrderStatus.PENDING_PAYMENT) {
-        throw new ConflictException('Order can no longer be marked as paid.');
+        return this.recordPaymentReconciliationInTransaction(
+          transaction,
+          attempt.id,
+          referenceId,
+          `Gateway verified payment after order reached ${order.status}.`,
+        );
       }
 
       const paidAt = new Date();
@@ -493,7 +551,12 @@ export class PaymentsService {
           };
         }
 
-        throw new ConflictException('Order status changed during payment verification.');
+        return this.recordPaymentReconciliationInTransaction(
+          transaction,
+          attempt.id,
+          referenceId,
+          'Order status changed during payment verification.',
+        );
       }
 
       await this.commitReservedInventory(transaction, order.warehouseId, order.id, order.items);
@@ -538,6 +601,139 @@ export class PaymentsService {
         referenceId,
       };
     });
+  }
+
+  private recordPaymentReconciliation(attemptId: string, referenceId: string, reason: string) {
+    return this.prisma.$transaction((transaction) =>
+      this.recordPaymentReconciliationInTransaction(transaction, attemptId, referenceId, reason),
+    );
+  }
+
+  private async recordPaymentReconciliationInTransaction(
+    transaction: Prisma.TransactionClient,
+    attemptId: string,
+    referenceId: string,
+    reason: string,
+  ) {
+    const attempt = await transaction.paymentAttempt.findUnique({
+      where: {
+        id: attemptId,
+      },
+      include: {
+        reconciliation: true,
+        payment: {
+          include: {
+            order: {
+              select: {
+                id: true,
+                status: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!attempt) {
+      throw new NotFoundException('Payment attempt was not found.');
+    }
+
+    if (
+      attempt.status === PaymentAttemptStatus.VERIFIED ||
+      attempt.payment.status === PaymentStatus.PAID ||
+      attempt.payment.order.status === OrderStatus.PAID
+    ) {
+      return {
+        success: true,
+        alreadyVerified: true,
+        orderId: attempt.payment.orderId,
+        referenceId: attempt.providerReference ?? referenceId,
+      };
+    }
+
+    if (
+      attempt.reconciliation?.status === PaymentReconciliationStatus.RESOLVED ||
+      attempt.status === PaymentAttemptStatus.RECONCILED ||
+      attempt.payment.status === PaymentStatus.REFUNDED
+    ) {
+      return {
+        success: true,
+        reconciled: true,
+        orderId: attempt.payment.orderId,
+        referenceId: attempt.providerReference ?? referenceId,
+      };
+    }
+
+    const verifiedAt = attempt.verifiedAt ?? new Date();
+    const reconciliation = await transaction.paymentReconciliation.upsert({
+      where: {
+        paymentAttemptId: attempt.id,
+      },
+      update: {
+        providerReference: referenceId,
+        reason,
+      },
+      create: {
+        paymentAttemptId: attempt.id,
+        provider: attempt.provider,
+        providerReference: referenceId,
+        amountToman: attempt.amountToman,
+        detectedOrderStatus: attempt.payment.order.status,
+        reason,
+      },
+    });
+
+    await transaction.paymentAttempt.update({
+      where: {
+        id: attempt.id,
+      },
+      data: {
+        status: PaymentAttemptStatus.RECONCILIATION_REQUIRED,
+        providerReference: referenceId,
+        verifiedAt,
+        failureCode: null,
+        failureMessage: null,
+      },
+    });
+
+    await transaction.payment.update({
+      where: {
+        id: attempt.paymentId,
+      },
+      data: {
+        status: PaymentStatus.RECONCILIATION_REQUIRED,
+      },
+    });
+
+    return {
+      success: true,
+      reconciliationRequired: true,
+      reconciliationId: reconciliation.id,
+      orderId: attempt.payment.orderId,
+      referenceId,
+    };
+  }
+
+  private conflictMessage(error: ConflictException): string {
+    const response = error.getResponse();
+
+    if (typeof response === 'string') {
+      return response.slice(0, 500);
+    }
+
+    if (typeof response === 'object' && response !== null && 'message' in response) {
+      const message = (response as { message?: unknown }).message;
+
+      if (typeof message === 'string') {
+        return message.slice(0, 500);
+      }
+
+      if (Array.isArray(message)) {
+        return message.join('; ').slice(0, 500);
+      }
+    }
+
+    return 'Payment was verified by the gateway but could not be finalized.';
   }
 
   private async commitReservedInventory(

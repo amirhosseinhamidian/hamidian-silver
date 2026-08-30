@@ -9,26 +9,27 @@ datasource db {
 }
 
 model User {
-  id                           String                  @id @default(uuid()) @db.Uuid
-  phone                        String                  @unique @db.VarChar(20)
-  firstName                    String?                 @db.VarChar(100)
-  lastName                     String?                 @db.VarChar(100)
-  isActive                     Boolean                 @default(true)
-  phoneVerifiedAt              DateTime?               @db.Timestamptz(3)
-  lastLoginAt                  DateTime?               @db.Timestamptz(3)
-  createdAt                    DateTime                @default(now()) @db.Timestamptz(3)
-  updatedAt                    DateTime                @updatedAt @db.Timestamptz(3)
-  deletedAt                    DateTime?               @db.Timestamptz(3)
-  roles                        UserRole[]
-  sessions                     AuthSession[]
-  inventoryMovements           InventoryMovement[]     @relation("InventoryMovementActor")
-  priceChanges                 ProductPriceHistory[]   @relation("ProductPriceHistoryActor")
-  platingRateChanges           PlatingRateHistory[]    @relation("PlatingRateHistoryActor")
-  orders                       Order[]
-  orderStatusChanges           OrderStatusHistory[]    @relation("OrderStatusHistoryActor")
-  addresses                    UserAddress[]
-  shipmentStatusChanges        ShipmentStatusHistory[] @relation("ShipmentStatusHistoryActor")
-  paymentGatewaySettingChanges PaymentGatewaySetting[] @relation("PaymentGatewaySettingUpdater")
+  id                             String                  @id @default(uuid()) @db.Uuid
+  phone                          String                  @unique @db.VarChar(20)
+  firstName                      String?                 @db.VarChar(100)
+  lastName                       String?                 @db.VarChar(100)
+  isActive                       Boolean                 @default(true)
+  phoneVerifiedAt                DateTime?               @db.Timestamptz(3)
+  lastLoginAt                    DateTime?               @db.Timestamptz(3)
+  createdAt                      DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt                      DateTime                @updatedAt @db.Timestamptz(3)
+  deletedAt                      DateTime?               @db.Timestamptz(3)
+  roles                          UserRole[]
+  sessions                       AuthSession[]
+  inventoryMovements             InventoryMovement[]     @relation("InventoryMovementActor")
+  priceChanges                   ProductPriceHistory[]   @relation("ProductPriceHistoryActor")
+  platingRateChanges             PlatingRateHistory[]    @relation("PlatingRateHistoryActor")
+  orders                         Order[]
+  orderStatusChanges             OrderStatusHistory[]    @relation("OrderStatusHistoryActor")
+  addresses                      UserAddress[]
+  shipmentStatusChanges          ShipmentStatusHistory[] @relation("ShipmentStatusHistoryActor")
+  paymentGatewaySettingChanges   PaymentGatewaySetting[] @relation("PaymentGatewaySettingUpdater")
+  paymentReconciliationsResolved PaymentReconciliation[] @relation("PaymentReconciliationResolver")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -613,6 +614,7 @@ enum PaymentStatus {
   PENDING
   PAID
   CANCELLED
+  RECONCILIATION_REQUIRED
   REFUNDED
 }
 
@@ -621,6 +623,8 @@ enum PaymentAttemptStatus {
   REDIRECTED
   VERIFIED
   FAILED
+  RECONCILIATION_REQUIRED
+  RECONCILED
 }
 
 model Payment {
@@ -639,26 +643,60 @@ model Payment {
 }
 
 model PaymentAttempt {
-  id                String               @id @default(uuid()) @db.Uuid
-  paymentId         String               @db.Uuid
-  idempotencyKey    String               @unique @db.VarChar(120)
-  provider          String               @db.VarChar(64)
-  status            PaymentAttemptStatus @default(CREATED)
+  id                String                 @id @default(uuid()) @db.Uuid
+  paymentId         String                 @db.Uuid
+  idempotencyKey    String                 @unique @db.VarChar(120)
+  provider          String                 @db.VarChar(64)
+  status            PaymentAttemptStatus   @default(CREATED)
   amountToman       Int
-  authority         String?              @db.VarChar(255)
-  paymentUrl        String?              @db.VarChar(2000)
-  providerReference String?              @db.VarChar(255)
-  failureCode       String?              @db.VarChar(120)
-  failureMessage    String?              @db.VarChar(500)
-  verifiedAt        DateTime?            @db.Timestamptz(3)
-  createdAt         DateTime             @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime             @updatedAt @db.Timestamptz(3)
-  payment           Payment              @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  authority         String?                @db.VarChar(255)
+  paymentUrl        String?                @db.VarChar(2000)
+  providerReference String?                @db.VarChar(255)
+  failureCode       String?                @db.VarChar(120)
+  failureMessage    String?                @db.VarChar(500)
+  verifiedAt        DateTime?              @db.Timestamptz(3)
+  createdAt         DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime               @updatedAt @db.Timestamptz(3)
+  payment           Payment                @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  reconciliation    PaymentReconciliation?
 
   @@unique([provider, authority])
   @@index([paymentId, createdAt])
   @@index([status, createdAt])
   @@map("payment_attempts")
+}
+
+enum PaymentReconciliationStatus {
+  OPEN
+  RESOLVED
+}
+
+enum PaymentReconciliationResolution {
+  REFUNDED_EXTERNALLY
+}
+
+model PaymentReconciliation {
+  id                  String                           @id @default(uuid()) @db.Uuid
+  paymentAttemptId    String                           @unique @db.Uuid
+  provider            String                           @db.VarChar(64)
+  providerReference   String                           @db.VarChar(255)
+  amountToman         Int
+  detectedOrderStatus OrderStatus
+  reason              String                           @db.VarChar(500)
+  status              PaymentReconciliationStatus      @default(OPEN)
+  resolution          PaymentReconciliationResolution?
+  resolutionNote      String?                          @db.VarChar(1000)
+  resolvedByUserId    String?                          @db.Uuid
+  resolvedAt          DateTime?                        @db.Timestamptz(3)
+  createdAt           DateTime                         @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime                         @updatedAt @db.Timestamptz(3)
+  paymentAttempt      PaymentAttempt                   @relation(fields: [paymentAttemptId], references: [id], onDelete: Restrict)
+  resolvedBy          User?                            @relation("PaymentReconciliationResolver", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([provider, createdAt])
+  @@index([resolvedByUserId])
+  @@map("payment_reconciliations")
 }
 
 model PaymentGatewaySetting {
