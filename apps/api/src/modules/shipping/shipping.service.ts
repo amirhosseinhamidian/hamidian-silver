@@ -18,6 +18,7 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { OrderCostsService } from '../finance/order-costs.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { buildFulfillmentReadiness } from '../orders/fulfillment-readiness';
+import { PROVIDER_CREATION_STALE_MS } from '../orders/fulfillment-sla.constants';
 import { SelectShippingRateDto } from './dto/select-shipping-rate.dto';
 import { ResetShipmentProviderCreationDto } from './dto/reset-shipment-provider-creation.dto';
 import { UpdateShipmentStatusDto } from './dto/update-shipment-status.dto';
@@ -28,8 +29,6 @@ import {
   type ShippingProvider,
   type ShippingQuoteOption,
 } from './shipping-provider.port';
-
-const PROVIDER_CREATION_STALE_MS = 15 * 60 * 1000;
 
 type OrderForShipping = {
   id: string;
