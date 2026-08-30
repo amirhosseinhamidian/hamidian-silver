@@ -30,6 +30,17 @@ export const PERMISSION_CODES = {
 
 export type PermissionCode = (typeof PERMISSION_CODES)[keyof typeof PERMISSION_CODES];
 
+const ROLE_CODE_SET = new Set<string>(Object.values(ROLE_CODES));
+const PERMISSION_CODE_SET = new Set<string>(Object.values(PERMISSION_CODES));
+
+export function isRoleCode(value: string): value is RoleCode {
+  return ROLE_CODE_SET.has(value);
+}
+
+export function isPermissionCode(value: string): value is PermissionCode {
+  return PERMISSION_CODE_SET.has(value);
+}
+
 export type PermissionDefinition = {
   code: PermissionCode;
   name: string;

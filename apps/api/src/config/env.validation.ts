@@ -9,6 +9,7 @@ export const envValidationSchema = Joi.object({
     .uri({ scheme: ['postgresql', 'postgres'] })
     .required(),
   OTP_PEPPER: Joi.string().min(32).required(),
+  AUTH_SESSION_TTL_DAYS: Joi.number().integer().min(1).max(90).default(30),
   SMS_PROVIDER: Joi.string().valid('disabled', 'kavenegar').default('disabled'),
   KAVENEGAR_API_KEY: Joi.when('SMS_PROVIDER', {
     is: 'kavenegar',

@@ -24,7 +24,9 @@ describe('PermissionsGuard', () => {
     permissionCodes: AuthenticatedPrincipal['permissionCodes'],
   ): AuthenticatedPrincipal {
     return {
+      sessionId: '20000000-0000-4000-8000-000000000001',
       userId: '00000000-0000-0000-0000-000000000001',
+      phone: '+989123456789',
       roleCodes: [ROLE_CODES.ADMIN],
       permissionCodes,
     };

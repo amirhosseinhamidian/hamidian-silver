@@ -25,6 +25,10 @@ describe('HealthController (e2e)', () => {
     });
   });
 
+  it('/api/v1/auth/me requires authentication', () => {
+    return request(app.getHttpServer()).get('/api/v1/auth/me').expect(401);
+  });
+
   afterEach(async () => {
     await app.close();
   });

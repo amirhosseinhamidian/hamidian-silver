@@ -1,5 +1,7 @@
 import {
   ADMIN_PERMISSION_CODES,
+  isPermissionCode,
+  isRoleCode,
   PERMISSION_CODES,
   PERMISSION_DEFINITIONS,
   ROLE_CODES,
@@ -26,6 +28,13 @@ describe('RBAC constants', () => {
     expect(ADMIN_PERMISSION_CODES).not.toContain(PERMISSION_CODES.FINANCE_WRITE);
     expect(ADMIN_PERMISSION_CODES).not.toContain(PERMISSION_CODES.SETTINGS_WRITE);
     expect(ADMIN_PERMISSION_CODES).not.toContain(PERMISSION_CODES.ORDERS_CANCEL);
+  });
+
+  it('recognizes known role and permission codes', () => {
+    expect(isRoleCode(ROLE_CODES.USER)).toBe(true);
+    expect(isRoleCode('UNKNOWN')).toBe(false);
+    expect(isPermissionCode(PERMISSION_CODES.CATALOG_READ)).toBe(true);
+    expect(isPermissionCode('unknown.permission')).toBe(false);
   });
 
   it('does not grant administrative permissions to User', () => {
