@@ -525,31 +525,32 @@ enum OrderStatus {
 }
 
 model Order {
-  id                    String               @id @default(uuid()) @db.Uuid
-  orderNumber           String               @unique @db.VarChar(32)
-  userId                String               @db.Uuid
-  warehouseId           String               @db.Uuid
-  status                OrderStatus          @default(PENDING_PAYMENT)
+  id                    String                @id @default(uuid()) @db.Uuid
+  orderNumber           String                @unique @db.VarChar(32)
+  userId                String                @db.Uuid
+  warehouseId           String                @db.Uuid
+  status                OrderStatus           @default(PENDING_PAYMENT)
   merchandiseTotalToman Int
-  platingTotalToman     Int                  @default(0)
-  discountTotalToman    Int                  @default(0)
-  shippingTotalToman    Int                  @default(0)
-  taxTotalToman         Int                  @default(0)
+  platingTotalToman     Int                   @default(0)
+  discountTotalToman    Int                   @default(0)
+  shippingTotalToman    Int                   @default(0)
+  taxTotalToman         Int                   @default(0)
   grandTotalToman       Int
-  reservationExpiresAt  DateTime             @db.Timestamptz(3)
-  paidAt                DateTime?            @db.Timestamptz(3)
-  cancelledAt           DateTime?            @db.Timestamptz(3)
-  deliveredAt           DateTime?            @db.Timestamptz(3)
-  createdAt             DateTime             @default(now()) @db.Timestamptz(3)
-  updatedAt             DateTime             @updatedAt @db.Timestamptz(3)
-  user                  User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
-  warehouse             Warehouse            @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  reservationExpiresAt  DateTime              @db.Timestamptz(3)
+  paidAt                DateTime?             @db.Timestamptz(3)
+  cancelledAt           DateTime?             @db.Timestamptz(3)
+  deliveredAt           DateTime?             @db.Timestamptz(3)
+  createdAt             DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime              @updatedAt @db.Timestamptz(3)
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  warehouse             Warehouse             @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
   shippingAddress       OrderAddress?
   items                 OrderItem[]
   statusHistory         OrderStatusHistory[]
   payment               Payment?
   shipment              Shipment?
   supplierPayables      SupplierPayable[]
+  financeSnapshot       OrderFinanceSnapshot?
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -729,6 +730,29 @@ model PaymentReconciliation {
   @@index([provider, createdAt])
   @@index([resolvedByUserId])
   @@map("payment_reconciliations")
+}
+
+model OrderFinanceSnapshot {
+  id                                 String   @id @default(uuid()) @db.Uuid
+  orderId                            String   @unique @db.Uuid
+  snapshotVersion                    Int      @default(1)
+  paidAt                             DateTime @db.Timestamptz(3)
+  merchandiseRevenueToman            Int
+  platingRevenueToman                Int
+  discountToman                      Int
+  shippingChargedToman               Int
+  taxToman                           Int
+  customerTotalToman                 Int
+  supplierCostToman                  Int
+  grossSalesToman                    Int
+  netSalesToman                      Int
+  grossMarginBeforeServiceCostsToman Int
+  createdAt                          DateTime @default(now()) @db.Timestamptz(3)
+  order                              Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([paidAt])
+  @@index([grossMarginBeforeServiceCostsToman, paidAt])
+  @@map("order_finance_snapshots")
 }
 
 model SupplierPayable {

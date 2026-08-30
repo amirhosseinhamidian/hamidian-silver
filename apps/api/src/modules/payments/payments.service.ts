@@ -16,6 +16,7 @@ import {
   PaymentStatus,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { OrderFinanceService } from '../finance/order-finance.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PAYMENT_GATEWAY_CODES } from './payment-gateway.constants';
@@ -47,6 +48,8 @@ export class PaymentsService {
     @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
     @Inject(NotificationOutboxService)
     private readonly outbox?: NotificationOutboxService,
+    @Inject(OrderFinanceService)
+    private readonly orderFinance: OrderFinanceService | undefined = undefined,
   ) {
     this.callbackBaseUrl = this.config.get<string>(
       'PAYMENT_CALLBACK_URL',
@@ -599,6 +602,18 @@ export class PaymentsService {
       });
 
       await this.createSupplierPayables(transaction, order.id, order.items);
+
+      await this.orderFinance?.createSnapshot(transaction, {
+        orderId: order.id,
+        paidAt,
+        merchandiseTotalToman: order.merchandiseTotalToman,
+        platingTotalToman: order.platingTotalToman,
+        discountTotalToman: order.discountTotalToman,
+        shippingTotalToman: order.shippingTotalToman,
+        taxTotalToman: order.taxTotalToman,
+        grandTotalToman: order.grandTotalToman,
+        items: order.items,
+      });
 
       await this.outbox?.enqueueOrderEvent(transaction, {
         type: NotificationOutboxEventType.PAYMENT_VERIFIED,
