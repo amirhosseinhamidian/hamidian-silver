@@ -11,6 +11,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { PlatingModule } from './modules/plating/plating.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { OrdersModule } from './modules/orders/orders.module';
     PricingModule,
     PlatingModule,
     OrdersModule,
+    PaymentsModule,
   ],
   providers: [
     {

@@ -518,6 +518,7 @@ model Order {
   shippingAddress       OrderAddress?
   items                 OrderItem[]
   statusHistory         OrderStatusHistory[]
+  payment               Payment?
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -580,4 +581,56 @@ model OrderStatusHistory {
   @@index([orderId, createdAt])
   @@index([actorUserId])
   @@map("order_status_history")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentAttemptStatus {
+  CREATED
+  REDIRECTED
+  VERIFIED
+  FAILED
+}
+
+model Payment {
+  id          String           @id @default(uuid()) @db.Uuid
+  orderId     String           @unique @db.Uuid
+  status      PaymentStatus    @default(PENDING)
+  amountToman Int
+  paidAt      DateTime?        @db.Timestamptz(3)
+  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @db.Timestamptz(3)
+  order       Order            @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  attempts    PaymentAttempt[]
+
+  @@index([status, createdAt])
+  @@map("payments")
+}
+
+model PaymentAttempt {
+  id                String               @id @default(uuid()) @db.Uuid
+  paymentId         String               @db.Uuid
+  idempotencyKey    String               @unique @db.VarChar(120)
+  provider          String               @db.VarChar(64)
+  status            PaymentAttemptStatus @default(CREATED)
+  amountToman       Int
+  authority         String?              @db.VarChar(255)
+  paymentUrl        String?              @db.VarChar(2000)
+  providerReference String?              @db.VarChar(255)
+  failureCode       String?              @db.VarChar(120)
+  failureMessage    String?              @db.VarChar(500)
+  verifiedAt        DateTime?            @db.Timestamptz(3)
+  createdAt         DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime             @updatedAt @db.Timestamptz(3)
+  payment           Payment              @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, authority])
+  @@index([paymentId, createdAt])
+  @@index([status, createdAt])
+  @@map("payment_attempts")
 }
