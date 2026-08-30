@@ -23,4 +23,15 @@ export const envValidationSchema = Joi.object({
     then: Joi.string().min(1).required(),
     otherwise: Joi.string().allow('').optional(),
   }),
+  PAYMENT_PROVIDER: Joi.string().valid('disabled', 'zarinpal').default('disabled'),
+  PAYMENT_CALLBACK_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .default('http://localhost:3000/api/v1/payments/callback'),
+  ZARINPAL_MERCHANT_ID: Joi.when('PAYMENT_PROVIDER', {
+    is: 'zarinpal',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string().guid().required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
+  ZARINPAL_SANDBOX: Joi.boolean().truthy('true').falsy('false').default(true),
 });
