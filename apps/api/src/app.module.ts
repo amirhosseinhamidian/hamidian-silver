@@ -9,6 +9,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { PricingModule } from './modules/pricing/pricing.module';
+import { PlatingModule } from './modules/plating/plating.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { PricingModule } from './modules/pricing/pricing.module';
     HealthModule,
     InventoryModule,
     PricingModule,
+    PlatingModule,
   ],
   providers: [
     {
