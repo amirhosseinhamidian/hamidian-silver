@@ -5,6 +5,12 @@ export type SendOtpMessage = {
   code: string;
 };
 
+export type SendSmsMessage = {
+  phone: string;
+  text: string;
+};
+
 export interface SmsSender {
   sendOtp(message: SendOtpMessage): Promise<void>;
+  sendMessage?(message: SendSmsMessage): Promise<void>;
 }

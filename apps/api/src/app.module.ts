@@ -7,8 +7,10 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AuthenticationGuard } from './modules/auth/authentication.guard';
 import { PermissionsGuard } from './modules/authorization/permissions.guard';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { FinanceModule } from './modules/finance/finance.module';
 import { HealthModule } from './modules/health/health.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { PlatingModule } from './modules/plating/plating.module';
 import { OrdersModule } from './modules/orders/orders.module';
@@ -32,8 +34,10 @@ import { ShippingModule } from './modules/shipping/shipping.module';
     ScheduleModule.forRoot(),
     AuthModule,
     CatalogModule,
+    FinanceModule,
     HealthModule,
     InventoryModule,
+    NotificationsModule,
     PricingModule,
     PlatingModule,
     OrdersModule,

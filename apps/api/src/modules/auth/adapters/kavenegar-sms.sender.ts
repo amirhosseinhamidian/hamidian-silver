@@ -1,6 +1,6 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { SendOtpMessage, SmsSender } from '../sms-sender.port';
+import type { SendOtpMessage, SendSmsMessage, SmsSender } from '../sms-sender.port';
 
 type KavenegarResponse = {
   return?: {
@@ -11,10 +11,12 @@ type KavenegarResponse = {
 export class KavenegarSmsSender implements SmsSender {
   private readonly apiKey: string;
   private readonly template: string;
+  private readonly sender: string;
 
   constructor(configService: ConfigService) {
     this.apiKey = configService.getOrThrow<string>('KAVENEGAR_API_KEY');
     this.template = configService.getOrThrow<string>('KAVENEGAR_OTP_TEMPLATE');
+    this.sender = configService.get?.<string>('KAVENEGAR_SENDER', '') ?? '';
   }
 
   async sendOtp(message: SendOtpMessage): Promise<void> {
@@ -40,6 +42,43 @@ export class KavenegarSmsSender implements SmsSender {
 
       if (payload.return?.status !== 200) {
         throw new Error('Kavenegar rejected the OTP request.');
+      }
+    } catch {
+      throw new ServiceUnavailableException('SMS delivery is temporarily unavailable.');
+    }
+  }
+
+  async sendMessage(message: SendSmsMessage): Promise<void> {
+    const url = new URL(
+      `https://api.kavenegar.com/v1/${encodeURIComponent(this.apiKey)}/sms/send.json`,
+    );
+    const body = new URLSearchParams();
+
+    body.set('receptor', this.toKavenegarReceptor(message.phone));
+    body.set('message', message.text);
+
+    if (this.sender) {
+      body.set('sender', this.sender);
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body,
+        signal: AbortSignal.timeout(5_000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Kavenegar HTTP ${response.status}`);
+      }
+
+      const payload = (await response.json()) as KavenegarResponse;
+
+      if (payload.return?.status !== 200) {
+        throw new Error('Kavenegar rejected the SMS request.');
       }
     } catch {
       throw new ServiceUnavailableException('SMS delivery is temporarily unavailable.');

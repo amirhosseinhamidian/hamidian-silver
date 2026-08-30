@@ -30,6 +30,10 @@ model User {
   shipmentStatusChanges          ShipmentStatusHistory[] @relation("ShipmentStatusHistoryActor")
   paymentGatewaySettingChanges   PaymentGatewaySetting[] @relation("PaymentGatewaySettingUpdater")
   paymentReconciliationsResolved PaymentReconciliation[] @relation("PaymentReconciliationResolver")
+  supplierPayablesSettled        SupplierPayable[]       @relation("SupplierPayableSettler")
+  supplierSettlementsCreated     SupplierSettlement[]    @relation("SupplierSettlementCreator")
+  supplierSettlementsPaid        SupplierSettlement[]    @relation("SupplierSettlementPayer")
+  supplierSettlementsCancelled   SupplierSettlement[]    @relation("SupplierSettlementCanceller")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -545,6 +549,7 @@ model Order {
   statusHistory         OrderStatusHistory[]
   payment               Payment?
   shipment              Shipment?
+  supplierPayables      SupplierPayable[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -566,28 +571,29 @@ model OrderAddress {
 }
 
 model OrderItem {
-  id                     String         @id @default(uuid()) @db.Uuid
-  orderId                String         @db.Uuid
-  variantId              String         @db.Uuid
+  id                     String           @id @default(uuid()) @db.Uuid
+  orderId                String           @db.Uuid
+  variantId              String           @db.Uuid
   quantity               Int
-  productNameSnapshot    String         @db.VarChar(200)
-  variantNameSnapshot    String?        @db.VarChar(150)
-  skuSnapshot            String         @db.VarChar(100)
-  sizeLabelSnapshot      String?        @db.VarChar(100)
+  productNameSnapshot    String           @db.VarChar(200)
+  variantNameSnapshot    String?          @db.VarChar(150)
+  skuSnapshot            String           @db.VarChar(100)
+  sizeLabelSnapshot      String?          @db.VarChar(100)
   unitSalePriceToman     Int
   unitSupplierPriceToman Int?
-  supplierIdSnapshot     String?        @db.Uuid
-  supplierNameSnapshot   String?        @db.VarChar(150)
+  supplierIdSnapshot     String?          @db.Uuid
+  supplierNameSnapshot   String?          @db.VarChar(150)
   platingType            PlatingType?
-  platingWeightGrams     Decimal?       @db.Decimal(10, 3)
+  platingWeightGrams     Decimal?         @db.Decimal(10, 3)
   platingRateToman       Int?
-  unitPlatingPriceToman  Int            @default(0)
+  unitPlatingPriceToman  Int              @default(0)
   platingLeadTimeDays    Int?
-  unitWeightGrams        Decimal?       @db.Decimal(10, 3)
+  unitWeightGrams        Decimal?         @db.Decimal(10, 3)
   lineTotalToman         Int
-  createdAt              DateTime       @default(now()) @db.Timestamptz(3)
-  order                  Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  variant                ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  createdAt              DateTime         @default(now()) @db.Timestamptz(3)
+  order                  Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant                ProductVariant   @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  supplierPayable        SupplierPayable?
 
   @@index([orderId])
   @@index([variantId])
@@ -608,6 +614,32 @@ model OrderStatusHistory {
   @@index([orderId, createdAt])
   @@index([actorUserId])
   @@map("order_status_history")
+}
+
+enum NotificationOutboxEventType {
+  PAYMENT_VERIFIED
+  SHIPMENT_TRACKING_AVAILABLE
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  PAYMENT_RECONCILIATION_REQUIRED
+}
+
+enum NotificationOutboxStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+enum SupplierPayableStatus {
+  OPEN
+  PAID
+}
+
+enum SupplierSettlementStatus {
+  DRAFT
+  PAID
+  CANCELLED
 }
 
 enum PaymentStatus {
@@ -697,6 +729,103 @@ model PaymentReconciliation {
   @@index([provider, createdAt])
   @@index([resolvedByUserId])
   @@map("payment_reconciliations")
+}
+
+model SupplierPayable {
+  id                     String                   @id @default(uuid()) @db.Uuid
+  orderId                String                   @db.Uuid
+  orderItemId            String                   @unique @db.Uuid
+  supplierIdSnapshot     String                   @db.Uuid
+  supplierNameSnapshot   String                   @db.VarChar(150)
+  quantity               Int
+  unitSupplierPriceToman Int
+  amountToman            Int
+  status                 SupplierPayableStatus    @default(OPEN)
+  settlementId           String?                  @db.Uuid
+  paidByUserId           String?                  @db.Uuid
+  paidAt                 DateTime?                @db.Timestamptz(3)
+  paymentReference       String?                  @db.VarChar(255)
+  settlementNote         String?                  @db.VarChar(1000)
+  createdAt              DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime                 @updatedAt @db.Timestamptz(3)
+  order                  Order                    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  orderItem              OrderItem                @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  settlement             SupplierSettlement?      @relation("SupplierPayableSettlement", fields: [settlementId], references: [id], onDelete: Restrict)
+  settlementItems        SupplierSettlementItem[]
+  paidBy                 User?                    @relation("SupplierPayableSettler", fields: [paidByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([supplierIdSnapshot, status, createdAt])
+  @@index([settlementId])
+  @@index([orderId])
+  @@index([paidByUserId])
+  @@map("supplier_payables")
+}
+
+model SupplierSettlement {
+  id                   String                   @id @default(uuid()) @db.Uuid
+  supplierIdSnapshot   String                   @db.Uuid
+  supplierNameSnapshot String                   @db.VarChar(150)
+  status               SupplierSettlementStatus @default(DRAFT)
+  totalAmountToman     Int
+  payableCount         Int
+  createdByUserId      String?                  @db.Uuid
+  paidByUserId         String?                  @db.Uuid
+  cancelledByUserId    String?                  @db.Uuid
+  note                 String?                  @db.VarChar(1000)
+  paymentReference     String?                  @db.VarChar(255)
+  paidAt               DateTime?                @db.Timestamptz(3)
+  cancelledAt          DateTime?                @db.Timestamptz(3)
+  createdAt            DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime                 @updatedAt @db.Timestamptz(3)
+  payables             SupplierPayable[]        @relation("SupplierPayableSettlement")
+  items                SupplierSettlementItem[]
+  createdBy            User?                    @relation("SupplierSettlementCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  paidBy               User?                    @relation("SupplierSettlementPayer", fields: [paidByUserId], references: [id], onDelete: SetNull)
+  cancelledBy          User?                    @relation("SupplierSettlementCanceller", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([supplierIdSnapshot, status, createdAt])
+  @@index([createdByUserId])
+  @@index([paidByUserId])
+  @@index([cancelledByUserId])
+  @@map("supplier_settlements")
+}
+
+model SupplierSettlementItem {
+  id           String             @id @default(uuid()) @db.Uuid
+  settlementId String             @db.Uuid
+  payableId    String             @db.Uuid
+  amountToman  Int
+  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
+  settlement   SupplierSettlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  payable      SupplierPayable    @relation(fields: [payableId], references: [id], onDelete: Restrict)
+
+  @@unique([settlementId, payableId])
+  @@index([payableId])
+  @@map("supplier_settlement_items")
+}
+
+model NotificationOutboxEvent {
+  id               String                      @id @default(uuid()) @db.Uuid
+  type             NotificationOutboxEventType
+  aggregateType    String                      @db.VarChar(64)
+  aggregateId      String                      @db.Uuid
+  deduplicationKey String                      @unique @db.VarChar(255)
+  payload          Json
+  status           NotificationOutboxStatus    @default(PENDING)
+  attempts         Int                         @default(0)
+  nextAttemptAt    DateTime                    @default(now()) @db.Timestamptz(3)
+  claimedAt        DateTime?                   @db.Timestamptz(3)
+  processedAt      DateTime?                   @db.Timestamptz(3)
+  lastError        String?                     @db.VarChar(1000)
+  createdAt        DateTime                    @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime                    @updatedAt @db.Timestamptz(3)
+
+  @@index([status, nextAttemptAt])
+  @@index([aggregateType, aggregateId, createdAt])
+  @@index([claimedAt])
+  @@map("notification_outbox_events")
 }
 
 model PaymentGatewaySetting {

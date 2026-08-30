@@ -9,12 +9,14 @@ import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   InventoryMovementType,
+  NotificationOutboxEventType,
   OrderStatus,
   PaymentAttemptStatus,
   PaymentReconciliationStatus,
   PaymentStatus,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PAYMENT_GATEWAY_CODES } from './payment-gateway.constants';
 import {
@@ -43,6 +45,8 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
+    @Inject(NotificationOutboxService)
+    private readonly outbox?: NotificationOutboxService,
   ) {
     this.callbackBaseUrl = this.config.get<string>(
       'PAYMENT_CALLBACK_URL',
@@ -594,6 +598,19 @@ export class PaymentsService {
         },
       });
 
+      await this.createSupplierPayables(transaction, order.id, order.items);
+
+      await this.outbox?.enqueueOrderEvent(transaction, {
+        type: NotificationOutboxEventType.PAYMENT_VERIFIED,
+        orderId: order.id,
+        deduplicationKey: `order:${order.id}:payment-verified`,
+        payload: {
+          paymentAttemptId: attempt.id,
+          provider: attempt.provider,
+          providerReference: referenceId,
+        },
+      });
+
       return {
         success: true,
         alreadyVerified: false,
@@ -705,6 +722,17 @@ export class PaymentsService {
       },
     });
 
+    await this.outbox?.enqueueOrderEvent(transaction, {
+      type: NotificationOutboxEventType.PAYMENT_RECONCILIATION_REQUIRED,
+      orderId: attempt.payment.orderId,
+      deduplicationKey: `payment-attempt:${attempt.id}:reconciliation-required`,
+      payload: {
+        paymentAttemptId: attempt.id,
+        provider: attempt.provider,
+        providerReference: referenceId,
+      },
+    });
+
     return {
       success: true,
       reconciliationRequired: true,
@@ -734,6 +762,67 @@ export class PaymentsService {
     }
 
     return 'Payment was verified by the gateway but could not be finalized.';
+  }
+
+  private async createSupplierPayables(
+    transaction: Prisma.TransactionClient,
+    orderId: string,
+    items: Array<{
+      id: string;
+      quantity: number;
+      unitSupplierPriceToman: number | null;
+      supplierIdSnapshot: string | null;
+      supplierNameSnapshot: string | null;
+    }>,
+  ): Promise<void> {
+    const rows = items.flatMap((item) => {
+      const unitSupplierPriceToman = item.unitSupplierPriceToman ?? null;
+      const supplierIdSnapshot = item.supplierIdSnapshot ?? null;
+      const supplierNameSnapshot = item.supplierNameSnapshot ?? null;
+      const hasAnySupplierSnapshot =
+        unitSupplierPriceToman !== null ||
+        supplierIdSnapshot !== null ||
+        supplierNameSnapshot !== null;
+
+      if (!hasAnySupplierSnapshot) {
+        return [];
+      }
+
+      if (
+        unitSupplierPriceToman === null ||
+        supplierIdSnapshot === null ||
+        supplierNameSnapshot === null
+      ) {
+        throw new ConflictException('Supplier snapshot is incomplete for a paid order item.');
+      }
+
+      const amountToman = unitSupplierPriceToman * item.quantity;
+
+      if (!Number.isSafeInteger(amountToman) || amountToman < 0) {
+        throw new ConflictException('Supplier payable amount exceeds the supported range.');
+      }
+
+      return [
+        {
+          orderId,
+          orderItemId: item.id,
+          supplierIdSnapshot,
+          supplierNameSnapshot,
+          quantity: item.quantity,
+          unitSupplierPriceToman,
+          amountToman,
+        },
+      ];
+    });
+
+    if (rows.length === 0) {
+      return;
+    }
+
+    await transaction.supplierPayable.createMany({
+      data: rows,
+      skipDuplicates: true,
+    });
   }
 
   private async commitReservedInventory(

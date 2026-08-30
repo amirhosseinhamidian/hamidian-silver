@@ -7,11 +7,13 @@ import {
 } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
 import {
+  NotificationOutboxEventType,
   OrderStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { SelectShippingRateDto } from './dto/select-shipping-rate.dto';
 import { ResetShipmentProviderCreationDto } from './dto/reset-shipment-provider-creation.dto';
 import { UpdateShipmentStatusDto } from './dto/update-shipment-status.dto';
@@ -46,6 +48,8 @@ export class ShippingService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(SHIPPING_PROVIDER) private readonly provider: ShippingProvider,
+    @Inject(NotificationOutboxService)
+    private readonly outbox?: NotificationOutboxService,
   ) {}
 
   async quoteOrder(userId: string, orderId: string) {
@@ -333,6 +337,18 @@ export class ShippingService {
             reason: 'Shipment created with shipping provider',
           },
         });
+
+        if (created.trackingCode) {
+          await this.outbox?.enqueueOrderEvent(transaction, {
+            type: NotificationOutboxEventType.SHIPMENT_TRACKING_AVAILABLE,
+            orderId: shipment.orderId,
+            deduplicationKey: `shipment:${shipment.id}:tracking-available`,
+            payload: {
+              shipmentId: shipment.id,
+              trackingCode: created.trackingCode,
+            },
+          });
+        }
 
         return {
           ...updated,
@@ -643,6 +659,18 @@ export class ShippingService {
         },
       });
 
+      if (!shipment.trackingCode && dto.trackingCode) {
+        await this.outbox?.enqueueOrderEvent(transaction, {
+          type: NotificationOutboxEventType.SHIPMENT_TRACKING_AVAILABLE,
+          orderId: shipment.orderId,
+          deduplicationKey: `shipment:${shipment.id}:tracking-available`,
+          payload: {
+            shipmentId: shipment.id,
+            trackingCode: dto.trackingCode,
+          },
+        });
+      }
+
       await this.syncOrderStatusForShipment(
         transaction,
         shipment.order,
@@ -728,6 +756,24 @@ export class ShippingService {
           reason: reason.slice(0, 500),
         },
       });
+
+      if (nextStatus === OrderStatus.SHIPPED) {
+        await this.outbox?.enqueueOrderEvent(transaction, {
+          type: NotificationOutboxEventType.ORDER_SHIPPED,
+          orderId: order.id,
+          deduplicationKey: `order:${order.id}:shipped`,
+          payload: {},
+        });
+      }
+
+      if (nextStatus === OrderStatus.DELIVERED) {
+        await this.outbox?.enqueueOrderEvent(transaction, {
+          type: NotificationOutboxEventType.ORDER_DELIVERED,
+          orderId: order.id,
+          deduplicationKey: `order:${order.id}:delivered`,
+          payload: {},
+        });
+      }
 
       currentStatus = nextStatus;
     }
