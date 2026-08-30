@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { ZarinpalPaymentGateway } from './adapters/zarinpal-payment.gateway';
+import { MellatPaymentGateway } from './adapters/mellat-payment.gateway';
 import { ZibalPaymentGateway } from './adapters/zibal-payment.gateway';
 import {
   PAYMENT_GATEWAY_CODES,
@@ -35,6 +36,7 @@ export class PaymentGatewayRegistry implements PaymentGateway {
     private readonly config: ConfigService,
     zarinpalGateway: ZarinpalPaymentGateway,
     @Optional() zibalGateway?: ZibalPaymentGateway,
+    @Optional() mellatGateway?: MellatPaymentGateway,
   ) {
     const gateways: Array<[PaymentGatewayCode, PaymentGateway]> = [
       [PAYMENT_GATEWAY_CODES.ZARINPAL, zarinpalGateway],
@@ -42,6 +44,10 @@ export class PaymentGatewayRegistry implements PaymentGateway {
 
     if (zibalGateway) {
       gateways.push([PAYMENT_GATEWAY_CODES.ZIBAL, zibalGateway]);
+    }
+
+    if (mellatGateway) {
+      gateways.push([PAYMENT_GATEWAY_CODES.MELLAT, mellatGateway]);
     }
 
     this.gateways = new Map<PaymentGatewayCode, PaymentGateway>(gateways);
@@ -198,7 +204,11 @@ export class PaymentGatewayRegistry implements PaymentGateway {
       case PAYMENT_GATEWAY_CODES.ZIBAL:
         return Boolean(this.config.get<string>('ZIBAL_MERCHANT_ID', ''));
       case PAYMENT_GATEWAY_CODES.MELLAT:
-        return false;
+        return Boolean(
+          this.config.get<string>('MELLAT_TERMINAL_ID', '') &&
+          this.config.get<string>('MELLAT_USERNAME', '') &&
+          this.config.get<string>('MELLAT_PASSWORD', ''),
+        );
     }
   }
 }

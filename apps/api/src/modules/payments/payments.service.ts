@@ -180,7 +180,11 @@ export class PaymentsService {
     }
   }
 
-  async verifyCallback(attemptId: string, authority: string) {
+  async verifyCallback(
+    attemptId: string,
+    authority: string,
+    callbackData?: Record<string, string>,
+  ) {
     const attempt = await this.prisma.paymentAttempt.findUnique({
       where: {
         id: attemptId,
@@ -215,10 +219,16 @@ export class PaymentsService {
       throw new BadRequestException('Payment authority does not match.');
     }
 
-    const gatewayInput: VerifyGatewayPaymentInput = {
+    const gatewayInput: VerifyGatewayPaymentInput & {
+      callbackData?: Record<string, string>;
+    } = {
       authority,
       amountRial: this.tomanToRial(attempt.amountToman),
     };
+
+    if (callbackData) {
+      gatewayInput.callbackData = callbackData;
+    }
 
     if (this.gateway.providerCode === 'registry') {
       gatewayInput.provider = attempt.provider;
