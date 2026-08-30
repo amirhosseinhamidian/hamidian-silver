@@ -13,6 +13,11 @@
     "api:test:e2e": "pnpm --filter api test:e2e",
     "api:build": "pnpm --filter api build",
     "api:lint": "pnpm --filter api lint",
-    "verify:api": "pnpm api:test && pnpm api:test:e2e && pnpm api:build && pnpm api:lint"
+    "verify:api": "pnpm api:test && pnpm api:test:e2e && pnpm api:build && pnpm api:lint",
+    "infra:config": "docker compose config --quiet",
+    "infra:up": "docker compose up -d --wait",
+    "infra:down": "docker compose down",
+    "infra:logs": "docker compose logs -f",
+    "infra:ps": "docker compose ps"
   }
 }
