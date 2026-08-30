@@ -47,7 +47,7 @@ export class ShippingService {
     const options = await this.provider.quote({
       orderNumber: order.orderNumber,
       totalWeightGrams,
-      declaredValueToman: order.grandTotalToman,
+      declaredValueToman: this.calculateDeclaredValueToman(order),
       destination: this.requireShippingAddress(order.shippingAddress),
     });
 
@@ -66,7 +66,7 @@ export class ShippingService {
     const options = await this.provider.quote({
       orderNumber: order.orderNumber,
       totalWeightGrams,
-      declaredValueToman: order.grandTotalToman,
+      declaredValueToman: this.calculateDeclaredValueToman(order),
       destination: this.requireShippingAddress(order.shippingAddress),
     });
 
@@ -327,6 +327,18 @@ export class ShippingService {
 
         return order;
       });
+  }
+
+  private calculateDeclaredValueToman(order: OrderForShipping): number {
+    const declaredValueToman =
+      order.merchandiseTotalToman +
+      order.platingTotalToman -
+      order.discountTotalToman +
+      order.taxTotalToman;
+
+    this.assertTomanAmount(declaredValueToman);
+
+    return declaredValueToman;
   }
 
   private assertOrderCanSelectShipping(order: OrderForShipping): void {

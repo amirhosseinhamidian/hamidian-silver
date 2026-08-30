@@ -34,4 +34,79 @@ export const envValidationSchema = Joi.object({
     otherwise: Joi.string().allow('').optional(),
   }),
   ZARINPAL_SANDBOX: Joi.boolean().truthy('true').falsy('false').default(true),
+  SHIPPING_PROVIDER: Joi.string().valid('disabled', 'postex').default('disabled'),
+  POSTEX_API_BASE_URL: Joi.string()
+    .uri({ scheme: ['https'] })
+    .default('https://api.postex.ir/api/v1'),
+  POSTEX_TRACKING_BASE_URL: Joi.string()
+    .uri({ scheme: ['https'] })
+    .default('https://api.postex.ir/api/app/v1'),
+  POSTEX_API_KEY: Joi.when('SHIPPING_PROVIDER', {
+    is: 'postex',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string().min(10).required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
+  POSTEX_ORIGIN_CITY_CODE: Joi.when('SHIPPING_PROVIDER', {
+    is: 'postex',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.number().integer().positive().required(),
+    otherwise: Joi.number().integer().positive().optional(),
+  }),
+  POSTEX_ORIGIN_CITY_NAME: Joi.when('SHIPPING_PROVIDER', {
+    is: 'postex',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string().min(1).required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
+  POSTEX_ORIGIN_POSTAL_CODE: Joi.when('SHIPPING_PROVIDER', {
+    is: 'postex',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string()
+      .pattern(/^\d{10}$/)
+      .required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
+  POSTEX_ORIGIN_ADDRESS: Joi.when('SHIPPING_PROVIDER', {
+    is: 'postex',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string().min(5).required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
+  POSTEX_ORIGIN_FIRST_NAME: Joi.when('SHIPPING_PROVIDER', {
+    is: 'postex',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string().min(1).required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
+  POSTEX_ORIGIN_LAST_NAME: Joi.when('SHIPPING_PROVIDER', {
+    is: 'postex',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string().min(1).required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
+  POSTEX_ORIGIN_MOBILE: Joi.when('SHIPPING_PROVIDER', {
+    is: 'postex',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string()
+      .pattern(/^(?:\+98|98|0)?9\d{9}$/)
+      .required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
+  POSTEX_ORIGIN_PHONE: Joi.string().allow('').optional(),
+  POSTEX_ORIGIN_COMPANY_NAME: Joi.string().allow('').optional(),
+  POSTEX_BOX_TYPE_ID: Joi.when('SHIPPING_PROVIDER', {
+    is: 'postex',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.number().integer().positive().required(),
+    otherwise: Joi.number().integer().positive().optional(),
+  }),
+  POSTEX_COLLECTION_TYPE: Joi.when('SHIPPING_PROVIDER', {
+    is: 'postex',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string().min(1).required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
+  POSTEX_PAYMENT_TYPE: Joi.string().valid('SENDER', 'RECEIVER').default('SENDER'),
+  POSTEX_REQUEST_TIMEOUT_MS: Joi.number().integer().min(1000).max(60000).default(15000),
 });

@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
 import { DisabledShippingProvider } from './adapters/disabled-shipping.provider';
-import { SHIPPING_PROVIDER } from './shipping-provider.port';
+import { PostexShippingProvider } from './adapters/postex-shipping.provider';
+import { SHIPPING_PROVIDER, type ShippingProvider } from './shipping-provider.port';
 import { ShippingController } from './shipping.controller';
 import { ShippingService } from './shipping.service';
 
@@ -11,9 +13,18 @@ import { ShippingService } from './shipping.service';
   providers: [
     ShippingService,
     DisabledShippingProvider,
+    PostexShippingProvider,
     {
       provide: SHIPPING_PROVIDER,
-      useExisting: DisabledShippingProvider,
+      inject: [ConfigService, DisabledShippingProvider, PostexShippingProvider],
+      useFactory: (
+        config: ConfigService,
+        disabledProvider: DisabledShippingProvider,
+        postexProvider: PostexShippingProvider,
+      ): ShippingProvider =>
+        config.get<string>('SHIPPING_PROVIDER', 'disabled') === 'postex'
+          ? postexProvider
+          : disabledProvider,
     },
   ],
 })
