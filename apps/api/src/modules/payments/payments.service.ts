@@ -293,12 +293,10 @@ export class PaymentsService {
     const verification = await this.gateway.verify(gatewayInput);
 
     if (!verification.success) {
-      await this.prisma.paymentAttempt.updateMany({
+      const failed = await this.prisma.paymentAttempt.updateMany({
         where: {
           id: attempt.id,
-          status: {
-            not: PaymentAttemptStatus.VERIFIED,
-          },
+          status: attempt.status,
         },
         data: {
           status: PaymentAttemptStatus.FAILED,
@@ -307,7 +305,63 @@ export class PaymentsService {
         },
       });
 
-      throw new BadRequestException('Payment verification failed.');
+      if (failed.count === 1) {
+        throw new BadRequestException('Payment verification failed.');
+      }
+
+      const current = await this.prisma.paymentAttempt.findUnique({
+        where: {
+          id: attempt.id,
+        },
+        include: {
+          payment: {
+            include: {
+              order: true,
+            },
+          },
+        },
+      });
+
+      if (
+        current?.status === PaymentAttemptStatus.VERIFIED ||
+        current?.payment.status === PaymentStatus.PAID ||
+        current?.payment.order.status === OrderStatus.PAID
+      ) {
+        return {
+          success: true,
+          alreadyVerified: true,
+          orderId: current.payment.orderId,
+          referenceId: current.providerReference,
+        };
+      }
+
+      if (
+        current?.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED ||
+        current?.payment.status === PaymentStatus.RECONCILIATION_REQUIRED
+      ) {
+        return {
+          success: true,
+          reconciliationRequired: true,
+          orderId: current.payment.orderId,
+          referenceId: current.providerReference,
+        };
+      }
+
+      if (
+        current?.status === PaymentAttemptStatus.RECONCILED ||
+        current?.payment.status === PaymentStatus.REFUNDED
+      ) {
+        return {
+          success: true,
+          reconciled: true,
+          orderId: current.payment.orderId,
+          referenceId: current.providerReference,
+        };
+      }
+
+      throw new ConflictException(
+        'Payment attempt state changed while processing a verification failure.',
+      );
     }
 
     try {
