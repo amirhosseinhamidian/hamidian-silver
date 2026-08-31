@@ -49,6 +49,8 @@ model User {
   platingFulfillmentsCompleted        OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentCompleter")
   platingFulfillmentsCancelled        OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentCanceller")
   operationalAlertRecipients          OperationalAlertOutboxEvent[] @relation("OperationalAlertRecipient")
+  notificationRecoveriesResolved NotificationOutboxRecovery[]  @relation("NotificationOutboxRecoveryResolver")
+  operationalAlertRecoveriesResolved   OperationalAlertOutboxRecovery[] @relation("OperationalAlertOutboxRecoveryResolver")
   operationalIncidentsAcknowledged    OperationalIncident[]         @relation("OperationalIncidentAcknowledger")
   operationalIncidentsAssigned        OperationalIncident[]         @relation("OperationalIncidentAssignee")
   operationalIncidentActivities       OperationalIncidentActivity[] @relation("OperationalIncidentActivityActor")
@@ -790,8 +792,15 @@ enum NotificationOutboxEventType {
 enum NotificationOutboxStatus {
   PENDING
   PROCESSING
+  DISPATCHING
   SENT
   FAILED
+  UNKNOWN
+}
+
+enum NotificationOutboxRecoveryResolution {
+  RETRY_APPROVED
+  MARKED_SENT
 }
 
 enum OperationalAlertLevel {
@@ -1136,6 +1145,7 @@ model NotificationOutboxEvent {
   lastError        String?                     @db.VarChar(1000)
   createdAt        DateTime                    @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime                    @updatedAt @db.Timestamptz(3)
+  recoveries       NotificationOutboxRecovery[]
 
   @@index([status, nextAttemptAt])
   @@index([aggregateType, aggregateId, createdAt])
@@ -1165,6 +1175,7 @@ model OperationalAlertOutboxEvent {
   updatedAt           DateTime                 @updatedAt @db.Timestamptz(3)
   order               Order                    @relation(fields: [orderId], references: [id], onDelete: Restrict)
   recipient           User?                    @relation("OperationalAlertRecipient", fields: [recipientUserId], references: [id], onDelete: SetNull)
+  recoveries          OperationalAlertOutboxRecovery[]
 
   @@index([status, nextAttemptAt])
   @@index([orderId, code, createdAt])
@@ -1172,6 +1183,38 @@ model OperationalAlertOutboxEvent {
   @@index([incidentFingerprint])
   @@index([claimedAt])
   @@map("operational_alert_outbox_events")
+}
+
+model NotificationOutboxRecovery {
+  id               String                               @id @default(uuid()) @db.Uuid
+  eventId          String                               @db.Uuid
+  resolution       NotificationOutboxRecoveryResolution
+  note                  String                               @db.VarChar(1000)
+  unknownReasonSnapshot String?                              @db.VarChar(1000)
+  resolvedByUserId      String                               @db.Uuid
+  createdAt        DateTime                             @default(now()) @db.Timestamptz(3)
+  event            NotificationOutboxEvent              @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  resolvedBy       User                                 @relation("NotificationOutboxRecoveryResolver", fields: [resolvedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([eventId, createdAt])
+  @@index([resolvedByUserId, createdAt])
+  @@map("notification_outbox_recoveries")
+}
+
+model OperationalAlertOutboxRecovery {
+  id               String                               @id @default(uuid()) @db.Uuid
+  eventId          String                               @db.Uuid
+  resolution       NotificationOutboxRecoveryResolution
+  note                  String                               @db.VarChar(1000)
+  unknownReasonSnapshot String?                              @db.VarChar(1000)
+  resolvedByUserId      String                               @db.Uuid
+  createdAt        DateTime                             @default(now()) @db.Timestamptz(3)
+  event            OperationalAlertOutboxEvent          @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  resolvedBy       User                                 @relation("OperationalAlertOutboxRecoveryResolver", fields: [resolvedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([eventId, createdAt])
+  @@index([resolvedByUserId, createdAt])
+  @@map("operational_alert_outbox_recoveries")
 }
 
 model OperationalIncident {

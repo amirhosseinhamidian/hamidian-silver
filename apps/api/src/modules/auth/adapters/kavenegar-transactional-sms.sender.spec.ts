@@ -1,4 +1,6 @@
+import { ServiceUnavailableException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
+import { SmsDeliveryUnknownError } from '../sms-delivery-unknown.error';
 import { KavenegarSmsSender } from './kavenegar-sms.sender';
 
 describe('KavenegarSmsSender transactional SMS', () => {
@@ -12,7 +14,7 @@ describe('KavenegarSmsSender transactional SMS', () => {
     fetchSpy.mockRestore();
   });
 
-  it('sends a transactional SMS through the generic Kavenegar send endpoint', async () => {
+  function createSender() {
     const config = {
       getOrThrow: jest.fn((key: string) =>
         key === 'KAVENEGAR_API_KEY' ? 'api-key' : 'otp-template',
@@ -21,6 +23,11 @@ describe('KavenegarSmsSender transactional SMS', () => {
         key === 'KAVENEGAR_SENDER' ? '10004346' : fallback,
       ),
     };
+
+    return new KavenegarSmsSender(config as unknown as ConfigService);
+  }
+
+  it('sends a transactional SMS through the generic Kavenegar send endpoint', async () => {
     fetchSpy.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -36,7 +43,7 @@ describe('KavenegarSmsSender transactional SMS', () => {
         },
       ),
     );
-    const sender = new KavenegarSmsSender(config as unknown as ConfigService);
+    const sender = createSender();
 
     await sender.sendMessage({
       phone: '+989120000000',
@@ -51,5 +58,45 @@ describe('KavenegarSmsSender transactional SMS', () => {
     expect(body.get('receptor')).toBe('09120000000');
     expect(body.get('message')).toBe('Test notification');
     expect(body.get('sender')).toBe('10004346');
+  });
+
+  it('marks network failures as an unknown delivery outcome', async () => {
+    fetchSpy.mockRejectedValueOnce(new Error('socket closed'));
+    const sender = createSender();
+
+    await expect(
+      sender.sendMessage({
+        phone: '+989120000000',
+        text: 'Test notification',
+      }),
+    ).rejects.toBeInstanceOf(SmsDeliveryUnknownError);
+  });
+
+  it('treats a provider 4xx response as a definitive retryable failure', async () => {
+    fetchSpy.mockResolvedValueOnce(new Response('Bad request', { status: 400 }));
+    const sender = createSender();
+
+    try {
+      await sender.sendMessage({
+        phone: '+989120000000',
+        text: 'Test notification',
+      });
+      throw new Error('Expected Kavenegar rejection.');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ServiceUnavailableException);
+      expect(error).not.toBeInstanceOf(SmsDeliveryUnknownError);
+    }
+  });
+
+  it('marks a malformed successful response as an unknown delivery outcome', async () => {
+    fetchSpy.mockResolvedValueOnce(new Response('not-json', { status: 200 }));
+    const sender = createSender();
+
+    await expect(
+      sender.sendMessage({
+        phone: '+989120000000',
+        text: 'Test notification',
+      }),
+    ).rejects.toBeInstanceOf(SmsDeliveryUnknownError);
   });
 });

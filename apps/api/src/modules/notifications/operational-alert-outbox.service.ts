@@ -115,10 +115,12 @@ export class OperationalAlertOutboxService {
       }),
     ]);
     const counts: Record<NotificationOutboxStatus, number> = {
-      [NotificationOutboxStatus.PENDING]: 0,
-      [NotificationOutboxStatus.PROCESSING]: 0,
-      [NotificationOutboxStatus.SENT]: 0,
-      [NotificationOutboxStatus.FAILED]: 0,
+      PENDING: 0,
+      PROCESSING: 0,
+      DISPATCHING: 0,
+      SENT: 0,
+      FAILED: 0,
+      UNKNOWN: 0,
     };
 
     for (const group of groups) {
