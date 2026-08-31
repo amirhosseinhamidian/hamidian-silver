@@ -98,19 +98,59 @@ export class PaymentReconciliationService {
       }
 
       const resolvedAt = new Date();
+      const claimed = await transaction.paymentReconciliation.updateMany({
+        where: {
+          id: reconciliation.id,
+          status: PaymentReconciliationStatus.OPEN,
+          resolution: null,
+          resolvedAt: null,
+        },
+        data: {
+          status: PaymentReconciliationStatus.RESOLVED,
+          resolution: PaymentReconciliationResolution.REFUNDED_EXTERNALLY,
+          resolutionNote,
+          resolvedByUserId: actorUserId,
+          resolvedAt,
+        },
+      });
 
-      await transaction.payment.update({
+      if (claimed.count !== 1) {
+        const current = await transaction.paymentReconciliation.findUnique({
+          where: {
+            id: reconciliation.id,
+          },
+        });
+
+        if (
+          current?.status === PaymentReconciliationStatus.RESOLVED &&
+          current.resolution === PaymentReconciliationResolution.REFUNDED_EXTERNALLY
+        ) {
+          return current;
+        }
+
+        throw new ConflictException(
+          'Payment reconciliation changed while resolving; reload before retrying.',
+        );
+      }
+
+      const payment = await transaction.payment.updateMany({
         where: {
           id: reconciliation.paymentAttempt.paymentId,
+          status: PaymentStatus.RECONCILIATION_REQUIRED,
         },
         data: {
           status: PaymentStatus.REFUNDED,
         },
       });
 
-      await transaction.paymentAttempt.update({
+      if (payment.count !== 1) {
+        throw new ConflictException('Payment state changed while resolving reconciliation.');
+      }
+
+      const attempt = await transaction.paymentAttempt.updateMany({
         where: {
           id: reconciliation.paymentAttemptId,
+          status: PaymentAttemptStatus.RECONCILIATION_REQUIRED,
         },
         data: {
           status: PaymentAttemptStatus.RECONCILED,
@@ -119,16 +159,15 @@ export class PaymentReconciliationService {
         },
       });
 
-      return transaction.paymentReconciliation.update({
+      if (attempt.count !== 1) {
+        throw new ConflictException(
+          'Payment attempt state changed while resolving reconciliation.',
+        );
+      }
+
+      return transaction.paymentReconciliation.findUniqueOrThrow({
         where: {
           id: reconciliation.id,
-        },
-        data: {
-          status: PaymentReconciliationStatus.RESOLVED,
-          resolution: PaymentReconciliationResolution.REFUNDED_EXTERNALLY,
-          resolutionNote,
-          resolvedByUserId: actorUserId,
-          resolvedAt,
         },
         include: {
           paymentAttempt: {
