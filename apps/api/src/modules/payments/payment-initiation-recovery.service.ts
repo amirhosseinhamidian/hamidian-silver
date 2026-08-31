@@ -11,6 +11,7 @@ import {
   PaymentInitiationRecoveryResolution,
   type ResolvePaymentInitiationRecoveryDto,
 } from './dto/resolve-payment-initiation-recovery.dto';
+import { PaymentInitiationRecoveryPolicy } from './payment-initiation-recovery-policy';
 
 const RECOVERY_MIN_AGE_MS = 2 * 60 * 1000;
 const RECOVERY_FAILURE_CODE = 'INITIATION_RECOVERY_ABANDONED';
@@ -19,7 +20,10 @@ const RECOVERY_FAILURE_MESSAGE =
 
 @Injectable()
 export class PaymentInitiationRecoveryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly recoveryPolicy: PaymentInitiationRecoveryPolicy,
+  ) {}
 
   listCandidates(now = new Date()) {
     const cutoff = new Date(now.getTime() - RECOVERY_MIN_AGE_MS);
@@ -197,6 +201,8 @@ export class PaymentInitiationRecoveryService {
 
   private redirectResolutionData(
     attempt: {
+      id: string;
+      provider: string;
       amountToman: number;
       payment: {
         status: PaymentStatus;
@@ -236,10 +242,17 @@ export class PaymentInitiationRecoveryService {
       );
     }
 
+    const paymentUrl = this.recoveryPolicy.requireCanonicalRedirect({
+      provider: attempt.provider,
+      attemptId: attempt.id,
+      authority: dto.authority,
+      paymentUrl: dto.paymentUrl,
+    });
+
     return {
       status: PaymentAttemptStatus.REDIRECTED,
       authority: dto.authority,
-      paymentUrl: dto.paymentUrl,
+      paymentUrl,
       failureCode: null,
       failureMessage: null,
     };

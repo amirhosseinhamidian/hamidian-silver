@@ -10,6 +10,7 @@ import './payment-gateway.dto-metadata';
 import { MellatPaymentCallbackController } from './mellat-payment-callback.controller';
 import { MellatPaymentRedirectController } from './mellat-payment-redirect.controller';
 import { PaymentInitiationRecoveryController } from './payment-initiation-recovery.controller';
+import { PaymentInitiationRecoveryPolicy } from './payment-initiation-recovery-policy';
 import { PaymentInitiationRecoveryService } from './payment-initiation-recovery.service';
 import { PaymentReconciliationController } from './payment-reconciliation.controller';
 import { PaymentReconciliationService } from './payment-reconciliation.service';
@@ -34,6 +35,7 @@ import { PaymentsService } from './payments.service';
     ZibalPaymentGateway,
     MellatPaymentGateway,
     PaymentGatewayRegistry,
+    PaymentInitiationRecoveryPolicy,
     PaymentInitiationRecoveryService,
     PaymentReconciliationService,
     {

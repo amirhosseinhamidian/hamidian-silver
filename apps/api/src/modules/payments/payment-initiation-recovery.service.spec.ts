@@ -5,6 +5,7 @@ import {
   PaymentInitiationRecoveryResolution,
   type ResolvePaymentInitiationRecoveryDto,
 } from './dto/resolve-payment-initiation-recovery.dto';
+import type { PaymentInitiationRecoveryPolicy } from './payment-initiation-recovery-policy';
 import { PaymentInitiationRecoveryService } from './payment-initiation-recovery.service';
 
 describe('PaymentInitiationRecoveryService', () => {
@@ -71,9 +72,15 @@ describe('PaymentInitiationRecoveryService', () => {
         callback(transaction),
       ),
     };
-    const service = new PaymentInitiationRecoveryService(prisma as unknown as PrismaService);
+    const recoveryPolicy = {
+      requireCanonicalRedirect: jest.fn(({ paymentUrl }: { paymentUrl: string }) => paymentUrl),
+    };
+    const service = new PaymentInitiationRecoveryService(
+      prisma as unknown as PrismaService,
+      recoveryPolicy as unknown as PaymentInitiationRecoveryPolicy,
+    );
 
-    return { service, prisma, transaction };
+    return { service, prisma, transaction, recoveryPolicy };
   }
 
   it('lists only aged created attempts as recovery candidates', async () => {
