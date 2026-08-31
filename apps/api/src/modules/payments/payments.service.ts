@@ -26,6 +26,7 @@ import { OrderFinanceService } from '../finance/order-finance.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PAYMENT_GATEWAY_CODES } from './payment-gateway.constants';
+import { isPaymentInitiationUnknownError } from './payment-initiation-unknown.error';
 import {
   PAYMENT_GATEWAY,
   type InitiateGatewayPaymentInput,
@@ -182,16 +183,18 @@ export class PaymentsService {
     try {
       initiated = await this.gateway.initiate(gatewayInput);
     } catch (error) {
-      await this.prisma.paymentAttempt.updateMany({
-        where: {
-          id: context.attemptId,
-          status: PaymentAttemptStatus.CREATED,
-        },
-        data: {
-          status: PaymentAttemptStatus.FAILED,
-          failureMessage: 'Payment initiation failed.',
-        },
-      });
+      if (!isPaymentInitiationUnknownError(error)) {
+        await this.prisma.paymentAttempt.updateMany({
+          where: {
+            id: context.attemptId,
+            status: PaymentAttemptStatus.CREATED,
+          },
+          data: {
+            status: PaymentAttemptStatus.FAILED,
+            failureMessage: 'Payment initiation failed.',
+          },
+        });
+      }
 
       throw error;
     }

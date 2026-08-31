@@ -2,6 +2,7 @@ import { ConflictException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { OrderStatus, PaymentAttemptStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
+import { PaymentInitiationUnknownError } from './payment-initiation-unknown.error';
 import type { PaymentGateway } from './payment-gateway.port';
 import { PaymentsService } from './payments.service';
 
@@ -139,6 +140,21 @@ describe('PaymentsService initiation concurrency', () => {
         idempotencyKey: 'init-race-conflict',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('preserves a created attempt when the gateway initiation outcome is unknown', async () => {
+    const { service, prisma, gateway } = createHarness();
+    const gatewayError = new PaymentInitiationUnknownError('Test gateway');
+
+    gateway.initiate.mockRejectedValue(gatewayError);
+
+    await expect(
+      service.initiateOrderPayment(userId, orderId, {
+        idempotencyKey: 'init-gateway-unknown',
+      }),
+    ).rejects.toBe(gatewayError);
+
+    expect(prisma.paymentAttempt.updateMany).not.toHaveBeenCalled();
   });
 
   it('still marks a created attempt failed when the gateway call itself fails', async () => {

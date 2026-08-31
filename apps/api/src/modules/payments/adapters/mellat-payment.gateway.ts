@@ -1,5 +1,6 @@
 import { BadGatewayException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PaymentInitiationUnknownError } from '../payment-initiation-unknown.error';
 import type {
   InitiateGatewayPaymentInput,
   InitiateGatewayPaymentResult,
@@ -72,13 +73,21 @@ export class MellatPaymentGateway implements PaymentGateway {
     });
     const [resCode, refId] = response.split(',', 2);
 
-    if (resCode !== '0' || !refId) {
+    if (resCode !== '0') {
       throw new BadGatewayException(
         `Mellat rejected the payment request with code ${resCode || 'UNKNOWN'}.`,
       );
     }
 
-    this.assertRefId(refId);
+    if (!refId) {
+      throw new PaymentInitiationUnknownError('Mellat');
+    }
+
+    try {
+      this.assertRefId(refId);
+    } catch {
+      throw new PaymentInitiationUnknownError('Mellat');
+    }
 
     return {
       authority: refId,
@@ -202,6 +211,7 @@ export class MellatPaymentGateway implements PaymentGateway {
     parameters: Record<string, string>,
   ): Promise<string> {
     const body = this.buildSoapEnvelope(method, parameters);
+    const initiationCall = method === 'bpPayRequest';
 
     try {
       const response = await fetch(this.soapUrl, {
@@ -217,6 +227,10 @@ export class MellatPaymentGateway implements PaymentGateway {
       const xml = await response.text();
 
       if (!response.ok) {
+        if (initiationCall) {
+          throw new PaymentInitiationUnknownError('Mellat');
+        }
+
         throw new BadGatewayException(
           this.extractSoapFault(xml) ?? `Mellat returned HTTP ${response.status}.`,
         );
@@ -225,6 +239,10 @@ export class MellatPaymentGateway implements PaymentGateway {
       const result = this.extractSoapReturn(xml);
 
       if (result === undefined) {
+        if (initiationCall) {
+          throw new PaymentInitiationUnknownError('Mellat');
+        }
+
         throw new BadGatewayException(
           this.extractSoapFault(xml) ?? 'Mellat returned an invalid SOAP response.',
         );
@@ -232,8 +250,12 @@ export class MellatPaymentGateway implements PaymentGateway {
 
       return result.trim();
     } catch (error) {
-      if (error instanceof BadGatewayException) {
+      if (error instanceof BadGatewayException || error instanceof PaymentInitiationUnknownError) {
         throw error;
+      }
+
+      if (initiationCall) {
+        throw new PaymentInitiationUnknownError('Mellat');
       }
 
       throw new ServiceUnavailableException('Mellat payment gateway is currently unavailable.');
