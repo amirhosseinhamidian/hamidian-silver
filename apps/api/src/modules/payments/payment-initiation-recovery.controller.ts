@@ -1,4 +1,6 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch } from '@nestjs/common';
+import { CurrentPrincipal } from '../auth/current-principal.decorator';
+import type { AuthenticatedPrincipal } from '../authorization/authorization.types';
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { ResolvePaymentInitiationRecoveryDto } from './dto/resolve-payment-initiation-recovery.dto';
@@ -19,7 +21,8 @@ export class PaymentInitiationRecoveryController {
   resolve(
     @Param('attemptId', new ParseUUIDPipe({ version: '4' })) attemptId: string,
     @Body() dto: ResolvePaymentInitiationRecoveryDto,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
   ) {
-    return this.recoveryService.resolve(attemptId, dto);
+    return this.recoveryService.resolve(attemptId, principal.userId, dto);
   }
 }

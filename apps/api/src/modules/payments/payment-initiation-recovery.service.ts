@@ -62,7 +62,12 @@ export class PaymentInitiationRecoveryService {
     });
   }
 
-  async resolve(attemptId: string, dto: ResolvePaymentInitiationRecoveryDto, now = new Date()) {
+  async resolve(
+    attemptId: string,
+    actorUserId: string,
+    dto: ResolvePaymentInitiationRecoveryDto,
+    now = new Date(),
+  ) {
     return this.prisma.$transaction(async (transaction) => {
       const locator = await transaction.paymentAttempt.findUnique({
         where: {
@@ -119,10 +124,17 @@ export class PaymentInitiationRecoveryService {
         throw new ConflictException('Payment state no longer permits initiation recovery.');
       }
 
-      const data =
+      const resolutionData =
         dto.resolution === PaymentInitiationRecoveryResolution.REDIRECTED
           ? this.redirectResolutionData(attempt, dto, now)
           : this.abandonedResolutionData(dto);
+      const data = {
+        ...resolutionData,
+        initiationRecoveryResolution: dto.resolution,
+        initiationRecoveryNote: dto.note ?? null,
+        initiationRecoveryResolvedByUserId: actorUserId,
+        initiationRecoveryResolvedAt: now,
+      };
 
       let resolved: { count: number };
 
@@ -253,12 +265,14 @@ export class PaymentInitiationRecoveryService {
       authority: string | null;
       paymentUrl: string | null;
       failureCode: string | null;
+      initiationRecoveryResolution: string | null;
     },
     dto: ResolvePaymentInitiationRecoveryDto,
   ) {
     if (
       dto.resolution === PaymentInitiationRecoveryResolution.REDIRECTED &&
-      attempt.status === PaymentAttemptStatus.REDIRECTED &&
+      attempt.initiationRecoveryResolution === PaymentInitiationRecoveryResolution.REDIRECTED &&
+      attempt.status !== PaymentAttemptStatus.CREATED &&
       attempt.authority === dto.authority &&
       attempt.paymentUrl === dto.paymentUrl
     ) {
@@ -267,6 +281,7 @@ export class PaymentInitiationRecoveryService {
 
     if (
       dto.resolution === PaymentInitiationRecoveryResolution.ABANDONED &&
+      attempt.initiationRecoveryResolution === PaymentInitiationRecoveryResolution.ABANDONED &&
       attempt.status === PaymentAttemptStatus.FAILED &&
       attempt.failureCode === RECOVERY_FAILURE_CODE
     ) {

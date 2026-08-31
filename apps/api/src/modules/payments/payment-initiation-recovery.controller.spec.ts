@@ -16,12 +16,15 @@ describe('PaymentInitiationRecoveryController', () => {
       service as unknown as PaymentInitiationRecoveryService,
     );
     const attemptId = '10000000-0000-4000-8000-000000000001';
+    const actorUserId = '20000000-0000-4000-8000-000000000001';
     const dto: ResolvePaymentInitiationRecoveryDto = {
       resolution: PaymentInitiationRecoveryResolution.ABANDONED,
     };
 
-    await controller.resolve(attemptId, dto);
+    await controller.resolve(attemptId, dto, {
+      userId: actorUserId,
+    } as never);
 
-    expect(service.resolve).toHaveBeenCalledWith(attemptId, dto);
+    expect(service.resolve).toHaveBeenCalledWith(attemptId, actorUserId, dto);
   });
 });

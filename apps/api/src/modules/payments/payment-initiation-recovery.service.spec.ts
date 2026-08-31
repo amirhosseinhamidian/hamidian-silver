@@ -11,6 +11,7 @@ describe('PaymentInitiationRecoveryService', () => {
   const now = new Date('2026-08-31T14:00:00.000Z');
   const attemptId = '10000000-0000-4000-8000-000000000001';
   const orderId = '20000000-0000-4000-8000-000000000001';
+  const actorUserId = '40000000-0000-4000-8000-000000000001';
 
   function attempt(overrides: Record<string, unknown> = {}) {
     return {
@@ -21,6 +22,10 @@ describe('PaymentInitiationRecoveryService', () => {
       authority: null,
       paymentUrl: null,
       failureCode: null,
+      initiationRecoveryResolution: null,
+      initiationRecoveryNote: null,
+      initiationRecoveryResolvedByUserId: null,
+      initiationRecoveryResolvedAt: null,
       createdAt: new Date(now.getTime() - 5 * 60 * 1000),
       payment: {
         id: '30000000-0000-4000-8000-000000000001',
@@ -99,7 +104,7 @@ describe('PaymentInitiationRecoveryService', () => {
       resolution: PaymentInitiationRecoveryResolution.ABANDONED,
     };
 
-    await service.resolve(attemptId, dto, now);
+    await service.resolve(attemptId, actorUserId, dto, now);
 
     expect(transaction.paymentAttempt.updateMany).toHaveBeenCalledWith({
       where: {
@@ -113,6 +118,10 @@ describe('PaymentInitiationRecoveryService', () => {
         status: PaymentAttemptStatus.FAILED,
         failureCode: 'INITIATION_RECOVERY_ABANDONED',
         failureMessage: 'Manager abandoned an unknown payment initiation after provider review.',
+        initiationRecoveryResolution: PaymentInitiationRecoveryResolution.ABANDONED,
+        initiationRecoveryNote: null,
+        initiationRecoveryResolvedByUserId: actorUserId,
+        initiationRecoveryResolvedAt: now,
       },
     });
   });
@@ -123,6 +132,10 @@ describe('PaymentInitiationRecoveryService', () => {
       status: PaymentAttemptStatus.REDIRECTED,
       authority: 'AUTH-RECOVERED',
       paymentUrl: 'https://gateway.example/pay/AUTH-RECOVERED',
+      initiationRecoveryResolution: PaymentInitiationRecoveryResolution.REDIRECTED,
+      initiationRecoveryNote: null,
+      initiationRecoveryResolvedByUserId: actorUserId,
+      initiationRecoveryResolvedAt: now,
     };
     const { service, transaction } = harness();
 
@@ -131,6 +144,7 @@ describe('PaymentInitiationRecoveryService', () => {
     await expect(
       service.resolve(
         attemptId,
+        actorUserId,
         {
           resolution: PaymentInitiationRecoveryResolution.REDIRECTED,
           authority: 'AUTH-RECOVERED',
@@ -148,6 +162,10 @@ describe('PaymentInitiationRecoveryService', () => {
           paymentUrl: 'https://gateway.example/pay/AUTH-RECOVERED',
           failureCode: null,
           failureMessage: null,
+          initiationRecoveryResolution: PaymentInitiationRecoveryResolution.REDIRECTED,
+          initiationRecoveryNote: null,
+          initiationRecoveryResolvedByUserId: actorUserId,
+          initiationRecoveryResolvedAt: now,
         },
       }),
     );
@@ -174,6 +192,7 @@ describe('PaymentInitiationRecoveryService', () => {
     await expect(
       service.resolve(
         attemptId,
+        actorUserId,
         {
           resolution: PaymentInitiationRecoveryResolution.REDIRECTED,
           authority: 'AUTH-RECOVERED',
@@ -192,6 +211,7 @@ describe('PaymentInitiationRecoveryService', () => {
     await expect(
       service.resolve(
         attemptId,
+        actorUserId,
         {
           resolution: PaymentInitiationRecoveryResolution.ABANDONED,
           authority: 'AUTH-NOT-ALLOWED',
@@ -202,12 +222,50 @@ describe('PaymentInitiationRecoveryService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('rejects a concurrent redirect that did not record recovery audit metadata', async () => {
+    const redirectedWithoutAudit = {
+      ...attempt(),
+      status: PaymentAttemptStatus.REDIRECTED,
+      authority: 'AUTH-RECOVERED',
+      paymentUrl: 'https://gateway.example/pay/AUTH-RECOVERED',
+    };
+    const { service, transaction } = harness();
+
+    transaction.paymentAttempt.updateMany.mockResolvedValue({ count: 0 });
+    transaction.paymentAttempt.findUnique
+      .mockReset()
+      .mockResolvedValueOnce({
+        payment: {
+          orderId,
+        },
+      })
+      .mockResolvedValueOnce(attempt())
+      .mockResolvedValueOnce(redirectedWithoutAudit);
+
+    await expect(
+      service.resolve(
+        attemptId,
+        actorUserId,
+        {
+          resolution: PaymentInitiationRecoveryResolution.REDIRECTED,
+          authority: 'AUTH-RECOVERED',
+          paymentUrl: 'https://gateway.example/pay/AUTH-RECOVERED',
+        },
+        now,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
   it('returns the concurrent winner idempotently for the same redirect', async () => {
     const redirected = {
       ...attempt(),
       status: PaymentAttemptStatus.REDIRECTED,
       authority: 'AUTH-RECOVERED',
       paymentUrl: 'https://gateway.example/pay/AUTH-RECOVERED',
+      initiationRecoveryResolution: PaymentInitiationRecoveryResolution.REDIRECTED,
+      initiationRecoveryNote: null,
+      initiationRecoveryResolvedByUserId: actorUserId,
+      initiationRecoveryResolvedAt: now,
     };
     const { service, transaction } = harness();
 
@@ -225,6 +283,7 @@ describe('PaymentInitiationRecoveryService', () => {
     await expect(
       service.resolve(
         attemptId,
+        actorUserId,
         {
           resolution: PaymentInitiationRecoveryResolution.REDIRECTED,
           authority: 'AUTH-RECOVERED',
