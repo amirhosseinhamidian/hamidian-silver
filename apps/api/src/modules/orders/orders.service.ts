@@ -23,6 +23,70 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 const RESERVATION_TTL_MINUTES = 15;
 
+const CUSTOMER_ORDER_ITEM_SELECT = {
+  id: true,
+  variantId: true,
+  quantity: true,
+  productNameSnapshot: true,
+  variantNameSnapshot: true,
+  skuSnapshot: true,
+  sizeLabelSnapshot: true,
+  unitSalePriceToman: true,
+  platingType: true,
+  platingWeightGrams: true,
+  platingRateToman: true,
+  unitPlatingPriceToman: true,
+  platingLeadTimeDays: true,
+  unitWeightGrams: true,
+  lineTotalToman: true,
+  createdAt: true,
+} satisfies Prisma.OrderItemSelect;
+
+const CUSTOMER_ORDER_LIST_SELECT = {
+  id: true,
+  orderNumber: true,
+  status: true,
+  merchandiseTotalToman: true,
+  platingTotalToman: true,
+  discountTotalToman: true,
+  shippingTotalToman: true,
+  taxTotalToman: true,
+  grandTotalToman: true,
+  reservationExpiresAt: true,
+  paidAt: true,
+  cancelledAt: true,
+  deliveredAt: true,
+  createdAt: true,
+  updatedAt: true,
+  items: {
+    select: CUSTOMER_ORDER_ITEM_SELECT,
+  },
+} satisfies Prisma.OrderSelect;
+
+const CUSTOMER_ORDER_DETAIL_SELECT = {
+  ...CUSTOMER_ORDER_LIST_SELECT,
+  shippingAddress: {
+    select: {
+      recipientName: true,
+      phone: true,
+      province: true,
+      city: true,
+      addressLine: true,
+      postalCode: true,
+    },
+  },
+  statusHistory: {
+    orderBy: {
+      createdAt: 'asc',
+    },
+    select: {
+      fromStatus: true,
+      toStatus: true,
+      createdAt: true,
+    },
+  },
+} satisfies Prisma.OrderSelect;
+
 type PreparedOrderItem = {
   variantId: string;
   quantity: number;
@@ -205,15 +269,7 @@ export class OrdersService {
         where: {
           id: order.id,
         },
-        include: {
-          shippingAddress: true,
-          items: true,
-          statusHistory: {
-            orderBy: {
-              createdAt: 'asc',
-            },
-          },
-        },
+        select: CUSTOMER_ORDER_DETAIL_SELECT,
       });
     });
   }
@@ -228,9 +284,7 @@ export class OrdersService {
       orderBy: {
         createdAt: 'desc',
       },
-      include: {
-        items: true,
-      },
+      select: CUSTOMER_ORDER_LIST_SELECT,
     });
   }
 
@@ -240,15 +294,7 @@ export class OrdersService {
         id: orderId,
         userId,
       },
-      include: {
-        shippingAddress: true,
-        items: true,
-        statusHistory: {
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
-      },
+      select: CUSTOMER_ORDER_DETAIL_SELECT,
     });
 
     if (!order) {

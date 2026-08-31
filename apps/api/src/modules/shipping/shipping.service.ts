@@ -53,6 +53,33 @@ type OrderForShipping = {
   }>;
 };
 
+const CUSTOMER_SHIPMENT_SELECT = {
+  id: true,
+  orderId: true,
+  provider: true,
+  providerServiceCode: true,
+  providerServiceName: true,
+  status: true,
+  shippingCostToman: true,
+  totalWeightGrams: true,
+  estimatedDeliveryDays: true,
+  trackingCode: true,
+  shippedAt: true,
+  deliveredAt: true,
+  createdAt: true,
+  updatedAt: true,
+  statusHistory: {
+    orderBy: {
+      createdAt: 'asc',
+    },
+    select: {
+      fromStatus: true,
+      toStatus: true,
+      createdAt: true,
+    },
+  },
+} satisfies Prisma.ShipmentSelect;
+
 @Injectable()
 export class ShippingService {
   constructor(
@@ -196,13 +223,7 @@ export class ShippingService {
         where: {
           id: shipment.id,
         },
-        include: {
-          statusHistory: {
-            orderBy: {
-              createdAt: 'asc',
-            },
-          },
-        },
+        select: CUSTOMER_SHIPMENT_SELECT,
       });
     });
   }
@@ -725,13 +746,7 @@ export class ShippingService {
           userId,
         },
       },
-      include: {
-        statusHistory: {
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
-      },
+      select: CUSTOMER_SHIPMENT_SELECT,
     });
 
     if (!shipment) {

@@ -435,7 +435,15 @@ export class PaymentsService {
           userId,
         },
       },
-      include: {
+      select: {
+        id: true,
+        orderId: true,
+        status: true,
+        amountToman: true,
+        refundedAmountToman: true,
+        paidAt: true,
+        createdAt: true,
+        updatedAt: true,
         attempts: {
           orderBy: {
             createdAt: 'desc',
@@ -445,7 +453,6 @@ export class PaymentsService {
             provider: true,
             status: true,
             amountToman: true,
-            authority: true,
             providerReference: true,
             verifiedAt: true,
             createdAt: true,
@@ -459,7 +466,6 @@ export class PaymentsService {
             id: true,
             status: true,
             amountToman: true,
-            externalReference: true,
             confirmedAt: true,
             cancelledAt: true,
             createdAt: true,
