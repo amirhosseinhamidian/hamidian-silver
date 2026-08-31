@@ -134,6 +134,13 @@ describe('PaymentRefundsService', () => {
           paymentId,
           status: PaymentRefundStatus.PENDING,
           amountToman: 300_000,
+          payment: {
+            id: paymentId,
+            status: PaymentStatus.PAID,
+            amountToman: 1_000_000,
+            refundedAmountToman: 0,
+            refundAllocatedToman: 300_000,
+          },
         }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         findUniqueOrThrow: jest.fn().mockResolvedValue({
@@ -142,19 +149,7 @@ describe('PaymentRefundsService', () => {
         }),
       },
       payment: {
-        update: jest
-          .fn()
-          .mockResolvedValueOnce({
-            id: paymentId,
-            status: PaymentStatus.PAID,
-            amountToman: 1_000_000,
-            refundedAmountToman: 300_000,
-            refundAllocatedToman: 300_000,
-          })
-          .mockResolvedValueOnce({
-            id: paymentId,
-            status: PaymentStatus.PARTIALLY_REFUNDED,
-          }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
     const prisma = {
@@ -168,11 +163,18 @@ describe('PaymentRefundsService', () => {
       externalReference: 'BANK-REFUND-1',
     });
 
-    expect(transaction.payment.update).toHaveBeenLastCalledWith({
+    expect(transaction.payment.updateMany).toHaveBeenCalledWith({
       where: {
         id: paymentId,
+        status: PaymentStatus.PAID,
+        amountToman: 1_000_000,
+        refundedAmountToman: 0,
+        refundAllocatedToman: 300_000,
       },
       data: {
+        refundedAmountToman: {
+          increment: 300_000,
+        },
         status: PaymentStatus.PARTIALLY_REFUNDED,
       },
     });
@@ -186,6 +188,13 @@ describe('PaymentRefundsService', () => {
           paymentId,
           status: PaymentRefundStatus.PENDING,
           amountToman: 400_000,
+          payment: {
+            id: paymentId,
+            status: PaymentStatus.PARTIALLY_REFUNDED,
+            amountToman: 1_000_000,
+            refundedAmountToman: 600_000,
+            refundAllocatedToman: 1_000_000,
+          },
         }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         findUniqueOrThrow: jest.fn().mockResolvedValue({
@@ -194,19 +203,7 @@ describe('PaymentRefundsService', () => {
         }),
       },
       payment: {
-        update: jest
-          .fn()
-          .mockResolvedValueOnce({
-            id: paymentId,
-            status: PaymentStatus.PARTIALLY_REFUNDED,
-            amountToman: 1_000_000,
-            refundedAmountToman: 1_000_000,
-            refundAllocatedToman: 1_000_000,
-          })
-          .mockResolvedValueOnce({
-            id: paymentId,
-            status: PaymentStatus.REFUNDED,
-          }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
     const prisma = {
@@ -220,14 +217,60 @@ describe('PaymentRefundsService', () => {
       externalReference: 'BANK-REFUND-2',
     });
 
-    expect(transaction.payment.update).toHaveBeenLastCalledWith({
+    expect(transaction.payment.updateMany).toHaveBeenCalledWith({
       where: {
         id: paymentId,
+        status: PaymentStatus.PARTIALLY_REFUNDED,
+        amountToman: 1_000_000,
+        refundedAmountToman: 600_000,
+        refundAllocatedToman: 1_000_000,
       },
       data: {
+        refundedAmountToman: {
+          increment: 400_000,
+        },
         status: PaymentStatus.REFUNDED,
       },
     });
+  });
+
+  it('rolls back confirmation when the payment aggregate changed concurrently', async () => {
+    const transaction = {
+      paymentRefund: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: refundId,
+          paymentId,
+          status: PaymentRefundStatus.PENDING,
+          amountToman: 300_000,
+          payment: {
+            id: paymentId,
+            status: PaymentStatus.PAID,
+            amountToman: 1_000_000,
+            refundedAmountToman: 0,
+            refundAllocatedToman: 300_000,
+          },
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn(),
+      },
+      payment: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
+    };
+    const service = new PaymentRefundsService(prisma as unknown as PrismaService);
+
+    await expect(
+      service.confirm(refundId, actorUserId, {
+        externalReference: 'BANK-REFUND-RACE',
+      }),
+    ).rejects.toThrow('Payment refund totals changed; reload and retry.');
+
+    expect(transaction.paymentRefund.findUniqueOrThrow).not.toHaveBeenCalled();
   });
 
   it('cancels a pending refund and releases its allocated capacity', async () => {
