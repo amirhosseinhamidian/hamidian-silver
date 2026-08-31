@@ -188,6 +188,10 @@ export class OperationalAlertOutboxWorker {
         return `${prefix}: ایجاد مرسوله سفارش ${orderNumber} بیش از حد مجاز در حال پردازش مانده است.`;
       case 'SHIPMENT_PROVIDER_RECONCILIATION_REQUIRED':
         return `${prefix}: وضعیت ایجاد مرسوله سفارش ${orderNumber} نیاز به تطبیق با سرویس ارسال دارد.`;
+      case 'PAYMENT_INITIATION_STUCK':
+        return `${prefix}: آغاز پرداخت سفارش ${orderNumber} در وضعیت نامشخص مانده و نیاز به بررسی درگاه دارد.`;
+      case 'PAYMENT_RECONCILIATION_OPEN':
+        return `${prefix}: تطبیق مالی پرداخت سفارش ${orderNumber} باز مانده و نیاز به پیگیری دارد.`;
       default:
         return `${prefix}: سفارش ${orderNumber} نیاز به بررسی دارد.`;
     }

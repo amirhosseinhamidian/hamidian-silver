@@ -12,6 +12,9 @@ import { MellatPaymentRedirectController } from './mellat-payment-redirect.contr
 import { PaymentInitiationRecoveryController } from './payment-initiation-recovery.controller';
 import { PaymentInitiationRecoveryPolicy } from './payment-initiation-recovery-policy';
 import { PaymentInitiationRecoveryService } from './payment-initiation-recovery.service';
+import { PaymentOperationalObservabilityController } from './payment-operational-observability.controller';
+import { PaymentOperationalObservabilityScheduler } from './payment-operational-observability.scheduler';
+import { PaymentOperationalObservabilityService } from './payment-operational-observability.service';
 import { PaymentReconciliationController } from './payment-reconciliation.controller';
 import { PaymentReconciliationService } from './payment-reconciliation.service';
 import { PaymentsController } from './payments.controller';
@@ -27,6 +30,7 @@ import { PaymentsService } from './payments.service';
     MellatPaymentCallbackController,
     MellatPaymentRedirectController,
     PaymentInitiationRecoveryController,
+    PaymentOperationalObservabilityController,
     PaymentReconciliationController,
   ],
   providers: [
@@ -37,6 +41,8 @@ import { PaymentsService } from './payments.service';
     PaymentGatewayRegistry,
     PaymentInitiationRecoveryPolicy,
     PaymentInitiationRecoveryService,
+    PaymentOperationalObservabilityService,
+    PaymentOperationalObservabilityScheduler,
     PaymentReconciliationService,
     {
       provide: PAYMENT_GATEWAY_REGISTRY,
