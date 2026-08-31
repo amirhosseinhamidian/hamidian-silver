@@ -57,8 +57,16 @@ describe('OperationalAlertOutboxWorker', () => {
       phone: '+989120000000',
       text: 'هشدار عملیات: ایجاد مرسوله سفارش HS-051 بیش از حد مجاز در حال پردازش مانده است.',
     });
+    const claimedAt =
+      prisma.operationalAlertOutboxEvent.updateMany.mock.calls[0]?.[0].data.claimedAt;
+    expect(claimedAt).toBeInstanceOf(Date);
     expect(prisma.operationalAlertOutboxEvent.updateMany).toHaveBeenLastCalledWith(
       expect.objectContaining({
+        where: {
+          id: '10000000-0000-4000-8000-000000000001',
+          status: NotificationOutboxStatus.PROCESSING,
+          claimedAt,
+        },
         data: expect.objectContaining({
           status: NotificationOutboxStatus.SENT,
           claimedAt: null,

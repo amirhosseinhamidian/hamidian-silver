@@ -142,6 +142,7 @@ export class NotificationOutboxWorker {
             where: {
               id: event.id,
               status: NotificationOutboxStatus.PROCESSING,
+              claimedAt,
             },
             data: {
               status: NotificationOutboxStatus.SENT,
@@ -158,6 +159,7 @@ export class NotificationOutboxWorker {
             where: {
               id: event.id,
               status: NotificationOutboxStatus.PROCESSING,
+              claimedAt,
             },
             data: {
               status: NotificationOutboxStatus.FAILED,

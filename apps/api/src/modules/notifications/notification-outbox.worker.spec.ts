@@ -78,11 +78,14 @@ describe('NotificationOutboxWorker', () => {
       phone: '+989120000000',
       text: 'پرداخت سفارش HS-TEST با موفقیت ثبت شد.',
     });
+    const claimedAt = prisma.notificationOutboxEvent.updateMany.mock.calls[0]?.[0].data.claimedAt;
+    expect(claimedAt).toBeInstanceOf(Date);
     expect(prisma.notificationOutboxEvent.updateMany).toHaveBeenLastCalledWith(
       expect.objectContaining({
         where: {
           id: '10000000-0000-4000-8000-000000000001',
           status: NotificationOutboxStatus.PROCESSING,
+          claimedAt,
         },
         data: expect.objectContaining({
           status: NotificationOutboxStatus.SENT,
@@ -100,8 +103,15 @@ describe('NotificationOutboxWorker', () => {
 
     await worker.dispatchPending();
 
+    const claimedAt = prisma.notificationOutboxEvent.updateMany.mock.calls[0]?.[0].data.claimedAt;
+    expect(claimedAt).toBeInstanceOf(Date);
     expect(prisma.notificationOutboxEvent.updateMany).toHaveBeenLastCalledWith(
       expect.objectContaining({
+        where: {
+          id: '10000000-0000-4000-8000-000000000001',
+          status: NotificationOutboxStatus.PROCESSING,
+          claimedAt,
+        },
         data: expect.objectContaining({
           status: NotificationOutboxStatus.FAILED,
           claimedAt: null,
