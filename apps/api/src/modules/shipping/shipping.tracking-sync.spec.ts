@@ -25,7 +25,8 @@ describe('ShippingService tracking sync', () => {
     const transaction = {
       shipment: {
         findUnique: jest.fn().mockResolvedValue(current),
-        update: jest.fn().mockResolvedValue({
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
           ...current,
           status: ShipmentStatus.DELIVERED,
         }),
@@ -34,7 +35,7 @@ describe('ShippingService tracking sync', () => {
         create: jest.fn().mockResolvedValue({}),
       },
       order: {
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       orderStatusHistory: {
         create: jest.fn().mockResolvedValue({}),
@@ -62,15 +63,19 @@ describe('ShippingService tracking sync', () => {
 
     await service.syncTracking(orderId);
 
-    expect(transaction.shipment.update).toHaveBeenCalledWith(
+    expect(transaction.shipment.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
+        where: {
+          id: shipmentId,
+          status: ShipmentStatus.READY,
+        },
         data: expect.objectContaining({
           status: ShipmentStatus.DELIVERED,
           lastProviderStatus: 'DELIVERED',
         }),
       }),
     );
-    expect(transaction.order.update).toHaveBeenCalledTimes(3);
+    expect(transaction.order.updateMany).toHaveBeenCalledTimes(3);
     expect(transaction.orderStatusHistory.create).toHaveBeenCalledTimes(3);
   });
 });

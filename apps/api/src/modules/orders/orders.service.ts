@@ -333,13 +333,25 @@ export class OrdersService {
         );
       }
 
-      const updated = await transaction.order.update({
+      const deliveredAt = dto.status === OrderStatus.DELIVERED ? new Date() : order.deliveredAt;
+      const claimed = await transaction.order.updateMany({
         where: {
           id: orderId,
+          status: order.status,
         },
         data: {
           status: dto.status,
-          deliveredAt: dto.status === OrderStatus.DELIVERED ? new Date() : order.deliveredAt,
+          deliveredAt,
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new ConflictException('Order state changed; reload and retry the status update.');
+      }
+
+      const updated = await transaction.order.findUniqueOrThrow({
+        where: {
+          id: orderId,
         },
       });
 

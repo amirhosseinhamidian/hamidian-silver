@@ -480,9 +480,10 @@ export class ShippingService {
       }
 
       const now = new Date();
-      const updated = await transaction.shipment.update({
+      const claimed = await transaction.shipment.updateMany({
         where: {
           id: current.id,
+          status: current.status,
         },
         data: {
           status: nextStatus,
@@ -497,6 +498,18 @@ export class ShippingService {
             nextStatus === ShipmentStatus.DELIVERED
               ? (current.deliveredAt ?? now)
               : current.deliveredAt,
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new ConflictException(
+          'Shipment state changed while synchronizing tracking; retry is required.',
+        );
+      }
+
+      const updated = await transaction.shipment.findUniqueOrThrow({
+        where: {
+          id: current.id,
         },
       });
 
@@ -716,9 +729,10 @@ export class ShippingService {
       }
 
       const now = new Date();
-      const updated = await transaction.shipment.update({
+      const claimed = await transaction.shipment.updateMany({
         where: {
           id: shipment.id,
+          status: shipment.status,
         },
         data: {
           status: dto.status,
@@ -736,6 +750,16 @@ export class ShippingService {
             dto.status === ShipmentStatus.DELIVERED
               ? (shipment.deliveredAt ?? now)
               : shipment.deliveredAt,
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new ConflictException('Shipment state changed; reload and retry the status update.');
+      }
+
+      const updated = await transaction.shipment.findUniqueOrThrow({
+        where: {
+          id: shipment.id,
         },
       });
 
@@ -827,15 +851,22 @@ export class ShippingService {
           ? (order.deliveredAt ?? new Date())
           : order.deliveredAt;
 
-      await transaction.order.update({
+      const claimed = await transaction.order.updateMany({
         where: {
           id: order.id,
+          status: currentStatus,
         },
         data: {
           status: nextStatus,
           deliveredAt,
         },
       });
+
+      if (claimed.count !== 1) {
+        throw new ConflictException(
+          'Order state changed while synchronizing shipment status; retry is required.',
+        );
+      }
 
       await transaction.orderStatusHistory.create({
         data: {
