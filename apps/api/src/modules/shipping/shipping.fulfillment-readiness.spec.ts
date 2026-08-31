@@ -1,6 +1,7 @@
 import { ConflictException } from '@nestjs/common';
 import {
   OrderStatus,
+  PaymentStatus,
   PlatingFulfillmentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
@@ -38,6 +39,9 @@ describe('ShippingService fulfillment readiness gate', () => {
             orderNumber: 'HS-049',
             status: OrderStatus.PROCESSING,
             paidAt: new Date('2026-08-30T12:00:00.000Z'),
+            payment: {
+              status: PaymentStatus.PAID,
+            },
             merchandiseTotalToman: 1_000_000,
             platingTotalToman: 200_000,
             discountTotalToman: 0,
@@ -69,6 +73,69 @@ describe('ShippingService fulfillment readiness gate', () => {
       service.createProviderShipment(orderId, '30000000-0000-4000-8000-000000000001'),
     ).rejects.toBeInstanceOf(ConflictException);
 
+    expect(provider.createShipment).not.toHaveBeenCalled();
+  });
+
+  it('does not contact the provider when the order payment is no longer settled', async () => {
+    const provider = {
+      providerCode: 'postex',
+      createShipment: jest.fn(),
+    };
+    const prisma = {
+      shipment: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: '20000000-0000-4000-8000-000000000001',
+          orderId,
+          provider: 'postex',
+          providerServiceCode: 'POST|STANDARD',
+          status: ShipmentStatus.PENDING,
+          providerCreationState: ShipmentProviderCreationState.NOT_STARTED,
+          providerShipmentId: null,
+          providerCreateError: null,
+          creationAttemptedAt: null,
+          shippingCostToman: 90_000,
+          totalWeightGrams: {
+            toString: () => '10.000',
+          },
+          order: {
+            id: orderId,
+            orderNumber: 'HS-049-PAYMENT',
+            status: OrderStatus.PROCESSING,
+            paidAt: new Date('2026-08-30T12:00:00.000Z'),
+            payment: {
+              status: PaymentStatus.PARTIALLY_REFUNDED,
+            },
+            merchandiseTotalToman: 1_000_000,
+            platingTotalToman: 0,
+            discountTotalToman: 0,
+            taxTotalToman: 0,
+            grandTotalToman: 1_090_000,
+            shippingAddress: {
+              recipientName: 'Test User',
+              phone: '09120000000',
+              province: 'Tehran',
+              city: 'Tehran',
+              addressLine: 'Test address',
+              postalCode: '1234567890',
+            },
+            platingFulfillment: null,
+          },
+        }),
+        updateMany: jest.fn(),
+      },
+    };
+    const service = new ShippingService(
+      prisma as unknown as PrismaService,
+      provider as unknown as ShippingProvider,
+      undefined,
+      undefined,
+    );
+
+    await expect(
+      service.createProviderShipment(orderId, '30000000-0000-4000-8000-000000000001'),
+    ).rejects.toThrow('PAYMENT_NOT_SETTLED');
+
+    expect(prisma.shipment.updateMany).not.toHaveBeenCalled();
     expect(provider.createShipment).not.toHaveBeenCalled();
   });
 });

@@ -3,6 +3,7 @@ import { INT32_MAX } from '../../common/int32';
 import { TOMAN_INT_MAX } from '../../common/toman';
 import {
   OrderStatus,
+  PaymentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
 } from '../../generated/prisma/enums';
@@ -117,6 +118,9 @@ describe('ShippingService provider boundary', () => {
         orderNumber: 'HS-BOUNDARY',
         status: OrderStatus.PAID,
         paidAt: new Date('2026-08-31T09:00:00.000Z'),
+        payment: {
+          status: PaymentStatus.PAID,
+        },
         merchandiseTotalToman: 1_000_000,
         platingTotalToman: 0,
         discountTotalToman: 0,

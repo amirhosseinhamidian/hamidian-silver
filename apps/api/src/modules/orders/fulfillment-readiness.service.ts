@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   OrderStatus,
+  PaymentStatus,
   PlatingFulfillmentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
@@ -57,6 +58,11 @@ export class FulfillmentReadinessService {
       in: [OrderStatus.PAID, OrderStatus.PROCESSING],
     };
     const readyCore: Prisma.OrderWhereInput = {
+      payment: {
+        is: {
+          status: PaymentStatus.PAID,
+        },
+      },
       shipment: {
         is: {
           status: ShipmentStatus.PENDING,
@@ -106,6 +112,11 @@ export class FulfillmentReadinessService {
       orderNumber: true,
       status: true,
       paidAt: true,
+      payment: {
+        select: {
+          status: true,
+        },
+      },
       platingTotalToman: true,
       platingFulfillment: {
         select: {

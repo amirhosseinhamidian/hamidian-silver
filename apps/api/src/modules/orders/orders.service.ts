@@ -9,6 +9,7 @@ import { isNonNegativeTomanInt, TOMAN_INT_MAX } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   OrderStatus,
+  PaymentStatus,
   PlatingType,
   ProductStatus,
   ShipmentStatus,
@@ -287,6 +288,11 @@ export class OrdersService {
           id: orderId,
         },
         include: {
+          payment: {
+            select: {
+              status: true,
+            },
+          },
           shipment: true,
         },
       });
@@ -307,6 +313,16 @@ export class OrdersService {
 
       if (allowedNextStatus[order.status] !== dto.status) {
         throw new BadRequestException('This order status transition is not allowed.');
+      }
+
+      if (
+        order.status === OrderStatus.PAID &&
+        dto.status === OrderStatus.PROCESSING &&
+        order.payment?.status !== PaymentStatus.PAID
+      ) {
+        throw new ConflictException(
+          'Order cannot enter processing while its payment is not fully settled.',
+        );
       }
 
       if (dto.status === OrderStatus.SHIPPED) {
@@ -338,6 +354,15 @@ export class OrdersService {
         where: {
           id: orderId,
           status: order.status,
+          ...(dto.status === OrderStatus.PROCESSING
+            ? {
+                payment: {
+                  is: {
+                    status: PaymentStatus.PAID,
+                  },
+                },
+              }
+            : {}),
         },
         data: {
           status: dto.status,

@@ -1,6 +1,7 @@
 import { ConflictException } from '@nestjs/common';
 import {
   OrderStatus,
+  PaymentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
 } from '../../generated/prisma/enums';
@@ -43,6 +44,9 @@ describe('ShippingService provider creation concurrency', () => {
         orderNumber: 'HS-CONCURRENCY',
         status: OrderStatus.PAID,
         paidAt: new Date('2026-08-31T09:00:00.000Z'),
+        payment: {
+          status: PaymentStatus.PAID,
+        },
         merchandiseTotalToman: 1_000_000,
         platingTotalToman: 0,
         discountTotalToman: 0,

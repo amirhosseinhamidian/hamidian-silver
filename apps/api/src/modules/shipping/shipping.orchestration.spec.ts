@@ -1,5 +1,6 @@
 import {
   OrderStatus,
+  PaymentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
 } from '../../generated/prisma/enums';
@@ -47,6 +48,9 @@ describe('ShippingService provider orchestration', () => {
         id: orderId,
         orderNumber: 'HS-TEST',
         status: OrderStatus.PAID,
+        payment: {
+          status: PaymentStatus.PAID,
+        },
         merchandiseTotalToman: 1_000_000,
         platingTotalToman: 0,
         discountTotalToman: 0,
@@ -107,6 +111,13 @@ describe('ShippingService provider orchestration', () => {
         where: expect.objectContaining({
           providerCreationState: ShipmentProviderCreationState.NOT_STARTED,
           providerShipmentId: null,
+          order: {
+            payment: {
+              is: {
+                status: PaymentStatus.PAID,
+              },
+            },
+          },
         }),
         data: expect.objectContaining({
           providerCreationState: ShipmentProviderCreationState.IN_PROGRESS,

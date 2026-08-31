@@ -14,6 +14,7 @@ import {
   NotificationOutboxEventType,
   OrderCostEntryType,
   OrderStatus,
+  PaymentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
 } from '../../generated/prisma/enums';
@@ -213,6 +214,11 @@ export class ShippingService {
         order: {
           include: {
             shippingAddress: true,
+            payment: {
+              select: {
+                status: true,
+              },
+            },
             platingFulfillment: {
               select: {
                 status: true,
@@ -249,6 +255,7 @@ export class ShippingService {
       orderNumber: shipment.order.orderNumber,
       status: shipment.order.status,
       paidAt: shipment.order.paidAt,
+      payment: shipment.order.payment,
       platingTotalToman: shipment.order.platingTotalToman,
       platingFulfillment: shipment.order.platingFulfillment,
       shipment: {
@@ -292,6 +299,13 @@ export class ShippingService {
         status: ShipmentStatus.PENDING,
         providerCreationState: ShipmentProviderCreationState.NOT_STARTED,
         providerShipmentId: null,
+        order: {
+          payment: {
+            is: {
+              status: PaymentStatus.PAID,
+            },
+          },
+        },
       },
       data: {
         providerCreationState: ShipmentProviderCreationState.IN_PROGRESS,
@@ -702,6 +716,11 @@ export class ShippingService {
         include: {
           order: {
             include: {
+              payment: {
+                select: {
+                  status: true,
+                },
+              },
               platingFulfillment: {
                 select: {
                   status: true,
@@ -734,6 +753,7 @@ export class ShippingService {
           orderNumber: shipment.order.orderNumber,
           status: shipment.order.status,
           paidAt: shipment.order.paidAt,
+          payment: shipment.order.payment,
           platingTotalToman: shipment.order.platingTotalToman,
           platingFulfillment: shipment.order.platingFulfillment,
           shipment: {
@@ -773,6 +793,17 @@ export class ShippingService {
         where: {
           id: shipment.id,
           status: shipment.status,
+          ...(dto.status === ShipmentStatus.HANDED_OVER
+            ? {
+                order: {
+                  payment: {
+                    is: {
+                      status: PaymentStatus.PAID,
+                    },
+                  },
+                },
+              }
+            : {}),
         },
         data: {
           status: dto.status,
