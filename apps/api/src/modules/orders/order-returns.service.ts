@@ -460,22 +460,52 @@ export class OrderReturnsService {
       throw new BadRequestException('Supplier credit amount exceeds the supported range.');
     }
 
-    await transaction.supplierCredit.createMany({
+    const expectedCredit = {
+      orderId,
+      orderItemId: orderItem.id,
+      returnItemId,
+      supplierIdSnapshot: orderItem.supplierIdSnapshot,
+      supplierNameSnapshot: orderItem.supplierNameSnapshot,
+      quantity,
+      unitSupplierPriceToman: orderItem.unitSupplierPriceToman,
+      amountToman,
+    };
+
+    const created = await transaction.supplierCredit.createMany({
       data: [
         {
-          orderId,
-          orderItemId: orderItem.id,
-          returnItemId,
-          supplierIdSnapshot: orderItem.supplierIdSnapshot,
-          supplierNameSnapshot: orderItem.supplierNameSnapshot,
-          quantity,
-          unitSupplierPriceToman: orderItem.unitSupplierPriceToman,
-          amountToman,
+          ...expectedCredit,
           createdByUserId: actorUserId,
         },
       ],
       skipDuplicates: true,
     });
+
+    if (created.count === 1) {
+      return;
+    }
+
+    const existing = await transaction.supplierCredit.findUnique({
+      where: {
+        returnItemId,
+      },
+    });
+
+    if (
+      !existing ||
+      existing.orderId !== expectedCredit.orderId ||
+      existing.orderItemId !== expectedCredit.orderItemId ||
+      existing.returnItemId !== expectedCredit.returnItemId ||
+      existing.supplierIdSnapshot !== expectedCredit.supplierIdSnapshot ||
+      existing.supplierNameSnapshot !== expectedCredit.supplierNameSnapshot ||
+      existing.quantity !== expectedCredit.quantity ||
+      existing.unitSupplierPriceToman !== expectedCredit.unitSupplierPriceToman ||
+      existing.amountToman !== expectedCredit.amountToman
+    ) {
+      throw new ConflictException(
+        'Existing supplier credit does not match the received return item.',
+      );
+    }
   }
 
   private returnInclude() {
