@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { isNonNegativeInt32, isSignedInt32 } from '../../common/int32';
 import { InventoryMovementType } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { AdjustStockDto } from './dto/adjust-stock.dto';
@@ -64,6 +65,10 @@ export class InventoryService {
   }
 
   async adjustStock(dto: AdjustStockDto, actorUserId: string) {
+    if (!isSignedInt32(dto.onHandDelta) || dto.onHandDelta === 0) {
+      throw new BadRequestException('Stock adjustment exceeds the supported range.');
+    }
+
     return this.prisma.$transaction(async (transaction) => {
       const warehouse = await transaction.warehouse.findFirst({
         where: {
@@ -114,6 +119,10 @@ export class InventoryService {
       const nextOnHand = (current?.onHand ?? 0) + dto.onHandDelta;
       const reserved = current?.reserved ?? 0;
 
+      if (!isNonNegativeInt32(nextOnHand)) {
+        throw new BadRequestException('Stock quantity exceeds the supported range.');
+      }
+
       if (nextOnHand < reserved) {
         throw new BadRequestException('On-hand stock cannot be lower than reserved stock.');
       }
@@ -153,6 +162,10 @@ export class InventoryService {
   }
 
   async bulkSetStock(dto: BulkSetStockDto, actorUserId: string) {
+    if (!isNonNegativeInt32(dto.onHand)) {
+      throw new BadRequestException('Bulk stock quantity exceeds the supported range.');
+    }
+
     return this.prisma.$transaction(async (transaction) => {
       const warehouse = await transaction.warehouse.findFirst({
         where: {
@@ -257,6 +270,10 @@ export class InventoryService {
   }
 
   async setLowStockThreshold(dto: SetLowStockThresholdDto) {
+    if (!isNonNegativeInt32(dto.lowStockThreshold)) {
+      throw new BadRequestException('Low-stock threshold exceeds the supported range.');
+    }
+
     return this.prisma.$transaction(async (transaction) => {
       const warehouse = await transaction.warehouse.findFirst({
         where: {

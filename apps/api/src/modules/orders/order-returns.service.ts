@@ -4,6 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { isNonNegativeInt32 } from '../../common/int32';
+import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   InventoryMovementType,
@@ -355,7 +357,7 @@ export class OrderReturnsService {
 
     const nextOnHand = inventory.onHand + quantity;
 
-    if (!Number.isSafeInteger(nextOnHand)) {
+    if (!isNonNegativeInt32(nextOnHand)) {
       throw new BadRequestException('Returned inventory exceeds the supported range.');
     }
 
@@ -415,7 +417,7 @@ export class OrderReturnsService {
 
     const amountToman = orderItem.unitSupplierPriceToman * quantity;
 
-    if (!Number.isSafeInteger(amountToman) || amountToman < 0) {
+    if (!isNonNegativeTomanInt(amountToman)) {
       throw new BadRequestException('Supplier credit amount exceeds the supported range.');
     }
 

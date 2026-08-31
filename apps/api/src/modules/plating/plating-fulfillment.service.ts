@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   OrderCostEntryType,
@@ -141,7 +142,7 @@ export class PlatingFulfillmentService {
   }
 
   async complete(orderId: string, actorUserId: string, dto: CompletePlatingFulfillmentDto) {
-    if (!Number.isSafeInteger(dto.actualCostToman) || dto.actualCostToman < 0) {
+    if (!isNonNegativeTomanInt(dto.actualCostToman)) {
       throw new BadRequestException('Actual plating cost is invalid.');
     }
 
