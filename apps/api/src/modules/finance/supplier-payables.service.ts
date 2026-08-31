@@ -141,16 +141,47 @@ export class SupplierPayablesService {
         throw new ConflictException('Supplier payable cannot be settled from its current status.');
       }
 
-      return transaction.supplierPayable.update({
+      const paidAt = new Date();
+      const claimed = await transaction.supplierPayable.updateMany({
         where: {
           id: payable.id,
+          status: SupplierPayableStatus.OPEN,
+          settlementId: null,
         },
         data: {
           status: SupplierPayableStatus.PAID,
           paidByUserId: actorUserId,
-          paidAt: new Date(),
+          paidAt,
           paymentReference: dto.paymentReference,
           settlementNote: dto.note,
+        },
+      });
+
+      if (claimed.count !== 1) {
+        const current = await transaction.supplierPayable.findUnique({
+          where: {
+            id: payable.id,
+          },
+        });
+
+        if (current?.status === SupplierPayableStatus.PAID) {
+          return current;
+        }
+
+        if (current?.settlementId) {
+          throw new ConflictException(
+            'Supplier payable was assigned to a settlement while payment was being recorded.',
+          );
+        }
+
+        throw new ConflictException(
+          'Supplier payable state changed while payment was being recorded.',
+        );
+      }
+
+      return transaction.supplierPayable.findUniqueOrThrow({
+        where: {
+          id: payable.id,
         },
         include: {
           order: {
