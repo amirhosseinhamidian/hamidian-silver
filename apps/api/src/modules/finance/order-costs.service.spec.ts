@@ -101,6 +101,51 @@ describe('OrderCostsService', () => {
     });
   });
 
+  it('reverses a zero actual-cost marker so reconciliation can reopen', async () => {
+    const transaction = {
+      orderCostEntry: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: costId,
+          orderId,
+          type: OrderCostEntryType.PAYMENT_GATEWAY_FEE,
+          amountToman: 0,
+          source: 'zarinpal',
+          externalReference: 'REF-ZERO',
+          reversalOfId: null,
+          reversal: null,
+        }),
+        create: jest.fn().mockResolvedValue({
+          id: '50000000-0000-4000-8000-000000000099',
+          amountToman: 0,
+          reversalOfId: costId,
+        }),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
+    };
+    const service = new OrderCostsService(prisma as unknown as PrismaService);
+
+    await service.reverse(costId, actorUserId, {
+      reason: 'Zero marker was recorded before the final provider fee arrived.',
+    });
+
+    expect(transaction.orderCostEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        orderId,
+        type: OrderCostEntryType.PAYMENT_GATEWAY_FEE,
+        amountToman: 0,
+        source: 'zarinpal',
+        idempotencyKey: `reverse:${costId}`,
+        reversalOfId: costId,
+        createdByUserId: actorUserId,
+      }),
+      include: expect.any(Object),
+    });
+  });
+
   it('calculates per-order contribution from net cost entries and confirmed refunds', async () => {
     const prisma = {
       orderFinanceSnapshot: {

@@ -160,15 +160,19 @@ export class OrderCostsService {
           return cost.reversal;
         }
 
-        if (cost.amountToman <= 0) {
-          throw new ConflictException('Only positive order cost entries can be reversed.');
+        if (cost.amountToman < 0) {
+          throw new ConflictException(
+            'Only non-negative original order cost entries can be reversed.',
+          );
         }
+
+        const reversalAmountToman = cost.amountToman === 0 ? 0 : -cost.amountToman;
 
         return transaction.orderCostEntry.create({
           data: {
             orderId: cost.orderId,
             type: cost.type,
-            amountToman: -cost.amountToman,
+            amountToman: reversalAmountToman,
             source: cost.source,
             externalReference: cost.externalReference,
             description: dto.reason
@@ -306,6 +310,10 @@ export class OrderCostsService {
           costEntries: {
             none: {
               type: OrderCostEntryType.PAYMENT_GATEWAY_FEE,
+              reversalOfId: null,
+              reversal: {
+                is: null,
+              },
             },
           },
         },
@@ -328,6 +336,10 @@ export class OrderCostsService {
           costEntries: {
             none: {
               type: OrderCostEntryType.SHIPPING_PROVIDER,
+              reversalOfId: null,
+              reversal: {
+                is: null,
+              },
             },
           },
         },
@@ -346,6 +358,10 @@ export class OrderCostsService {
           costEntries: {
             none: {
               type: OrderCostEntryType.PLATING_SERVICE,
+              reversalOfId: null,
+              reversal: {
+                is: null,
+              },
             },
           },
         },
@@ -570,6 +586,11 @@ export class OrderCostsService {
           externalReference: true,
           occurredAt: true,
           reversalOfId: true,
+          reversal: {
+            select: {
+              id: true,
+            },
+          },
         },
         orderBy: {
           occurredAt: 'asc' as const,
@@ -609,9 +630,13 @@ export class OrderCostsService {
       externalReference: string | null;
       occurredAt: Date;
       reversalOfId: string | null;
+      reversal: { id: string } | null;
     }>;
   }) {
-    const costTypes = new Set(order.costEntries.map((entry) => entry.type));
+    const activeCostEntries = order.costEntries.filter(
+      (entry) => entry.reversalOfId === null && entry.reversal === null,
+    );
+    const activeCostTypes = new Set(activeCostEntries.map((entry) => entry.type));
     const verifiedAttempt = order.payment?.attempts[0];
     const missingCosts: Array<{
       code:
@@ -622,7 +647,7 @@ export class OrderCostsService {
       externalReference?: string | null;
     }> = [];
 
-    if (verifiedAttempt && !costTypes.has(OrderCostEntryType.PAYMENT_GATEWAY_FEE)) {
+    if (verifiedAttempt && !activeCostTypes.has(OrderCostEntryType.PAYMENT_GATEWAY_FEE)) {
       missingCosts.push({
         code: 'PAYMENT_GATEWAY_FEE_MISSING',
         source: verifiedAttempt.provider,
@@ -632,7 +657,7 @@ export class OrderCostsService {
 
     if (
       order.shipment?.providerShipmentId &&
-      !costTypes.has(OrderCostEntryType.SHIPPING_PROVIDER)
+      !activeCostTypes.has(OrderCostEntryType.SHIPPING_PROVIDER)
     ) {
       missingCosts.push({
         code: 'SHIPPING_PROVIDER_COST_MISSING',
@@ -641,7 +666,7 @@ export class OrderCostsService {
       });
     }
 
-    if (order.platingTotalToman > 0 && !costTypes.has(OrderCostEntryType.PLATING_SERVICE)) {
+    if (order.platingTotalToman > 0 && !activeCostTypes.has(OrderCostEntryType.PLATING_SERVICE)) {
       missingCosts.push({
         code: 'PLATING_SERVICE_COST_MISSING',
       });
@@ -664,6 +689,7 @@ export class OrderCostsService {
         platingChargedToman: order.platingTotalToman,
       },
       costEntries: order.costEntries,
+      activeCostEntries,
       missingCosts,
       reconciled: missingCosts.length === 0,
     };
