@@ -201,7 +201,7 @@ describe('PaymentsService', () => {
             },
           },
         }),
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       order: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -222,7 +222,7 @@ describe('PaymentsService', () => {
         create: jest.fn().mockResolvedValue({}),
       },
       payment: {
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
 
@@ -266,15 +266,26 @@ describe('PaymentsService', () => {
       }),
     });
 
-    expect(transaction.paymentAttempt.update).toHaveBeenCalledWith({
+    expect(transaction.paymentAttempt.updateMany).toHaveBeenCalledWith({
       where: {
         id: attemptId,
+        status: PaymentAttemptStatus.REDIRECTED,
       },
       data: expect.objectContaining({
         status: PaymentAttemptStatus.VERIFIED,
         providerReference: 'REF-1',
         verifiedAt: expect.any(Date),
       }),
+    });
+    expect(transaction.payment.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: paymentId,
+        status: PaymentStatus.PENDING,
+      },
+      data: {
+        status: PaymentStatus.PAID,
+        paidAt: expect.any(Date),
+      },
     });
   });
 

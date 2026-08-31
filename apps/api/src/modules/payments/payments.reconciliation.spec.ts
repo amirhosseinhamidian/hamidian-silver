@@ -77,10 +77,10 @@ describe('PaymentsService reconciliation safety', () => {
           .fn()
           .mockResolvedValueOnce(finalAttempt)
           .mockResolvedValueOnce(reconciliationAttempt),
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       payment: {
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       paymentReconciliation: {
         upsert: jest.fn().mockResolvedValue({
@@ -118,10 +118,11 @@ describe('PaymentsService reconciliation safety', () => {
       referenceId: 'REF-1',
     });
 
-    expect(transaction.paymentAttempt.update).toHaveBeenCalledWith(
+    expect(transaction.paymentAttempt.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
           id: attemptId,
+          status: PaymentAttemptStatus.REDIRECTED,
         },
         data: expect.objectContaining({
           status: PaymentAttemptStatus.RECONCILIATION_REQUIRED,
@@ -129,9 +130,10 @@ describe('PaymentsService reconciliation safety', () => {
         }),
       }),
     );
-    expect(transaction.payment.update).toHaveBeenCalledWith({
+    expect(transaction.payment.updateMany).toHaveBeenCalledWith({
       where: {
         id: paymentId,
+        status: PaymentStatus.CANCELLED,
       },
       data: {
         status: PaymentStatus.RECONCILIATION_REQUIRED,
@@ -171,10 +173,10 @@ describe('PaymentsService reconciliation safety', () => {
     const recordTransaction = {
       paymentAttempt: {
         findUnique: jest.fn().mockResolvedValue(reconciliationAttempt),
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       payment: {
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       paymentReconciliation: {
         upsert: jest.fn().mockResolvedValue({
@@ -213,5 +215,98 @@ describe('PaymentsService reconciliation safety', () => {
         referenceId: 'REF-2',
       }),
     );
+  });
+
+  it('does not let reconciliation overwrite a concurrently verified payment', async () => {
+    const callbackAttempt = {
+      id: attemptId,
+      paymentId,
+      provider: PAYMENT_GATEWAY_CODES.ZARINPAL,
+      authority: 'AUTH-3',
+      providerReference: null,
+      amountToman: 1_000_000,
+      verifiedAt: null,
+      status: PaymentAttemptStatus.REDIRECTED,
+      payment: {
+        orderId,
+        status: PaymentStatus.PENDING,
+        order: {
+          status: OrderStatus.PENDING_PAYMENT,
+        },
+      },
+    };
+    const staleAttempt = {
+      ...callbackAttempt,
+      reconciliation: null,
+      payment: {
+        ...callbackAttempt.payment,
+        order: {
+          id: orderId,
+          status: OrderStatus.PENDING_PAYMENT,
+        },
+      },
+    };
+    const verifiedAttempt = {
+      ...staleAttempt,
+      status: PaymentAttemptStatus.VERIFIED,
+      providerReference: 'REF-WINNER',
+      payment: {
+        ...staleAttempt.payment,
+        status: PaymentStatus.PAID,
+        order: {
+          id: orderId,
+          status: OrderStatus.PAID,
+        },
+      },
+    };
+    const recordTransaction = {
+      paymentAttempt: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValueOnce(staleAttempt)
+          .mockResolvedValueOnce(verifiedAttempt),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      payment: {
+        updateMany: jest.fn(),
+      },
+      paymentReconciliation: {
+        upsert: jest.fn(),
+      },
+    };
+    const prisma = {
+      paymentAttempt: {
+        findUnique: jest.fn().mockResolvedValue(callbackAttempt),
+        updateMany: jest.fn(),
+      },
+      $transaction: jest
+        .fn()
+        .mockRejectedValueOnce(new ConflictException('Reserved inventory is inconsistent.'))
+        .mockImplementationOnce(
+          async (callback: (client: typeof recordTransaction) => Promise<unknown>) =>
+            callback(recordTransaction),
+        ),
+    };
+
+    gateway.verify.mockResolvedValue({
+      success: true,
+      referenceId: 'REF-LOSER',
+    });
+
+    const service = new PaymentsService(
+      prisma as unknown as PrismaService,
+      config as unknown as ConfigService,
+      gateway,
+    );
+
+    await expect(service.verifyCallback(attemptId, 'AUTH-3')).resolves.toEqual({
+      success: true,
+      alreadyVerified: true,
+      orderId,
+      referenceId: 'REF-WINNER',
+    });
+
+    expect(recordTransaction.payment.updateMany).not.toHaveBeenCalled();
+    expect(recordTransaction.paymentReconciliation.upsert).not.toHaveBeenCalled();
   });
 });

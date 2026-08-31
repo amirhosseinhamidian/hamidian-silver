@@ -666,19 +666,10 @@ export class PaymentsService {
         },
       });
 
-      await transaction.payment.update({
-        where: {
-          id: attempt.paymentId,
-        },
-        data: {
-          status: PaymentStatus.PAID,
-          paidAt,
-        },
-      });
-
-      await transaction.paymentAttempt.update({
+      const attemptFinalized = await transaction.paymentAttempt.updateMany({
         where: {
           id: attempt.id,
+          status: attempt.status,
         },
         data: {
           status: PaymentAttemptStatus.VERIFIED,
@@ -688,6 +679,25 @@ export class PaymentsService {
           failureMessage: null,
         },
       });
+
+      if (attemptFinalized.count !== 1) {
+        throw new ConflictException('Payment attempt state changed during finalization.');
+      }
+
+      const paymentFinalized = await transaction.payment.updateMany({
+        where: {
+          id: attempt.paymentId,
+          status: attempt.payment.status,
+        },
+        data: {
+          status: PaymentStatus.PAID,
+          paidAt,
+        },
+      });
+
+      if (paymentFinalized.count !== 1) {
+        throw new ConflictException('Payment state changed during finalization.');
+      }
 
       await this.createSupplierPayables(transaction, order.id, order.items);
 
@@ -797,7 +807,112 @@ export class PaymentsService {
       };
     }
 
+    if (
+      attempt.reconciliation?.status === PaymentReconciliationStatus.OPEN &&
+      attempt.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED &&
+      attempt.payment.status === PaymentStatus.RECONCILIATION_REQUIRED
+    ) {
+      return {
+        success: true,
+        reconciliationRequired: true,
+        reconciliationId: attempt.reconciliation.id,
+        orderId: attempt.payment.orderId,
+        referenceId: attempt.providerReference ?? referenceId,
+      };
+    }
+
     const verifiedAt = attempt.verifiedAt ?? new Date();
+    const attemptClaimed = await transaction.paymentAttempt.updateMany({
+      where: {
+        id: attempt.id,
+        status: attempt.status,
+      },
+      data: {
+        status: PaymentAttemptStatus.RECONCILIATION_REQUIRED,
+        providerReference: referenceId,
+        verifiedAt,
+        failureCode: null,
+        failureMessage: null,
+      },
+    });
+
+    if (attemptClaimed.count !== 1) {
+      const current = await transaction.paymentAttempt.findUnique({
+        where: {
+          id: attempt.id,
+        },
+        include: {
+          reconciliation: true,
+          payment: {
+            include: {
+              order: {
+                select: {
+                  id: true,
+                  status: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (
+        current?.status === PaymentAttemptStatus.VERIFIED ||
+        current?.payment.status === PaymentStatus.PAID ||
+        current?.payment.order.status === OrderStatus.PAID
+      ) {
+        return {
+          success: true,
+          alreadyVerified: true,
+          orderId: current.payment.orderId,
+          referenceId: current.providerReference ?? referenceId,
+        };
+      }
+
+      if (
+        current?.reconciliation?.status === PaymentReconciliationStatus.OPEN &&
+        current.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED &&
+        current.payment.status === PaymentStatus.RECONCILIATION_REQUIRED
+      ) {
+        return {
+          success: true,
+          reconciliationRequired: true,
+          reconciliationId: current.reconciliation.id,
+          orderId: current.payment.orderId,
+          referenceId: current.providerReference ?? referenceId,
+        };
+      }
+
+      if (
+        current?.reconciliation?.status === PaymentReconciliationStatus.RESOLVED ||
+        current?.status === PaymentAttemptStatus.RECONCILED ||
+        current?.payment.status === PaymentStatus.REFUNDED
+      ) {
+        return {
+          success: true,
+          reconciled: true,
+          orderId: current.payment.orderId,
+          referenceId: current.providerReference ?? referenceId,
+        };
+      }
+
+      throw new ConflictException('Payment attempt state changed while recording reconciliation.');
+    }
+
+    const paymentClaimed = await transaction.payment.updateMany({
+      where: {
+        id: attempt.paymentId,
+        status: attempt.payment.status,
+      },
+      data: {
+        status: PaymentStatus.RECONCILIATION_REQUIRED,
+      },
+    });
+
+    if (paymentClaimed.count !== 1) {
+      throw new ConflictException('Payment state changed while recording reconciliation.');
+    }
+
     const reconciliation = await transaction.paymentReconciliation.upsert({
       where: {
         paymentAttemptId: attempt.id,
@@ -813,28 +928,6 @@ export class PaymentsService {
         amountToman: attempt.amountToman,
         detectedOrderStatus: attempt.payment.order.status,
         reason,
-      },
-    });
-
-    await transaction.paymentAttempt.update({
-      where: {
-        id: attempt.id,
-      },
-      data: {
-        status: PaymentAttemptStatus.RECONCILIATION_REQUIRED,
-        providerReference: referenceId,
-        verifiedAt,
-        failureCode: null,
-        failureMessage: null,
-      },
-    });
-
-    await transaction.payment.update({
-      where: {
-        id: attempt.paymentId,
-      },
-      data: {
-        status: PaymentStatus.RECONCILIATION_REQUIRED,
       },
     });
 
