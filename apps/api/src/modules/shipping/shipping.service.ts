@@ -360,9 +360,12 @@ export class ShippingService {
         }
 
         const now = new Date();
-        const updated = await transaction.shipment.update({
+        const finalized = await transaction.shipment.updateMany({
           where: {
             id: current.id,
+            status: ShipmentStatus.PENDING,
+            providerCreationState: ShipmentProviderCreationState.IN_PROGRESS,
+            providerShipmentId: null,
           },
           data: {
             providerCreationState: ShipmentProviderCreationState.CREATED,
@@ -370,6 +373,18 @@ export class ShippingService {
             trackingCode: created.trackingCode,
             providerCreateError: null,
             status: ShipmentStatus.READY,
+          },
+        });
+
+        if (finalized.count !== 1) {
+          throw new ConflictException(
+            'Shipment creation state changed before provider result could be finalized.',
+          );
+        }
+
+        const updated = await transaction.shipment.findUniqueOrThrow({
+          where: {
+            id: current.id,
           },
         });
 
@@ -585,14 +600,29 @@ export class ShippingService {
         throw new ConflictException('Shipment provider creation is not in a resettable state.');
       }
 
-      const updated = await transaction.shipment.update({
+      const reset = await transaction.shipment.updateMany({
         where: {
           id: shipment.id,
+          status: shipment.status,
+          providerCreationState: shipment.providerCreationState,
+          providerShipmentId: null,
         },
         data: {
           providerCreationState: ShipmentProviderCreationState.NOT_STARTED,
           creationAttemptedAt: null,
           providerCreateError: null,
+        },
+      });
+
+      if (reset.count !== 1) {
+        throw new ConflictException(
+          'Shipment creation state changed while resetting; reload before retrying.',
+        );
+      }
+
+      const updated = await transaction.shipment.findUniqueOrThrow({
+        where: {
+          id: shipment.id,
         },
       });
 

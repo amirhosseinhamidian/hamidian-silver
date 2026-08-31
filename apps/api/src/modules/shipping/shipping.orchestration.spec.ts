@@ -69,7 +69,8 @@ describe('ShippingService provider orchestration', () => {
           ...baseShipment,
           providerCreationState: ShipmentProviderCreationState.IN_PROGRESS,
         }),
-        update: jest.fn().mockResolvedValue({
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
           ...baseShipment,
           providerCreationState: ShipmentProviderCreationState.CREATED,
           providerShipmentId: 'PX-1',
@@ -113,8 +114,14 @@ describe('ShippingService provider orchestration', () => {
       }),
     );
     expect(provider.createShipment).toHaveBeenCalledTimes(1);
-    expect(transaction.shipment.update).toHaveBeenCalledWith(
+    expect(transaction.shipment.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
+        where: {
+          id: shipmentId,
+          status: ShipmentStatus.PENDING,
+          providerCreationState: ShipmentProviderCreationState.IN_PROGRESS,
+          providerShipmentId: null,
+        },
         data: expect.objectContaining({
           providerCreationState: ShipmentProviderCreationState.CREATED,
           providerShipmentId: 'PX-1',
