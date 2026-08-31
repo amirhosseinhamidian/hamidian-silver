@@ -46,24 +46,49 @@ export class ShippingTrackingScheduler {
 
     try {
       const dueBefore = new Date(Date.now() - this.trackingIntervalMs);
+      const activeStatuses = [
+        ShipmentStatus.READY,
+        ShipmentStatus.HANDED_OVER,
+        ShipmentStatus.IN_TRANSIT,
+      ];
+      const dueFilter = {
+        AND: [
+          {
+            OR: [
+              {
+                lastTrackingSyncAt: null,
+              },
+              {
+                lastTrackingSyncAt: {
+                  lte: dueBefore,
+                },
+              },
+            ],
+          },
+          {
+            OR: [
+              {
+                trackingAttemptedAt: null,
+              },
+              {
+                trackingAttemptedAt: {
+                  lte: dueBefore,
+                },
+              },
+            ],
+          },
+        ],
+      };
+
       const shipments = await this.prisma.shipment.findMany({
         where: {
           status: {
-            in: [ShipmentStatus.READY, ShipmentStatus.HANDED_OVER, ShipmentStatus.IN_TRANSIT],
+            in: activeStatuses,
           },
           providerShipmentId: {
             not: null,
           },
-          OR: [
-            {
-              lastTrackingSyncAt: null,
-            },
-            {
-              lastTrackingSyncAt: {
-                lte: dueBefore,
-              },
-            },
-          ],
+          ...dueFilter,
         },
         orderBy: [
           {
@@ -81,6 +106,27 @@ export class ShippingTrackingScheduler {
       });
 
       for (const shipment of shipments) {
+        const trackingAttemptedAt = new Date();
+        const claimed = await this.prisma.shipment.updateMany({
+          where: {
+            id: shipment.id,
+            status: {
+              in: activeStatuses,
+            },
+            providerShipmentId: {
+              not: null,
+            },
+            ...dueFilter,
+          },
+          data: {
+            trackingAttemptedAt,
+          },
+        });
+
+        if (claimed.count !== 1) {
+          continue;
+        }
+
         try {
           await this.shippingService.syncTracking(shipment.orderId);
         } catch (error) {
