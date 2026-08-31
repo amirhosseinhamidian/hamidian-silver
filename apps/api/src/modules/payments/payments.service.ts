@@ -7,6 +7,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { lockOrderRowForUpdate } from '../../common/order-row-lock';
 import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
@@ -384,6 +385,8 @@ export class PaymentsService {
     provider: string,
   ): Promise<InitiationContext> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockOrderRowForUpdate(transaction, orderId);
+
       const order = await transaction.order.findFirst({
         where: {
           id: orderId,

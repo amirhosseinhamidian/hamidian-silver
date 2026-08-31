@@ -6,6 +6,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
+import { lockOrderRowForUpdate } from '../../common/order-row-lock';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   NotificationOutboxEventType,
@@ -98,6 +99,8 @@ export class ShippingService {
     }
 
     return this.prisma.$transaction(async (transaction) => {
+      await lockOrderRowForUpdate(transaction, orderId);
+
       const currentOrder = await transaction.order.findFirst({
         where: {
           id: orderId,

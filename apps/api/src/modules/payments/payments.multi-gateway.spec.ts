@@ -43,6 +43,7 @@ describe('PaymentsService multi-gateway routing', () => {
 
   it('stores the selected provider and passes it to the registry boundary', async () => {
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: orderId }]),
       order: {
         findFirst: jest.fn().mockResolvedValue({
           id: orderId,
@@ -91,6 +92,11 @@ describe('PaymentsService multi-gateway routing', () => {
       provider: PAYMENT_GATEWAY_CODES.ZIBAL,
       idempotencyKey: 'checkout-zibal-001',
     });
+
+    expect(transaction.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(transaction.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      transaction.order.findFirst.mock.invocationCallOrder[0],
+    );
 
     expect(transaction.paymentAttempt.create).toHaveBeenCalledWith({
       data: {

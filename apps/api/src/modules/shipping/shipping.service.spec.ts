@@ -112,6 +112,7 @@ describe('ShippingService', () => {
     ]);
 
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: orderId }]),
       order: {
         findFirst: jest.fn().mockResolvedValue({
           id: orderId,
@@ -150,6 +151,11 @@ describe('ShippingService', () => {
     await service.selectRate(userId, orderId, {
       serviceCode: 'EXPRESS',
     });
+
+    expect(transaction.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(transaction.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      transaction.order.findFirst.mock.invocationCallOrder[0],
+    );
 
     expect(transaction.shipment.upsert).toHaveBeenCalledWith({
       where: {
@@ -204,6 +210,7 @@ describe('ShippingService', () => {
     ]);
 
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: orderId }]),
       order: {
         findFirst: jest.fn().mockResolvedValue({
           id: orderId,

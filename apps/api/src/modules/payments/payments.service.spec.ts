@@ -49,6 +49,7 @@ describe('PaymentsService', () => {
 
   it('initiates a payment using Rial only at the gateway boundary', async () => {
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: orderId }]),
       order: {
         findFirst: jest.fn().mockResolvedValue({
           id: orderId,
@@ -96,6 +97,11 @@ describe('PaymentsService', () => {
       idempotencyKey: 'checkout-12345678',
     });
 
+    expect(transaction.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(transaction.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      transaction.order.findFirst.mock.invocationCallOrder[0],
+    );
+
     expect(gateway.initiate).toHaveBeenCalledWith({
       attemptId,
       orderNumber: 'HS-TEST',
@@ -106,6 +112,7 @@ describe('PaymentsService', () => {
 
   it('reuses an already redirected attempt for the same idempotency key', async () => {
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: orderId }]),
       order: {
         findFirst: jest.fn().mockResolvedValue({
           id: orderId,
@@ -302,6 +309,7 @@ describe('PaymentsService', () => {
 
   it('rejects payment initiation after the inventory reservation expires', async () => {
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: orderId }]),
       order: {
         findFirst: jest.fn().mockResolvedValue({
           id: orderId,
@@ -330,6 +338,8 @@ describe('PaymentsService', () => {
       }),
     ).rejects.toBeInstanceOf(ConflictException);
 
+    expect(transaction.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(transaction.payment.upsert).not.toHaveBeenCalled();
     expect(gateway.initiate).not.toHaveBeenCalled();
   });
 });
