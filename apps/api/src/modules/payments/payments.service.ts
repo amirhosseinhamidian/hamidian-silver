@@ -165,37 +165,21 @@ export class PaymentsService {
 
     const callbackUrl = `${this.callbackBaseUrl}/${context.attemptId}`;
 
+    const gatewayInput: InitiateGatewayPaymentInput = {
+      attemptId: context.attemptId,
+      orderNumber: context.orderNumber,
+      amountRial: this.tomanToRial(context.amountToman),
+      callbackUrl,
+    };
+
+    if (this.gateway.providerCode === 'registry') {
+      gatewayInput.provider = context.provider;
+    }
+
+    let initiated: Awaited<ReturnType<PaymentGateway['initiate']>>;
+
     try {
-      const gatewayInput: InitiateGatewayPaymentInput = {
-        attemptId: context.attemptId,
-        orderNumber: context.orderNumber,
-        amountRial: this.tomanToRial(context.amountToman),
-        callbackUrl,
-      };
-
-      if (this.gateway.providerCode === 'registry') {
-        gatewayInput.provider = context.provider;
-      }
-
-      const initiated = await this.gateway.initiate(gatewayInput);
-
-      const updated = await this.prisma.paymentAttempt.update({
-        where: {
-          id: context.attemptId,
-        },
-        data: {
-          authority: initiated.authority,
-          paymentUrl: initiated.paymentUrl,
-          status: PaymentAttemptStatus.REDIRECTED,
-        },
-      });
-
-      return {
-        attemptId: updated.id,
-        status: updated.status,
-        authority: updated.authority,
-        paymentUrl: updated.paymentUrl,
-      };
+      initiated = await this.gateway.initiate(gatewayInput);
     } catch (error) {
       await this.prisma.paymentAttempt.updateMany({
         where: {
@@ -210,6 +194,75 @@ export class PaymentsService {
 
       throw error;
     }
+
+    const persisted = await this.prisma.paymentAttempt.updateMany({
+      where: {
+        id: context.attemptId,
+        status: PaymentAttemptStatus.CREATED,
+      },
+      data: {
+        authority: initiated.authority,
+        paymentUrl: initiated.paymentUrl,
+        status: PaymentAttemptStatus.REDIRECTED,
+        failureMessage: null,
+      },
+    });
+
+    if (persisted.count === 1) {
+      return {
+        attemptId: context.attemptId,
+        status: PaymentAttemptStatus.REDIRECTED,
+        authority: initiated.authority,
+        paymentUrl: initiated.paymentUrl,
+      };
+    }
+
+    const current = await this.prisma.paymentAttempt.findUnique({
+      where: {
+        id: context.attemptId,
+      },
+    });
+
+    if (
+      current?.status === PaymentAttemptStatus.REDIRECTED &&
+      current.authority === initiated.authority &&
+      current.paymentUrl === initiated.paymentUrl
+    ) {
+      return {
+        attemptId: current.id,
+        status: current.status,
+        authority: current.authority,
+        paymentUrl: current.paymentUrl,
+      };
+    }
+
+    if (current?.status === PaymentAttemptStatus.VERIFIED) {
+      return {
+        attemptId: current.id,
+        status: current.status,
+        alreadyPaid: true,
+      };
+    }
+
+    if (current?.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED) {
+      return {
+        attemptId: current.id,
+        status: current.status,
+        reconciliationRequired: true,
+      };
+    }
+
+    if (current?.status === PaymentAttemptStatus.RECONCILED) {
+      return {
+        attemptId: current.id,
+        status: current.status,
+        reconciled: true,
+      };
+    }
+
+    throw new ConflictException(
+      'Payment attempt state changed while storing the gateway initiation result.',
+    );
   }
 
   async verifyCallback(

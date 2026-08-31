@@ -86,12 +86,7 @@ describe('PaymentsService', () => {
       authority: 'AUTH-1',
       paymentUrl: 'https://gateway.example/pay/AUTH-1',
     });
-    prisma.paymentAttempt.update.mockResolvedValue({
-      id: attemptId,
-      status: PaymentAttemptStatus.REDIRECTED,
-      authority: 'AUTH-1',
-      paymentUrl: 'https://gateway.example/pay/AUTH-1',
-    });
+    prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 1 });
 
     await service.initiateOrderPayment(userId, orderId, {
       idempotencyKey: 'checkout-12345678',
