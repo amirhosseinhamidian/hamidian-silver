@@ -17,6 +17,7 @@ describe('PaymentReconciliationController', () => {
     await controller.resolveExternalRefund(
       reconciliationId,
       {
+        externalRefundReference: 'GW-REFUND-1',
         resolutionNote: 'Refund confirmed externally.',
       },
       {
@@ -27,6 +28,7 @@ describe('PaymentReconciliationController', () => {
     expect(service.resolveExternalRefund).toHaveBeenCalledWith(
       reconciliationId,
       actorUserId,
+      'GW-REFUND-1',
       'Refund confirmed externally.',
     );
   });

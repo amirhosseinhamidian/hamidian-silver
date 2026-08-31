@@ -62,6 +62,7 @@ export class PaymentReconciliationService {
   async resolveExternalRefund(
     reconciliationId: string,
     actorUserId: string,
+    externalRefundReference: string,
     resolutionNote: string,
   ) {
     return this.prisma.$transaction(async (transaction) => {
@@ -82,9 +83,25 @@ export class PaymentReconciliationService {
         throw new NotFoundException('Payment reconciliation was not found.');
       }
 
+      if (
+        reconciliation.provider !== reconciliation.paymentAttempt.provider ||
+        reconciliation.providerReference !== reconciliation.paymentAttempt.providerReference ||
+        reconciliation.amountToman !== reconciliation.paymentAttempt.amountToman
+      ) {
+        throw new ConflictException(
+          'Payment reconciliation snapshot no longer matches the payment attempt.',
+        );
+      }
+
       if (reconciliation.status === PaymentReconciliationStatus.RESOLVED) {
         if (reconciliation.resolution === PaymentReconciliationResolution.REFUNDED_EXTERNALLY) {
-          return reconciliation;
+          if (reconciliation.externalReference === externalRefundReference) {
+            return reconciliation;
+          }
+
+          throw new ConflictException(
+            'Payment reconciliation was resolved with a different external refund reference.',
+          );
         }
 
         throw new ConflictException('Payment reconciliation is already resolved.');
@@ -104,21 +121,40 @@ export class PaymentReconciliationService {
       }
 
       const resolvedAt = new Date();
-      const claimed = await transaction.paymentReconciliation.updateMany({
-        where: {
-          id: reconciliation.id,
-          status: PaymentReconciliationStatus.OPEN,
-          resolution: null,
-          resolvedAt: null,
-        },
-        data: {
-          status: PaymentReconciliationStatus.RESOLVED,
-          resolution: PaymentReconciliationResolution.REFUNDED_EXTERNALLY,
-          resolutionNote,
-          resolvedByUserId: actorUserId,
-          resolvedAt,
-        },
-      });
+      let claimed: { count: number };
+
+      try {
+        claimed = await transaction.paymentReconciliation.updateMany({
+          where: {
+            id: reconciliation.id,
+            status: PaymentReconciliationStatus.OPEN,
+            resolution: null,
+            externalReference: null,
+            resolvedAt: null,
+          },
+          data: {
+            status: PaymentReconciliationStatus.RESOLVED,
+            resolution: PaymentReconciliationResolution.REFUNDED_EXTERNALLY,
+            externalReference: externalRefundReference,
+            resolutionNote,
+            resolvedByUserId: actorUserId,
+            resolvedAt,
+          },
+        });
+      } catch (error) {
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          'code' in error &&
+          error.code === 'P2002'
+        ) {
+          throw new ConflictException(
+            'External refund reference is already used by another payment reconciliation.',
+          );
+        }
+
+        throw error;
+      }
 
       if (claimed.count !== 1) {
         const current = await transaction.paymentReconciliation.findUnique({
@@ -131,7 +167,13 @@ export class PaymentReconciliationService {
           current?.status === PaymentReconciliationStatus.RESOLVED &&
           current.resolution === PaymentReconciliationResolution.REFUNDED_EXTERNALLY
         ) {
-          return current;
+          if (current.externalReference === externalRefundReference) {
+            return current;
+          }
+
+          throw new ConflictException(
+            'Payment reconciliation was resolved with a different external refund reference.',
+          );
         }
 
         throw new ConflictException(

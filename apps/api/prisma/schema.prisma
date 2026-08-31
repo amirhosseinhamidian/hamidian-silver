@@ -949,6 +949,7 @@ model PaymentReconciliation {
   reason              String                           @db.VarChar(500)
   status              PaymentReconciliationStatus      @default(OPEN)
   resolution          PaymentReconciliationResolution?
+  externalReference   String?                       @db.VarChar(255)
   resolutionNote      String?                          @db.VarChar(1000)
   resolvedByUserId    String?                          @db.Uuid
   resolvedAt          DateTime?                        @db.Timestamptz(3)

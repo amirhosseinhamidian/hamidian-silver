@@ -28,6 +28,7 @@ export class PaymentReconciliationController {
     return this.reconciliationService.resolveExternalRefund(
       reconciliationId,
       principal.userId,
+      dto.externalRefundReference,
       dto.resolutionNote,
     );
   }
