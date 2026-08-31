@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import { SupplierPayableStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { OrderFinanceService } from './order-finance.service';
@@ -27,6 +27,8 @@ describe('OrderFinanceService', () => {
         {
           quantity: 2,
           unitSupplierPriceToman: 600_000,
+          supplierIdSnapshot: '20000000-0000-4000-8000-000000000001',
+          supplierNameSnapshot: 'Supplier A',
         },
         {
           quantity: 1,
@@ -74,7 +76,7 @@ describe('OrderFinanceService', () => {
         grandTotalToman: 999_999,
         items: [],
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toBeInstanceOf(ConflictException);
 
     expect(transaction.orderFinanceSnapshot.createMany).not.toHaveBeenCalled();
   });

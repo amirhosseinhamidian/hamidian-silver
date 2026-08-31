@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   PaymentRefundStatus,
@@ -22,6 +27,8 @@ type FinanceSnapshotOrderInput = {
   items: Array<{
     quantity: number;
     unitSupplierPriceToman: number | null | undefined;
+    supplierIdSnapshot?: string | null;
+    supplierNameSnapshot?: string | null;
   }>;
 };
 
@@ -230,30 +237,51 @@ export class OrderFinanceService {
 
     return this.prisma.$transaction(async (transaction) => {
       let created = 0;
+      let skipped = 0;
+      const issues: Array<{
+        orderId: string;
+        orderNumber: string;
+        reason: string;
+      }> = [];
 
       for (const order of orders) {
         if (!order.paidAt) {
           continue;
         }
 
-        const result = await this.createSnapshot(transaction, {
-          orderId: order.id,
-          paidAt: order.paidAt,
-          merchandiseTotalToman: order.merchandiseTotalToman,
-          platingTotalToman: order.platingTotalToman,
-          discountTotalToman: order.discountTotalToman,
-          shippingTotalToman: order.shippingTotalToman,
-          taxTotalToman: order.taxTotalToman,
-          grandTotalToman: order.grandTotalToman,
-          items: order.items,
-        });
+        try {
+          const result = await this.createSnapshot(transaction, {
+            orderId: order.id,
+            paidAt: order.paidAt,
+            merchandiseTotalToman: order.merchandiseTotalToman,
+            platingTotalToman: order.platingTotalToman,
+            discountTotalToman: order.discountTotalToman,
+            shippingTotalToman: order.shippingTotalToman,
+            taxTotalToman: order.taxTotalToman,
+            grandTotalToman: order.grandTotalToman,
+            items: order.items,
+          });
 
-        created += result.count;
+          created += result.count;
+        } catch (error) {
+          if (!(error instanceof ConflictException)) {
+            throw error;
+          }
+
+          skipped += 1;
+          issues.push({
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            reason: this.conflictMessage(error),
+          });
+        }
       }
 
       return {
         scanned: orders.length,
         created,
+        skipped,
+        issues,
       };
     });
   }
@@ -269,28 +297,50 @@ export class OrderFinanceService {
     ];
 
     if (amounts.some((amount) => !Number.isSafeInteger(amount) || amount < 0)) {
-      throw new BadRequestException('Order finance snapshot contains an invalid amount.');
+      throw new ConflictException('Order finance snapshot contains an invalid amount.');
     }
 
     let supplierCostToman = 0;
 
     for (const item of input.items) {
-      const unitSupplierPriceToman = item.unitSupplierPriceToman ?? null;
+      if (!Number.isSafeInteger(item.quantity) || item.quantity <= 0) {
+        throw new ConflictException('Order finance item quantity is invalid.');
+      }
 
-      if (unitSupplierPriceToman === null) {
+      const unitSupplierPriceToman = item.unitSupplierPriceToman ?? null;
+      const supplierIdSnapshot = item.supplierIdSnapshot ?? null;
+      const supplierNameSnapshot = item.supplierNameSnapshot?.trim() || null;
+      const hasAnySupplierSnapshot =
+        unitSupplierPriceToman !== null ||
+        supplierIdSnapshot !== null ||
+        supplierNameSnapshot !== null;
+
+      if (!hasAnySupplierSnapshot) {
         continue;
+      }
+
+      if (
+        unitSupplierPriceToman === null ||
+        supplierIdSnapshot === null ||
+        supplierNameSnapshot === null
+      ) {
+        throw new ConflictException('Supplier snapshot is incomplete for an order finance item.');
+      }
+
+      if (!Number.isSafeInteger(unitSupplierPriceToman) || unitSupplierPriceToman < 0) {
+        throw new ConflictException('Supplier cost exceeds the supported range.');
       }
 
       const lineSupplierCost = unitSupplierPriceToman * item.quantity;
 
       if (!Number.isSafeInteger(lineSupplierCost) || lineSupplierCost < 0) {
-        throw new BadRequestException('Supplier cost exceeds the supported range.');
+        throw new ConflictException('Supplier cost exceeds the supported range.');
       }
 
       supplierCostToman += lineSupplierCost;
 
       if (!Number.isSafeInteger(supplierCostToman)) {
-        throw new BadRequestException('Supplier cost exceeds the supported range.');
+        throw new ConflictException('Supplier cost exceeds the supported range.');
       }
     }
 
@@ -306,13 +356,13 @@ export class OrderFinanceService {
       !Number.isSafeInteger(expectedCustomerTotalToman) ||
       expectedCustomerTotalToman !== input.grandTotalToman
     ) {
-      throw new BadRequestException('Order finance totals are inconsistent.');
+      throw new ConflictException('Order finance totals are inconsistent.');
     }
 
     const grossMarginBeforeServiceCostsToman = netSalesToman - supplierCostToman;
 
     if (!Number.isSafeInteger(grossMarginBeforeServiceCostsToman)) {
-      throw new BadRequestException('Order finance margin exceeds the supported range.');
+      throw new ConflictException('Order finance margin exceeds the supported range.');
     }
 
     return {
@@ -327,6 +377,28 @@ export class OrderFinanceService {
       netSalesToman,
       grossMarginBeforeServiceCostsToman,
     };
+  }
+
+  private conflictMessage(error: ConflictException): string {
+    const response = error.getResponse();
+
+    if (typeof response === 'string') {
+      return response.slice(0, 500);
+    }
+
+    if (typeof response === 'object' && response !== null && 'message' in response) {
+      const message = (response as { message?: unknown }).message;
+
+      if (typeof message === 'string') {
+        return message.slice(0, 500);
+      }
+
+      if (Array.isArray(message)) {
+        return message.join('; ').slice(0, 500);
+      }
+    }
+
+    return 'Order finance snapshot failed integrity validation.';
   }
 
   private buildSnapshotWhere(from?: string, to?: string): Prisma.OrderFinanceSnapshotWhereInput {
