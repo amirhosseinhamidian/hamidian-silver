@@ -631,6 +631,22 @@ export class SupplierSettlementsService {
         });
       } catch (error) {
         if (this.isRecordNotFoundError(error)) {
+          const current = await transaction.supplierSettlement.findUnique({
+            where: {
+              id: settlement.id,
+            },
+          });
+
+          if (current?.status === SupplierSettlementStatus.PAID) {
+            return current;
+          }
+
+          if (current?.status === SupplierSettlementStatus.CANCELLED) {
+            throw new ConflictException(
+              'Supplier settlement was cancelled while payment was being recorded.',
+            );
+          }
+
           throw new ConflictException(
             'Supplier settlement changed while payment was being recorded.',
           );
@@ -752,6 +768,20 @@ export class SupplierSettlementsService {
         });
       } catch (error) {
         if (this.isRecordNotFoundError(error)) {
+          const current = await transaction.supplierSettlement.findUnique({
+            where: {
+              id: settlement.id,
+            },
+          });
+
+          if (current?.status === SupplierSettlementStatus.CANCELLED) {
+            return current;
+          }
+
+          if (current?.status === SupplierSettlementStatus.PAID) {
+            throw new ConflictException('Paid supplier settlements cannot be cancelled.');
+          }
+
           throw new ConflictException(
             'Supplier settlement changed while cancellation was being recorded.',
           );
