@@ -1,4 +1,5 @@
 import {
+  BadGatewayException,
   BadRequestException,
   ConflictException,
   Inject,
@@ -195,6 +196,8 @@ export class PaymentsService {
       throw error;
     }
 
+    this.assertGatewayInitiationResult(initiated);
+
     const persisted = await this.prisma.paymentAttempt.updateMany({
       where: {
         id: context.attemptId,
@@ -346,6 +349,8 @@ export class PaymentsService {
     const verification = await this.gateway.verify(gatewayInput);
 
     if (!verification.success) {
+      this.assertGatewayFailureResult(verification.code, verification.message);
+
       const failed = await this.prisma.paymentAttempt.updateMany({
         where: {
           id: attempt.id,
@@ -416,6 +421,8 @@ export class PaymentsService {
         'Payment attempt state changed while processing a verification failure.',
       );
     }
+
+    this.assertGatewayVerificationResult(verification.referenceId, verification.actualFeeToman);
 
     try {
       return await this.finalizeVerifiedPayment(
@@ -1148,6 +1155,54 @@ export class PaymentsService {
           referenceId: orderId,
         },
       });
+    }
+  }
+
+  private assertGatewayInitiationResult(
+    result: Awaited<ReturnType<PaymentGateway['initiate']>>,
+  ): void {
+    this.assertGatewayString(result.authority, 'Payment gateway authority', 255);
+    this.assertGatewayString(result.paymentUrl, 'Payment gateway payment URL', 2000);
+
+    let paymentUrl: URL;
+
+    try {
+      paymentUrl = new URL(result.paymentUrl);
+    } catch {
+      throw new BadGatewayException('Payment gateway payment URL is invalid.');
+    }
+
+    if (paymentUrl.protocol !== 'https:' && paymentUrl.protocol !== 'http:') {
+      throw new BadGatewayException('Payment gateway payment URL is invalid.');
+    }
+  }
+
+  private assertGatewayVerificationResult(referenceId: string, actualFeeToman?: number): void {
+    this.assertGatewayString(referenceId, 'Payment gateway reference ID', 255);
+
+    if (actualFeeToman !== undefined && !isNonNegativeTomanInt(actualFeeToman)) {
+      throw new BadGatewayException('Payment gateway actual fee is invalid.');
+    }
+  }
+
+  private assertGatewayFailureResult(code?: string, message?: string): void {
+    if (code !== undefined) {
+      this.assertGatewayString(code, 'Payment gateway failure code', 120);
+    }
+
+    if (message !== undefined) {
+      this.assertGatewayString(message, 'Payment gateway failure message', 500);
+    }
+  }
+
+  private assertGatewayString(value: string, label: string, maxLength: number): void {
+    if (
+      typeof value !== 'string' ||
+      value.length === 0 ||
+      value.length > maxLength ||
+      value.trim() !== value
+    ) {
+      throw new BadGatewayException(`${label} is invalid.`);
     }
   }
 
