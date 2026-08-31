@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { isNonNegativeInt32, isSignedInt32 } from '../../common/int32';
 import { InventoryMovementType } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
@@ -127,22 +132,48 @@ export class InventoryService {
         throw new BadRequestException('On-hand stock cannot be lower than reserved stock.');
       }
 
-      const inventory = current
-        ? await transaction.inventory.update({
-            where: {
-              id: current.id,
-            },
-            data: {
-              onHand: nextOnHand,
-            },
-          })
-        : await transaction.inventory.create({
+      let inventory: InventorySnapshot;
+
+      if (current) {
+        const updated = await transaction.inventory.updateMany({
+          where: {
+            id: current.id,
+            onHand: current.onHand,
+            reserved: current.reserved,
+          },
+          data: {
+            onHand: nextOnHand,
+          },
+        });
+
+        if (updated.count !== 1) {
+          throw new ConflictException('Inventory changed while adjusting stock; reload and retry.');
+        }
+
+        inventory = await transaction.inventory.findUniqueOrThrow({
+          where: {
+            id: current.id,
+          },
+        });
+      } else {
+        try {
+          inventory = await transaction.inventory.create({
             data: {
               warehouseId: dto.warehouseId,
               variantId: dto.variantId,
               onHand: nextOnHand,
             },
           });
+        } catch (error) {
+          if (this.isUniqueConstraintError(error)) {
+            throw new ConflictException(
+              'Inventory was created concurrently; reload and retry the adjustment.',
+            );
+          }
+
+          throw error;
+        }
+      }
 
       await transaction.inventoryMovement.create({
         data: {
@@ -218,22 +249,50 @@ export class InventoryService {
           throw new BadRequestException('Bulk stock quantity cannot be lower than reserved stock.');
         }
 
-        const inventory = await transaction.inventory.upsert({
-          where: {
-            warehouseId_variantId: {
-              warehouseId: dto.warehouseId,
-              variantId,
+        let inventory: InventorySnapshot;
+
+        if (current) {
+          const updated = await transaction.inventory.updateMany({
+            where: {
+              id: current.id,
+              onHand: current.onHand,
+              reserved: current.reserved,
             },
-          },
-          update: {
-            onHand: dto.onHand,
-          },
-          create: {
-            warehouseId: dto.warehouseId,
-            variantId,
-            onHand: dto.onHand,
-          },
-        });
+            data: {
+              onHand: dto.onHand,
+            },
+          });
+
+          if (updated.count !== 1) {
+            throw new ConflictException(
+              'Inventory changed while bulk-setting stock; reload and retry.',
+            );
+          }
+
+          inventory = await transaction.inventory.findUniqueOrThrow({
+            where: {
+              id: current.id,
+            },
+          });
+        } else {
+          try {
+            inventory = await transaction.inventory.create({
+              data: {
+                warehouseId: dto.warehouseId,
+                variantId,
+                onHand: dto.onHand,
+              },
+            });
+          } catch (error) {
+            if (this.isUniqueConstraintError(error)) {
+              throw new ConflictException(
+                'Inventory was created concurrently; reload and retry the bulk stock update.',
+              );
+            }
+
+            throw error;
+          }
+        }
 
         const delta = dto.onHand - (current?.onHand ?? 0);
 
@@ -376,5 +435,9 @@ export class InventoryService {
       available,
       isLowStock: available <= inventory.lowStockThreshold,
     };
+  }
+
+  private isUniqueConstraintError(error: unknown): boolean {
+    return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002';
   }
 }

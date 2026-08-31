@@ -378,6 +378,22 @@ export class OrdersService {
         );
       }
 
+      const cancelledAt = new Date();
+      const claimed = await transaction.order.updateMany({
+        where: {
+          id: order.id,
+          status: OrderStatus.PENDING_PAYMENT,
+        },
+        data: {
+          status: OrderStatus.CANCELLED,
+          cancelledAt,
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new ConflictException('Order state changed while cancelling; reload and retry.');
+      }
+
       const quantitiesByVariant = new Map<string, number>();
 
       for (const item of order.items) {
@@ -433,13 +449,9 @@ export class OrdersService {
         });
       }
 
-      const cancelled = await transaction.order.update({
+      const cancelled = await transaction.order.findUniqueOrThrow({
         where: {
           id: order.id,
-        },
-        data: {
-          status: OrderStatus.CANCELLED,
-          cancelledAt: new Date(),
         },
       });
 
