@@ -293,11 +293,7 @@ export class PaymentsService {
       throw new NotFoundException('Payment attempt was not found.');
     }
 
-    if (
-      attempt.status === PaymentAttemptStatus.VERIFIED ||
-      attempt.payment.status === PaymentStatus.PAID ||
-      attempt.payment.order.status === OrderStatus.PAID
-    ) {
+    if (attempt.status === PaymentAttemptStatus.VERIFIED) {
       return {
         success: true,
         alreadyVerified: true,
@@ -306,10 +302,7 @@ export class PaymentsService {
       };
     }
 
-    if (
-      attempt.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED ||
-      attempt.payment.status === PaymentStatus.RECONCILIATION_REQUIRED
-    ) {
+    if (attempt.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED) {
       return {
         success: true,
         reconciliationRequired: true,
@@ -318,10 +311,7 @@ export class PaymentsService {
       };
     }
 
-    if (
-      attempt.status === PaymentAttemptStatus.RECONCILED ||
-      attempt.payment.status === PaymentStatus.REFUNDED
-    ) {
+    if (attempt.status === PaymentAttemptStatus.RECONCILED) {
       return {
         success: true,
         reconciled: true,
@@ -383,11 +373,7 @@ export class PaymentsService {
         },
       });
 
-      if (
-        current?.status === PaymentAttemptStatus.VERIFIED ||
-        current?.payment.status === PaymentStatus.PAID ||
-        current?.payment.order.status === OrderStatus.PAID
-      ) {
+      if (current?.status === PaymentAttemptStatus.VERIFIED) {
         return {
           success: true,
           alreadyVerified: true,
@@ -396,10 +382,7 @@ export class PaymentsService {
         };
       }
 
-      if (
-        current?.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED ||
-        current?.payment.status === PaymentStatus.RECONCILIATION_REQUIRED
-      ) {
+      if (current?.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED) {
         return {
           success: true,
           reconciliationRequired: true,
@@ -408,10 +391,7 @@ export class PaymentsService {
         };
       }
 
-      if (
-        current?.status === PaymentAttemptStatus.RECONCILED ||
-        current?.payment.status === PaymentStatus.REFUNDED
-      ) {
+      if (current?.status === PaymentAttemptStatus.RECONCILED) {
         return {
           success: true,
           reconciled: true,
@@ -656,11 +636,7 @@ export class PaymentsService {
 
       const order = attempt.payment.order;
 
-      if (
-        attempt.status === PaymentAttemptStatus.VERIFIED ||
-        attempt.payment.status === PaymentStatus.PAID ||
-        order.status === OrderStatus.PAID
-      ) {
+      if (attempt.status === PaymentAttemptStatus.VERIFIED) {
         return {
           success: true,
           alreadyVerified: true,
@@ -669,12 +645,42 @@ export class PaymentsService {
         };
       }
 
+      if (attempt.status !== PaymentAttemptStatus.REDIRECTED) {
+        return this.recordPaymentReconciliationInTransaction(
+          transaction,
+          attempt.id,
+          referenceId,
+          `Gateway verification completed after payment attempt reached ${attempt.status}.`,
+        );
+      }
+
       if (order.status !== OrderStatus.PENDING_PAYMENT) {
         return this.recordPaymentReconciliationInTransaction(
           transaction,
           attempt.id,
           referenceId,
           `Gateway verified payment after order reached ${order.status}.`,
+        );
+      }
+
+      if (attempt.payment.status !== PaymentStatus.PENDING) {
+        return this.recordPaymentReconciliationInTransaction(
+          transaction,
+          attempt.id,
+          referenceId,
+          `Gateway verified payment while payment aggregate was ${attempt.payment.status}.`,
+        );
+      }
+
+      if (
+        attempt.amountToman !== attempt.payment.amountToman ||
+        attempt.payment.amountToman !== order.grandTotalToman
+      ) {
+        return this.recordPaymentReconciliationInTransaction(
+          transaction,
+          attempt.id,
+          referenceId,
+          'Verified payment amount snapshots do not match the Payment and Order totals.',
         );
       }
 
@@ -691,24 +697,6 @@ export class PaymentsService {
       });
 
       if (claimed.count !== 1) {
-        const currentOrder = await transaction.order.findUnique({
-          where: {
-            id: order.id,
-          },
-          select: {
-            status: true,
-          },
-        });
-
-        if (currentOrder?.status === OrderStatus.PAID) {
-          return {
-            success: true,
-            alreadyVerified: true,
-            orderId: order.id,
-            referenceId,
-          };
-        }
-
         return this.recordPaymentReconciliationInTransaction(
           transaction,
           attempt.id,
@@ -844,11 +832,7 @@ export class PaymentsService {
       throw new NotFoundException('Payment attempt was not found.');
     }
 
-    if (
-      attempt.status === PaymentAttemptStatus.VERIFIED ||
-      attempt.payment.status === PaymentStatus.PAID ||
-      attempt.payment.order.status === OrderStatus.PAID
-    ) {
+    if (attempt.status === PaymentAttemptStatus.VERIFIED) {
       return {
         success: true,
         alreadyVerified: true,
@@ -859,8 +843,7 @@ export class PaymentsService {
 
     if (
       attempt.reconciliation?.status === PaymentReconciliationStatus.RESOLVED ||
-      attempt.status === PaymentAttemptStatus.RECONCILED ||
-      attempt.payment.status === PaymentStatus.REFUNDED
+      attempt.status === PaymentAttemptStatus.RECONCILED
     ) {
       return {
         success: true,
@@ -872,8 +855,7 @@ export class PaymentsService {
 
     if (
       attempt.reconciliation?.status === PaymentReconciliationStatus.OPEN &&
-      attempt.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED &&
-      attempt.payment.status === PaymentStatus.RECONCILIATION_REQUIRED
+      attempt.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED
     ) {
       return {
         success: true,
@@ -883,6 +865,11 @@ export class PaymentsService {
         referenceId: attempt.providerReference ?? referenceId,
       };
     }
+
+    const preserveSettledPayment =
+      attempt.payment.status === PaymentStatus.PAID ||
+      attempt.payment.status === PaymentStatus.PARTIALLY_REFUNDED ||
+      attempt.payment.status === PaymentStatus.REFUNDED;
 
     const verifiedAt = attempt.verifiedAt ?? new Date();
     const attemptClaimed = await transaction.paymentAttempt.updateMany({
@@ -919,11 +906,7 @@ export class PaymentsService {
         },
       });
 
-      if (
-        current?.status === PaymentAttemptStatus.VERIFIED ||
-        current?.payment.status === PaymentStatus.PAID ||
-        current?.payment.order.status === OrderStatus.PAID
-      ) {
+      if (current?.status === PaymentAttemptStatus.VERIFIED) {
         return {
           success: true,
           alreadyVerified: true,
@@ -934,8 +917,7 @@ export class PaymentsService {
 
       if (
         current?.reconciliation?.status === PaymentReconciliationStatus.OPEN &&
-        current.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED &&
-        current.payment.status === PaymentStatus.RECONCILIATION_REQUIRED
+        current.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED
       ) {
         return {
           success: true,
@@ -948,8 +930,7 @@ export class PaymentsService {
 
       if (
         current?.reconciliation?.status === PaymentReconciliationStatus.RESOLVED ||
-        current?.status === PaymentAttemptStatus.RECONCILED ||
-        current?.payment.status === PaymentStatus.REFUNDED
+        current?.status === PaymentAttemptStatus.RECONCILED
       ) {
         return {
           success: true,
@@ -962,18 +943,20 @@ export class PaymentsService {
       throw new ConflictException('Payment attempt state changed while recording reconciliation.');
     }
 
-    const paymentClaimed = await transaction.payment.updateMany({
-      where: {
-        id: attempt.paymentId,
-        status: attempt.payment.status,
-      },
-      data: {
-        status: PaymentStatus.RECONCILIATION_REQUIRED,
-      },
-    });
+    if (!preserveSettledPayment) {
+      const paymentClaimed = await transaction.payment.updateMany({
+        where: {
+          id: attempt.paymentId,
+          status: attempt.payment.status,
+        },
+        data: {
+          status: PaymentStatus.RECONCILIATION_REQUIRED,
+        },
+      });
 
-    if (paymentClaimed.count !== 1) {
-      throw new ConflictException('Payment state changed while recording reconciliation.');
+      if (paymentClaimed.count !== 1) {
+        throw new ConflictException('Payment state changed while recording reconciliation.');
+      }
     }
 
     const reconciliation = await transaction.paymentReconciliation.upsert({

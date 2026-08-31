@@ -24,9 +24,11 @@ describe('PaymentsService supplier payables', () => {
       status: PaymentAttemptStatus.REDIRECTED,
       payment: {
         orderId,
+        amountToman: 1_000_000,
         status: PaymentStatus.PENDING,
         order: {
           id: orderId,
+          grandTotalToman: 1_000_000,
           status: OrderStatus.PENDING_PAYMENT,
         },
       },
@@ -38,6 +40,7 @@ describe('PaymentsService supplier payables', () => {
         order: {
           id: orderId,
           warehouseId,
+          grandTotalToman: 1_000_000,
           status: OrderStatus.PENDING_PAYMENT,
           items: [
             {

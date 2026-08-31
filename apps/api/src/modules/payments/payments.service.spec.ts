@@ -164,9 +164,11 @@ describe('PaymentsService', () => {
       payment: {
         id: paymentId,
         orderId,
+        amountToman: 1_000_000,
         status: PaymentStatus.PENDING,
         order: {
           id: orderId,
+          grandTotalToman: 1_000_000,
           status: OrderStatus.PENDING_PAYMENT,
         },
       },
@@ -182,15 +184,18 @@ describe('PaymentsService', () => {
         findUnique: jest.fn().mockResolvedValue({
           id: attemptId,
           paymentId,
+          amountToman: 1_000_000,
           authority: 'AUTH-1',
           status: PaymentAttemptStatus.REDIRECTED,
           providerReference: null,
           payment: {
             id: paymentId,
+            amountToman: 1_000_000,
             status: PaymentStatus.PENDING,
             order: {
               id: orderId,
               warehouseId: '70000000-0000-4000-8000-000000000001',
+              grandTotalToman: 1_000_000,
               status: OrderStatus.PENDING_PAYMENT,
               items: [{ variantId, quantity: 2 }],
             },

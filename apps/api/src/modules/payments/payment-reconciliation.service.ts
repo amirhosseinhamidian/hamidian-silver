@@ -90,9 +90,15 @@ export class PaymentReconciliationService {
         throw new ConflictException('Payment reconciliation is already resolved.');
       }
 
+      const paymentStatus = reconciliation.paymentAttempt.payment.status;
+      const preserveSettledPayment =
+        paymentStatus === PaymentStatus.PAID ||
+        paymentStatus === PaymentStatus.PARTIALLY_REFUNDED ||
+        paymentStatus === PaymentStatus.REFUNDED;
+
       if (
-        reconciliation.paymentAttempt.payment.status !== PaymentStatus.RECONCILIATION_REQUIRED ||
-        reconciliation.paymentAttempt.status !== PaymentAttemptStatus.RECONCILIATION_REQUIRED
+        reconciliation.paymentAttempt.status !== PaymentAttemptStatus.RECONCILIATION_REQUIRED ||
+        (!preserveSettledPayment && paymentStatus !== PaymentStatus.RECONCILIATION_REQUIRED)
       ) {
         throw new ConflictException('Payment reconciliation state no longer matches the payment.');
       }
@@ -133,18 +139,20 @@ export class PaymentReconciliationService {
         );
       }
 
-      const payment = await transaction.payment.updateMany({
-        where: {
-          id: reconciliation.paymentAttempt.paymentId,
-          status: PaymentStatus.RECONCILIATION_REQUIRED,
-        },
-        data: {
-          status: PaymentStatus.REFUNDED,
-        },
-      });
+      if (!preserveSettledPayment) {
+        const payment = await transaction.payment.updateMany({
+          where: {
+            id: reconciliation.paymentAttempt.paymentId,
+            status: PaymentStatus.RECONCILIATION_REQUIRED,
+          },
+          data: {
+            status: PaymentStatus.REFUNDED,
+          },
+        });
 
-      if (payment.count !== 1) {
-        throw new ConflictException('Payment state changed while resolving reconciliation.');
+        if (payment.count !== 1) {
+          throw new ConflictException('Payment state changed while resolving reconciliation.');
+        }
       }
 
       const attempt = await transaction.paymentAttempt.updateMany({

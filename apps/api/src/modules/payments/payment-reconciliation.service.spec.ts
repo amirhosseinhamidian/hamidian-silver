@@ -136,6 +136,60 @@ describe('PaymentReconciliationService', () => {
     expect(transaction.paymentAttempt.updateMany).not.toHaveBeenCalled();
   });
 
+  it('resolves an extra-attempt reconciliation without overwriting a settled payment', async () => {
+    const settledReconciliation = {
+      ...openReconciliation(),
+      paymentAttempt: {
+        ...openReconciliation().paymentAttempt,
+        payment: {
+          status: PaymentStatus.PAID,
+        },
+      },
+    };
+    const transaction = {
+      paymentReconciliation: {
+        findUnique: jest.fn().mockResolvedValue(settledReconciliation),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          id: reconciliationId,
+          status: PaymentReconciliationStatus.RESOLVED,
+          resolution: PaymentReconciliationResolution.REFUNDED_EXTERNALLY,
+        }),
+      },
+      payment: {
+        updateMany: jest.fn(),
+      },
+      paymentAttempt: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
+    };
+    const service = new PaymentReconciliationService(prisma as unknown as PrismaService);
+
+    await service.resolveExternalRefund(
+      reconciliationId,
+      actorUserId,
+      'Duplicate charge refunded in gateway dashboard.',
+    );
+
+    expect(transaction.payment.updateMany).not.toHaveBeenCalled();
+    expect(transaction.paymentAttempt.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: paymentAttemptId,
+        status: PaymentAttemptStatus.RECONCILIATION_REQUIRED,
+      },
+      data: {
+        status: PaymentAttemptStatus.RECONCILED,
+        failureCode: null,
+        failureMessage: null,
+      },
+    });
+  });
+
   it('rolls back when payment state changed before reconciliation resolution', async () => {
     const transaction = {
       paymentReconciliation: {
