@@ -32,6 +32,9 @@ describe('OrderExpirationService', () => {
           warehouseId,
           status: OrderStatus.PENDING_PAYMENT,
           reservationExpiresAt: new Date(now.getTime() - 1_000),
+          payment: {
+            status: PaymentStatus.PENDING,
+          },
           items: [
             {
               variantId,
@@ -58,6 +61,7 @@ describe('OrderExpirationService', () => {
       },
       payment: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUnique: jest.fn(),
       },
       orderStatusHistory: {
         create: jest.fn().mockResolvedValue({}),
@@ -76,6 +80,11 @@ describe('OrderExpirationService', () => {
         status: OrderStatus.PENDING_PAYMENT,
         reservationExpiresAt: {
           lte: now,
+        },
+        payment: {
+          is: {
+            status: PaymentStatus.PENDING,
+          },
         },
       },
       data: {
