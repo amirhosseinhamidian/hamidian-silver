@@ -73,6 +73,13 @@ describe('ShippingTrackingScheduler', () => {
                 },
               ]),
             }),
+            expect.objectContaining({
+              OR: expect.arrayContaining([
+                {
+                  trackingSyncToken: null,
+                },
+              ]),
+            }),
           ]),
         }),
         take: 25,
@@ -103,7 +110,7 @@ describe('ShippingTrackingScheduler', () => {
     expect(shippingService.syncTracking).toHaveBeenCalledTimes(2);
   });
 
-  it('claims a shipment before provider tracking and skips work when another process won', async () => {
+  it('delegates due shipments to the service that owns the cross-process tracking lease', async () => {
     const shipment = {
       id: '10000000-0000-4000-8000-000000000001',
       orderId: '20000000-0000-4000-8000-000000000001',
@@ -112,24 +119,10 @@ describe('ShippingTrackingScheduler', () => {
       shipments: [shipment],
     });
 
-    prisma.shipment.updateMany.mockResolvedValue({ count: 0 });
-
     await scheduler.syncActiveShipments();
 
-    expect(prisma.shipment.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          id: shipment.id,
-          providerShipmentId: {
-            not: null,
-          },
-        }),
-        data: {
-          trackingAttemptedAt: expect.any(Date),
-        },
-      }),
-    );
-    expect(shippingService.syncTracking).not.toHaveBeenCalled();
+    expect(shippingService.syncTracking).toHaveBeenCalledWith(shipment.orderId);
+    expect(prisma.shipment.updateMany).not.toHaveBeenCalled();
   });
 
   it('does not overlap scheduler batches inside one process', async () => {

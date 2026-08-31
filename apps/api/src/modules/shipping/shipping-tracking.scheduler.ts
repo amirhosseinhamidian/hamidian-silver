@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ShipmentStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { TRACKING_SYNC_LEASE_MS } from './shipping-tracking.constants';
 import { ShippingService } from './shipping.service';
 
 const DEFAULT_TRACKING_INTERVAL_MINUTES = 10;
@@ -46,6 +47,7 @@ export class ShippingTrackingScheduler {
 
     try {
       const dueBefore = new Date(Date.now() - this.trackingIntervalMs);
+      const staleLeaseBefore = new Date(Date.now() - TRACKING_SYNC_LEASE_MS);
       const activeStatuses = [
         ShipmentStatus.READY,
         ShipmentStatus.HANDED_OVER,
@@ -73,6 +75,18 @@ export class ShippingTrackingScheduler {
               {
                 trackingAttemptedAt: {
                   lte: dueBefore,
+                },
+              },
+            ],
+          },
+          {
+            OR: [
+              {
+                trackingSyncToken: null,
+              },
+              {
+                trackingSyncStartedAt: {
+                  lte: staleLeaseBefore,
                 },
               },
             ],
@@ -106,27 +120,6 @@ export class ShippingTrackingScheduler {
       });
 
       for (const shipment of shipments) {
-        const trackingAttemptedAt = new Date();
-        const claimed = await this.prisma.shipment.updateMany({
-          where: {
-            id: shipment.id,
-            status: {
-              in: activeStatuses,
-            },
-            providerShipmentId: {
-              not: null,
-            },
-            ...dueFilter,
-          },
-          data: {
-            trackingAttemptedAt,
-          },
-        });
-
-        if (claimed.count !== 1) {
-          continue;
-        }
-
         try {
           await this.shippingService.syncTracking(shipment.orderId);
         } catch (error) {

@@ -1273,6 +1273,8 @@ model Shipment {
   lastProviderDescription String?                       @db.VarChar(500)
   lastTrackingSyncAt      DateTime?                     @db.Timestamptz(3)
   trackingAttemptedAt     DateTime?                     @db.Timestamptz(3)
+  trackingSyncToken       String?                       @db.Uuid
+  trackingSyncStartedAt   DateTime?                     @db.Timestamptz(3)
   shippedAt               DateTime?                     @db.Timestamptz(3)
   deliveredAt             DateTime?                     @db.Timestamptz(3)
   createdAt               DateTime                      @default(now()) @db.Timestamptz(3)
@@ -1282,6 +1284,7 @@ model Shipment {
 
   @@index([status, createdAt])
   @@index([status, trackingAttemptedAt])
+  @@index([trackingSyncStartedAt])
   @@index([providerCreationState, creationAttemptedAt])
   @@index([provider, providerShipmentId])
   @@index([trackingCode])

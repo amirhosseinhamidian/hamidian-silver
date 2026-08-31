@@ -6,6 +6,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { isNonNegativeInt32 } from '../../common/int32';
 import { lockOrderRowForUpdate } from '../../common/order-row-lock';
 import { isNonNegativeTomanInt } from '../../common/toman';
@@ -34,6 +35,7 @@ import {
   type ShippingProvider,
   type ShippingQuoteOption,
 } from './shipping-provider.port';
+import { TRACKING_SYNC_LEASE_MS } from './shipping-tracking.constants';
 
 type OrderForShipping = {
   id: string;
@@ -477,105 +479,166 @@ export class ShippingService {
       throw new ConflictException('Configured shipping provider does not match this shipment.');
     }
 
-    if (!shipment.providerShipmentId) {
+    const providerShipmentId = shipment.providerShipmentId;
+
+    if (!providerShipmentId) {
       throw new ConflictException(
         'Provider shipment must be created before tracking can be synchronized.',
       );
     }
 
-    const tracked = await this.provider.track({
-      providerShipmentId: shipment.providerShipmentId,
-      trackingCode: shipment.trackingCode ?? undefined,
+    const trackingSyncToken = randomUUID();
+    const trackingSyncStartedAt = new Date();
+    const staleBefore = new Date(trackingSyncStartedAt.getTime() - TRACKING_SYNC_LEASE_MS);
+    const lease = await this.prisma.shipment.updateMany({
+      where: {
+        id: shipment.id,
+        providerShipmentId,
+        OR: [
+          {
+            trackingSyncToken: null,
+            trackingSyncStartedAt: null,
+          },
+          {
+            trackingSyncToken: {
+              not: null,
+            },
+            trackingSyncStartedAt: {
+              lte: staleBefore,
+            },
+          },
+        ],
+      },
+      data: {
+        trackingSyncToken,
+        trackingSyncStartedAt,
+        trackingAttemptedAt: trackingSyncStartedAt,
+      },
     });
-    const syncedAt = new Date();
 
-    return this.prisma.$transaction(async (transaction) => {
-      const current = await transaction.shipment.findUnique({
-        where: {
-          id: shipment.id,
-        },
-        include: {
-          order: true,
-        },
+    if (lease.count !== 1) {
+      throw new ConflictException('Shipment tracking synchronization is already in progress.');
+    }
+
+    try {
+      const tracked = await this.provider.track({
+        providerShipmentId,
+        trackingCode: shipment.trackingCode ?? undefined,
       });
+      const syncedAt = new Date();
 
-      if (!current) {
-        throw new NotFoundException('Shipment was not found.');
-      }
-
-      let nextStatus = current.status;
-
-      if (tracked.normalizedStatus) {
-        const candidate = this.toShipmentStatus(tracked.normalizedStatus);
-
-        if (
-          candidate === current.status ||
-          this.isAllowedProviderSyncTransition(current.status, candidate)
-        ) {
-          nextStatus = candidate;
-        }
-      }
-
-      const now = new Date();
-      const claimed = await transaction.shipment.updateMany({
-        where: {
-          id: current.id,
-          status: current.status,
-        },
-        data: {
-          status: nextStatus,
-          lastProviderStatus: tracked.providerStatus.slice(0, 255),
-          lastProviderDescription: tracked.description?.slice(0, 500),
-          lastTrackingSyncAt: syncedAt,
-          shippedAt:
-            nextStatus === ShipmentStatus.HANDED_OVER ||
-            nextStatus === ShipmentStatus.IN_TRANSIT ||
-            nextStatus === ShipmentStatus.DELIVERED
-              ? (current.shippedAt ?? now)
-              : current.shippedAt,
-          deliveredAt:
-            nextStatus === ShipmentStatus.DELIVERED
-              ? (current.deliveredAt ?? now)
-              : current.deliveredAt,
-        },
-      });
-
-      if (claimed.count !== 1) {
-        throw new ConflictException(
-          'Shipment state changed while synchronizing tracking; retry is required.',
-        );
-      }
-
-      const updated = await transaction.shipment.findUniqueOrThrow({
-        where: {
-          id: current.id,
-        },
-      });
-
-      if (nextStatus !== current.status) {
-        await transaction.shipmentStatusHistory.create({
-          data: {
-            shipmentId: current.id,
-            actorUserId: null,
-            fromStatus: current.status,
-            toStatus: nextStatus,
-            reason: tracked.description
-              ? `Provider tracking sync: ${tracked.description}`.slice(0, 500)
-              : `Provider tracking sync: ${tracked.providerStatus}`.slice(0, 500),
+      return await this.prisma.$transaction(async (transaction) => {
+        const current = await transaction.shipment.findUnique({
+          where: {
+            id: shipment.id,
+          },
+          include: {
+            order: true,
           },
         });
 
-        await this.syncOrderStatusForShipment(
-          transaction,
-          current.order,
-          nextStatus,
-          null,
-          'Shipment status synchronized from provider',
-        );
-      }
+        if (!current) {
+          throw new NotFoundException('Shipment was not found.');
+        }
 
-      return updated;
-    });
+        let nextStatus = current.status;
+        let acceptProviderSnapshot = true;
+
+        if (tracked.normalizedStatus) {
+          const candidate = this.toShipmentStatus(tracked.normalizedStatus);
+
+          if (
+            candidate === current.status ||
+            this.isAllowedProviderSyncTransition(current.status, candidate)
+          ) {
+            nextStatus = candidate;
+          } else {
+            acceptProviderSnapshot = false;
+          }
+        }
+
+        const now = new Date();
+        const finalized = await transaction.shipment.updateMany({
+          where: {
+            id: current.id,
+            status: current.status,
+            providerShipmentId,
+            trackingSyncToken,
+          },
+          data: {
+            status: nextStatus,
+            lastProviderStatus: acceptProviderSnapshot
+              ? tracked.providerStatus.slice(0, 255)
+              : current.lastProviderStatus,
+            lastProviderDescription: acceptProviderSnapshot
+              ? tracked.description?.slice(0, 500)
+              : current.lastProviderDescription,
+            lastTrackingSyncAt: syncedAt,
+            trackingSyncToken: null,
+            trackingSyncStartedAt: null,
+            shippedAt:
+              nextStatus === ShipmentStatus.HANDED_OVER ||
+              nextStatus === ShipmentStatus.IN_TRANSIT ||
+              nextStatus === ShipmentStatus.DELIVERED
+                ? (current.shippedAt ?? now)
+                : current.shippedAt,
+            deliveredAt:
+              nextStatus === ShipmentStatus.DELIVERED
+                ? (current.deliveredAt ?? now)
+                : current.deliveredAt,
+          },
+        });
+
+        if (finalized.count !== 1) {
+          throw new ConflictException(
+            'Shipment tracking response is stale or ownership changed; retry is required.',
+          );
+        }
+
+        const updated = await transaction.shipment.findUniqueOrThrow({
+          where: {
+            id: current.id,
+          },
+        });
+
+        if (nextStatus !== current.status) {
+          await transaction.shipmentStatusHistory.create({
+            data: {
+              shipmentId: current.id,
+              actorUserId: null,
+              fromStatus: current.status,
+              toStatus: nextStatus,
+              reason: tracked.description
+                ? `Provider tracking sync: ${tracked.description}`.slice(0, 500)
+                : `Provider tracking sync: ${tracked.providerStatus}`.slice(0, 500),
+            },
+          });
+
+          await this.syncOrderStatusForShipment(
+            transaction,
+            current.order,
+            nextStatus,
+            null,
+            'Shipment status synchronized from provider',
+          );
+        }
+
+        return updated;
+      });
+    } catch (error) {
+      await this.prisma.shipment.updateMany({
+        where: {
+          id: shipment.id,
+          trackingSyncToken,
+        },
+        data: {
+          trackingSyncToken: null,
+          trackingSyncStartedAt: null,
+        },
+      });
+
+      throw error;
+    }
   }
 
   async resetProviderCreation(
