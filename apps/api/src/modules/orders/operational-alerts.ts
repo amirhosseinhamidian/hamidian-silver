@@ -1,6 +1,17 @@
 import { OperationalAlertLevel } from '../../generated/prisma/enums';
 import type { OperationsWorkCode, OperationsWorkItem } from './operations-work-queue';
 
+export type OperationalIncidentDescriptor = {
+  orderId: string;
+  orderNumber: string;
+  code: OperationsWorkCode;
+  priority: string;
+  incidentFingerprint: string;
+  incidentAt: Date;
+  dueAt: Date | null;
+  payload: Record<string, string | number | boolean | null>;
+};
+
 export type OperationalAlertCandidate = {
   orderId: string;
   orderNumber: string;
@@ -12,12 +23,14 @@ export type OperationalAlertCandidate = {
   payload: Record<string, string | number | boolean | null>;
 };
 
-const ALERT_CODES = new Set<OperationsWorkCode>([
+export const OPERATIONAL_ALERT_CODES = [
   'PLATING_OVERDUE',
   'PLATING_CANCELLED',
   'SHIPMENT_CREATION_STALE',
   'SHIPMENT_PROVIDER_RECONCILIATION_REQUIRED',
-]);
+] as const satisfies readonly OperationsWorkCode[];
+
+const ALERT_CODES = new Set<OperationsWorkCode>(OPERATIONAL_ALERT_CODES);
 
 const ESCALATION_MS: Partial<Record<OperationsWorkCode, number>> = {
   PLATING_OVERDUE: 24 * 60 * 60 * 1000,
@@ -30,56 +43,77 @@ export function isOperationalAlertItem(item: OperationsWorkItem): boolean {
   return ALERT_CODES.has(item.code);
 }
 
-export function buildOperationalAlertCandidates(
+export function buildOperationalIncidentDescriptor(
   item: OperationsWorkItem,
-  now = new Date(),
-): OperationalAlertCandidate[] {
+): OperationalIncidentDescriptor | null {
   if (!isOperationalAlertItem(item)) {
-    return [];
+    return null;
   }
 
   const incidentAt = resolveIncidentAt(item);
 
   if (!incidentAt) {
+    return null;
+  }
+
+  const incidentFingerprint = [item.code, item.orderId, incidentAt.toISOString()].join(':');
+
+  return {
+    orderId: item.orderId,
+    orderNumber: item.orderNumber,
+    code: item.code,
+    priority: item.priority,
+    incidentFingerprint,
+    incidentAt,
+    dueAt: item.dueAt,
+    payload: {
+      orderNumber: item.orderNumber,
+      workType: item.workType,
+      code: item.code,
+      state: item.state,
+      priority: item.priority,
+      incidentAt: incidentAt.toISOString(),
+      dueAt: item.dueAt?.toISOString() ?? null,
+      ageMinutes: item.ageMinutes,
+    },
+  };
+}
+
+export function buildOperationalAlertCandidates(
+  item: OperationsWorkItem,
+  now = new Date(),
+): OperationalAlertCandidate[] {
+  const incident = buildOperationalIncidentDescriptor(item);
+
+  if (!incident) {
     return [];
   }
 
-  const fingerprint = [item.code, item.orderId, incidentAt.toISOString()].join(':');
-  const payload = {
-    orderNumber: item.orderNumber,
-    workType: item.workType,
-    code: item.code,
-    state: item.state,
-    priority: item.priority,
-    incidentAt: incidentAt.toISOString(),
-    dueAt: item.dueAt?.toISOString() ?? null,
-    ageMinutes: item.ageMinutes,
-  };
   const candidates: OperationalAlertCandidate[] = [
     {
-      orderId: item.orderId,
-      orderNumber: item.orderNumber,
-      code: item.code,
+      orderId: incident.orderId,
+      orderNumber: incident.orderNumber,
+      code: incident.code,
       level: OperationalAlertLevel.INITIAL,
-      priority: item.priority,
-      incidentFingerprint: fingerprint,
-      dueAt: item.dueAt,
-      payload,
+      priority: incident.priority,
+      incidentFingerprint: incident.incidentFingerprint,
+      dueAt: incident.dueAt,
+      payload: incident.payload,
     },
   ];
-  const escalationMs = ESCALATION_MS[item.code];
+  const escalationMs = ESCALATION_MS[incident.code];
 
-  if (escalationMs !== undefined && now.getTime() >= incidentAt.getTime() + escalationMs) {
+  if (escalationMs !== undefined && now.getTime() >= incident.incidentAt.getTime() + escalationMs) {
     candidates.push({
-      orderId: item.orderId,
-      orderNumber: item.orderNumber,
-      code: item.code,
+      orderId: incident.orderId,
+      orderNumber: incident.orderNumber,
+      code: incident.code,
       level: OperationalAlertLevel.ESCALATION,
-      priority: item.priority,
-      incidentFingerprint: fingerprint,
-      dueAt: item.dueAt,
+      priority: incident.priority,
+      incidentFingerprint: incident.incidentFingerprint,
+      dueAt: incident.dueAt,
       payload: {
-        ...payload,
+        ...incident.payload,
         escalationAfterMinutes: Math.floor(escalationMs / 60_000),
       },
     });

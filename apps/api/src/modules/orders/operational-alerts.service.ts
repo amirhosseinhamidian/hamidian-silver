@@ -4,6 +4,7 @@ import {
   OperationalAlertOutboxService,
 } from '../notifications/operational-alert-outbox.service';
 import { buildOperationalAlertCandidates, isOperationalAlertItem } from './operational-alerts';
+import { OperationalIncidentsService } from './operational-incidents.service';
 import { OperationsWorkQueueService } from './operations-work-queue.service';
 
 @Injectable()
@@ -11,11 +12,13 @@ export class OperationalAlertsService {
   constructor(
     private readonly workQueue: OperationsWorkQueueService,
     private readonly outbox: OperationalAlertOutboxService,
+    private readonly incidents: OperationalIncidentsService,
   ) {}
 
   async scan(now = new Date()) {
     const items = await this.workQueue.snapshot(now);
     const alertItems = items.filter(isOperationalAlertItem);
+    const incidentSync = await this.incidents.syncFromWorkItems(alertItems, now);
     const candidates: EnqueueOperationalAlertInput[] = alertItems.flatMap((item) =>
       buildOperationalAlertCandidates(item, now),
     );
@@ -24,6 +27,7 @@ export class OperationalAlertsService {
     return {
       scannedAt: now,
       activeIncidentCount: alertItems.length,
+      incidentSync,
       ...enqueue,
     };
   }

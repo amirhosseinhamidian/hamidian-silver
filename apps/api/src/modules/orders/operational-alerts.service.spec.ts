@@ -1,6 +1,7 @@
 import { OperationalAlertLevel, OrderStatus } from '../../generated/prisma/enums';
 import type { OperationalAlertOutboxService } from '../notifications/operational-alert-outbox.service';
 import { OperationalAlertsService } from './operational-alerts.service';
+import type { OperationalIncidentsService } from './operational-incidents.service';
 import type { OperationsWorkQueueService } from './operations-work-queue.service';
 
 describe('OperationalAlertsService', () => {
@@ -42,14 +43,27 @@ describe('OperationalAlertsService', () => {
         enqueuedCount: 4,
       }),
     };
+    const incidents = {
+      syncFromWorkItems: jest.fn().mockResolvedValue({
+        activeCount: 1,
+        createdCount: 1,
+        reopenedCount: 0,
+        resolvedCount: 0,
+      }),
+    };
     const service = new OperationalAlertsService(
       workQueue as unknown as OperationsWorkQueueService,
       outbox as unknown as OperationalAlertOutboxService,
+      incidents as unknown as OperationalIncidentsService,
     );
 
     const result = await service.scan(new Date('2026-08-30T12:00:00.000Z'));
 
     expect(result.activeIncidentCount).toBe(1);
+    expect(incidents.syncFromWorkItems).toHaveBeenCalledWith(
+      [expect.objectContaining({ code: 'PLATING_OVERDUE' })],
+      new Date('2026-08-30T12:00:00.000Z'),
+    );
     expect(outbox.enqueueMany).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({

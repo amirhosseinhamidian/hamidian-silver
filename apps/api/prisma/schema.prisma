@@ -48,6 +48,9 @@ model User {
   platingFulfillmentsCompleted      OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentCompleter")
   platingFulfillmentsCancelled      OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentCanceller")
   operationalAlertRecipients        OperationalAlertOutboxEvent[] @relation("OperationalAlertRecipient")
+  operationalIncidentsAcknowledged  OperationalIncident[]         @relation("OperationalIncidentAcknowledger")
+  operationalIncidentsAssigned      OperationalIncident[]         @relation("OperationalIncidentAssignee")
+  operationalIncidentActivities     OperationalIncidentActivity[] @relation("OperationalIncidentActivityActor")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -606,6 +609,7 @@ model Order {
   costEntries           OrderCostEntry[]
   platingFulfillment    OrderPlatingFulfillment?
   operationalAlerts     OperationalAlertOutboxEvent[]
+  operationalIncidents  OperationalIncident[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -792,6 +796,20 @@ enum NotificationOutboxStatus {
 enum OperationalAlertLevel {
   INITIAL
   ESCALATION
+}
+
+enum OperationalIncidentResolutionSource {
+  AUTO
+}
+
+enum OperationalIncidentActivityType {
+  DETECTED
+  ACKNOWLEDGED
+  ASSIGNED
+  UNASSIGNED
+  NOTE_ADDED
+  RESOLVED
+  REOPENED
 }
 
 enum SupplierPayableStatus {
@@ -1145,6 +1163,56 @@ model OperationalAlertOutboxEvent {
   @@index([incidentFingerprint])
   @@index([claimedAt])
   @@map("operational_alert_outbox_events")
+}
+
+model OperationalIncident {
+  id                   String                               @id @default(uuid()) @db.Uuid
+  incidentFingerprint  String                               @unique @db.VarChar(180)
+  orderId              String                               @db.Uuid
+  code                 String                               @db.VarChar(80)
+  priority             String                               @db.VarChar(16)
+  incidentAt           DateTime                             @db.Timestamptz(3)
+  dueAt                DateTime?                            @db.Timestamptz(3)
+  firstDetectedAt      DateTime                             @db.Timestamptz(3)
+  lastDetectedAt       DateTime                             @db.Timestamptz(3)
+  acknowledgedAt       DateTime?                            @db.Timestamptz(3)
+  acknowledgedByUserId String?                              @db.Uuid
+  assignedToUserId     String?                              @db.Uuid
+  resolvedAt           DateTime?                            @db.Timestamptz(3)
+  resolutionSource     OperationalIncidentResolutionSource?
+  resolutionNote       String?                              @db.VarChar(1000)
+  snapshot             Json
+  createdAt            DateTime                             @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime                             @updatedAt @db.Timestamptz(3)
+  order                Order                                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  acknowledgedBy       User?                                @relation("OperationalIncidentAcknowledger", fields: [acknowledgedByUserId], references: [id], onDelete: SetNull)
+  assignedTo           User?                                @relation("OperationalIncidentAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  activities           OperationalIncidentActivity[]
+
+  @@index([resolvedAt, priority, lastDetectedAt])
+  @@index([code, resolvedAt, lastDetectedAt])
+  @@index([assignedToUserId, resolvedAt])
+  @@index([acknowledgedByUserId])
+  @@index([orderId, createdAt])
+  @@map("operational_incidents")
+}
+
+model OperationalIncidentActivity {
+  id          String                          @id @default(uuid()) @db.Uuid
+  incidentId  String                          @db.Uuid
+  type        OperationalIncidentActivityType
+  actorUserId String?                         @db.Uuid
+  note        String?                         @db.VarChar(1000)
+  metadata    Json
+  activityKey String?                         @unique @db.VarChar(255)
+  createdAt   DateTime                        @default(now()) @db.Timestamptz(3)
+  incident    OperationalIncident             @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  actor       User?                           @relation("OperationalIncidentActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([incidentId, createdAt])
+  @@index([actorUserId])
+  @@index([type, createdAt])
+  @@map("operational_incident_activities")
 }
 
 model PaymentGatewaySetting {

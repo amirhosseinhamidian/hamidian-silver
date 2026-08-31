@@ -8,6 +8,8 @@ import { OperationsWorkQueueService } from './operations-work-queue.service';
 import { OperationalAlertsController } from './operational-alerts.controller';
 import { OperationalAlertsScheduler } from './operational-alerts.scheduler';
 import { OperationalAlertsService } from './operational-alerts.service';
+import { OperationalIncidentsController } from './operational-incidents.controller';
+import { OperationalIncidentsService } from './operational-incidents.service';
 import { OrderExpirationScheduler } from './order-expiration.scheduler';
 import { OrderExpirationService } from './order-expiration.service';
 import { OrderReturnsController } from './order-returns.controller';
@@ -23,6 +25,7 @@ import { OrdersService } from './orders.service';
     FulfillmentReadinessController,
     OperationsWorkQueueController,
     OperationalAlertsController,
+    OperationalIncidentsController,
   ],
   providers: [
     OrdersService,
@@ -32,6 +35,7 @@ import { OrdersService } from './orders.service';
     FulfillmentReadinessService,
     OperationsWorkQueueService,
     OperationalAlertsService,
+    OperationalIncidentsService,
     OperationalAlertsScheduler,
   ],
   exports: [OrderExpirationService],
