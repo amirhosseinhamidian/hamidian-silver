@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { isNonNegativeTomanInt, TOMAN_INT_MAX } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   OrderStatus,
@@ -666,7 +667,7 @@ export class OrdersService {
     const totalMilliToman = milliGrams * BigInt(pricePerGramToman);
     const roundedToman = (totalMilliToman + 500n) / 1000n;
 
-    if (roundedToman > BigInt(Number.MAX_SAFE_INTEGER)) {
+    if (roundedToman > BigInt(TOMAN_INT_MAX)) {
       throw new BadRequestException('Calculated plating price exceeds the supported range.');
     }
 
@@ -674,7 +675,7 @@ export class OrdersService {
   }
 
   private assertSafeTomanAmount(amount: number): void {
-    if (!Number.isSafeInteger(amount) || amount < 0) {
+    if (!isNonNegativeTomanInt(amount)) {
       throw new BadRequestException('Calculated order amount exceeds the supported range.');
     }
   }

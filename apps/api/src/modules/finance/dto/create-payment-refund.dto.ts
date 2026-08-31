@@ -1,4 +1,5 @@
-import { IsInt, IsOptional, IsString, IsUUID, Length, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
+import { TOMAN_INT_MAX } from '../../../common/toman';
 
 export class CreatePaymentRefundDto {
   @IsUUID('4')
@@ -6,6 +7,7 @@ export class CreatePaymentRefundDto {
 
   @IsInt()
   @Min(1)
+  @Max(TOMAN_INT_MAX)
   amountToman!: number;
 
   @IsString()

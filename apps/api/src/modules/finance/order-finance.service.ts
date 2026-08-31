@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { isNonNegativeTomanInt, isSignedTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   PaymentRefundStatus,
@@ -296,7 +297,7 @@ export class OrderFinanceService {
       input.grandTotalToman,
     ];
 
-    if (amounts.some((amount) => !Number.isSafeInteger(amount) || amount < 0)) {
+    if (amounts.some((amount) => !isNonNegativeTomanInt(amount))) {
       throw new ConflictException('Order finance snapshot contains an invalid amount.');
     }
 
@@ -327,19 +328,19 @@ export class OrderFinanceService {
         throw new ConflictException('Supplier snapshot is incomplete for an order finance item.');
       }
 
-      if (!Number.isSafeInteger(unitSupplierPriceToman) || unitSupplierPriceToman < 0) {
+      if (!isNonNegativeTomanInt(unitSupplierPriceToman)) {
         throw new ConflictException('Supplier cost exceeds the supported range.');
       }
 
       const lineSupplierCost = unitSupplierPriceToman * item.quantity;
 
-      if (!Number.isSafeInteger(lineSupplierCost) || lineSupplierCost < 0) {
+      if (!isNonNegativeTomanInt(lineSupplierCost)) {
         throw new ConflictException('Supplier cost exceeds the supported range.');
       }
 
       supplierCostToman += lineSupplierCost;
 
-      if (!Number.isSafeInteger(supplierCostToman)) {
+      if (!isNonNegativeTomanInt(supplierCostToman)) {
         throw new ConflictException('Supplier cost exceeds the supported range.');
       }
     }
@@ -350,10 +351,9 @@ export class OrderFinanceService {
       netSalesToman + input.shippingTotalToman + input.taxTotalToman;
 
     if (
-      !Number.isSafeInteger(grossSalesToman) ||
-      !Number.isSafeInteger(netSalesToman) ||
-      netSalesToman < 0 ||
-      !Number.isSafeInteger(expectedCustomerTotalToman) ||
+      !isNonNegativeTomanInt(grossSalesToman) ||
+      !isNonNegativeTomanInt(netSalesToman) ||
+      !isNonNegativeTomanInt(expectedCustomerTotalToman) ||
       expectedCustomerTotalToman !== input.grandTotalToman
     ) {
       throw new ConflictException('Order finance totals are inconsistent.');
@@ -361,7 +361,7 @@ export class OrderFinanceService {
 
     const grossMarginBeforeServiceCostsToman = netSalesToman - supplierCostToman;
 
-    if (!Number.isSafeInteger(grossMarginBeforeServiceCostsToman)) {
+    if (!isSignedTomanInt(grossMarginBeforeServiceCostsToman)) {
       throw new ConflictException('Order finance margin exceeds the supported range.');
     }
 

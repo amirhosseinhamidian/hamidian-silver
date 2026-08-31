@@ -7,6 +7,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   InventoryMovementType,
@@ -856,7 +857,7 @@ export class PaymentsService {
 
       const amountToman = unitSupplierPriceToman * item.quantity;
 
-      if (!Number.isSafeInteger(amountToman) || amountToman < 0) {
+      if (!isNonNegativeTomanInt(amountToman)) {
         throw new ConflictException('Supplier payable amount exceeds the supported range.');
       }
 

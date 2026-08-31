@@ -1,8 +1,10 @@
 import { IsBoolean, IsInt, IsNumber, IsOptional, Max, Min } from 'class-validator';
+import { TOMAN_INT_MAX } from '../../../common/toman';
 
 export class SetProductSupplierDto {
   @IsInt()
   @Min(0)
+  @Max(TOMAN_INT_MAX)
   supplierPriceToman!: number;
 
   @IsOptional()

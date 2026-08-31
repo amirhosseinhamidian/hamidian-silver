@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   SupplierCreditApplicationStatus,
@@ -193,7 +194,7 @@ export class SupplierSettlementsService {
 
       const totalAmountToman = payables.reduce((total, payable) => total + payable.amountToman, 0);
 
-      if (!Number.isSafeInteger(totalAmountToman) || totalAmountToman < 0) {
+      if (!isNonNegativeTomanInt(totalAmountToman)) {
         throw new BadRequestException('Supplier settlement total exceeds the supported range.');
       }
 

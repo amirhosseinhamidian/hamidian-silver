@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   OrderCostEntryType,
@@ -59,7 +60,7 @@ export class OrderCostsService {
   }
 
   async create(actorUserId: string, dto: CreateOrderCostDto) {
-    if (!Number.isSafeInteger(dto.amountToman) || dto.amountToman <= 0) {
+    if (!isNonNegativeTomanInt(dto.amountToman) || dto.amountToman === 0) {
       throw new BadRequestException('Order cost amount is invalid.');
     }
 
@@ -220,7 +221,7 @@ export class OrderCostsService {
       createdByUserId?: string | null;
     },
   ) {
-    if (!Number.isSafeInteger(input.amountToman) || input.amountToman < 0 || !input.source.trim()) {
+    if (!isNonNegativeTomanInt(input.amountToman) || !input.source.trim()) {
       throw new ConflictException('Provider actual cost is invalid.');
     }
 
