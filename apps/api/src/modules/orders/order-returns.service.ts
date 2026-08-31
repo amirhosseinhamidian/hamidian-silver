@@ -192,6 +192,24 @@ export class OrderReturnsService {
       });
 
       if (claimed.count !== 1) {
+        const current = await transaction.orderReturn.findUnique({
+          where: {
+            id: orderReturn.id,
+          },
+          select: {
+            status: true,
+          },
+        });
+
+        if (current?.status === OrderReturnStatus.RECEIVED) {
+          return transaction.orderReturn.findUniqueOrThrow({
+            where: {
+              id: orderReturn.id,
+            },
+            include: this.returnInclude(),
+          });
+        }
+
         throw new ConflictException('Order return state changed; reload and retry.');
       }
 
@@ -207,6 +225,9 @@ export class OrderReturnsService {
             id: item.orderItem.id,
             returnedQuantity: {
               lte: item.orderItem.quantity - item.quantity,
+            },
+            returnAllocatedQuantity: {
+              gte: item.orderItem.returnedQuantity + item.quantity,
             },
           },
           data: {
@@ -302,6 +323,24 @@ export class OrderReturnsService {
       });
 
       if (claimed.count !== 1) {
+        const current = await transaction.orderReturn.findUnique({
+          where: {
+            id: orderReturn.id,
+          },
+          select: {
+            status: true,
+          },
+        });
+
+        if (current?.status === OrderReturnStatus.CANCELLED) {
+          return transaction.orderReturn.findUniqueOrThrow({
+            where: {
+              id: orderReturn.id,
+            },
+            include: this.returnInclude(),
+          });
+        }
+
         throw new ConflictException('Order return state changed; reload and retry.');
       }
 
