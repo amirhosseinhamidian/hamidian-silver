@@ -6,7 +6,9 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
+import { isNonNegativeInt32 } from '../../common/int32';
 import { lockOrderRowForUpdate } from '../../common/order-row-lock';
+import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   NotificationOutboxEventType,
@@ -25,6 +27,7 @@ import { ResetShipmentProviderCreationDto } from './dto/reset-shipment-provider-
 import { UpdateShipmentStatusDto } from './dto/update-shipment-status.dto';
 import {
   SHIPPING_PROVIDER,
+  type CreateProviderShipmentResult,
   type ProviderShipmentTrackingStatus,
   type ShippingAddressSnapshot,
   type ShippingProvider,
@@ -302,25 +305,27 @@ export class ShippingService {
     }
 
     try {
-      const created = await this.provider.createShipment({
-        orderNumber: shipment.order.orderNumber,
-        serviceCode: shipment.providerServiceCode,
-        totalWeightGrams: shipment.totalWeightGrams.toString(),
-        declaredValueToman: this.calculateDeclaredValueToman({
-          id: shipment.order.id,
+      const created = this.validateCreateShipmentResult(
+        await this.provider.createShipment({
           orderNumber: shipment.order.orderNumber,
-          status: shipment.order.status,
-          merchandiseTotalToman: shipment.order.merchandiseTotalToman,
-          platingTotalToman: shipment.order.platingTotalToman,
-          discountTotalToman: shipment.order.discountTotalToman,
-          taxTotalToman: shipment.order.taxTotalToman,
-          grandTotalToman: shipment.order.grandTotalToman,
-          shippingAddress: shipment.order.shippingAddress,
-          items: [],
+          serviceCode: shipment.providerServiceCode,
+          totalWeightGrams: shipment.totalWeightGrams.toString(),
+          declaredValueToman: this.calculateDeclaredValueToman({
+            id: shipment.order.id,
+            orderNumber: shipment.order.orderNumber,
+            status: shipment.order.status,
+            merchandiseTotalToman: shipment.order.merchandiseTotalToman,
+            platingTotalToman: shipment.order.platingTotalToman,
+            discountTotalToman: shipment.order.discountTotalToman,
+            taxTotalToman: shipment.order.taxTotalToman,
+            grandTotalToman: shipment.order.grandTotalToman,
+            shippingAddress: shipment.order.shippingAddress,
+            items: [],
+          }),
+          shippingCostToman: shipment.shippingCostToman,
+          destination: this.requireShippingAddress(shipment.order.shippingAddress),
         }),
-        shippingCostToman: shipment.shippingCostToman,
-        destination: this.requireShippingAddress(shipment.order.shippingAddress),
-      });
+      );
 
       return this.prisma.$transaction(async (transaction) => {
         const current = await transaction.shipment.findUnique({
@@ -494,7 +499,9 @@ export class ShippingService {
           lastProviderDescription: tracked.description?.slice(0, 500),
           lastTrackingSyncAt: syncedAt,
           shippedAt:
-            nextStatus === ShipmentStatus.HANDED_OVER || nextStatus === ShipmentStatus.IN_TRANSIT
+            nextStatus === ShipmentStatus.HANDED_OVER ||
+            nextStatus === ShipmentStatus.IN_TRANSIT ||
+            nextStatus === ShipmentStatus.DELIVERED
               ? (current.shippedAt ?? now)
               : current.shippedAt,
           deliveredAt:
@@ -746,7 +753,9 @@ export class ShippingService {
             : shipment.providerCreationState,
           providerCreateError: dto.providerShipmentId ? null : shipment.providerCreateError,
           shippedAt:
-            dto.status === ShipmentStatus.HANDED_OVER || dto.status === ShipmentStatus.IN_TRANSIT
+            dto.status === ShipmentStatus.HANDED_OVER ||
+            dto.status === ShipmentStatus.IN_TRANSIT ||
+            dto.status === ShipmentStatus.DELIVERED
               ? (shipment.shippedAt ?? now)
               : shipment.shippedAt,
           deliveredAt:
@@ -1051,11 +1060,12 @@ export class ShippingService {
 
   private validateQuoteOption(option: ShippingQuoteOption): ShippingQuoteOption {
     if (
-      !option.serviceCode ||
-      !Number.isSafeInteger(option.costToman) ||
-      option.costToman < 0 ||
+      !option.serviceCode.trim() ||
+      option.serviceCode.length > 120 ||
+      (option.serviceName !== undefined && option.serviceName.length > 200) ||
+      !isNonNegativeTomanInt(option.costToman) ||
       (option.estimatedDeliveryDays !== undefined &&
-        (!Number.isInteger(option.estimatedDeliveryDays) || option.estimatedDeliveryDays < 0))
+        !isNonNegativeInt32(option.estimatedDeliveryDays))
     ) {
       throw new BadRequestException('Shipping provider returned an invalid quote.');
     }
@@ -1063,8 +1073,24 @@ export class ShippingService {
     return option;
   }
 
+  private validateCreateShipmentResult(
+    result: CreateProviderShipmentResult,
+  ): CreateProviderShipmentResult {
+    if (
+      !result.providerShipmentId.trim() ||
+      result.providerShipmentId.length > 255 ||
+      (result.trackingCode !== undefined &&
+        (!result.trackingCode.trim() || result.trackingCode.length > 255)) ||
+      (result.actualCostToman !== undefined && !isNonNegativeTomanInt(result.actualCostToman))
+    ) {
+      throw new ConflictException('Shipping provider returned invalid shipment creation data.');
+    }
+
+    return result;
+  }
+
   private assertTomanAmount(amount: number): void {
-    if (!Number.isSafeInteger(amount) || amount < 0) {
+    if (!isNonNegativeTomanInt(amount)) {
       throw new BadRequestException('Calculated order amount exceeds the supported range.');
     }
   }

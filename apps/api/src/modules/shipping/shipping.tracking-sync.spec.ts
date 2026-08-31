@@ -72,6 +72,8 @@ describe('ShippingService tracking sync', () => {
         data: expect.objectContaining({
           status: ShipmentStatus.DELIVERED,
           lastProviderStatus: 'DELIVERED',
+          shippedAt: expect.any(Date),
+          deliveredAt: expect.any(Date),
         }),
       }),
     );
