@@ -130,6 +130,14 @@ export class PaymentRefundsService {
           );
         }
 
+        const verifiedAttempt = payment.attempts[0];
+
+        if (!verifiedAttempt?.providerReference) {
+          throw new ConflictException(
+            'Verified payment provider identity is required before recording a customer refund.',
+          );
+        }
+
         const claimed = await transaction.payment.updateMany({
           where: {
             id: payment.id,
@@ -151,15 +159,13 @@ export class PaymentRefundsService {
           throw new ConflictException('Payment refund capacity changed; reload and retry.');
         }
 
-        const verifiedAttempt = payment.attempts[0];
-
         return transaction.paymentRefund.create({
           data: {
             paymentId: payment.id,
             idempotencyKey: dto.idempotencyKey,
             amountToman: dto.amountToman,
-            providerSnapshot: verifiedAttempt?.provider,
-            originalProviderReferenceSnapshot: verifiedAttempt?.providerReference,
+            providerSnapshot: verifiedAttempt.provider,
+            originalProviderReferenceSnapshot: verifiedAttempt.providerReference,
             requestNote: dto.note,
             requestedByUserId: actorUserId,
           },
@@ -226,6 +232,8 @@ export class PaymentRefundsService {
       }
 
       if (refund.status === PaymentRefundStatus.CONFIRMED) {
+        this.assertConfirmationReferenceMatches(refund.externalReference, dto.externalReference);
+
         return transaction.paymentRefund.findUniqueOrThrow({
           where: {
             id: refund.id,
@@ -259,19 +267,31 @@ export class PaymentRefundsService {
           ? PaymentStatus.REFUNDED
           : PaymentStatus.PARTIALLY_REFUNDED;
       const confirmedAt = new Date();
-      const claimed = await transaction.paymentRefund.updateMany({
-        where: {
-          id: refund.id,
-          status: PaymentRefundStatus.PENDING,
-        },
-        data: {
-          status: PaymentRefundStatus.CONFIRMED,
-          externalReference: dto.externalReference,
-          resolutionNote: dto.note,
-          confirmedByUserId: actorUserId,
-          confirmedAt,
-        },
-      });
+      let claimed: { count: number };
+
+      try {
+        claimed = await transaction.paymentRefund.updateMany({
+          where: {
+            id: refund.id,
+            status: PaymentRefundStatus.PENDING,
+          },
+          data: {
+            status: PaymentRefundStatus.CONFIRMED,
+            externalReference: dto.externalReference,
+            resolutionNote: dto.note,
+            confirmedByUserId: actorUserId,
+            confirmedAt,
+          },
+        });
+      } catch (error) {
+        if (this.isUniqueConstraintError(error)) {
+          throw new ConflictException(
+            'External refund reference is already assigned to another confirmed refund.',
+          );
+        }
+
+        throw error;
+      }
 
       if (claimed.count !== 1) {
         const current = await transaction.paymentRefund.findUnique({
@@ -281,6 +301,8 @@ export class PaymentRefundsService {
         });
 
         if (current?.status === PaymentRefundStatus.CONFIRMED) {
+          this.assertConfirmationReferenceMatches(current.externalReference, dto.externalReference);
+
           return transaction.paymentRefund.findUniqueOrThrow({
             where: {
               id: refund.id,
@@ -426,6 +448,17 @@ export class PaymentRefundsService {
         include: this.refundInclude(),
       });
     });
+  }
+
+  private assertConfirmationReferenceMatches(
+    persistedReference: string | null,
+    requestedReference: string,
+  ): void {
+    if (persistedReference !== requestedReference) {
+      throw new ConflictException(
+        'Payment refund is already confirmed with a different external reference.',
+      );
+    }
   }
 
   private refundInclude() {
