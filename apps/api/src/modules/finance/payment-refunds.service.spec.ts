@@ -273,7 +273,7 @@ describe('PaymentRefundsService', () => {
     expect(transaction.paymentRefund.findUniqueOrThrow).not.toHaveBeenCalled();
   });
 
-  it('cancels a pending refund and releases its allocated capacity', async () => {
+  it('cancels a pending refund and releases its allocated capacity with aggregate CAS', async () => {
     const transaction = {
       paymentRefund: {
         findUnique: jest.fn().mockResolvedValue({
@@ -281,6 +281,13 @@ describe('PaymentRefundsService', () => {
           paymentId,
           status: PaymentRefundStatus.PENDING,
           amountToman: 250_000,
+          payment: {
+            id: paymentId,
+            status: PaymentStatus.PARTIALLY_REFUNDED,
+            amountToman: 1_000_000,
+            refundedAmountToman: 100_000,
+            refundAllocatedToman: 350_000,
+          },
         }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         findUniqueOrThrow: jest.fn().mockResolvedValue({
@@ -306,9 +313,10 @@ describe('PaymentRefundsService', () => {
     expect(transaction.payment.updateMany).toHaveBeenCalledWith({
       where: {
         id: paymentId,
-        refundAllocatedToman: {
-          gte: 250_000,
-        },
+        status: PaymentStatus.PARTIALLY_REFUNDED,
+        amountToman: 1_000_000,
+        refundedAmountToman: 100_000,
+        refundAllocatedToman: 350_000,
       },
       data: {
         refundAllocatedToman: {
@@ -316,5 +324,92 @@ describe('PaymentRefundsService', () => {
         },
       },
     });
+  });
+
+  it('rolls back cancellation when the payment aggregate changes concurrently', async () => {
+    const transaction = {
+      paymentRefund: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: refundId,
+          paymentId,
+          status: PaymentRefundStatus.PENDING,
+          amountToman: 250_000,
+          payment: {
+            id: paymentId,
+            status: PaymentStatus.PAID,
+            amountToman: 1_000_000,
+            refundedAmountToman: 0,
+            refundAllocatedToman: 250_000,
+          },
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn(),
+      },
+      payment: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
+    };
+    const service = new PaymentRefundsService(prisma as unknown as PrismaService);
+
+    await expect(
+      service.cancel(refundId, actorUserId, {
+        reason: 'External refund was not executed.',
+      }),
+    ).rejects.toThrow('Payment refund totals changed; reload and retry.');
+
+    expect(transaction.paymentRefund.findUniqueOrThrow).not.toHaveBeenCalled();
+  });
+
+  it('returns a concurrently cancelled refund idempotently without releasing capacity twice', async () => {
+    const cancelledRefund = {
+      id: refundId,
+      paymentId,
+      status: PaymentRefundStatus.CANCELLED,
+      amountToman: 250_000,
+    };
+    const transaction = {
+      paymentRefund: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValueOnce({
+            id: refundId,
+            paymentId,
+            status: PaymentRefundStatus.PENDING,
+            amountToman: 250_000,
+            payment: {
+              id: paymentId,
+              status: PaymentStatus.PAID,
+              amountToman: 1_000_000,
+              refundedAmountToman: 0,
+              refundAllocatedToman: 250_000,
+            },
+          })
+          .mockResolvedValueOnce(cancelledRefund),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(cancelledRefund),
+      },
+      payment: {
+        updateMany: jest.fn(),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
+    };
+    const service = new PaymentRefundsService(prisma as unknown as PrismaService);
+
+    await expect(
+      service.cancel(refundId, actorUserId, {
+        reason: 'External refund was not executed.',
+      }),
+    ).resolves.toBe(cancelledRefund);
+
+    expect(transaction.payment.updateMany).not.toHaveBeenCalled();
   });
 });

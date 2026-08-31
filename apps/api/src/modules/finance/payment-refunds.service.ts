@@ -327,6 +327,17 @@ export class PaymentRefundsService {
         where: {
           id: refundId,
         },
+        include: {
+          payment: {
+            select: {
+              id: true,
+              status: true,
+              amountToman: true,
+              refundedAmountToman: true,
+              refundAllocatedToman: true,
+            },
+          },
+        },
       });
 
       if (!refund) {
@@ -346,6 +357,16 @@ export class PaymentRefundsService {
         throw new ConflictException('Only pending payment refunds can be cancelled.');
       }
 
+      const nextRefundAllocatedToman = refund.payment.refundAllocatedToman - refund.amountToman;
+
+      if (
+        nextRefundAllocatedToman < 0 ||
+        nextRefundAllocatedToman < refund.payment.refundedAmountToman ||
+        nextRefundAllocatedToman > refund.payment.amountToman
+      ) {
+        throw new ConflictException('Payment refund allocation is inconsistent.');
+      }
+
       const cancelledAt = new Date();
       const claimed = await transaction.paymentRefund.updateMany({
         where: {
@@ -361,15 +382,31 @@ export class PaymentRefundsService {
       });
 
       if (claimed.count !== 1) {
+        const current = await transaction.paymentRefund.findUnique({
+          where: {
+            id: refund.id,
+          },
+        });
+
+        if (current?.status === PaymentRefundStatus.CANCELLED) {
+          return transaction.paymentRefund.findUniqueOrThrow({
+            where: {
+              id: refund.id,
+            },
+            include: this.refundInclude(),
+          });
+        }
+
         throw new ConflictException('Payment refund state changed; reload and retry.');
       }
 
       const released = await transaction.payment.updateMany({
         where: {
           id: refund.paymentId,
-          refundAllocatedToman: {
-            gte: refund.amountToman,
-          },
+          status: refund.payment.status,
+          amountToman: refund.payment.amountToman,
+          refundedAmountToman: refund.payment.refundedAmountToman,
+          refundAllocatedToman: refund.payment.refundAllocatedToman,
         },
         data: {
           refundAllocatedToman: {
@@ -379,7 +416,7 @@ export class PaymentRefundsService {
       });
 
       if (released.count !== 1) {
-        throw new ConflictException('Payment refund allocation is inconsistent.');
+        throw new ConflictException('Payment refund totals changed; reload and retry.');
       }
 
       return transaction.paymentRefund.findUniqueOrThrow({
