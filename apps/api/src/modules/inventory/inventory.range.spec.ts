@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { INT32_MAX } from '../../common/int32';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { InventoryService } from './inventory.service';
@@ -47,7 +47,10 @@ describe('InventoryService PostgreSQL Int32 range', () => {
         },
         actorUserId,
       ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.INVENTORY_NOT_AVAILABLE,
+    });
 
     expect(transaction.inventory.update).not.toHaveBeenCalled();
     expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();
@@ -68,7 +71,10 @@ describe('InventoryService PostgreSQL Int32 range', () => {
         },
         actorUserId,
       ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.INVENTORY_NOT_AVAILABLE,
+    });
 
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });

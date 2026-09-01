@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { InventoryService } from './inventory.service';
 
@@ -151,7 +151,10 @@ describe('InventoryService', () => {
         },
         actorUserId,
       ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.INVENTORY_RESERVATION_FAILED,
+    });
   });
 
   it('rejects an adjustment when inventory changes after the snapshot is read', async () => {
@@ -192,7 +195,10 @@ describe('InventoryService', () => {
         },
         actorUserId,
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.INVENTORY_STATE_CHANGED,
+    });
 
     expect(transaction.inventory.findUniqueOrThrow).not.toHaveBeenCalled();
     expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();
@@ -222,7 +228,10 @@ describe('InventoryService', () => {
         },
         actorUserId,
       ),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.NOT_FOUND,
+    });
   });
 
   it('bulk-sets the same quantity while keeping inventory per variant', async () => {
