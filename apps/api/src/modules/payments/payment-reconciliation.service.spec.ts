@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import {
   PaymentAttemptStatus,
   PaymentReconciliationResolution,
@@ -236,7 +236,10 @@ describe('PaymentReconciliationService', () => {
         externalRefundReference,
         'Refund confirmed externally',
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.PAYMENT_FAILED,
+    });
 
     expect(transaction.paymentAttempt.updateMany).not.toHaveBeenCalled();
   });

@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, PaymentStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { OrdersService } from './orders.service';
@@ -40,7 +40,10 @@ describe('OrdersService status concurrency', () => {
         },
         actorUserId,
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.ORDER_STATE_CHANGED,
+    });
 
     expect(transaction.order.updateMany).toHaveBeenCalledWith({
       where: {
@@ -97,7 +100,11 @@ describe('OrdersService status concurrency', () => {
         },
         actorUserId,
       ),
-    ).rejects.toThrow('Order cannot enter processing while its payment is not fully settled.');
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.ORDER_PAYMENT_NOT_SETTLED,
+      message: 'Order payment is not settled.',
+    });
 
     expect(transaction.order.updateMany).not.toHaveBeenCalled();
     expect(transaction.orderStatusHistory.create).not.toHaveBeenCalled();

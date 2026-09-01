@@ -1,5 +1,5 @@
-import { ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, PaymentAttemptStatus, PaymentStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { PaymentGateway } from './payment-gateway.port';
@@ -347,7 +347,10 @@ describe('PaymentsService', () => {
       service.initiateOrderPayment(userId, orderId, {
         idempotencyKey: 'checkout-expired',
       }),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.PAYMENT_FAILED,
+    });
 
     expect(transaction.$queryRaw).toHaveBeenCalledTimes(1);
     expect(transaction.payment.upsert).not.toHaveBeenCalled();

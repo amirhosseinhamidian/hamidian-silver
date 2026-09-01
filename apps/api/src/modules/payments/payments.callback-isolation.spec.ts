@@ -1,5 +1,5 @@
-import { ConflictException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
+import { ErrorCode } from '../../common/errors/error-codes';
 import {
   OrderStatus,
   PaymentAttemptStatus,
@@ -164,9 +164,10 @@ describe('PaymentsService callback attempt isolation', () => {
       paymentGateway,
     );
 
-    await expect(service.verifyCallback(attemptId, 'AUTH-B')).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(service.verifyCallback(attemptId, 'AUTH-B')).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.PAYMENT_FAILED,
+    });
 
     expect(paymentGateway.verify).toHaveBeenCalled();
     expect(prisma.$transaction).not.toHaveBeenCalled();

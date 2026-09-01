@@ -1,13 +1,13 @@
 import {
   BadGatewayException,
-  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
-  NotFoundException,
   Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DomainException } from '../../common/errors/domain-exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { lockOrderRowForUpdate } from '../../common/order-row-lock';
 import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
@@ -107,7 +107,7 @@ export class PaymentsService {
         existing.payment.order.userId !== userId ||
         (existing.provider && existing.provider !== provider)
       ) {
-        throw new ConflictException('Idempotency key is already in use.');
+        throw new DomainException(ErrorCode.PAYMENT_FAILED, 'Idempotency key is already in use.');
       }
 
       context = {
@@ -156,13 +156,17 @@ export class PaymentsService {
     }
 
     if (context.status === PaymentAttemptStatus.FAILED) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
         'This idempotency key belongs to a failed payment attempt. Use a new key.',
       );
     }
 
     if (!context.isNew && context.status === PaymentAttemptStatus.CREATED) {
-      throw new ConflictException('Payment attempt is still being initialized.');
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
+        'Payment attempt is still being initialized.',
+      );
     }
 
     const callbackUrl = `${this.callbackBaseUrl}/${context.attemptId}`;
@@ -266,7 +270,8 @@ export class PaymentsService {
       };
     }
 
-    throw new ConflictException(
+    throw new DomainException(
+      ErrorCode.PAYMENT_FAILED,
       'Payment attempt state changed while storing the gateway initiation result.',
     );
   }
@@ -290,7 +295,7 @@ export class PaymentsService {
     });
 
     if (!attempt) {
-      throw new NotFoundException('Payment attempt was not found.');
+      throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment attempt was not found.');
     }
 
     if (attempt.status === PaymentAttemptStatus.VERIFIED) {
@@ -321,7 +326,10 @@ export class PaymentsService {
     }
 
     if (!attempt.authority || attempt.authority !== authority) {
-      throw new BadRequestException('Payment authority does not match.');
+      throw new DomainException(
+        ErrorCode.PAYMENT_CALLBACK_INVALID,
+        'Payment authority does not match.',
+      );
     }
 
     const gatewayInput: VerifyGatewayPaymentInput & {
@@ -357,7 +365,7 @@ export class PaymentsService {
       });
 
       if (failed.count === 1) {
-        throw new BadRequestException('Payment verification failed.');
+        throw new DomainException(ErrorCode.PAYMENT_FAILED, 'Payment verification failed.');
       }
 
       const current = await this.prisma.paymentAttempt.findUnique({
@@ -400,7 +408,8 @@ export class PaymentsService {
         };
       }
 
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
         'Payment attempt state changed while processing a verification failure.',
       );
     }
@@ -475,7 +484,7 @@ export class PaymentsService {
     });
 
     if (!payment) {
-      throw new NotFoundException('Payment was not found.');
+      throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment was not found.');
     }
 
     return payment;
@@ -505,7 +514,7 @@ export class PaymentsService {
       });
 
       if (!order) {
-        throw new NotFoundException('Order was not found.');
+        throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
       }
 
       if (order.status === OrderStatus.PAID) {
@@ -534,15 +543,18 @@ export class PaymentsService {
           };
         }
 
-        throw new ConflictException('Order is already paid.');
+        throw new DomainException(ErrorCode.PAYMENT_ALREADY_CONFIRMED, 'Order is already paid.');
       }
 
       if (order.status !== OrderStatus.PENDING_PAYMENT) {
-        throw new ConflictException('Order is not payable.');
+        throw new DomainException(ErrorCode.PAYMENT_FAILED, 'Order is not payable.');
       }
 
       if (order.reservationExpiresAt <= new Date()) {
-        throw new ConflictException('Order inventory reservation has expired.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
+          'Order inventory reservation has expired.',
+        );
       }
 
       const payment = await transaction.payment.upsert({
@@ -557,7 +569,10 @@ export class PaymentsService {
       });
 
       if (payment.amountToman !== order.grandTotalToman) {
-        throw new ConflictException('Order total no longer matches payment amount.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
+          'Order total no longer matches payment amount.',
+        );
       }
 
       const existing = await transaction.paymentAttempt.findUnique({
@@ -571,7 +586,7 @@ export class PaymentsService {
           existing.paymentId !== payment.id ||
           (existing.provider && existing.provider !== provider)
         ) {
-          throw new ConflictException('Idempotency key is already in use.');
+          throw new DomainException(ErrorCode.PAYMENT_FAILED, 'Idempotency key is already in use.');
         }
 
         return {
@@ -633,11 +648,14 @@ export class PaymentsService {
       });
 
       if (!attempt) {
-        throw new NotFoundException('Payment attempt was not found.');
+        throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment attempt was not found.');
       }
 
       if (attempt.authority !== authority) {
-        throw new BadRequestException('Payment authority does not match.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_CALLBACK_INVALID,
+          'Payment authority does not match.',
+        );
       }
 
       const order = attempt.payment.order;
@@ -835,7 +853,7 @@ export class PaymentsService {
     });
 
     if (!attempt) {
-      throw new NotFoundException('Payment attempt was not found.');
+      throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment attempt was not found.');
     }
 
     if (attempt.status === PaymentAttemptStatus.VERIFIED) {
@@ -946,7 +964,10 @@ export class PaymentsService {
         };
       }
 
-      throw new ConflictException('Payment attempt state changed while recording reconciliation.');
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
+        'Payment attempt state changed while recording reconciliation.',
+      );
     }
 
     if (!preserveSettledPayment) {
@@ -961,7 +982,10 @@ export class PaymentsService {
       });
 
       if (paymentClaimed.count !== 1) {
-        throw new ConflictException('Payment state changed while recording reconciliation.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
+          'Payment state changed while recording reconciliation.',
+        );
       }
     }
 
@@ -1200,7 +1224,7 @@ export class PaymentsService {
 
   private tomanToRial(amountToman: number): string {
     if (!Number.isSafeInteger(amountToman) || amountToman < 0) {
-      throw new BadRequestException('Payment amount is invalid.');
+      throw new DomainException(ErrorCode.PAYMENT_FAILED, 'Payment amount is invalid.');
     }
 
     return (BigInt(amountToman) * 10n).toString();

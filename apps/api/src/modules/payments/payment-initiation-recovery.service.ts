@@ -1,9 +1,6 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { DomainException } from '../../common/errors/domain-exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { lockOrderRowForUpdate } from '../../common/order-row-lock';
 import { OrderStatus, PaymentAttemptStatus, PaymentStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
@@ -87,7 +84,7 @@ export class PaymentInitiationRecoveryService {
       });
 
       if (!locator) {
-        throw new NotFoundException('Payment attempt was not found.');
+        throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment attempt was not found.');
       }
 
       await lockOrderRowForUpdate(transaction, locator.payment.orderId);
@@ -106,7 +103,7 @@ export class PaymentInitiationRecoveryService {
       });
 
       if (!attempt) {
-        throw new NotFoundException('Payment attempt was not found.');
+        throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment attempt was not found.');
       }
 
       if (attempt.status !== PaymentAttemptStatus.CREATED) {
@@ -116,7 +113,8 @@ export class PaymentInitiationRecoveryService {
       const cutoff = new Date(now.getTime() - RECOVERY_MIN_AGE_MS);
 
       if (attempt.createdAt > cutoff) {
-        throw new ConflictException(
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
           'Payment attempt is too recent for manual initiation recovery.',
         );
       }
@@ -125,7 +123,10 @@ export class PaymentInitiationRecoveryService {
         attempt.payment.status !== PaymentStatus.PENDING &&
         attempt.payment.status !== PaymentStatus.CANCELLED
       ) {
-        throw new ConflictException('Payment state no longer permits initiation recovery.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
+          'Payment state no longer permits initiation recovery.',
+        );
       }
 
       const resolutionData =
@@ -155,7 +156,8 @@ export class PaymentInitiationRecoveryService {
         });
       } catch (error) {
         if (this.isUniqueConstraintError(error)) {
-          throw new ConflictException(
+          throw new DomainException(
+            ErrorCode.PAYMENT_FAILED,
             'Recovered gateway authority is already attached to another payment attempt.',
           );
         }
@@ -178,7 +180,7 @@ export class PaymentInitiationRecoveryService {
         });
 
         if (!current) {
-          throw new NotFoundException('Payment attempt was not found.');
+          throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment attempt was not found.');
         }
 
         return this.resolveExisting(current, dto);
@@ -218,7 +220,8 @@ export class PaymentInitiationRecoveryService {
     now: Date,
   ) {
     if (!dto.authority || !dto.paymentUrl) {
-      throw new BadRequestException(
+      throw new DomainException(
+        ErrorCode.PAYMENT_CALLBACK_INVALID,
         'Recovered authority and payment URL are required for a redirected resolution.',
       );
     }
@@ -228,7 +231,8 @@ export class PaymentInitiationRecoveryService {
       attempt.payment.order.status !== OrderStatus.PENDING_PAYMENT ||
       attempt.payment.order.reservationExpiresAt <= now
     ) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
         'Order is no longer payable; the initiation cannot be restored to a redirect.',
       );
     }
@@ -237,7 +241,8 @@ export class PaymentInitiationRecoveryService {
       attempt.amountToman !== attempt.payment.amountToman ||
       attempt.payment.amountToman !== attempt.payment.order.grandTotalToman
     ) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
         'Payment amount snapshots are inconsistent; the initiation cannot be restored.',
       );
     }
@@ -260,7 +265,8 @@ export class PaymentInitiationRecoveryService {
 
   private abandonedResolutionData(dto: ResolvePaymentInitiationRecoveryDto) {
     if (dto.authority || dto.paymentUrl) {
-      throw new BadRequestException(
+      throw new DomainException(
+        ErrorCode.PAYMENT_CALLBACK_INVALID,
         'Authority and payment URL are only valid for a redirected recovery.',
       );
     }
@@ -301,7 +307,8 @@ export class PaymentInitiationRecoveryService {
       return attempt;
     }
 
-    throw new ConflictException(
+    throw new DomainException(
+      ErrorCode.PAYMENT_FAILED,
       'Payment attempt state changed while resolving initiation recovery.',
     );
   }

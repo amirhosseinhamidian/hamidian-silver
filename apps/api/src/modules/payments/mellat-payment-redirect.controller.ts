@@ -1,12 +1,6 @@
-import {
-  ConflictException,
-  Controller,
-  Get,
-  Header,
-  NotFoundException,
-  Param,
-  ParseUUIDPipe,
-} from '@nestjs/common';
+import { Controller, Get, Header, Param, ParseUUIDPipe } from '@nestjs/common';
+import { DomainException } from '../../common/errors/domain-exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { PaymentAttemptStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { Public } from '../auth/public.decorator';
@@ -39,11 +33,17 @@ export class MellatPaymentRedirectController {
     });
 
     if (!attempt || attempt.provider !== PAYMENT_GATEWAY_CODES.MELLAT || !attempt.authority) {
-      throw new NotFoundException('Mellat payment attempt was not found.');
+      throw new DomainException(
+        ErrorCode.PAYMENT_NOT_FOUND,
+        'Mellat payment attempt was not found.',
+      );
     }
 
     if (attempt.status !== PaymentAttemptStatus.REDIRECTED) {
-      throw new ConflictException('Mellat payment attempt can no longer be redirected.');
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
+        'Mellat payment attempt can no longer be redirected.',
+      );
     }
 
     return this.mellatGateway.buildStartPayForm(attempt.authority);

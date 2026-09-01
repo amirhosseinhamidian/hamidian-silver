@@ -1,5 +1,5 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, PaymentAttemptStatus, PaymentStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { PaymentGateway } from './payment-gateway.port';
@@ -149,9 +149,10 @@ describe('PaymentsService verification concurrency', () => {
       message: 'Payment was declined',
     });
 
-    await expect(service.verifyCallback(attemptId, 'AUTH-1')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(service.verifyCallback(attemptId, 'AUTH-1')).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.PAYMENT_FAILED,
+    });
 
     expect(prisma.paymentAttempt.findUnique).toHaveBeenCalledTimes(1);
   });
@@ -171,8 +172,9 @@ describe('PaymentsService verification concurrency', () => {
       code: 'STALE_FAILURE',
     });
 
-    await expect(service.verifyCallback(attemptId, 'AUTH-1')).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(service.verifyCallback(attemptId, 'AUTH-1')).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.PAYMENT_FAILED,
+    });
   });
 });

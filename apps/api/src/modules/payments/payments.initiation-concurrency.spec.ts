@@ -1,5 +1,5 @@
-import { ConflictException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, PaymentAttemptStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { PaymentInitiationUnknownError } from './payment-initiation-unknown.error';
@@ -139,7 +139,10 @@ describe('PaymentsService initiation concurrency', () => {
       service.initiateOrderPayment(userId, orderId, {
         idempotencyKey: 'init-race-conflict',
       }),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.PAYMENT_FAILED,
+    });
   });
 
   it('preserves a created attempt when the gateway initiation outcome is unknown', async () => {

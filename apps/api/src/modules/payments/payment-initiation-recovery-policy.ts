@@ -1,5 +1,7 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DomainException } from '../../common/errors/domain-exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 import {
   PAYMENT_GATEWAY_CODES,
   isPaymentGatewayCode,
@@ -22,7 +24,8 @@ export class PaymentInitiationRecoveryPolicy {
 
   requireCanonicalRedirect(input: RecoveryRedirectInput): string {
     if (!isPaymentGatewayCode(input.provider)) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
         'Payment attempt provider does not support manual initiation recovery.',
       );
     }
@@ -30,7 +33,8 @@ export class PaymentInitiationRecoveryPolicy {
     const canonicalUrl = this.buildCanonicalUrl(input.provider, input.attemptId, input.authority);
 
     if (input.paymentUrl !== canonicalUrl) {
-      throw new BadRequestException(
+      throw new DomainException(
+        ErrorCode.PAYMENT_CALLBACK_INVALID,
         'Recovered payment URL does not match the selected gateway and authority.',
       );
     }
@@ -64,13 +68,19 @@ export class PaymentInitiationRecoveryPolicy {
 
   private buildZibalUrl(authority: string): string {
     if (!/^\d+$/.test(authority)) {
-      throw new BadRequestException('Recovered Zibal trackId is invalid.');
+      throw new DomainException(
+        ErrorCode.PAYMENT_CALLBACK_INVALID,
+        'Recovered Zibal trackId is invalid.',
+      );
     }
 
     const trackId = Number(authority);
 
     if (!Number.isSafeInteger(trackId) || trackId <= 0) {
-      throw new BadRequestException('Recovered Zibal trackId is outside the supported range.');
+      throw new DomainException(
+        ErrorCode.PAYMENT_CALLBACK_INVALID,
+        'Recovered Zibal trackId is outside the supported range.',
+      );
     }
 
     return `${ZIBAL_START_PAY_BASE_URL}${encodeURIComponent(authority)}`;
@@ -78,7 +88,10 @@ export class PaymentInitiationRecoveryPolicy {
 
   private buildMellatUrl(attemptId: string, authority: string): string {
     if (!/^[A-Za-z0-9]+$/.test(authority)) {
-      throw new BadRequestException('Recovered Mellat RefId is invalid.');
+      throw new DomainException(
+        ErrorCode.PAYMENT_CALLBACK_INVALID,
+        'Recovered Mellat RefId is invalid.',
+      );
     }
 
     const callbackBaseUrl = this.config.get<string>(
@@ -100,7 +113,8 @@ export class PaymentInitiationRecoveryPolicy {
 
       return parsed.toString();
     } catch {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.PAYMENT_CALLBACK_INVALID,
         'Payment callback URL cannot produce the canonical Mellat recovery redirect.',
       );
     }

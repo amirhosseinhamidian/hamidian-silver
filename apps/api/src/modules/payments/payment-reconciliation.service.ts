@@ -1,4 +1,6 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { DomainException } from '../../common/errors/domain-exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 import {
   PaymentAttemptStatus,
   PaymentReconciliationResolution,
@@ -80,7 +82,10 @@ export class PaymentReconciliationService {
       });
 
       if (!reconciliation) {
-        throw new NotFoundException('Payment reconciliation was not found.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_NOT_FOUND,
+          'Payment reconciliation was not found.',
+        );
       }
 
       if (
@@ -88,7 +93,8 @@ export class PaymentReconciliationService {
         reconciliation.providerReference !== reconciliation.paymentAttempt.providerReference ||
         reconciliation.amountToman !== reconciliation.paymentAttempt.amountToman
       ) {
-        throw new ConflictException(
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
           'Payment reconciliation snapshot no longer matches the payment attempt.',
         );
       }
@@ -99,12 +105,16 @@ export class PaymentReconciliationService {
             return reconciliation;
           }
 
-          throw new ConflictException(
+          throw new DomainException(
+            ErrorCode.PAYMENT_FAILED,
             'Payment reconciliation was resolved with a different external refund reference.',
           );
         }
 
-        throw new ConflictException('Payment reconciliation is already resolved.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_ALREADY_CONFIRMED,
+          'Payment reconciliation is already resolved.',
+        );
       }
 
       const paymentStatus = reconciliation.paymentAttempt.payment.status;
@@ -117,7 +127,10 @@ export class PaymentReconciliationService {
         reconciliation.paymentAttempt.status !== PaymentAttemptStatus.RECONCILIATION_REQUIRED ||
         (!preserveSettledPayment && paymentStatus !== PaymentStatus.RECONCILIATION_REQUIRED)
       ) {
-        throw new ConflictException('Payment reconciliation state no longer matches the payment.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
+          'Payment reconciliation state no longer matches the payment.',
+        );
       }
 
       const resolvedAt = new Date();
@@ -148,7 +161,8 @@ export class PaymentReconciliationService {
           'code' in error &&
           error.code === 'P2002'
         ) {
-          throw new ConflictException(
+          throw new DomainException(
+            ErrorCode.PAYMENT_FAILED,
             'External refund reference is already used by another payment reconciliation.',
           );
         }
@@ -171,12 +185,14 @@ export class PaymentReconciliationService {
             return current;
           }
 
-          throw new ConflictException(
+          throw new DomainException(
+            ErrorCode.PAYMENT_FAILED,
             'Payment reconciliation was resolved with a different external refund reference.',
           );
         }
 
-        throw new ConflictException(
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
           'Payment reconciliation changed while resolving; reload before retrying.',
         );
       }
@@ -193,7 +209,10 @@ export class PaymentReconciliationService {
         });
 
         if (payment.count !== 1) {
-          throw new ConflictException('Payment state changed while resolving reconciliation.');
+          throw new DomainException(
+            ErrorCode.PAYMENT_FAILED,
+            'Payment state changed while resolving reconciliation.',
+          );
         }
       }
 
@@ -210,7 +229,8 @@ export class PaymentReconciliationService {
       });
 
       if (attempt.count !== 1) {
-        throw new ConflictException(
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
           'Payment attempt state changed while resolving reconciliation.',
         );
       }

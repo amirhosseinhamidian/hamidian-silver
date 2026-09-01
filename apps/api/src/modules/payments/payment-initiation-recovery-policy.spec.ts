@@ -1,5 +1,5 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { PaymentInitiationRecoveryPolicy } from './payment-initiation-recovery-policy';
 
 describe('PaymentInitiationRecoveryPolicy', () => {
@@ -36,7 +36,12 @@ describe('PaymentInitiationRecoveryPolicy', () => {
         authority: 'A000000000000000000000000000000001',
         paymentUrl: 'https://example.com/phishing',
       }),
-    ).toThrow(BadRequestException);
+    ).toThrow(
+      expect.objectContaining({
+        name: 'DomainException',
+        code: ErrorCode.PAYMENT_CALLBACK_INVALID,
+      }),
+    );
   });
 
   it('enforces the same numeric trackId contract as the Zibal adapter', () => {
@@ -58,7 +63,12 @@ describe('PaymentInitiationRecoveryPolicy', () => {
         authority: 'not-a-track-id',
         paymentUrl: 'https://gateway.zibal.ir/start/not-a-track-id',
       }),
-    ).toThrow(BadRequestException);
+    ).toThrow(
+      expect.objectContaining({
+        name: 'DomainException',
+        code: ErrorCode.PAYMENT_CALLBACK_INVALID,
+      }),
+    );
   });
 
   it('requires Mellat recovery to use the internal redirect for the exact attempt', () => {
@@ -86,6 +96,11 @@ describe('PaymentInitiationRecoveryPolicy', () => {
         authority: 'AUTH',
         paymentUrl: 'https://gateway.example/pay/AUTH',
       }),
-    ).toThrow(ConflictException);
+    ).toThrow(
+      expect.objectContaining({
+        name: 'DomainException',
+        code: ErrorCode.PAYMENT_FAILED,
+      }),
+    );
   });
 });

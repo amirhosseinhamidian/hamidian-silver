@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, PlatingType, ProductStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { OrdersService } from './orders.service';
@@ -231,7 +231,10 @@ describe('OrdersService', () => {
           },
         ],
       }),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.INVENTORY_NOT_AVAILABLE,
+    });
   });
 
   it('does not allow staff status changes to mark a pending order as paid', async () => {
@@ -261,7 +264,10 @@ describe('OrdersService', () => {
         },
         userId,
       ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.ORDER_INVALID_STATUS_TRANSITION,
+    });
 
     expect(transaction.order.update).not.toHaveBeenCalled();
   });
@@ -380,7 +386,10 @@ describe('OrdersService', () => {
         },
         userId,
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.ORDER_STATE_CHANGED,
+    });
 
     expect(transaction.inventory.findUnique).not.toHaveBeenCalled();
     expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();

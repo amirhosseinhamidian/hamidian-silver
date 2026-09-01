@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, PaymentAttemptStatus, PaymentStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import {
@@ -207,7 +207,10 @@ describe('PaymentInitiationRecoveryService', () => {
         },
         now,
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.PAYMENT_FAILED,
+    });
 
     expect(transaction.paymentAttempt.updateMany).not.toHaveBeenCalled();
   });
@@ -226,7 +229,10 @@ describe('PaymentInitiationRecoveryService', () => {
         },
         now,
       ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.PAYMENT_CALLBACK_INVALID,
+    });
   });
 
   it('rejects a concurrent redirect that did not record recovery audit metadata', async () => {
@@ -260,7 +266,10 @@ describe('PaymentInitiationRecoveryService', () => {
         },
         now,
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.PAYMENT_FAILED,
+    });
   });
 
   it('returns the concurrent winner idempotently for the same redirect', async () => {
