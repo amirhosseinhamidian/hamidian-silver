@@ -20,4 +20,16 @@ export class HealthService {
       database: 'postgresql',
     };
   }
+
+  async checkReadiness() {
+    await this.checkDatabase();
+
+    return {
+      status: 'ok',
+      service: 'hamidian-silver-api',
+      checks: {
+        database: 'ok',
+      },
+    };
+  }
 }
