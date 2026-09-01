@@ -23,6 +23,18 @@ importers:
 
   apps/admin:
     dependencies:
+      '@hamidian/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      '@hamidian/locale':
+        specifier: workspace:*
+        version: link:../../packages/locale
+      '@hamidian/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@hamidian/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       next:
         specifier: 16.3.3
         version: 16.3.3(@babel/core@7.29.7)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -160,6 +172,18 @@ importers:
 
   apps/storefront:
     dependencies:
+      '@hamidian/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      '@hamidian/locale':
+        specifier: workspace:*
+        version: link:../../packages/locale
+      '@hamidian/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@hamidian/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       next:
         specifier: 16.3.3
         version: 16.3.3(@babel/core@7.29.7)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -195,13 +219,31 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  packages/api-client: {}
+  packages/api-client:
+    dependencies:
+      '@hamidian/types':
+        specifier: workspace:*
+        version: link:../types
 
   packages/locale: {}
 
   packages/types: {}
 
-  packages/ui: {}
+  packages/ui:
+    dependencies:
+      react:
+        specifier: ^19.0.0
+        version: 19.2.8
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.8(react@19.2.8)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.5(@types/react@19.2.18)
 
 packages:
 
