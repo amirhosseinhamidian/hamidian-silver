@@ -61,7 +61,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         message:
           exception instanceof DomainException
             ? exception.message
-            : exception instanceof HttpException
+            : exception instanceof HttpException && status < HttpStatus.INTERNAL_SERVER_ERROR
               ? this.extractMessage(exception)
               : 'Internal server error',
       },
