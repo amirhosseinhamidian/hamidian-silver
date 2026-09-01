@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, ShipmentStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { ShippingProvider } from './shipping-provider.port';
@@ -236,7 +236,10 @@ describe('ShippingService', () => {
       service.selectRate(userId, orderId, {
         serviceCode: 'EXPRESS',
       }),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_INVALID_STATUS,
+    });
   });
 
   it('rejects shipping quotes when an order item has no weight snapshot', async () => {
@@ -250,7 +253,10 @@ describe('ShippingService', () => {
       ],
     });
 
-    await expect(service.quoteOrder(userId, orderId)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.quoteOrder(userId, orderId)).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_NOT_READY,
+    });
 
     expect(provider.quote).not.toHaveBeenCalled();
   });
@@ -284,7 +290,10 @@ describe('ShippingService', () => {
         },
         userId,
       ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_INVALID_STATUS,
+    });
 
     expect(transaction.shipment.update).not.toHaveBeenCalled();
   });

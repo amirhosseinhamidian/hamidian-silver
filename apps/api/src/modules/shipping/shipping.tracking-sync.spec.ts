@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, ShipmentStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { ShippingProvider } from './shipping-provider.port';
@@ -134,7 +134,10 @@ describe('ShippingService tracking sync', () => {
     });
     const service = new ShippingService(prisma as unknown as PrismaService, shippingProvider);
 
-    await expect(service.syncTracking(orderId)).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.syncTracking(orderId)).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_INVALID_STATUS,
+    });
 
     expect(shippingProvider.track).not.toHaveBeenCalled();
     expect(prisma.$transaction).not.toHaveBeenCalled();

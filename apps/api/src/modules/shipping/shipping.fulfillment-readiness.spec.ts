@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import {
   OrderStatus,
   PaymentStatus,
@@ -71,7 +71,10 @@ describe('ShippingService fulfillment readiness gate', () => {
 
     await expect(
       service.createProviderShipment(orderId, '30000000-0000-4000-8000-000000000001'),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_NOT_READY,
+    });
 
     expect(provider.createShipment).not.toHaveBeenCalled();
   });

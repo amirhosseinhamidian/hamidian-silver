@@ -1,12 +1,7 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-  Optional,
-} from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { DomainException } from '../../common/errors/domain-exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { isNonNegativeInt32 } from '../../common/int32';
 import { lockOrderRowForUpdate } from '../../common/order-row-lock';
 import { isNonNegativeTomanInt } from '../../common/toman';
@@ -128,7 +123,10 @@ export class ShippingService {
       .find((option) => option.serviceCode === dto.serviceCode);
 
     if (!selected) {
-      throw new BadRequestException('Selected shipping service is not available.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Selected shipping service is not available.',
+      );
     }
 
     return this.prisma.$transaction(async (transaction) => {
@@ -150,19 +148,28 @@ export class ShippingService {
       });
 
       if (!currentOrder) {
-        throw new NotFoundException('Order was not found.');
+        throw new DomainException(ErrorCode.NOT_FOUND, 'Order was not found.');
       }
 
       if (currentOrder.status !== OrderStatus.PENDING_PAYMENT) {
-        throw new ConflictException('Shipping can no longer be changed for this order.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Shipping can no longer be changed for this order.',
+        );
       }
 
       if (currentOrder.payment) {
-        throw new ConflictException('Shipping cannot be changed after payment initialization.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Shipping cannot be changed after payment initialization.',
+        );
       }
 
       if (currentOrder.shipment && currentOrder.shipment.status !== ShipmentStatus.PENDING) {
-        throw new ConflictException('Shipment is already being processed.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Shipment is already being processed.',
+        );
       }
 
       const baseTotal =
@@ -253,18 +260,22 @@ export class ShippingService {
     });
 
     if (!shipment) {
-      throw new NotFoundException('Shipment was not found.');
+      throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
     }
 
     if (
       shipment.order.status !== OrderStatus.PAID &&
       shipment.order.status !== OrderStatus.PROCESSING
     ) {
-      throw new ConflictException('Provider shipment can only be created after payment.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Provider shipment can only be created after payment.',
+      );
     }
 
     if (shipment.provider !== this.provider.providerCode) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
         'Configured shipping provider does not match the selected shipment provider.',
       );
     }
@@ -293,7 +304,8 @@ export class ShippingService {
     });
 
     if (!readiness.readyForShipmentCreation) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
         `Order is not ready for provider shipment creation: ${readiness.blockers
           .map(({ code }) => code)
           .join(', ')}`,
@@ -304,13 +316,15 @@ export class ShippingService {
       shipment.providerCreationState === ShipmentProviderCreationState.IN_PROGRESS ||
       shipment.providerCreationState === ShipmentProviderCreationState.UNKNOWN
     ) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.SHIPMENT_INVALID_STATUS,
         'Provider shipment creation is already in progress or needs reconciliation.',
       );
     }
 
     if (shipment.status !== ShipmentStatus.PENDING) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.SHIPMENT_INVALID_STATUS,
         'Provider shipment can only be created from the pending shipment state.',
       );
     }
@@ -338,7 +352,10 @@ export class ShippingService {
     });
 
     if (claimed.count !== 1) {
-      throw new ConflictException('Shipment creation state changed; reload before retrying.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_INVALID_STATUS,
+        'Shipment creation state changed; reload before retrying.',
+      );
     }
 
     try {
@@ -372,7 +389,7 @@ export class ShippingService {
         });
 
         if (!current) {
-          throw new NotFoundException('Shipment was not found.');
+          throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
         }
 
         if (current.providerShipmentId) {
@@ -391,7 +408,8 @@ export class ShippingService {
         }
 
         if (current.providerCreationState !== ShipmentProviderCreationState.IN_PROGRESS) {
-          throw new ConflictException(
+          throw new DomainException(
+            ErrorCode.SHIPMENT_INVALID_STATUS,
             'Shipment creation state changed while contacting the provider.',
           );
         }
@@ -414,7 +432,8 @@ export class ShippingService {
         });
 
         if (finalized.count !== 1) {
-          throw new ConflictException(
+          throw new DomainException(
+            ErrorCode.SHIPMENT_INVALID_STATUS,
             'Shipment creation state changed before provider result could be finalized.',
           );
         }
@@ -493,17 +512,21 @@ export class ShippingService {
     });
 
     if (!shipment) {
-      throw new NotFoundException('Shipment was not found.');
+      throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
     }
 
     if (shipment.provider !== this.provider.providerCode) {
-      throw new ConflictException('Configured shipping provider does not match this shipment.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Configured shipping provider does not match this shipment.',
+      );
     }
 
     const providerShipmentId = shipment.providerShipmentId;
 
     if (!providerShipmentId) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
         'Provider shipment must be created before tracking can be synchronized.',
       );
     }
@@ -538,7 +561,10 @@ export class ShippingService {
     });
 
     if (lease.count !== 1) {
-      throw new ConflictException('Shipment tracking synchronization is already in progress.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_INVALID_STATUS,
+        'Shipment tracking synchronization is already in progress.',
+      );
     }
 
     try {
@@ -559,7 +585,7 @@ export class ShippingService {
         });
 
         if (!current) {
-          throw new NotFoundException('Shipment was not found.');
+          throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
         }
 
         let nextStatus = current.status;
@@ -611,7 +637,8 @@ export class ShippingService {
         });
 
         if (finalized.count !== 1) {
-          throw new ConflictException(
+          throw new DomainException(
+            ErrorCode.SHIPMENT_INVALID_STATUS,
             'Shipment tracking response is stale or ownership changed; retry is required.',
           );
         }
@@ -668,7 +695,8 @@ export class ShippingService {
     actorUserId: string,
   ) {
     if (!dto.confirmNoProviderShipment) {
-      throw new BadRequestException(
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
         'Confirm that no provider shipment exists before resetting creation.',
       );
     }
@@ -681,11 +709,14 @@ export class ShippingService {
       });
 
       if (!shipment) {
-        throw new NotFoundException('Shipment was not found.');
+        throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
       }
 
       if (shipment.providerShipmentId) {
-        throw new ConflictException('Provider shipment already exists and cannot be reset.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Provider shipment already exists and cannot be reset.',
+        );
       }
 
       const isUnknown = shipment.providerCreationState === ShipmentProviderCreationState.UNKNOWN;
@@ -695,7 +726,10 @@ export class ShippingService {
         Date.now() - shipment.creationAttemptedAt.getTime() >= PROVIDER_CREATION_STALE_MS;
 
       if (!isUnknown && !isStaleInProgress) {
-        throw new ConflictException('Shipment provider creation is not in a resettable state.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Shipment provider creation is not in a resettable state.',
+        );
       }
 
       const reset = await transaction.shipment.updateMany({
@@ -713,7 +747,8 @@ export class ShippingService {
       });
 
       if (reset.count !== 1) {
-        throw new ConflictException(
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
           'Shipment creation state changed while resetting; reload before retrying.',
         );
       }
@@ -750,7 +785,7 @@ export class ShippingService {
     });
 
     if (!shipment) {
-      throw new NotFoundException('Shipment was not found.');
+      throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
     }
 
     return shipment;
@@ -779,7 +814,7 @@ export class ShippingService {
     });
 
     if (!shipment) {
-      throw new NotFoundException('Shipment was not found.');
+      throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
     }
 
     return shipment;
@@ -810,7 +845,7 @@ export class ShippingService {
       });
 
       if (!shipment) {
-        throw new NotFoundException('Shipment was not found.');
+        throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
       }
 
       if (shipment.status === dto.status) {
@@ -818,7 +853,10 @@ export class ShippingService {
       }
 
       if (!this.isAllowedTransition(shipment.status, dto.status)) {
-        throw new BadRequestException('This shipment status transition is not allowed.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'This shipment status transition is not allowed.',
+        );
       }
 
       if (
@@ -846,7 +884,8 @@ export class ShippingService {
         });
 
         if (!readiness.readyForHandoff) {
-          throw new ConflictException(
+          throw new DomainException(
+            ErrorCode.SHIPMENT_NOT_READY,
             `Order is not ready for shipment handoff: ${readiness.handoffBlockers
               .map(({ code }) => code)
               .join(', ')}`,
@@ -859,11 +898,17 @@ export class ShippingService {
         shipment.providerShipmentId &&
         dto.providerShipmentId !== shipment.providerShipmentId
       ) {
-        throw new ConflictException('Provider shipment ID cannot be replaced once stored.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Provider shipment ID cannot be replaced once stored.',
+        );
       }
 
       if (dto.trackingCode && shipment.trackingCode && dto.trackingCode !== shipment.trackingCode) {
-        throw new ConflictException('Tracking code cannot be replaced once stored.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Tracking code cannot be replaced once stored.',
+        );
       }
 
       const now = new Date();
@@ -905,7 +950,10 @@ export class ShippingService {
       });
 
       if (claimed.count !== 1) {
-        throw new ConflictException('Shipment state changed; reload and retry the status update.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Shipment state changed; reload and retry the status update.',
+        );
       }
 
       const updated = await transaction.shipment.findUniqueOrThrow({
@@ -982,7 +1030,10 @@ export class ShippingService {
     };
 
     if (rank[order.status] < 1) {
-      throw new ConflictException('Shipment cannot advance an unpaid or closed order.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Shipment cannot advance an unpaid or closed order.',
+      );
     }
 
     const steps =
@@ -1014,7 +1065,8 @@ export class ShippingService {
       });
 
       if (claimed.count !== 1) {
-        throw new ConflictException(
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
           'Order state changed while synchronizing shipment status; retry is required.',
         );
       }
@@ -1130,7 +1182,7 @@ export class ShippingService {
       })
       .then((order) => {
         if (!order) {
-          throw new NotFoundException('Order was not found.');
+          throw new DomainException(ErrorCode.NOT_FOUND, 'Order was not found.');
         }
 
         return order;
@@ -1151,13 +1203,16 @@ export class ShippingService {
 
   private assertOrderCanSelectShipping(order: OrderForShipping): void {
     if (order.status !== OrderStatus.PENDING_PAYMENT) {
-      throw new ConflictException('Shipping can only be selected before payment.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_INVALID_STATUS,
+        'Shipping can only be selected before payment.',
+      );
     }
   }
 
   private requireShippingAddress(address: ShippingAddressSnapshot | null): ShippingAddressSnapshot {
     if (!address) {
-      throw new BadRequestException('Order shipping address is missing.');
+      throw new DomainException(ErrorCode.SHIPMENT_NOT_READY, 'Order shipping address is missing.');
     }
 
     return address;
@@ -1173,7 +1228,8 @@ export class ShippingService {
 
     for (const item of items) {
       if (!item.unitWeightGrams) {
-        throw new BadRequestException(
+        throw new DomainException(
+          ErrorCode.SHIPMENT_NOT_READY,
           'Every order item needs a weight before shipping can be quoted.',
         );
       }
@@ -1190,7 +1246,7 @@ export class ShippingService {
 
   private decimalGramsToMilliGrams(value: string): bigint {
     if (!/^\d+(?:\.\d{1,3})?$/.test(value)) {
-      throw new BadRequestException('Order item weight is invalid.');
+      throw new DomainException(ErrorCode.SHIPMENT_NOT_READY, 'Order item weight is invalid.');
     }
 
     const [whole, fraction = ''] = value.split('.');
@@ -1206,7 +1262,10 @@ export class ShippingService {
       (option.estimatedDeliveryDays !== undefined &&
         !isNonNegativeInt32(option.estimatedDeliveryDays))
     ) {
-      throw new BadRequestException('Shipping provider returned an invalid quote.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Shipping provider returned an invalid quote.',
+      );
     }
 
     return option;
@@ -1222,7 +1281,10 @@ export class ShippingService {
         (!result.trackingCode.trim() || result.trackingCode.length > 255)) ||
       (result.actualCostToman !== undefined && !isNonNegativeTomanInt(result.actualCostToman))
     ) {
-      throw new ConflictException('Shipping provider returned invalid shipment creation data.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Shipping provider returned invalid shipment creation data.',
+      );
     }
 
     return result;
@@ -1230,7 +1292,10 @@ export class ShippingService {
 
   private assertTomanAmount(amount: number): void {
     if (!isNonNegativeTomanInt(amount)) {
-      throw new BadRequestException('Calculated order amount exceeds the supported range.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Calculated order amount exceeds the supported range.',
+      );
     }
   }
 

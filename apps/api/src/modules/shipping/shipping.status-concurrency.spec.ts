@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import {
   OrderStatus,
   PaymentStatus,
@@ -64,7 +64,10 @@ describe('ShippingService status concurrency', () => {
         },
         actorUserId,
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_INVALID_STATUS,
+    });
 
     expect(transaction.shipment.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -137,7 +140,10 @@ describe('ShippingService status concurrency', () => {
         },
         actorUserId,
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_INVALID_STATUS,
+    });
 
     expect(transaction.shipment.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({

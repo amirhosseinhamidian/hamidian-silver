@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { INT32_MAX } from '../../common/int32';
 import { TOMAN_INT_MAX } from '../../common/toman';
 import {
@@ -69,7 +69,10 @@ describe('ShippingService provider boundary', () => {
       provider as unknown as ShippingProvider,
     );
 
-    await expect(service.quoteOrder(userId, orderId)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.quoteOrder(userId, orderId)).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_NOT_READY,
+    });
   });
 
   it('rejects provider delivery estimates outside the PostgreSQL Int range', async () => {
@@ -95,7 +98,10 @@ describe('ShippingService provider boundary', () => {
       provider as unknown as ShippingProvider,
     );
 
-    await expect(service.quoteOrder(userId, orderId)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.quoteOrder(userId, orderId)).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_NOT_READY,
+    });
   });
 
   it('marks creation unknown when the provider returns invalid shipment identifiers', async () => {
@@ -150,9 +156,10 @@ describe('ShippingService provider boundary', () => {
       provider as unknown as ShippingProvider,
     );
 
-    await expect(service.createProviderShipment(orderId, userId)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(service.createProviderShipment(orderId, userId)).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_NOT_READY,
+    });
 
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(prisma.shipment.updateMany).toHaveBeenLastCalledWith({

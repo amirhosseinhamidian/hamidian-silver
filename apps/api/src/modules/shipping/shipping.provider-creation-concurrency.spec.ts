@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import {
   OrderStatus,
   PaymentStatus,
@@ -99,9 +99,10 @@ describe('ShippingService provider creation concurrency', () => {
       provider as unknown as ShippingProvider,
     );
 
-    await expect(service.createProviderShipment(orderId, actorUserId)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(service.createProviderShipment(orderId, actorUserId)).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_INVALID_STATUS,
+    });
 
     expect(transaction.shipment.findUniqueOrThrow).not.toHaveBeenCalled();
     expect(transaction.shipmentStatusHistory.create).not.toHaveBeenCalled();
@@ -146,7 +147,10 @@ describe('ShippingService provider creation concurrency', () => {
         },
         actorUserId,
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_INVALID_STATUS,
+    });
 
     expect(transaction.shipment.findUniqueOrThrow).not.toHaveBeenCalled();
     expect(transaction.shipmentStatusHistory.create).not.toHaveBeenCalled();
