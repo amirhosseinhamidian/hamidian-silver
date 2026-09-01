@@ -1,6 +1,7 @@
 import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
+import { HttpExceptionFilter } from './common/http-exception.filter';
 
 export type ListenOptions = {
   host: string;
@@ -19,6 +20,8 @@ export function configureApp(app: INestApplication): void {
   const corsOrigins = parseCorsOrigins(config.getOrThrow<string>('CORS_ORIGINS'));
 
   app.use(helmet());
+
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   app.enableCors({
     origin: corsOrigins,
