@@ -1,9 +1,7 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { DomainException } from '../../common/errors/domain-exception';
+
+import { ErrorCode } from '../../common/errors/error-codes';
 import { randomUUID } from 'node:crypto';
 import { isNonNegativeTomanInt, TOMAN_INT_MAX } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
@@ -298,7 +296,7 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order was not found.');
+      throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
     }
 
     return order;
@@ -344,7 +342,7 @@ export class OrdersService {
       });
 
       if (!order) {
-        throw new NotFoundException('Order was not found.');
+        throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
       }
 
       if (order.status === dto.status) {
@@ -358,7 +356,10 @@ export class OrdersService {
       };
 
       if (allowedNextStatus[order.status] !== dto.status) {
-        throw new BadRequestException('This order status transition is not allowed.');
+        throw new DomainException(
+          ErrorCode.ORDER_INVALID_STATUS_TRANSITION,
+          'This order status transition is not allowed.',
+        );
       }
 
       if (
@@ -366,8 +367,9 @@ export class OrdersService {
         dto.status === OrderStatus.PROCESSING &&
         order.payment?.status !== PaymentStatus.PAID
       ) {
-        throw new ConflictException(
-          'Order cannot enter processing while its payment is not fully settled.',
+        throw new DomainException(
+          ErrorCode.ORDER_PAYMENT_NOT_SETTLED,
+          'Order payment is not settled.',
         );
       }
 
@@ -380,8 +382,9 @@ export class OrdersService {
             ShipmentStatus.DELIVERED,
           ]).has(order.shipment.status)
         ) {
-          throw new ConflictException(
-            'Order cannot be marked as shipped before the shipment is handed over.',
+          throw new DomainException(
+            ErrorCode.ORDER_SHIPMENT_NOT_READY,
+            'Order shipment is not ready.',
           );
         }
       }
@@ -390,8 +393,9 @@ export class OrdersService {
         dto.status === OrderStatus.DELIVERED &&
         order.shipment?.status !== ShipmentStatus.DELIVERED
       ) {
-        throw new ConflictException(
-          'Order cannot be marked as delivered before the shipment is delivered.',
+        throw new DomainException(
+          ErrorCode.ORDER_SHIPMENT_NOT_READY,
+          'Order shipment is not ready.',
         );
       }
 
@@ -417,7 +421,10 @@ export class OrdersService {
       });
 
       if (claimed.count !== 1) {
-        throw new ConflictException('Order state changed; reload and retry the status update.');
+        throw new DomainException(
+          ErrorCode.ORDER_STATE_CHANGED,
+          'Order state changed. Please retry.',
+        );
       }
 
       const updated = await transaction.order.findUniqueOrThrow({
@@ -452,12 +459,13 @@ export class OrdersService {
       });
 
       if (!order) {
-        throw new NotFoundException('Order was not found.');
+        throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
       }
 
       if (order.status !== OrderStatus.PENDING_PAYMENT) {
-        throw new BadRequestException(
-          'At this stage only pending-payment orders can be cancelled.',
+        throw new DomainException(
+          ErrorCode.ORDER_CANNOT_CANCEL,
+          'Order cannot be cancelled in current state.',
         );
       }
 
@@ -474,7 +482,10 @@ export class OrdersService {
       });
 
       if (claimed.count !== 1) {
-        throw new ConflictException('Order state changed while cancelling; reload and retry.');
+        throw new DomainException(
+          ErrorCode.ORDER_STATE_CHANGED,
+          'Order state changed. Please retry.',
+        );
       }
 
       const quantitiesByVariant = new Map<string, number>();
@@ -497,7 +508,7 @@ export class OrdersService {
         });
 
         if (!inventory || inventory.reserved < quantity) {
-          throw new ConflictException('Reserved inventory is inconsistent.');
+          throw new DomainException(ErrorCode.INVENTORY_STATE_CHANGED, 'Inventory state changed.');
         }
 
         const nextReserved = inventory.reserved - quantity;
@@ -513,7 +524,7 @@ export class OrdersService {
         });
 
         if (updated.count !== 1) {
-          throw new ConflictException('Inventory changed; please retry.');
+          throw new DomainException(ErrorCode.INVENTORY_STATE_CHANGED, 'Inventory state changed.');
         }
 
         await transaction.inventoryMovement.create({
@@ -719,7 +730,7 @@ export class OrdersService {
       });
 
       if (!inventory || inventory.onHand - inventory.reserved < quantity) {
-        throw new ConflictException('Insufficient inventory for one or more items.');
+        throw new DomainException(ErrorCode.INVENTORY_NOT_AVAILABLE, 'Inventory is not available.');
       }
 
       const nextReserved = inventory.reserved + quantity;
@@ -735,7 +746,10 @@ export class OrdersService {
       });
 
       if (updated.count !== 1) {
-        throw new ConflictException('Inventory changed; please retry.');
+        throw new DomainException(
+          ErrorCode.INVENTORY_STATE_CHANGED,
+          'Inventory state changed. Please retry.',
+        );
       }
 
       await transaction.inventoryMovement.create({
