@@ -1,5 +1,7 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { DomainException } from './errors/domain-exception';
+import { ErrorCode } from './errors/error-codes';
 
 type ApiErrorResponse = {
   success: false;
@@ -29,7 +31,7 @@ function resolveErrorCode(status: number): string {
       return 'NOT_FOUND';
 
     default:
-      return 'INTERNAL_ERROR';
+      return ErrorCode.INTERNAL_ERROR;
   }
 }
 
@@ -42,19 +44,26 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const request = ctx.getRequest<Request>();
 
-    const status =
-      exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+    const isDomainException = exception instanceof DomainException;
+
+    const status = isDomainException
+      ? HttpStatus.CONFLICT
+      : exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
 
     const payload: ApiErrorResponse = {
       success: false,
 
       error: {
-        code: resolveErrorCode(status),
+        code: exception instanceof DomainException ? exception.code : resolveErrorCode(status),
 
         message:
-          exception instanceof HttpException
-            ? this.extractMessage(exception)
-            : 'Internal server error',
+          exception instanceof DomainException
+            ? exception.message
+            : exception instanceof HttpException
+              ? this.extractMessage(exception)
+              : 'Internal server error',
       },
 
       meta: {
