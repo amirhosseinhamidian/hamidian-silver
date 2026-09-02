@@ -1,4 +1,5 @@
 import { OperationalAlertLevel } from '../../generated/prisma/enums';
+import { ROLE_CODES } from '../authorization/rbac.constants';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { OperationalAlertOutboxService } from './operational-alert-outbox.service';
 
@@ -61,5 +62,50 @@ describe('OperationalAlertOutboxService', () => {
       ]),
       skipDuplicates: true,
     });
+  });
+  it('can restrict sensitive operational alerts to Managers only', async () => {
+    const prisma = {
+      user: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      operationalAlertOutboxEvent: {
+        createMany: jest.fn(),
+      },
+    };
+    const service = new OperationalAlertOutboxService(prisma as unknown as PrismaService);
+
+    await service.enqueueMany(
+      [
+        {
+          orderId: '20000000-0000-4000-8000-000000000001',
+          orderNumber: 'HS-FIN-1',
+          code: 'PAYMENT_INITIATION_STUCK',
+          level: OperationalAlertLevel.INITIAL,
+          priority: 'HIGH',
+          incidentFingerprint: 'PAYMENT_INITIATION_STUCK:30000000-0000-4000-8000-000000000001',
+          dueAt: new Date('2026-08-31T14:00:00.000Z'),
+          payload: {
+            paymentAttemptId: '30000000-0000-4000-8000-000000000001',
+          },
+        },
+      ],
+      [ROLE_CODES.MANAGER],
+    );
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          roles: {
+            some: {
+              role: expect.objectContaining({
+                code: {
+                  in: [ROLE_CODES.MANAGER],
+                },
+              }),
+            },
+          },
+        }),
+      }),
+    );
   });
 });

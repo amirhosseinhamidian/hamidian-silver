@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, ShipmentStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { OrdersService } from './orders.service';
@@ -34,7 +34,10 @@ describe('OrdersService shipping lifecycle guards', () => {
         },
         '20000000-0000-4000-8000-000000000001',
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.ORDER_SHIPMENT_NOT_READY,
+    });
 
     expect(transaction.order.update).not.toHaveBeenCalled();
   });
@@ -69,7 +72,10 @@ describe('OrdersService shipping lifecycle guards', () => {
         },
         '20000000-0000-4000-8000-000000000001',
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.ORDER_SHIPMENT_NOT_READY,
+    });
 
     expect(transaction.order.update).not.toHaveBeenCalled();
   });

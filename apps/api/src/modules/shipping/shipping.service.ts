@@ -1,16 +1,16 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-  Optional,
-} from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import { DomainException } from '../../common/errors/domain-exception';
+import { ErrorCode } from '../../common/errors/error-codes';
+import { isNonNegativeInt32 } from '../../common/int32';
+import { lockOrderRowForUpdate } from '../../common/order-row-lock';
+import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   NotificationOutboxEventType,
   OrderCostEntryType,
   OrderStatus,
+  PaymentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
 } from '../../generated/prisma/enums';
@@ -24,11 +24,13 @@ import { ResetShipmentProviderCreationDto } from './dto/reset-shipment-provider-
 import { UpdateShipmentStatusDto } from './dto/update-shipment-status.dto';
 import {
   SHIPPING_PROVIDER,
+  type CreateProviderShipmentResult,
   type ProviderShipmentTrackingStatus,
   type ShippingAddressSnapshot,
   type ShippingProvider,
   type ShippingQuoteOption,
 } from './shipping-provider.port';
+import { TRACKING_SYNC_LEASE_MS } from './shipping-tracking.constants';
 
 type OrderForShipping = {
   id: string;
@@ -45,6 +47,33 @@ type OrderForShipping = {
     unitWeightGrams: { toString(): string } | null;
   }>;
 };
+
+const CUSTOMER_SHIPMENT_SELECT = {
+  id: true,
+  orderId: true,
+  provider: true,
+  providerServiceCode: true,
+  providerServiceName: true,
+  status: true,
+  shippingCostToman: true,
+  totalWeightGrams: true,
+  estimatedDeliveryDays: true,
+  trackingCode: true,
+  shippedAt: true,
+  deliveredAt: true,
+  createdAt: true,
+  updatedAt: true,
+  statusHistory: {
+    orderBy: {
+      createdAt: 'asc',
+    },
+    select: {
+      fromStatus: true,
+      toStatus: true,
+      createdAt: true,
+    },
+  },
+} satisfies Prisma.ShipmentSelect;
 
 @Injectable()
 export class ShippingService {
@@ -94,10 +123,15 @@ export class ShippingService {
       .find((option) => option.serviceCode === dto.serviceCode);
 
     if (!selected) {
-      throw new BadRequestException('Selected shipping service is not available.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Selected shipping service is not available.',
+      );
     }
 
     return this.prisma.$transaction(async (transaction) => {
+      await lockOrderRowForUpdate(transaction, orderId);
+
       const currentOrder = await transaction.order.findFirst({
         where: {
           id: orderId,
@@ -114,19 +148,28 @@ export class ShippingService {
       });
 
       if (!currentOrder) {
-        throw new NotFoundException('Order was not found.');
+        throw new DomainException(ErrorCode.NOT_FOUND, 'Order was not found.');
       }
 
       if (currentOrder.status !== OrderStatus.PENDING_PAYMENT) {
-        throw new ConflictException('Shipping can no longer be changed for this order.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Shipping can no longer be changed for this order.',
+        );
       }
 
       if (currentOrder.payment) {
-        throw new ConflictException('Shipping cannot be changed after payment initialization.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Shipping cannot be changed after payment initialization.',
+        );
       }
 
       if (currentOrder.shipment && currentOrder.shipment.status !== ShipmentStatus.PENDING) {
-        throw new ConflictException('Shipment is already being processed.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Shipment is already being processed.',
+        );
       }
 
       const baseTotal =
@@ -187,13 +230,7 @@ export class ShippingService {
         where: {
           id: shipment.id,
         },
-        include: {
-          statusHistory: {
-            orderBy: {
-              createdAt: 'asc',
-            },
-          },
-        },
+        select: CUSTOMER_SHIPMENT_SELECT,
       });
     });
   }
@@ -207,6 +244,11 @@ export class ShippingService {
         order: {
           include: {
             shippingAddress: true,
+            payment: {
+              select: {
+                status: true,
+              },
+            },
             platingFulfillment: {
               select: {
                 status: true,
@@ -218,18 +260,22 @@ export class ShippingService {
     });
 
     if (!shipment) {
-      throw new NotFoundException('Shipment was not found.');
+      throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
     }
 
     if (
       shipment.order.status !== OrderStatus.PAID &&
       shipment.order.status !== OrderStatus.PROCESSING
     ) {
-      throw new ConflictException('Provider shipment can only be created after payment.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Provider shipment can only be created after payment.',
+      );
     }
 
     if (shipment.provider !== this.provider.providerCode) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
         'Configured shipping provider does not match the selected shipment provider.',
       );
     }
@@ -243,6 +289,7 @@ export class ShippingService {
       orderNumber: shipment.order.orderNumber,
       status: shipment.order.status,
       paidAt: shipment.order.paidAt,
+      payment: shipment.order.payment,
       platingTotalToman: shipment.order.platingTotalToman,
       platingFulfillment: shipment.order.platingFulfillment,
       shipment: {
@@ -257,7 +304,8 @@ export class ShippingService {
     });
 
     if (!readiness.readyForShipmentCreation) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
         `Order is not ready for provider shipment creation: ${readiness.blockers
           .map(({ code }) => code)
           .join(', ')}`,
@@ -268,13 +316,15 @@ export class ShippingService {
       shipment.providerCreationState === ShipmentProviderCreationState.IN_PROGRESS ||
       shipment.providerCreationState === ShipmentProviderCreationState.UNKNOWN
     ) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.SHIPMENT_INVALID_STATUS,
         'Provider shipment creation is already in progress or needs reconciliation.',
       );
     }
 
     if (shipment.status !== ShipmentStatus.PENDING) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.SHIPMENT_INVALID_STATUS,
         'Provider shipment can only be created from the pending shipment state.',
       );
     }
@@ -286,6 +336,13 @@ export class ShippingService {
         status: ShipmentStatus.PENDING,
         providerCreationState: ShipmentProviderCreationState.NOT_STARTED,
         providerShipmentId: null,
+        order: {
+          payment: {
+            is: {
+              status: PaymentStatus.PAID,
+            },
+          },
+        },
       },
       data: {
         providerCreationState: ShipmentProviderCreationState.IN_PROGRESS,
@@ -295,29 +352,34 @@ export class ShippingService {
     });
 
     if (claimed.count !== 1) {
-      throw new ConflictException('Shipment creation state changed; reload before retrying.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_INVALID_STATUS,
+        'Shipment creation state changed; reload before retrying.',
+      );
     }
 
     try {
-      const created = await this.provider.createShipment({
-        orderNumber: shipment.order.orderNumber,
-        serviceCode: shipment.providerServiceCode,
-        totalWeightGrams: shipment.totalWeightGrams.toString(),
-        declaredValueToman: this.calculateDeclaredValueToman({
-          id: shipment.order.id,
+      const created = this.validateCreateShipmentResult(
+        await this.provider.createShipment({
           orderNumber: shipment.order.orderNumber,
-          status: shipment.order.status,
-          merchandiseTotalToman: shipment.order.merchandiseTotalToman,
-          platingTotalToman: shipment.order.platingTotalToman,
-          discountTotalToman: shipment.order.discountTotalToman,
-          taxTotalToman: shipment.order.taxTotalToman,
-          grandTotalToman: shipment.order.grandTotalToman,
-          shippingAddress: shipment.order.shippingAddress,
-          items: [],
+          serviceCode: shipment.providerServiceCode,
+          totalWeightGrams: shipment.totalWeightGrams.toString(),
+          declaredValueToman: this.calculateDeclaredValueToman({
+            id: shipment.order.id,
+            orderNumber: shipment.order.orderNumber,
+            status: shipment.order.status,
+            merchandiseTotalToman: shipment.order.merchandiseTotalToman,
+            platingTotalToman: shipment.order.platingTotalToman,
+            discountTotalToman: shipment.order.discountTotalToman,
+            taxTotalToman: shipment.order.taxTotalToman,
+            grandTotalToman: shipment.order.grandTotalToman,
+            shippingAddress: shipment.order.shippingAddress,
+            items: [],
+          }),
+          shippingCostToman: shipment.shippingCostToman,
+          destination: this.requireShippingAddress(shipment.order.shippingAddress),
         }),
-        shippingCostToman: shipment.shippingCostToman,
-        destination: this.requireShippingAddress(shipment.order.shippingAddress),
-      });
+      );
 
       return this.prisma.$transaction(async (transaction) => {
         const current = await transaction.shipment.findUnique({
@@ -327,7 +389,7 @@ export class ShippingService {
         });
 
         if (!current) {
-          throw new NotFoundException('Shipment was not found.');
+          throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
         }
 
         if (current.providerShipmentId) {
@@ -346,15 +408,19 @@ export class ShippingService {
         }
 
         if (current.providerCreationState !== ShipmentProviderCreationState.IN_PROGRESS) {
-          throw new ConflictException(
+          throw new DomainException(
+            ErrorCode.SHIPMENT_INVALID_STATUS,
             'Shipment creation state changed while contacting the provider.',
           );
         }
 
         const now = new Date();
-        const updated = await transaction.shipment.update({
+        const finalized = await transaction.shipment.updateMany({
           where: {
             id: current.id,
+            status: ShipmentStatus.PENDING,
+            providerCreationState: ShipmentProviderCreationState.IN_PROGRESS,
+            providerShipmentId: null,
           },
           data: {
             providerCreationState: ShipmentProviderCreationState.CREATED,
@@ -362,6 +428,19 @@ export class ShippingService {
             trackingCode: created.trackingCode,
             providerCreateError: null,
             status: ShipmentStatus.READY,
+          },
+        });
+
+        if (finalized.count !== 1) {
+          throw new DomainException(
+            ErrorCode.SHIPMENT_INVALID_STATUS,
+            'Shipment creation state changed before provider result could be finalized.',
+          );
+        }
+
+        const updated = await transaction.shipment.findUniqueOrThrow({
+          where: {
+            id: current.id,
           },
         });
 
@@ -433,97 +512,181 @@ export class ShippingService {
     });
 
     if (!shipment) {
-      throw new NotFoundException('Shipment was not found.');
+      throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
     }
 
     if (shipment.provider !== this.provider.providerCode) {
-      throw new ConflictException('Configured shipping provider does not match this shipment.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Configured shipping provider does not match this shipment.',
+      );
     }
 
-    if (!shipment.providerShipmentId) {
-      throw new ConflictException(
+    const providerShipmentId = shipment.providerShipmentId;
+
+    if (!providerShipmentId) {
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
         'Provider shipment must be created before tracking can be synchronized.',
       );
     }
 
-    const tracked = await this.provider.track({
-      providerShipmentId: shipment.providerShipmentId,
-      trackingCode: shipment.trackingCode ?? undefined,
+    const trackingSyncToken = randomUUID();
+    const trackingSyncStartedAt = new Date();
+    const staleBefore = new Date(trackingSyncStartedAt.getTime() - TRACKING_SYNC_LEASE_MS);
+    const lease = await this.prisma.shipment.updateMany({
+      where: {
+        id: shipment.id,
+        providerShipmentId,
+        OR: [
+          {
+            trackingSyncToken: null,
+            trackingSyncStartedAt: null,
+          },
+          {
+            trackingSyncToken: {
+              not: null,
+            },
+            trackingSyncStartedAt: {
+              lte: staleBefore,
+            },
+          },
+        ],
+      },
+      data: {
+        trackingSyncToken,
+        trackingSyncStartedAt,
+        trackingAttemptedAt: trackingSyncStartedAt,
+      },
     });
-    const syncedAt = new Date();
 
-    return this.prisma.$transaction(async (transaction) => {
-      const current = await transaction.shipment.findUnique({
-        where: {
-          id: shipment.id,
-        },
-        include: {
-          order: true,
-        },
+    if (lease.count !== 1) {
+      throw new DomainException(
+        ErrorCode.SHIPMENT_INVALID_STATUS,
+        'Shipment tracking synchronization is already in progress.',
+      );
+    }
+
+    try {
+      const tracked = await this.provider.track({
+        providerShipmentId,
+        trackingCode: shipment.trackingCode ?? undefined,
       });
+      const syncedAt = new Date();
 
-      if (!current) {
-        throw new NotFoundException('Shipment was not found.');
-      }
-
-      let nextStatus = current.status;
-
-      if (tracked.normalizedStatus) {
-        const candidate = this.toShipmentStatus(tracked.normalizedStatus);
-
-        if (
-          candidate === current.status ||
-          this.isAllowedProviderSyncTransition(current.status, candidate)
-        ) {
-          nextStatus = candidate;
-        }
-      }
-
-      const now = new Date();
-      const updated = await transaction.shipment.update({
-        where: {
-          id: current.id,
-        },
-        data: {
-          status: nextStatus,
-          lastProviderStatus: tracked.providerStatus.slice(0, 255),
-          lastProviderDescription: tracked.description?.slice(0, 500),
-          lastTrackingSyncAt: syncedAt,
-          shippedAt:
-            nextStatus === ShipmentStatus.HANDED_OVER || nextStatus === ShipmentStatus.IN_TRANSIT
-              ? (current.shippedAt ?? now)
-              : current.shippedAt,
-          deliveredAt:
-            nextStatus === ShipmentStatus.DELIVERED
-              ? (current.deliveredAt ?? now)
-              : current.deliveredAt,
-        },
-      });
-
-      if (nextStatus !== current.status) {
-        await transaction.shipmentStatusHistory.create({
-          data: {
-            shipmentId: current.id,
-            actorUserId: null,
-            fromStatus: current.status,
-            toStatus: nextStatus,
-            reason: tracked.description
-              ? `Provider tracking sync: ${tracked.description}`.slice(0, 500)
-              : `Provider tracking sync: ${tracked.providerStatus}`.slice(0, 500),
+      return await this.prisma.$transaction(async (transaction) => {
+        const current = await transaction.shipment.findUnique({
+          where: {
+            id: shipment.id,
+          },
+          include: {
+            order: true,
           },
         });
 
-        await this.syncOrderStatusForShipment(
-          transaction,
-          current.order,
-          nextStatus,
-          null,
-          'Shipment status synchronized from provider',
-        );
-      }
+        if (!current) {
+          throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
+        }
 
-      return updated;
-    });
+        let nextStatus = current.status;
+        let acceptProviderSnapshot = true;
+
+        if (tracked.normalizedStatus) {
+          const candidate = this.toShipmentStatus(tracked.normalizedStatus);
+
+          if (
+            candidate === current.status ||
+            this.isAllowedProviderSyncTransition(current.status, candidate)
+          ) {
+            nextStatus = candidate;
+          } else {
+            acceptProviderSnapshot = false;
+          }
+        }
+
+        const now = new Date();
+        const finalized = await transaction.shipment.updateMany({
+          where: {
+            id: current.id,
+            status: current.status,
+            providerShipmentId,
+            trackingSyncToken,
+          },
+          data: {
+            status: nextStatus,
+            lastProviderStatus: acceptProviderSnapshot
+              ? tracked.providerStatus.slice(0, 255)
+              : current.lastProviderStatus,
+            lastProviderDescription: acceptProviderSnapshot
+              ? tracked.description?.slice(0, 500)
+              : current.lastProviderDescription,
+            lastTrackingSyncAt: syncedAt,
+            trackingSyncToken: null,
+            trackingSyncStartedAt: null,
+            shippedAt:
+              nextStatus === ShipmentStatus.HANDED_OVER ||
+              nextStatus === ShipmentStatus.IN_TRANSIT ||
+              nextStatus === ShipmentStatus.DELIVERED
+                ? (current.shippedAt ?? now)
+                : current.shippedAt,
+            deliveredAt:
+              nextStatus === ShipmentStatus.DELIVERED
+                ? (current.deliveredAt ?? now)
+                : current.deliveredAt,
+          },
+        });
+
+        if (finalized.count !== 1) {
+          throw new DomainException(
+            ErrorCode.SHIPMENT_INVALID_STATUS,
+            'Shipment tracking response is stale or ownership changed; retry is required.',
+          );
+        }
+
+        const updated = await transaction.shipment.findUniqueOrThrow({
+          where: {
+            id: current.id,
+          },
+        });
+
+        if (nextStatus !== current.status) {
+          await transaction.shipmentStatusHistory.create({
+            data: {
+              shipmentId: current.id,
+              actorUserId: null,
+              fromStatus: current.status,
+              toStatus: nextStatus,
+              reason: tracked.description
+                ? `Provider tracking sync: ${tracked.description}`.slice(0, 500)
+                : `Provider tracking sync: ${tracked.providerStatus}`.slice(0, 500),
+            },
+          });
+
+          await this.syncOrderStatusForShipment(
+            transaction,
+            current.order,
+            nextStatus,
+            null,
+            'Shipment status synchronized from provider',
+          );
+        }
+
+        return updated;
+      });
+    } catch (error) {
+      await this.prisma.shipment.updateMany({
+        where: {
+          id: shipment.id,
+          trackingSyncToken,
+        },
+        data: {
+          trackingSyncToken: null,
+          trackingSyncStartedAt: null,
+        },
+      });
+
+      throw error;
+    }
   }
 
   async resetProviderCreation(
@@ -532,7 +695,8 @@ export class ShippingService {
     actorUserId: string,
   ) {
     if (!dto.confirmNoProviderShipment) {
-      throw new BadRequestException(
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
         'Confirm that no provider shipment exists before resetting creation.',
       );
     }
@@ -545,11 +709,14 @@ export class ShippingService {
       });
 
       if (!shipment) {
-        throw new NotFoundException('Shipment was not found.');
+        throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
       }
 
       if (shipment.providerShipmentId) {
-        throw new ConflictException('Provider shipment already exists and cannot be reset.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Provider shipment already exists and cannot be reset.',
+        );
       }
 
       const isUnknown = shipment.providerCreationState === ShipmentProviderCreationState.UNKNOWN;
@@ -559,17 +726,36 @@ export class ShippingService {
         Date.now() - shipment.creationAttemptedAt.getTime() >= PROVIDER_CREATION_STALE_MS;
 
       if (!isUnknown && !isStaleInProgress) {
-        throw new ConflictException('Shipment provider creation is not in a resettable state.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Shipment provider creation is not in a resettable state.',
+        );
       }
 
-      const updated = await transaction.shipment.update({
+      const reset = await transaction.shipment.updateMany({
         where: {
           id: shipment.id,
+          status: shipment.status,
+          providerCreationState: shipment.providerCreationState,
+          providerShipmentId: null,
         },
         data: {
           providerCreationState: ShipmentProviderCreationState.NOT_STARTED,
           creationAttemptedAt: null,
           providerCreateError: null,
+        },
+      });
+
+      if (reset.count !== 1) {
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Shipment creation state changed while resetting; reload before retrying.',
+        );
+      }
+
+      const updated = await transaction.shipment.findUniqueOrThrow({
+        where: {
+          id: shipment.id,
         },
       });
 
@@ -595,17 +781,11 @@ export class ShippingService {
           userId,
         },
       },
-      include: {
-        statusHistory: {
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
-      },
+      select: CUSTOMER_SHIPMENT_SELECT,
     });
 
     if (!shipment) {
-      throw new NotFoundException('Shipment was not found.');
+      throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
     }
 
     return shipment;
@@ -634,7 +814,7 @@ export class ShippingService {
     });
 
     if (!shipment) {
-      throw new NotFoundException('Shipment was not found.');
+      throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
     }
 
     return shipment;
@@ -649,6 +829,11 @@ export class ShippingService {
         include: {
           order: {
             include: {
+              payment: {
+                select: {
+                  status: true,
+                },
+              },
               platingFulfillment: {
                 select: {
                   status: true,
@@ -660,7 +845,7 @@ export class ShippingService {
       });
 
       if (!shipment) {
-        throw new NotFoundException('Shipment was not found.');
+        throw new DomainException(ErrorCode.NOT_FOUND, 'Shipment was not found.');
       }
 
       if (shipment.status === dto.status) {
@@ -668,7 +853,10 @@ export class ShippingService {
       }
 
       if (!this.isAllowedTransition(shipment.status, dto.status)) {
-        throw new BadRequestException('This shipment status transition is not allowed.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'This shipment status transition is not allowed.',
+        );
       }
 
       if (
@@ -681,6 +869,7 @@ export class ShippingService {
           orderNumber: shipment.order.orderNumber,
           status: shipment.order.status,
           paidAt: shipment.order.paidAt,
+          payment: shipment.order.payment,
           platingTotalToman: shipment.order.platingTotalToman,
           platingFulfillment: shipment.order.platingFulfillment,
           shipment: {
@@ -695,7 +884,8 @@ export class ShippingService {
         });
 
         if (!readiness.readyForHandoff) {
-          throw new ConflictException(
+          throw new DomainException(
+            ErrorCode.SHIPMENT_NOT_READY,
             `Order is not ready for shipment handoff: ${readiness.handoffBlockers
               .map(({ code }) => code)
               .join(', ')}`,
@@ -708,17 +898,35 @@ export class ShippingService {
         shipment.providerShipmentId &&
         dto.providerShipmentId !== shipment.providerShipmentId
       ) {
-        throw new ConflictException('Provider shipment ID cannot be replaced once stored.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Provider shipment ID cannot be replaced once stored.',
+        );
       }
 
       if (dto.trackingCode && shipment.trackingCode && dto.trackingCode !== shipment.trackingCode) {
-        throw new ConflictException('Tracking code cannot be replaced once stored.');
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Tracking code cannot be replaced once stored.',
+        );
       }
 
       const now = new Date();
-      const updated = await transaction.shipment.update({
+      const claimed = await transaction.shipment.updateMany({
         where: {
           id: shipment.id,
+          status: shipment.status,
+          ...(dto.status === ShipmentStatus.HANDED_OVER
+            ? {
+                order: {
+                  payment: {
+                    is: {
+                      status: PaymentStatus.PAID,
+                    },
+                  },
+                },
+              }
+            : {}),
         },
         data: {
           status: dto.status,
@@ -729,13 +937,28 @@ export class ShippingService {
             : shipment.providerCreationState,
           providerCreateError: dto.providerShipmentId ? null : shipment.providerCreateError,
           shippedAt:
-            dto.status === ShipmentStatus.HANDED_OVER || dto.status === ShipmentStatus.IN_TRANSIT
+            dto.status === ShipmentStatus.HANDED_OVER ||
+            dto.status === ShipmentStatus.IN_TRANSIT ||
+            dto.status === ShipmentStatus.DELIVERED
               ? (shipment.shippedAt ?? now)
               : shipment.shippedAt,
           deliveredAt:
             dto.status === ShipmentStatus.DELIVERED
               ? (shipment.deliveredAt ?? now)
               : shipment.deliveredAt,
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Shipment state changed; reload and retry the status update.',
+        );
+      }
+
+      const updated = await transaction.shipment.findUniqueOrThrow({
+        where: {
+          id: shipment.id,
         },
       });
 
@@ -807,7 +1030,10 @@ export class ShippingService {
     };
 
     if (rank[order.status] < 1) {
-      throw new ConflictException('Shipment cannot advance an unpaid or closed order.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Shipment cannot advance an unpaid or closed order.',
+      );
     }
 
     const steps =
@@ -827,15 +1053,23 @@ export class ShippingService {
           ? (order.deliveredAt ?? new Date())
           : order.deliveredAt;
 
-      await transaction.order.update({
+      const claimed = await transaction.order.updateMany({
         where: {
           id: order.id,
+          status: currentStatus,
         },
         data: {
           status: nextStatus,
           deliveredAt,
         },
       });
+
+      if (claimed.count !== 1) {
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Order state changed while synchronizing shipment status; retry is required.',
+        );
+      }
 
       await transaction.orderStatusHistory.create({
         data: {
@@ -948,7 +1182,7 @@ export class ShippingService {
       })
       .then((order) => {
         if (!order) {
-          throw new NotFoundException('Order was not found.');
+          throw new DomainException(ErrorCode.NOT_FOUND, 'Order was not found.');
         }
 
         return order;
@@ -969,13 +1203,16 @@ export class ShippingService {
 
   private assertOrderCanSelectShipping(order: OrderForShipping): void {
     if (order.status !== OrderStatus.PENDING_PAYMENT) {
-      throw new ConflictException('Shipping can only be selected before payment.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_INVALID_STATUS,
+        'Shipping can only be selected before payment.',
+      );
     }
   }
 
   private requireShippingAddress(address: ShippingAddressSnapshot | null): ShippingAddressSnapshot {
     if (!address) {
-      throw new BadRequestException('Order shipping address is missing.');
+      throw new DomainException(ErrorCode.SHIPMENT_NOT_READY, 'Order shipping address is missing.');
     }
 
     return address;
@@ -991,7 +1228,8 @@ export class ShippingService {
 
     for (const item of items) {
       if (!item.unitWeightGrams) {
-        throw new BadRequestException(
+        throw new DomainException(
+          ErrorCode.SHIPMENT_NOT_READY,
           'Every order item needs a weight before shipping can be quoted.',
         );
       }
@@ -1008,7 +1246,7 @@ export class ShippingService {
 
   private decimalGramsToMilliGrams(value: string): bigint {
     if (!/^\d+(?:\.\d{1,3})?$/.test(value)) {
-      throw new BadRequestException('Order item weight is invalid.');
+      throw new DomainException(ErrorCode.SHIPMENT_NOT_READY, 'Order item weight is invalid.');
     }
 
     const [whole, fraction = ''] = value.split('.');
@@ -1017,21 +1255,47 @@ export class ShippingService {
 
   private validateQuoteOption(option: ShippingQuoteOption): ShippingQuoteOption {
     if (
-      !option.serviceCode ||
-      !Number.isSafeInteger(option.costToman) ||
-      option.costToman < 0 ||
+      !option.serviceCode.trim() ||
+      option.serviceCode.length > 120 ||
+      (option.serviceName !== undefined && option.serviceName.length > 200) ||
+      !isNonNegativeTomanInt(option.costToman) ||
       (option.estimatedDeliveryDays !== undefined &&
-        (!Number.isInteger(option.estimatedDeliveryDays) || option.estimatedDeliveryDays < 0))
+        !isNonNegativeInt32(option.estimatedDeliveryDays))
     ) {
-      throw new BadRequestException('Shipping provider returned an invalid quote.');
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Shipping provider returned an invalid quote.',
+      );
     }
 
     return option;
   }
 
+  private validateCreateShipmentResult(
+    result: CreateProviderShipmentResult,
+  ): CreateProviderShipmentResult {
+    if (
+      !result.providerShipmentId.trim() ||
+      result.providerShipmentId.length > 255 ||
+      (result.trackingCode !== undefined &&
+        (!result.trackingCode.trim() || result.trackingCode.length > 255)) ||
+      (result.actualCostToman !== undefined && !isNonNegativeTomanInt(result.actualCostToman))
+    ) {
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Shipping provider returned invalid shipment creation data.',
+      );
+    }
+
+    return result;
+  }
+
   private assertTomanAmount(amount: number): void {
-    if (!Number.isSafeInteger(amount) || amount < 0) {
-      throw new BadRequestException('Calculated order amount exceeds the supported range.');
+    if (!isNonNegativeTomanInt(amount)) {
+      throw new DomainException(
+        ErrorCode.SHIPMENT_NOT_READY,
+        'Calculated order amount exceeds the supported range.',
+      );
     }
   }
 

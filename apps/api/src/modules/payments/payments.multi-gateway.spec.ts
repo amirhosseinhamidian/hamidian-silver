@@ -43,6 +43,7 @@ describe('PaymentsService multi-gateway routing', () => {
 
   it('stores the selected provider and passes it to the registry boundary', async () => {
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: orderId }]),
       order: {
         findFirst: jest.fn().mockResolvedValue({
           id: orderId,
@@ -80,17 +81,17 @@ describe('PaymentsService multi-gateway routing', () => {
       authority: 'TRACK-1',
       paymentUrl: 'https://gateway.example/TRACK-1',
     });
-    prisma.paymentAttempt.update.mockResolvedValue({
-      id: attemptId,
-      status: PaymentAttemptStatus.REDIRECTED,
-      authority: 'TRACK-1',
-      paymentUrl: 'https://gateway.example/TRACK-1',
-    });
+    prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 1 });
 
     await service.initiateOrderPayment(userId, orderId, {
       provider: PAYMENT_GATEWAY_CODES.ZIBAL,
       idempotencyKey: 'checkout-zibal-001',
     });
+
+    expect(transaction.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(transaction.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      transaction.order.findFirst.mock.invocationCallOrder[0],
+    );
 
     expect(transaction.paymentAttempt.create).toHaveBeenCalledWith({
       data: {

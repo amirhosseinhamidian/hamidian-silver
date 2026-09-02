@@ -6,8 +6,10 @@ import {
   IsString,
   IsUUID,
   Length,
+  Max,
   Min,
 } from 'class-validator';
+import { TOMAN_INT_MAX } from '../../../common/toman';
 import { OrderCostEntryType } from '../../../generated/prisma/enums';
 
 export class CreateOrderCostDto {
@@ -19,6 +21,7 @@ export class CreateOrderCostDto {
 
   @IsInt()
   @Min(1)
+  @Max(TOMAN_INT_MAX)
   amountToman!: number;
 
   @IsString()

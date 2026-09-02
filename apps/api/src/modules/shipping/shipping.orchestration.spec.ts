@@ -1,5 +1,6 @@
 import {
   OrderStatus,
+  PaymentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
 } from '../../generated/prisma/enums';
@@ -47,6 +48,9 @@ describe('ShippingService provider orchestration', () => {
         id: orderId,
         orderNumber: 'HS-TEST',
         status: OrderStatus.PAID,
+        payment: {
+          status: PaymentStatus.PAID,
+        },
         merchandiseTotalToman: 1_000_000,
         platingTotalToman: 0,
         discountTotalToman: 0,
@@ -69,7 +73,8 @@ describe('ShippingService provider orchestration', () => {
           ...baseShipment,
           providerCreationState: ShipmentProviderCreationState.IN_PROGRESS,
         }),
-        update: jest.fn().mockResolvedValue({
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
           ...baseShipment,
           providerCreationState: ShipmentProviderCreationState.CREATED,
           providerShipmentId: 'PX-1',
@@ -106,6 +111,13 @@ describe('ShippingService provider orchestration', () => {
         where: expect.objectContaining({
           providerCreationState: ShipmentProviderCreationState.NOT_STARTED,
           providerShipmentId: null,
+          order: {
+            payment: {
+              is: {
+                status: PaymentStatus.PAID,
+              },
+            },
+          },
         }),
         data: expect.objectContaining({
           providerCreationState: ShipmentProviderCreationState.IN_PROGRESS,
@@ -113,8 +125,14 @@ describe('ShippingService provider orchestration', () => {
       }),
     );
     expect(provider.createShipment).toHaveBeenCalledTimes(1);
-    expect(transaction.shipment.update).toHaveBeenCalledWith(
+    expect(transaction.shipment.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
+        where: {
+          id: shipmentId,
+          status: ShipmentStatus.PENDING,
+          providerCreationState: ShipmentProviderCreationState.IN_PROGRESS,
+          providerShipmentId: null,
+        },
         data: expect.objectContaining({
           providerCreationState: ShipmentProviderCreationState.CREATED,
           providerShipmentId: 'PX-1',

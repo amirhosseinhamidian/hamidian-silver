@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   SupplierCreditApplicationStatus,
@@ -193,7 +194,7 @@ export class SupplierSettlementsService {
 
       const totalAmountToman = payables.reduce((total, payable) => total + payable.amountToman, 0);
 
-      if (!Number.isSafeInteger(totalAmountToman) || totalAmountToman < 0) {
+      if (!isNonNegativeTomanInt(totalAmountToman)) {
         throw new BadRequestException('Supplier settlement total exceeds the supported range.');
       }
 
@@ -630,6 +631,22 @@ export class SupplierSettlementsService {
         });
       } catch (error) {
         if (this.isRecordNotFoundError(error)) {
+          const current = await transaction.supplierSettlement.findUnique({
+            where: {
+              id: settlement.id,
+            },
+          });
+
+          if (current?.status === SupplierSettlementStatus.PAID) {
+            return current;
+          }
+
+          if (current?.status === SupplierSettlementStatus.CANCELLED) {
+            throw new ConflictException(
+              'Supplier settlement was cancelled while payment was being recorded.',
+            );
+          }
+
           throw new ConflictException(
             'Supplier settlement changed while payment was being recorded.',
           );
@@ -751,6 +768,20 @@ export class SupplierSettlementsService {
         });
       } catch (error) {
         if (this.isRecordNotFoundError(error)) {
+          const current = await transaction.supplierSettlement.findUnique({
+            where: {
+              id: settlement.id,
+            },
+          });
+
+          if (current?.status === SupplierSettlementStatus.CANCELLED) {
+            return current;
+          }
+
+          if (current?.status === SupplierSettlementStatus.PAID) {
+            throw new ConflictException('Paid supplier settlements cannot be cancelled.');
+          }
+
           throw new ConflictException(
             'Supplier settlement changed while cancellation was being recorded.',
           );

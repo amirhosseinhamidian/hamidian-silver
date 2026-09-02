@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
 import { NotificationOutboxStatus, OperationalAlertLevel } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
-import { ROLE_CODES } from '../authorization/rbac.constants';
+import { ROLE_CODES, type RoleCode } from '../authorization/rbac.constants';
 
 export type EnqueueOperationalAlertInput = {
   orderId: string;
@@ -19,7 +19,10 @@ export type EnqueueOperationalAlertInput = {
 export class OperationalAlertOutboxService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async enqueueMany(inputs: EnqueueOperationalAlertInput[]) {
+  async enqueueMany(
+    inputs: EnqueueOperationalAlertInput[],
+    recipientRoleCodes: readonly RoleCode[] = [ROLE_CODES.MANAGER, ROLE_CODES.ADMIN],
+  ) {
     if (inputs.length === 0) {
       return {
         recipientCount: 0,
@@ -36,7 +39,7 @@ export class OperationalAlertOutboxService {
           some: {
             role: {
               code: {
-                in: [ROLE_CODES.MANAGER, ROLE_CODES.ADMIN],
+                in: [...recipientRoleCodes],
               },
               isActive: true,
               deletedAt: null,
@@ -112,10 +115,12 @@ export class OperationalAlertOutboxService {
       }),
     ]);
     const counts: Record<NotificationOutboxStatus, number> = {
-      [NotificationOutboxStatus.PENDING]: 0,
-      [NotificationOutboxStatus.PROCESSING]: 0,
-      [NotificationOutboxStatus.SENT]: 0,
-      [NotificationOutboxStatus.FAILED]: 0,
+      PENDING: 0,
+      PROCESSING: 0,
+      DISPATCHING: 0,
+      SENT: 0,
+      FAILED: 0,
+      UNKNOWN: 0,
     };
 
     for (const group of groups) {

@@ -1,5 +1,6 @@
 import { BadGatewayException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PaymentInitiationUnknownError } from '../payment-initiation-unknown.error';
 import type {
   InitiateGatewayPaymentInput,
   InitiateGatewayPaymentResult,
@@ -56,12 +57,16 @@ export class ZarinpalPaymentGateway implements PaymentGateway {
   async initiate(input: InitiateGatewayPaymentInput): Promise<InitiateGatewayPaymentResult> {
     this.assertConfigured();
     const amount = this.parseRialAmount(input.amountRial);
-    const payload = await this.post<ZarinpalRequestData>(REQUEST_PATH, {
-      merchant_id: this.merchantId,
-      amount,
-      callback_url: input.callbackUrl,
-      description: `Hamidian Silver order ${input.orderNumber}`,
-    });
+    const payload = await this.post<ZarinpalRequestData>(
+      REQUEST_PATH,
+      {
+        merchant_id: this.merchantId,
+        amount,
+        callback_url: input.callbackUrl,
+        description: `Hamidian Silver order ${input.orderNumber}`,
+      },
+      true,
+    );
 
     if (payload.data?.code !== 100 || !payload.data.authority) {
       throw new BadGatewayException(
@@ -106,7 +111,11 @@ export class ZarinpalPaymentGateway implements PaymentGateway {
     }
   }
 
-  private async post<T>(path: string, body: Record<string, unknown>): Promise<ZarinpalEnvelope<T>> {
+  private async post<T>(
+    path: string,
+    body: Record<string, unknown>,
+    initiationUnknownOnTransport = false,
+  ): Promise<ZarinpalEnvelope<T>> {
     try {
       const response = await fetch(`${this.apiBaseUrl}${path}`, {
         method: 'POST',
@@ -121,6 +130,10 @@ export class ZarinpalPaymentGateway implements PaymentGateway {
       const payload = (await response.json()) as ZarinpalEnvelope<T>;
 
       if (!response.ok) {
+        if (initiationUnknownOnTransport) {
+          throw new PaymentInitiationUnknownError('Zarinpal');
+        }
+
         throw new BadGatewayException(
           this.getErrorMessage(payload, 'Zarinpal returned an HTTP error.'),
         );
@@ -128,8 +141,12 @@ export class ZarinpalPaymentGateway implements PaymentGateway {
 
       return payload;
     } catch (error) {
-      if (error instanceof BadGatewayException) {
+      if (error instanceof BadGatewayException || error instanceof PaymentInitiationUnknownError) {
         throw error;
+      }
+
+      if (initiationUnknownOnTransport) {
+        throw new PaymentInitiationUnknownError('Zarinpal');
       }
 
       throw new ServiceUnavailableException('Zarinpal is currently unavailable.');

@@ -1,5 +1,6 @@
 import {
   OrderStatus,
+  PaymentStatus,
   PlatingFulfillmentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
@@ -18,6 +19,9 @@ describe('FulfillmentReadinessService', () => {
           orderNumber: 'HS-049-A',
           status: OrderStatus.PAID,
           paidAt: new Date('2026-08-30T12:00:00.000Z'),
+          payment: {
+            status: PaymentStatus.PAID,
+          },
           platingTotalToman: 0,
           platingFulfillment: null,
           shipment: {
@@ -57,6 +61,9 @@ describe('FulfillmentReadinessService', () => {
           orderNumber: 'HS-049-B',
           status: OrderStatus.PROCESSING,
           paidAt: new Date('2026-08-30T12:00:00.000Z'),
+          payment: {
+            status: PaymentStatus.PAID,
+          },
           platingTotalToman: 200_000,
           platingFulfillment: {
             status: PlatingFulfillmentStatus.IN_PROGRESS,
@@ -91,6 +98,9 @@ describe('FulfillmentReadinessService', () => {
           orderNumber: 'HS-049-C',
           status: OrderStatus.PROCESSING,
           paidAt: new Date('2026-08-30T12:00:00.000Z'),
+          payment: {
+            status: PaymentStatus.PAID,
+          },
           platingTotalToman: 200_000,
           platingFulfillment: {
             status: PlatingFulfillmentStatus.CANCELLED,
@@ -137,6 +147,11 @@ describe('FulfillmentReadinessService', () => {
           status: {
             in: [OrderStatus.PAID, OrderStatus.PROCESSING],
           },
+          payment: {
+            is: {
+              status: PaymentStatus.PAID,
+            },
+          },
           shipment: {
             is: {
               status: ShipmentStatus.PENDING,
@@ -147,5 +162,46 @@ describe('FulfillmentReadinessService', () => {
         }),
       }),
     );
+  });
+
+  it('blocks fulfillment when the order status is paid but the payment is no longer settled', async () => {
+    const prisma = {
+      order: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: orderId,
+          orderNumber: 'HS-049-D',
+          status: OrderStatus.PAID,
+          paidAt: new Date('2026-08-30T12:00:00.000Z'),
+          payment: {
+            status: PaymentStatus.PARTIALLY_REFUNDED,
+          },
+          platingTotalToman: 0,
+          platingFulfillment: null,
+          shipment: {
+            id: '20000000-0000-4000-8000-000000000001',
+            status: ShipmentStatus.PENDING,
+            provider: 'postex',
+            providerCreationState: ShipmentProviderCreationState.NOT_STARTED,
+            providerShipmentId: null,
+            providerCreateError: null,
+            creationAttemptedAt: null,
+          },
+        }),
+      },
+    };
+    const service = new FulfillmentReadinessService(prisma as unknown as PrismaService);
+
+    const result = await service.get(orderId);
+
+    expect(result.readyForProcessing).toBe(false);
+    expect(result.readyForShipmentCreation).toBe(false);
+    expect(result.readyForHandoff).toBe(false);
+    expect(result.blockers).toContainEqual({
+      code: 'PAYMENT_NOT_SETTLED',
+    });
+    expect(result.handoffBlockers).toContainEqual({
+      code: 'PAYMENT_NOT_SETTLED',
+    });
+    expect(result.checks.payment).toBe('BLOCKED');
   });
 });

@@ -25,7 +25,7 @@ describe('PaymentsService Mellat callback routing', () => {
             },
           },
         }),
-        updateMany: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
     const config = {

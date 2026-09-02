@@ -1,5 +1,5 @@
-import { ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, PaymentAttemptStatus, PaymentStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { PaymentGateway } from './payment-gateway.port';
@@ -49,6 +49,7 @@ describe('PaymentsService', () => {
 
   it('initiates a payment using Rial only at the gateway boundary', async () => {
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: orderId }]),
       order: {
         findFirst: jest.fn().mockResolvedValue({
           id: orderId,
@@ -85,16 +86,16 @@ describe('PaymentsService', () => {
       authority: 'AUTH-1',
       paymentUrl: 'https://gateway.example/pay/AUTH-1',
     });
-    prisma.paymentAttempt.update.mockResolvedValue({
-      id: attemptId,
-      status: PaymentAttemptStatus.REDIRECTED,
-      authority: 'AUTH-1',
-      paymentUrl: 'https://gateway.example/pay/AUTH-1',
-    });
+    prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 1 });
 
     await service.initiateOrderPayment(userId, orderId, {
       idempotencyKey: 'checkout-12345678',
     });
+
+    expect(transaction.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(transaction.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      transaction.order.findFirst.mock.invocationCallOrder[0],
+    );
 
     expect(gateway.initiate).toHaveBeenCalledWith({
       attemptId,
@@ -106,6 +107,7 @@ describe('PaymentsService', () => {
 
   it('reuses an already redirected attempt for the same idempotency key', async () => {
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: orderId }]),
       order: {
         findFirst: jest.fn().mockResolvedValue({
           id: orderId,
@@ -162,9 +164,11 @@ describe('PaymentsService', () => {
       payment: {
         id: paymentId,
         orderId,
+        amountToman: 1_000_000,
         status: PaymentStatus.PENDING,
         order: {
           id: orderId,
+          grandTotalToman: 1_000_000,
           status: OrderStatus.PENDING_PAYMENT,
         },
       },
@@ -180,21 +184,24 @@ describe('PaymentsService', () => {
         findUnique: jest.fn().mockResolvedValue({
           id: attemptId,
           paymentId,
+          amountToman: 1_000_000,
           authority: 'AUTH-1',
           status: PaymentAttemptStatus.REDIRECTED,
           providerReference: null,
           payment: {
             id: paymentId,
+            amountToman: 1_000_000,
             status: PaymentStatus.PENDING,
             order: {
               id: orderId,
               warehouseId: '70000000-0000-4000-8000-000000000001',
+              grandTotalToman: 1_000_000,
               status: OrderStatus.PENDING_PAYMENT,
               items: [{ variantId, quantity: 2 }],
             },
           },
         }),
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       order: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -215,7 +222,7 @@ describe('PaymentsService', () => {
         create: jest.fn().mockResolvedValue({}),
       },
       payment: {
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
 
@@ -259,15 +266,26 @@ describe('PaymentsService', () => {
       }),
     });
 
-    expect(transaction.paymentAttempt.update).toHaveBeenCalledWith({
+    expect(transaction.paymentAttempt.updateMany).toHaveBeenCalledWith({
       where: {
         id: attemptId,
+        status: PaymentAttemptStatus.REDIRECTED,
       },
       data: expect.objectContaining({
         status: PaymentAttemptStatus.VERIFIED,
         providerReference: 'REF-1',
         verifiedAt: expect.any(Date),
       }),
+    });
+    expect(transaction.payment.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: paymentId,
+        status: PaymentStatus.PENDING,
+      },
+      data: {
+        status: PaymentStatus.PAID,
+        paidAt: expect.any(Date),
+      },
     });
   });
 
@@ -302,6 +320,7 @@ describe('PaymentsService', () => {
 
   it('rejects payment initiation after the inventory reservation expires', async () => {
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: orderId }]),
       order: {
         findFirst: jest.fn().mockResolvedValue({
           id: orderId,
@@ -328,8 +347,13 @@ describe('PaymentsService', () => {
       service.initiateOrderPayment(userId, orderId, {
         idempotencyKey: 'checkout-expired',
       }),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.PAYMENT_FAILED,
+    });
 
+    expect(transaction.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(transaction.payment.upsert).not.toHaveBeenCalled();
     expect(gateway.initiate).not.toHaveBeenCalled();
   });
 });

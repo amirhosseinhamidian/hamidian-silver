@@ -1,4 +1,4 @@
-import { OrderStatus, PlatingFulfillmentStatus } from '../../generated/prisma/enums';
+import { OrderStatus, PaymentStatus, PlatingFulfillmentStatus } from '../../generated/prisma/enums';
 import { buildOperationsWorkItems, type OperationsWorkQueueInput } from './operations-work-queue';
 
 describe('operations work queue alert anchors', () => {
@@ -8,6 +8,7 @@ describe('operations work queue alert anchors', () => {
       orderNumber: 'HS-051-NO-SHIP',
       status: OrderStatus.PAID,
       paidAt: new Date('2026-08-30T10:00:00.000Z'),
+      payment: { status: PaymentStatus.PAID },
       platingTotalToman: 0,
       platingFulfillment: null,
       shipment: null,
@@ -27,6 +28,7 @@ describe('operations work queue alert anchors', () => {
       orderNumber: 'HS-051-CANCELLED',
       status: OrderStatus.PROCESSING,
       paidAt: new Date('2026-08-28T10:00:00.000Z'),
+      payment: { status: PaymentStatus.PAID },
       platingTotalToman: 200_000,
       platingFulfillment: {
         status: PlatingFulfillmentStatus.CANCELLED,

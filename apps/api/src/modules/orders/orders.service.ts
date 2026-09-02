@@ -1,13 +1,13 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { DomainException } from '../../common/errors/domain-exception';
+
+import { ErrorCode } from '../../common/errors/error-codes';
 import { randomUUID } from 'node:crypto';
+import { isNonNegativeTomanInt, TOMAN_INT_MAX } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   OrderStatus,
+  PaymentStatus,
   PlatingType,
   ProductStatus,
   ShipmentStatus,
@@ -20,6 +20,70 @@ import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 const RESERVATION_TTL_MINUTES = 15;
+
+const CUSTOMER_ORDER_ITEM_SELECT = {
+  id: true,
+  variantId: true,
+  quantity: true,
+  productNameSnapshot: true,
+  variantNameSnapshot: true,
+  skuSnapshot: true,
+  sizeLabelSnapshot: true,
+  unitSalePriceToman: true,
+  platingType: true,
+  platingWeightGrams: true,
+  platingRateToman: true,
+  unitPlatingPriceToman: true,
+  platingLeadTimeDays: true,
+  unitWeightGrams: true,
+  lineTotalToman: true,
+  createdAt: true,
+} satisfies Prisma.OrderItemSelect;
+
+const CUSTOMER_ORDER_LIST_SELECT = {
+  id: true,
+  orderNumber: true,
+  status: true,
+  merchandiseTotalToman: true,
+  platingTotalToman: true,
+  discountTotalToman: true,
+  shippingTotalToman: true,
+  taxTotalToman: true,
+  grandTotalToman: true,
+  reservationExpiresAt: true,
+  paidAt: true,
+  cancelledAt: true,
+  deliveredAt: true,
+  createdAt: true,
+  updatedAt: true,
+  items: {
+    select: CUSTOMER_ORDER_ITEM_SELECT,
+  },
+} satisfies Prisma.OrderSelect;
+
+const CUSTOMER_ORDER_DETAIL_SELECT = {
+  ...CUSTOMER_ORDER_LIST_SELECT,
+  shippingAddress: {
+    select: {
+      recipientName: true,
+      phone: true,
+      province: true,
+      city: true,
+      addressLine: true,
+      postalCode: true,
+    },
+  },
+  statusHistory: {
+    orderBy: {
+      createdAt: 'asc',
+    },
+    select: {
+      fromStatus: true,
+      toStatus: true,
+      createdAt: true,
+    },
+  },
+} satisfies Prisma.OrderSelect;
 
 type PreparedOrderItem = {
   variantId: string;
@@ -203,15 +267,7 @@ export class OrdersService {
         where: {
           id: order.id,
         },
-        include: {
-          shippingAddress: true,
-          items: true,
-          statusHistory: {
-            orderBy: {
-              createdAt: 'asc',
-            },
-          },
-        },
+        select: CUSTOMER_ORDER_DETAIL_SELECT,
       });
     });
   }
@@ -226,9 +282,7 @@ export class OrdersService {
       orderBy: {
         createdAt: 'desc',
       },
-      include: {
-        items: true,
-      },
+      select: CUSTOMER_ORDER_LIST_SELECT,
     });
   }
 
@@ -238,19 +292,11 @@ export class OrdersService {
         id: orderId,
         userId,
       },
-      include: {
-        shippingAddress: true,
-        items: true,
-        statusHistory: {
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
-      },
+      select: CUSTOMER_ORDER_DETAIL_SELECT,
     });
 
     if (!order) {
-      throw new NotFoundException('Order was not found.');
+      throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
     }
 
     return order;
@@ -286,12 +332,17 @@ export class OrdersService {
           id: orderId,
         },
         include: {
+          payment: {
+            select: {
+              status: true,
+            },
+          },
           shipment: true,
         },
       });
 
       if (!order) {
-        throw new NotFoundException('Order was not found.');
+        throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
       }
 
       if (order.status === dto.status) {
@@ -305,7 +356,21 @@ export class OrdersService {
       };
 
       if (allowedNextStatus[order.status] !== dto.status) {
-        throw new BadRequestException('This order status transition is not allowed.');
+        throw new DomainException(
+          ErrorCode.ORDER_INVALID_STATUS_TRANSITION,
+          'This order status transition is not allowed.',
+        );
+      }
+
+      if (
+        order.status === OrderStatus.PAID &&
+        dto.status === OrderStatus.PROCESSING &&
+        order.payment?.status !== PaymentStatus.PAID
+      ) {
+        throw new DomainException(
+          ErrorCode.ORDER_PAYMENT_NOT_SETTLED,
+          'Order payment is not settled.',
+        );
       }
 
       if (dto.status === OrderStatus.SHIPPED) {
@@ -317,8 +382,9 @@ export class OrdersService {
             ShipmentStatus.DELIVERED,
           ]).has(order.shipment.status)
         ) {
-          throw new ConflictException(
-            'Order cannot be marked as shipped before the shipment is handed over.',
+          throw new DomainException(
+            ErrorCode.ORDER_SHIPMENT_NOT_READY,
+            'Order shipment is not ready.',
           );
         }
       }
@@ -327,18 +393,43 @@ export class OrdersService {
         dto.status === OrderStatus.DELIVERED &&
         order.shipment?.status !== ShipmentStatus.DELIVERED
       ) {
-        throw new ConflictException(
-          'Order cannot be marked as delivered before the shipment is delivered.',
+        throw new DomainException(
+          ErrorCode.ORDER_SHIPMENT_NOT_READY,
+          'Order shipment is not ready.',
         );
       }
 
-      const updated = await transaction.order.update({
+      const deliveredAt = dto.status === OrderStatus.DELIVERED ? new Date() : order.deliveredAt;
+      const claimed = await transaction.order.updateMany({
         where: {
           id: orderId,
+          status: order.status,
+          ...(dto.status === OrderStatus.PROCESSING
+            ? {
+                payment: {
+                  is: {
+                    status: PaymentStatus.PAID,
+                  },
+                },
+              }
+            : {}),
         },
         data: {
           status: dto.status,
-          deliveredAt: dto.status === OrderStatus.DELIVERED ? new Date() : order.deliveredAt,
+          deliveredAt,
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new DomainException(
+          ErrorCode.ORDER_STATE_CHANGED,
+          'Order state changed. Please retry.',
+        );
+      }
+
+      const updated = await transaction.order.findUniqueOrThrow({
+        where: {
+          id: orderId,
         },
       });
 
@@ -368,12 +459,32 @@ export class OrdersService {
       });
 
       if (!order) {
-        throw new NotFoundException('Order was not found.');
+        throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
       }
 
       if (order.status !== OrderStatus.PENDING_PAYMENT) {
-        throw new BadRequestException(
-          'At this stage only pending-payment orders can be cancelled.',
+        throw new DomainException(
+          ErrorCode.ORDER_CANNOT_CANCEL,
+          'Order cannot be cancelled in current state.',
+        );
+      }
+
+      const cancelledAt = new Date();
+      const claimed = await transaction.order.updateMany({
+        where: {
+          id: order.id,
+          status: OrderStatus.PENDING_PAYMENT,
+        },
+        data: {
+          status: OrderStatus.CANCELLED,
+          cancelledAt,
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new DomainException(
+          ErrorCode.ORDER_STATE_CHANGED,
+          'Order state changed. Please retry.',
         );
       }
 
@@ -397,7 +508,7 @@ export class OrdersService {
         });
 
         if (!inventory || inventory.reserved < quantity) {
-          throw new ConflictException('Reserved inventory is inconsistent.');
+          throw new DomainException(ErrorCode.INVENTORY_STATE_CHANGED, 'Inventory state changed.');
         }
 
         const nextReserved = inventory.reserved - quantity;
@@ -413,7 +524,7 @@ export class OrdersService {
         });
 
         if (updated.count !== 1) {
-          throw new ConflictException('Inventory changed; please retry.');
+          throw new DomainException(ErrorCode.INVENTORY_STATE_CHANGED, 'Inventory state changed.');
         }
 
         await transaction.inventoryMovement.create({
@@ -432,13 +543,9 @@ export class OrdersService {
         });
       }
 
-      const cancelled = await transaction.order.update({
+      const cancelled = await transaction.order.findUniqueOrThrow({
         where: {
           id: order.id,
-        },
-        data: {
-          status: OrderStatus.CANCELLED,
-          cancelledAt: new Date(),
         },
       });
 
@@ -623,7 +730,7 @@ export class OrdersService {
       });
 
       if (!inventory || inventory.onHand - inventory.reserved < quantity) {
-        throw new ConflictException('Insufficient inventory for one or more items.');
+        throw new DomainException(ErrorCode.INVENTORY_NOT_AVAILABLE, 'Inventory is not available.');
       }
 
       const nextReserved = inventory.reserved + quantity;
@@ -639,7 +746,10 @@ export class OrdersService {
       });
 
       if (updated.count !== 1) {
-        throw new ConflictException('Inventory changed; please retry.');
+        throw new DomainException(
+          ErrorCode.INVENTORY_STATE_CHANGED,
+          'Inventory state changed. Please retry.',
+        );
       }
 
       await transaction.inventoryMovement.create({
@@ -666,7 +776,7 @@ export class OrdersService {
     const totalMilliToman = milliGrams * BigInt(pricePerGramToman);
     const roundedToman = (totalMilliToman + 500n) / 1000n;
 
-    if (roundedToman > BigInt(Number.MAX_SAFE_INTEGER)) {
+    if (roundedToman > BigInt(TOMAN_INT_MAX)) {
       throw new BadRequestException('Calculated plating price exceeds the supported range.');
     }
 
@@ -674,7 +784,7 @@ export class OrdersService {
   }
 
   private assertSafeTomanAmount(amount: number): void {
-    if (!Number.isSafeInteger(amount) || amount < 0) {
+    if (!isNonNegativeTomanInt(amount)) {
       throw new BadRequestException('Calculated order amount exceeds the supported range.');
     }
   }

@@ -3,12 +3,15 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { NotificationOutboxStatus, OperationalAlertLevel } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { isSmsDeliveryUnknownError } from '../auth/sms-delivery-unknown.error';
 import { SMS_SENDER, type SmsSender } from '../auth/sms-sender.port';
 
 const DEFAULT_BATCH_SIZE = 50;
 const MAX_BATCH_SIZE = 200;
 const DEFAULT_STALE_MINUTES = 10;
 const MAX_ATTEMPTS = 8;
+const STALE_DISPATCH_ERROR =
+  'SMS dispatch outcome is unknown because the worker lease expired before confirmation.';
 
 @Injectable()
 export class OperationalAlertOutboxWorker {
@@ -53,13 +56,17 @@ export class OperationalAlertOutboxWorker {
       const staleBefore = new Date(now.getTime() - this.staleMs);
       const events = await this.prisma.operationalAlertOutboxEvent.findMany({
         where: {
-          attempts: {
-            lt: MAX_ATTEMPTS,
-          },
           OR: [
             {
-              status: {
-                in: [NotificationOutboxStatus.PENDING, NotificationOutboxStatus.FAILED],
+              status: NotificationOutboxStatus.PENDING,
+              nextAttemptAt: {
+                lte: now,
+              },
+            },
+            {
+              status: NotificationOutboxStatus.FAILED,
+              attempts: {
+                lt: MAX_ATTEMPTS,
               },
               nextAttemptAt: {
                 lte: now,
@@ -67,6 +74,12 @@ export class OperationalAlertOutboxWorker {
             },
             {
               status: NotificationOutboxStatus.PROCESSING,
+              claimedAt: {
+                lte: staleBefore,
+              },
+            },
+            {
+              status: NotificationOutboxStatus.DISPATCHING,
               claimedAt: {
                 lte: staleBefore,
               },
@@ -85,17 +98,34 @@ export class OperationalAlertOutboxWorker {
       });
 
       for (const event of events) {
+        if (event.status === NotificationOutboxStatus.DISPATCHING) {
+          await this.quarantineStaleDispatch(event.id, event.claimedAt, staleBefore);
+          continue;
+        }
+
+        if (
+          event.status === NotificationOutboxStatus.PROCESSING &&
+          event.attempts >= MAX_ATTEMPTS
+        ) {
+          await this.releaseExhaustedProcessing(event.id, event.claimedAt, staleBefore);
+          continue;
+        }
+
         const claimedAt = new Date();
         const claimed = await this.prisma.operationalAlertOutboxEvent.updateMany({
           where: {
             id: event.id,
-            attempts: {
-              lt: MAX_ATTEMPTS,
-            },
             OR: [
               {
-                status: {
-                  in: [NotificationOutboxStatus.PENDING, NotificationOutboxStatus.FAILED],
+                status: NotificationOutboxStatus.PENDING,
+                nextAttemptAt: {
+                  lte: claimedAt,
+                },
+              },
+              {
+                status: NotificationOutboxStatus.FAILED,
+                attempts: {
+                  lt: MAX_ATTEMPTS,
                 },
                 nextAttemptAt: {
                   lte: claimedAt,
@@ -103,6 +133,9 @@ export class OperationalAlertOutboxWorker {
               },
               {
                 status: NotificationOutboxStatus.PROCESSING,
+                attempts: {
+                  lt: MAX_ATTEMPTS,
+                },
                 claimedAt: {
                   lte: new Date(claimedAt.getTime() - this.staleMs),
                 },
@@ -122,20 +155,45 @@ export class OperationalAlertOutboxWorker {
           continue;
         }
 
-        try {
-          if (!this.smsSender.sendMessage) {
-            throw new Error('Configured SMS sender does not support transactional messages.');
-          }
+        if (!this.smsSender.sendMessage) {
+          await this.failBeforeDispatch(
+            event.id,
+            claimedAt,
+            event.attempts + 1,
+            new Error('Configured SMS sender does not support transactional messages.'),
+          );
+          continue;
+        }
 
-          await this.smsSender.sendMessage({
-            phone: event.recipientPhone,
-            text: this.buildMessage(event.code, event.level, this.readOrderNumber(event.payload)),
-          });
+        const sendMessage = this.smsSender.sendMessage.bind(this.smsSender);
+        const message = {
+          phone: event.recipientPhone,
+          text: this.buildMessage(event.code, event.level, this.readOrderNumber(event.payload)),
+        };
+
+        const dispatching = await this.prisma.operationalAlertOutboxEvent.updateMany({
+          where: {
+            id: event.id,
+            status: NotificationOutboxStatus.PROCESSING,
+            claimedAt,
+          },
+          data: {
+            status: NotificationOutboxStatus.DISPATCHING,
+          },
+        });
+
+        if (dispatching.count !== 1) {
+          continue;
+        }
+
+        try {
+          await sendMessage(message);
 
           await this.prisma.operationalAlertOutboxEvent.updateMany({
             where: {
               id: event.id,
-              status: NotificationOutboxStatus.PROCESSING,
+              status: NotificationOutboxStatus.DISPATCHING,
+              claimedAt,
             },
             data: {
               status: NotificationOutboxStatus.SENT,
@@ -145,25 +203,7 @@ export class OperationalAlertOutboxWorker {
             },
           });
         } catch (error) {
-          const attempts = event.attempts + 1;
-          const retryAt = new Date(Date.now() + this.retryDelayMs(attempts));
-
-          await this.prisma.operationalAlertOutboxEvent.updateMany({
-            where: {
-              id: event.id,
-              status: NotificationOutboxStatus.PROCESSING,
-            },
-            data: {
-              status: NotificationOutboxStatus.FAILED,
-              nextAttemptAt: retryAt,
-              claimedAt: null,
-              lastError: this.errorMessage(error).slice(0, 1000),
-            },
-          });
-
-          this.logger.warn(
-            `Operational alert outbox event ${event.id} failed: ${this.errorMessage(error)}`,
-          );
+          await this.settleDispatchFailure(event.id, claimedAt, event.attempts + 1, error);
         }
       }
     } catch (error) {
@@ -171,6 +211,130 @@ export class OperationalAlertOutboxWorker {
     } finally {
       this.running = false;
     }
+  }
+
+  private async releaseExhaustedProcessing(
+    eventId: string,
+    claimedAt: Date | null,
+    staleBefore: Date,
+  ): Promise<void> {
+    if (!claimedAt || claimedAt > staleBefore) {
+      return;
+    }
+
+    await this.prisma.operationalAlertOutboxEvent.updateMany({
+      where: {
+        id: eventId,
+        status: NotificationOutboxStatus.PROCESSING,
+        claimedAt,
+        attempts: {
+          gte: MAX_ATTEMPTS,
+        },
+      },
+      data: {
+        status: NotificationOutboxStatus.FAILED,
+        claimedAt: null,
+        lastError:
+          'Operational alert processing lease expired after the maximum attempts before SMS dispatch.',
+      },
+    });
+  }
+
+  private async quarantineStaleDispatch(
+    eventId: string,
+    claimedAt: Date | null,
+    staleBefore: Date,
+  ): Promise<void> {
+    if (!claimedAt || claimedAt > staleBefore) {
+      return;
+    }
+
+    await this.prisma.operationalAlertOutboxEvent.updateMany({
+      where: {
+        id: eventId,
+        status: NotificationOutboxStatus.DISPATCHING,
+        claimedAt,
+      },
+      data: {
+        status: NotificationOutboxStatus.UNKNOWN,
+        claimedAt: null,
+        lastError: STALE_DISPATCH_ERROR,
+      },
+    });
+  }
+
+  private async failBeforeDispatch(
+    eventId: string,
+    claimedAt: Date,
+    attempts: number,
+    error: unknown,
+  ): Promise<void> {
+    const retryAt = new Date(Date.now() + this.retryDelayMs(attempts));
+
+    await this.prisma.operationalAlertOutboxEvent.updateMany({
+      where: {
+        id: eventId,
+        status: NotificationOutboxStatus.PROCESSING,
+        claimedAt,
+      },
+      data: {
+        status: NotificationOutboxStatus.FAILED,
+        nextAttemptAt: retryAt,
+        claimedAt: null,
+        lastError: this.errorMessage(error).slice(0, 1000),
+      },
+    });
+
+    this.logger.warn(
+      `Operational alert outbox event ${eventId} failed: ${this.errorMessage(error)}`,
+    );
+  }
+
+  private async settleDispatchFailure(
+    eventId: string,
+    claimedAt: Date,
+    attempts: number,
+    error: unknown,
+  ): Promise<void> {
+    if (isSmsDeliveryUnknownError(error)) {
+      await this.prisma.operationalAlertOutboxEvent.updateMany({
+        where: {
+          id: eventId,
+          status: NotificationOutboxStatus.DISPATCHING,
+          claimedAt,
+        },
+        data: {
+          status: NotificationOutboxStatus.UNKNOWN,
+          claimedAt: null,
+          lastError: this.errorMessage(error).slice(0, 1000),
+        },
+      });
+
+      this.logger.warn(
+        `Operational alert outbox event ${eventId} has an unknown delivery outcome: ${this.errorMessage(error)}`,
+      );
+      return;
+    }
+
+    const retryAt = new Date(Date.now() + this.retryDelayMs(attempts));
+
+    await this.prisma.operationalAlertOutboxEvent.updateMany({
+      where: {
+        id: eventId,
+        status: NotificationOutboxStatus.DISPATCHING,
+        claimedAt,
+      },
+      data: {
+        status: NotificationOutboxStatus.FAILED,
+        nextAttemptAt: retryAt,
+        claimedAt: null,
+        lastError: this.errorMessage(error).slice(0, 1000),
+      },
+    });
+
+    this.logger.warn(
+      `Operational alert outbox event ${eventId} failed: ${this.errorMessage(error)}`,
+    );
   }
 
   private buildMessage(code: string, level: OperationalAlertLevel, orderNumber: string) {
@@ -186,6 +350,10 @@ export class OperationalAlertOutboxWorker {
         return `${prefix}: ایجاد مرسوله سفارش ${orderNumber} بیش از حد مجاز در حال پردازش مانده است.`;
       case 'SHIPMENT_PROVIDER_RECONCILIATION_REQUIRED':
         return `${prefix}: وضعیت ایجاد مرسوله سفارش ${orderNumber} نیاز به تطبیق با سرویس ارسال دارد.`;
+      case 'PAYMENT_INITIATION_STUCK':
+        return `${prefix}: آغاز پرداخت سفارش ${orderNumber} در وضعیت نامشخص مانده و نیاز به بررسی درگاه دارد.`;
+      case 'PAYMENT_RECONCILIATION_OPEN':
+        return `${prefix}: تطبیق مالی پرداخت سفارش ${orderNumber} باز مانده و نیاز به پیگیری دارد.`;
       default:
         return `${prefix}: سفارش ${orderNumber} نیاز به بررسی دارد.`;
     }

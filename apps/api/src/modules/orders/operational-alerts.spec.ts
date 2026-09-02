@@ -1,5 +1,8 @@
 import { OperationalAlertLevel, OrderStatus } from '../../generated/prisma/enums';
-import { buildOperationalAlertCandidates } from './operational-alerts';
+import {
+  buildOperationalAlertCandidates,
+  buildOperationalIncidentDescriptor,
+} from './operational-alerts';
 import type { OperationsWorkItem } from './operations-work-queue';
 
 describe('operational alert incident derivation', () => {
@@ -22,9 +25,14 @@ describe('operational alert incident derivation', () => {
     };
   }
 
-  it('creates one stable initial alert fingerprint for an overdue incident', () => {
-    const candidates = buildOperationalAlertCandidates(workItem(), now);
+  it('uses one stable fingerprint for incident tracking and alert delivery', () => {
+    const item = workItem();
+    const incident = buildOperationalIncidentDescriptor(item);
+    const candidates = buildOperationalAlertCandidates(item, now);
 
+    expect(incident?.incidentFingerprint).toBe(
+      'PLATING_OVERDUE:10000000-0000-4000-8000-000000000001:2026-08-29T10:00:00.000Z',
+    );
     expect(candidates[0]).toEqual(
       expect.objectContaining({
         level: OperationalAlertLevel.INITIAL,

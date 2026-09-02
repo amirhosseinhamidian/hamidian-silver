@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, ShipmentStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { ShippingProvider } from './shipping-provider.port';
@@ -112,6 +112,7 @@ describe('ShippingService', () => {
     ]);
 
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: orderId }]),
       order: {
         findFirst: jest.fn().mockResolvedValue({
           id: orderId,
@@ -150,6 +151,11 @@ describe('ShippingService', () => {
     await service.selectRate(userId, orderId, {
       serviceCode: 'EXPRESS',
     });
+
+    expect(transaction.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(transaction.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      transaction.order.findFirst.mock.invocationCallOrder[0],
+    );
 
     expect(transaction.shipment.upsert).toHaveBeenCalledWith({
       where: {
@@ -204,6 +210,7 @@ describe('ShippingService', () => {
     ]);
 
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: orderId }]),
       order: {
         findFirst: jest.fn().mockResolvedValue({
           id: orderId,
@@ -229,7 +236,10 @@ describe('ShippingService', () => {
       service.selectRate(userId, orderId, {
         serviceCode: 'EXPRESS',
       }),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_INVALID_STATUS,
+    });
   });
 
   it('rejects shipping quotes when an order item has no weight snapshot', async () => {
@@ -243,7 +253,10 @@ describe('ShippingService', () => {
       ],
     });
 
-    await expect(service.quoteOrder(userId, orderId)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.quoteOrder(userId, orderId)).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_NOT_READY,
+    });
 
     expect(provider.quote).not.toHaveBeenCalled();
   });
@@ -277,7 +290,10 @@ describe('ShippingService', () => {
         },
         userId,
       ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.SHIPMENT_INVALID_STATUS,
+    });
 
     expect(transaction.shipment.update).not.toHaveBeenCalled();
   });

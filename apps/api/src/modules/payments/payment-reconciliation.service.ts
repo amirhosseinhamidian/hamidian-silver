@@ -1,4 +1,6 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { DomainException } from '../../common/errors/domain-exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 import {
   PaymentAttemptStatus,
   PaymentReconciliationResolution,
@@ -62,6 +64,7 @@ export class PaymentReconciliationService {
   async resolveExternalRefund(
     reconciliationId: string,
     actorUserId: string,
+    externalRefundReference: string,
     resolutionNote: string,
   ) {
     return this.prisma.$transaction(async (transaction) => {
@@ -79,38 +82,144 @@ export class PaymentReconciliationService {
       });
 
       if (!reconciliation) {
-        throw new NotFoundException('Payment reconciliation was not found.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_NOT_FOUND,
+          'Payment reconciliation was not found.',
+        );
+      }
+
+      if (
+        reconciliation.provider !== reconciliation.paymentAttempt.provider ||
+        reconciliation.providerReference !== reconciliation.paymentAttempt.providerReference ||
+        reconciliation.amountToman !== reconciliation.paymentAttempt.amountToman
+      ) {
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
+          'Payment reconciliation snapshot no longer matches the payment attempt.',
+        );
       }
 
       if (reconciliation.status === PaymentReconciliationStatus.RESOLVED) {
         if (reconciliation.resolution === PaymentReconciliationResolution.REFUNDED_EXTERNALLY) {
-          return reconciliation;
+          if (reconciliation.externalReference === externalRefundReference) {
+            return reconciliation;
+          }
+
+          throw new DomainException(
+            ErrorCode.PAYMENT_FAILED,
+            'Payment reconciliation was resolved with a different external refund reference.',
+          );
         }
 
-        throw new ConflictException('Payment reconciliation is already resolved.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_ALREADY_CONFIRMED,
+          'Payment reconciliation is already resolved.',
+        );
       }
 
+      const paymentStatus = reconciliation.paymentAttempt.payment.status;
+      const preserveSettledPayment =
+        paymentStatus === PaymentStatus.PAID ||
+        paymentStatus === PaymentStatus.PARTIALLY_REFUNDED ||
+        paymentStatus === PaymentStatus.REFUNDED;
+
       if (
-        reconciliation.paymentAttempt.payment.status !== PaymentStatus.RECONCILIATION_REQUIRED ||
-        reconciliation.paymentAttempt.status !== PaymentAttemptStatus.RECONCILIATION_REQUIRED
+        reconciliation.paymentAttempt.status !== PaymentAttemptStatus.RECONCILIATION_REQUIRED ||
+        (!preserveSettledPayment && paymentStatus !== PaymentStatus.RECONCILIATION_REQUIRED)
       ) {
-        throw new ConflictException('Payment reconciliation state no longer matches the payment.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
+          'Payment reconciliation state no longer matches the payment.',
+        );
       }
 
       const resolvedAt = new Date();
+      let claimed: { count: number };
 
-      await transaction.payment.update({
-        where: {
-          id: reconciliation.paymentAttempt.paymentId,
-        },
-        data: {
-          status: PaymentStatus.REFUNDED,
-        },
-      });
+      try {
+        claimed = await transaction.paymentReconciliation.updateMany({
+          where: {
+            id: reconciliation.id,
+            status: PaymentReconciliationStatus.OPEN,
+            resolution: null,
+            externalReference: null,
+            resolvedAt: null,
+          },
+          data: {
+            status: PaymentReconciliationStatus.RESOLVED,
+            resolution: PaymentReconciliationResolution.REFUNDED_EXTERNALLY,
+            externalReference: externalRefundReference,
+            resolutionNote,
+            resolvedByUserId: actorUserId,
+            resolvedAt,
+          },
+        });
+      } catch (error) {
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          'code' in error &&
+          error.code === 'P2002'
+        ) {
+          throw new DomainException(
+            ErrorCode.PAYMENT_FAILED,
+            'External refund reference is already used by another payment reconciliation.',
+          );
+        }
 
-      await transaction.paymentAttempt.update({
+        throw error;
+      }
+
+      if (claimed.count !== 1) {
+        const current = await transaction.paymentReconciliation.findUnique({
+          where: {
+            id: reconciliation.id,
+          },
+        });
+
+        if (
+          current?.status === PaymentReconciliationStatus.RESOLVED &&
+          current.resolution === PaymentReconciliationResolution.REFUNDED_EXTERNALLY
+        ) {
+          if (current.externalReference === externalRefundReference) {
+            return current;
+          }
+
+          throw new DomainException(
+            ErrorCode.PAYMENT_FAILED,
+            'Payment reconciliation was resolved with a different external refund reference.',
+          );
+        }
+
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
+          'Payment reconciliation changed while resolving; reload before retrying.',
+        );
+      }
+
+      if (!preserveSettledPayment) {
+        const payment = await transaction.payment.updateMany({
+          where: {
+            id: reconciliation.paymentAttempt.paymentId,
+            status: PaymentStatus.RECONCILIATION_REQUIRED,
+          },
+          data: {
+            status: PaymentStatus.REFUNDED,
+          },
+        });
+
+        if (payment.count !== 1) {
+          throw new DomainException(
+            ErrorCode.PAYMENT_FAILED,
+            'Payment state changed while resolving reconciliation.',
+          );
+        }
+      }
+
+      const attempt = await transaction.paymentAttempt.updateMany({
         where: {
           id: reconciliation.paymentAttemptId,
+          status: PaymentAttemptStatus.RECONCILIATION_REQUIRED,
         },
         data: {
           status: PaymentAttemptStatus.RECONCILED,
@@ -119,16 +228,16 @@ export class PaymentReconciliationService {
         },
       });
 
-      return transaction.paymentReconciliation.update({
+      if (attempt.count !== 1) {
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
+          'Payment attempt state changed while resolving reconciliation.',
+        );
+      }
+
+      return transaction.paymentReconciliation.findUniqueOrThrow({
         where: {
           id: reconciliation.id,
-        },
-        data: {
-          status: PaymentReconciliationStatus.RESOLVED,
-          resolution: PaymentReconciliationResolution.REFUNDED_EXTERNALLY,
-          resolutionNote,
-          resolvedByUserId: actorUserId,
-          resolvedAt,
         },
         include: {
           paymentAttempt: {

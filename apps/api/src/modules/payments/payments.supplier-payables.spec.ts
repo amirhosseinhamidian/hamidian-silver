@@ -24,9 +24,11 @@ describe('PaymentsService supplier payables', () => {
       status: PaymentAttemptStatus.REDIRECTED,
       payment: {
         orderId,
+        amountToman: 1_000_000,
         status: PaymentStatus.PENDING,
         order: {
           id: orderId,
+          grandTotalToman: 1_000_000,
           status: OrderStatus.PENDING_PAYMENT,
         },
       },
@@ -38,6 +40,7 @@ describe('PaymentsService supplier payables', () => {
         order: {
           id: orderId,
           warehouseId,
+          grandTotalToman: 1_000_000,
           status: OrderStatus.PENDING_PAYMENT,
           items: [
             {
@@ -55,7 +58,7 @@ describe('PaymentsService supplier payables', () => {
     const transaction = {
       paymentAttempt: {
         findUnique: jest.fn().mockResolvedValue(transactionAttempt),
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       order: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -75,7 +78,7 @@ describe('PaymentsService supplier payables', () => {
         create: jest.fn().mockResolvedValue({}),
       },
       payment: {
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       supplierPayable: {
         createMany: jest.fn().mockResolvedValue({ count: 1 }),

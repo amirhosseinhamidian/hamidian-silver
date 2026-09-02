@@ -1,5 +1,6 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SmsDeliveryUnknownError } from '../sms-delivery-unknown.error';
 import type { SendOtpMessage, SendSmsMessage, SmsSender } from '../sms-sender.port';
 
 type KavenegarResponse = {
@@ -61,8 +62,10 @@ export class KavenegarSmsSender implements SmsSender {
       body.set('sender', this.sender);
     }
 
+    let response: Response;
+
     try {
-      const response = await fetch(url, {
+      response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -70,18 +73,28 @@ export class KavenegarSmsSender implements SmsSender {
         body,
         signal: AbortSignal.timeout(5_000),
       });
-
-      if (!response.ok) {
-        throw new Error(`Kavenegar HTTP ${response.status}`);
-      }
-
-      const payload = (await response.json()) as KavenegarResponse;
-
-      if (payload.return?.status !== 200) {
-        throw new Error('Kavenegar rejected the SMS request.');
-      }
     } catch {
-      throw new ServiceUnavailableException('SMS delivery is temporarily unavailable.');
+      throw new SmsDeliveryUnknownError('Kavenegar');
+    }
+
+    if (!response.ok) {
+      if (response.status >= 500) {
+        throw new SmsDeliveryUnknownError('Kavenegar');
+      }
+
+      throw new ServiceUnavailableException('Kavenegar rejected the SMS request.');
+    }
+
+    let payload: KavenegarResponse;
+
+    try {
+      payload = (await response.json()) as KavenegarResponse;
+    } catch {
+      throw new SmsDeliveryUnknownError('Kavenegar');
+    }
+
+    if (payload.return?.status !== 200) {
+      throw new ServiceUnavailableException('Kavenegar rejected the SMS request.');
     }
   }
 

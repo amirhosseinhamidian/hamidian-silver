@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ShipmentStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { TRACKING_SYNC_LEASE_MS } from './shipping-tracking.constants';
 import { ShippingService } from './shipping.service';
 
 const DEFAULT_TRACKING_INTERVAL_MINUTES = 10;
@@ -46,24 +47,62 @@ export class ShippingTrackingScheduler {
 
     try {
       const dueBefore = new Date(Date.now() - this.trackingIntervalMs);
+      const staleLeaseBefore = new Date(Date.now() - TRACKING_SYNC_LEASE_MS);
+      const activeStatuses = [
+        ShipmentStatus.READY,
+        ShipmentStatus.HANDED_OVER,
+        ShipmentStatus.IN_TRANSIT,
+      ];
+      const dueFilter = {
+        AND: [
+          {
+            OR: [
+              {
+                lastTrackingSyncAt: null,
+              },
+              {
+                lastTrackingSyncAt: {
+                  lte: dueBefore,
+                },
+              },
+            ],
+          },
+          {
+            OR: [
+              {
+                trackingAttemptedAt: null,
+              },
+              {
+                trackingAttemptedAt: {
+                  lte: dueBefore,
+                },
+              },
+            ],
+          },
+          {
+            OR: [
+              {
+                trackingSyncToken: null,
+              },
+              {
+                trackingSyncStartedAt: {
+                  lte: staleLeaseBefore,
+                },
+              },
+            ],
+          },
+        ],
+      };
+
       const shipments = await this.prisma.shipment.findMany({
         where: {
           status: {
-            in: [ShipmentStatus.READY, ShipmentStatus.HANDED_OVER, ShipmentStatus.IN_TRANSIT],
+            in: activeStatuses,
           },
           providerShipmentId: {
             not: null,
           },
-          OR: [
-            {
-              lastTrackingSyncAt: null,
-            },
-            {
-              lastTrackingSyncAt: {
-                lte: dueBefore,
-              },
-            },
-          ],
+          ...dueFilter,
         },
         orderBy: [
           {

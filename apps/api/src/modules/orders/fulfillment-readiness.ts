@@ -1,5 +1,6 @@
 import {
   OrderStatus,
+  PaymentStatus,
   PlatingFulfillmentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
@@ -9,6 +10,7 @@ export type FulfillmentReadinessState = 'READY' | 'BLOCKED';
 
 export type FulfillmentReadinessBlockerCode =
   | 'ORDER_NOT_PAID'
+  | 'PAYMENT_NOT_SETTLED'
   | 'ORDER_CLOSED'
   | 'ORDER_ALREADY_FULFILLED'
   | 'SHIPPING_NOT_SELECTED'
@@ -22,6 +24,7 @@ export type FulfillmentReadinessBlockerCode =
 
 export type FulfillmentHandoffBlockerCode =
   | 'ORDER_NOT_PAID'
+  | 'PAYMENT_NOT_SETTLED'
   | 'ORDER_CLOSED'
   | 'SHIPPING_NOT_SELECTED'
   | 'PLATING_NOT_STARTED'
@@ -35,6 +38,9 @@ export type FulfillmentReadinessInput = {
   orderNumber: string;
   status: OrderStatus;
   paidAt: Date | null;
+  payment: {
+    status: PaymentStatus;
+  } | null;
   platingTotalToman: number;
   platingFulfillment: {
     status: PlatingFulfillmentStatus;
@@ -51,12 +57,15 @@ export type FulfillmentReadinessInput = {
 };
 
 export function buildFulfillmentReadiness(input: FulfillmentReadinessInput) {
+  const paymentSettled = input.payment?.status === PaymentStatus.PAID;
   const paymentCheck =
     input.status === OrderStatus.PENDING_PAYMENT
       ? 'BLOCKED'
       : input.status === OrderStatus.CANCELLED || input.status === OrderStatus.EXPIRED
         ? 'CLOSED'
-        : 'READY';
+        : paymentSettled
+          ? 'READY'
+          : 'BLOCKED';
 
   const platingCheck = resolvePlatingCheck(input);
   const shippingSelectionCheck = input.shipment ? 'READY' : 'BLOCKED';
@@ -72,6 +81,8 @@ export function buildFulfillmentReadiness(input: FulfillmentReadinessInput) {
     creationBlockers.push({ code: 'ORDER_CLOSED' });
   } else if (input.status === OrderStatus.SHIPPED || input.status === OrderStatus.DELIVERED) {
     creationBlockers.push({ code: 'ORDER_ALREADY_FULFILLED' });
+  } else if (!paymentSettled) {
+    creationBlockers.push({ code: 'PAYMENT_NOT_SETTLED' });
   }
 
   if (!input.shipment) {
@@ -105,6 +116,11 @@ export function buildFulfillmentReadiness(input: FulfillmentReadinessInput) {
     handoffBlockers.push({ code: 'ORDER_NOT_PAID' });
   } else if (input.status === OrderStatus.CANCELLED || input.status === OrderStatus.EXPIRED) {
     handoffBlockers.push({ code: 'ORDER_CLOSED' });
+  } else if (
+    (input.status === OrderStatus.PAID || input.status === OrderStatus.PROCESSING) &&
+    !paymentSettled
+  ) {
+    handoffBlockers.push({ code: 'PAYMENT_NOT_SETTLED' });
   }
 
   if (!input.shipment) {
@@ -130,6 +146,7 @@ export function buildFulfillmentReadiness(input: FulfillmentReadinessInput) {
 
   const readyForProcessing =
     (input.status === OrderStatus.PAID || input.status === OrderStatus.PROCESSING) &&
+    paymentSettled &&
     Boolean(input.shipment);
 
   const readyForShipmentCreation = creationBlockers.length === 0;

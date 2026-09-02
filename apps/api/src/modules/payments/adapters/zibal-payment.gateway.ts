@@ -1,5 +1,6 @@
 import { BadGatewayException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PaymentInitiationUnknownError } from '../payment-initiation-unknown.error';
 import type {
   InitiateGatewayPaymentInput,
   InitiateGatewayPaymentResult,
@@ -35,18 +36,28 @@ export class ZibalPaymentGateway implements PaymentGateway {
     this.assertConfigured();
 
     const amount = this.parseRialAmount(input.amountRial);
-    const payload = await this.post('/request', {
-      merchant: this.merchantId,
-      amount,
-      callbackUrl: `${input.callbackUrl}/zibal`,
-      description: `Hamidian Silver order ${input.orderNumber}`,
-    });
+    const payload = await this.post(
+      '/request',
+      {
+        merchant: this.merchantId,
+        amount,
+        callbackUrl: `${input.callbackUrl}/zibal`,
+        description: `Hamidian Silver order ${input.orderNumber}`,
+      },
+      true,
+    );
 
     if (payload.result !== 100 || payload.trackId === undefined) {
       throw new BadGatewayException(payload.message || 'Zibal rejected the payment request.');
     }
 
-    const trackId = this.parseTrackId(payload.trackId);
+    let trackId: string;
+
+    try {
+      trackId = this.parseTrackId(payload.trackId);
+    } catch {
+      throw new PaymentInitiationUnknownError('Zibal');
+    }
 
     return {
       authority: trackId,
@@ -113,6 +124,7 @@ export class ZibalPaymentGateway implements PaymentGateway {
   private async post(
     path: '/request' | '/verify',
     body: Record<string, unknown>,
+    initiationUnknownOnTransport = false,
   ): Promise<ZibalResponse> {
     try {
       const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -127,13 +139,21 @@ export class ZibalPaymentGateway implements PaymentGateway {
       const payload = (await response.json()) as ZibalResponse;
 
       if (!response.ok) {
+        if (initiationUnknownOnTransport) {
+          throw new PaymentInitiationUnknownError('Zibal');
+        }
+
         throw new BadGatewayException(payload.message || 'Zibal returned an HTTP error.');
       }
 
       return payload;
     } catch (error) {
-      if (error instanceof BadGatewayException) {
+      if (error instanceof BadGatewayException || error instanceof PaymentInitiationUnknownError) {
         throw error;
+      }
+
+      if (initiationUnknownOnTransport) {
+        throw new PaymentInitiationUnknownError('Zibal');
       }
 
       throw new ServiceUnavailableException('Zibal is currently unavailable.');

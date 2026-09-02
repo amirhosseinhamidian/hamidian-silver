@@ -66,7 +66,19 @@ describe('Application (e2e)', () => {
   });
 
   it('/api/v1/health (GET) remains public', () => {
-    return request(app.getHttpServer()).get('/api/v1/health').expect(200).expect({
+    return request(app.getHttpServer())
+      .get('/api/v1/health')
+      .set('x-request-id', 'health-check-1')
+      .expect('x-request-id', 'health-check-1')
+      .expect(200)
+      .expect({
+        status: 'ok',
+        service: 'hamidian-silver-api',
+      });
+  });
+
+  it('/api/v1/health/live (GET) exposes a public liveness probe', () => {
+    return request(app.getHttpServer()).get('/api/v1/health/live').expect(200).expect({
       status: 'ok',
       service: 'hamidian-silver-api',
     });

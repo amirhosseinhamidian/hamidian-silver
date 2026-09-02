@@ -1,5 +1,6 @@
 import {
   OrderStatus,
+  PaymentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
 } from '../../generated/prisma/enums';
@@ -16,6 +17,9 @@ describe('OperationsWorkQueueService', () => {
             orderNumber: 'HS-050-READY',
             status: OrderStatus.PAID,
             paidAt: new Date('2026-08-30T10:00:00.000Z'),
+            payment: {
+              status: PaymentStatus.PAID,
+            },
             platingTotalToman: 0,
             items: [],
             platingFulfillment: null,
@@ -53,6 +57,11 @@ describe('OperationsWorkQueueService', () => {
         where: {
           status: {
             in: [OrderStatus.PAID, OrderStatus.PROCESSING],
+          },
+          payment: {
+            is: {
+              status: PaymentStatus.PAID,
+            },
           },
         },
       }),

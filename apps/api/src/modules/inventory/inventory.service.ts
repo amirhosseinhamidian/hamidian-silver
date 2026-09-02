@@ -1,4 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { DomainException } from '../../common/errors/domain-exception';
+import { ErrorCode } from '../../common/errors/error-codes';
+import { isNonNegativeInt32, isSignedInt32 } from '../../common/int32';
 import { InventoryMovementType } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { AdjustStockDto } from './dto/adjust-stock.dto';
@@ -64,6 +67,13 @@ export class InventoryService {
   }
 
   async adjustStock(dto: AdjustStockDto, actorUserId: string) {
+    if (!isSignedInt32(dto.onHandDelta) || dto.onHandDelta === 0) {
+      throw new DomainException(
+        ErrorCode.INVENTORY_NOT_AVAILABLE,
+        'Stock adjustment exceeds the supported range.',
+      );
+    }
+
     return this.prisma.$transaction(async (transaction) => {
       const warehouse = await transaction.warehouse.findFirst({
         where: {
@@ -77,7 +87,7 @@ export class InventoryService {
       });
 
       if (!warehouse) {
-        throw new NotFoundException('Warehouse was not found.');
+        throw new DomainException(ErrorCode.NOT_FOUND, 'Warehouse was not found.');
       }
 
       const variant = await transaction.productVariant.findFirst({
@@ -95,7 +105,7 @@ export class InventoryService {
       });
 
       if (!variant) {
-        throw new NotFoundException('Product variant was not found.');
+        throw new DomainException(ErrorCode.NOT_FOUND, 'Product variant was not found.');
       }
 
       const current = await transaction.inventory.findUnique({
@@ -108,32 +118,75 @@ export class InventoryService {
       });
 
       if (!current && dto.onHandDelta < 0) {
-        throw new BadRequestException('Stock cannot be reduced below zero.');
+        throw new DomainException(
+          ErrorCode.INVENTORY_NOT_AVAILABLE,
+          'Stock cannot be reduced below zero.',
+        );
       }
 
       const nextOnHand = (current?.onHand ?? 0) + dto.onHandDelta;
       const reserved = current?.reserved ?? 0;
 
-      if (nextOnHand < reserved) {
-        throw new BadRequestException('On-hand stock cannot be lower than reserved stock.');
+      if (!isNonNegativeInt32(nextOnHand)) {
+        throw new DomainException(
+          ErrorCode.INVENTORY_NOT_AVAILABLE,
+          'Stock quantity exceeds the supported range.',
+        );
       }
 
-      const inventory = current
-        ? await transaction.inventory.update({
-            where: {
-              id: current.id,
-            },
-            data: {
-              onHand: nextOnHand,
-            },
-          })
-        : await transaction.inventory.create({
+      if (nextOnHand < reserved) {
+        throw new DomainException(
+          ErrorCode.INVENTORY_RESERVATION_FAILED,
+          'On-hand stock cannot be lower than reserved stock.',
+        );
+      }
+
+      let inventory: InventorySnapshot;
+
+      if (current) {
+        const updated = await transaction.inventory.updateMany({
+          where: {
+            id: current.id,
+            onHand: current.onHand,
+            reserved: current.reserved,
+          },
+          data: {
+            onHand: nextOnHand,
+          },
+        });
+
+        if (updated.count !== 1) {
+          throw new DomainException(
+            ErrorCode.INVENTORY_STATE_CHANGED,
+            'Inventory changed while adjusting stock; reload and retry.',
+          );
+        }
+
+        inventory = await transaction.inventory.findUniqueOrThrow({
+          where: {
+            id: current.id,
+          },
+        });
+      } else {
+        try {
+          inventory = await transaction.inventory.create({
             data: {
               warehouseId: dto.warehouseId,
               variantId: dto.variantId,
               onHand: nextOnHand,
             },
           });
+        } catch (error) {
+          if (this.isUniqueConstraintError(error)) {
+            throw new DomainException(
+              ErrorCode.INVENTORY_STATE_CHANGED,
+              'Inventory was created concurrently; reload and retry the adjustment.',
+            );
+          }
+
+          throw error;
+        }
+      }
 
       await transaction.inventoryMovement.create({
         data: {
@@ -153,6 +206,13 @@ export class InventoryService {
   }
 
   async bulkSetStock(dto: BulkSetStockDto, actorUserId: string) {
+    if (!isNonNegativeInt32(dto.onHand)) {
+      throw new DomainException(
+        ErrorCode.INVENTORY_NOT_AVAILABLE,
+        'Bulk stock quantity exceeds the supported range.',
+      );
+    }
+
     return this.prisma.$transaction(async (transaction) => {
       const warehouse = await transaction.warehouse.findFirst({
         where: {
@@ -166,7 +226,7 @@ export class InventoryService {
       });
 
       if (!warehouse) {
-        throw new NotFoundException('Warehouse was not found.');
+        throw new DomainException(ErrorCode.NOT_FOUND, 'Warehouse was not found.');
       }
 
       const variants = await transaction.productVariant.findMany({
@@ -186,7 +246,10 @@ export class InventoryService {
       });
 
       if (variants.length !== dto.variantIds.length) {
-        throw new NotFoundException('One or more product variants were not found.');
+        throw new DomainException(
+          ErrorCode.NOT_FOUND,
+          'One or more product variants were not found.',
+        );
       }
 
       for (const variantId of dto.variantIds) {
@@ -202,25 +265,58 @@ export class InventoryService {
         const reserved = current?.reserved ?? 0;
 
         if (dto.onHand < reserved) {
-          throw new BadRequestException('Bulk stock quantity cannot be lower than reserved stock.');
+          throw new DomainException(
+            ErrorCode.INVENTORY_RESERVATION_FAILED,
+            'Bulk stock quantity cannot be lower than reserved stock.',
+          );
         }
 
-        const inventory = await transaction.inventory.upsert({
-          where: {
-            warehouseId_variantId: {
-              warehouseId: dto.warehouseId,
-              variantId,
+        let inventory: InventorySnapshot;
+
+        if (current) {
+          const updated = await transaction.inventory.updateMany({
+            where: {
+              id: current.id,
+              onHand: current.onHand,
+              reserved: current.reserved,
             },
-          },
-          update: {
-            onHand: dto.onHand,
-          },
-          create: {
-            warehouseId: dto.warehouseId,
-            variantId,
-            onHand: dto.onHand,
-          },
-        });
+            data: {
+              onHand: dto.onHand,
+            },
+          });
+
+          if (updated.count !== 1) {
+            throw new DomainException(
+              ErrorCode.INVENTORY_STATE_CHANGED,
+              'Inventory changed while bulk-setting stock; reload and retry.',
+            );
+          }
+
+          inventory = await transaction.inventory.findUniqueOrThrow({
+            where: {
+              id: current.id,
+            },
+          });
+        } else {
+          try {
+            inventory = await transaction.inventory.create({
+              data: {
+                warehouseId: dto.warehouseId,
+                variantId,
+                onHand: dto.onHand,
+              },
+            });
+          } catch (error) {
+            if (this.isUniqueConstraintError(error)) {
+              throw new DomainException(
+                ErrorCode.INVENTORY_STATE_CHANGED,
+                'Inventory was created concurrently; reload and retry the bulk stock update.',
+              );
+            }
+
+            throw error;
+          }
+        }
 
         const delta = dto.onHand - (current?.onHand ?? 0);
 
@@ -257,6 +353,13 @@ export class InventoryService {
   }
 
   async setLowStockThreshold(dto: SetLowStockThresholdDto) {
+    if (!isNonNegativeInt32(dto.lowStockThreshold)) {
+      throw new DomainException(
+        ErrorCode.INVENTORY_NOT_AVAILABLE,
+        'Low-stock threshold exceeds the supported range.',
+      );
+    }
+
     return this.prisma.$transaction(async (transaction) => {
       const warehouse = await transaction.warehouse.findFirst({
         where: {
@@ -270,7 +373,7 @@ export class InventoryService {
       });
 
       if (!warehouse) {
-        throw new NotFoundException('Warehouse was not found.');
+        throw new DomainException(ErrorCode.NOT_FOUND, 'Warehouse was not found.');
       }
 
       const variant = await transaction.productVariant.findFirst({
@@ -288,7 +391,7 @@ export class InventoryService {
       });
 
       if (!variant) {
-        throw new NotFoundException('Product variant was not found.');
+        throw new DomainException(ErrorCode.NOT_FOUND, 'Product variant was not found.');
       }
 
       const inventory = await transaction.inventory.upsert({
@@ -359,5 +462,9 @@ export class InventoryService {
       available,
       isLowStock: available <= inventory.lowStockThreshold,
     };
+  }
+
+  private isUniqueConstraintError(error: unknown): boolean {
+    return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002';
   }
 }

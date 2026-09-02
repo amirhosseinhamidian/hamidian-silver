@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { InventoryService } from './inventory.service';
 
@@ -151,7 +151,57 @@ describe('InventoryService', () => {
         },
         actorUserId,
       ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.INVENTORY_RESERVATION_FAILED,
+    });
+  });
+
+  it('rejects an adjustment when inventory changes after the snapshot is read', async () => {
+    const transaction = {
+      warehouse: {
+        findFirst: jest.fn().mockResolvedValue({ id: warehouseId }),
+      },
+      productVariant: {
+        findFirst: jest.fn().mockResolvedValue({ id: variantId }),
+      },
+      inventory: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: '40000000-0000-4000-8000-000000000001',
+          warehouseId,
+          variantId,
+          onHand: 10,
+          reserved: 2,
+          lowStockThreshold: 0,
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findUniqueOrThrow: jest.fn(),
+      },
+      inventoryMovement: {
+        create: jest.fn(),
+      },
+    };
+
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(
+      service.adjustStock(
+        {
+          warehouseId,
+          variantId,
+          onHandDelta: 1,
+        },
+        actorUserId,
+      ),
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.INVENTORY_STATE_CHANGED,
+    });
+
+    expect(transaction.inventory.findUniqueOrThrow).not.toHaveBeenCalled();
+    expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();
   });
 
   it('rejects bulk stock when one variant does not exist', async () => {
@@ -178,7 +228,10 @@ describe('InventoryService', () => {
         },
         actorUserId,
       ),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.NOT_FOUND,
+    });
   });
 
   it('bulk-sets the same quantity while keeping inventory per variant', async () => {
@@ -203,24 +256,23 @@ describe('InventoryService', () => {
             lowStockThreshold: 0,
           })
           .mockResolvedValueOnce(null),
-        upsert: jest
-          .fn()
-          .mockResolvedValueOnce({
-            id: '40000000-0000-4000-8000-000000000001',
-            warehouseId,
-            variantId,
-            onHand: 8,
-            reserved: 0,
-            lowStockThreshold: 0,
-          })
-          .mockResolvedValueOnce({
-            id: '40000000-0000-4000-8000-000000000002',
-            warehouseId,
-            variantId: secondVariantId,
-            onHand: 8,
-            reserved: 0,
-            lowStockThreshold: 0,
-          }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          id: '40000000-0000-4000-8000-000000000001',
+          warehouseId,
+          variantId,
+          onHand: 8,
+          reserved: 0,
+          lowStockThreshold: 0,
+        }),
+        create: jest.fn().mockResolvedValue({
+          id: '40000000-0000-4000-8000-000000000002',
+          warehouseId,
+          variantId: secondVariantId,
+          onHand: 8,
+          reserved: 0,
+          lowStockThreshold: 0,
+        }),
         findMany: jest.fn().mockResolvedValue([
           {
             id: '40000000-0000-4000-8000-000000000001',
@@ -260,7 +312,8 @@ describe('InventoryService', () => {
 
     expect(result).toHaveLength(2);
     expect(result.every((item) => item.onHand === 8)).toBe(true);
-    expect(transaction.inventory.upsert).toHaveBeenCalledTimes(2);
+    expect(transaction.inventory.updateMany).toHaveBeenCalledTimes(1);
+    expect(transaction.inventory.create).toHaveBeenCalledTimes(1);
     expect(transaction.inventoryMovement.create).toHaveBeenCalledTimes(2);
   });
 

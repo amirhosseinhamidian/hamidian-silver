@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
-import { OrderStatus } from '../../generated/prisma/enums';
+import { OrderStatus, PaymentStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { OperationsWorkQueueQueryDto } from './dto/operations-work-queue-query.dto';
 import {
@@ -58,6 +58,11 @@ export class OperationsWorkQueueService {
         status: {
           in: [OrderStatus.PAID, OrderStatus.PROCESSING],
         },
+        payment: {
+          is: {
+            status: PaymentStatus.PAID,
+          },
+        },
       },
       orderBy: [
         {
@@ -78,6 +83,11 @@ export class OperationsWorkQueueService {
       status: true,
       paidAt: true,
       platingTotalToman: true,
+      payment: {
+        select: {
+          status: true,
+        },
+      },
       items: {
         where: {
           platingType: {

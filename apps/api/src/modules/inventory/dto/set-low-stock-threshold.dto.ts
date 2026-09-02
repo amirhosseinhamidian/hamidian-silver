@@ -1,4 +1,5 @@
-import { IsInt, IsUUID, Min } from 'class-validator';
+import { IsInt, IsUUID, Max, Min } from 'class-validator';
+import { INT32_MAX } from '../../../common/int32';
 
 export class SetLowStockThresholdDto {
   @IsUUID('4')
@@ -9,5 +10,6 @@ export class SetLowStockThresholdDto {
 
   @IsInt()
   @Min(0)
+  @Max(INT32_MAX)
   lowStockThreshold!: number;
 }

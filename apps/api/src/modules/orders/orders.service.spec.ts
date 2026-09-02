@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, PlatingType, ProductStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { OrdersService } from './orders.service';
@@ -231,7 +231,10 @@ describe('OrdersService', () => {
           },
         ],
       }),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.INVENTORY_NOT_AVAILABLE,
+    });
   });
 
   it('does not allow staff status changes to mark a pending order as paid', async () => {
@@ -261,7 +264,10 @@ describe('OrdersService', () => {
         },
         userId,
       ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.ORDER_INVALID_STATUS_TRANSITION,
+    });
 
     expect(transaction.order.update).not.toHaveBeenCalled();
   });
@@ -281,7 +287,8 @@ describe('OrdersService', () => {
             },
           ],
         }),
-        update: jest.fn().mockResolvedValue({
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
           id: orderId,
           status: OrderStatus.CANCELLED,
         }),
@@ -325,14 +332,67 @@ describe('OrdersService', () => {
       },
     });
 
-    expect(transaction.order.update).toHaveBeenCalledWith({
+    expect(transaction.order.updateMany).toHaveBeenCalledWith({
       where: {
         id: orderId,
+        status: OrderStatus.PENDING_PAYMENT,
       },
       data: {
         status: OrderStatus.CANCELLED,
         cancelledAt: expect.any(Date),
       },
     });
+  });
+
+  it('does not release inventory when payment finalization wins the order-state claim', async () => {
+    const orderId = '60000000-0000-4000-8000-000000000001';
+    const transaction = {
+      order: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: orderId,
+          warehouseId,
+          status: OrderStatus.PENDING_PAYMENT,
+          items: [
+            {
+              variantId,
+              quantity: 2,
+            },
+          ],
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findUniqueOrThrow: jest.fn(),
+      },
+      inventory: {
+        findUnique: jest.fn(),
+        updateMany: jest.fn(),
+      },
+      inventoryMovement: {
+        create: jest.fn(),
+      },
+      orderStatusHistory: {
+        create: jest.fn(),
+      },
+    };
+
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(
+      service.cancelOrder(
+        orderId,
+        {
+          reason: 'Manager cancellation',
+        },
+        userId,
+      ),
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.ORDER_STATE_CHANGED,
+    });
+
+    expect(transaction.inventory.findUnique).not.toHaveBeenCalled();
+    expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();
+    expect(transaction.orderStatusHistory.create).not.toHaveBeenCalled();
   });
 });

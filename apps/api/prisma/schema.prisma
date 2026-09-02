@@ -9,45 +9,51 @@ datasource db {
 }
 
 model User {
-  id                                String                        @id @default(uuid()) @db.Uuid
-  phone                             String                        @unique @db.VarChar(20)
-  firstName                         String?                       @db.VarChar(100)
-  lastName                          String?                       @db.VarChar(100)
-  isActive                          Boolean                       @default(true)
-  phoneVerifiedAt                   DateTime?                     @db.Timestamptz(3)
-  lastLoginAt                       DateTime?                     @db.Timestamptz(3)
-  createdAt                         DateTime                      @default(now()) @db.Timestamptz(3)
-  updatedAt                         DateTime                      @updatedAt @db.Timestamptz(3)
-  deletedAt                         DateTime?                     @db.Timestamptz(3)
-  roles                             UserRole[]
-  sessions                          AuthSession[]
-  inventoryMovements                InventoryMovement[]           @relation("InventoryMovementActor")
-  priceChanges                      ProductPriceHistory[]         @relation("ProductPriceHistoryActor")
-  platingRateChanges                PlatingRateHistory[]          @relation("PlatingRateHistoryActor")
-  orders                            Order[]
-  orderStatusChanges                OrderStatusHistory[]          @relation("OrderStatusHistoryActor")
-  addresses                         UserAddress[]
-  shipmentStatusChanges             ShipmentStatusHistory[]       @relation("ShipmentStatusHistoryActor")
-  paymentGatewaySettingChanges      PaymentGatewaySetting[]       @relation("PaymentGatewaySettingUpdater")
-  paymentReconciliationsResolved    PaymentReconciliation[]       @relation("PaymentReconciliationResolver")
-  supplierPayablesSettled           SupplierPayable[]             @relation("SupplierPayableSettler")
-  supplierSettlementsCreated        SupplierSettlement[]          @relation("SupplierSettlementCreator")
-  supplierSettlementsPaid           SupplierSettlement[]          @relation("SupplierSettlementPayer")
-  supplierSettlementsCancelled      SupplierSettlement[]          @relation("SupplierSettlementCanceller")
-  paymentRefundsRequested           PaymentRefund[]               @relation("PaymentRefundRequester")
-  paymentRefundsConfirmed           PaymentRefund[]               @relation("PaymentRefundConfirmer")
-  paymentRefundsCancelled           PaymentRefund[]               @relation("PaymentRefundCanceller")
-  orderReturnsRequested             OrderReturn[]                 @relation("OrderReturnRequester")
-  orderReturnsReceived              OrderReturn[]                 @relation("OrderReturnReceiver")
-  orderReturnsCancelled             OrderReturn[]                 @relation("OrderReturnCanceller")
-  supplierCreditsCreated            SupplierCredit[]              @relation("SupplierCreditCreator")
-  supplierCreditApplicationsApplied SupplierCreditApplication[]   @relation("SupplierCreditApplicationApplier")
-  supplierCreditApplicationsRemoved SupplierCreditApplication[]   @relation("SupplierCreditApplicationRemover")
-  orderCostEntriesCreated           OrderCostEntry[]              @relation("OrderCostEntryCreator")
-  platingFulfillmentsStarted        OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentStarter")
-  platingFulfillmentsCompleted      OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentCompleter")
-  platingFulfillmentsCancelled      OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentCanceller")
-  operationalAlertRecipients        OperationalAlertOutboxEvent[] @relation("OperationalAlertRecipient")
+  id                                  String                        @id @default(uuid()) @db.Uuid
+  phone                               String                        @unique @db.VarChar(20)
+  firstName                           String?                       @db.VarChar(100)
+  lastName                            String?                       @db.VarChar(100)
+  isActive                            Boolean                       @default(true)
+  phoneVerifiedAt                     DateTime?                     @db.Timestamptz(3)
+  lastLoginAt                         DateTime?                     @db.Timestamptz(3)
+  createdAt                           DateTime                      @default(now()) @db.Timestamptz(3)
+  updatedAt                           DateTime                      @updatedAt @db.Timestamptz(3)
+  deletedAt                           DateTime?                     @db.Timestamptz(3)
+  roles                               UserRole[]
+  sessions                            AuthSession[]
+  inventoryMovements                  InventoryMovement[]           @relation("InventoryMovementActor")
+  priceChanges                        ProductPriceHistory[]         @relation("ProductPriceHistoryActor")
+  platingRateChanges                  PlatingRateHistory[]          @relation("PlatingRateHistoryActor")
+  orders                              Order[]
+  orderStatusChanges                  OrderStatusHistory[]          @relation("OrderStatusHistoryActor")
+  addresses                           UserAddress[]
+  shipmentStatusChanges               ShipmentStatusHistory[]       @relation("ShipmentStatusHistoryActor")
+  paymentGatewaySettingChanges        PaymentGatewaySetting[]       @relation("PaymentGatewaySettingUpdater")
+  paymentReconciliationsResolved      PaymentReconciliation[]       @relation("PaymentReconciliationResolver")
+  paymentInitiationRecoveriesResolved PaymentAttempt[]              @relation("PaymentInitiationRecoveryResolver")
+  supplierPayablesSettled             SupplierPayable[]             @relation("SupplierPayableSettler")
+  supplierSettlementsCreated          SupplierSettlement[]          @relation("SupplierSettlementCreator")
+  supplierSettlementsPaid             SupplierSettlement[]          @relation("SupplierSettlementPayer")
+  supplierSettlementsCancelled        SupplierSettlement[]          @relation("SupplierSettlementCanceller")
+  paymentRefundsRequested             PaymentRefund[]               @relation("PaymentRefundRequester")
+  paymentRefundsConfirmed             PaymentRefund[]               @relation("PaymentRefundConfirmer")
+  paymentRefundsCancelled             PaymentRefund[]               @relation("PaymentRefundCanceller")
+  orderReturnsRequested               OrderReturn[]                 @relation("OrderReturnRequester")
+  orderReturnsReceived                OrderReturn[]                 @relation("OrderReturnReceiver")
+  orderReturnsCancelled               OrderReturn[]                 @relation("OrderReturnCanceller")
+  supplierCreditsCreated              SupplierCredit[]              @relation("SupplierCreditCreator")
+  supplierCreditApplicationsApplied   SupplierCreditApplication[]   @relation("SupplierCreditApplicationApplier")
+  supplierCreditApplicationsRemoved   SupplierCreditApplication[]   @relation("SupplierCreditApplicationRemover")
+  orderCostEntriesCreated             OrderCostEntry[]              @relation("OrderCostEntryCreator")
+  platingFulfillmentsStarted          OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentStarter")
+  platingFulfillmentsCompleted        OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentCompleter")
+  platingFulfillmentsCancelled        OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentCanceller")
+  operationalAlertRecipients          OperationalAlertOutboxEvent[] @relation("OperationalAlertRecipient")
+  notificationRecoveriesResolved NotificationOutboxRecovery[]  @relation("NotificationOutboxRecoveryResolver")
+  operationalAlertRecoveriesResolved   OperationalAlertOutboxRecovery[] @relation("OperationalAlertOutboxRecoveryResolver")
+  operationalIncidentsAcknowledged    OperationalIncident[]         @relation("OperationalIncidentAcknowledger")
+  operationalIncidentsAssigned        OperationalIncident[]         @relation("OperationalIncidentAssignee")
+  operationalIncidentActivities       OperationalIncidentActivity[] @relation("OperationalIncidentActivityActor")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -606,6 +612,7 @@ model Order {
   costEntries           OrderCostEntry[]
   platingFulfillment    OrderPlatingFulfillment?
   operationalAlerts     OperationalAlertOutboxEvent[]
+  operationalIncidents  OperationalIncident[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -785,13 +792,34 @@ enum NotificationOutboxEventType {
 enum NotificationOutboxStatus {
   PENDING
   PROCESSING
+  DISPATCHING
   SENT
   FAILED
+  UNKNOWN
+}
+
+enum NotificationOutboxRecoveryResolution {
+  RETRY_APPROVED
+  MARKED_SENT
 }
 
 enum OperationalAlertLevel {
   INITIAL
   ESCALATION
+}
+
+enum OperationalIncidentResolutionSource {
+  AUTO
+}
+
+enum OperationalIncidentActivityType {
+  DETECTED
+  ACKNOWLEDGED
+  ASSIGNED
+  UNASSIGNED
+  NOTE_ADDED
+  RESOLVED
+  REOPENED
 }
 
 enum SupplierPayableStatus {
@@ -881,26 +909,33 @@ model PaymentRefund {
 }
 
 model PaymentAttempt {
-  id                String                 @id @default(uuid()) @db.Uuid
-  paymentId         String                 @db.Uuid
-  idempotencyKey    String                 @unique @db.VarChar(120)
-  provider          String                 @db.VarChar(64)
-  status            PaymentAttemptStatus   @default(CREATED)
-  amountToman       Int
-  authority         String?                @db.VarChar(255)
-  paymentUrl        String?                @db.VarChar(2000)
-  providerReference String?                @db.VarChar(255)
-  failureCode       String?                @db.VarChar(120)
-  failureMessage    String?                @db.VarChar(500)
-  verifiedAt        DateTime?              @db.Timestamptz(3)
-  createdAt         DateTime               @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime               @updatedAt @db.Timestamptz(3)
-  payment           Payment                @relation(fields: [paymentId], references: [id], onDelete: Restrict)
-  reconciliation    PaymentReconciliation?
+  id                                 String                 @id @default(uuid()) @db.Uuid
+  paymentId                          String                 @db.Uuid
+  idempotencyKey                     String                 @unique @db.VarChar(120)
+  provider                           String                 @db.VarChar(64)
+  status                             PaymentAttemptStatus   @default(CREATED)
+  amountToman                        Int
+  authority                          String?                @db.VarChar(255)
+  paymentUrl                         String?                @db.VarChar(2000)
+  providerReference                  String?                @db.VarChar(255)
+  failureCode                        String?                @db.VarChar(120)
+  failureMessage                     String?                @db.VarChar(500)
+  verifiedAt                         DateTime?              @db.Timestamptz(3)
+  initiationRecoveryResolution       String?                @db.VarChar(32)
+  initiationRecoveryNote             String?                @db.VarChar(400)
+  initiationRecoveryResolvedByUserId String?                @db.Uuid
+  initiationRecoveryResolvedAt       DateTime?              @db.Timestamptz(3)
+  createdAt                          DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt                          DateTime               @updatedAt @db.Timestamptz(3)
+  payment                            Payment                @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  reconciliation                     PaymentReconciliation?
+  initiationRecoveryResolvedBy       User?                  @relation("PaymentInitiationRecoveryResolver", fields: [initiationRecoveryResolvedByUserId], references: [id], onDelete: Restrict)
 
   @@unique([provider, authority])
   @@index([paymentId, createdAt])
   @@index([status, createdAt])
+  @@index([initiationRecoveryResolvedByUserId])
+  @@index([initiationRecoveryResolvedAt])
   @@map("payment_attempts")
 }
 
@@ -923,6 +958,7 @@ model PaymentReconciliation {
   reason              String                           @db.VarChar(500)
   status              PaymentReconciliationStatus      @default(OPEN)
   resolution          PaymentReconciliationResolution?
+  externalReference   String?                       @db.VarChar(255)
   resolutionNote      String?                          @db.VarChar(1000)
   resolvedByUserId    String?                          @db.Uuid
   resolvedAt          DateTime?                        @db.Timestamptz(3)
@@ -1109,6 +1145,7 @@ model NotificationOutboxEvent {
   lastError        String?                     @db.VarChar(1000)
   createdAt        DateTime                    @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime                    @updatedAt @db.Timestamptz(3)
+  recoveries       NotificationOutboxRecovery[]
 
   @@index([status, nextAttemptAt])
   @@index([aggregateType, aggregateId, createdAt])
@@ -1138,6 +1175,7 @@ model OperationalAlertOutboxEvent {
   updatedAt           DateTime                 @updatedAt @db.Timestamptz(3)
   order               Order                    @relation(fields: [orderId], references: [id], onDelete: Restrict)
   recipient           User?                    @relation("OperationalAlertRecipient", fields: [recipientUserId], references: [id], onDelete: SetNull)
+  recoveries          OperationalAlertOutboxRecovery[]
 
   @@index([status, nextAttemptAt])
   @@index([orderId, code, createdAt])
@@ -1145,6 +1183,88 @@ model OperationalAlertOutboxEvent {
   @@index([incidentFingerprint])
   @@index([claimedAt])
   @@map("operational_alert_outbox_events")
+}
+
+model NotificationOutboxRecovery {
+  id               String                               @id @default(uuid()) @db.Uuid
+  eventId          String                               @db.Uuid
+  resolution       NotificationOutboxRecoveryResolution
+  note                  String                               @db.VarChar(1000)
+  unknownReasonSnapshot String?                              @db.VarChar(1000)
+  resolvedByUserId      String                               @db.Uuid
+  createdAt        DateTime                             @default(now()) @db.Timestamptz(3)
+  event            NotificationOutboxEvent              @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  resolvedBy       User                                 @relation("NotificationOutboxRecoveryResolver", fields: [resolvedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([eventId, createdAt])
+  @@index([resolvedByUserId, createdAt])
+  @@map("notification_outbox_recoveries")
+}
+
+model OperationalAlertOutboxRecovery {
+  id               String                               @id @default(uuid()) @db.Uuid
+  eventId          String                               @db.Uuid
+  resolution       NotificationOutboxRecoveryResolution
+  note                  String                               @db.VarChar(1000)
+  unknownReasonSnapshot String?                              @db.VarChar(1000)
+  resolvedByUserId      String                               @db.Uuid
+  createdAt        DateTime                             @default(now()) @db.Timestamptz(3)
+  event            OperationalAlertOutboxEvent          @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  resolvedBy       User                                 @relation("OperationalAlertOutboxRecoveryResolver", fields: [resolvedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([eventId, createdAt])
+  @@index([resolvedByUserId, createdAt])
+  @@map("operational_alert_outbox_recoveries")
+}
+
+model OperationalIncident {
+  id                   String                               @id @default(uuid()) @db.Uuid
+  incidentFingerprint  String                               @unique @db.VarChar(180)
+  orderId              String                               @db.Uuid
+  code                 String                               @db.VarChar(80)
+  priority             String                               @db.VarChar(16)
+  incidentAt           DateTime                             @db.Timestamptz(3)
+  dueAt                DateTime?                            @db.Timestamptz(3)
+  firstDetectedAt      DateTime                             @db.Timestamptz(3)
+  lastDetectedAt       DateTime                             @db.Timestamptz(3)
+  acknowledgedAt       DateTime?                            @db.Timestamptz(3)
+  acknowledgedByUserId String?                              @db.Uuid
+  assignedToUserId     String?                              @db.Uuid
+  resolvedAt           DateTime?                            @db.Timestamptz(3)
+  resolutionSource     OperationalIncidentResolutionSource?
+  resolutionNote       String?                              @db.VarChar(1000)
+  snapshot             Json
+  createdAt            DateTime                             @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime                             @updatedAt @db.Timestamptz(3)
+  order                Order                                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  acknowledgedBy       User?                                @relation("OperationalIncidentAcknowledger", fields: [acknowledgedByUserId], references: [id], onDelete: SetNull)
+  assignedTo           User?                                @relation("OperationalIncidentAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  activities           OperationalIncidentActivity[]
+
+  @@index([resolvedAt, priority, lastDetectedAt])
+  @@index([code, resolvedAt, lastDetectedAt])
+  @@index([assignedToUserId, resolvedAt])
+  @@index([acknowledgedByUserId])
+  @@index([orderId, createdAt])
+  @@map("operational_incidents")
+}
+
+model OperationalIncidentActivity {
+  id          String                          @id @default(uuid()) @db.Uuid
+  incidentId  String                          @db.Uuid
+  type        OperationalIncidentActivityType
+  actorUserId String?                         @db.Uuid
+  note        String?                         @db.VarChar(1000)
+  metadata    Json
+  activityKey String?                         @unique @db.VarChar(255)
+  createdAt   DateTime                        @default(now()) @db.Timestamptz(3)
+  incident    OperationalIncident             @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  actor       User?                           @relation("OperationalIncidentActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([incidentId, createdAt])
+  @@index([actorUserId])
+  @@index([type, createdAt])
+  @@map("operational_incident_activities")
 }
 
 model PaymentGatewaySetting {
@@ -1195,6 +1315,9 @@ model Shipment {
   lastProviderStatus      String?                       @db.VarChar(255)
   lastProviderDescription String?                       @db.VarChar(500)
   lastTrackingSyncAt      DateTime?                     @db.Timestamptz(3)
+  trackingAttemptedAt     DateTime?                     @db.Timestamptz(3)
+  trackingSyncToken       String?                       @db.Uuid
+  trackingSyncStartedAt   DateTime?                     @db.Timestamptz(3)
   shippedAt               DateTime?                     @db.Timestamptz(3)
   deliveredAt             DateTime?                     @db.Timestamptz(3)
   createdAt               DateTime                      @default(now()) @db.Timestamptz(3)
@@ -1203,6 +1326,8 @@ model Shipment {
   statusHistory           ShipmentStatusHistory[]
 
   @@index([status, createdAt])
+  @@index([status, trackingAttemptedAt])
+  @@index([trackingSyncStartedAt])
   @@index([providerCreationState, creationAttemptedAt])
   @@index([provider, providerShipmentId])
   @@index([trackingCode])

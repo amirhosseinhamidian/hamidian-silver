@@ -42,4 +42,24 @@ describe('HealthService', () => {
 
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
   });
+
+  it('reports readiness after the database probe succeeds', async () => {
+    prisma.$queryRaw.mockResolvedValue([{ '?column?': 1 }]);
+
+    await expect(service.checkReadiness()).resolves.toEqual({
+      status: 'ok',
+      service: 'hamidian-silver-api',
+      checks: {
+        database: 'ok',
+      },
+    });
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects readiness when the database probe fails', async () => {
+    prisma.$queryRaw.mockRejectedValue(new Error('database unavailable'));
+
+    await expect(service.checkReadiness()).rejects.toThrow('database unavailable');
+  });
 });

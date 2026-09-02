@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   OrderCostEntryType,
@@ -133,6 +134,19 @@ export class PlatingFulfillmentService {
       });
 
       if (claimed.count !== 1) {
+        const current = await transaction.orderPlatingFulfillment.findUnique({
+          where: {
+            id: fulfillment.id,
+          },
+          select: {
+            status: true,
+          },
+        });
+
+        if (current?.status === PlatingFulfillmentStatus.IN_PROGRESS) {
+          return this.loadOperationalFulfillment(transaction, fulfillment.id);
+        }
+
         throw new ConflictException('Plating fulfillment state changed; reload and retry.');
       }
 
@@ -141,7 +155,7 @@ export class PlatingFulfillmentService {
   }
 
   async complete(orderId: string, actorUserId: string, dto: CompletePlatingFulfillmentDto) {
-    if (!Number.isSafeInteger(dto.actualCostToman) || dto.actualCostToman < 0) {
+    if (!isNonNegativeTomanInt(dto.actualCostToman)) {
       throw new BadRequestException('Actual plating cost is invalid.');
     }
 
@@ -208,6 +222,30 @@ export class PlatingFulfillmentService {
       });
 
       if (claimed.count !== 1) {
+        const current = await transaction.orderPlatingFulfillment.findUnique({
+          where: {
+            id: fulfillment.id,
+          },
+          select: {
+            status: true,
+            actualCostToman: true,
+            externalReference: true,
+          },
+        });
+
+        if (current?.status === PlatingFulfillmentStatus.COMPLETED) {
+          if (
+            current.actualCostToman === dto.actualCostToman &&
+            current.externalReference === (dto.externalReference ?? null)
+          ) {
+            return this.loadFinancialFulfillment(transaction, fulfillment.id);
+          }
+
+          throw new ConflictException(
+            'Plating fulfillment was completed concurrently with different financial data.',
+          );
+        }
+
         throw new ConflictException('Plating fulfillment state changed; reload and retry.');
       }
 
@@ -265,6 +303,25 @@ export class PlatingFulfillmentService {
       });
 
       if (claimed.count !== 1) {
+        const current = await transaction.orderPlatingFulfillment.findUnique({
+          where: {
+            id: fulfillment.id,
+          },
+          select: {
+            status: true,
+          },
+        });
+
+        if (current?.status === PlatingFulfillmentStatus.CANCELLED) {
+          return this.loadOperationalFulfillment(transaction, fulfillment.id);
+        }
+
+        if (current?.status === PlatingFulfillmentStatus.COMPLETED) {
+          throw new ConflictException(
+            'Completed plating fulfillment cannot be cancelled; use a financial reversal if needed.',
+          );
+        }
+
         throw new ConflictException('Plating fulfillment state changed; reload and retry.');
       }
 

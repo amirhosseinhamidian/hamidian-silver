@@ -89,8 +89,9 @@ export class OrderExpirationService {
       }
 
       if (
-        order.payment?.status === PaymentStatus.PAID ||
-        order.payment?.status === PaymentStatus.RECONCILIATION_REQUIRED
+        order.payment &&
+        order.payment.status !== PaymentStatus.PENDING &&
+        order.payment.status !== PaymentStatus.CANCELLED
       ) {
         return false;
       }
@@ -102,6 +103,15 @@ export class OrderExpirationService {
           reservationExpiresAt: {
             lte: now,
           },
+          payment: order.payment
+            ? {
+                is: {
+                  status: order.payment.status,
+                },
+              }
+            : {
+                is: null,
+              },
         },
         data: {
           status: OrderStatus.EXPIRED,
@@ -114,7 +124,7 @@ export class OrderExpirationService {
 
       await this.releaseReservedInventory(transaction, order.warehouseId, order.id, order.items);
 
-      await transaction.payment.updateMany({
+      const paymentCancelled = await transaction.payment.updateMany({
         where: {
           orderId: order.id,
           status: PaymentStatus.PENDING,
@@ -123,6 +133,26 @@ export class OrderExpirationService {
           status: PaymentStatus.CANCELLED,
         },
       });
+
+      if (order.payment?.status === PaymentStatus.PENDING && paymentCancelled.count !== 1) {
+        const currentPayment = await transaction.payment.findUnique({
+          where: {
+            orderId: order.id,
+          },
+          select: {
+            status: true,
+          },
+        });
+
+        if (
+          currentPayment?.status !== PaymentStatus.CANCELLED &&
+          currentPayment?.status !== PaymentStatus.RECONCILIATION_REQUIRED
+        ) {
+          throw new ConflictException(
+            'Payment state changed while expiring the order; expiration was rolled back.',
+          );
+        }
+      }
 
       await transaction.orderStatusHistory.create({
         data: {

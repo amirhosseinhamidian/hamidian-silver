@@ -1,5 +1,6 @@
 import {
   OrderStatus,
+  PaymentStatus,
   PlatingFulfillmentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
@@ -70,6 +71,10 @@ export function buildOperationsWorkItems(
   input: OperationsWorkQueueInput,
   now = new Date(),
 ): OperationsWorkItem[] {
+  if (input.payment?.status !== PaymentStatus.PAID) {
+    return [];
+  }
+
   const readiness = buildFulfillmentReadiness(input);
   const items: OperationsWorkItem[] = [];
 

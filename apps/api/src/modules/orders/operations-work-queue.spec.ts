@@ -1,5 +1,6 @@
 import {
   OrderStatus,
+  PaymentStatus,
   PlatingFulfillmentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
@@ -19,6 +20,9 @@ describe('operations work queue derivation', () => {
       orderNumber: 'HS-050',
       status: OrderStatus.PROCESSING,
       paidAt: new Date('2026-08-28T12:00:00.000Z'),
+      payment: {
+        status: PaymentStatus.PAID,
+      },
       platingTotalToman: 0,
       items: [],
       platingFulfillment: null,
@@ -128,6 +132,17 @@ describe('operations work queue derivation', () => {
         priority: 'MEDIUM',
       }),
     ]);
+  });
+
+  it('does not surface operational work after payment leaves the settled state', () => {
+    const input = baseInput();
+    input.platingTotalToman = 300_000;
+    input.items = [{ platingLeadTimeDays: 2 }];
+    input.payment = {
+      status: PaymentStatus.RECONCILIATION_REQUIRED,
+    };
+
+    expect(buildOperationsWorkItems(input, now)).toEqual([]);
   });
 
   it('summarizes work items without double-counting unique orders', () => {

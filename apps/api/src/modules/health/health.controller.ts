@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { Public } from '../auth/public.decorator';
 import { HealthService } from './health.service';
 
@@ -10,6 +10,20 @@ export class HealthController {
   @Get()
   check() {
     return this.healthService.checkApplication();
+  }
+
+  @Get('live')
+  checkLiveness() {
+    return this.healthService.checkApplication();
+  }
+
+  @Get('ready')
+  async checkReadiness() {
+    try {
+      return await this.healthService.checkReadiness();
+    } catch {
+      throw new ServiceUnavailableException('Service is not ready.');
+    }
   }
 
   @Get('database')

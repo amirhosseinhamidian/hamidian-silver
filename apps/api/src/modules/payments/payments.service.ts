@@ -1,12 +1,15 @@
 import {
-  BadRequestException,
+  BadGatewayException,
   ConflictException,
   Inject,
   Injectable,
-  NotFoundException,
   Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DomainException } from '../../common/errors/domain-exception';
+import { ErrorCode } from '../../common/errors/error-codes';
+import { lockOrderRowForUpdate } from '../../common/order-row-lock';
+import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   InventoryMovementType,
@@ -23,6 +26,7 @@ import { OrderFinanceService } from '../finance/order-finance.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PAYMENT_GATEWAY_CODES } from './payment-gateway.constants';
+import { isPaymentInitiationUnknownError } from './payment-initiation-unknown.error';
 import {
   PAYMENT_GATEWAY,
   type InitiateGatewayPaymentInput,
@@ -103,7 +107,7 @@ export class PaymentsService {
         existing.payment.order.userId !== userId ||
         (existing.provider && existing.provider !== provider)
       ) {
-        throw new ConflictException('Idempotency key is already in use.');
+        throw new DomainException(ErrorCode.PAYMENT_FAILED, 'Idempotency key is already in use.');
       }
 
       context = {
@@ -152,62 +156,124 @@ export class PaymentsService {
     }
 
     if (context.status === PaymentAttemptStatus.FAILED) {
-      throw new ConflictException(
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
         'This idempotency key belongs to a failed payment attempt. Use a new key.',
       );
     }
 
     if (!context.isNew && context.status === PaymentAttemptStatus.CREATED) {
-      throw new ConflictException('Payment attempt is still being initialized.');
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
+        'Payment attempt is still being initialized.',
+      );
     }
 
     const callbackUrl = `${this.callbackBaseUrl}/${context.attemptId}`;
 
+    const gatewayInput: InitiateGatewayPaymentInput = {
+      attemptId: context.attemptId,
+      orderNumber: context.orderNumber,
+      amountRial: this.tomanToRial(context.amountToman),
+      callbackUrl,
+    };
+
+    if (this.gateway.providerCode === 'registry') {
+      gatewayInput.provider = context.provider;
+    }
+
+    let initiated: Awaited<ReturnType<PaymentGateway['initiate']>>;
+
     try {
-      const gatewayInput: InitiateGatewayPaymentInput = {
-        attemptId: context.attemptId,
-        orderNumber: context.orderNumber,
-        amountRial: this.tomanToRial(context.amountToman),
-        callbackUrl,
-      };
-
-      if (this.gateway.providerCode === 'registry') {
-        gatewayInput.provider = context.provider;
-      }
-
-      const initiated = await this.gateway.initiate(gatewayInput);
-
-      const updated = await this.prisma.paymentAttempt.update({
-        where: {
-          id: context.attemptId,
-        },
-        data: {
-          authority: initiated.authority,
-          paymentUrl: initiated.paymentUrl,
-          status: PaymentAttemptStatus.REDIRECTED,
-        },
-      });
-
-      return {
-        attemptId: updated.id,
-        status: updated.status,
-        authority: updated.authority,
-        paymentUrl: updated.paymentUrl,
-      };
+      initiated = await this.gateway.initiate(gatewayInput);
     } catch (error) {
-      await this.prisma.paymentAttempt.updateMany({
-        where: {
-          id: context.attemptId,
-          status: PaymentAttemptStatus.CREATED,
-        },
-        data: {
-          status: PaymentAttemptStatus.FAILED,
-          failureMessage: 'Payment initiation failed.',
-        },
-      });
+      if (!isPaymentInitiationUnknownError(error)) {
+        await this.prisma.paymentAttempt.updateMany({
+          where: {
+            id: context.attemptId,
+            status: PaymentAttemptStatus.CREATED,
+          },
+          data: {
+            status: PaymentAttemptStatus.FAILED,
+            failureMessage: 'Payment initiation failed.',
+          },
+        });
+      }
 
       throw error;
     }
+
+    this.assertGatewayInitiationResult(initiated);
+
+    const persisted = await this.prisma.paymentAttempt.updateMany({
+      where: {
+        id: context.attemptId,
+        status: PaymentAttemptStatus.CREATED,
+      },
+      data: {
+        authority: initiated.authority,
+        paymentUrl: initiated.paymentUrl,
+        status: PaymentAttemptStatus.REDIRECTED,
+        failureMessage: null,
+      },
+    });
+
+    if (persisted.count === 1) {
+      return {
+        attemptId: context.attemptId,
+        status: PaymentAttemptStatus.REDIRECTED,
+        authority: initiated.authority,
+        paymentUrl: initiated.paymentUrl,
+      };
+    }
+
+    const current = await this.prisma.paymentAttempt.findUnique({
+      where: {
+        id: context.attemptId,
+      },
+    });
+
+    if (
+      current?.status === PaymentAttemptStatus.REDIRECTED &&
+      current.authority === initiated.authority &&
+      current.paymentUrl === initiated.paymentUrl
+    ) {
+      return {
+        attemptId: current.id,
+        status: current.status,
+        authority: current.authority,
+        paymentUrl: current.paymentUrl,
+      };
+    }
+
+    if (current?.status === PaymentAttemptStatus.VERIFIED) {
+      return {
+        attemptId: current.id,
+        status: current.status,
+        alreadyPaid: true,
+      };
+    }
+
+    if (current?.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED) {
+      return {
+        attemptId: current.id,
+        status: current.status,
+        reconciliationRequired: true,
+      };
+    }
+
+    if (current?.status === PaymentAttemptStatus.RECONCILED) {
+      return {
+        attemptId: current.id,
+        status: current.status,
+        reconciled: true,
+      };
+    }
+
+    throw new DomainException(
+      ErrorCode.PAYMENT_FAILED,
+      'Payment attempt state changed while storing the gateway initiation result.',
+    );
   }
 
   async verifyCallback(
@@ -229,14 +295,10 @@ export class PaymentsService {
     });
 
     if (!attempt) {
-      throw new NotFoundException('Payment attempt was not found.');
+      throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment attempt was not found.');
     }
 
-    if (
-      attempt.status === PaymentAttemptStatus.VERIFIED ||
-      attempt.payment.status === PaymentStatus.PAID ||
-      attempt.payment.order.status === OrderStatus.PAID
-    ) {
+    if (attempt.status === PaymentAttemptStatus.VERIFIED) {
       return {
         success: true,
         alreadyVerified: true,
@@ -245,10 +307,7 @@ export class PaymentsService {
       };
     }
 
-    if (
-      attempt.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED ||
-      attempt.payment.status === PaymentStatus.RECONCILIATION_REQUIRED
-    ) {
+    if (attempt.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED) {
       return {
         success: true,
         reconciliationRequired: true,
@@ -257,10 +316,7 @@ export class PaymentsService {
       };
     }
 
-    if (
-      attempt.status === PaymentAttemptStatus.RECONCILED ||
-      attempt.payment.status === PaymentStatus.REFUNDED
-    ) {
+    if (attempt.status === PaymentAttemptStatus.RECONCILED) {
       return {
         success: true,
         reconciled: true,
@@ -270,7 +326,10 @@ export class PaymentsService {
     }
 
     if (!attempt.authority || attempt.authority !== authority) {
-      throw new BadRequestException('Payment authority does not match.');
+      throw new DomainException(
+        ErrorCode.PAYMENT_CALLBACK_INVALID,
+        'Payment authority does not match.',
+      );
     }
 
     const gatewayInput: VerifyGatewayPaymentInput & {
@@ -291,12 +350,12 @@ export class PaymentsService {
     const verification = await this.gateway.verify(gatewayInput);
 
     if (!verification.success) {
-      await this.prisma.paymentAttempt.updateMany({
+      this.assertGatewayFailureResult(verification.code, verification.message);
+
+      const failed = await this.prisma.paymentAttempt.updateMany({
         where: {
           id: attempt.id,
-          status: {
-            not: PaymentAttemptStatus.VERIFIED,
-          },
+          status: attempt.status,
         },
         data: {
           status: PaymentAttemptStatus.FAILED,
@@ -305,8 +364,57 @@ export class PaymentsService {
         },
       });
 
-      throw new BadRequestException('Payment verification failed.');
+      if (failed.count === 1) {
+        throw new DomainException(ErrorCode.PAYMENT_FAILED, 'Payment verification failed.');
+      }
+
+      const current = await this.prisma.paymentAttempt.findUnique({
+        where: {
+          id: attempt.id,
+        },
+        include: {
+          payment: {
+            include: {
+              order: true,
+            },
+          },
+        },
+      });
+
+      if (current?.status === PaymentAttemptStatus.VERIFIED) {
+        return {
+          success: true,
+          alreadyVerified: true,
+          orderId: current.payment.orderId,
+          referenceId: current.providerReference,
+        };
+      }
+
+      if (current?.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED) {
+        return {
+          success: true,
+          reconciliationRequired: true,
+          orderId: current.payment.orderId,
+          referenceId: current.providerReference,
+        };
+      }
+
+      if (current?.status === PaymentAttemptStatus.RECONCILED) {
+        return {
+          success: true,
+          reconciled: true,
+          orderId: current.payment.orderId,
+          referenceId: current.providerReference,
+        };
+      }
+
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
+        'Payment attempt state changed while processing a verification failure.',
+      );
     }
+
+    this.assertGatewayVerificationResult(verification.referenceId, verification.actualFeeToman);
 
     try {
       return await this.finalizeVerifiedPayment(
@@ -336,7 +444,15 @@ export class PaymentsService {
           userId,
         },
       },
-      include: {
+      select: {
+        id: true,
+        orderId: true,
+        status: true,
+        amountToman: true,
+        refundedAmountToman: true,
+        paidAt: true,
+        createdAt: true,
+        updatedAt: true,
         attempts: {
           orderBy: {
             createdAt: 'desc',
@@ -346,7 +462,6 @@ export class PaymentsService {
             provider: true,
             status: true,
             amountToman: true,
-            authority: true,
             providerReference: true,
             verifiedAt: true,
             createdAt: true,
@@ -360,7 +475,6 @@ export class PaymentsService {
             id: true,
             status: true,
             amountToman: true,
-            externalReference: true,
             confirmedAt: true,
             cancelledAt: true,
             createdAt: true,
@@ -370,7 +484,7 @@ export class PaymentsService {
     });
 
     if (!payment) {
-      throw new NotFoundException('Payment was not found.');
+      throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment was not found.');
     }
 
     return payment;
@@ -383,6 +497,8 @@ export class PaymentsService {
     provider: string,
   ): Promise<InitiationContext> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockOrderRowForUpdate(transaction, orderId);
+
       const order = await transaction.order.findFirst({
         where: {
           id: orderId,
@@ -398,7 +514,7 @@ export class PaymentsService {
       });
 
       if (!order) {
-        throw new NotFoundException('Order was not found.');
+        throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
       }
 
       if (order.status === OrderStatus.PAID) {
@@ -427,15 +543,18 @@ export class PaymentsService {
           };
         }
 
-        throw new ConflictException('Order is already paid.');
+        throw new DomainException(ErrorCode.PAYMENT_ALREADY_CONFIRMED, 'Order is already paid.');
       }
 
       if (order.status !== OrderStatus.PENDING_PAYMENT) {
-        throw new ConflictException('Order is not payable.');
+        throw new DomainException(ErrorCode.PAYMENT_FAILED, 'Order is not payable.');
       }
 
       if (order.reservationExpiresAt <= new Date()) {
-        throw new ConflictException('Order inventory reservation has expired.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
+          'Order inventory reservation has expired.',
+        );
       }
 
       const payment = await transaction.payment.upsert({
@@ -450,7 +569,10 @@ export class PaymentsService {
       });
 
       if (payment.amountToman !== order.grandTotalToman) {
-        throw new ConflictException('Order total no longer matches payment amount.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
+          'Order total no longer matches payment amount.',
+        );
       }
 
       const existing = await transaction.paymentAttempt.findUnique({
@@ -464,7 +586,7 @@ export class PaymentsService {
           existing.paymentId !== payment.id ||
           (existing.provider && existing.provider !== provider)
         ) {
-          throw new ConflictException('Idempotency key is already in use.');
+          throw new DomainException(ErrorCode.PAYMENT_FAILED, 'Idempotency key is already in use.');
         }
 
         return {
@@ -526,20 +648,19 @@ export class PaymentsService {
       });
 
       if (!attempt) {
-        throw new NotFoundException('Payment attempt was not found.');
+        throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment attempt was not found.');
       }
 
       if (attempt.authority !== authority) {
-        throw new BadRequestException('Payment authority does not match.');
+        throw new DomainException(
+          ErrorCode.PAYMENT_CALLBACK_INVALID,
+          'Payment authority does not match.',
+        );
       }
 
       const order = attempt.payment.order;
 
-      if (
-        attempt.status === PaymentAttemptStatus.VERIFIED ||
-        attempt.payment.status === PaymentStatus.PAID ||
-        order.status === OrderStatus.PAID
-      ) {
+      if (attempt.status === PaymentAttemptStatus.VERIFIED) {
         return {
           success: true,
           alreadyVerified: true,
@@ -548,12 +669,42 @@ export class PaymentsService {
         };
       }
 
+      if (attempt.status !== PaymentAttemptStatus.REDIRECTED) {
+        return this.recordPaymentReconciliationInTransaction(
+          transaction,
+          attempt.id,
+          referenceId,
+          `Gateway verification completed after payment attempt reached ${attempt.status}.`,
+        );
+      }
+
       if (order.status !== OrderStatus.PENDING_PAYMENT) {
         return this.recordPaymentReconciliationInTransaction(
           transaction,
           attempt.id,
           referenceId,
           `Gateway verified payment after order reached ${order.status}.`,
+        );
+      }
+
+      if (attempt.payment.status !== PaymentStatus.PENDING) {
+        return this.recordPaymentReconciliationInTransaction(
+          transaction,
+          attempt.id,
+          referenceId,
+          `Gateway verified payment while payment aggregate was ${attempt.payment.status}.`,
+        );
+      }
+
+      if (
+        attempt.amountToman !== attempt.payment.amountToman ||
+        attempt.payment.amountToman !== order.grandTotalToman
+      ) {
+        return this.recordPaymentReconciliationInTransaction(
+          transaction,
+          attempt.id,
+          referenceId,
+          'Verified payment amount snapshots do not match the Payment and Order totals.',
         );
       }
 
@@ -570,24 +721,6 @@ export class PaymentsService {
       });
 
       if (claimed.count !== 1) {
-        const currentOrder = await transaction.order.findUnique({
-          where: {
-            id: order.id,
-          },
-          select: {
-            status: true,
-          },
-        });
-
-        if (currentOrder?.status === OrderStatus.PAID) {
-          return {
-            success: true,
-            alreadyVerified: true,
-            orderId: order.id,
-            referenceId,
-          };
-        }
-
         return this.recordPaymentReconciliationInTransaction(
           transaction,
           attempt.id,
@@ -608,19 +741,10 @@ export class PaymentsService {
         },
       });
 
-      await transaction.payment.update({
-        where: {
-          id: attempt.paymentId,
-        },
-        data: {
-          status: PaymentStatus.PAID,
-          paidAt,
-        },
-      });
-
-      await transaction.paymentAttempt.update({
+      const attemptFinalized = await transaction.paymentAttempt.updateMany({
         where: {
           id: attempt.id,
+          status: attempt.status,
         },
         data: {
           status: PaymentAttemptStatus.VERIFIED,
@@ -630,6 +754,25 @@ export class PaymentsService {
           failureMessage: null,
         },
       });
+
+      if (attemptFinalized.count !== 1) {
+        throw new ConflictException('Payment attempt state changed during finalization.');
+      }
+
+      const paymentFinalized = await transaction.payment.updateMany({
+        where: {
+          id: attempt.paymentId,
+          status: attempt.payment.status,
+        },
+        data: {
+          status: PaymentStatus.PAID,
+          paidAt,
+        },
+      });
+
+      if (paymentFinalized.count !== 1) {
+        throw new ConflictException('Payment state changed during finalization.');
+      }
 
       await this.createSupplierPayables(transaction, order.id, order.items);
 
@@ -710,14 +853,10 @@ export class PaymentsService {
     });
 
     if (!attempt) {
-      throw new NotFoundException('Payment attempt was not found.');
+      throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment attempt was not found.');
     }
 
-    if (
-      attempt.status === PaymentAttemptStatus.VERIFIED ||
-      attempt.payment.status === PaymentStatus.PAID ||
-      attempt.payment.order.status === OrderStatus.PAID
-    ) {
+    if (attempt.status === PaymentAttemptStatus.VERIFIED) {
       return {
         success: true,
         alreadyVerified: true,
@@ -728,8 +867,7 @@ export class PaymentsService {
 
     if (
       attempt.reconciliation?.status === PaymentReconciliationStatus.RESOLVED ||
-      attempt.status === PaymentAttemptStatus.RECONCILED ||
-      attempt.payment.status === PaymentStatus.REFUNDED
+      attempt.status === PaymentAttemptStatus.RECONCILED
     ) {
       return {
         success: true,
@@ -739,7 +877,118 @@ export class PaymentsService {
       };
     }
 
+    if (
+      attempt.reconciliation?.status === PaymentReconciliationStatus.OPEN &&
+      attempt.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED
+    ) {
+      return {
+        success: true,
+        reconciliationRequired: true,
+        reconciliationId: attempt.reconciliation.id,
+        orderId: attempt.payment.orderId,
+        referenceId: attempt.providerReference ?? referenceId,
+      };
+    }
+
+    const preserveSettledPayment =
+      attempt.payment.status === PaymentStatus.PAID ||
+      attempt.payment.status === PaymentStatus.PARTIALLY_REFUNDED ||
+      attempt.payment.status === PaymentStatus.REFUNDED;
+
     const verifiedAt = attempt.verifiedAt ?? new Date();
+    const attemptClaimed = await transaction.paymentAttempt.updateMany({
+      where: {
+        id: attempt.id,
+        status: attempt.status,
+      },
+      data: {
+        status: PaymentAttemptStatus.RECONCILIATION_REQUIRED,
+        providerReference: referenceId,
+        verifiedAt,
+        failureCode: null,
+        failureMessage: null,
+      },
+    });
+
+    if (attemptClaimed.count !== 1) {
+      const current = await transaction.paymentAttempt.findUnique({
+        where: {
+          id: attempt.id,
+        },
+        include: {
+          reconciliation: true,
+          payment: {
+            include: {
+              order: {
+                select: {
+                  id: true,
+                  status: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (current?.status === PaymentAttemptStatus.VERIFIED) {
+        return {
+          success: true,
+          alreadyVerified: true,
+          orderId: current.payment.orderId,
+          referenceId: current.providerReference ?? referenceId,
+        };
+      }
+
+      if (
+        current?.reconciliation?.status === PaymentReconciliationStatus.OPEN &&
+        current.status === PaymentAttemptStatus.RECONCILIATION_REQUIRED
+      ) {
+        return {
+          success: true,
+          reconciliationRequired: true,
+          reconciliationId: current.reconciliation.id,
+          orderId: current.payment.orderId,
+          referenceId: current.providerReference ?? referenceId,
+        };
+      }
+
+      if (
+        current?.reconciliation?.status === PaymentReconciliationStatus.RESOLVED ||
+        current?.status === PaymentAttemptStatus.RECONCILED
+      ) {
+        return {
+          success: true,
+          reconciled: true,
+          orderId: current.payment.orderId,
+          referenceId: current.providerReference ?? referenceId,
+        };
+      }
+
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
+        'Payment attempt state changed while recording reconciliation.',
+      );
+    }
+
+    if (!preserveSettledPayment) {
+      const paymentClaimed = await transaction.payment.updateMany({
+        where: {
+          id: attempt.paymentId,
+          status: attempt.payment.status,
+        },
+        data: {
+          status: PaymentStatus.RECONCILIATION_REQUIRED,
+        },
+      });
+
+      if (paymentClaimed.count !== 1) {
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
+          'Payment state changed while recording reconciliation.',
+        );
+      }
+    }
+
     const reconciliation = await transaction.paymentReconciliation.upsert({
       where: {
         paymentAttemptId: attempt.id,
@@ -755,28 +1004,6 @@ export class PaymentsService {
         amountToman: attempt.amountToman,
         detectedOrderStatus: attempt.payment.order.status,
         reason,
-      },
-    });
-
-    await transaction.paymentAttempt.update({
-      where: {
-        id: attempt.id,
-      },
-      data: {
-        status: PaymentAttemptStatus.RECONCILIATION_REQUIRED,
-        providerReference: referenceId,
-        verifiedAt,
-        failureCode: null,
-        failureMessage: null,
-      },
-    });
-
-    await transaction.payment.update({
-      where: {
-        id: attempt.paymentId,
-      },
-      data: {
-        status: PaymentStatus.RECONCILIATION_REQUIRED,
       },
     });
 
@@ -856,7 +1083,7 @@ export class PaymentsService {
 
       const amountToman = unitSupplierPriceToman * item.quantity;
 
-      if (!Number.isSafeInteger(amountToman) || amountToman < 0) {
+      if (!isNonNegativeTomanInt(amountToman)) {
         throw new ConflictException('Supplier payable amount exceeds the supported range.');
       }
 
@@ -947,9 +1174,57 @@ export class PaymentsService {
     }
   }
 
+  private assertGatewayInitiationResult(
+    result: Awaited<ReturnType<PaymentGateway['initiate']>>,
+  ): void {
+    this.assertGatewayString(result.authority, 'Payment gateway authority', 255);
+    this.assertGatewayString(result.paymentUrl, 'Payment gateway payment URL', 2000);
+
+    let paymentUrl: URL;
+
+    try {
+      paymentUrl = new URL(result.paymentUrl);
+    } catch {
+      throw new BadGatewayException('Payment gateway payment URL is invalid.');
+    }
+
+    if (paymentUrl.protocol !== 'https:' && paymentUrl.protocol !== 'http:') {
+      throw new BadGatewayException('Payment gateway payment URL is invalid.');
+    }
+  }
+
+  private assertGatewayVerificationResult(referenceId: string, actualFeeToman?: number): void {
+    this.assertGatewayString(referenceId, 'Payment gateway reference ID', 255);
+
+    if (actualFeeToman !== undefined && !isNonNegativeTomanInt(actualFeeToman)) {
+      throw new BadGatewayException('Payment gateway actual fee is invalid.');
+    }
+  }
+
+  private assertGatewayFailureResult(code?: string, message?: string): void {
+    if (code !== undefined) {
+      this.assertGatewayString(code, 'Payment gateway failure code', 120);
+    }
+
+    if (message !== undefined) {
+      this.assertGatewayString(message, 'Payment gateway failure message', 500);
+    }
+  }
+
+  private assertGatewayString(value: string, label: string, maxLength: number): void {
+    if (
+      typeof value !== 'string' ||
+      value.length === 0 ||
+      value.length > maxLength ||
+      value.trim() !== value
+    ) {
+      throw new BadGatewayException(`${label} is invalid.`);
+    }
+  }
+
   private tomanToRial(amountToman: number): string {
     if (!Number.isSafeInteger(amountToman) || amountToman < 0) {
-      throw new BadRequestException('Payment amount is invalid.');
+      throw new DomainException(ErrorCode.PAYMENT_FAILED, 'Payment amount is invalid.');
     }
 
     return (BigInt(amountToman) * 10n).toString();
