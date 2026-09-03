@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { calculatePlatingPriceToman } from '../../common/plating-price';
 import { ProductStatus, SizeMode } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
@@ -782,6 +783,24 @@ export class CatalogService {
             id: true,
             name: true,
             weightGrams: true,
+            platingEligible: true,
+            platingOptions: {
+              where: {
+                isActive: true,
+                platingRate: {
+                  isActive: true,
+                },
+              },
+              select: {
+                platingRate: {
+                  select: {
+                    type: true,
+                    pricePerGramToman: true,
+                    leadTimeDays: true,
+                  },
+                },
+              },
+            },
             size: {
               select: {
                 id: true,
@@ -839,6 +858,20 @@ export class CatalogService {
 
         return total + Math.max(0, inventory.onHand - inventory.reserved);
       }, 0);
+      const weightGrams = variant.weightGrams;
+      const platingOptions =
+        variant.platingEligible && weightGrams
+          ? variant.platingOptions
+              .map(({ platingRate }) => ({
+                type: platingRate.type,
+                unitPriceToman: calculatePlatingPriceToman(
+                  weightGrams.toString(),
+                  platingRate.pricePerGramToman,
+                ),
+                leadTimeDays: platingRate.leadTimeDays,
+              }))
+              .sort((left, right) => left.type.localeCompare(right.type))
+          : [];
 
       return {
         id: variant.id,
@@ -854,6 +887,7 @@ export class CatalogService {
             : null,
         availableQuantity,
         isAvailable: availableQuantity > 0,
+        platingOptions,
       };
     });
     const availableQuantity = variants.reduce(

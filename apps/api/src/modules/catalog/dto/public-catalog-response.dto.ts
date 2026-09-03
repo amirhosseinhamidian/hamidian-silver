@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { SizeMode } from '../../../generated/prisma/enums';
+import { PlatingType, SizeMode } from '../../../generated/prisma/enums';
 
 export class PublicCatalogMediaDto {
   @ApiProperty({ type: String, nullable: true, format: 'uri' })
@@ -59,6 +59,14 @@ export class PublicCatalogSizeDto {
   label!: string;
 }
 
+export class PublicCatalogPlatingOptionDto {
+  @ApiProperty({ enum: PlatingType })
+  type!: PlatingType;
+
+  unitPriceToman!: number;
+  leadTimeDays!: number;
+}
+
 export class PublicCatalogVariantDto {
   id!: string;
 
@@ -73,6 +81,9 @@ export class PublicCatalogVariantDto {
 
   availableQuantity!: number;
   isAvailable!: boolean;
+
+  @ApiProperty({ type: () => PublicCatalogPlatingOptionDto, isArray: true })
+  platingOptions!: PublicCatalogPlatingOptionDto[];
 }
 
 export class PublicCatalogProductSummaryDto {

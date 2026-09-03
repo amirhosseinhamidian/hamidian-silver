@@ -1998,10 +1998,17 @@ export interface components {
             code: string;
             label: string;
         };
+        PublicCatalogPlatingOptionDto: {
+            /** @enum {string} */
+            type: "GOLD" | "RHODIUM";
+            unitPriceToman: number;
+            leadTimeDays: number;
+        };
         PublicCatalogVariantDto: {
             name: string | null;
             weightGrams: number | null;
             size: components["schemas"]["PublicCatalogSizeDto"] | null;
+            platingOptions: components["schemas"]["PublicCatalogPlatingOptionDto"][];
             id: string;
             availableQuantity: number;
             isAvailable: boolean;

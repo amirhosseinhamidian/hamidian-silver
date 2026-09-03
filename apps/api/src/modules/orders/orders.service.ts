@@ -3,7 +3,8 @@ import { DomainException } from '../../common/errors/domain-exception';
 
 import { ErrorCode } from '../../common/errors/error-codes';
 import { randomUUID } from 'node:crypto';
-import { isNonNegativeTomanInt, TOMAN_INT_MAX } from '../../common/toman';
+import { calculatePlatingPriceToman } from '../../common/plating-price';
+import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   OrderStatus,
@@ -674,7 +675,7 @@ export class OrdersService {
       platingWeightGrams = variant.weightGrams.toString();
       platingRateToman = option.platingRate.pricePerGramToman;
       platingLeadTimeDays = option.platingRate.leadTimeDays;
-      unitPlatingPriceToman = this.calculatePlatingPrice(platingWeightGrams, platingRateToman);
+      unitPlatingPriceToman = calculatePlatingPriceToman(platingWeightGrams, platingRateToman);
     }
 
     const unitSalePriceToman = variant.product.salePriceToman;
@@ -767,20 +768,6 @@ export class OrdersService {
         },
       });
     }
-  }
-
-  private calculatePlatingPrice(weightGrams: string, pricePerGramToman: number): number {
-    const [wholePart, fractionPart = ''] = weightGrams.split('.');
-    const normalizedFraction = fractionPart.padEnd(3, '0').slice(0, 3);
-    const milliGrams = BigInt(wholePart) * 1000n + BigInt(normalizedFraction || '0');
-    const totalMilliToman = milliGrams * BigInt(pricePerGramToman);
-    const roundedToman = (totalMilliToman + 500n) / 1000n;
-
-    if (roundedToman > BigInt(TOMAN_INT_MAX)) {
-      throw new BadRequestException('Calculated plating price exceeds the supported range.');
-    }
-
-    return Number(roundedToman);
   }
 
   private assertSafeTomanAmount(amount: number): void {

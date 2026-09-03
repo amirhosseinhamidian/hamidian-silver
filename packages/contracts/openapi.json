@@ -4588,6 +4588,29 @@
           "label"
         ]
       },
+      "PublicCatalogPlatingOptionDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "enum": [
+              "GOLD",
+              "RHODIUM"
+            ],
+            "type": "string"
+          },
+          "unitPriceToman": {
+            "type": "number"
+          },
+          "leadTimeDays": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "unitPriceToman",
+          "leadTimeDays"
+        ]
+      },
       "PublicCatalogVariantDto": {
         "type": "object",
         "properties": {
@@ -4608,6 +4631,12 @@
               }
             ]
           },
+          "platingOptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogPlatingOptionDto"
+            }
+          },
           "id": {
             "type": "string"
           },
@@ -4622,6 +4651,7 @@
           "name",
           "weightGrams",
           "size",
+          "platingOptions",
           "id",
           "availableQuantity",
           "isAvailable"
