@@ -1,8 +1,15 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+@import '@hamidian/ui/themes/luxury/tokens.css';
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: var(--luxury-background);
+  --foreground: var(--luxury-foreground);
+
+  --ui-primary: var(--luxury-primary);
+  --ui-primary-foreground: #ffffff;
+
+  --ui-border: var(--luxury-border);
+  --ui-radius: var(--luxury-radius-md);
 }
 
 @theme inline {
@@ -12,15 +19,8 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-peyda), sans-serif;
 }

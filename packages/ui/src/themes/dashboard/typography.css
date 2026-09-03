@@ -1,0 +1,13 @@
+:root {
+  --dashboard-font-body: var(--font-vazirmatn);
+
+  --dashboard-text-xs: 0.75rem;
+  --dashboard-text-sm: 0.875rem;
+  --dashboard-text-md: 1rem;
+  --dashboard-text-lg: 1.125rem;
+  --dashboard-text-xl: 1.5rem;
+
+  --dashboard-weight-normal: 400;
+  --dashboard-weight-medium: 500;
+  --dashboard-weight-bold: 700;
+}

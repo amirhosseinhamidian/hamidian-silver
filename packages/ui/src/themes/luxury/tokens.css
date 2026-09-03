@@ -1,0 +1,15 @@
+:root {
+  --luxury-background: #ffffff;
+  --luxury-foreground: #171717;
+
+  --luxury-primary: #111111;
+  --luxury-primary-foreground: #ffffff;
+
+  --luxury-muted: #737373;
+
+  --luxury-border: #e5e5e5;
+
+  --luxury-radius-sm: 4px;
+  --luxury-radius-md: 6px;
+  --luxury-radius-lg: 8px;
+}

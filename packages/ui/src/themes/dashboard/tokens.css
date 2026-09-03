@@ -1,0 +1,13 @@
+:root {
+  --dashboard-background: #f8fafc;
+  --dashboard-foreground: #0f172a;
+
+  --dashboard-primary: #2563eb;
+
+  --dashboard-muted: #64748b;
+
+  --dashboard-border: #e2e8f0;
+
+  --dashboard-radius-sm: 6px;
+  --dashboard-radius-md: 8px;
+}
