@@ -1,3 +1,4 @@
+import { StorefrontHeader } from '@/components/layout/storefront-header';
 import type { ReactNode } from 'react';
 
 type StorefrontShellProps = Readonly<{
@@ -13,6 +14,7 @@ export function StorefrontShell({ children }: StorefrontShellProps) {
       <a href="#main-content" className="sf-skip-link">
         رفتن به محتوای اصلی
       </a>
+      <StorefrontHeader />
       {children}
     </div>
   );
