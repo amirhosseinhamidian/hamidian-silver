@@ -1,3 +1,4 @@
+import { peyda } from '@/styles/fonts';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import './globals.css';
@@ -16,7 +17,7 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="fa" dir="rtl">
+    <html lang="fa" dir="rtl" className={peyda.variable}>
       <body>{children}</body>
     </html>
   );

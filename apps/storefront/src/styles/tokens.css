@@ -19,5 +19,5 @@
   --sf-radius-md: 0.25rem;
   --sf-focus-ring: 0 0 0 3px rgb(17 17 17 / 20%);
 
-  --sf-font-family: 'Peyda', Tahoma, Arial, sans-serif;
+  --sf-font-family: var(--font-peyda), Tahoma, Arial, sans-serif;
 }
