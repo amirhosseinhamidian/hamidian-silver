@@ -1,4 +1,6 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
+import { Public } from '../auth/public.decorator';
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CatalogService } from './catalog.service';
@@ -8,10 +10,46 @@ import { CreateCountryDto } from './dto/create-country.dto';
 import { CreateMediaDto } from './dto/create-media.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CreateSizeDto } from './dto/create-size.dto';
+import { PublicCatalogQueryDto } from './dto/public-catalog-query.dto';
+import {
+  PublicCatalogBrandDto,
+  PublicCatalogCategoryDto,
+  PublicCatalogProductDetailDto,
+  PublicCatalogProductListDto,
+} from './dto/public-catalog-response.dto';
 
 @Controller('catalog')
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
+
+  @Public()
+  @Get('public/categories')
+  @ApiOkResponse({ type: PublicCatalogCategoryDto, isArray: true })
+  listPublicCategories() {
+    return this.catalogService.listPublicCategories();
+  }
+
+  @Public()
+  @Get('public/brands')
+  @ApiOkResponse({ type: PublicCatalogBrandDto, isArray: true })
+  listPublicBrands() {
+    return this.catalogService.listPublicBrands();
+  }
+
+  @Public()
+  @Get('public/products')
+  @ApiOkResponse({ type: PublicCatalogProductListDto })
+  listPublicProducts(@Query() query: PublicCatalogQueryDto) {
+    return this.catalogService.listPublicProducts(query);
+  }
+
+  @Public()
+  @Get('public/products/:slug')
+  @ApiOkResponse({ type: PublicCatalogProductDetailDto })
+  @ApiNotFoundResponse()
+  getPublicProduct(@Param('slug') slug: string) {
+    return this.catalogService.getPublicProduct(slug);
+  }
 
   @Post('media')
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)

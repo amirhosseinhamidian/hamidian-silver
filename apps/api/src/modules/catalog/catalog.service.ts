@@ -7,6 +7,7 @@ import { CreateCountryDto } from './dto/create-country.dto';
 import { CreateMediaDto } from './dto/create-media.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CreateSizeDto } from './dto/create-size.dto';
+import { PublicCatalogQueryDto, PublicCatalogSort } from './dto/public-catalog-query.dto';
 
 @Injectable()
 export class CatalogService {
@@ -348,6 +349,589 @@ export class CatalogService {
         },
       },
     });
+  }
+
+
+  async listPublicCategories() {
+    const categories = await this.prisma.category.findMany({
+      where: {
+        isActive: true,
+        deletedAt: null,
+      },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        parentId: true,
+        sortOrder: true,
+        image: {
+          select: {
+            storageKey: true,
+            mimeType: true,
+            altText: true,
+            width: true,
+            height: true,
+            deletedAt: true,
+          },
+        },
+      },
+    });
+
+    return categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      description: category.description,
+      parentId: category.parentId,
+      sortOrder: category.sortOrder,
+      image:
+        category.image && !category.image.deletedAt
+          ? {
+              storageKey: category.image.storageKey,
+              mimeType: category.image.mimeType,
+              altText: category.image.altText,
+              width: category.image.width,
+              height: category.image.height,
+            }
+          : null,
+    }));
+  }
+
+  async listPublicBrands() {
+    const brands = await this.prisma.brand.findMany({
+      where: {
+        isActive: true,
+        deletedAt: null,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        image: {
+          select: {
+            storageKey: true,
+            mimeType: true,
+            altText: true,
+            width: true,
+            height: true,
+            deletedAt: true,
+          },
+        },
+      },
+    });
+
+    return brands.map((brand) => ({
+      id: brand.id,
+      name: brand.name,
+      slug: brand.slug,
+      description: brand.description,
+      image:
+        brand.image && !brand.image.deletedAt
+          ? {
+              storageKey: brand.image.storageKey,
+              mimeType: brand.image.mimeType,
+              altText: brand.image.altText,
+              width: brand.image.width,
+              height: brand.image.height,
+            }
+          : null,
+    }));
+  }
+
+  async listPublicProducts(query: PublicCatalogQueryDto) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 24;
+    const sort = query.sort ?? PublicCatalogSort.NEWEST;
+    const search = query.q?.trim();
+    const category = query.category?.trim();
+    const brand = query.brand?.trim();
+
+    const where = {
+      status: ProductStatus.ACTIVE,
+      deletedAt: null,
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' as const } },
+              { shortDescription: { contains: search, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+      ...(category
+        ? {
+            categories: {
+              some: {
+                category: {
+                  is: {
+                    slug: category,
+                    isActive: true,
+                    deletedAt: null,
+                  },
+                },
+              },
+            },
+          }
+        : {}),
+      ...(brand
+        ? {
+            brand: {
+              is: {
+                slug: brand,
+                isActive: true,
+                deletedAt: null,
+              },
+            },
+          }
+        : {}),
+    };
+
+    const orderBy =
+      sort === PublicCatalogSort.PRICE_ASC
+        ? { salePriceToman: 'asc' as const }
+        : sort === PublicCatalogSort.PRICE_DESC
+          ? { salePriceToman: 'desc' as const }
+          : sort === PublicCatalogSort.NAME_ASC
+            ? { name: 'asc' as const }
+            : { createdAt: 'desc' as const };
+
+    const [products, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          shortDescription: true,
+          salePriceToman: true,
+          sizeMode: true,
+          brand: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              description: true,
+              isActive: true,
+              deletedAt: true,
+              image: {
+                select: {
+                  storageKey: true,
+                  mimeType: true,
+                  altText: true,
+                  width: true,
+                  height: true,
+                  deletedAt: true,
+                },
+              },
+            },
+          },
+          categories: {
+            select: {
+              category: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  description: true,
+                  parentId: true,
+                  sortOrder: true,
+                  isActive: true,
+                  deletedAt: true,
+                  image: {
+                    select: {
+                      storageKey: true,
+                      mimeType: true,
+                      altText: true,
+                      width: true,
+                      height: true,
+                      deletedAt: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          variants: {
+            where: {
+              isActive: true,
+              deletedAt: null,
+            },
+            select: {
+              inventories: {
+                select: {
+                  onHand: true,
+                  reserved: true,
+                  warehouse: {
+                    select: {
+                      isActive: true,
+                      deletedAt: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          media: {
+            orderBy: {
+              sortOrder: 'asc',
+            },
+            select: {
+              isPrimary: true,
+              altText: true,
+              media: {
+                select: {
+                  storageKey: true,
+                  mimeType: true,
+                  altText: true,
+                  width: true,
+                  height: true,
+                  deletedAt: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return {
+      items: products.map((product) => {
+        const availableQuantity = product.variants.reduce(
+          (productTotal, variant) =>
+            productTotal +
+            variant.inventories.reduce((variantTotal, inventory) => {
+              if (!inventory.warehouse.isActive || inventory.warehouse.deletedAt) {
+                return variantTotal;
+              }
+
+              return variantTotal + Math.max(0, inventory.onHand - inventory.reserved);
+            }, 0),
+          0,
+        );
+        const primaryMedia =
+          product.media.find((item) => item.isPrimary && !item.media.deletedAt) ??
+          product.media.find((item) => !item.media.deletedAt);
+        const brand =
+          product.brand?.isActive && !product.brand.deletedAt
+            ? {
+                id: product.brand.id,
+                name: product.brand.name,
+                slug: product.brand.slug,
+                description: product.brand.description,
+                image:
+                  product.brand.image && !product.brand.image.deletedAt
+                    ? {
+                        storageKey: product.brand.image.storageKey,
+                        mimeType: product.brand.image.mimeType,
+                        altText: product.brand.image.altText,
+                        width: product.brand.image.width,
+                        height: product.brand.image.height,
+                      }
+                    : null,
+              }
+            : null;
+
+        return {
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          shortDescription: product.shortDescription,
+          salePriceToman: product.salePriceToman,
+          sizeMode: product.sizeMode,
+          brand,
+          categories: product.categories
+            .filter(({ category }) => category.isActive && !category.deletedAt)
+            .map(({ category }) => ({
+              id: category.id,
+              name: category.name,
+              slug: category.slug,
+              description: category.description,
+              parentId: category.parentId,
+              sortOrder: category.sortOrder,
+              image:
+                category.image && !category.image.deletedAt
+                  ? {
+                      storageKey: category.image.storageKey,
+                      mimeType: category.image.mimeType,
+                      altText: category.image.altText,
+                      width: category.image.width,
+                      height: category.image.height,
+                    }
+                  : null,
+            })),
+          primaryMedia: primaryMedia
+            ? {
+                storageKey: primaryMedia.media.storageKey,
+                mimeType: primaryMedia.media.mimeType,
+                altText: primaryMedia.altText ?? primaryMedia.media.altText,
+                width: primaryMedia.media.width,
+                height: primaryMedia.media.height,
+              }
+            : null,
+          availableQuantity,
+          isAvailable: availableQuantity > 0,
+        };
+      }),
+      page,
+      pageSize,
+      total,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  }
+
+  async getPublicProduct(slug: string) {
+    const product = await this.prisma.product.findFirst({
+      where: {
+        slug,
+        status: ProductStatus.ACTIVE,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        shortDescription: true,
+        description: true,
+        salePriceToman: true,
+        sizeMode: true,
+        brand: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            isActive: true,
+            deletedAt: true,
+            image: {
+              select: {
+                storageKey: true,
+                mimeType: true,
+                altText: true,
+                width: true,
+                height: true,
+                deletedAt: true,
+              },
+            },
+          },
+        },
+        country: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            isoCode: true,
+            isActive: true,
+            deletedAt: true,
+          },
+        },
+        categories: {
+          select: {
+            category: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                description: true,
+                parentId: true,
+                sortOrder: true,
+                isActive: true,
+                deletedAt: true,
+                image: {
+                  select: {
+                    storageKey: true,
+                    mimeType: true,
+                    altText: true,
+                    width: true,
+                    height: true,
+                    deletedAt: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        variants: {
+          where: {
+            isActive: true,
+            deletedAt: null,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+          select: {
+            id: true,
+            name: true,
+            weightGrams: true,
+            size: {
+              select: {
+                id: true,
+                code: true,
+                label: true,
+                isActive: true,
+                deletedAt: true,
+              },
+            },
+            inventories: {
+              select: {
+                onHand: true,
+                reserved: true,
+                warehouse: {
+                  select: {
+                    isActive: true,
+                    deletedAt: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        media: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
+          select: {
+            isPrimary: true,
+            altText: true,
+            media: {
+              select: {
+                storageKey: true,
+                mimeType: true,
+                altText: true,
+                width: true,
+                height: true,
+                deletedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Product was not found.');
+    }
+
+    const variants = product.variants.map((variant) => {
+      const availableQuantity = variant.inventories.reduce((total, inventory) => {
+        if (!inventory.warehouse.isActive || inventory.warehouse.deletedAt) {
+          return total;
+        }
+
+        return total + Math.max(0, inventory.onHand - inventory.reserved);
+      }, 0);
+
+      return {
+        id: variant.id,
+        name: variant.name,
+        weightGrams: variant.weightGrams === null ? null : Number(variant.weightGrams),
+        size:
+          variant.size?.isActive && !variant.size.deletedAt
+            ? {
+                id: variant.size.id,
+                code: variant.size.code,
+                label: variant.size.label,
+              }
+            : null,
+        availableQuantity,
+        isAvailable: availableQuantity > 0,
+      };
+    });
+    const availableQuantity = variants.reduce(
+      (total, variant) => total + variant.availableQuantity,
+      0,
+    );
+    const media = product.media
+      .filter((item) => !item.media.deletedAt)
+      .map((item) => ({
+        storageKey: item.media.storageKey,
+        mimeType: item.media.mimeType,
+        altText: item.altText ?? item.media.altText,
+        width: item.media.width,
+        height: item.media.height,
+      }));
+    const primaryMediaItem =
+      product.media.find((item) => item.isPrimary && !item.media.deletedAt) ??
+      product.media.find((item) => !item.media.deletedAt);
+
+    return {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      shortDescription: product.shortDescription,
+      description: product.description,
+      salePriceToman: product.salePriceToman,
+      sizeMode: product.sizeMode,
+      brand:
+        product.brand?.isActive && !product.brand.deletedAt
+          ? {
+              id: product.brand.id,
+              name: product.brand.name,
+              slug: product.brand.slug,
+              description: product.brand.description,
+              image:
+                product.brand.image && !product.brand.image.deletedAt
+                  ? {
+                      storageKey: product.brand.image.storageKey,
+                      mimeType: product.brand.image.mimeType,
+                      altText: product.brand.image.altText,
+                      width: product.brand.image.width,
+                      height: product.brand.image.height,
+                    }
+                  : null,
+            }
+          : null,
+      categories: product.categories
+        .filter(({ category }) => category.isActive && !category.deletedAt)
+        .map(({ category }) => ({
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          description: category.description,
+          parentId: category.parentId,
+          sortOrder: category.sortOrder,
+          image:
+            category.image && !category.image.deletedAt
+              ? {
+                  storageKey: category.image.storageKey,
+                  mimeType: category.image.mimeType,
+                  altText: category.image.altText,
+                  width: category.image.width,
+                  height: category.image.height,
+                }
+              : null,
+        })),
+      primaryMedia: primaryMediaItem
+        ? {
+            storageKey: primaryMediaItem.media.storageKey,
+            mimeType: primaryMediaItem.media.mimeType,
+            altText: primaryMediaItem.altText ?? primaryMediaItem.media.altText,
+            width: primaryMediaItem.media.width,
+            height: primaryMediaItem.media.height,
+          }
+        : null,
+      availableQuantity,
+      isAvailable: availableQuantity > 0,
+      country:
+        product.country?.isActive && !product.country.deletedAt
+          ? {
+              id: product.country.id,
+              name: product.country.name,
+              slug: product.country.slug,
+              isoCode: product.country.isoCode,
+            }
+          : null,
+      variants,
+      media,
+    };
   }
 
   private async requireMedia(mediaId: string): Promise<void> {

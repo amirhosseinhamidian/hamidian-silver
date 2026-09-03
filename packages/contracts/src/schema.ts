@@ -84,6 +84,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/public/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_listPublicCategories_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/public/brands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_listPublicBrands_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/public/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_listPublicProducts_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/public/products/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_getPublicProduct_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/media": {
         parameters: {
             query?: never;
@@ -1878,6 +1942,87 @@ export interface components {
             id: string;
             phone: string;
         };
+        PublicCatalogMediaDto: {
+            altText: string | null;
+            width: number | null;
+            height: number | null;
+            storageKey: string;
+            mimeType: string;
+        };
+        PublicCatalogCategoryDto: {
+            description: string | null;
+            parentId: string | null;
+            image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            id: string;
+            name: string;
+            slug: string;
+            sortOrder: number;
+        };
+        PublicCatalogBrandDto: {
+            description: string | null;
+            image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            id: string;
+            name: string;
+            slug: string;
+        };
+        PublicCatalogProductSummaryDto: {
+            shortDescription: string | null;
+            salePriceToman: number | null;
+            /** @enum {string} */
+            sizeMode: "NONE" | "FREE_SIZE" | "SIZED";
+            brand: components["schemas"]["PublicCatalogBrandDto"] | null;
+            categories: components["schemas"]["PublicCatalogCategoryDto"][];
+            primaryMedia: components["schemas"]["PublicCatalogMediaDto"] | null;
+            id: string;
+            name: string;
+            slug: string;
+            availableQuantity: number;
+            isAvailable: boolean;
+        };
+        PublicCatalogProductListDto: {
+            items: components["schemas"]["PublicCatalogProductSummaryDto"][];
+            page: number;
+            pageSize: number;
+            total: number;
+            totalPages: number;
+        };
+        PublicCatalogCountryDto: {
+            id: string;
+            name: string;
+            slug: string;
+            isoCode: string;
+        };
+        PublicCatalogSizeDto: {
+            id: string;
+            code: string;
+            label: string;
+        };
+        PublicCatalogVariantDto: {
+            name: string | null;
+            weightGrams: number | null;
+            size: components["schemas"]["PublicCatalogSizeDto"] | null;
+            id: string;
+            availableQuantity: number;
+            isAvailable: boolean;
+        };
+        PublicCatalogProductDetailDto: {
+            shortDescription: string | null;
+            salePriceToman: number | null;
+            /** @enum {string} */
+            sizeMode: "NONE" | "FREE_SIZE" | "SIZED";
+            brand: components["schemas"]["PublicCatalogBrandDto"] | null;
+            categories: components["schemas"]["PublicCatalogCategoryDto"][];
+            primaryMedia: components["schemas"]["PublicCatalogMediaDto"] | null;
+            description: string | null;
+            country: components["schemas"]["PublicCatalogCountryDto"] | null;
+            variants: components["schemas"]["PublicCatalogVariantDto"][];
+            media: components["schemas"]["PublicCatalogMediaDto"][];
+            id: string;
+            name: string;
+            slug: string;
+            availableQuantity: number;
+            isAvailable: boolean;
+        };
         CreateMediaDto: {
             storageKey: string;
             originalName?: string;
@@ -2301,6 +2446,97 @@ export interface operations {
         requestBody?: never;
         responses: {
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_listPublicCategories_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCatalogCategoryDto"][];
+                };
+            };
+        };
+    };
+    CatalogController_listPublicBrands_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCatalogBrandDto"][];
+                };
+            };
+        };
+    };
+    CatalogController_listPublicProducts_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                q?: string;
+                category?: string;
+                brand?: string;
+                sort?: "newest" | "price-asc" | "price-desc" | "name-asc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCatalogProductListDto"];
+                };
+            };
+        };
+    };
+    CatalogController_getPublicProduct_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCatalogProductDetailDto"];
+                };
+            };
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -29,6 +29,8 @@ describe('CatalogService', () => {
     },
     product: {
       findMany: jest.fn(),
+      findFirst: jest.fn(),
+      count: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -254,5 +256,72 @@ describe('CatalogService', () => {
     };
 
     await expect(service.createProduct(dto)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('returns only active categories through the public catalog projection', async () => {
+    prisma.category.findMany.mockResolvedValue([]);
+
+    await service.listPublicCategories();
+
+    expect(prisma.category.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          isActive: true,
+          deletedAt: null,
+        },
+      }),
+    );
+  });
+
+  it('paginates public products and excludes internal supplier data from the query', async () => {
+    prisma.product.findMany.mockResolvedValue([]);
+    prisma.product.count.mockResolvedValue(0);
+
+    await expect(
+      service.listPublicProducts({
+        page: 2,
+        pageSize: 12,
+        category: 'rings',
+      }),
+    ).resolves.toEqual({
+      items: [],
+      page: 2,
+      pageSize: 12,
+      total: 0,
+      totalPages: 0,
+    });
+
+    const query = prisma.product.findMany.mock.calls[0]?.[0];
+
+    expect(query).toEqual(
+      expect.objectContaining({
+        skip: 12,
+        take: 12,
+        where: expect.objectContaining({
+          status: ProductStatus.ACTIVE,
+          deletedAt: null,
+        }),
+      }),
+    );
+    expect(query.select).not.toHaveProperty('suppliers');
+    expect(query.select).not.toHaveProperty('priceHistory');
+  });
+
+  it('does not expose a non-active product through its public slug', async () => {
+    prisma.product.findFirst.mockResolvedValue(null);
+
+    await expect(service.getPublicProduct('hidden-product')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+
+    expect(prisma.product.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          slug: 'hidden-product',
+          status: ProductStatus.ACTIVE,
+          deletedAt: null,
+        },
+      }),
+    );
   });
 });
