@@ -1,11 +1,12 @@
+import { AdminShell } from '@/components/layout/admin-shell';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 
 describe('admin test environment', () => {
-  it('renders React content in jsdom', () => {
-    render(createElement('h1', null, 'Admin test environment'));
+  it('renders application-owned components in jsdom', () => {
+    render(createElement(AdminShell, null, createElement('main', null, 'Admin test environment')));
 
-    expect(screen.getByRole('heading', { name: 'Admin test environment' })).toBeInTheDocument();
+    expect(screen.getByRole('main')).toHaveTextContent('Admin test environment');
   });
 });
