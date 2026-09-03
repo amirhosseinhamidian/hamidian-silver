@@ -64,7 +64,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         <section aria-labelledby="product-title" className="lg:pt-4">
           {product.brand ? (
             <Link
-              href={`/products?brand=${product.brand.slug}`}
+              href={`/brands/${product.brand.slug}`}
               className="text-xs text-[var(--sf-color-muted)]"
             >
               {product.brand.name}
@@ -94,7 +94,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               {product.categories.map((category) => (
                 <Link
                   key={category.id}
-                  href={`/products?category=${category.slug}`}
+                  href={`/categories/${category.slug}`}
                   className="
                     border border-[var(--sf-color-border)] px-3 py-2
                     text-xs text-[var(--sf-color-muted)]

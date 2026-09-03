@@ -1,24 +1,18 @@
-import Link from 'next/link';
+import { ButtonLink } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 
 export default function ProductNotFound() {
   return (
-    <main
-      id="main-content"
-      className="sf-container py-[var(--sf-section-space)] text-center"
-    >
-      <h1 className="text-3xl font-medium">این محصول پیدا نشد</h1>
-      <p className="mt-4 text-sm text-[var(--sf-color-muted)]">
-        ممکن است محصول حذف شده یا دیگر برای فروش فعال نباشد.
-      </p>
-      <Link
-        href="/products"
-        className="
-          mt-7 inline-block border-b border-[var(--sf-color-ink)]
-          pb-1 text-sm
-        "
-      >
-        بازگشت به محصولات
-      </Link>
+    <main id="main-content" className="sf-container py-[var(--sf-section-space)]">
+      <EmptyState
+        title="این محصول پیدا نشد"
+        description="ممکن است محصول حذف شده یا دیگر برای فروش فعال نباشد."
+        action={
+          <ButtonLink href="/products" variant="text" size="sm">
+            بازگشت به محصولات
+          </ButtonLink>
+        }
+      />
     </main>
   );
 }
