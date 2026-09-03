@@ -2,7 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { SizeMode } from '../../../generated/prisma/enums';
 
 export class PublicCatalogMediaDto {
-  storageKey!: string;
+  @ApiProperty({ type: String, nullable: true, format: 'uri' })
+  url!: string | null;
+
   mimeType!: string;
 
   @ApiProperty({ type: String, nullable: true })

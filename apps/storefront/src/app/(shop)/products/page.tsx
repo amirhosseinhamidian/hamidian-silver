@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { CatalogMedia } from '@/components/catalog/catalog-media';
 import {
   buildCatalogHref,
   getPublicCatalogIndex,
@@ -17,15 +18,8 @@ function ProductCard({ product }: Readonly<{ product: PublicCatalogProductSummar
   return (
     <li>
       <Link href={`/products/${product.slug}`} className="group block">
-        <div
-          className="
-            flex aspect-[4/5] items-center justify-center
-            bg-[var(--sf-color-surface)] px-6 text-center
-          "
-        >
-          <span className="text-xs leading-6 text-[var(--sf-color-subtle)]">
-            {product.primaryMedia?.altText || product.name}
-          </span>
+        <div className="aspect-[4/5] overflow-hidden bg-[var(--sf-color-surface)]">
+          <CatalogMedia media={product.primaryMedia} alt={product.name} />
         </div>
 
         <div className="pt-4">
@@ -187,9 +181,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               "
             >
               {products.page > 1 ? (
-                <Link href={buildCatalogHref(filters, { page: products.page - 1 })}>
-                  صفحه قبل
-                </Link>
+                <Link href={buildCatalogHref(filters, { page: products.page - 1 })}>صفحه قبل</Link>
               ) : (
                 <span />
               )}
@@ -200,9 +192,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               </span>
 
               {products.page < products.totalPages ? (
-                <Link href={buildCatalogHref(filters, { page: products.page + 1 })}>
-                  صفحه بعد
-                </Link>
+                <Link href={buildCatalogHref(filters, { page: products.page + 1 })}>صفحه بعد</Link>
               ) : (
                 <span />
               )}

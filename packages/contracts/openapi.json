@@ -4323,6 +4323,11 @@
       "PublicCatalogMediaDto": {
         "type": "object",
         "properties": {
+          "url": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
           "altText": {
             "type": "string",
             "nullable": true
@@ -4335,18 +4340,15 @@
             "type": "number",
             "nullable": true
           },
-          "storageKey": {
-            "type": "string"
-          },
           "mimeType": {
             "type": "string"
           }
         },
         "required": [
+          "url",
           "altText",
           "width",
           "height",
-          "storageKey",
           "mimeType"
         ]
       },

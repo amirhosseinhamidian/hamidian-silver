@@ -8,10 +8,14 @@ import { CreateMediaDto } from './dto/create-media.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CreateSizeDto } from './dto/create-size.dto';
 import { PublicCatalogQueryDto, PublicCatalogSort } from './dto/public-catalog-query.dto';
+import { PublicMediaUrlService } from './public-media-url.service';
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly publicMediaUrl: PublicMediaUrlService,
+  ) {}
 
   createMedia(dto: CreateMediaDto) {
     return this.prisma.media.create({
@@ -351,7 +355,6 @@ export class CatalogService {
     });
   }
 
-
   async listPublicCategories() {
     const categories = await this.prisma.category.findMany({
       where: {
@@ -389,7 +392,7 @@ export class CatalogService {
       image:
         category.image && !category.image.deletedAt
           ? {
-              storageKey: category.image.storageKey,
+              url: this.publicMediaUrl.resolve(category.image.storageKey),
               mimeType: category.image.mimeType,
               altText: category.image.altText,
               width: category.image.width,
@@ -434,7 +437,7 @@ export class CatalogService {
       image:
         brand.image && !brand.image.deletedAt
           ? {
-              storageKey: brand.image.storageKey,
+              url: this.publicMediaUrl.resolve(brand.image.storageKey),
               mimeType: brand.image.mimeType,
               altText: brand.image.altText,
               width: brand.image.width,
@@ -630,7 +633,7 @@ export class CatalogService {
                 image:
                   product.brand.image && !product.brand.image.deletedAt
                     ? {
-                        storageKey: product.brand.image.storageKey,
+                        url: this.publicMediaUrl.resolve(product.brand.image.storageKey),
                         mimeType: product.brand.image.mimeType,
                         altText: product.brand.image.altText,
                         width: product.brand.image.width,
@@ -660,7 +663,7 @@ export class CatalogService {
               image:
                 category.image && !category.image.deletedAt
                   ? {
-                      storageKey: category.image.storageKey,
+                      url: this.publicMediaUrl.resolve(category.image.storageKey),
                       mimeType: category.image.mimeType,
                       altText: category.image.altText,
                       width: category.image.width,
@@ -670,7 +673,7 @@ export class CatalogService {
             })),
           primaryMedia: primaryMedia
             ? {
-                storageKey: primaryMedia.media.storageKey,
+                url: this.publicMediaUrl.resolve(primaryMedia.media.storageKey),
                 mimeType: primaryMedia.media.mimeType,
                 altText: primaryMedia.altText ?? primaryMedia.media.altText,
                 width: primaryMedia.media.width,
@@ -852,7 +855,7 @@ export class CatalogService {
     const media = product.media
       .filter((item) => !item.media.deletedAt)
       .map((item) => ({
-        storageKey: item.media.storageKey,
+        url: this.publicMediaUrl.resolve(item.media.storageKey),
         mimeType: item.media.mimeType,
         altText: item.altText ?? item.media.altText,
         width: item.media.width,
@@ -880,7 +883,7 @@ export class CatalogService {
               image:
                 product.brand.image && !product.brand.image.deletedAt
                   ? {
-                      storageKey: product.brand.image.storageKey,
+                      url: this.publicMediaUrl.resolve(product.brand.image.storageKey),
                       mimeType: product.brand.image.mimeType,
                       altText: product.brand.image.altText,
                       width: product.brand.image.width,
@@ -901,7 +904,7 @@ export class CatalogService {
           image:
             category.image && !category.image.deletedAt
               ? {
-                  storageKey: category.image.storageKey,
+                  url: this.publicMediaUrl.resolve(category.image.storageKey),
                   mimeType: category.image.mimeType,
                   altText: category.image.altText,
                   width: category.image.width,
@@ -911,7 +914,7 @@ export class CatalogService {
         })),
       primaryMedia: primaryMediaItem
         ? {
-            storageKey: primaryMediaItem.media.storageKey,
+            url: this.publicMediaUrl.resolve(primaryMediaItem.media.storageKey),
             mimeType: primaryMediaItem.media.mimeType,
             altText: primaryMediaItem.altText ?? primaryMediaItem.media.altText,
             width: primaryMediaItem.media.width,

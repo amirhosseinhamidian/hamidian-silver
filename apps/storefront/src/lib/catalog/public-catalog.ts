@@ -4,10 +4,9 @@ import { createServerApiClient } from '@/lib/api/server-client';
 
 export type PublicCatalogCategory = components['schemas']['PublicCatalogCategoryDto'];
 export type PublicCatalogBrand = components['schemas']['PublicCatalogBrandDto'];
-export type PublicCatalogProductSummary =
-  components['schemas']['PublicCatalogProductSummaryDto'];
-export type PublicCatalogProductDetail =
-  components['schemas']['PublicCatalogProductDetailDto'];
+export type PublicCatalogMedia = components['schemas']['PublicCatalogMediaDto'];
+export type PublicCatalogProductSummary = components['schemas']['PublicCatalogProductSummaryDto'];
+export type PublicCatalogProductDetail = components['schemas']['PublicCatalogProductDetailDto'];
 export type PublicCatalogProductList = components['schemas']['PublicCatalogProductListDto'];
 
 export type CatalogSort = 'newest' | 'price-asc' | 'price-desc' | 'name-asc';
@@ -21,17 +20,10 @@ export type CatalogFilters = Readonly<{
   sort: CatalogSort;
 }>;
 
-export type CatalogSearchParams = Readonly<
-  Record<string, string | string[] | undefined>
->;
+export type CatalogSearchParams = Readonly<Record<string, string | string[] | undefined>>;
 
 const DEFAULT_PAGE_SIZE = 24;
-const SORT_VALUES = new Set<CatalogSort>([
-  'newest',
-  'price-asc',
-  'price-desc',
-  'name-asc',
-]);
+const SORT_VALUES = new Set<CatalogSort>(['newest', 'price-asc', 'price-desc', 'name-asc']);
 
 function firstValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -147,11 +139,7 @@ export async function getPublicCatalogIndex(filters: CatalogFilters): Promise<{
     client.GET('/api/v1/catalog/public/brands'),
   ]);
 
-  assertSuccessfulResponse(
-    productsResult.response,
-    productsResult.data,
-    'storefront products',
-  );
+  assertSuccessfulResponse(productsResult.response, productsResult.data, 'storefront products');
   assertSuccessfulResponse(
     categoriesResult.response,
     categoriesResult.data,

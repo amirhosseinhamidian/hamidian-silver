@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProductStatus, SizeMode } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CatalogService } from './catalog.service';
+import type { PublicMediaUrlService } from './public-media-url.service';
 import type { CreateProductDto } from './dto/create-product.dto';
 
 describe('CatalogService', () => {
@@ -35,11 +36,18 @@ describe('CatalogService', () => {
     $transaction: jest.fn(),
   };
 
+  const publicMediaUrl = {
+    resolve: jest.fn((storageKey: string) => `https://media.hamidian.shop/${storageKey}`),
+  };
+
   let service: CatalogService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new CatalogService(prisma as unknown as PrismaService);
+    service = new CatalogService(
+      prisma as unknown as PrismaService,
+      publicMediaUrl as unknown as PublicMediaUrlService,
+    );
   });
 
   it('requires category image media to exist', async () => {
@@ -259,9 +267,42 @@ describe('CatalogService', () => {
   });
 
   it('returns only active categories through the public catalog projection', async () => {
-    prisma.category.findMany.mockResolvedValue([]);
+    prisma.category.findMany.mockResolvedValue([
+      {
+        id: '10000000-0000-4000-8000-000000000001',
+        name: 'Rings',
+        slug: 'rings',
+        description: null,
+        parentId: null,
+        sortOrder: 0,
+        image: {
+          storageKey: 'categories/rings.jpg',
+          mimeType: 'image/jpeg',
+          altText: 'Silver rings',
+          width: 1200,
+          height: 1200,
+          deletedAt: null,
+        },
+      },
+    ]);
 
-    await service.listPublicCategories();
+    await expect(service.listPublicCategories()).resolves.toEqual([
+      {
+        id: '10000000-0000-4000-8000-000000000001',
+        name: 'Rings',
+        slug: 'rings',
+        description: null,
+        parentId: null,
+        sortOrder: 0,
+        image: {
+          url: 'https://media.hamidian.shop/categories/rings.jpg',
+          mimeType: 'image/jpeg',
+          altText: 'Silver rings',
+          width: 1200,
+          height: 1200,
+        },
+      },
+    ]);
 
     expect(prisma.category.findMany).toHaveBeenCalledWith(
       expect.objectContaining({

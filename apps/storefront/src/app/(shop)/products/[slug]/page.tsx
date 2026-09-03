@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { getPublicCatalogProduct } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 
@@ -18,6 +19,10 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     notFound();
   }
 
+  const publicImages = product.media.filter(
+    (media) => media.url && media.mimeType.startsWith('image/'),
+  );
+
   return (
     <main id="main-content" className="sf-container py-[var(--sf-section-space)]">
       <nav aria-label="مسیر صفحه" className="mb-8 text-xs text-[var(--sf-color-muted)]">
@@ -29,16 +34,31 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
       </nav>
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(22rem,0.9fr)] lg:gap-16">
-        <section
-          aria-label="رسانه محصول"
-          className="
-            flex min-h-[28rem] items-center justify-center
-            bg-[var(--sf-color-surface)] px-8 text-center
-          "
-        >
-          <p className="max-w-sm text-sm leading-7 text-[var(--sf-color-subtle)]">
-            {product.primaryMedia?.altText || product.name}
-          </p>
+        <section aria-label="رسانه محصول">
+          {publicImages.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {publicImages.map((media, index) => (
+                <div
+                  key={media.url ?? index}
+                  className={
+                    index === 0
+                      ? 'aspect-[4/5] overflow-hidden bg-[var(--sf-color-surface)] sm:col-span-2'
+                      : 'aspect-square overflow-hidden bg-[var(--sf-color-surface)]'
+                  }
+                >
+                  <CatalogMedia media={media} alt={product.name} eager={index === 0} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              className="
+                min-h-[28rem] bg-[var(--sf-color-surface)]
+              "
+            >
+              <CatalogMedia media={product.primaryMedia} alt={product.name} eager />
+            </div>
+          )}
         </section>
 
         <section aria-labelledby="product-title" className="lg:pt-4">

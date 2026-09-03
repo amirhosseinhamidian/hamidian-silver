@@ -9,6 +9,10 @@ export const envValidationSchema = Joi.object({
   HTTP_KEEP_ALIVE_TIMEOUT_MS: Joi.number().integer().min(1000).max(30000).default(5000),
   HTTP_MAX_REQUESTS_PER_SOCKET: Joi.number().integer().min(1).max(10000).default(1000),
   CORS_ORIGINS: Joi.string().min(1).default('http://localhost:3001,http://localhost:3002'),
+  MEDIA_PUBLIC_BASE_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .allow('')
+    .optional(),
   DATABASE_URL: Joi.string()
     .uri({ scheme: ['postgresql', 'postgres'] })
     .required(),

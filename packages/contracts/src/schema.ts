@@ -1943,10 +1943,11 @@ export interface components {
             phone: string;
         };
         PublicCatalogMediaDto: {
+            /** Format: uri */
+            url: string | null;
             altText: string | null;
             width: number | null;
             height: number | null;
-            storageKey: string;
             mimeType: string;
         };
         PublicCatalogCategoryDto: {
