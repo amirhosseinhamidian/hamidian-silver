@@ -2,6 +2,10 @@ import Link from 'next/link';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
+import { Button, ButtonLink } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Select } from '@/components/ui/form-control';
+import { FormField } from '@/components/ui/form-field';
 import {
   buildCatalogCollectionHref,
   type CatalogFilters,
@@ -72,33 +76,18 @@ export function CatalogCollectionPage({
           border-b border-[var(--sf-color-border)] py-6
         "
       >
-        <label className="flex min-w-48 flex-col gap-2 text-xs text-[var(--sf-color-muted)]">
-          مرتب‌سازی
-          <select
-            name="sort"
-            defaultValue={filters.sort}
-            className="
-              h-11 border border-[var(--sf-color-border)] bg-transparent px-3
-              text-sm text-[var(--sf-color-ink)] outline-none
-              focus:border-[var(--sf-color-border-strong)]
-            "
-          >
-            <option value="newest">جدیدترین‌ها</option>
-            <option value="price-asc">کمترین قیمت</option>
-            <option value="price-desc">بیشترین قیمت</option>
-            <option value="name-asc">نام محصول</option>
-          </select>
-        </label>
+        <FormField id={`collection-sort-${path}`} label="مرتب‌سازی" className="min-w-48">
+          {(controlProps) => (
+            <Select {...controlProps} name="sort" defaultValue={filters.sort}>
+              <option value="newest">جدیدترین‌ها</option>
+              <option value="price-asc">کمترین قیمت</option>
+              <option value="price-desc">بیشترین قیمت</option>
+              <option value="name-asc">نام محصول</option>
+            </Select>
+          )}
+        </FormField>
 
-        <button
-          type="submit"
-          className="
-            h-11 bg-[var(--sf-color-ink)] px-6 text-sm text-[var(--sf-color-inverse)]
-            transition-opacity hover:opacity-80
-          "
-        >
-          اعمال
-        </button>
+        <Button type="submit">اعمال</Button>
       </form>
 
       {products.items.length > 0 ? (
@@ -149,23 +138,15 @@ export function CatalogCollectionPage({
           ) : null}
         </>
       ) : (
-        <section className="py-20 text-center" aria-labelledby="empty-collection-title">
-          <h2 id="empty-collection-title" className="text-2xl font-medium">
-            هنوز محصولی در این مجموعه نیست
-          </h2>
-          <p className="mt-3 text-sm text-[var(--sf-color-muted)]">
-            می‌توانید سایر محصولات گالری را مشاهده کنید.
-          </p>
-          <Link
-            href="/products"
-            className="
-              mt-6 inline-block border-b border-[var(--sf-color-ink)]
-              pb-1 text-sm
-            "
-          >
-            مشاهده همه محصولات
-          </Link>
-        </section>
+        <EmptyState
+          title="هنوز محصولی در این مجموعه نیست"
+          description="می‌توانید سایر محصولات گالری را مشاهده کنید."
+          action={
+            <ButtonLink href="/products" variant="text" size="sm">
+              مشاهده همه محصولات
+            </ButtonLink>
+          }
+        />
       )}
     </main>
   );

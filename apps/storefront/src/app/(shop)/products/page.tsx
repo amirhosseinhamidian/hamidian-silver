@@ -1,6 +1,10 @@
 import Link from 'next/link';
 
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
+import { Button, ButtonLink } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Input, Select } from '@/components/ui/form-control';
+import { FormField } from '@/components/ui/form-field';
 import {
   buildCatalogHref,
   getPublicCatalogIndex,
@@ -50,89 +54,59 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           sm:grid-cols-2 lg:grid-cols-[minmax(14rem,1fr)_repeat(3,minmax(10rem,0.55fr))_auto]
         "
       >
-        <label className="flex flex-col gap-2 text-xs text-[var(--sf-color-muted)]">
-          جستجو
-          <input
-            type="search"
-            name="q"
-            defaultValue={filters.q ?? ''}
-            maxLength={100}
-            placeholder="نام محصول..."
-            className="
-              h-11 border border-[var(--sf-color-border)] bg-transparent px-3
-              text-sm text-[var(--sf-color-ink)] outline-none
-              focus:border-[var(--sf-color-border-strong)]
-            "
-          />
-        </label>
+        <FormField id="catalog-search" label="جستجو">
+          {(controlProps) => (
+            <Input
+              {...controlProps}
+              type="search"
+              name="q"
+              defaultValue={filters.q ?? ''}
+              maxLength={100}
+              placeholder="نام محصول..."
+            />
+          )}
+        </FormField>
 
-        <label className="flex flex-col gap-2 text-xs text-[var(--sf-color-muted)]">
-          دسته‌بندی
-          <select
-            name="category"
-            defaultValue={filters.category ?? ''}
-            className="
-              h-11 border border-[var(--sf-color-border)] bg-transparent px-3
-              text-sm text-[var(--sf-color-ink)] outline-none
-              focus:border-[var(--sf-color-border-strong)]
-            "
-          >
-            <option value="">همه دسته‌ها</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.slug}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FormField id="catalog-category" label="دسته‌بندی">
+          {(controlProps) => (
+            <Select {...controlProps} name="category" defaultValue={filters.category ?? ''}>
+              <option value="">همه دسته‌ها</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.slug}>
+                  {category.name}
+                </option>
+              ))}
+            </Select>
+          )}
+        </FormField>
 
-        <label className="flex flex-col gap-2 text-xs text-[var(--sf-color-muted)]">
-          برند
-          <select
-            name="brand"
-            defaultValue={filters.brand ?? ''}
-            className="
-              h-11 border border-[var(--sf-color-border)] bg-transparent px-3
-              text-sm text-[var(--sf-color-ink)] outline-none
-              focus:border-[var(--sf-color-border-strong)]
-            "
-          >
-            <option value="">همه برندها</option>
-            {brands.map((brand) => (
-              <option key={brand.id} value={brand.slug}>
-                {brand.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FormField id="catalog-brand" label="برند">
+          {(controlProps) => (
+            <Select {...controlProps} name="brand" defaultValue={filters.brand ?? ''}>
+              <option value="">همه برندها</option>
+              {brands.map((brand) => (
+                <option key={brand.id} value={brand.slug}>
+                  {brand.name}
+                </option>
+              ))}
+            </Select>
+          )}
+        </FormField>
 
-        <label className="flex flex-col gap-2 text-xs text-[var(--sf-color-muted)]">
-          مرتب‌سازی
-          <select
-            name="sort"
-            defaultValue={filters.sort}
-            className="
-              h-11 border border-[var(--sf-color-border)] bg-transparent px-3
-              text-sm text-[var(--sf-color-ink)] outline-none
-              focus:border-[var(--sf-color-border-strong)]
-            "
-          >
-            <option value="newest">جدیدترین‌ها</option>
-            <option value="price-asc">کمترین قیمت</option>
-            <option value="price-desc">بیشترین قیمت</option>
-            <option value="name-asc">نام محصول</option>
-          </select>
-        </label>
+        <FormField id="catalog-sort" label="مرتب‌سازی">
+          {(controlProps) => (
+            <Select {...controlProps} name="sort" defaultValue={filters.sort}>
+              <option value="newest">جدیدترین‌ها</option>
+              <option value="price-asc">کمترین قیمت</option>
+              <option value="price-desc">بیشترین قیمت</option>
+              <option value="name-asc">نام محصول</option>
+            </Select>
+          )}
+        </FormField>
 
-        <button
-          type="submit"
-          className="
-            h-11 self-end bg-[var(--sf-color-ink)] px-6 text-sm
-            text-[var(--sf-color-inverse)] transition-opacity hover:opacity-80
-          "
-        >
+        <Button type="submit" className="self-end">
           اعمال
-        </button>
+        </Button>
       </form>
 
       {products.items.length > 0 ? (
@@ -171,23 +145,15 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           ) : null}
         </>
       ) : (
-        <section className="py-20 text-center" aria-labelledby="empty-catalog-title">
-          <h2 id="empty-catalog-title" className="text-2xl font-medium">
-            محصولی پیدا نشد
-          </h2>
-          <p className="mt-3 text-sm text-[var(--sf-color-muted)]">
-            عبارت جستجو یا فیلترها را تغییر دهید.
-          </p>
-          <Link
-            href="/products"
-            className="
-              mt-6 inline-block border-b border-[var(--sf-color-ink)]
-              pb-1 text-sm
-            "
-          >
-            مشاهده همه محصولات
-          </Link>
-        </section>
+        <EmptyState
+          title="محصولی پیدا نشد"
+          description="عبارت جستجو یا فیلترها را تغییر دهید."
+          action={
+            <ButtonLink href="/products" variant="text" size="sm">
+              مشاهده همه محصولات
+            </ButtonLink>
+          }
+        />
       )}
     </main>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Button, ButtonLink } from '@/components/ui/button';
 
 type CatalogRouteErrorProps = Readonly<{
   title: string;
@@ -15,17 +15,13 @@ export function CatalogRouteError({ title, reset }: CatalogRouteErrorProps) {
         <p className="mt-3 text-sm text-[var(--sf-color-muted)]">
           دریافت اطلاعات کاتالوگ با خطا روبه‌رو شد.
         </p>
-        <div className="mt-7 flex flex-wrap justify-center gap-5 text-sm">
-          <button
-            type="button"
-            onClick={reset}
-            className="border-b border-[var(--sf-color-ink)] pb-1"
-          >
+        <div className="mt-7 flex flex-wrap justify-center gap-3">
+          <Button type="button" onClick={reset}>
             تلاش دوباره
-          </button>
-          <Link href="/products" className="border-b border-[var(--sf-color-border-strong)] pb-1">
+          </Button>
+          <ButtonLink href="/products" variant="outline">
             همه محصولات
-          </Link>
+          </ButtonLink>
         </div>
       </section>
     </main>
