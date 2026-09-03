@@ -447,6 +447,7 @@ export class CatalogService {
     const search = query.q?.trim();
     const category = query.category?.trim();
     const brand = query.brand?.trim();
+    const categoryIds = category ? await this.resolvePublicCategoryIds(category) : undefined;
 
     const where = {
       status: ProductStatus.ACTIVE,
@@ -459,16 +460,12 @@ export class CatalogService {
             ],
           }
         : {}),
-      ...(category
+      ...(categoryIds
         ? {
             categories: {
               some: {
-                category: {
-                  is: {
-                    slug: category,
-                    isActive: true,
-                    deletedAt: null,
-                  },
+                categoryId: {
+                  in: categoryIds,
                 },
               },
             },
@@ -489,12 +486,30 @@ export class CatalogService {
 
     const orderBy =
       sort === PublicCatalogSort.PRICE_ASC
-        ? { salePriceToman: 'asc' as const }
+        ? [
+            {
+              salePriceToman: {
+                sort: 'asc' as const,
+                nulls: 'last' as const,
+              },
+            },
+            { createdAt: 'desc' as const },
+            { id: 'asc' as const },
+          ]
         : sort === PublicCatalogSort.PRICE_DESC
-          ? { salePriceToman: 'desc' as const }
+          ? [
+              {
+                salePriceToman: {
+                  sort: 'desc' as const,
+                  nulls: 'last' as const,
+                },
+              },
+              { createdAt: 'desc' as const },
+              { id: 'asc' as const },
+            ]
           : sort === PublicCatalogSort.NAME_ASC
-            ? { name: 'asc' as const }
-            : { createdAt: 'desc' as const };
+            ? [{ name: 'asc' as const }, { id: 'asc' as const }]
+            : [{ createdAt: 'desc' as const }, { id: 'desc' as const }];
 
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
@@ -928,6 +943,55 @@ export class CatalogService {
       variants,
       media,
     };
+  }
+
+  private async resolvePublicCategoryIds(slug: string): Promise<string[]> {
+    const categories = await this.prisma.category.findMany({
+      where: {
+        isActive: true,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        slug: true,
+        parentId: true,
+      },
+    });
+    const root = categories.find((category) => category.slug === slug);
+
+    if (!root) {
+      return [];
+    }
+
+    const childIdsByParent = new Map<string, string[]>();
+
+    for (const category of categories) {
+      if (!category.parentId) {
+        continue;
+      }
+
+      const childIds = childIdsByParent.get(category.parentId) ?? [];
+      childIds.push(category.id);
+      childIdsByParent.set(category.parentId, childIds);
+    }
+
+    const categoryIds: string[] = [];
+    const visitedIds = new Set<string>();
+    const pendingIds = [root.id];
+
+    while (pendingIds.length > 0) {
+      const categoryId = pendingIds.pop();
+
+      if (!categoryId || visitedIds.has(categoryId)) {
+        continue;
+      }
+
+      visitedIds.add(categoryId);
+      categoryIds.push(categoryId);
+      pendingIds.push(...(childIdsByParent.get(categoryId) ?? []));
+    }
+
+    return categoryIds;
   }
 
   private async requireMedia(mediaId: string): Promise<void> {

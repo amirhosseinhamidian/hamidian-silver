@@ -4,6 +4,7 @@ import type { PrismaService } from '../../infrastructure/database/prisma.service
 import { CatalogService } from './catalog.service';
 import type { PublicMediaUrlService } from './public-media-url.service';
 import type { CreateProductDto } from './dto/create-product.dto';
+import { PublicCatalogSort } from './dto/public-catalog-query.dto';
 
 describe('CatalogService', () => {
   const prisma = {
@@ -315,6 +316,13 @@ describe('CatalogService', () => {
   });
 
   it('paginates public products and excludes internal supplier data from the query', async () => {
+    prisma.category.findMany.mockResolvedValue([
+      {
+        id: '10000000-0000-4000-8000-000000000001',
+        slug: 'rings',
+        parentId: null,
+      },
+    ]);
     prisma.product.findMany.mockResolvedValue([]);
     prisma.product.count.mockResolvedValue(0);
 
@@ -346,6 +354,66 @@ describe('CatalogService', () => {
     );
     expect(query.select).not.toHaveProperty('suppliers');
     expect(query.select).not.toHaveProperty('priceHistory');
+  });
+
+  it('includes active descendant categories when filtering a parent collection', async () => {
+    const parentId = '10000000-0000-4000-8000-000000000001';
+    const childId = '10000000-0000-4000-8000-000000000002';
+    const grandchildId = '10000000-0000-4000-8000-000000000003';
+
+    prisma.category.findMany.mockResolvedValue([
+      { id: parentId, slug: 'jewelry', parentId: null },
+      { id: childId, slug: 'rings', parentId },
+      { id: grandchildId, slug: 'silver-rings', parentId: childId },
+    ]);
+    prisma.product.findMany.mockResolvedValue([]);
+    prisma.product.count.mockResolvedValue(0);
+
+    await service.listPublicProducts({
+      category: 'jewelry',
+    });
+
+    expect(prisma.category.findMany).toHaveBeenCalledWith({
+      where: {
+        isActive: true,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        slug: true,
+        parentId: true,
+      },
+    });
+
+    const query = prisma.product.findMany.mock.calls[0]?.[0];
+    const categoryIds = query?.where?.categories?.some?.categoryId?.in;
+
+    expect(categoryIds).toEqual(expect.arrayContaining([parentId, childId, grandchildId]));
+    expect(categoryIds).toHaveLength(3);
+  });
+
+  it('uses deterministic price ordering and keeps null prices last', async () => {
+    prisma.product.findMany.mockResolvedValue([]);
+    prisma.product.count.mockResolvedValue(0);
+
+    await service.listPublicProducts({
+      sort: PublicCatalogSort.PRICE_ASC,
+    });
+
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [
+          {
+            salePriceToman: {
+              sort: 'asc',
+              nulls: 'last',
+            },
+          },
+          { createdAt: 'desc' },
+          { id: 'asc' },
+        ],
+      }),
+    );
   });
 
   it('does not expose a non-active product through its public slug', async () => {
