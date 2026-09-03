@@ -46,3 +46,6 @@ Thumbs.db
 
 # Generated Prisma Client
 apps/api/src/generated/prisma/
+
+# Local API media uploads
+apps/api/.data/

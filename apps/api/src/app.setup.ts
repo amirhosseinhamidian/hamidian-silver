@@ -1,9 +1,14 @@
 import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import type { Server } from 'node:http';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { requestIdMiddleware } from './common/request-id.middleware';
+import {
+  MEDIA_PUBLIC_ROUTE_PREFIX,
+  resolveMediaStorageRoot,
+} from './config/media-storage';
 
 export type ListenOptions = {
   host: string;
@@ -26,12 +31,23 @@ export function configureApiRouting(app: INestApplication): void {
   });
 }
 
-export function configureApp(app: INestApplication): void {
+export function configureApp(app: NestExpressApplication): void {
   const config = app.get(ConfigService);
   const corsOrigins = parseCorsOrigins(config.getOrThrow<string>('CORS_ORIGINS'));
 
   app.use(requestIdMiddleware);
   app.use(helmet());
+  app.useStaticAssets(resolveMediaStorageRoot(config), {
+    prefix: MEDIA_PUBLIC_ROUTE_PREFIX,
+    dotfiles: 'deny',
+    index: false,
+    redirect: false,
+    immutable: true,
+    maxAge: '1y',
+    setHeaders(response) {
+      response.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  });
 
   app.useGlobalFilters(new HttpExceptionFilter());
 

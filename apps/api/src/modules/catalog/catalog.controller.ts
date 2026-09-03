@@ -1,13 +1,29 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+} from '@nestjs/swagger';
+import { MEDIA_UPLOAD_LIMIT_BYTES } from '../../config/media-storage';
 import { Public } from '../auth/public.decorator';
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
+import { CatalogMediaService } from './catalog-media.service';
 import { CatalogService } from './catalog.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
-import { CreateMediaDto } from './dto/create-media.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CreateSizeDto } from './dto/create-size.dto';
 import { PublicCatalogQueryDto } from './dto/public-catalog-query.dto';
@@ -17,10 +33,15 @@ import {
   PublicCatalogProductDetailDto,
   PublicCatalogProductListDto,
 } from './dto/public-catalog-response.dto';
+import { UploadMediaDto } from './dto/upload-media.dto';
+import type { CatalogUploadFile } from './local-media-storage.service';
 
 @Controller('catalog')
 export class CatalogController {
-  constructor(private readonly catalogService: CatalogService) {}
+  constructor(
+    private readonly catalogService: CatalogService,
+    private readonly catalogMediaService: CatalogMediaService,
+  ) {}
 
   @Public()
   @Get('public/categories')
@@ -53,8 +74,37 @@ export class CatalogController {
 
   @Post('media')
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
-  createMedia(@Body() dto: CreateMediaDto) {
-    return this.catalogService.createMedia(dto);
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: MEDIA_UPLOAD_LIMIT_BYTES,
+        files: 1,
+      },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+        altText: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 255,
+        },
+      },
+    },
+  })
+  uploadMedia(
+    @UploadedFile() file: CatalogUploadFile | undefined,
+    @Body() dto: UploadMediaDto,
+  ) {
+    return this.catalogMediaService.upload(file, dto);
   }
 
   @Post('categories')

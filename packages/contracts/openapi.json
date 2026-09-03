@@ -298,14 +298,28 @@
     },
     "/api/v1/catalog/media": {
       "post": {
-        "operationId": "CatalogController_createMedia_v1",
+        "operationId": "CatalogController_uploadMedia_v1",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/CreateMediaDto"
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "altText": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                }
               }
             }
           }
@@ -4713,48 +4727,6 @@
           "slug",
           "availableQuantity",
           "isAvailable"
-        ]
-      },
-      "CreateMediaDto": {
-        "type": "object",
-        "properties": {
-          "storageKey": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 500
-          },
-          "originalName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "mimeType": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 100
-          },
-          "width": {
-            "type": "number",
-            "minimum": 1
-          },
-          "height": {
-            "type": "number",
-            "minimum": 1
-          },
-          "sizeBytes": {
-            "type": "number",
-            "minimum": 1
-          },
-          "altText": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          }
-        },
-        "required": [
-          "storageKey",
-          "mimeType",
-          "sizeBytes"
         ]
       },
       "CreateCategoryDto": {

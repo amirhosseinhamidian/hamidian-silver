@@ -4,7 +4,6 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
-import { CreateMediaDto } from './dto/create-media.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CreateSizeDto } from './dto/create-size.dto';
 import { PublicCatalogQueryDto, PublicCatalogSort } from './dto/public-catalog-query.dto';
@@ -16,12 +15,6 @@ export class CatalogService {
     private readonly prisma: PrismaService,
     private readonly publicMediaUrl: PublicMediaUrlService,
   ) {}
-
-  createMedia(dto: CreateMediaDto) {
-    return this.prisma.media.create({
-      data: dto,
-    });
-  }
 
   async createCategory(dto: CreateCategoryDto) {
     if (dto.parentId) {

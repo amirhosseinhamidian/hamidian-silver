@@ -9,10 +9,24 @@ export const envValidationSchema = Joi.object({
   HTTP_KEEP_ALIVE_TIMEOUT_MS: Joi.number().integer().min(1000).max(30000).default(5000),
   HTTP_MAX_REQUESTS_PER_SOCKET: Joi.number().integer().min(1).max(10000).default(1000),
   CORS_ORIGINS: Joi.string().min(1).default('http://localhost:3001,http://localhost:3002'),
-  MEDIA_PUBLIC_BASE_URL: Joi.string()
-    .uri({ scheme: ['http', 'https'] })
-    .allow('')
-    .optional(),
+  MEDIA_STORAGE_ROOT: Joi.when('NODE_ENV', {
+    is: 'production',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string().min(1).empty('').required(),
+    otherwise: Joi.string().min(1).empty('').default('.data/media'),
+  }),
+  MEDIA_PUBLIC_BASE_URL: Joi.when('NODE_ENV', {
+    is: 'production',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string()
+      .uri({ scheme: ['http', 'https'] })
+      .empty('')
+      .required(),
+    otherwise: Joi.string()
+      .uri({ scheme: ['http', 'https'] })
+      .empty('')
+      .default('http://localhost:3000/media'),
+  }),
   DATABASE_URL: Joi.string()
     .uri({ scheme: ['postgresql', 'postgres'] })
     .required(),

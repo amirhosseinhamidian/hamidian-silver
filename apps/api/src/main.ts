@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { configureApp, configureHttpServer, getListenOptions } from './app.setup';
 import { configureSwagger } from './openapi';
@@ -7,7 +8,7 @@ import { configureSwagger } from './openapi';
 const bootstrapLogger = new Logger('Bootstrap');
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   configureApp(app);
   configureSwagger(app);

@@ -157,7 +157,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["CatalogController_createMedia_v1"];
+        post: operations["CatalogController_uploadMedia_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2024,15 +2024,6 @@ export interface components {
             availableQuantity: number;
             isAvailable: boolean;
         };
-        CreateMediaDto: {
-            storageKey: string;
-            originalName?: string;
-            mimeType: string;
-            width?: number;
-            height?: number;
-            sizeBytes: number;
-            altText?: string;
-        };
         CreateCategoryDto: {
             name: string;
             slug: string;
@@ -2545,7 +2536,7 @@ export interface operations {
             };
         };
     };
-    CatalogController_createMedia_v1: {
+    CatalogController_uploadMedia_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2554,7 +2545,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateMediaDto"];
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    altText?: string;
+                };
             };
         };
         responses: {
