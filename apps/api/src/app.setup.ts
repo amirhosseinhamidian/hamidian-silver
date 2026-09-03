@@ -17,6 +17,15 @@ function parseCorsOrigins(value: string): string[] {
     .filter(Boolean);
 }
 
+export function configureApiRouting(app: INestApplication): void {
+  app.setGlobalPrefix('api');
+
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',
+  });
+}
+
 export function configureApp(app: INestApplication): void {
   const config = app.get(ConfigService);
   const corsOrigins = parseCorsOrigins(config.getOrThrow<string>('CORS_ORIGINS'));
@@ -31,12 +40,7 @@ export function configureApp(app: INestApplication): void {
     credentials: true,
   });
 
-  app.setGlobalPrefix('api');
-
-  app.enableVersioning({
-    type: VersioningType.URI,
-    defaultVersion: '1',
-  });
+  configureApiRouting(app);
 
   app.useGlobalPipes(
     new ValidationPipe({

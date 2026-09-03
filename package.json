@@ -13,6 +13,7 @@
     "api:test:e2e": "pnpm --filter api test:e2e",
     "api:build": "pnpm --filter api build",
     "api:lint": "pnpm --filter api lint",
+    "contracts:openapi": "pnpm db:generate && pnpm --filter api openapi:generate",
     "storefront:lint": "pnpm --filter @hamidian/storefront lint",
     "storefront:typecheck": "pnpm --filter @hamidian/storefront typecheck",
     "storefront:test": "pnpm --filter @hamidian/storefront test",

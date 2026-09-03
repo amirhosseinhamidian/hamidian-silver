@@ -2,8 +2,9 @@
 
 Shared API contracts for the Hamidian Silver frontend applications.
 
-This package is intentionally source-only during F0. In F1, its public exports
-will be generated from the NestJS OpenAPI document so Storefront and Admin use
-the backend contract as the single source of truth.
+The NestJS API is the source of truth. Run `pnpm contracts:openapi` from the
+repository root to rebuild `openapi.json`. The snapshot is generated from the
+same Swagger configuration used by the running API.
 
-Do not add handwritten copies of backend DTOs here.
+Do not add handwritten copies of backend DTOs here. Generated TypeScript
+exports will be added in the next F1 contract-generation step.

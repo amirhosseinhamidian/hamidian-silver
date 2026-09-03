@@ -7,3 +7,4 @@ coverage/
 pnpm-lock.yaml
 apps/api/src/generated/prisma/
 apps/api/prisma/migrations/
+packages/contracts/openapi.json

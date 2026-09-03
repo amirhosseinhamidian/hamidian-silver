@@ -1,0 +1,5342 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/auth/otp/request": {
+      "post": {
+        "operationId": "AuthController_requestCode_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/otp/verify": {
+      "post": {
+        "operationId": "AuthController_verifyCode_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "AuthController_getCurrentUser_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout_v1",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout-all": {
+      "post": {
+        "operationId": "AuthController_logoutAll_v1",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/catalog/media": {
+      "post": {
+        "operationId": "CatalogController_createMedia_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMediaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/categories": {
+      "post": {
+        "operationId": "CatalogController_createCategory_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "get": {
+        "operationId": "CatalogController_listCategories_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/brands": {
+      "post": {
+        "operationId": "CatalogController_createBrand_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBrandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "get": {
+        "operationId": "CatalogController_listBrands_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/countries": {
+      "post": {
+        "operationId": "CatalogController_createCountry_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCountryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "get": {
+        "operationId": "CatalogController_listCountries_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/sizes": {
+      "post": {
+        "operationId": "CatalogController_createSize_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSizeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "get": {
+        "operationId": "CatalogController_listSizes_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/products": {
+      "post": {
+        "operationId": "CatalogController_createProduct_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "get": {
+        "operationId": "CatalogController_listProducts_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/finance/supplier-payables": {
+      "get": {
+        "operationId": "SupplierPayablesController_list_v1",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PAID",
+                "OPEN"
+              ]
+            }
+          },
+          {
+            "name": "supplierId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierPayables"
+        ]
+      }
+    },
+    "/api/v1/finance/supplier-payables/summary": {
+      "get": {
+        "operationId": "SupplierPayablesController_summary_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierPayables"
+        ]
+      }
+    },
+    "/api/v1/finance/supplier-payables/{payableId}/mark-paid": {
+      "patch": {
+        "operationId": "SupplierPayablesController_markPaid_v1",
+        "parameters": [
+          {
+            "name": "payableId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkSupplierPayablePaidDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierPayables"
+        ]
+      }
+    },
+    "/api/v1/finance/supplier-settlements": {
+      "get": {
+        "operationId": "SupplierSettlementsController_list_v1",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "CANCELLED",
+                "PAID"
+              ]
+            }
+          },
+          {
+            "name": "supplierId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierSettlements"
+        ]
+      },
+      "post": {
+        "operationId": "SupplierSettlementsController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSupplierSettlementDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierSettlements"
+        ]
+      }
+    },
+    "/api/v1/finance/supplier-settlements/{settlementId}": {
+      "get": {
+        "operationId": "SupplierSettlementsController_get_v1",
+        "parameters": [
+          {
+            "name": "settlementId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierSettlements"
+        ]
+      }
+    },
+    "/api/v1/finance/supplier-settlements/{settlementId}/credits": {
+      "post": {
+        "operationId": "SupplierSettlementsController_applyCredit_v1",
+        "parameters": [
+          {
+            "name": "settlementId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplySupplierCreditDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierSettlements"
+        ]
+      }
+    },
+    "/api/v1/finance/supplier-settlements/{settlementId}/credits/{applicationId}/remove": {
+      "post": {
+        "operationId": "SupplierSettlementsController_removeCredit_v1",
+        "parameters": [
+          {
+            "name": "settlementId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "applicationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveSupplierCreditApplicationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierSettlements"
+        ]
+      }
+    },
+    "/api/v1/finance/supplier-settlements/{settlementId}/pay": {
+      "post": {
+        "operationId": "SupplierSettlementsController_pay_v1",
+        "parameters": [
+          {
+            "name": "settlementId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaySupplierSettlementDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierSettlements"
+        ]
+      }
+    },
+    "/api/v1/finance/supplier-settlements/{settlementId}/cancel": {
+      "post": {
+        "operationId": "SupplierSettlementsController_cancel_v1",
+        "parameters": [
+          {
+            "name": "settlementId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelSupplierSettlementDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierSettlements"
+        ]
+      }
+    },
+    "/api/v1/finance/dashboard": {
+      "get": {
+        "operationId": "OrderFinanceController_dashboard_v1",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OrderFinance"
+        ]
+      }
+    },
+    "/api/v1/finance/orders": {
+      "get": {
+        "operationId": "OrderFinanceController_listOrders_v1",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OrderFinance"
+        ]
+      }
+    },
+    "/api/v1/finance/orders/backfill-missing": {
+      "post": {
+        "operationId": "OrderFinanceController_backfillMissing_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackfillFinanceSnapshotsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OrderFinance"
+        ]
+      }
+    },
+    "/api/v1/finance/orders/{orderId}": {
+      "get": {
+        "operationId": "OrderFinanceController_getOrder_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OrderFinance"
+        ]
+      }
+    },
+    "/api/v1/finance/refunds": {
+      "get": {
+        "operationId": "PaymentRefundsController_list_v1",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "CANCELLED",
+                "FAILED",
+                "CONFIRMED"
+              ]
+            }
+          },
+          {
+            "name": "orderId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PaymentRefunds"
+        ]
+      },
+      "post": {
+        "operationId": "PaymentRefundsController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePaymentRefundDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PaymentRefunds"
+        ]
+      }
+    },
+    "/api/v1/finance/refunds/{refundId}": {
+      "get": {
+        "operationId": "PaymentRefundsController_get_v1",
+        "parameters": [
+          {
+            "name": "refundId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PaymentRefunds"
+        ]
+      }
+    },
+    "/api/v1/finance/refunds/{refundId}/confirm": {
+      "post": {
+        "operationId": "PaymentRefundsController_confirm_v1",
+        "parameters": [
+          {
+            "name": "refundId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPaymentRefundDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PaymentRefunds"
+        ]
+      }
+    },
+    "/api/v1/finance/refunds/{refundId}/cancel": {
+      "post": {
+        "operationId": "PaymentRefundsController_cancel_v1",
+        "parameters": [
+          {
+            "name": "refundId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelPaymentRefundDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PaymentRefunds"
+        ]
+      }
+    },
+    "/api/v1/finance/supplier-credits": {
+      "get": {
+        "operationId": "SupplierCreditsController_list_v1",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "AVAILABLE",
+                "PARTIALLY_APPLIED",
+                "APPLIED",
+                "VOIDED"
+              ]
+            }
+          },
+          {
+            "name": "supplierId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierCredits"
+        ]
+      }
+    },
+    "/api/v1/finance/supplier-credits/{creditId}": {
+      "get": {
+        "operationId": "SupplierCreditsController_get_v1",
+        "parameters": [
+          {
+            "name": "creditId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierCredits"
+        ]
+      }
+    },
+    "/api/v1/finance/dashboard/management": {
+      "get": {
+        "operationId": "FinancialReportingController_managementDashboard_v1",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "FinancialReporting"
+        ]
+      }
+    },
+    "/api/v1/finance/dashboard/suppliers": {
+      "get": {
+        "operationId": "FinancialReportingController_suppliers_v1",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "FinancialReporting"
+        ]
+      }
+    },
+    "/api/v1/finance/dashboard/contribution": {
+      "get": {
+        "operationId": "FinancialReportingController_contribution_v1",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "FinancialReporting"
+        ]
+      }
+    },
+    "/api/v1/finance/cashflow": {
+      "get": {
+        "operationId": "FinancialReportingController_cashflow_v1",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "FinancialReporting"
+        ]
+      }
+    },
+    "/api/v1/finance/order-costs": {
+      "get": {
+        "operationId": "OrderCostsController_list_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SHIPPING_PROVIDER",
+                "PAYMENT_GATEWAY_FEE",
+                "PLATING_SERVICE",
+                "MANUAL_ADJUSTMENT"
+              ]
+            }
+          },
+          {
+            "name": "source",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OrderCosts"
+        ]
+      },
+      "post": {
+        "operationId": "OrderCostsController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderCostDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OrderCosts"
+        ]
+      }
+    },
+    "/api/v1/finance/order-costs/{costId}": {
+      "get": {
+        "operationId": "OrderCostsController_get_v1",
+        "parameters": [
+          {
+            "name": "costId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OrderCosts"
+        ]
+      }
+    },
+    "/api/v1/finance/order-costs/{costId}/reverse": {
+      "post": {
+        "operationId": "OrderCostsController_reverse_v1",
+        "parameters": [
+          {
+            "name": "costId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReverseOrderCostDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OrderCosts"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-reconciliation": {
+      "get": {
+        "operationId": "OrderCostsController_reconciliation_v1",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OrderCosts"
+        ]
+      }
+    },
+    "/api/v1/finance/orders/{orderId}/cost-reconciliation": {
+      "get": {
+        "operationId": "OrderCostsController_orderReconciliation_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OrderCosts"
+        ]
+      }
+    },
+    "/api/v1/finance/orders/{orderId}/contribution": {
+      "get": {
+        "operationId": "OrderCostsController_contribution_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OrderCosts"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "HealthController_check_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/health/live": {
+      "get": {
+        "operationId": "HealthController_checkLiveness_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "operationId": "HealthController_checkReadiness_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/health/database": {
+      "get": {
+        "operationId": "HealthController_checkDatabase_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/inventory/warehouses": {
+      "post": {
+        "operationId": "InventoryController_createWarehouse_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWarehouseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Inventory"
+        ]
+      },
+      "get": {
+        "operationId": "InventoryController_listWarehouses_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/stock/adjust": {
+      "post": {
+        "operationId": "InventoryController_adjustStock_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustStockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/stock/bulk-set": {
+      "post": {
+        "operationId": "InventoryController_bulkSetStock_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkSetStockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/stock/low-stock-threshold": {
+      "patch": {
+        "operationId": "InventoryController_setLowStockThreshold_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetLowStockThresholdDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/stock": {
+      "get": {
+        "operationId": "InventoryController_listStock_v1",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/notifications/recovery/unknown": {
+      "get": {
+        "operationId": "NotificationOutboxRecoveryController_listUnknown_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "NotificationOutboxRecovery"
+        ]
+      }
+    },
+    "/api/v1/notifications/recovery/customer/{eventId}/resolve": {
+      "patch": {
+        "operationId": "NotificationOutboxRecoveryController_resolveCustomer_v1",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveNotificationOutboxRecoveryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "NotificationOutboxRecovery"
+        ]
+      }
+    },
+    "/api/v1/notifications/recovery/operational/{eventId}/resolve": {
+      "patch": {
+        "operationId": "NotificationOutboxRecoveryController_resolveOperational_v1",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveNotificationOutboxRecoveryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "NotificationOutboxRecovery"
+        ]
+      }
+    },
+    "/api/v1/pricing/suppliers": {
+      "post": {
+        "operationId": "PricingController_createSupplier_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSupplierDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Pricing"
+        ]
+      },
+      "get": {
+        "operationId": "PricingController_listSuppliers_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Pricing"
+        ]
+      }
+    },
+    "/api/v1/pricing/products/{productId}/suppliers/{supplierId}": {
+      "put": {
+        "operationId": "PricingController_setProductSupplier_v1",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "supplierId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetProductSupplierDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Pricing"
+        ]
+      }
+    },
+    "/api/v1/pricing/products/{productId}": {
+      "get": {
+        "operationId": "PricingController_getProductPricing_v1",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Pricing"
+        ]
+      }
+    },
+    "/api/v1/pricing/products/{productId}/sale-price": {
+      "patch": {
+        "operationId": "PricingController_setSalePrice_v1",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetSalePriceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Pricing"
+        ]
+      }
+    },
+    "/api/v1/pricing/products/{productId}/history": {
+      "get": {
+        "operationId": "PricingController_listPriceHistory_v1",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Pricing"
+        ]
+      }
+    },
+    "/api/v1/plating/rates": {
+      "get": {
+        "operationId": "PlatingController_listRates_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Plating"
+        ]
+      }
+    },
+    "/api/v1/plating/rates/{type}": {
+      "put": {
+        "operationId": "PlatingController_setRate_v1",
+        "parameters": [
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "GOLD",
+                "RHODIUM"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPlatingRateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Plating"
+        ]
+      }
+    },
+    "/api/v1/plating/rates/{type}/history": {
+      "get": {
+        "operationId": "PlatingController_listRateHistory_v1",
+        "parameters": [
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "GOLD",
+                "RHODIUM"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Plating"
+        ]
+      }
+    },
+    "/api/v1/plating/variants/{variantId}/eligibility": {
+      "patch": {
+        "operationId": "PlatingController_setVariantEligibility_v1",
+        "parameters": [
+          {
+            "name": "variantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPlatingEligibilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Plating"
+        ]
+      }
+    },
+    "/api/v1/plating/variants/{variantId}/options/{type}": {
+      "put": {
+        "operationId": "PlatingController_setVariantOption_v1",
+        "parameters": [
+          {
+            "name": "variantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "GOLD",
+                "RHODIUM"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPlatingOptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Plating"
+        ]
+      }
+    },
+    "/api/v1/plating/variants/{variantId}": {
+      "get": {
+        "operationId": "PlatingController_getVariantPlating_v1",
+        "parameters": [
+          {
+            "name": "variantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Plating"
+        ]
+      }
+    },
+    "/api/v1/plating/variants/{variantId}/quote/{type}": {
+      "get": {
+        "operationId": "PlatingController_quoteVariant_v1",
+        "parameters": [
+          {
+            "name": "variantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "GOLD",
+                "RHODIUM"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Plating"
+        ]
+      }
+    },
+    "/api/v1/operations/plating/orders": {
+      "get": {
+        "operationId": "PlatingFulfillmentController_list_v1",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELLED"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatingFulfillment"
+        ]
+      }
+    },
+    "/api/v1/operations/plating/orders/{orderId}": {
+      "get": {
+        "operationId": "PlatingFulfillmentController_get_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatingFulfillment"
+        ]
+      }
+    },
+    "/api/v1/operations/plating/orders/{orderId}/start": {
+      "post": {
+        "operationId": "PlatingFulfillmentController_start_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartPlatingFulfillmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatingFulfillment"
+        ]
+      }
+    },
+    "/api/v1/operations/plating/orders/{orderId}/complete": {
+      "post": {
+        "operationId": "PlatingFulfillmentController_complete_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletePlatingFulfillmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PlatingFulfillment"
+        ]
+      }
+    },
+    "/api/v1/operations/plating/orders/{orderId}/cancel": {
+      "post": {
+        "operationId": "PlatingFulfillmentController_cancel_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelPlatingFulfillmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatingFulfillment"
+        ]
+      }
+    },
+    "/api/v1/orders": {
+      "post": {
+        "operationId": "OrdersController_createOrder_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      },
+      "get": {
+        "operationId": "OrdersController_listOrders_v1",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CANCELLED",
+                "PENDING_PAYMENT",
+                "PAID",
+                "PROCESSING",
+                "SHIPPED",
+                "DELIVERED",
+                "EXPIRED"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/orders/me": {
+      "get": {
+        "operationId": "OrdersController_listMyOrders_v1",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CANCELLED",
+                "PENDING_PAYMENT",
+                "PAID",
+                "PROCESSING",
+                "SHIPPED",
+                "DELIVERED",
+                "EXPIRED"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/orders/me/{orderId}": {
+      "get": {
+        "operationId": "OrdersController_getMyOrder_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{orderId}/status": {
+      "patch": {
+        "operationId": "OrdersController_updateStatus_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrderStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{orderId}/cancel": {
+      "post": {
+        "operationId": "OrdersController_cancelOrder_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{orderId}/returns": {
+      "post": {
+        "operationId": "OrderReturnsController_create_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderReturnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OrderReturns"
+        ]
+      },
+      "get": {
+        "operationId": "OrderReturnsController_listForOrder_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OrderReturns"
+        ]
+      }
+    },
+    "/api/v1/orders/returns/{returnId}": {
+      "get": {
+        "operationId": "OrderReturnsController_get_v1",
+        "parameters": [
+          {
+            "name": "returnId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OrderReturns"
+        ]
+      }
+    },
+    "/api/v1/orders/returns/{returnId}/receive": {
+      "post": {
+        "operationId": "OrderReturnsController_receive_v1",
+        "parameters": [
+          {
+            "name": "returnId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiveOrderReturnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OrderReturns"
+        ]
+      }
+    },
+    "/api/v1/orders/returns/{returnId}/cancel": {
+      "post": {
+        "operationId": "OrderReturnsController_cancel_v1",
+        "parameters": [
+          {
+            "name": "returnId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelOrderReturnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OrderReturns"
+        ]
+      }
+    },
+    "/api/v1/operations/orders/readiness": {
+      "get": {
+        "operationId": "FulfillmentReadinessController_list_v1",
+        "parameters": [
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "READY",
+                "BLOCKED"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "FulfillmentReadiness"
+        ]
+      }
+    },
+    "/api/v1/operations/orders/{orderId}/readiness": {
+      "get": {
+        "operationId": "FulfillmentReadinessController_get_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "FulfillmentReadiness"
+        ]
+      }
+    },
+    "/api/v1/operations/work-queue": {
+      "get": {
+        "operationId": "OperationsWorkQueueController_list_v1",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PLATING",
+                "SHIPPING"
+              ]
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "READY",
+                "BLOCKED",
+                "OVERDUE"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OperationsWorkQueue"
+        ]
+      }
+    },
+    "/api/v1/operations/work-queue/summary": {
+      "get": {
+        "operationId": "OperationsWorkQueueController_summary_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OperationsWorkQueue"
+        ]
+      }
+    },
+    "/api/v1/operations/alerts/summary": {
+      "get": {
+        "operationId": "OperationalAlertsController_summary_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OperationalAlerts"
+        ]
+      }
+    },
+    "/api/v1/operations/incidents": {
+      "get": {
+        "operationId": "OperationalIncidentsController_list_v1",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "ACKNOWLEDGED",
+                "RESOLVED"
+              ]
+            }
+          },
+          {
+            "name": "code",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PLATING_OVERDUE",
+                "PLATING_CANCELLED",
+                "SHIPMENT_CREATION_STALE",
+                "SHIPMENT_PROVIDER_RECONCILIATION_REQUIRED"
+              ]
+            }
+          },
+          {
+            "name": "assignedToMe",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OperationalIncidents"
+        ]
+      }
+    },
+    "/api/v1/operations/incidents/{incidentId}": {
+      "get": {
+        "operationId": "OperationalIncidentsController_get_v1",
+        "parameters": [
+          {
+            "name": "incidentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OperationalIncidents"
+        ]
+      }
+    },
+    "/api/v1/operations/incidents/{incidentId}/acknowledge": {
+      "post": {
+        "operationId": "OperationalIncidentsController_acknowledge_v1",
+        "parameters": [
+          {
+            "name": "incidentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OperationalIncidents"
+        ]
+      }
+    },
+    "/api/v1/operations/incidents/{incidentId}/assign": {
+      "post": {
+        "operationId": "OperationalIncidentsController_assign_v1",
+        "parameters": [
+          {
+            "name": "incidentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignOperationalIncidentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OperationalIncidents"
+        ]
+      }
+    },
+    "/api/v1/operations/incidents/{incidentId}/unassign": {
+      "post": {
+        "operationId": "OperationalIncidentsController_unassign_v1",
+        "parameters": [
+          {
+            "name": "incidentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OperationalIncidents"
+        ]
+      }
+    },
+    "/api/v1/operations/incidents/{incidentId}/notes": {
+      "post": {
+        "operationId": "OperationalIncidentsController_addNote_v1",
+        "parameters": [
+          {
+            "name": "incidentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddOperationalIncidentNoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OperationalIncidents"
+        ]
+      }
+    },
+    "/api/v1/payments/orders/{orderId}/initiate": {
+      "post": {
+        "operationId": "PaymentsController_initiateOrderPayment_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitiatePaymentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/orders/{orderId}": {
+      "get": {
+        "operationId": "PaymentsController_getOrderPayment_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/callback/{attemptId}": {
+      "get": {
+        "operationId": "PaymentsController_verifyCallback_v1",
+        "parameters": [
+          {
+            "name": "attemptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authority",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 255,
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authority",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 255,
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OK",
+                "NOK"
+              ]
+            }
+          },
+          {
+            "name": "Status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OK",
+                "NOK"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/gateways": {
+      "get": {
+        "operationId": "PaymentGatewaySettingsController_listAvailableGateways_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PaymentGatewaySettings"
+        ]
+      }
+    },
+    "/api/v1/payments/settings/gateways": {
+      "get": {
+        "operationId": "PaymentGatewaySettingsController_listGatewaySettings_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PaymentGatewaySettings"
+        ]
+      }
+    },
+    "/api/v1/payments/settings/gateways/{provider}": {
+      "patch": {
+        "operationId": "PaymentGatewaySettingsController_updateGatewaySetting_v1",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePaymentGatewaySettingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PaymentGatewaySettings"
+        ]
+      }
+    },
+    "/api/v1/payments/callback/{attemptId}/zibal": {
+      "get": {
+        "operationId": "ZibalPaymentCallbackController_verifyCallback_v1",
+        "parameters": [
+          {
+            "name": "attemptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "trackId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d+$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^-?\\d+$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ZibalPaymentCallback"
+        ]
+      }
+    },
+    "/api/v1/payments/callback/{attemptId}/mellat": {
+      "post": {
+        "operationId": "MellatPaymentCallbackController_verifyCallback_v1",
+        "parameters": [
+          {
+            "name": "attemptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MellatPaymentCallbackDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MellatPaymentCallback"
+        ]
+      }
+    },
+    "/api/v1/payments/redirect/{attemptId}/mellat": {
+      "get": {
+        "operationId": "MellatPaymentRedirectController_redirect_v1",
+        "parameters": [
+          {
+            "name": "attemptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MellatPaymentRedirect"
+        ]
+      }
+    },
+    "/api/v1/payments/initiation-recovery": {
+      "get": {
+        "operationId": "PaymentInitiationRecoveryController_list_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PaymentInitiationRecovery"
+        ]
+      }
+    },
+    "/api/v1/payments/initiation-recovery/{attemptId}/resolve": {
+      "patch": {
+        "operationId": "PaymentInitiationRecoveryController_resolve_v1",
+        "parameters": [
+          {
+            "name": "attemptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolvePaymentInitiationRecoveryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PaymentInitiationRecovery"
+        ]
+      }
+    },
+    "/api/v1/payments/operations/summary": {
+      "get": {
+        "operationId": "PaymentOperationalObservabilityController_summary_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PaymentOperationalObservability"
+        ]
+      }
+    },
+    "/api/v1/payments/reconciliations": {
+      "get": {
+        "operationId": "PaymentReconciliationController_list_v1",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "RESOLVED",
+                "OPEN"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PaymentReconciliation"
+        ]
+      }
+    },
+    "/api/v1/payments/reconciliations/{reconciliationId}/resolve-external-refund": {
+      "patch": {
+        "operationId": "PaymentReconciliationController_resolveExternalRefund_v1",
+        "parameters": [
+          {
+            "name": "reconciliationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolvePaymentReconciliationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PaymentReconciliation"
+        ]
+      }
+    },
+    "/api/v1/profile": {
+      "get": {
+        "operationId": "ProfileController_getProfile_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Profile"
+        ]
+      },
+      "patch": {
+        "operationId": "ProfileController_updateProfile_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/api/v1/profile/addresses": {
+      "get": {
+        "operationId": "ProfileController_listAddresses_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Profile"
+        ]
+      },
+      "post": {
+        "operationId": "ProfileController_createAddress_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserAddressDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/api/v1/profile/addresses/{addressId}": {
+      "patch": {
+        "operationId": "ProfileController_updateAddress_v1",
+        "parameters": [
+          {
+            "name": "addressId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserAddressDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Profile"
+        ]
+      },
+      "delete": {
+        "operationId": "ProfileController_deleteAddress_v1",
+        "parameters": [
+          {
+            "name": "addressId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/api/v1/profile/addresses/{addressId}/default": {
+      "patch": {
+        "operationId": "ProfileController_setDefaultAddress_v1",
+        "parameters": [
+          {
+            "name": "addressId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/api/v1/shipping/me/orders/{orderId}/quote": {
+      "post": {
+        "operationId": "ShippingController_quoteOrder_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      }
+    },
+    "/api/v1/shipping/me/orders/{orderId}/select": {
+      "post": {
+        "operationId": "ShippingController_selectRate_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectShippingRateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      }
+    },
+    "/api/v1/shipping/me/orders/{orderId}": {
+      "get": {
+        "operationId": "ShippingController_getMyShipment_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      }
+    },
+    "/api/v1/shipping/orders/{orderId}": {
+      "get": {
+        "operationId": "ShippingController_getShipment_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      }
+    },
+    "/api/v1/shipping/orders/{orderId}/create": {
+      "post": {
+        "operationId": "ShippingController_createProviderShipment_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      }
+    },
+    "/api/v1/shipping/orders/{orderId}/track": {
+      "post": {
+        "operationId": "ShippingController_syncTracking_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      }
+    },
+    "/api/v1/shipping/orders/{orderId}/provider-creation/reset": {
+      "post": {
+        "operationId": "ShippingController_resetProviderCreation_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetShipmentProviderCreationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      }
+    },
+    "/api/v1/shipping/orders/{orderId}/status": {
+      "patch": {
+        "operationId": "ShippingController_updateStatus_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateShipmentStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Hamidian Silver API",
+    "description": "Backend API documentation",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "RequestOtpDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 20
+          }
+        },
+        "required": [
+          "phone"
+        ]
+      },
+      "VerifyOtpDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 20
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "phone",
+          "code"
+        ]
+      },
+      "CreateMediaDto": {
+        "type": "object",
+        "properties": {
+          "storageKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "originalName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "mimeType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "width": {
+            "type": "number",
+            "minimum": 1
+          },
+          "height": {
+            "type": "number",
+            "minimum": 1
+          },
+          "sizeBytes": {
+            "type": "number",
+            "minimum": 1
+          },
+          "altText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "storageKey",
+          "mimeType",
+          "sizeBytes"
+        ]
+      },
+      "CreateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "description": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "imageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 0
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "slug"
+        ]
+      },
+      "CreateBrandDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "description": {
+            "type": "string"
+          },
+          "imageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "slug"
+        ]
+      },
+      "CreateCountryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "isoCode": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$"
+          },
+          "imageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "isoCode"
+        ]
+      },
+      "CreateSizeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 0
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ]
+      },
+      "CreateProductVariantDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "sizeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "weightGrams": {
+            "type": "number",
+            "minimum": 0
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sku"
+        ]
+      },
+      "CreateProductMediaDto": {
+        "type": "object",
+        "properties": {
+          "mediaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 0
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "altText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "mediaId"
+        ]
+      },
+      "CreateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220
+          },
+          "shortDescription": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          },
+          "sizeMode": {
+            "type": "string",
+            "enum": [
+              "NONE",
+              "FREE_SIZE",
+              "SIZED"
+            ]
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "countryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryIds": {
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "variants": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateProductVariantDto"
+            }
+          },
+          "media": {
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateProductMediaDto"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "sizeMode",
+          "variants"
+        ]
+      },
+      "MarkSupplierPayablePaidDto": {
+        "type": "object",
+        "properties": {
+          "paymentReference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "note": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        }
+      },
+      "CreateSupplierSettlementDto": {
+        "type": "object",
+        "properties": {
+          "payableIds": {
+            "uniqueItems": true,
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "note": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "payableIds"
+        ]
+      },
+      "ApplySupplierCreditDto": {
+        "type": "object",
+        "properties": {
+          "supplierCreditId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amountToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "supplierCreditId",
+          "amountToman",
+          "idempotencyKey"
+        ]
+      },
+      "RemoveSupplierCreditApplicationDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        }
+      },
+      "PaySupplierSettlementDto": {
+        "type": "object",
+        "properties": {
+          "paymentReference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "note": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        }
+      },
+      "CancelSupplierSettlementDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        }
+      },
+      "BackfillFinanceSnapshotsDto": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 200
+          }
+        }
+      },
+      "CreatePaymentRefundDto": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amountToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 120
+          },
+          "note": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "orderId",
+          "amountToman",
+          "idempotencyKey"
+        ]
+      },
+      "ConfirmPaymentRefundDto": {
+        "type": "object",
+        "properties": {
+          "externalReference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "note": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "externalReference"
+        ]
+      },
+      "CancelPaymentRefundDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        }
+      },
+      "CreateOrderCostDto": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "SHIPPING_PROVIDER",
+              "PAYMENT_GATEWAY_FEE",
+              "PLATING_SERVICE",
+              "MANUAL_ADJUSTMENT"
+            ]
+          },
+          "amountToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "externalReference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 120
+          },
+          "occurredAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderId",
+          "type",
+          "amountToman",
+          "source",
+          "idempotencyKey"
+        ]
+      },
+      "ReverseOrderCostDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        }
+      },
+      "CreateWarehouseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "AdjustStockDto": {
+        "type": "object",
+        "properties": {
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "variantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "onHandDelta": {
+            "type": "number",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "warehouseId",
+          "variantId",
+          "onHandDelta"
+        ]
+      },
+      "BulkSetStockDto": {
+        "type": "object",
+        "properties": {
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "variantIds": {
+            "uniqueItems": true,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "onHand": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "warehouseId",
+          "variantIds",
+          "onHand"
+        ]
+      },
+      "SetLowStockThresholdDto": {
+        "type": "object",
+        "properties": {
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "variantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lowStockThreshold": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "warehouseId",
+          "variantId",
+          "lowStockThreshold"
+        ]
+      },
+      "ResolveNotificationOutboxRecoveryDto": {
+        "type": "object",
+        "properties": {
+          "resolution": {
+            "enum": [
+              "RETRY_APPROVED",
+              "MARKED_SENT"
+            ],
+            "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "resolution",
+          "note"
+        ]
+      },
+      "CreateSupplierDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "contactName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 20
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "SetProductSupplierDto": {
+        "type": "object",
+        "properties": {
+          "supplierPriceToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "markupPercent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "isPreferred": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "supplierPriceToman"
+        ]
+      },
+      "SetSalePriceDto": {
+        "type": "object",
+        "properties": {
+          "salePriceToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "salePriceToman"
+        ]
+      },
+      "SetPlatingRateDto": {
+        "type": "object",
+        "properties": {
+          "pricePerGramToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "leadTimeDays": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 365
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "pricePerGramToman",
+          "leadTimeDays"
+        ]
+      },
+      "SetPlatingEligibilityDto": {
+        "type": "object",
+        "properties": {
+          "platingEligible": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "platingEligible"
+        ]
+      },
+      "SetPlatingOptionDto": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StartPlatingFulfillmentDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        }
+      },
+      "CompletePlatingFulfillmentDto": {
+        "type": "object",
+        "properties": {
+          "actualCostToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "externalReference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "note": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "actualCostToman"
+        ]
+      },
+      "CancelPlatingFulfillmentDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "CreateOrderAddressDto": {
+        "type": "object",
+        "properties": {
+          "recipientName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 20
+          },
+          "province": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "city": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "addressLine": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          },
+          "postalCode": {
+            "type": "string",
+            "pattern": "^\\d{10}$"
+          }
+        },
+        "required": [
+          "recipientName",
+          "phone",
+          "province",
+          "city",
+          "addressLine",
+          "postalCode"
+        ]
+      },
+      "CreateOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "variantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 99
+          },
+          "platingType": {
+            "type": "string",
+            "enum": [
+              "GOLD",
+              "RHODIUM"
+            ]
+          }
+        },
+        "required": [
+          "variantId",
+          "quantity"
+        ]
+      },
+      "CreateOrderDto": {
+        "type": "object",
+        "properties": {
+          "userAddressId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shippingAddress": {
+            "$ref": "#/components/schemas/CreateOrderAddressDto"
+          },
+          "items": {
+            "uniqueItems": true,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateOrderItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "UpdateOrderStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "CANCELLED",
+              "PENDING_PAYMENT",
+              "PAID",
+              "PROCESSING",
+              "SHIPPED",
+              "DELIVERED",
+              "EXPIRED"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "CancelOrderDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "CreateOrderReturnItemDto": {
+        "type": "object",
+        "properties": {
+          "orderItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "orderItemId",
+          "quantity"
+        ]
+      },
+      "CreateOrderReturnDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateOrderReturnItemDto"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ReceiveOrderReturnItemDto": {
+        "type": "object",
+        "properties": {
+          "returnItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "disposition": {
+            "type": "string",
+            "enum": [
+              "RESTOCK",
+              "RETURN_TO_SUPPLIER"
+            ]
+          }
+        },
+        "required": [
+          "returnItemId",
+          "disposition"
+        ]
+      },
+      "ReceiveOrderReturnDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceiveOrderReturnItemDto"
+            }
+          },
+          "note": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CancelOrderReturnDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        }
+      },
+      "AssignOperationalIncidentDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "userId"
+        ]
+      },
+      "AddOperationalIncidentNoteDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "note"
+        ]
+      },
+      "InitiatePaymentDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 120,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          }
+        },
+        "required": [
+          "idempotencyKey"
+        ]
+      },
+      "UpdatePaymentGatewaySettingDto": {
+        "type": "object",
+        "properties": {
+          "isEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "isEnabled"
+        ]
+      },
+      "MellatPaymentCallbackDto": {
+        "type": "object",
+        "properties": {
+          "RefId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9]+$"
+          },
+          "ResCode": {
+            "type": "string",
+            "pattern": "^\\d+$"
+          },
+          "SaleOrderId": {
+            "type": "string",
+            "pattern": "^\\d+$"
+          },
+          "SaleReferenceId": {
+            "type": "string",
+            "pattern": "^\\d+$"
+          }
+        },
+        "required": [
+          "RefId",
+          "ResCode"
+        ]
+      },
+      "ResolvePaymentInitiationRecoveryDto": {
+        "type": "object",
+        "properties": {
+          "resolution": {
+            "type": "string",
+            "enum": [
+              "ABANDONED",
+              "REDIRECTED"
+            ]
+          },
+          "authority": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "paymentUrl": {
+            "type": "string",
+            "format": "uri",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "note": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 400
+          }
+        },
+        "required": [
+          "resolution"
+        ]
+      },
+      "ResolvePaymentReconciliationDto": {
+        "type": "object",
+        "properties": {
+          "externalRefundReference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "resolutionNote": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "externalRefundReference",
+          "resolutionNote"
+        ]
+      },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      },
+      "CreateUserAddressDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "recipientName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 20
+          },
+          "province": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "city": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "addressLine": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          },
+          "postalCode": {
+            "type": "string",
+            "pattern": "^\\d{10}$"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "title",
+          "recipientName",
+          "phone",
+          "province",
+          "city",
+          "addressLine",
+          "postalCode"
+        ]
+      },
+      "UpdateUserAddressDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "recipientName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 20
+          },
+          "province": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "city": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "addressLine": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          },
+          "postalCode": {
+            "type": "string",
+            "pattern": "^\\d{10}$"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SelectShippingRateDto": {
+        "type": "object",
+        "properties": {
+          "serviceCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "serviceCode"
+        ]
+      },
+      "ResetShipmentProviderCreationDto": {
+        "type": "object",
+        "properties": {
+          "confirmNoProviderShipment": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "confirmNoProviderShipment",
+          "reason"
+        ]
+      },
+      "UpdateShipmentStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "CANCELLED",
+              "DELIVERED",
+              "FAILED",
+              "READY",
+              "HANDED_OVER",
+              "IN_TRANSIT"
+            ]
+          },
+          "trackingCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "providerShipmentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "status"
+        ]
+      }
+    }
+  }
+}
