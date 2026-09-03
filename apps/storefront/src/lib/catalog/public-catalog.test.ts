@@ -1,4 +1,5 @@
 import {
+  buildCatalogCollectionHref,
   buildCatalogHref,
   parseCatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
@@ -72,5 +73,35 @@ describe('buildCatalogHref', () => {
         sort: 'newest',
       }),
     ).toBe('/products');
+  });
+});
+
+describe('buildCatalogCollectionHref', () => {
+  it('keeps collection routes focused on sorting and pagination', () => {
+    const filters = parseCatalogSearchParams({
+      q: 'ignored',
+      category: 'rings',
+      brand: 'brand-a',
+      sort: 'price-desc',
+      page: '3',
+    });
+
+    expect(buildCatalogCollectionHref('/categories/rings', filters)).toBe(
+      '/categories/rings?sort=price-desc&page=3',
+    );
+  });
+
+  it('omits default collection query values', () => {
+    const filters = parseCatalogSearchParams({
+      sort: 'price-asc',
+      page: '4',
+    });
+
+    expect(
+      buildCatalogCollectionHref('/brands/hamidian', filters, {
+        sort: 'newest',
+        page: 1,
+      }),
+    ).toBe('/brands/hamidian');
   });
 });

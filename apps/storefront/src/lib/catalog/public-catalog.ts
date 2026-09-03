@@ -59,6 +59,7 @@ export function parseCatalogSearchParams(searchParams: CatalogSearchParams): Cat
 }
 
 type CatalogFilterOverrides = Partial<Omit<CatalogFilters, 'pageSize'>>;
+type CatalogCollectionHrefOverrides = Partial<Pick<CatalogFilters, 'page' | 'sort'>>;
 
 export function buildCatalogHref(
   filters: CatalogFilters,
@@ -95,6 +96,28 @@ export function buildCatalogHref(
   return query ? `/products?${query}` : '/products';
 }
 
+export function buildCatalogCollectionHref(
+  pathname: string,
+  filters: CatalogFilters,
+  overrides: CatalogCollectionHrefOverrides = {},
+): string {
+  const page = overrides.page ?? filters.page;
+  const sort = overrides.sort ?? filters.sort;
+  const searchParams = new URLSearchParams();
+
+  if (sort !== 'newest') {
+    searchParams.set('sort', sort);
+  }
+
+  if (page > 1) {
+    searchParams.set('page', String(page));
+  }
+
+  const query = searchParams.toString();
+
+  return query ? `${pathname}?${query}` : pathname;
+}
+
 function createPublicCatalogClient() {
   const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;
 
@@ -115,42 +138,61 @@ function assertSuccessfulResponse(
   }
 }
 
+export async function getPublicCatalogProducts(
+  filters: CatalogFilters,
+): Promise<PublicCatalogProductList> {
+  const client = createPublicCatalogClient();
+  const result = await client.GET('/api/v1/catalog/public/products', {
+    params: {
+      query: {
+        page: filters.page,
+        pageSize: filters.pageSize,
+        q: filters.q,
+        category: filters.category,
+        brand: filters.brand,
+        sort: filters.sort,
+      },
+    },
+  });
+
+  assertSuccessfulResponse(result.response, result.data, 'storefront products');
+
+  return result.data;
+}
+
+export async function getPublicCatalogCategories(): Promise<PublicCatalogCategory[]> {
+  const client = createPublicCatalogClient();
+  const result = await client.GET('/api/v1/catalog/public/categories');
+
+  assertSuccessfulResponse(result.response, result.data, 'storefront categories');
+
+  return result.data;
+}
+
+export async function getPublicCatalogBrands(): Promise<PublicCatalogBrand[]> {
+  const client = createPublicCatalogClient();
+  const result = await client.GET('/api/v1/catalog/public/brands');
+
+  assertSuccessfulResponse(result.response, result.data, 'storefront brands');
+
+  return result.data;
+}
+
 export async function getPublicCatalogIndex(filters: CatalogFilters): Promise<{
   products: PublicCatalogProductList;
   categories: PublicCatalogCategory[];
   brands: PublicCatalogBrand[];
 }> {
-  const client = createPublicCatalogClient();
-
-  const [productsResult, categoriesResult, brandsResult] = await Promise.all([
-    client.GET('/api/v1/catalog/public/products', {
-      params: {
-        query: {
-          page: filters.page,
-          pageSize: filters.pageSize,
-          q: filters.q,
-          category: filters.category,
-          brand: filters.brand,
-          sort: filters.sort,
-        },
-      },
-    }),
-    client.GET('/api/v1/catalog/public/categories'),
-    client.GET('/api/v1/catalog/public/brands'),
+  const [products, categories, brands] = await Promise.all([
+    getPublicCatalogProducts(filters),
+    getPublicCatalogCategories(),
+    getPublicCatalogBrands(),
   ]);
 
-  assertSuccessfulResponse(productsResult.response, productsResult.data, 'storefront products');
-  assertSuccessfulResponse(
-    categoriesResult.response,
-    categoriesResult.data,
-    'storefront categories',
-  );
-  assertSuccessfulResponse(brandsResult.response, brandsResult.data, 'storefront brands');
-
   return {
-    products: productsResult.data,
-    categories: categoriesResult.data,
-    brands: brandsResult.data,
+    products,
+    categories,
+    brands,
   };
 }
 
