@@ -1,0 +1,23 @@
+:root {
+  --sf-color-canvas: #ffffff;
+  --sf-color-surface: #f8f7f5;
+  --sf-color-surface-emphasis: #f1efec;
+  --sf-color-ink: #111111;
+  --sf-color-muted: #686868;
+  --sf-color-subtle: #8a8a8a;
+  --sf-color-border: #dedbd6;
+  --sf-color-border-strong: #b9b5af;
+  --sf-color-accent: #111111;
+  --sf-color-inverse: #ffffff;
+
+  --sf-content-max: 90rem;
+  --sf-reading-max: 42rem;
+  --sf-page-gutter: clamp(1rem, 4vw, 3rem);
+  --sf-section-space: clamp(4rem, 8vw, 8rem);
+
+  --sf-radius-sm: 0.125rem;
+  --sf-radius-md: 0.25rem;
+  --sf-focus-ring: 0 0 0 3px rgb(17 17 17 / 20%);
+
+  --sf-font-family: 'Peyda', Tahoma, Arial, sans-serif;
+}

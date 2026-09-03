@@ -9,10 +9,14 @@ describe('storefront test environment', () => {
       createElement(
         StorefrontShell,
         null,
-        createElement('main', null, 'Storefront test environment'),
+        createElement('main', { id: 'main-content' }, 'Storefront test environment'),
       ),
     );
 
     expect(screen.getByRole('main')).toHaveTextContent('Storefront test environment');
+    expect(screen.getByRole('link', { name: 'رفتن به محتوای اصلی' })).toHaveAttribute(
+      'href',
+      '#main-content',
+    );
   });
 });
