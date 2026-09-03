@@ -1851,9 +1851,32 @@ export interface components {
         RequestOtpDto: {
             phone: string;
         };
+        OtpRequestResponseDto: {
+            challengeId: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         VerifyOtpDto: {
             phone: string;
             code: string;
+        };
+        AuthUserResponseDto: {
+            id: string;
+            phone: string;
+        };
+        LoginResponseDto: {
+            /** @enum {string} */
+            tokenType: "Bearer";
+            accessToken: string;
+            /** Format: date-time */
+            expiresAt: string;
+            user: components["schemas"]["AuthUserResponseDto"];
+        };
+        CurrentUserResponseDto: {
+            roles: ("MANAGER" | "ADMIN" | "USER")[];
+            permissions: ("catalog.read" | "catalog.write" | "inventory.read" | "inventory.write" | "orders.read" | "orders.status.write" | "orders.tracking.write" | "orders.cancel" | "cms.read" | "cms.write" | "pricing.read" | "pricing.write" | "finance.read" | "finance.write" | "settings.read" | "settings.write" | "users.read" | "users.write" | "audit.read")[];
+            id: string;
+            phone: string;
         };
         CreateMediaDto: {
             storageKey: string;
@@ -2204,7 +2227,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["OtpRequestResponseDto"];
                 };
             };
         };
@@ -2227,7 +2250,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["LoginResponseDto"];
                 };
             };
         };
@@ -2245,7 +2268,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CurrentUserResponseDto"];
+                };
             };
         };
     };

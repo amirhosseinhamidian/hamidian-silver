@@ -21,7 +21,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/OtpRequestResponseDto"
                 }
               }
             }
@@ -52,7 +52,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/LoginResponseDto"
                 }
               }
             }
@@ -69,9 +69,21 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "Auth"
         ]
@@ -86,6 +98,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "Auth"
         ]
@@ -100,6 +117,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "Auth"
         ]
@@ -3998,6 +4020,22 @@
           "phone"
         ]
       },
+      "OtpRequestResponseDto": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId",
+          "expiresAt"
+        ]
+      },
       "VerifyOtpDto": {
         "type": "object",
         "properties": {
@@ -4014,6 +4052,103 @@
         "required": [
           "phone",
           "code"
+        ]
+      },
+      "AuthUserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "phone"
+        ]
+      },
+      "LoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AuthUserResponseDto"
+          }
+        },
+        "required": [
+          "tokenType",
+          "accessToken",
+          "expiresAt",
+          "user"
+        ]
+      },
+      "CurrentUserResponseDto": {
+        "type": "object",
+        "properties": {
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "MANAGER",
+                "ADMIN",
+                "USER"
+              ]
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "catalog.read",
+                "catalog.write",
+                "inventory.read",
+                "inventory.write",
+                "orders.read",
+                "orders.status.write",
+                "orders.tracking.write",
+                "orders.cancel",
+                "cms.read",
+                "cms.write",
+                "pricing.read",
+                "pricing.write",
+                "finance.read",
+                "finance.write",
+                "settings.read",
+                "settings.write",
+                "users.read",
+                "users.write",
+                "audit.read"
+              ]
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "roles",
+          "permissions",
+          "id",
+          "phone"
         ]
       },
       "CreateMediaDto": {

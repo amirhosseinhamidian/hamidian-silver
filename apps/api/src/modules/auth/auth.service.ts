@@ -9,19 +9,14 @@ import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { AuthenticatedPrincipal } from '../authorization/authorization.types';
 import { isPermissionCode, isRoleCode, ROLE_CODES } from '../authorization/rbac.constants';
+import type {
+  CurrentUserResponseDto,
+  LoginResponseDto,
+  OtpRequestResponseDto,
+} from './dto/auth-response.dto';
 import { OtpService } from './otp.service';
 
 const INVALID_SESSION_MESSAGE = 'Invalid or expired session.';
-
-type LoginResult = {
-  accessToken: string;
-  tokenType: 'Bearer';
-  expiresAt: Date;
-  user: {
-    id: string;
-    phone: string;
-  };
-};
 
 @Injectable()
 export class AuthService {
@@ -36,11 +31,11 @@ export class AuthService {
     this.sessionTtlMs = sessionTtlDays * 24 * 60 * 60 * 1000;
   }
 
-  requestOtp(phone: string) {
+  requestOtp(phone: string): Promise<OtpRequestResponseDto> {
     return this.otpService.requestCode(phone);
   }
 
-  async verifyOtp(phone: string, code: string): Promise<LoginResult> {
+  async verifyOtp(phone: string, code: string): Promise<LoginResponseDto> {
     const verification = await this.otpService.verifyCode(phone, code);
 
     return this.createSession(verification.phone);
@@ -116,12 +111,12 @@ export class AuthService {
     };
   }
 
-  getCurrentUser(principal: AuthenticatedPrincipal) {
+  getCurrentUser(principal: AuthenticatedPrincipal): CurrentUserResponseDto {
     return {
       id: principal.userId,
       phone: principal.phone,
-      roles: principal.roleCodes,
-      permissions: principal.permissionCodes,
+      roles: [...principal.roleCodes],
+      permissions: [...principal.permissionCodes],
     };
   }
 
@@ -149,7 +144,7 @@ export class AuthService {
     });
   }
 
-  private async createSession(phone: string): Promise<LoginResult> {
+  private async createSession(phone: string): Promise<LoginResponseDto> {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + this.sessionTtlMs);
     const accessToken = randomBytes(32).toString('base64url');
