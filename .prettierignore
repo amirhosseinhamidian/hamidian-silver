@@ -2,6 +2,8 @@ node_modules/
 dist/
 coverage/
 .pnpm-store/
+**/.next/**
+**/next-env.d.ts
 pnpm-lock.yaml
 apps/api/src/generated/prisma/
 apps/api/prisma/migrations/
