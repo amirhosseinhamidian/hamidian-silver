@@ -4171,6 +4171,77 @@
           "Shipping"
         ]
       }
+    },
+    "/api/v1/site-settings/public": {
+      "get": {
+        "operationId": "SiteSettingsController_getPublicSettings_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSiteSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SiteSettings"
+        ]
+      }
+    },
+    "/api/v1/site-settings": {
+      "get": {
+        "operationId": "SiteSettingsController_getAdminSettings_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSiteSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SiteSettings"
+        ]
+      },
+      "patch": {
+        "operationId": "SiteSettingsController_updateSettings_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSiteSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSiteSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SiteSettings"
+        ]
+      }
     }
   },
   "info": {
@@ -6037,6 +6108,127 @@
         "required": [
           "status"
         ]
+      },
+      "PublicSiteSettingsMediaDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "altText": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "url",
+          "altText"
+        ]
+      },
+      "PublicSiteSettingsDto": {
+        "type": "object",
+        "properties": {
+          "catalogHeroEnabled": {
+            "type": "boolean"
+          },
+          "catalogHeroTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "catalogHeroSubtitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "catalogHeroMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicSiteSettingsMediaDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "catalogHeroEnabled",
+          "catalogHeroTitle",
+          "catalogHeroSubtitle",
+          "catalogHeroMedia"
+        ]
+      },
+      "AdminSiteSettingsDto": {
+        "type": "object",
+        "properties": {
+          "catalogHeroEnabled": {
+            "type": "boolean"
+          },
+          "catalogHeroTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "catalogHeroSubtitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "catalogHeroMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "catalogHeroMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicSiteSettingsMediaDto"
+              }
+            ]
+          },
+          "updatedByUserId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "catalogHeroEnabled",
+          "catalogHeroTitle",
+          "catalogHeroSubtitle",
+          "catalogHeroMediaId",
+          "catalogHeroMedia",
+          "updatedByUserId",
+          "updatedAt"
+        ]
+      },
+      "UpdateSiteSettingsDto": {
+        "type": "object",
+        "properties": {
+          "catalogHeroEnabled": {
+            "type": "boolean"
+          },
+          "catalogHeroTitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "catalogHeroSubtitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "catalogHeroMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        }
       }
     }
   }

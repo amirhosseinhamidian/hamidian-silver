@@ -107,7 +107,7 @@ export function CatalogFilterForm({
         </div>
       </section>
 
-      <div className="sticky bottom-0 bg-[var(--sf-color-canvas)] pt-7">
+      <div className="pt-7">
         <Button type="submit" className="w-full">
           اعمال فیلترها
         </Button>

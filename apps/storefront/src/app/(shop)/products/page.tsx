@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { CatalogFilterForm } from '@/components/catalog/catalog-filter-form';
+import { CatalogHero } from '@/components/catalog/catalog-hero';
 import { CatalogFilterSheet } from '@/components/catalog/catalog-filter-sheet';
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
 import { Button, ButtonLink } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import {
   parseCatalogSearchParams,
   type CatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
+import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
 type ProductsPageProps = Readonly<{
   searchParams: Promise<CatalogSearchParams>;
@@ -22,45 +24,17 @@ const persianNumber = new Intl.NumberFormat('fa-IR');
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const filters = parseCatalogSearchParams(await searchParams);
-  const { products, categories, brands } = await getPublicCatalogIndex(filters);
+  const [{ products, categories, brands }, siteSettings] = await Promise.all([
+    getPublicCatalogIndex(filters),
+    getPublicSiteSettings(),
+  ]);
   const heroImageSrc = getCatalogDevHeroImageSrc();
   const activeFilterCount = [filters.q, filters.category, filters.brand].filter(Boolean).length;
   const hasActiveFilters = Boolean(activeFilterCount > 0 || filters.sort !== 'newest');
 
   return (
     <main id="main-content" className="pb-[var(--sf-section-space)]">
-      {heroImageSrc ? (
-        <section
-          className="
-            relative isolate min-h-[18rem] overflow-hidden bg-[var(--sf-color-surface)]
-            sm:min-h-[24rem] lg:min-h-[30rem]
-          "
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- local dev fixture is intentionally served from public/. */}
-          <img
-            src={heroImageSrc}
-            alt=""
-            className="absolute inset-0 -z-20 h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-          <div className="sf-container flex min-h-[inherit] items-end py-10 text-white sm:py-14">
-            <div className="max-w-2xl">
-              <p className="text-xs text-white/75">کاتالوگ فروشگاه</p>
-              <h1 className="mt-3 text-4xl font-normal sm:text-5xl lg:text-6xl">
-                محصولات نقره حمیدیان
-              </h1>
-              <p className="mt-4 max-w-xl text-sm leading-7 text-white/80">
-                مجموعه‌ای از زیورآلات نقره با طراحی مینیمال و امکان انتخاب سایز و آبکاری.
-              </p>
-            </div>
-          </div>
-        </section>
-      ) : (
-        <header className="sf-container pt-[var(--sf-section-space)]">
-          <p className="text-sm text-[var(--sf-color-muted)]">کاتالوگ فروشگاه</p>
-          <h1 className="mt-3 text-4xl font-normal sm:text-5xl">محصولات نقره حمیدیان</h1>
-        </header>
-      )}
+      <CatalogHero settings={siteSettings} devFallbackSrc={heroImageSrc} />
 
       <section className="sf-container pt-8">
         <div

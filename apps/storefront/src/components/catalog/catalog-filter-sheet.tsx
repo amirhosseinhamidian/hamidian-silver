@@ -38,7 +38,7 @@ export function CatalogFilterSheet({ children, activeCount }: CatalogFilterSheet
         />
         <DialogPrimitive.Content
           className="
-            fixed inset-x-0 bottom-0 z-[100] max-h-[88dvh] overflow-y-auto
+            fixed inset-x-0 bottom-0 z-[100] flex max-h-[88dvh] flex-col
             rounded-t-[var(--sf-radius-md)] bg-[var(--sf-color-canvas)]
             data-[state=closed]:animate-[sf-sheet-close_560ms_cubic-bezier(0.16,1,0.3,1)_forwards]
             data-[state=open]:animate-[sf-sheet-open_640ms_cubic-bezier(0.16,1,0.3,1)]

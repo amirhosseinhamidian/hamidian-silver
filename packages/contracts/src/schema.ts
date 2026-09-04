@@ -1908,6 +1908,38 @@ export interface paths {
         patch: operations["ShippingController_updateStatus_v1"];
         trace?: never;
     };
+    "/api/v1/site-settings/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SiteSettingsController_getPublicSettings_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/site-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SiteSettingsController_getAdminSettings_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SiteSettingsController_updateSettings_v1"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2343,6 +2375,36 @@ export interface components {
             trackingCode?: string;
             providerShipmentId?: string;
             reason?: string;
+        };
+        PublicSiteSettingsMediaDto: {
+            /** Format: uri */
+            url: string | null;
+            altText: string | null;
+        };
+        PublicSiteSettingsDto: {
+            catalogHeroEnabled: boolean;
+            catalogHeroTitle: string | null;
+            catalogHeroSubtitle: string | null;
+            catalogHeroMedia: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
+        };
+        AdminSiteSettingsDto: {
+            catalogHeroEnabled: boolean;
+            catalogHeroTitle: string | null;
+            catalogHeroSubtitle: string | null;
+            /** Format: uuid */
+            catalogHeroMediaId: string | null;
+            catalogHeroMedia: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
+            /** Format: uuid */
+            updatedByUserId: string | null;
+            /** Format: date-time */
+            updatedAt: string | null;
+        };
+        UpdateSiteSettingsDto: {
+            catalogHeroEnabled?: boolean;
+            catalogHeroTitle?: string | null;
+            catalogHeroSubtitle?: string | null;
+            /** Format: uuid */
+            catalogHeroMediaId?: string | null;
         };
     };
     responses: never;
@@ -5195,6 +5257,67 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    SiteSettingsController_getPublicSettings_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicSiteSettingsDto"];
+                };
+            };
+        };
+    };
+    SiteSettingsController_getAdminSettings_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSiteSettingsDto"];
+                };
+            };
+        };
+    };
+    SiteSettingsController_updateSettings_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSiteSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSiteSettingsDto"];
+                };
             };
         };
     };

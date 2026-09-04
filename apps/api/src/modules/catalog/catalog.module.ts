@@ -15,5 +15,6 @@ import { PublicMediaUrlService } from './public-media-url.service';
     LocalMediaStorageService,
     PublicMediaUrlService,
   ],
+  exports: [PublicMediaUrlService],
 })
 export class CatalogModule {}
