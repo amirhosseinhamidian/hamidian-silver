@@ -1,9 +1,11 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { ApiCreatedResponse } from '@nestjs/swagger';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { Public } from '../auth/public.decorator';
 import type { AuthenticatedPrincipal } from '../authorization/authorization.types';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PaymentCallbackQueryDto } from './dto/payment-callback-query.dto';
+import { PaymentInitiationResponseDto } from './dto/payment-initiation-response.dto';
 import { PaymentsService } from './payments.service';
 
 @Controller('payments')
@@ -11,6 +13,7 @@ export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post('orders/:orderId/initiate')
+  @ApiCreatedResponse({ type: PaymentInitiationResponseDto })
   initiateOrderPayment(
     @CurrentPrincipal() principal: AuthenticatedPrincipal,
     @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,

@@ -6,7 +6,6 @@ import { ZibalPaymentGateway } from './adapters/zibal-payment.gateway';
 import { PAYMENT_GATEWAY } from './payment-gateway.port';
 import { PaymentGatewaySettingsController } from './payment-gateway-settings.controller';
 import { PAYMENT_GATEWAY_REGISTRY, PaymentGatewayRegistry } from './payment-gateway.registry';
-import './payment-gateway.dto-metadata';
 import { MellatPaymentCallbackController } from './mellat-payment-callback.controller';
 import { MellatPaymentRedirectController } from './mellat-payment-redirect.controller';
 import { PaymentInitiationRecoveryController } from './payment-initiation-recovery.controller';

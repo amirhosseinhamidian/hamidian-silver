@@ -1,10 +1,12 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import type { AuthenticatedPrincipal } from '../authorization/authorization.types';
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { CustomerOrderDetailDto, CustomerOrderSummaryDto } from './dto/customer-order-response.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrdersService } from './orders.service';
@@ -14,11 +16,13 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
+  @ApiCreatedResponse({ type: CustomerOrderDetailDto })
   createOrder(@CurrentPrincipal() principal: AuthenticatedPrincipal, @Body() dto: CreateOrderDto) {
     return this.ordersService.createOrder(principal.userId, dto);
   }
 
   @Get('me')
+  @ApiOkResponse({ type: CustomerOrderSummaryDto, isArray: true })
   listMyOrders(
     @CurrentPrincipal() principal: AuthenticatedPrincipal,
     @Query() query: ListOrdersQueryDto,
@@ -27,6 +31,7 @@ export class OrdersController {
   }
 
   @Get('me/:orderId')
+  @ApiOkResponse({ type: CustomerOrderDetailDto })
   getMyOrder(
     @CurrentPrincipal() principal: AuthenticatedPrincipal,
     @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,

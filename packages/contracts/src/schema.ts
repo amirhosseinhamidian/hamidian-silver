@@ -2277,6 +2277,94 @@ export interface components {
             shippingAddress?: components["schemas"]["CreateOrderAddressDto"];
             items: components["schemas"]["CreateOrderItemDto"][];
         };
+        CustomerOrderItemDto: {
+            variantNameSnapshot: string | null;
+            sizeLabelSnapshot: string | null;
+            /** @enum {string|null} */
+            platingType: "GOLD" | "RHODIUM" | null;
+            platingWeightGrams: string | null;
+            platingRateToman: number | null;
+            platingLeadTimeDays: number | null;
+            unitWeightGrams: string | null;
+            id: string;
+            variantId: string;
+            quantity: number;
+            productNameSnapshot: string;
+            skuSnapshot: string;
+            unitSalePriceToman: number;
+            unitPlatingPriceToman: number;
+            lineTotalToman: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CustomerOrderShippingAddressDto: {
+            recipientName: string;
+            phone: string;
+            province: string;
+            city: string;
+            addressLine: string;
+            postalCode: string;
+        };
+        CustomerOrderStatusHistoryDto: {
+            /** @enum {string|null} */
+            fromStatus: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED" | null;
+            /** @enum {string} */
+            toStatus: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CustomerOrderDetailDto: {
+            /** @enum {string} */
+            status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
+            /** Format: date-time */
+            paidAt: string | null;
+            /** Format: date-time */
+            cancelledAt: string | null;
+            /** Format: date-time */
+            deliveredAt: string | null;
+            items: components["schemas"]["CustomerOrderItemDto"][];
+            shippingAddress: components["schemas"]["CustomerOrderShippingAddressDto"];
+            statusHistory: components["schemas"]["CustomerOrderStatusHistoryDto"][];
+            id: string;
+            orderNumber: string;
+            merchandiseTotalToman: number;
+            platingTotalToman: number;
+            discountTotalToman: number;
+            shippingTotalToman: number;
+            taxTotalToman: number;
+            grandTotalToman: number;
+            /** Format: date-time */
+            reservationExpiresAt: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CustomerOrderSummaryDto: {
+            /** @enum {string} */
+            status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
+            /** Format: date-time */
+            paidAt: string | null;
+            /** Format: date-time */
+            cancelledAt: string | null;
+            /** Format: date-time */
+            deliveredAt: string | null;
+            items: components["schemas"]["CustomerOrderItemDto"][];
+            id: string;
+            orderNumber: string;
+            merchandiseTotalToman: number;
+            platingTotalToman: number;
+            discountTotalToman: number;
+            shippingTotalToman: number;
+            taxTotalToman: number;
+            grandTotalToman: number;
+            /** Format: date-time */
+            reservationExpiresAt: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         UpdateOrderStatusDto: {
             /** @enum {string} */
             status: "CANCELLED" | "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "EXPIRED";
@@ -2315,7 +2403,21 @@ export interface components {
             note: string;
         };
         InitiatePaymentDto: {
+            /** @enum {string} */
+            provider?: "zarinpal" | "zibal" | "mellat";
             idempotencyKey: string;
+        };
+        PaymentInitiationResponseDto: {
+            /** Format: uuid */
+            attemptId: string;
+            /** @enum {string} */
+            status: "CREATED" | "REDIRECTED" | "VERIFIED" | "FAILED" | "RECONCILIATION_REQUIRED" | "RECONCILED";
+            authority?: string;
+            /** Format: uri */
+            paymentUrl?: string;
+            alreadyPaid?: boolean;
+            reconciliationRequired?: boolean;
+            reconciled?: boolean;
         };
         UpdatePaymentGatewaySettingDto: {
             isEnabled: boolean;
@@ -4226,7 +4328,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CustomerOrderDetailDto"];
+                };
             };
         };
     };
@@ -4247,7 +4351,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["CustomerOrderSummaryDto"][];
                 };
             };
         };
@@ -4267,7 +4371,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CustomerOrderDetailDto"];
+                };
             };
         };
     };
@@ -4673,7 +4779,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["PaymentInitiationResponseDto"];
                 };
             };
         };

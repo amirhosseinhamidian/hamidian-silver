@@ -2633,7 +2633,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerOrderDetailDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -2726,7 +2733,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CustomerOrderSummaryDto"
+                  }
                 }
               }
             }
@@ -2752,7 +2762,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerOrderDetailDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3366,7 +3383,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/PaymentInitiationResponseDto"
                 }
               }
             }
@@ -5687,6 +5704,354 @@
           "items"
         ]
       },
+      "CustomerOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "variantNameSnapshot": {
+            "type": "string",
+            "nullable": true
+          },
+          "sizeLabelSnapshot": {
+            "type": "string",
+            "nullable": true
+          },
+          "platingType": {
+            "nullable": true,
+            "enum": [
+              "GOLD",
+              "RHODIUM"
+            ],
+            "type": "string"
+          },
+          "platingWeightGrams": {
+            "type": "string",
+            "nullable": true
+          },
+          "platingRateToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "platingLeadTimeDays": {
+            "type": "number",
+            "nullable": true
+          },
+          "unitWeightGrams": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "variantId": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "productNameSnapshot": {
+            "type": "string"
+          },
+          "skuSnapshot": {
+            "type": "string"
+          },
+          "unitSalePriceToman": {
+            "type": "number"
+          },
+          "unitPlatingPriceToman": {
+            "type": "number"
+          },
+          "lineTotalToman": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "variantNameSnapshot",
+          "sizeLabelSnapshot",
+          "platingType",
+          "platingWeightGrams",
+          "platingRateToman",
+          "platingLeadTimeDays",
+          "unitWeightGrams",
+          "id",
+          "variantId",
+          "quantity",
+          "productNameSnapshot",
+          "skuSnapshot",
+          "unitSalePriceToman",
+          "unitPlatingPriceToman",
+          "lineTotalToman",
+          "createdAt"
+        ]
+      },
+      "CustomerOrderShippingAddressDto": {
+        "type": "object",
+        "properties": {
+          "recipientName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "province": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "addressLine": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipientName",
+          "phone",
+          "province",
+          "city",
+          "addressLine",
+          "postalCode"
+        ]
+      },
+      "CustomerOrderStatusHistoryDto": {
+        "type": "object",
+        "properties": {
+          "fromStatus": {
+            "nullable": true,
+            "enum": [
+              "PENDING_PAYMENT",
+              "PAID",
+              "PROCESSING",
+              "SHIPPED",
+              "DELIVERED",
+              "CANCELLED",
+              "EXPIRED"
+            ],
+            "type": "string"
+          },
+          "toStatus": {
+            "enum": [
+              "PENDING_PAYMENT",
+              "PAID",
+              "PROCESSING",
+              "SHIPPED",
+              "DELIVERED",
+              "CANCELLED",
+              "EXPIRED"
+            ],
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fromStatus",
+          "toStatus",
+          "createdAt"
+        ]
+      },
+      "CustomerOrderDetailDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "PENDING_PAYMENT",
+              "PAID",
+              "PROCESSING",
+              "SHIPPED",
+              "DELIVERED",
+              "CANCELLED",
+              "EXPIRED"
+            ],
+            "type": "string"
+          },
+          "paidAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "cancelledAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "deliveredAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerOrderItemDto"
+            }
+          },
+          "shippingAddress": {
+            "$ref": "#/components/schemas/CustomerOrderShippingAddressDto"
+          },
+          "statusHistory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerOrderStatusHistoryDto"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "orderNumber": {
+            "type": "string"
+          },
+          "merchandiseTotalToman": {
+            "type": "number"
+          },
+          "platingTotalToman": {
+            "type": "number"
+          },
+          "discountTotalToman": {
+            "type": "number"
+          },
+          "shippingTotalToman": {
+            "type": "number"
+          },
+          "taxTotalToman": {
+            "type": "number"
+          },
+          "grandTotalToman": {
+            "type": "number"
+          },
+          "reservationExpiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "paidAt",
+          "cancelledAt",
+          "deliveredAt",
+          "items",
+          "shippingAddress",
+          "statusHistory",
+          "id",
+          "orderNumber",
+          "merchandiseTotalToman",
+          "platingTotalToman",
+          "discountTotalToman",
+          "shippingTotalToman",
+          "taxTotalToman",
+          "grandTotalToman",
+          "reservationExpiresAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CustomerOrderSummaryDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "PENDING_PAYMENT",
+              "PAID",
+              "PROCESSING",
+              "SHIPPED",
+              "DELIVERED",
+              "CANCELLED",
+              "EXPIRED"
+            ],
+            "type": "string"
+          },
+          "paidAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "cancelledAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "deliveredAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerOrderItemDto"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "orderNumber": {
+            "type": "string"
+          },
+          "merchandiseTotalToman": {
+            "type": "number"
+          },
+          "platingTotalToman": {
+            "type": "number"
+          },
+          "discountTotalToman": {
+            "type": "number"
+          },
+          "shippingTotalToman": {
+            "type": "number"
+          },
+          "taxTotalToman": {
+            "type": "number"
+          },
+          "grandTotalToman": {
+            "type": "number"
+          },
+          "reservationExpiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "paidAt",
+          "cancelledAt",
+          "deliveredAt",
+          "items",
+          "id",
+          "orderNumber",
+          "merchandiseTotalToman",
+          "platingTotalToman",
+          "discountTotalToman",
+          "shippingTotalToman",
+          "taxTotalToman",
+          "grandTotalToman",
+          "reservationExpiresAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "UpdateOrderStatusDto": {
         "type": "object",
         "properties": {
@@ -5839,6 +6204,14 @@
       "InitiatePaymentDto": {
         "type": "object",
         "properties": {
+          "provider": {
+            "enum": [
+              "zarinpal",
+              "zibal",
+              "mellat"
+            ],
+            "type": "string"
+          },
           "idempotencyKey": {
             "type": "string",
             "minLength": 8,
@@ -5848,6 +6221,46 @@
         },
         "required": [
           "idempotencyKey"
+        ]
+      },
+      "PaymentInitiationResponseDto": {
+        "type": "object",
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "CREATED",
+              "REDIRECTED",
+              "VERIFIED",
+              "FAILED",
+              "RECONCILIATION_REQUIRED",
+              "RECONCILED"
+            ],
+            "type": "string"
+          },
+          "authority": {
+            "type": "string"
+          },
+          "paymentUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "alreadyPaid": {
+            "type": "boolean"
+          },
+          "reconciliationRequired": {
+            "type": "boolean"
+          },
+          "reconciled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "attemptId",
+          "status"
         ]
       },
       "UpdatePaymentGatewaySettingDto": {
