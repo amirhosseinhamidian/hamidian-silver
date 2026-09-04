@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/form-control';
+import { Select } from '@/components/ui/select';
 
 describe('Button', () => {
   it('disables interaction while loading without hiding its accessible label', () => {
@@ -13,6 +14,8 @@ describe('Button', () => {
 
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button.className).toContain('rounded-[var(--sf-radius-md)]');
+    expect(button.className).toContain('sf-button-solid');
   });
 });
 
@@ -42,5 +45,22 @@ describe('Input', () => {
     render(<Input aria-label="کد تخفیف" invalid />);
 
     expect(screen.getByLabelText('کد تخفیف')).toHaveAttribute('aria-invalid', 'true');
+  });
+});
+
+describe('Select', () => {
+  it('renders the selected option through an accessible custom trigger', () => {
+    render(
+      <Select
+        aria-label="مرتب‌سازی"
+        defaultValue="newest"
+        options={[
+          { value: 'newest', label: 'جدیدترین‌ها' },
+          { value: 'price-asc', label: 'کمترین قیمت' },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole('combobox', { name: 'مرتب‌سازی' })).toHaveTextContent('جدیدترین‌ها');
   });
 });

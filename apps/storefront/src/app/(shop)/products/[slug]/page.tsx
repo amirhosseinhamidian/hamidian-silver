@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
+import { ProductPurchasePanel } from '@/components/cart/product-purchase-panel';
 import { getPublicCatalogProduct } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 
@@ -106,30 +107,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             </div>
           ) : null}
 
-          {product.variants.length > 0 ? (
-            <section aria-labelledby="variants-title" className="mt-10">
-              <h2 id="variants-title" className="text-sm font-medium">
-                انتخاب محصول
-              </h2>
-              <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-                {product.variants.map((variant) => (
-                  <li
-                    key={variant.id}
-                    className="
-                      border border-[var(--sf-color-border)] p-3 text-sm
-                    "
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span>{variant.size?.label || variant.name || 'بدون سایز'}</span>
-                      <span className="text-xs text-[var(--sf-color-muted)]">
-                        {variant.isAvailable ? 'موجود' : 'ناموجود'}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
+          <ProductPurchasePanel product={product} />
 
           {product.description ? (
             <section

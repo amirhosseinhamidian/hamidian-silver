@@ -49,3 +49,6 @@ apps/api/src/generated/prisma/
 
 # Local API media uploads
 apps/api/.data/
+
+# Local storefront catalog fixture images
+apps/storefront/public/dev-catalog/

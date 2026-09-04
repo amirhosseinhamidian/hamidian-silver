@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@hamidian/contracts": "workspace:*",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-select": "^2.2.6",
     "next": "16.3.3",
     "openapi-fetch": "0.17.0",
     "react": "19.2.8",

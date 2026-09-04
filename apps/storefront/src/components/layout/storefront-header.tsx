@@ -3,10 +3,11 @@ import {
   StorefrontAnnouncementBar,
   type StorefrontAnnouncement,
 } from '@/components/layout/storefront-announcement';
+import { CartHeaderLink } from '@/components/cart/cart-header-link';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { FiHeart, FiMapPin, FiSearch, FiShoppingBag, FiUser } from 'react-icons/fi';
+import { FiHeart, FiMapPin, FiSearch, FiUser } from 'react-icons/fi';
 
 export type StorefrontNavigationCategory = Readonly<{
   id: string;
@@ -98,9 +99,7 @@ export function StorefrontHeader({
                 <FiMapPin aria-hidden="true" size={21} />
               </IconLink>
             </span>
-            <IconLink href="/cart" label="سبد خرید">
-              <FiShoppingBag aria-hidden="true" size={21} />
-            </IconLink>
+            <CartHeaderLink />
           </div>
         </div>
       </div>

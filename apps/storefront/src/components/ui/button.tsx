@@ -8,8 +8,8 @@ export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 const variantClasses: Record<ButtonVariant, string> = {
   solid: `
-    border border-[var(--sf-color-ink)] bg-[var(--sf-color-ink)]
-    text-[var(--sf-color-inverse)] hover:opacity-80
+    sf-button-solid border border-[var(--sf-color-ink)] bg-[var(--sf-color-ink)]
+    text-white hover:opacity-80
   `,
   outline: `
     border border-[var(--sf-color-border-strong)] bg-transparent
@@ -43,9 +43,9 @@ export function buttonClassName({
 }> = {}): string {
   return cn(
     `
-      inline-flex shrink-0 items-center justify-center gap-2
+      inline-flex shrink-0 items-center justify-center gap-2 rounded-[var(--sf-radius-md)]
       font-medium transition-[background-color,border-color,opacity]
-      duration-150 disabled:pointer-events-none disabled:opacity-45
+      duration-300 ease-out disabled:pointer-events-none disabled:opacity-45
     `,
     variantClasses[variant],
     sizeClasses[size],

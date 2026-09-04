@@ -4,8 +4,8 @@ import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Select } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { Select } from '@/components/ui/select';
 import {
   buildCatalogCollectionHref,
   type CatalogFilters,
@@ -24,6 +24,13 @@ type CatalogCollectionPageProps = Readonly<{
 }>;
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
+
+const sortOptions = [
+  { value: 'newest', label: 'جدیدترین‌ها' },
+  { value: 'price-asc', label: 'کمترین قیمت' },
+  { value: 'price-desc', label: 'بیشترین قیمت' },
+  { value: 'name-asc', label: 'نام محصول' },
+] as const;
 
 export function CatalogCollectionPage({
   path,
@@ -62,7 +69,12 @@ export function CatalogCollectionPage({
         </div>
 
         {image ? (
-          <div className="aspect-[4/3] overflow-hidden bg-[var(--sf-color-surface)]">
+          <div
+            className="
+              aspect-[4/3] overflow-hidden rounded-[var(--sf-radius-md)]
+              bg-[var(--sf-color-surface)]
+            "
+          >
             <CatalogMedia media={image} alt={title} eager />
           </div>
         ) : null}
@@ -76,14 +88,14 @@ export function CatalogCollectionPage({
           border-b border-[var(--sf-color-border)] py-6
         "
       >
-        <FormField id={`collection-sort-${path}`} label="مرتب‌سازی" className="min-w-48">
+        <FormField id={`collection-sort-${path}`} label="مرتب‌سازی" className="min-w-52">
           {(controlProps) => (
-            <Select {...controlProps} name="sort" defaultValue={filters.sort}>
-              <option value="newest">جدیدترین‌ها</option>
-              <option value="price-asc">کمترین قیمت</option>
-              <option value="price-desc">بیشترین قیمت</option>
-              <option value="name-asc">نام محصول</option>
-            </Select>
+            <Select
+              {...controlProps}
+              name="sort"
+              defaultValue={filters.sort}
+              options={sortOptions}
+            />
           )}
         </FormField>
 
@@ -92,7 +104,7 @@ export function CatalogCollectionPage({
 
       {products.items.length > 0 ? (
         <>
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-10 py-10 md:grid-cols-3 lg:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-x-3 gap-y-10 py-10 sm:gap-x-5 md:grid-cols-3 lg:grid-cols-4">
             {products.items.map((product) => (
               <CatalogProductCard key={product.id} product={product} />
             ))}

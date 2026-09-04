@@ -4,12 +4,15 @@ type CatalogMediaProps = Readonly<{
   media: PublicCatalogMedia | null;
   alt: string;
   eager?: boolean;
+  fallbackSrc?: string | null;
 }>;
 
-export function CatalogMedia({ media, alt, eager = false }: CatalogMediaProps) {
+export function CatalogMedia({ media, alt, eager = false, fallbackSrc = null }: CatalogMediaProps) {
   const accessibleAlt = media?.altText?.trim() || alt;
+  const src =
+    media?.url && media.mimeType.startsWith('image/') ? media.url : fallbackSrc?.trim() || null;
 
-  if (!media?.url || !media.mimeType.startsWith('image/')) {
+  if (!src) {
     return (
       <span
         className="
@@ -23,12 +26,12 @@ export function CatalogMedia({ media, alt, eager = false }: CatalogMediaProps) {
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- media URLs are runtime catalog data and cannot be statically allowlisted.
+    // eslint-disable-next-line @next/next/no-img-element -- media URLs are runtime catalog data and local dev fixtures are intentionally served from public/.
     <img
-      src={media.url}
+      src={src}
       alt={accessibleAlt}
-      width={media.width ?? undefined}
-      height={media.height ?? undefined}
+      width={media?.width ?? undefined}
+      height={media?.height ?? undefined}
       loading={eager ? 'eager' : 'lazy'}
       decoding="async"
       className="h-full w-full object-cover"

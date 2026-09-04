@@ -8,7 +8,10 @@ export function Skeleton({ className, ...props }: SkeletonProps) {
   return (
     <div
       aria-hidden="true"
-      className={cn('animate-pulse bg-[var(--sf-color-surface-emphasis)]', className)}
+      className={cn(
+        'animate-pulse rounded-[var(--sf-radius-md)] bg-[var(--sf-color-surface-emphasis)]',
+        className,
+      )}
       {...props}
     />
   );

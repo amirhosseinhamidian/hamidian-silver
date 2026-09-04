@@ -1,10 +1,12 @@
 import Link from 'next/link';
 
+import { CatalogFilterForm } from '@/components/catalog/catalog-filter-form';
+import { CatalogFilterSheet } from '@/components/catalog/catalog-filter-sheet';
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Input, Select } from '@/components/ui/form-control';
-import { FormField } from '@/components/ui/form-field';
+import { Select } from '@/components/ui/select';
+import { getCatalogDevHeroImageSrc } from '@/lib/catalog/dev-media.server';
 import {
   buildCatalogHref,
   getPublicCatalogIndex,
@@ -16,145 +18,195 @@ type ProductsPageProps = Readonly<{
   searchParams: Promise<CatalogSearchParams>;
 }>;
 
+const persianNumber = new Intl.NumberFormat('fa-IR');
+
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const filters = parseCatalogSearchParams(await searchParams);
   const { products, categories, brands } = await getPublicCatalogIndex(filters);
-  const hasActiveFilters = Boolean(
-    filters.q || filters.category || filters.brand || filters.sort !== 'newest',
-  );
+  const heroImageSrc = getCatalogDevHeroImageSrc();
+  const activeFilterCount = [filters.q, filters.category, filters.brand].filter(Boolean).length;
+  const hasActiveFilters = Boolean(activeFilterCount > 0 || filters.sort !== 'newest');
 
   return (
-    <main id="main-content" className="sf-container py-[var(--sf-section-space)]">
-      <header className="flex flex-col gap-5 border-b border-[var(--sf-color-border)] pb-8">
-        <p className="text-sm text-[var(--sf-color-muted)]">کاتالوگ فروشگاه</p>
-        <div className="flex flex-wrap items-end justify-between gap-5">
+    <main id="main-content" className="pb-[var(--sf-section-space)]">
+      {heroImageSrc ? (
+        <section
+          className="
+            relative isolate min-h-[18rem] overflow-hidden bg-[var(--sf-color-surface)]
+            sm:min-h-[24rem] lg:min-h-[30rem]
+          "
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- local dev fixture is intentionally served from public/. */}
+          <img
+            src={heroImageSrc}
+            alt=""
+            className="absolute inset-0 -z-20 h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+          <div className="sf-container flex min-h-[inherit] items-end py-10 text-white sm:py-14">
+            <div className="max-w-2xl">
+              <p className="text-xs text-white/75">کاتالوگ فروشگاه</p>
+              <h1 className="mt-3 text-4xl font-normal sm:text-5xl lg:text-6xl">
+                محصولات نقره حمیدیان
+              </h1>
+              <p className="mt-4 max-w-xl text-sm leading-7 text-white/80">
+                مجموعه‌ای از زیورآلات نقره با طراحی مینیمال و امکان انتخاب سایز و آبکاری.
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <header className="sf-container pt-[var(--sf-section-space)]">
+          <p className="text-sm text-[var(--sf-color-muted)]">کاتالوگ فروشگاه</p>
+          <h1 className="mt-3 text-4xl font-normal sm:text-5xl">محصولات نقره حمیدیان</h1>
+        </header>
+      )}
+
+      <section className="sf-container pt-8">
+        <div
+          className="
+            flex flex-wrap items-center justify-between gap-4
+            border-b border-[var(--sf-color-border)] pb-6
+          "
+        >
           <div>
-            <h1 className="text-4xl font-normal sm:text-5xl">محصولات نقره حمیدیان</h1>
-            <p className="mt-3 text-sm text-[var(--sf-color-muted)]">
-              {new Intl.NumberFormat('fa-IR').format(products.total)} محصول
-            </p>
+            <p className="text-lg font-medium">{persianNumber.format(products.total)} محصول</p>
+            {hasActiveFilters ? (
+              <Link
+                href="/products"
+                className="mt-1 inline-block text-xs text-[var(--sf-color-muted)] underline underline-offset-4"
+              >
+                پاک کردن فیلترها
+              </Link>
+            ) : null}
           </div>
 
-          {hasActiveFilters ? (
-            <Link
-              href="/products"
-              className="text-sm underline decoration-[var(--sf-color-border-strong)] underline-offset-4"
+          <div className="flex items-end gap-3">
+            <div className="lg:hidden">
+              <CatalogFilterSheet activeCount={activeFilterCount}>
+                <CatalogFilterForm
+                  filters={filters}
+                  categories={categories}
+                  brands={brands}
+                  idPrefix="mobile-catalog-filter"
+                  className="pt-2"
+                />
+              </CatalogFilterSheet>
+            </div>
+
+            <form
+              action="/products"
+              method="get"
+              className="flex min-w-[11rem] items-end gap-2 sm:min-w-[15rem]"
             >
-              پاک کردن فیلترها
-            </Link>
-          ) : null}
+              {filters.q ? <input type="hidden" name="q" value={filters.q} /> : null}
+              {filters.category ? (
+                <input type="hidden" name="category" value={filters.category} />
+              ) : null}
+              {filters.brand ? <input type="hidden" name="brand" value={filters.brand} /> : null}
+              <div className="min-w-0 flex-1">
+                <label htmlFor="catalog-sort" className="sr-only">
+                  مرتب‌سازی
+                </label>
+                <Select
+                  id="catalog-sort"
+                  name="sort"
+                  defaultValue={filters.sort}
+                  aria-label="مرتب‌سازی محصولات"
+                  options={[
+                    { value: 'newest', label: 'جدیدترین‌ها' },
+                    { value: 'price-asc', label: 'کمترین قیمت' },
+                    { value: 'price-desc', label: 'بیشترین قیمت' },
+                    { value: 'name-asc', label: 'نام محصول' },
+                  ]}
+                />
+              </div>
+              <Button type="submit" variant="outline" size="md">
+                اعمال
+              </Button>
+            </form>
+          </div>
         </div>
-      </header>
 
-      <form
-        action="/products"
-        method="get"
-        className="
-          grid gap-4 border-b border-[var(--sf-color-border)] py-6
-          sm:grid-cols-2 lg:grid-cols-[minmax(14rem,1fr)_repeat(3,minmax(10rem,0.55fr))_auto]
-        "
-      >
-        <FormField id="catalog-search" label="جستجو">
-          {(controlProps) => (
-            <Input
-              {...controlProps}
-              type="search"
-              name="q"
-              defaultValue={filters.q ?? ''}
-              maxLength={100}
-              placeholder="نام محصول..."
-            />
-          )}
-        </FormField>
+        <div className="grid gap-8 pt-8 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-10">
+          <aside className="hidden lg:block">
+            <div className="sticky top-6">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <h2 className="text-base font-medium">فیلترها</h2>
+                {activeFilterCount > 0 ? (
+                  <span className="text-xs text-[var(--sf-color-muted)]">
+                    {persianNumber.format(activeFilterCount)} فعال
+                  </span>
+                ) : null}
+              </div>
+              <CatalogFilterForm
+                filters={filters}
+                categories={categories}
+                brands={brands}
+                idPrefix="desktop-catalog-filter"
+              />
+            </div>
+          </aside>
 
-        <FormField id="catalog-category" label="دسته‌بندی">
-          {(controlProps) => (
-            <Select {...controlProps} name="category" defaultValue={filters.category ?? ''}>
-              <option value="">همه دسته‌ها</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.slug}>
-                  {category.name}
-                </option>
-              ))}
-            </Select>
-          )}
-        </FormField>
+          <div className="min-w-0">
+            {products.items.length > 0 ? (
+              <>
+                <ul
+                  className="
+                    grid grid-cols-2 gap-x-3 gap-y-10
+                    sm:gap-x-5 xl:grid-cols-3 2xl:grid-cols-4
+                  "
+                >
+                  {products.items.map((product) => (
+                    <CatalogProductCard key={product.id} product={product} />
+                  ))}
+                </ul>
 
-        <FormField id="catalog-brand" label="برند">
-          {(controlProps) => (
-            <Select {...controlProps} name="brand" defaultValue={filters.brand ?? ''}>
-              <option value="">همه برندها</option>
-              {brands.map((brand) => (
-                <option key={brand.id} value={brand.slug}>
-                  {brand.name}
-                </option>
-              ))}
-            </Select>
-          )}
-        </FormField>
+                {products.totalPages > 1 ? (
+                  <nav
+                    aria-label="صفحه‌بندی محصولات"
+                    className="
+                      mt-10 flex items-center justify-between gap-4
+                      border-t border-[var(--sf-color-border)] pt-6 text-sm
+                    "
+                  >
+                    {products.page > 1 ? (
+                      <Link href={buildCatalogHref(filters, { page: products.page - 1 })}>
+                        صفحه قبل
+                      </Link>
+                    ) : (
+                      <span />
+                    )}
 
-        <FormField id="catalog-sort" label="مرتب‌سازی">
-          {(controlProps) => (
-            <Select {...controlProps} name="sort" defaultValue={filters.sort}>
-              <option value="newest">جدیدترین‌ها</option>
-              <option value="price-asc">کمترین قیمت</option>
-              <option value="price-desc">بیشترین قیمت</option>
-              <option value="name-asc">نام محصول</option>
-            </Select>
-          )}
-        </FormField>
+                    <span className="text-[var(--sf-color-muted)]">
+                      صفحه {persianNumber.format(products.page)} از{' '}
+                      {persianNumber.format(products.totalPages)}
+                    </span>
 
-        <Button type="submit" className="self-end">
-          اعمال
-        </Button>
-      </form>
-
-      {products.items.length > 0 ? (
-        <>
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-10 py-10 md:grid-cols-3 lg:grid-cols-4">
-            {products.items.map((product) => (
-              <CatalogProductCard key={product.id} product={product} />
-            ))}
-          </ul>
-
-          {products.totalPages > 1 ? (
-            <nav
-              aria-label="صفحه‌بندی محصولات"
-              className="
-                flex items-center justify-between gap-4
-                border-t border-[var(--sf-color-border)] pt-6 text-sm
-              "
-            >
-              {products.page > 1 ? (
-                <Link href={buildCatalogHref(filters, { page: products.page - 1 })}>صفحه قبل</Link>
-              ) : (
-                <span />
-              )}
-
-              <span className="text-[var(--sf-color-muted)]">
-                صفحه {new Intl.NumberFormat('fa-IR').format(products.page)} از{' '}
-                {new Intl.NumberFormat('fa-IR').format(products.totalPages)}
-              </span>
-
-              {products.page < products.totalPages ? (
-                <Link href={buildCatalogHref(filters, { page: products.page + 1 })}>صفحه بعد</Link>
-              ) : (
-                <span />
-              )}
-            </nav>
-          ) : null}
-        </>
-      ) : (
-        <EmptyState
-          title="محصولی پیدا نشد"
-          description="عبارت جستجو یا فیلترها را تغییر دهید."
-          action={
-            <ButtonLink href="/products" variant="text" size="sm">
-              مشاهده همه محصولات
-            </ButtonLink>
-          }
-        />
-      )}
+                    {products.page < products.totalPages ? (
+                      <Link href={buildCatalogHref(filters, { page: products.page + 1 })}>
+                        صفحه بعد
+                      </Link>
+                    ) : (
+                      <span />
+                    )}
+                  </nav>
+                ) : null}
+              </>
+            ) : (
+              <EmptyState
+                title="محصولی پیدا نشد"
+                description="عبارت جستجو یا فیلترها را تغییر دهید."
+                action={
+                  <ButtonLink href="/products" variant="text" size="sm">
+                    مشاهده همه محصولات
+                  </ButtonLink>
+                }
+              />
+            )}
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

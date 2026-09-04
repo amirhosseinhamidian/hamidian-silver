@@ -42,8 +42,13 @@ button,
 input,
 select,
 textarea {
-  color: inherit;
   font: inherit;
+}
+
+input,
+select,
+textarea {
+  color: inherit;
 }
 
 button,
@@ -57,7 +62,6 @@ button:disabled,
 }
 
 a {
-  color: inherit;
   text-decoration: none;
 }
 
@@ -65,6 +69,17 @@ a {
   outline: 1px solid var(--sf-color-ink);
   outline-offset: 4px;
   box-shadow: var(--sf-focus-ring);
+}
+
+.sf-select-trigger:focus-visible {
+  outline: 0;
+  outline-offset: 0;
+  border-color: var(--sf-color-ink);
+  box-shadow: none;
+}
+
+.sf-button-solid {
+  color: var(--sf-color-inverse);
 }
 
 .sf-container {
@@ -79,6 +94,7 @@ a {
   z-index: 100;
   padding: 0.625rem 0.875rem;
   border: 1px solid var(--sf-color-ink);
+  border-radius: var(--sf-radius-md);
   background: var(--sf-color-canvas);
   color: var(--sf-color-ink);
   font-size: 0.875rem;
@@ -88,6 +104,105 @@ a {
 
 .sf-skip-link:focus-visible {
   transform: translateY(0);
+}
+
+.sf-catalog-card {
+  border: 1px solid transparent;
+  border-radius: var(--sf-radius-md);
+  transition: border-color 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sf-catalog-card__media img {
+  transition: transform 1400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sf-catalog-card__action {
+  transition:
+    opacity 560ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 560ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sf-catalog-card:hover,
+  .sf-catalog-card:focus-within {
+    border-color: var(--sf-color-border);
+  }
+
+  .sf-catalog-card:hover .sf-catalog-card__media img,
+  .sf-catalog-card:focus-within .sf-catalog-card__media img {
+    transform: scale(1.15);
+  }
+
+  .sf-catalog-card__action {
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+
+  .sf-catalog-card:hover .sf-catalog-card__action,
+  .sf-catalog-card:focus-within .sf-catalog-card__action {
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sf-select-open {
+  from {
+    opacity: 0;
+    transform: translateY(-0.4rem) scaleY(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+@keyframes sf-select-close {
+  from {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-0.35rem) scaleY(0.98);
+  }
+}
+
+@keyframes sf-sheet-open {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes sf-sheet-close {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sf-overlay-open {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sf-overlay-close {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
