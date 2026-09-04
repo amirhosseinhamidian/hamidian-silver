@@ -73,13 +73,13 @@ describe('ProductPurchasePanel', () => {
   it('requires an available variant and sends only the selected purchase snapshot to the cart', () => {
     render(<ProductPurchasePanel product={product} />);
 
-    const addButton = screen.getByRole('button', { name: 'افزودن به سبد خرید' });
-    expect(addButton).toBeDisabled();
+    const addButtons = screen.getAllByRole('button', { name: 'افزودن به سبد خرید' });
+    expect(addButtons[0]).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('radio', { name: /52/ }));
+    fireEvent.click(screen.getByRole('radio', { name: '52' }));
     fireEvent.click(screen.getByRole('radio', { name: /آبکاری طلا/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'افزایش تعداد' }));
-    fireEvent.click(addButton);
+    fireEvent.click(screen.getAllByRole('button', { name: 'افزایش تعداد' })[0]);
+    fireEvent.click(addButtons[0]);
 
     expect(addItem).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -94,5 +94,20 @@ describe('ProductPurchasePanel', () => {
       }),
     );
     expect(screen.getByText('محصول به سبد خرید اضافه شد.')).toBeInTheDocument();
+  });
+
+  it('keeps the mobile add action usable so it can direct the shopper to size selection', () => {
+    render(<ProductPurchasePanel product={product} />);
+
+    const addButtons = screen.getAllByRole('button', { name: 'افزودن به سبد خرید' });
+    expect(addButtons[0]).toBeDisabled();
+    expect(addButtons[1]).toBeEnabled();
+
+    fireEvent.click(addButtons[1]);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('لطفاً سایز را انتخاب کنید.');
+    expect(screen.getByRole('alert')).toHaveClass('text-red-600');
+    expect(screen.getByRole('alert')).toHaveTextContent('لطفاً سایز را انتخاب کنید.');
+    expect(addItem).not.toHaveBeenCalled();
   });
 });

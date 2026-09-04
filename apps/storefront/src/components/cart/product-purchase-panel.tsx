@@ -1,6 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { FiAlertCircle } from 'react-icons/fi';
 
 import { Button, ButtonLink } from '@/components/ui/button';
 import { QuantityControl } from '@/components/ui/quantity-control';
@@ -28,14 +30,25 @@ type ProductPurchasePanelProps = Readonly<{
 
 export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   const initiallySelectedVariant =
-    product.variants.length === 1 && product.variants[0]?.isAvailable
-      ? product.variants[0].id
-      : '';
+    product.variants.length === 1 && product.variants[0]?.isAvailable ? product.variants[0].id : '';
   const [variantId, setVariantId] = useState(initiallySelectedVariant);
   const [platingType, setPlatingType] = useState<CartPlatingType | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [variantMessage, setVariantMessage] = useState<string | null>(null);
+  const [selectionToast, setSelectionToast] = useState<string | null>(null);
+  const variantSelectorRef = useRef<HTMLFieldSetElement>(null);
   const { addItem } = useCart();
+
+  useEffect(() => {
+    if (!selectionToast) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setSelectionToast(null), 2600);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [selectionToast]);
 
   const selectedVariant = useMemo(
     () => product.variants.find((variant) => variant.id === variantId) ?? null,
@@ -55,12 +68,25 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
     selectedVariant?.isAvailable === true &&
     selectedVariant.availableQuantity > 0 &&
     product.salePriceToman !== null;
+  const hasMultipleVariants = product.variants.length > 1;
+  const isSizeSelection = product.sizeMode === 'SIZED';
+  const selectorLabel = isSizeSelection ? 'انتخاب سایز' : 'انتخاب مدل';
+  const hasPurchasableVariant = product.variants.some(
+    (variant) => variant.isAvailable && variant.availableQuantity > 0,
+  );
+  const desktopAddButtonDisabled = !canAdd;
+  const mobileAddButtonDisabled =
+    product.salePriceToman === null ||
+    !hasPurchasableVariant ||
+    (selectedVariant !== null && !canAdd);
 
   function selectVariant(nextVariantId: string) {
     setVariantId(nextVariantId);
     setPlatingType(null);
     setQuantity(1);
     setAdded(false);
+    setVariantMessage(null);
+    setSelectionToast(null);
   }
 
   function selectPlating(nextPlatingType: CartPlatingType | null) {
@@ -68,8 +94,28 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
     setAdded(false);
   }
 
+  function requestVariantSelection(): boolean {
+    if (selectedVariant) {
+      return true;
+    }
+
+    if (hasMultipleVariants) {
+      const message = isSizeSelection ? 'لطفاً سایز را انتخاب کنید.' : 'لطفاً مدل را انتخاب کنید.';
+      setVariantMessage(message);
+      setSelectionToast(message);
+      variantSelectorRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }
+
+    return false;
+  }
+
   function handleAddToCart() {
-    if (!selectedVariant || !canAdd || product.salePriceToman === null) {
+    if (
+      !requestVariantSelection() ||
+      !selectedVariant ||
+      !canAdd ||
+      product.salePriceToman === null
+    ) {
       return;
     }
 
@@ -92,16 +138,27 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   return (
     <section
       aria-labelledby="purchase-options-title"
-      className="mt-10 border-t border-[var(--sf-color-border)] pt-8"
+      className="mt-9 border-t border-[var(--sf-color-border)] pt-7"
     >
       <h2 id="purchase-options-title" className="text-sm font-medium">
         انتخاب و خرید
       </h2>
 
-      {product.variants.length > 0 ? (
-        <fieldset className="mt-5">
-          <legend className="text-xs text-[var(--sf-color-muted)]">گزینه محصول</legend>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      {hasMultipleVariants ? (
+        <fieldset ref={variantSelectorRef} className="mt-5 scroll-mt-28">
+          <legend className="sr-only">{selectorLabel}</legend>
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-xs text-[var(--sf-color-muted)]">{selectorLabel}</span>
+            {isSizeSelection ? (
+              <Link
+                href="/size-guide"
+                className="border-b border-[var(--sf-color-border-strong)] text-xs"
+              >
+                راهنمای انتخاب سایز
+              </Link>
+            ) : null}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
             {product.variants.map((variant) => (
               <label key={variant.id} className="cursor-pointer">
                 <input
@@ -115,28 +172,33 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
                 />
                 <span
                   className="
-                    flex min-h-12 items-center justify-between gap-3
-                    border border-[var(--sf-color-border)] px-3 py-2 text-sm
+                    inline-flex min-h-11 min-w-12 items-center justify-center
+                    border border-[var(--sf-color-border)] px-4 py-2 text-sm
                     transition-colors peer-checked:border-[var(--sf-color-ink)]
-                    peer-disabled:cursor-not-allowed peer-disabled:opacity-45
+                    peer-checked:bg-[var(--sf-color-ink)] peer-checked:text-white
+                    peer-disabled:cursor-not-allowed peer-disabled:opacity-35
                   "
                 >
-                  <span>{getVariantLabel(variant)}</span>
-                  <span className="text-xs text-[var(--sf-color-muted)]">
-                    {variant.isAvailable
-                      ? `${persianNumber.format(variant.availableQuantity)} موجود`
-                      : 'ناموجود'}
-                  </span>
+                  {getVariantLabel(variant)}
                 </span>
               </label>
             ))}
           </div>
+          {variantMessage ? (
+            <p
+              role="alert"
+              className="mt-3 flex items-center gap-1.5 text-xs font-medium text-red-600"
+            >
+              <FiAlertCircle aria-hidden="true" className="shrink-0" size={15} />
+              <span>{variantMessage}</span>
+            </p>
+          ) : null}
         </fieldset>
-      ) : (
+      ) : product.variants.length === 0 ? (
         <p className="mt-5 text-sm text-[var(--sf-color-muted)]">
-          گزینه قابل خریدی برای این محصول تعریف نشده است.
+          این محصول در حال حاضر گزینه قابل خریدی ندارد.
         </p>
-      )}
+      ) : null}
 
       {selectedVariant && selectedVariant.platingOptions.length > 0 ? (
         <fieldset className="mt-6">
@@ -196,7 +258,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       ) : null}
 
       {selectedVariant ? (
-        <div className="mt-6 flex flex-wrap items-end justify-between gap-5">
+        <div className="mt-6 hidden flex-wrap items-end justify-between gap-5 lg:flex">
           <div>
             <p className="text-xs text-[var(--sf-color-muted)]">تعداد</p>
             <div className="mt-2">
@@ -217,17 +279,17 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
             <p className="mt-2 text-lg">{formatTomanPrice(unitPriceToman)}</p>
           </div>
         </div>
-      ) : (
-        <p className="mt-6 text-sm text-[var(--sf-color-muted)]">
-          برای ادامه یک گزینه موجود را انتخاب کنید.
+      ) : hasMultipleVariants ? (
+        <p className="mt-6 hidden text-sm text-[var(--sf-color-muted)] lg:block">
+          {isSizeSelection ? 'برای ادامه سایز را انتخاب کنید.' : 'برای ادامه مدل را انتخاب کنید.'}
         </p>
-      )}
+      ) : null}
 
       <Button
         type="button"
         size="lg"
-        className="mt-6 w-full"
-        disabled={!canAdd}
+        className="mt-6 hidden w-full lg:inline-flex"
+        disabled={desktopAddButtonDisabled}
         onClick={handleAddToCart}
       >
         افزودن به سبد خرید
@@ -241,10 +303,12 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
 
       {added ? (
         <div
-          role="status"
+          role="alert"
           className="
-            mt-4 flex flex-wrap items-center justify-between gap-3
-            border border-[var(--sf-color-border)] px-4 py-3 text-sm
+            fixed inset-x-4 bottom-28 z-50 mx-auto flex max-w-sm items-center gap-2
+            border border-red-200 bg-white px-4 py-3 text-sm font-medium text-red-700
+            shadow-[0_10px_30px_rgba(0,0,0,0.12)]
+            lg:hidden
           "
         >
           <span>محصول به سبد خرید اضافه شد.</span>
@@ -253,6 +317,57 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
           </ButtonLink>
         </div>
       ) : null}
+
+      {selectionToast ? (
+        <div
+          aria-live="polite"
+          className="
+            fixed inset-x-4 bottom-28 z-50 mx-auto flex max-w-sm items-center gap-2
+            border border-red-200 bg-white px-4 py-3 text-sm font-medium text-red-700
+            shadow-[0_10px_30px_rgba(0,0,0,0.12)] lg:hidden
+          "
+        >
+          <FiAlertCircle aria-hidden="true" className="shrink-0" size={18} />
+          <span>{selectionToast}</span>
+        </div>
+      ) : null}
+
+      <div
+        className="
+          fixed inset-x-0 bottom-0 z-40 box-border w-full max-w-[100dvw]
+          overflow-x-clip border-t border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)]
+          px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3
+          shadow-[0_-10px_30px_rgba(0,0,0,0.06)] lg:hidden
+        "
+      >
+        <div className="mx-auto w-full min-w-0 max-w-xl">
+          <p className="text-right text-xl font-semibold leading-none sm:text-2xl">
+            {formatTomanPrice(unitPriceToman)}
+          </p>
+
+          <div className="mt-3 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
+            <QuantityControl
+              value={quantity}
+              max={maxQuantity}
+              disabled={!canAdd}
+              compact
+              onChange={(nextQuantity) => {
+                setQuantity(nextQuantity);
+                setAdded(false);
+              }}
+            />
+            <Button
+              type="button"
+              size="lg"
+              className="min-w-0 w-full px-3 sm:px-7"
+              disabled={mobileAddButtonDisabled}
+              onClick={handleAddToCart}
+            >
+              افزودن به سبد خرید
+            </Button>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
