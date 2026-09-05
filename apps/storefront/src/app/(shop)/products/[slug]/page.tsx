@@ -10,6 +10,7 @@ import {
   type PublicCatalogProductDetail,
 } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
+import { getDiscountPercent } from '@/lib/catalog/pricing';
 
 type ProductDetailPageProps = Readonly<{
   params: Promise<{
@@ -122,9 +123,25 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           </h1>
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-            <p className="text-2xl font-medium sm:text-3xl">
-              {formatTomanPrice(product.salePriceToman)}
-            </p>
+            <div className="flex flex-col gap-1">
+              {product.compareAtPriceToman &&
+              product.salePriceToman &&
+              product.compareAtPriceToman > product.salePriceToman ? (
+                <div className="flex items-center gap-3 text-sm text-[var(--sf-color-muted)]">
+                  <span className="line-through">
+                    {formatTomanPrice(product.compareAtPriceToman)}
+                  </span>
+
+                  <span>
+                    {getDiscountPercent(product.compareAtPriceToman, product.salePriceToman)}٪ تخفیف
+                  </span>
+                </div>
+              ) : null}
+
+              <p className="text-2xl font-medium sm:text-3xl">
+                {formatTomanPrice(product.salePriceToman)}
+              </p>
+            </div>
             <WishlistButton
               item={{
                 productId: product.id,

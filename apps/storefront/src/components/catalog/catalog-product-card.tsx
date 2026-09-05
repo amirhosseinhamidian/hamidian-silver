@@ -5,6 +5,7 @@ import { ButtonLink } from '@/components/ui/button';
 import { getCatalogDevProductImageSrc } from '@/lib/catalog/dev-media.server';
 import type { PublicCatalogProductSummary } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
+import { getDiscountPercent } from '@/lib/catalog/pricing';
 
 type CatalogProductCardProps = Readonly<{
   product: PublicCatalogProductSummary;
@@ -47,9 +48,23 @@ export function CatalogProductCard({ product }: CatalogProductCardProps) {
           </p>
         ) : null}
 
-        <p className="mt-3 text-sm font-medium sm:text-base">
-          {formatTomanPrice(product.salePriceToman)}
-        </p>
+        <div className="mt-3 flex flex-col items-center gap-1">
+          {product.compareAtPriceToman &&
+          product.salePriceToman &&
+          product.compareAtPriceToman > product.salePriceToman ? (
+            <div className="flex items-center gap-2 text-xs text-[var(--sf-color-muted)]">
+              <span className="line-through">{formatTomanPrice(product.compareAtPriceToman)}</span>
+
+              <span className="text-[var(--sf-color-ink)]">
+                {getDiscountPercent(product.compareAtPriceToman, product.salePriceToman)}٪
+              </span>
+            </div>
+          ) : null}
+
+          <p className="text-sm font-medium sm:text-base">
+            {formatTomanPrice(product.salePriceToman)}
+          </p>
+        </div>
 
         <div className="sf-catalog-card__action mt-auto pt-4">
           <ButtonLink href={`/products/${product.slug}`} variant="solid" className="w-full">

@@ -97,6 +97,9 @@ export class PublicCatalogProductSummaryDto {
   @ApiProperty({ type: Number, nullable: true })
   salePriceToman!: number | null;
 
+  @ApiProperty({ nullable: true })
+  compareAtPriceToman!: number | null;
+
   @ApiProperty({ enum: SizeMode })
   sizeMode!: SizeMode;
 

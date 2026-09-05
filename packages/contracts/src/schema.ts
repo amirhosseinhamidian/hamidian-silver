@@ -2001,6 +2001,7 @@ export interface components {
         PublicCatalogProductSummaryDto: {
             shortDescription: string | null;
             salePriceToman: number | null;
+            compareAtPriceToman: number | null;
             /** @enum {string} */
             sizeMode: "NONE" | "FREE_SIZE" | "SIZED";
             brand: components["schemas"]["PublicCatalogBrandDto"] | null;
@@ -2048,6 +2049,7 @@ export interface components {
         PublicCatalogProductDetailDto: {
             shortDescription: string | null;
             salePriceToman: number | null;
+            compareAtPriceToman: number | null;
             /** @enum {string} */
             sizeMode: "NONE" | "FREE_SIZE" | "SIZED";
             brand: components["schemas"]["PublicCatalogBrandDto"] | null;
