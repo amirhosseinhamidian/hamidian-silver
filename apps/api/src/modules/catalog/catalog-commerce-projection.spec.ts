@@ -31,6 +31,7 @@ describe('CatalogService commerce projection', () => {
       shortDescription: null,
       description: null,
       salePriceToman: 850_000,
+      compareAtPriceToman: 1_000_000,
       sizeMode: 'SIZED',
       brand: null,
       country: null,
@@ -77,6 +78,7 @@ describe('CatalogService commerce projection', () => {
 
     const product = await service.getPublicProduct('silver-ring');
 
+    expect(product.compareAtPriceToman).toBe(1_000_000);
     expect(product.variants).toEqual([
       expect.objectContaining({
         id: '10000000-0000-4000-8000-000000000002',
@@ -95,6 +97,7 @@ describe('CatalogService commerce projection', () => {
     expect(prisma.product.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         select: expect.objectContaining({
+          compareAtPriceToman: true,
           variants: expect.objectContaining({
             select: expect.objectContaining({
               platingEligible: true,

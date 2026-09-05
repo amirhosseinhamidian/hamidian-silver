@@ -734,6 +734,7 @@ export class CatalogService {
         shortDescription: true,
         description: true,
         salePriceToman: true,
+        compareAtPriceToman: true,
         sizeMode: true,
         brand: {
           select: {
@@ -934,6 +935,7 @@ export class CatalogService {
       shortDescription: product.shortDescription,
       description: product.description,
       salePriceToman: product.salePriceToman,
+      compareAtPriceToman: product.compareAtPriceToman,
       sizeMode: product.sizeMode,
       brand:
         product.brand?.isActive && !product.brand.deletedAt
