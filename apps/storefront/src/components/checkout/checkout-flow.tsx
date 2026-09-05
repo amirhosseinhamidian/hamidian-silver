@@ -21,6 +21,11 @@ type AuthState =
   | { status: 'anonymous' }
   | { status: 'authenticated'; user: CurrentUser };
 
+type CheckoutPriceChange = Readonly<{
+  cartSubtotalToman: number;
+  orderTotalToman: number;
+}>;
+
 const providerLabels: Record<PaymentProvider, string> = {
   zarinpal: 'زرین‌پال',
   zibal: 'زیبال',
@@ -73,6 +78,8 @@ export function CheckoutFlow() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [pendingOrderTotalToman, setPendingOrderTotalToman] = useState<number | null>(null);
+  const [priceChange, setPriceChange] = useState<CheckoutPriceChange | null>(null);
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
 
   useEffect(() => {
@@ -199,11 +206,28 @@ export function CheckoutFlow() {
         }
 
         const order = (await orderResponse.json()) as CustomerOrderDetail;
+
+        if (!Number.isSafeInteger(order.grandTotalToman) || order.grandTotalToman < 0) {
+          setCheckoutError('مبلغ نهایی معتبری از سرویس سفارش دریافت نشد. دوباره تلاش کنید.');
+          return;
+        }
+
         orderId = order.id;
         orderNumber = order.orderNumber;
         setPendingOrderId(order.id);
+        setPendingOrderTotalToman(order.grandTotalToman);
         setCompletedOrderNumber(order.orderNumber);
+
+        if (order.grandTotalToman !== subtotalToman) {
+          setPriceChange({
+            cartSubtotalToman: subtotalToman,
+            orderTotalToman: order.grandTotalToman,
+          });
+          return;
+        }
       }
+
+      setPriceChange(null);
 
       const provider = String(formData.get('provider') ?? 'zarinpal') as PaymentProvider;
       const paymentResponse = await fetch('/api/checkout/payment', {
@@ -228,6 +252,7 @@ export function CheckoutFlow() {
       if (payment.alreadyPaid) {
         clearCart();
         setPendingOrderId(null);
+        setPendingOrderTotalToman(null);
         setCompletedOrderNumber(orderNumber);
         return;
       }
@@ -238,6 +263,8 @@ export function CheckoutFlow() {
       }
 
       clearCart();
+      setPendingOrderId(null);
+      setPendingOrderTotalToman(null);
       window.location.assign(payment.paymentUrl);
     } catch {
       setCheckoutError('ارتباط با سرویس سفارش یا پرداخت برقرار نشد. دوباره تلاش کنید.');
@@ -397,10 +424,34 @@ export function CheckoutFlow() {
           <span className="text-[var(--sf-color-muted)]">تعداد کالا</span>
           <span>{new Intl.NumberFormat('fa-IR').format(itemCount)}</span>
         </div>
-        <div className="mt-3 flex items-center justify-between gap-4 text-sm">
-          <span className="text-[var(--sf-color-muted)]">مبلغ نمایشی سبد</span>
-          <span>{formatTomanPrice(subtotalToman)}</span>
-        </div>
+        {priceChange ? (
+          <>
+            <div className="mt-3 flex items-center justify-between gap-4 text-sm text-[var(--sf-color-muted)]">
+              <span>مبلغ قبلی سبد</span>
+              <span className="line-through">
+                {formatTomanPrice(priceChange.cartSubtotalToman)}
+              </span>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-4 text-sm font-medium">
+              <span>مبلغ نهایی سفارش</span>
+              <span>{formatTomanPrice(priceChange.orderTotalToman)}</span>
+            </div>
+            <p
+              role="alert"
+              className="mt-4 border border-[var(--sf-color-border)] bg-[var(--sf-color-surface)] p-3 text-xs leading-6"
+            >
+              قیمت یا هزینه آبکاری از زمان افزودن کالا به سبد تغییر کرده است. مبلغ جدید را بررسی و
+              برای ادامه تأیید کنید.
+            </p>
+          </>
+        ) : (
+          <div className="mt-3 flex items-center justify-between gap-4 text-sm">
+            <span className="text-[var(--sf-color-muted)]">
+              {pendingOrderTotalToman === null ? 'مبلغ نمایشی سبد' : 'مبلغ نهایی سفارش'}
+            </span>
+            <span>{formatTomanPrice(pendingOrderTotalToman ?? subtotalToman)}</span>
+          </div>
+        )}
         <p className="mt-4 text-xs leading-6 text-[var(--sf-color-muted)]">
           مبلغ، موجودی و هزینه آبکاری هنگام ثبت سفارش دوباره توسط سرور محاسبه می‌شود.
         </p>
@@ -426,7 +477,11 @@ export function CheckoutFlow() {
         ) : null}
 
         <Button type="submit" loading={checkoutLoading} className="mt-6 w-full">
-          {pendingOrderId ? 'تلاش مجدد برای پرداخت' : 'ثبت سفارش و پرداخت'}
+          {priceChange
+            ? 'تأیید مبلغ جدید و پرداخت'
+            : pendingOrderId
+              ? 'تلاش مجدد برای پرداخت'
+              : 'ثبت سفارش و پرداخت'}
         </Button>
         <ButtonLink href="/cart" variant="text" className="mt-3 w-full">
           بازگشت به سبد خرید
