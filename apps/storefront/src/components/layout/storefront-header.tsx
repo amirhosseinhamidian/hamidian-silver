@@ -4,6 +4,7 @@ import {
   type StorefrontAnnouncement,
 } from '@/components/layout/storefront-announcement';
 import { CartHeaderLink } from '@/components/cart/cart-header-link';
+import { StorefrontMobileMenu } from '@/components/layout/storefront-mobile-menu';
 import { StorefrontSearch } from '@/components/layout/storefront-search';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -53,13 +54,13 @@ export function StorefrontHeader({
     : null;
 
   return (
-    <header>
+    <>
       <StorefrontAnnouncementBar
         announcement={announcement}
         initialRemainingSeconds={initialRemainingSeconds}
       />
 
-      <div className="border-b border-[var(--sf-color-border)]">
+      <div className="hidden border-b border-[var(--sf-color-border)] lg:block">
         <div className="sf-container grid min-h-24 grid-cols-[1fr_auto_1fr] items-center gap-3">
           <nav
             aria-label="لینک‌های اطلاعاتی"
@@ -105,11 +106,45 @@ export function StorefrontHeader({
         </div>
       </div>
 
-      <div className="border-b border-[var(--sf-color-border)]">
-        <div className="sf-container flex items-center gap-4">
-          <StorefrontSearch />
+      <header
+        className="
+          sticky top-0 z-40 border-b border-[var(--sf-color-border)]
+          bg-[var(--sf-color-canvas)]
+        "
+      >
+        <div
+          dir="ltr"
+          className="
+            sf-container grid min-h-16 grid-cols-[1fr_auto_1fr] items-center gap-2
+            lg:flex lg:min-h-0 lg:flex-row-reverse lg:gap-4
+          "
+        >
+          <div className="flex items-center justify-start gap-1 lg:contents">
+            <div className="lg:hidden">
+              <StorefrontMobileMenu navigationCategories={navigationCategories} />
+            </div>
+            <StorefrontSearch />
+          </div>
 
-          <nav aria-label="پیمایش اصلی" className="min-w-0 flex-1 overflow-x-auto">
+          <Link
+            href="/"
+            aria-label="نقره حمیدیان، صفحه اصلی موبایل"
+            className="relative h-11 w-28 lg:hidden"
+          >
+            <Image
+              src="/brand/hamidian-signature.png"
+              alt=""
+              fill
+              sizes="7rem"
+              className="scale-110 object-contain"
+            />
+          </Link>
+
+          <nav
+            dir="rtl"
+            aria-label="پیمایش اصلی"
+            className="hidden min-w-0 flex-1 overflow-x-auto lg:block"
+          >
             <ul className="flex min-w-max items-center gap-9 py-4 text-sm">
               <li>
                 <Link href="/">خانه</Link>
@@ -129,8 +164,15 @@ export function StorefrontHeader({
               </li>
             </ul>
           </nav>
+
+          <div className="flex items-center justify-end gap-1 lg:hidden">
+            <IconLink href="/contact" label="نشانی گالری">
+              <FiMapPin aria-hidden="true" size={21} />
+            </IconLink>
+            <CartHeaderLink />
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+    </>
   );
 }

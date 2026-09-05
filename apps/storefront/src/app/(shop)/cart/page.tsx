@@ -149,7 +149,7 @@ export default function CartPage() {
           })}
         </ul>
 
-        <aside className="hidden h-fit border border-[var(--sf-color-border)] p-5 lg:sticky lg:top-6 lg:block">
+        <aside className="hidden h-fit mt-8 border border-[var(--sf-color-border)] p-5 lg:sticky lg:top-20 lg:mt-14 lg:block">
           <h2 className="text-lg font-medium">خلاصه سبد</h2>
           <div className="mt-5 flex items-center justify-between gap-4 text-sm">
             <span className="text-[var(--sf-color-muted)]">مجموع کالاها</span>
@@ -163,13 +163,13 @@ export default function CartPage() {
         </aside>
         <div
           className="
-    fixed inset-x-0 bottom-0 z-40
-    border-t border-[var(--sf-color-border)]
-    bg-white
-    p-4
-    shadow-[0_-8px_24px_rgba(0,0,0,0.08)]
-    lg:hidden
-  "
+            fixed inset-x-0 bottom-0 z-40
+            border-t border-[var(--sf-color-border)]
+            bg-white
+            p-4
+            shadow-[0_-8px_24px_rgba(0,0,0,0.08)]
+            lg:hidden
+          "
         >
           <div className="flex items-center justify-between gap-4">
             <div>

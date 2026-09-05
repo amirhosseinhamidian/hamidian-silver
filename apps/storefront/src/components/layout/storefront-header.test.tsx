@@ -49,8 +49,14 @@ describe('StorefrontHeader', () => {
       'href',
       '/account',
     );
-    expect(screen.getByRole('link', { name: 'سبد خرید' })).toHaveAttribute('href', '/cart');
+    expect(screen.getAllByRole('link', { name: 'سبد خرید' })).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'جستجو در محصولات' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'باز کردن منوی موبایل' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'نقره حمیدیان، صفحه اصلی موبایل' }),
+    ).toHaveAttribute('href', '/');
+
+    expect(screen.getByRole('banner')).toHaveClass('sticky', 'top-0');
 
     const navigation = screen.getByRole('navigation', { name: 'پیمایش اصلی' });
 
@@ -102,5 +108,27 @@ describe('StorefrontHeader', () => {
     expect(searchInput).toHaveAttribute('maxlength', '100');
     expect(within(searchForm).getByRole('button', { name: 'اجرای جستجو' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'بستن جستجو' })).toBeInTheDocument();
+  });
+
+  it('opens mobile navigation with configured categories and utility links', () => {
+    render(<StorefrontHeader navigationCategories={navigationCategories} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'باز کردن منوی موبایل' }));
+
+    const mobileNavigation = screen.getByRole('navigation', { name: 'منوی موبایل' });
+
+    expect(within(mobileNavigation).getByRole('link', { name: 'خانه' })).toHaveAttribute(
+      'href',
+      '/',
+    );
+    expect(within(mobileNavigation).getByRole('link', { name: 'انگشتر' })).toHaveAttribute(
+      'href',
+      '/categories/rings',
+    );
+    expect(within(mobileNavigation).getByRole('link', { name: 'علاقه‌مندی‌ها' })).toHaveAttribute(
+      'href',
+      '/wishlist',
+    );
+    expect(screen.getByRole('button', { name: 'بستن منوی موبایل' })).toBeInTheDocument();
   });
 });

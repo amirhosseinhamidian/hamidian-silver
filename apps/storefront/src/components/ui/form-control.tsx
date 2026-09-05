@@ -3,7 +3,7 @@ import type { ComponentPropsWithoutRef } from 'react';
 import { cn } from '@/lib/ui/cn';
 
 const controlClassName = `
-  min-h-11 w-full rounded-[var(--sf-radius-md)] border border-[var(--sf-color-border)] bg-transparent px-3
+  sf-form-control min-h-11 w-full rounded-[var(--sf-radius-md)] border border-[var(--sf-color-border)] bg-transparent px-3
   text-sm text-[var(--sf-color-ink)] outline-none transition-colors
   placeholder:text-[var(--sf-color-subtle)]
   hover:border-[var(--sf-color-border-strong)]

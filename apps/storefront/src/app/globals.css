@@ -78,6 +78,13 @@ a {
   box-shadow: none;
 }
 
+.sf-form-control:focus-visible {
+  outline: 0;
+  outline-offset: 0;
+  border-color: var(--sf-color-ink);
+  box-shadow: none;
+}
+
 .sf-button-solid {
   color: var(--sf-color-inverse);
 }
