@@ -3,12 +3,13 @@
 import Link from 'next/link';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
-import { Button, ButtonLink } from '@/components/ui/button';
+import { ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QuantityControl } from '@/components/ui/quantity-control';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import type { CartPlatingType } from '@/lib/cart/cart-state';
 import { useCart } from '@/lib/cart/cart-store';
+import { CiTrash } from 'react-icons/ci';
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
 
@@ -22,7 +23,10 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <main id="main-content" className="sf-container py-[var(--sf-section-space)]">
+      <main
+        id="main-content"
+        className="sf-container pb-32 pt-8 sm:pb-[var(--sf-section-space)] sm:pt-10"
+      >
         <EmptyState
           title="سبد خرید شما خالی است"
           description="محصولات موردنظر خود را انتخاب کنید و دوباره به این صفحه برگردید."
@@ -37,7 +41,10 @@ export default function CartPage() {
   }
 
   return (
-    <main id="main-content" className="sf-container py-[var(--sf-section-space)]">
+    <main
+      id="main-content"
+      className="sf-container pb-32 pt-8 sm:pb-[var(--sf-section-space)] sm:pt-10"
+    >
       <header className="border-b border-[var(--sf-color-border)] pb-8">
         <p className="text-sm text-[var(--sf-color-muted)]">خرید شما</p>
         <h1 className="mt-3 text-4xl font-normal sm:text-5xl">سبد خرید</h1>
@@ -53,37 +60,57 @@ export default function CartPage() {
               (item.unitSalePriceToman + item.unitPlatingPriceToman) * item.quantity;
 
             return (
-              <li key={item.key} className="grid gap-5 py-6 sm:grid-cols-[8rem_minmax(0,1fr)]">
+              <li
+                key={item.key}
+                className="
+                grid grid-cols-[4.5rem_minmax(0,1fr)]
+                gap-3
+                py-4
+                sm:grid-cols-[8rem_minmax(0,1fr)]
+                "
+              >
                 <Link
                   href={`/products/${item.productSlug}`}
-                  className="aspect-[4/5] overflow-hidden bg-[var(--sf-color-surface)]"
+                  className="aspect-square overflow-hidden rounded-sm bg-(--sf-color-surface)"
                   aria-label={`مشاهده ${item.productName}`}
                 >
-                  <CatalogMedia media={item.media} alt={item.productName} />
+                  <CatalogMedia
+                    media={item.media}
+                    fallbackSrc={
+                      process.env.NODE_ENV === 'development'
+                        ? `/dev-catalog/products/${item.productSlug}.webp`
+                        : null
+                    }
+                    alt={item.productName}
+                  />
                 </Link>
 
-                <div className="flex min-w-0 flex-col justify-between gap-5">
+                <div className="flex min-w-0 flex-col justify-between gap-3">
                   <div>
-                    <Link href={`/products/${item.productSlug}`} className="text-lg">
+                    <Link href={`/products/${item.productSlug}`} className="text-base sn:text-lg">
                       {item.productName}
                     </Link>
-                    <p className="mt-2 text-sm text-[var(--sf-color-muted)]">
-                      {item.variantLabel}
-                    </p>
+                    {item.variantLabel ? (
+                      <p className="mt-2 text-sm text-(--sf-color-muted)">
+                        {item.variantLabel.includes(':')
+                          ? item.variantLabel
+                          : `گزینه: ${item.variantLabel}`}
+                      </p>
+                    ) : null}
                     {item.platingType ? (
-                      <p className="mt-1 text-sm text-[var(--sf-color-muted)]">
+                      <p className="mt-1 text-sm text-(--sf-color-muted)">
                         {platingLabels[item.platingType]}
                         {item.platingLeadTimeDays > 0
                           ? ` · ${persianNumber.format(item.platingLeadTimeDays)} روز آماده‌سازی`
                           : ''}
                       </p>
                     ) : null}
-                    <p className="mt-3 text-sm">
+                    <p className="mt-2 text-sm font-medium">
                       {formatTomanPrice(item.unitSalePriceToman + item.unitPlatingPriceToman)}
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-end justify-between gap-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <QuantityControl
                       value={item.quantity}
                       max={item.maxQuantity}
@@ -91,18 +118,25 @@ export default function CartPage() {
                       label={`تعداد ${item.productName}`}
                     />
 
-                    <div className="text-left">
-                      <p className="text-xs text-[var(--sf-color-muted)]">جمع این مورد</p>
+                    <div>
+                      <p className="text-xs text-(--sf-color-muted)">جمع این مورد</p>
                       <p className="mt-1 text-sm">{formatTomanPrice(lineTotal)}</p>
-                      <Button
+                      <button
                         type="button"
-                        variant="text"
-                        size="sm"
-                        className="mt-2"
+                        aria-label="حذف محصول"
+                        title="حذف محصول"
+                        className="
+                            mt-2 inline-flex h-8 w-8 items-center justify-center
+                            rounded-sm
+                            text-(--sf-color-muted)
+                            transition-colors
+                            hover:text-(--sf-color-ink)
+                            justify-items-end
+                          "
                         onClick={() => removeItem(item.key)}
                       >
-                        حذف
-                      </Button>
+                        <CiTrash size={18} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -111,21 +145,40 @@ export default function CartPage() {
           })}
         </ul>
 
-        <aside className="h-fit border border-[var(--sf-color-border)] p-5 lg:sticky lg:top-6">
+        <aside className="hidden h-fit border border-[var(--sf-color-border)] p-5 lg:sticky lg:top-6 lg:block">
           <h2 className="text-lg font-medium">خلاصه سبد</h2>
           <div className="mt-5 flex items-center justify-between gap-4 text-sm">
             <span className="text-[var(--sf-color-muted)]">مجموع کالاها</span>
-            <span>{formatTomanPrice(subtotalToman)}</span>
+            <span className="text-xl font-semibold">{formatTomanPrice(subtotalToman)}</span>
           </div>
-          <p className="mt-5 text-xs leading-6 text-[var(--sf-color-muted)]">
-            قیمت و موجودی نهایی هنگام ثبت سفارش دوباره توسط سرور بررسی می‌شود.
-          </p>
-          <div className="mt-6">
-            <ButtonLink href="/products" variant="outline" className="w-full">
-              ادامه خرید
+          <div className="mt-6 grid gap-3">
+            <ButtonLink href="/checkout" variant="solid" className="w-full">
+              ثبت سفارش
             </ButtonLink>
           </div>
         </aside>
+        <div
+          className="
+    fixed inset-x-0 bottom-0 z-40
+    border-t border-[var(--sf-color-border)]
+    bg-white
+    p-4
+    shadow-[0_-8px_24px_rgba(0,0,0,0.08)]
+    lg:hidden
+  "
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-[var(--sf-color-muted)]">مجموع</p>
+
+              <p className="text-xl font-bold">{formatTomanPrice(subtotalToman)}</p>
+            </div>
+
+            <ButtonLink href="/checkout" variant="solid" className="flex-1">
+              ثبت سفارش
+            </ButtonLink>
+          </div>
+        </div>
       </div>
     </main>
   );

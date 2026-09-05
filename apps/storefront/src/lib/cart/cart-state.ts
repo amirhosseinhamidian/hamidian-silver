@@ -1,5 +1,10 @@
 export type CartPlatingType = 'GOLD' | 'RHODIUM';
 
+export type CartVariantAttribute = Readonly<{
+  name: string;
+  value: string;
+}>;
+
 export type CartMediaSnapshot = Readonly<{
   url: string | null;
   mimeType: string;
@@ -182,8 +187,7 @@ export function getCartItemCount(items: readonly CartItem[]): number {
 
 export function getCartSubtotalToman(items: readonly CartItem[]): number {
   return items.reduce(
-    (total, item) =>
-      total + (item.unitSalePriceToman + item.unitPlatingPriceToman) * item.quantity,
+    (total, item) => total + (item.unitSalePriceToman + item.unitPlatingPriceToman) * item.quantity,
     0,
   );
 }
