@@ -4,10 +4,11 @@ import {
   type StorefrontAnnouncement,
 } from '@/components/layout/storefront-announcement';
 import { CartHeaderLink } from '@/components/cart/cart-header-link';
+import { StorefrontSearch } from '@/components/layout/storefront-search';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { FiHeart, FiMapPin, FiSearch, FiUser } from 'react-icons/fi';
+import { FiHeart, FiMapPin, FiUser } from 'react-icons/fi';
 
 export type StorefrontNavigationCategory = Readonly<{
   id: string;
@@ -106,9 +107,7 @@ export function StorefrontHeader({
 
       <div className="border-b border-[var(--sf-color-border)]">
         <div className="sf-container flex items-center gap-4">
-          <IconLink href="/products" label="جستجو در محصولات">
-            <FiSearch aria-hidden="true" size={22} />
-          </IconLink>
+          <StorefrontSearch />
 
           <nav aria-label="پیمایش اصلی" className="min-w-0 flex-1 overflow-x-auto">
             <ul className="flex min-w-max items-center gap-9 py-4 text-sm">
