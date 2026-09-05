@@ -5066,6 +5066,14 @@
             "type": "string",
             "format": "uuid"
           },
+          "salePriceToman": {
+            "type": "number",
+            "minimum": 0
+          },
+          "compareAtPriceToman": {
+            "type": "number",
+            "minimum": 0
+          },
           "categoryIds": {
             "uniqueItems": true,
             "type": "array",

@@ -90,6 +90,16 @@ export class CreateProductDto {
   countryId?: string;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  salePriceToman?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  compareAtPriceToman?: number;
+
+  @IsOptional()
   @IsArray()
   @ArrayUnique()
   @IsUUID('4', { each: true })

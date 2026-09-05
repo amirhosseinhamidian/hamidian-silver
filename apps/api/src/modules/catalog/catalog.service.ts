@@ -182,10 +182,28 @@ export class CatalogService {
         }
       }
 
+      if (
+        dto.compareAtPriceToman !== undefined &&
+        dto.salePriceToman !== undefined &&
+        dto.compareAtPriceToman <= dto.salePriceToman
+      ) {
+        throw new BadRequestException('Compare price must be greater than sale price.');
+      }
+
+      if (
+        dto.compareAtPriceToman !== undefined &&
+        dto.salePriceToman !== undefined &&
+        dto.compareAtPriceToman <= dto.salePriceToman
+      ) {
+        throw new BadRequestException('Compare price must be greater than sale price.');
+      }
+
       const product = await transaction.product.create({
         data: {
           name: dto.name,
           slug: dto.slug,
+          salePriceToman: dto.salePriceToman,
+          compareAtPriceToman: dto.compareAtPriceToman,
           shortDescription: dto.shortDescription,
           description: dto.description,
           status: dto.status ?? ProductStatus.DRAFT,
@@ -524,6 +542,7 @@ export class CatalogService {
           slug: true,
           shortDescription: true,
           salePriceToman: true,
+          compareAtPriceToman: true,
           sizeMode: true,
           brand: {
             select: {
@@ -658,6 +677,7 @@ export class CatalogService {
           slug: product.slug,
           shortDescription: product.shortDescription,
           salePriceToman: product.salePriceToman,
+          compareAtPriceToman: product.compareAtPriceToman,
           sizeMode: product.sizeMode,
           brand,
           categories: product.categories

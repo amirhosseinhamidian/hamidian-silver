@@ -2124,6 +2124,8 @@ export interface components {
             brandId?: string;
             /** Format: uuid */
             countryId?: string;
+            salePriceToman?: number;
+            compareAtPriceToman?: number;
             categoryIds?: string[];
             variants: components["schemas"]["CreateProductVariantDto"][];
             media?: components["schemas"]["CreateProductMediaDto"][];
