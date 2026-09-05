@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 
 import { ProductPurchasePanel } from '@/components/cart/product-purchase-panel';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
+import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { getCatalogDevProductImageSrc } from '@/lib/catalog/dev-media.server';
 import {
@@ -132,9 +133,12 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                     {formatTomanPrice(product.compareAtPriceToman)}
                   </span>
 
-                  <span>
-                    {getDiscountPercent(product.compareAtPriceToman, product.salePriceToman)}٪ تخفیف
-                  </span>
+                  <DiscountBadge
+                    percent={getDiscountPercent(
+                      product.compareAtPriceToman,
+                      product.salePriceToman,
+                    )!}
+                  />
                 </div>
               ) : null}
 
@@ -150,6 +154,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 brandName: product.brand?.name ?? null,
                 media: product.primaryMedia,
                 salePriceToman: product.salePriceToman,
+                compareAtPriceToman: product.compareAtPriceToman,
               }}
             />
           </div>

@@ -15,6 +15,7 @@ const item: WishlistItem = {
   brandName: 'Hamidian Studio',
   media: null,
   salePriceToman: 3_200_000,
+  compareAtPriceToman: 4_000_000,
 };
 
 describe('wishlist state', () => {
@@ -30,5 +31,30 @@ describe('wishlist state', () => {
 
     expect(deserializeWishlist(serialized)).toEqual([item]);
     expect(deserializeWishlist('[{"productId":42}]')).toEqual([]);
+  });
+
+  it('keeps legacy stored items without compare prices', () => {
+    const legacyItem: Record<string, unknown> = { ...item };
+    delete legacyItem.compareAtPriceToman;
+
+    expect(deserializeWishlist(JSON.stringify([legacyItem]))).toEqual([
+      {
+        ...item,
+        compareAtPriceToman: null,
+      },
+    ]);
+  });
+
+  it('rejects an unsafe persisted compare price', () => {
+    expect(
+      deserializeWishlist(
+        JSON.stringify([
+          {
+            ...item,
+            compareAtPriceToman: -1,
+          },
+        ]),
+      ),
+    ).toEqual([]);
   });
 });

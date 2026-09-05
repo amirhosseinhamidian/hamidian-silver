@@ -17,6 +17,7 @@ const baseItem: AddCartItemInput = {
   variantLabel: 'سایز ۵۲',
   media: null,
   unitSalePriceToman: 800_000,
+  unitCompareAtPriceToman: 1_000_000,
   platingType: null,
   unitPlatingPriceToman: 0,
   platingLeadTimeDays: 0,
@@ -74,5 +75,30 @@ describe('cart state', () => {
     expect(restored).toHaveLength(1);
     expect(restored[0]?.key).toBe(cartItemKey(baseItem.variantId, null));
     expect(restored[0]?.quantity).toBe(2);
+  });
+
+  it('keeps legacy stored items without compare prices', () => {
+    const legacyItem: Record<string, unknown> = { ...baseItem };
+    delete legacyItem.unitCompareAtPriceToman;
+
+    expect(deserializeCart(JSON.stringify([legacyItem]))).toEqual([
+      expect.objectContaining({
+        variantId: baseItem.variantId,
+        unitCompareAtPriceToman: null,
+      }),
+    ]);
+  });
+
+  it('rejects an unsafe persisted compare price', () => {
+    expect(
+      deserializeCart(
+        JSON.stringify([
+          {
+            ...baseItem,
+            unitCompareAtPriceToman: -1,
+          },
+        ]),
+      ),
+    ).toEqual([]);
   });
 });

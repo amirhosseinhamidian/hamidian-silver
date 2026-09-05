@@ -3,9 +3,11 @@
 import Link from 'next/link';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
+import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
+import { getDiscountPercent } from '@/lib/catalog/pricing';
 import { useWishlist } from '@/lib/wishlist/wishlist-store';
 
 export default function WishlistPage() {
@@ -35,42 +37,59 @@ export default function WishlistPage() {
       </header>
 
       <ul className="grid gap-6 py-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {items.map((item) => (
-          <li key={item.productId} className="flex min-w-0 flex-col">
-            <Link
-              href={`/products/${item.slug}`}
-              className="aspect-square overflow-hidden bg-[var(--sf-color-surface)]"
-            >
-              <CatalogMedia
-                media={item.media}
-                fallbackSrc={
-                  process.env.NODE_ENV === 'development'
-                    ? `/dev-catalog/products/${item.slug}.webp`
-                    : null
-                }
-                alt={item.name}
-              />
-            </Link>
-            <div className="pt-4">
-              {item.brandName ? (
-                <p className="text-xs text-[var(--sf-color-subtle)]">{item.brandName}</p>
-              ) : null}
-              <Link href={`/products/${item.slug}`} className="mt-1 block text-base font-medium">
-                {item.name}
-              </Link>
-              <p className="mt-2 text-sm">{formatTomanPrice(item.salePriceToman)}</p>
-              <Button
-                type="button"
-                variant="text"
-                size="sm"
-                className="mt-3"
-                onClick={() => toggleItem(item)}
+        {items.map((item) => {
+          const discountPercent = getDiscountPercent(
+            item.compareAtPriceToman,
+            item.salePriceToman,
+          );
+
+          return (
+            <li key={item.productId} className="flex min-w-0 flex-col">
+              <Link
+                href={`/products/${item.slug}`}
+                className="aspect-square overflow-hidden bg-[var(--sf-color-surface)]"
               >
-                حذف از علاقه‌مندی‌ها
-              </Button>
-            </div>
-          </li>
-        ))}
+                <CatalogMedia
+                  media={item.media}
+                  fallbackSrc={
+                    process.env.NODE_ENV === 'development'
+                      ? `/dev-catalog/products/${item.slug}.webp`
+                      : null
+                  }
+                  alt={item.name}
+                />
+              </Link>
+              <div className="pt-4">
+                {item.brandName ? (
+                  <p className="text-xs text-[var(--sf-color-subtle)]">{item.brandName}</p>
+                ) : null}
+                <Link href={`/products/${item.slug}`} className="mt-1 block text-base font-medium">
+                  {item.name}
+                </Link>
+                {discountPercent !== null ? (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-[var(--sf-color-muted)]">
+                    <span className="line-through">
+                      {formatTomanPrice(item.compareAtPriceToman)}
+                    </span>
+                    <DiscountBadge percent={discountPercent} />
+                  </div>
+                ) : null}
+                <p className={discountPercent !== null ? 'mt-1 text-sm' : 'mt-2 text-sm'}>
+                  {formatTomanPrice(item.salePriceToman)}
+                </p>
+                <Button
+                  type="button"
+                  variant="text"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => toggleItem(item)}
+                >
+                  حذف از علاقه‌مندی‌ها
+                </Button>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </main>
   );

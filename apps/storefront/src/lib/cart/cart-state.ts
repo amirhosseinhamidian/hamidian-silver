@@ -21,6 +21,7 @@ export type CartItem = Readonly<{
   variantLabel: string;
   media: CartMediaSnapshot | null;
   unitSalePriceToman: number;
+  unitCompareAtPriceToman: number | null;
   platingType: CartPlatingType | null;
   unitPlatingPriceToman: number;
   platingLeadTimeDays: number;
@@ -45,7 +46,7 @@ function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === 'string';
 }
 
-function isNullableDimension(value: unknown): value is number | null {
+function isNullableNonNegativeSafeInteger(value: unknown): value is number | null {
   return value === null || isNonNegativeSafeInteger(value);
 }
 
@@ -60,8 +61,8 @@ function normalizeMedia(value: unknown): CartMediaSnapshot | null | undefined {
     typeof value.mimeType !== 'string' ||
     !value.mimeType ||
     !isNullableString(value.altText) ||
-    !isNullableDimension(value.width) ||
-    !isNullableDimension(value.height)
+    !isNullableNonNegativeSafeInteger(value.width) ||
+    !isNullableNonNegativeSafeInteger(value.height)
   ) {
     return undefined;
   }
@@ -90,6 +91,8 @@ function normalizeStoredCartItem(value: unknown): CartItem | null {
 
   const media = normalizeMedia(value.media);
   const platingType = normalizePlatingType(value.platingType);
+  const unitCompareAtPriceToman =
+    value.unitCompareAtPriceToman === undefined ? null : value.unitCompareAtPriceToman;
 
   if (
     typeof value.variantId !== 'string' ||
@@ -103,6 +106,7 @@ function normalizeStoredCartItem(value: unknown): CartItem | null {
     media === undefined ||
     platingType === undefined ||
     !isNonNegativeSafeInteger(value.unitSalePriceToman) ||
+    !isNullableNonNegativeSafeInteger(unitCompareAtPriceToman) ||
     !isNonNegativeSafeInteger(value.unitPlatingPriceToman) ||
     !isNonNegativeSafeInteger(value.platingLeadTimeDays) ||
     !isNonNegativeSafeInteger(value.maxQuantity) ||
@@ -123,6 +127,7 @@ function normalizeStoredCartItem(value: unknown): CartItem | null {
     variantLabel: value.variantLabel,
     media,
     unitSalePriceToman: value.unitSalePriceToman,
+    unitCompareAtPriceToman,
     platingType,
     unitPlatingPriceToman: value.unitPlatingPriceToman,
     platingLeadTimeDays: value.platingLeadTimeDays,

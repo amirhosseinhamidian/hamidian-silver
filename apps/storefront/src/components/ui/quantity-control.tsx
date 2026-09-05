@@ -1,5 +1,7 @@
 'use client';
 
+import { CiTrash } from 'react-icons/ci';
+
 import { Button } from '@/components/ui/button';
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
@@ -9,6 +11,7 @@ type QuantityControlProps = Readonly<{
   min?: number;
   max: number;
   onChange: (value: number) => void;
+  onRemove?: () => void;
   disabled?: boolean;
   label?: string;
   compact?: boolean;
@@ -19,10 +22,13 @@ export function QuantityControl({
   min = 1,
   max,
   onChange,
+  onRemove,
   disabled = false,
   label = 'تعداد',
   compact = false,
 }: QuantityControlProps) {
+  const showRemove = value <= min && onRemove !== undefined;
+
   return (
     <div
       role="group"
@@ -34,11 +40,19 @@ export function QuantityControl({
         variant="outline"
         size={compact ? 'sm' : 'icon'}
         className={compact ? 'min-w-9 px-2' : undefined}
-        disabled={disabled || value <= min}
-        aria-label="کاهش تعداد"
-        onClick={() => onChange(Math.max(min, value - 1))}
+        disabled={disabled || (!showRemove && value <= min)}
+        aria-label={showRemove ? 'حذف از سبد خرید' : 'کاهش تعداد'}
+        title={showRemove ? 'حذف از سبد خرید' : undefined}
+        onClick={() => {
+          if (showRemove) {
+            onRemove();
+            return;
+          }
+
+          onChange(Math.max(min, value - 1));
+        }}
       >
-        −
+        {showRemove ? <CiTrash aria-hidden="true" size={18} /> : '−'}
       </Button>
       <output
         className={`${compact ? 'min-w-7 text-base' : 'min-w-9 text-lg'} text-center font-semibold`}

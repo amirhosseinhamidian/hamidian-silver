@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
+import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { ButtonLink } from '@/components/ui/button';
 import { getCatalogDevProductImageSrc } from '@/lib/catalog/dev-media.server';
 import type { PublicCatalogProductSummary } from '@/lib/catalog/public-catalog';
@@ -55,9 +56,9 @@ export function CatalogProductCard({ product }: CatalogProductCardProps) {
             <div className="flex items-center gap-2 text-xs text-[var(--sf-color-muted)]">
               <span className="line-through">{formatTomanPrice(product.compareAtPriceToman)}</span>
 
-              <span className="text-[var(--sf-color-ink)]">
-                {getDiscountPercent(product.compareAtPriceToman, product.salePriceToman)}٪
-              </span>
+              <DiscountBadge
+                percent={getDiscountPercent(product.compareAtPriceToman, product.salePriceToman)!}
+              />
             </div>
           ) : null}
 

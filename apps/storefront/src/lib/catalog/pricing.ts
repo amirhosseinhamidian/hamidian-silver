@@ -1,10 +1,14 @@
 export function getDiscountPercent(
-  compareAtPriceToman: number | null,
-  salePriceToman: number | null,
+  compareAtPriceToman: number | null | undefined,
+  salePriceToman: number | null | undefined,
 ): number | null {
   if (
-    compareAtPriceToman === null ||
-    salePriceToman === null ||
+    typeof compareAtPriceToman !== 'number' ||
+    !Number.isSafeInteger(compareAtPriceToman) ||
+    compareAtPriceToman <= 0 ||
+    typeof salePriceToman !== 'number' ||
+    !Number.isSafeInteger(salePriceToman) ||
+    salePriceToman < 0 ||
     compareAtPriceToman <= salePriceToman
   ) {
     return null;
@@ -14,8 +18,8 @@ export function getDiscountPercent(
 }
 
 export function getPriceDiscount(
-  compareAtPriceToman: number | null,
-  salePriceToman: number | null,
+  compareAtPriceToman: number | null | undefined,
+  salePriceToman: number | null | undefined,
 ) {
   const discountPercent = getDiscountPercent(compareAtPriceToman, salePriceToman);
 

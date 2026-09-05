@@ -7,6 +7,7 @@ export type WishlistItem = Readonly<{
   brandName: string | null;
   media: PublicCatalogMedia | null;
   salePriceToman: number | null;
+  compareAtPriceToman: number | null;
 }>;
 
 const MAX_WISHLIST_ITEMS = 100;
@@ -55,6 +56,8 @@ function normalizeWishlistItem(value: unknown): WishlistItem | null {
   }
 
   const media = normalizeMedia(value.media);
+  const compareAtPriceToman =
+    value.compareAtPriceToman === undefined ? null : value.compareAtPriceToman;
 
   if (
     typeof value.productId !== 'string' ||
@@ -65,7 +68,8 @@ function normalizeWishlistItem(value: unknown): WishlistItem | null {
     !value.name ||
     !isNullableString(value.brandName) ||
     media === undefined ||
-    !isNullableSafeInteger(value.salePriceToman)
+    !isNullableSafeInteger(value.salePriceToman) ||
+    !isNullableSafeInteger(compareAtPriceToman)
   ) {
     return null;
   }
@@ -77,6 +81,7 @@ function normalizeWishlistItem(value: unknown): WishlistItem | null {
     brandName: value.brandName,
     media,
     salePriceToman: value.salePriceToman,
+    compareAtPriceToman,
   };
 }
 

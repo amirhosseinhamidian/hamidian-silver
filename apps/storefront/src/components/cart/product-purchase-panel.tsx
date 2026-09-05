@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FiAlertCircle } from 'react-icons/fi';
 
+import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { QuantityControl } from '@/components/ui/quantity-control';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
+import { getDiscountPercent } from '@/lib/catalog/pricing';
 import type { PublicCatalogProductDetail } from '@/lib/catalog/public-catalog';
-import type { CartPlatingType } from '@/lib/cart/cart-state';
+import { cartItemKey, type CartPlatingType } from '@/lib/cart/cart-state';
 import { useCart } from '@/lib/cart/cart-store';
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
@@ -45,12 +47,10 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
     product.variants.length === 1 && product.variants[0]?.isAvailable ? product.variants[0].id : '';
   const [variantId, setVariantId] = useState(initiallySelectedVariant);
   const [platingType, setPlatingType] = useState<CartPlatingType | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [added, setAdded] = useState(false);
   const [variantMessage, setVariantMessage] = useState<string | null>(null);
   const [selectionToast, setSelectionToast] = useState<string | null>(null);
   const variantSelectorRef = useRef<HTMLFieldSetElement>(null);
-  const { addItem } = useCart();
+  const { items, addItem, setQuantity, removeItem } = useCart();
 
   useEffect(() => {
     if (!selectionToast) {
@@ -69,6 +69,9 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   const selectedPlating = selectedVariant?.platingOptions.find(
     (option) => option.type === platingType,
   );
+  const selectedCartItem = selectedVariant
+    ? (items.find((item) => item.key === cartItemKey(selectedVariant.id, platingType)) ?? null)
+    : null;
   const maxQuantity = selectedVariant
     ? Math.max(1, Math.min(99, selectedVariant.availableQuantity))
     : 1;
@@ -76,6 +79,10 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
     product.salePriceToman === null
       ? null
       : product.salePriceToman + (selectedPlating?.unitPriceToman ?? 0);
+  const discountPercent = getDiscountPercent(
+    product.compareAtPriceToman,
+    product.salePriceToman,
+  );
   const canAdd =
     selectedVariant?.isAvailable === true &&
     selectedVariant.availableQuantity > 0 &&
@@ -95,15 +102,12 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   function selectVariant(nextVariantId: string) {
     setVariantId(nextVariantId);
     setPlatingType(null);
-    setQuantity(1);
-    setAdded(false);
     setVariantMessage(null);
     setSelectionToast(null);
   }
 
   function selectPlating(nextPlatingType: CartPlatingType | null) {
     setPlatingType(nextPlatingType);
-    setAdded(false);
   }
 
   function requestVariantSelection(): boolean {
@@ -138,13 +142,13 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       variantLabel: getCartVariantLabel(selectedVariant),
       media: product.primaryMedia,
       unitSalePriceToman: product.salePriceToman,
+      unitCompareAtPriceToman: product.compareAtPriceToman ?? null,
       platingType,
       unitPlatingPriceToman: selectedPlating?.unitPriceToman ?? 0,
       platingLeadTimeDays: selectedPlating?.leadTimeDays ?? 0,
-      quantity,
+      quantity: 1,
       maxQuantity,
     });
-    setAdded(true);
   }
 
   return (
@@ -271,24 +275,35 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
 
       {selectedVariant ? (
         <div className="mt-6 hidden flex-wrap items-end justify-between gap-5 lg:flex">
-          <div>
-            <p className="text-xs text-[var(--sf-color-muted)]">تعداد</p>
-            <div className="mt-2">
-              <QuantityControl
-                value={quantity}
-                max={maxQuantity}
-                disabled={!canAdd}
-                onChange={(nextQuantity) => {
-                  setQuantity(nextQuantity);
-                  setAdded(false);
-                }}
-              />
+          {selectedCartItem ? (
+            <div>
+              <p className="text-xs text-[var(--sf-color-muted)]">تعداد</p>
+              <div className="mt-2">
+                <QuantityControl
+                  value={selectedCartItem.quantity}
+                  max={selectedCartItem.maxQuantity}
+                  onChange={(nextQuantity) =>
+                    setQuantity(selectedCartItem.key, nextQuantity)
+                  }
+                  onRemove={() => removeItem(selectedCartItem.key)}
+                />
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="text-left">
             <p className="text-xs text-[var(--sf-color-muted)]">قیمت هر واحد با انتخاب فعلی</p>
-            <p className="mt-2 text-lg">{formatTomanPrice(unitPriceToman)}</p>
+            {discountPercent !== null ? (
+              <div className="mt-2 flex items-center justify-end gap-2 text-xs text-[var(--sf-color-muted)]">
+                <span className="line-through">
+                  {formatTomanPrice(product.compareAtPriceToman)}
+                </span>
+                <DiscountBadge percent={discountPercent} />
+              </div>
+            ) : null}
+            <p className={discountPercent !== null ? 'mt-1 text-lg' : 'mt-2 text-lg'}>
+              {formatTomanPrice(unitPriceToman)}
+            </p>
           </div>
         </div>
       ) : hasMultipleVariants ? (
@@ -297,37 +312,31 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         </p>
       ) : null}
 
-      <Button
-        type="button"
-        size="lg"
-        className="mt-6 hidden w-full lg:inline-flex"
-        disabled={desktopAddButtonDisabled}
-        onClick={handleAddToCart}
-      >
-        افزودن به سبد خرید
-      </Button>
+      {selectedCartItem ? (
+        <ButtonLink
+          href="/cart"
+          variant="solid"
+          size="lg"
+          className="mt-6 hidden w-full lg:inline-flex"
+        >
+          مشاهده سبد خرید
+        </ButtonLink>
+      ) : (
+        <Button
+          type="button"
+          size="lg"
+          className="mt-6 hidden w-full lg:inline-flex"
+          disabled={desktopAddButtonDisabled}
+          onClick={handleAddToCart}
+        >
+          افزودن به سبد خرید
+        </Button>
+      )}
 
       {product.salePriceToman === null ? (
         <p className="mt-3 text-xs leading-6 text-[var(--sf-color-muted)]">
           این محصول تا زمان تعیین قیمت قابل افزودن به سبد خرید نیست.
         </p>
-      ) : null}
-
-      {added ? (
-        <div
-          role="alert"
-          className="
-            fixed inset-x-4 bottom-28 z-50 mx-auto flex max-w-sm items-center gap-2
-            border border-red-200 bg-white px-4 py-3 text-sm font-medium text-red-700
-            shadow-[0_10px_30px_rgba(0,0,0,0.12)]
-            lg:hidden
-          "
-        >
-          <span>محصول به سبد خرید اضافه شد.</span>
-          <ButtonLink href="/cart" variant="text" size="sm">
-            مشاهده سبد خرید
-          </ButtonLink>
-        </div>
       ) : null}
 
       {selectionToast ? (
@@ -353,30 +362,60 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         "
       >
         <div className="mx-auto w-full min-w-0 max-w-xl">
-          <p className="text-right text-xl font-semibold leading-none sm:text-2xl">
+          {discountPercent !== null ? (
+            <div className="flex items-center justify-end gap-2 text-xs text-[var(--sf-color-muted)]">
+              <span className="line-through">
+                {formatTomanPrice(product.compareAtPriceToman)}
+              </span>
+              <DiscountBadge percent={discountPercent} />
+            </div>
+          ) : null}
+          <p
+            className={
+              discountPercent !== null
+                ? 'mt-1 text-right text-xl font-semibold leading-none sm:text-2xl'
+                : 'text-right text-xl font-semibold leading-none sm:text-2xl'
+            }
+          >
             {formatTomanPrice(unitPriceToman)}
           </p>
 
-          <div className="mt-3 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
-            <QuantityControl
-              value={quantity}
-              max={maxQuantity}
-              disabled={!canAdd}
-              compact
-              onChange={(nextQuantity) => {
-                setQuantity(nextQuantity);
-                setAdded(false);
-              }}
-            />
-            <Button
-              type="button"
-              size="lg"
-              className="min-w-0 w-full px-3 sm:px-7"
-              disabled={mobileAddButtonDisabled}
-              onClick={handleAddToCart}
-            >
-              افزودن به سبد خرید
-            </Button>
+          <div
+            className={
+              selectedCartItem
+                ? 'mt-3 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3'
+                : 'mt-3 grid min-w-0'
+            }
+          >
+            {selectedCartItem ? (
+              <QuantityControl
+                value={selectedCartItem.quantity}
+                max={selectedCartItem.maxQuantity}
+                compact
+                onChange={(nextQuantity) => setQuantity(selectedCartItem.key, nextQuantity)}
+                onRemove={() => removeItem(selectedCartItem.key)}
+              />
+            ) : null}
+            {selectedCartItem ? (
+              <ButtonLink
+                href="/cart"
+                variant="solid"
+                size="lg"
+                className="min-w-0 w-full px-3 sm:px-7"
+              >
+                مشاهده سبد خرید
+              </ButtonLink>
+            ) : (
+              <Button
+                type="button"
+                size="lg"
+                className="min-w-0 w-full px-3 sm:px-7"
+                disabled={mobileAddButtonDisabled}
+                onClick={handleAddToCart}
+              >
+                افزودن به سبد خرید
+              </Button>
+            )}
           </div>
         </div>
       </div>

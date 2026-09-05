@@ -18,4 +18,19 @@ describe('QuantityControl', () => {
 
     expect(screen.getByRole('button', { name: 'افزایش تعداد' })).toBeDisabled();
   });
+
+  it('replaces decrement with a remove action at the minimum quantity', () => {
+    const onChange = vi.fn();
+    const onRemove = vi.fn();
+
+    render(
+      <QuantityControl value={1} min={1} max={3} onChange={onChange} onRemove={onRemove} />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'کاهش تعداد' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'حذف از سبد خرید' }));
+
+    expect(onRemove).toHaveBeenCalledOnce();
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

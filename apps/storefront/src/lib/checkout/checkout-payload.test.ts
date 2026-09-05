@@ -11,6 +11,7 @@ const baseItem: CartItem = {
   variantLabel: 'سایز ۵۴',
   media: null,
   unitSalePriceToman: 3_000_000,
+  unitCompareAtPriceToman: 3_750_000,
   platingType: null,
   unitPlatingPriceToman: 0,
   platingLeadTimeDays: 0,
@@ -61,6 +62,7 @@ describe('buildCreateOrderBody', () => {
       },
     ]);
     expect(JSON.stringify(body)).not.toContain('unitSalePriceToman');
+    expect(JSON.stringify(body)).not.toContain('unitCompareAtPriceToman');
     expect(JSON.stringify(body)).not.toContain('unitPlatingPriceToman');
   });
 });

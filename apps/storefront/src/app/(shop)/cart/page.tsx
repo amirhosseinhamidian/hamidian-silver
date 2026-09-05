@@ -3,13 +3,14 @@
 import Link from 'next/link';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
+import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QuantityControl } from '@/components/ui/quantity-control';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
+import { getDiscountPercent } from '@/lib/catalog/pricing';
 import type { CartPlatingType } from '@/lib/cart/cart-state';
 import { useCart } from '@/lib/cart/cart-store';
-import { CiTrash } from 'react-icons/ci';
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
 
@@ -58,6 +59,10 @@ export default function CartPage() {
           {items.map((item) => {
             const lineTotal =
               (item.unitSalePriceToman + item.unitPlatingPriceToman) * item.quantity;
+            const discountPercent = getDiscountPercent(
+              item.unitCompareAtPriceToman,
+              item.unitSalePriceToman,
+            );
 
             return (
               <li
@@ -105,7 +110,21 @@ export default function CartPage() {
                           : ''}
                       </p>
                     ) : null}
-                    <p className="mt-2 text-sm font-medium">
+                    {discountPercent !== null ? (
+                      <div className="mt-2 flex items-center gap-2 text-xs text-(--sf-color-muted)">
+                        <span className="line-through">
+                          {formatTomanPrice(item.unitCompareAtPriceToman)}
+                        </span>
+                        <DiscountBadge percent={discountPercent} />
+                      </div>
+                    ) : null}
+                    <p
+                      className={
+                        discountPercent !== null
+                          ? 'mt-1 text-sm font-medium'
+                          : 'mt-2 text-sm font-medium'
+                      }
+                    >
                       {formatTomanPrice(item.unitSalePriceToman + item.unitPlatingPriceToman)}
                     </p>
                   </div>
@@ -115,28 +134,13 @@ export default function CartPage() {
                       value={item.quantity}
                       max={item.maxQuantity}
                       onChange={(quantity) => setQuantity(item.key, quantity)}
+                      onRemove={() => removeItem(item.key)}
                       label={`تعداد ${item.productName}`}
                     />
 
                     <div>
                       <p className="text-xs text-(--sf-color-muted)">جمع این مورد</p>
                       <p className="mt-1 text-sm">{formatTomanPrice(lineTotal)}</p>
-                      <button
-                        type="button"
-                        aria-label="حذف محصول"
-                        title="حذف محصول"
-                        className="
-                            mt-2 inline-flex h-8 w-8 items-center justify-center
-                            rounded-sm
-                            text-(--sf-color-muted)
-                            transition-colors
-                            hover:text-(--sf-color-ink)
-                            justify-items-end
-                          "
-                        onClick={() => removeItem(item.key)}
-                      >
-                        <CiTrash size={18} />
-                      </button>
                     </div>
                   </div>
                 </div>
