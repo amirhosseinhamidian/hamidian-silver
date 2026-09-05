@@ -85,6 +85,7 @@ describe('ProductPurchasePanel', () => {
       expect.objectContaining({
         variantId: '10000000-0000-4000-8000-000000000011',
         productSlug: 'silver-ring',
+        variantLabel: 'سایز: 52',
         unitSalePriceToman: 800_000,
         platingType: 'GOLD',
         unitPlatingPriceToman: 25_000,
@@ -94,6 +95,31 @@ describe('ProductPurchasePanel', () => {
       }),
     );
     expect(screen.getByText('محصول به سبد خرید اضافه شد.')).toBeInTheDocument();
+  });
+
+  it('stores a named variant as a model while keeping its selector label concise', () => {
+    const modelProduct: PublicCatalogProductDetail = {
+      ...product,
+      sizeMode: 'NONE',
+      variants: [
+        {
+          ...product.variants[0]!,
+          name: 'کلاسیک',
+          size: null,
+        },
+      ],
+    };
+
+    render(<ProductPurchasePanel product={modelProduct} />);
+
+    expect(screen.queryByText('مدل: کلاسیک')).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'افزودن به سبد خرید' })[0]);
+
+    expect(addItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variantLabel: 'مدل: کلاسیک',
+      }),
+    );
   });
 
   it('keeps the mobile add action usable so it can direct the shopper to size selection', () => {

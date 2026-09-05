@@ -20,8 +20,20 @@ const platingLabels: Record<CartPlatingType, string> = {
 
 type ProductVariant = PublicCatalogProductDetail['variants'][number];
 
-function getVariantLabel(variant: ProductVariant): string {
+function getVariantOptionLabel(variant: ProductVariant): string {
   return variant.size?.label?.trim() || variant.name?.trim() || 'بدون سایز';
+}
+
+function getCartVariantLabel(variant: ProductVariant): string {
+  const sizeLabel = variant.size?.label?.trim();
+
+  if (sizeLabel) {
+    return `سایز: ${sizeLabel}`;
+  }
+
+  const modelName = variant.name?.trim();
+
+  return modelName ? `مدل: ${modelName}` : 'بدون سایز';
 }
 
 type ProductPurchasePanelProps = Readonly<{
@@ -123,7 +135,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       variantId: selectedVariant.id,
       productSlug: product.slug,
       productName: product.name,
-      variantLabel: getVariantLabel(selectedVariant),
+      variantLabel: getCartVariantLabel(selectedVariant),
       media: product.primaryMedia,
       unitSalePriceToman: product.salePriceToman,
       platingType,
@@ -179,7 +191,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
                     peer-disabled:cursor-not-allowed peer-disabled:opacity-35
                   "
                 >
-                  {getVariantLabel(variant)}
+                  {getVariantOptionLabel(variant)}
                 </span>
               </label>
             ))}
