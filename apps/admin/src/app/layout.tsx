@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { vazirmatn } from '@/styles/fonts';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -20,7 +21,7 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="fa" dir="rtl">
+    <html lang="fa" dir="rtl" className={vazirmatn.variable}>
       <body>{children}</body>
     </html>
   );

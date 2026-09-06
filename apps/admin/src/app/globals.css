@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '../styles/tokens.css';
 
 *,
 *::before,
@@ -8,25 +9,86 @@
 
 html {
   min-height: 100%;
-  background: #f8fafc;
+  background: var(--admin-color-canvas);
+  color-scheme: light;
+  text-size-adjust: 100%;
 }
 
 body {
   min-height: 100dvh;
   margin: 0;
-  background: #f8fafc;
-  color: #0f172a;
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--admin-color-canvas);
+  color: var(--admin-color-ink);
+  font-family: var(--admin-font-family);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
 }
 
 button,
 input,
 select,
 textarea {
-  font: inherit;
+  font-family: inherit;
+}
+
+button,
+[role='button'] {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled='true'] {
+  cursor: default;
+}
+
+::selection {
+  background: var(--admin-color-primary);
+  color: white;
+}
+
+:focus-visible {
+  outline: 2px solid var(--admin-color-primary);
+  outline-offset: 2px;
+}
+
+.admin-form-control:focus-visible,
+.admin-select-trigger:focus-visible {
+  outline: none;
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+.admin-container {
+  width: min(calc(100% - 2rem), var(--admin-content-max));
+  margin-inline: auto;
+}
+
+@media (min-width: 48rem) {
+  .admin-container {
+    width: min(calc(100% - 3rem), var(--admin-content-max));
+  }
+}
+
+@keyframes admin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.admin-spinner {
+  animation: admin-spin 700ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
