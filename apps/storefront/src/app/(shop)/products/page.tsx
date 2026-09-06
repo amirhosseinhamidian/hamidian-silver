@@ -3,11 +3,14 @@ import Link from 'next/link';
 import { CatalogFilterForm } from '@/components/catalog/catalog-filter-form';
 import { CatalogHero } from '@/components/catalog/catalog-hero';
 import { CatalogFilterSheet } from '@/components/catalog/catalog-filter-sheet';
-import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
+import { CatalogProductGrid } from '@/components/catalog/catalog-product-grid';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Select } from '@/components/ui/select';
-import { getCatalogDevHeroImageSrc } from '@/lib/catalog/dev-media.server';
+import {
+  getCatalogDevHeroImageSrc,
+  getCatalogDevProductImageSources,
+} from '@/lib/catalog/dev-media.server';
 import {
   buildCatalogHref,
   getPublicCatalogIndex,
@@ -125,46 +128,21 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           <div className="min-w-0">
             {products.items.length > 0 ? (
               <>
-                <ul
-                  className="
-                    grid grid-cols-2 gap-x-3 gap-y-10
-                    sm:gap-x-5 xl:grid-cols-3 2xl:grid-cols-4
-                  "
-                >
-                  {products.items.map((product) => (
-                    <CatalogProductCard key={product.id} product={product} />
-                  ))}
-                </ul>
-
-                {products.totalPages > 1 ? (
-                  <nav
-                    aria-label="صفحه‌بندی محصولات"
-                    className="
-                      mt-10 flex items-center justify-between gap-4
-                      border-t border-[var(--sf-color-border)] pt-6 text-sm
-                    "
-                  >
-                    {products.page > 1 ? (
-                      <Link href={buildCatalogHref(filters, { page: products.page - 1 })}>
-                        صفحه قبل
-                      </Link>
-                    ) : (
-                      <span />
-                    )}
-
-                    <span className="text-[var(--sf-color-muted)]">
-                      صفحه {persianNumber.format(products.page)} از{' '}
-                      {persianNumber.format(products.totalPages)}
-                    </span>
-
-                    {products.page < products.totalPages ? (
+                <CatalogProductGrid
+                  key={buildCatalogHref(filters)}
+                  filters={filters}
+                  initialProducts={products}
+                  initialFallbackSources={getCatalogDevProductImageSources(products.items)}
+                  className="xl:grid-cols-3 2xl:grid-cols-4"
+                />
+                {products.page < products.totalPages ? (
+                  <noscript>
+                    <div className="mt-10 border-t border-[var(--sf-color-border)] pt-6 text-center text-sm">
                       <Link href={buildCatalogHref(filters, { page: products.page + 1 })}>
-                        صفحه بعد
+                        مشاهده محصولات بیشتر
                       </Link>
-                    ) : (
-                      <span />
-                    )}
-                  </nav>
+                    </div>
+                  </noscript>
                 ) : null}
               </>
             ) : (

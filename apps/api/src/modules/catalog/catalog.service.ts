@@ -530,50 +530,82 @@ export class CatalogService {
             ? [{ name: 'asc' as const }, { id: 'asc' as const }]
             : [{ createdAt: 'desc' as const }, { id: 'desc' as const }];
 
-    const [products, total] = await Promise.all([
-      this.prisma.product.findMany({
-        where,
-        orderBy,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          shortDescription: true,
-          salePriceToman: true,
-          compareAtPriceToman: true,
-          sizeMode: true,
-          brand: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              description: true,
-              isActive: true,
-              deletedAt: true,
-              image: {
-                select: {
-                  storageKey: true,
-                  mimeType: true,
-                  altText: true,
-                  width: true,
-                  height: true,
-                  deletedAt: true,
+    const orderedProducts = await this.prisma.product.findMany({
+      where,
+      orderBy,
+      select: {
+        id: true,
+        variants: {
+          where: {
+            isActive: true,
+            deletedAt: null,
+          },
+          select: {
+            inventories: {
+              select: {
+                onHand: true,
+                reserved: true,
+                warehouse: {
+                  select: {
+                    isActive: true,
+                    deletedAt: true,
+                  },
                 },
               },
             },
           },
-          categories: {
+        },
+      },
+    });
+    const availabilityByProductId = new Map(
+      orderedProducts.map((product) => [
+        product.id,
+        product.variants.reduce(
+          (productTotal, variant) =>
+            productTotal +
+            variant.inventories.reduce((variantTotal, inventory) => {
+              if (!inventory.warehouse.isActive || inventory.warehouse.deletedAt) {
+                return variantTotal;
+              }
+
+              return variantTotal + Math.max(0, inventory.onHand - inventory.reserved);
+            }, 0),
+          0,
+        ),
+      ] as const),
+    );
+    const prioritizedProductIds = [
+      ...orderedProducts.filter((product) => (availabilityByProductId.get(product.id) ?? 0) > 0),
+      ...orderedProducts.filter((product) => (availabilityByProductId.get(product.id) ?? 0) === 0),
+    ].map((product) => product.id);
+    const total = prioritizedProductIds.length;
+    const pageProductIds = prioritizedProductIds.slice(
+      (page - 1) * pageSize,
+      page * pageSize,
+    );
+    const products =
+      pageProductIds.length === 0
+        ? []
+        : await this.prisma.product.findMany({
+            where: {
+              id: {
+                in: pageProductIds,
+              },
+            },
             select: {
-              category: {
+              id: true,
+              name: true,
+              slug: true,
+              shortDescription: true,
+              salePriceToman: true,
+              compareAtPriceToman: true,
+              sizeMode: true,
+              brand: {
                 select: {
                   id: true,
                   name: true,
                   slug: true,
                   description: true,
-                  parentId: true,
-                  sortOrder: true,
                   isActive: true,
                   deletedAt: true,
                   image: {
@@ -588,66 +620,63 @@ export class CatalogService {
                   },
                 },
               },
-            },
-          },
-          variants: {
-            where: {
-              isActive: true,
-              deletedAt: null,
-            },
-            select: {
-              inventories: {
+              categories: {
                 select: {
-                  onHand: true,
-                  reserved: true,
-                  warehouse: {
+                  category: {
                     select: {
+                      id: true,
+                      name: true,
+                      slug: true,
+                      description: true,
+                      parentId: true,
+                      sortOrder: true,
                       isActive: true,
+                      deletedAt: true,
+                      image: {
+                        select: {
+                          storageKey: true,
+                          mimeType: true,
+                          altText: true,
+                          width: true,
+                          height: true,
+                          deletedAt: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              media: {
+                orderBy: {
+                  sortOrder: 'asc',
+                },
+                select: {
+                  isPrimary: true,
+                  altText: true,
+                  media: {
+                    select: {
+                      storageKey: true,
+                      mimeType: true,
+                      altText: true,
+                      width: true,
+                      height: true,
                       deletedAt: true,
                     },
                   },
                 },
               },
             },
-          },
-          media: {
-            orderBy: {
-              sortOrder: 'asc',
-            },
-            select: {
-              isPrimary: true,
-              altText: true,
-              media: {
-                select: {
-                  storageKey: true,
-                  mimeType: true,
-                  altText: true,
-                  width: true,
-                  height: true,
-                  deletedAt: true,
-                },
-              },
-            },
-          },
-        },
-      }),
-      this.prisma.product.count({ where }),
-    ]);
+          });
+    const productById = new Map(products.map((product) => [product.id, product] as const));
+    const orderedPageProducts = pageProductIds.flatMap((productId) => {
+      const product = productById.get(productId);
+
+      return product ? [product] : [];
+    });
 
     return {
-      items: products.map((product) => {
-        const availableQuantity = product.variants.reduce(
-          (productTotal, variant) =>
-            productTotal +
-            variant.inventories.reduce((variantTotal, inventory) => {
-              if (!inventory.warehouse.isActive || inventory.warehouse.deletedAt) {
-                return variantTotal;
-              }
-
-              return variantTotal + Math.max(0, inventory.onHand - inventory.reserved);
-            }, 0),
-          0,
-        );
+      items: orderedPageProducts.map((product) => {
+        const availableQuantity = availabilityByProductId.get(product.id) ?? 0;
         const primaryMedia =
           product.media.find((item) => item.isPrimary && !item.media.deletedAt) ??
           product.media.find((item) => !item.media.deletedAt);

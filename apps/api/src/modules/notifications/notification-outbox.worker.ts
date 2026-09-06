@@ -4,6 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import {
   NotificationOutboxEventType,
   NotificationOutboxStatus,
+  StockNotificationStatus,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { isSmsDeliveryUnknownError } from '../auth/sms-delivery-unknown.error';
@@ -196,7 +197,7 @@ export class NotificationOutboxWorker {
         try {
           await sendMessage(message);
 
-          await this.prisma.notificationOutboxEvent.updateMany({
+          const sent = await this.prisma.notificationOutboxEvent.updateMany({
             where: {
               id: event.id,
               status: NotificationOutboxStatus.DISPATCHING,
@@ -209,6 +210,19 @@ export class NotificationOutboxWorker {
               lastError: null,
             },
           });
+
+          if (sent.count === 1 && event.aggregateType === 'STOCK_SUBSCRIPTION') {
+            await this.prisma.stockNotificationSubscription.updateMany({
+              where: {
+                id: event.aggregateId,
+                status: StockNotificationStatus.QUEUED,
+              },
+              data: {
+                status: StockNotificationStatus.NOTIFIED,
+                notifiedAt: new Date(),
+              },
+            });
+          }
         } catch (error) {
           await this.settleDispatchFailure(event.id, claimedAt, event.attempts + 1, error);
         }
@@ -345,6 +359,55 @@ export class NotificationOutboxWorker {
     aggregateType: string,
     aggregateId: string,
   ): Promise<{ phone: string; text: string }> {
+    if (
+      aggregateType === 'STOCK_SUBSCRIPTION' &&
+      type === NotificationOutboxEventType.STOCK_AVAILABLE
+    ) {
+      const subscription = await this.prisma.stockNotificationSubscription.findFirst({
+        where: {
+          id: aggregateId,
+          status: StockNotificationStatus.QUEUED,
+        },
+        select: {
+          user: {
+            select: {
+              phone: true,
+            },
+          },
+          product: {
+            select: {
+              name: true,
+            },
+          },
+          variant: {
+            select: {
+              name: true,
+              size: {
+                select: {
+                  label: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!subscription) {
+        throw new Error('Stock notification subscription was not found.');
+      }
+
+      const variantLabel =
+        subscription.variant?.size?.label?.trim() || subscription.variant?.name?.trim();
+      const targetLabel = variantLabel
+        ? `${subscription.product.name} (${variantLabel})`
+        : subscription.product.name;
+
+      return {
+        phone: subscription.user.phone,
+        text: `${targetLabel} دوباره موجود شد. نقره حمیدیان`,
+      };
+    }
+
     if (aggregateType !== 'ORDER') {
       throw new Error(`Unsupported notification aggregate type: ${aggregateType}`);
     }
@@ -406,6 +469,8 @@ export class NotificationOutboxWorker {
           phone: order.user.phone,
           text: `پرداخت سفارش ${order.orderNumber} ثبت شده و در حال بررسی است. لطفاً تا پایان بررسی پرداخت مجدد انجام ندهید.`,
         };
+      case NotificationOutboxEventType.STOCK_AVAILABLE:
+        throw new Error('Stock notification event has an invalid aggregate type.');
     }
   }
 

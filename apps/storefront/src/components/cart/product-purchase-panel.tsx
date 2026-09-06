@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { FiAlertCircle } from 'react-icons/fi';
 
 import { DiscountBadge } from '@/components/catalog/discount-badge';
+import { StockNotificationButton } from '@/components/catalog/stock-notification-button';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { QuantityControl } from '@/components/ui/quantity-control';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
@@ -43,8 +44,7 @@ type ProductPurchasePanelProps = Readonly<{
 }>;
 
 export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
-  const initiallySelectedVariant =
-    product.variants.length === 1 && product.variants[0]?.isAvailable ? product.variants[0].id : '';
+  const initiallySelectedVariant = product.variants.length === 1 ? product.variants[0]?.id : '';
   const [variantId, setVariantId] = useState(initiallySelectedVariant);
   const [platingType, setPlatingType] = useState<CartPlatingType | null>(null);
   const [variantMessage, setVariantMessage] = useState<string | null>(null);
@@ -93,6 +93,11 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   const hasPurchasableVariant = product.variants.some(
     (variant) => variant.isAvailable && variant.availableQuantity > 0,
   );
+  const notificationVariant =
+    selectedVariant && (!selectedVariant.isAvailable || selectedVariant.availableQuantity <= 0)
+      ? selectedVariant
+      : null;
+  const showStockNotification = notificationVariant !== null || !hasPurchasableVariant;
   const desktopAddButtonDisabled = !canAdd;
   const mobileAddButtonDisabled =
     product.salePriceToman === null ||
@@ -182,7 +187,6 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
                   name={`variant-${product.id}`}
                   value={variant.id}
                   checked={variantId === variant.id}
-                  disabled={!variant.isAvailable}
                   onChange={() => selectVariant(variant.id)}
                   className="peer sr-only"
                 />
@@ -192,10 +196,12 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
                     border border-[var(--sf-color-border)] px-4 py-2 text-sm
                     transition-colors peer-checked:border-[var(--sf-color-ink)]
                     peer-checked:bg-[var(--sf-color-ink)] peer-checked:text-white
-                    peer-disabled:cursor-not-allowed peer-disabled:opacity-35
                   "
                 >
-                  {getVariantOptionLabel(variant)}
+                  <span>{getVariantOptionLabel(variant)}</span>
+                  {!variant.isAvailable ? (
+                    <span className="mr-2 text-[0.65rem] opacity-60">ناموجود</span>
+                  ) : null}
                 </span>
               </label>
             ))}
@@ -216,7 +222,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         </p>
       ) : null}
 
-      {selectedVariant && selectedVariant.platingOptions.length > 0 ? (
+      {selectedVariant?.isAvailable && selectedVariant.platingOptions.length > 0 ? (
         <fieldset className="mt-6">
           <legend className="text-xs text-[var(--sf-color-muted)]">نوع آبکاری</legend>
           <div className="mt-3 grid gap-2">
@@ -312,7 +318,14 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         </p>
       ) : null}
 
-      {selectedCartItem ? (
+      {showStockNotification ? (
+        <StockNotificationButton
+          key={notificationVariant?.id ?? product.id}
+          productId={product.id}
+          variantId={notificationVariant?.id}
+          className="mt-6 hidden lg:block"
+        />
+      ) : selectedCartItem ? (
         <ButtonLink
           href="/cart"
           variant="solid"
@@ -396,7 +409,14 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
                 onRemove={() => removeItem(selectedCartItem.key)}
               />
             ) : null}
-            {selectedCartItem ? (
+            {showStockNotification ? (
+              <StockNotificationButton
+                key={notificationVariant?.id ?? product.id}
+                productId={product.id}
+                variantId={notificationVariant?.id}
+                className="min-w-0 w-full"
+              />
+            ) : selectedCartItem ? (
               <ButtonLink
                 href="/cart"
                 variant="solid"

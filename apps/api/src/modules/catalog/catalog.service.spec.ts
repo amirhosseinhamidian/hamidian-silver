@@ -324,7 +324,6 @@ describe('CatalogService', () => {
       },
     ]);
     prisma.product.findMany.mockResolvedValue([]);
-    prisma.product.count.mockResolvedValue(0);
 
     await expect(
       service.listPublicProducts({
@@ -344,8 +343,6 @@ describe('CatalogService', () => {
 
     expect(query).toEqual(
       expect.objectContaining({
-        skip: 12,
-        take: 12,
         where: expect.objectContaining({
           status: ProductStatus.ACTIVE,
           deletedAt: null,
@@ -354,6 +351,9 @@ describe('CatalogService', () => {
     );
     expect(query.select).not.toHaveProperty('suppliers');
     expect(query.select).not.toHaveProperty('priceHistory');
+    expect(query).not.toHaveProperty('skip');
+    expect(query).not.toHaveProperty('take');
+    expect(prisma.product.count).not.toHaveBeenCalled();
   });
 
   it('includes active descendant categories when filtering a parent collection', async () => {
@@ -367,7 +367,6 @@ describe('CatalogService', () => {
       { id: grandchildId, slug: 'silver-rings', parentId: childId },
     ]);
     prisma.product.findMany.mockResolvedValue([]);
-    prisma.product.count.mockResolvedValue(0);
 
     await service.listPublicProducts({
       category: 'jewelry',
@@ -394,7 +393,6 @@ describe('CatalogService', () => {
 
   it('uses deterministic price ordering and keeps null prices last', async () => {
     prisma.product.findMany.mockResolvedValue([]);
-    prisma.product.count.mockResolvedValue(0);
 
     await service.listPublicProducts({
       sort: PublicCatalogSort.PRICE_ASC,
@@ -412,6 +410,107 @@ describe('CatalogService', () => {
           { createdAt: 'desc' },
           { id: 'asc' },
         ],
+      }),
+    );
+  });
+
+  it('prioritizes available products before paginating while preserving catalog order', async () => {
+    const availableFirstId = '10000000-0000-4000-8000-000000000011';
+    const unavailableId = '10000000-0000-4000-8000-000000000012';
+    const availableSecondId = '10000000-0000-4000-8000-000000000013';
+    const activeWarehouse = {
+      isActive: true,
+      deletedAt: null,
+    };
+
+    prisma.product.findMany
+      .mockResolvedValueOnce([
+        {
+          id: availableFirstId,
+          variants: [
+            {
+              inventories: [{ onHand: 2, reserved: 1, warehouse: activeWarehouse }],
+            },
+          ],
+        },
+        {
+          id: unavailableId,
+          variants: [
+            {
+              inventories: [{ onHand: 1, reserved: 1, warehouse: activeWarehouse }],
+            },
+          ],
+        },
+        {
+          id: availableSecondId,
+          variants: [
+            {
+              inventories: [{ onHand: 3, reserved: 0, warehouse: activeWarehouse }],
+            },
+          ],
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: availableSecondId,
+          name: 'Available second',
+          slug: 'available-second',
+          shortDescription: null,
+          salePriceToman: 900_000,
+          compareAtPriceToman: null,
+          sizeMode: SizeMode.NONE,
+          brand: null,
+          categories: [],
+          media: [],
+        },
+        {
+          id: availableFirstId,
+          name: 'Available first',
+          slug: 'available-first',
+          shortDescription: null,
+          salePriceToman: 800_000,
+          compareAtPriceToman: null,
+          sizeMode: SizeMode.NONE,
+          brand: null,
+          categories: [],
+          media: [],
+        },
+      ]);
+
+    await expect(
+      service.listPublicProducts({
+        page: 1,
+        pageSize: 2,
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            id: availableFirstId,
+            availableQuantity: 1,
+            isAvailable: true,
+          }),
+          expect.objectContaining({
+            id: availableSecondId,
+            availableQuantity: 3,
+            isAvailable: true,
+          }),
+        ],
+        page: 1,
+        pageSize: 2,
+        total: 3,
+        totalPages: 2,
+      }),
+    );
+
+    expect(prisma.product.findMany).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: {
+          id: {
+            in: [availableFirstId, availableSecondId],
+          },
+        },
       }),
     );
   });

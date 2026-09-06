@@ -43,4 +43,23 @@ describe('CatalogProductCard', () => {
     expect(screen.queryByText('۰٪')).not.toBeInTheDocument();
     expect(screen.getAllByText(formatTomanPrice(800_000))).toHaveLength(1);
   });
+
+  it('labels an unavailable product without presenting a purchase action', () => {
+    render(
+      <CatalogProductCard
+        product={{
+          ...product,
+          availableQuantity: 0,
+          isAvailable: false,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('ناموجود')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'مشاهده محصول' })).toHaveAttribute(
+      'href',
+      '/products/silver-ring',
+    );
+    expect(screen.queryByRole('link', { name: 'مشاهده و خرید' })).not.toBeInTheDocument();
+  });
 });

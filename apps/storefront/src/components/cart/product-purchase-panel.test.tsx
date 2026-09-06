@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProductPurchasePanel } from '@/components/cart/product-purchase-panel';
@@ -80,6 +80,14 @@ describe('ProductPurchasePanel', () => {
     cartStoreMock.addItem.mockReset();
     cartStoreMock.setQuantity.mockReset();
     cartStoreMock.removeItem.mockReset();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 201,
+        json: vi.fn().mockResolvedValue({ subscribed: true, target: 'VARIANT' }),
+      }),
+    );
   });
 
   it('adds one selected item, then exposes cart-linked quantity controls and cart links', () => {
@@ -243,5 +251,29 @@ describe('ProductPurchasePanel', () => {
     );
 
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+  });
+
+  it('allows selecting an unavailable size and registering a stock notification', async () => {
+    render(<ProductPurchasePanel product={product} />);
+
+    fireEvent.click(screen.getByRole('radio', { name: /54.*ناموجود/ }));
+    const notificationButtons = screen.getAllByRole('button', {
+      name: 'اگر موجود شد خبرم کن',
+    });
+    fireEvent.click(notificationButtons[0]!);
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/stock-notifications',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            productId: product.id,
+            variantId: '10000000-0000-4000-8000-000000000013',
+          }),
+        }),
+      ),
+    );
+    expect(await screen.findAllByText('درخواست اطلاع‌رسانی ثبت شد')).toHaveLength(2);
   });
 });

@@ -3,30 +3,40 @@ import Link from 'next/link';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { ButtonLink } from '@/components/ui/button';
-import { getCatalogDevProductImageSrc } from '@/lib/catalog/dev-media.server';
 import type { PublicCatalogProductSummary } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
 
 type CatalogProductCardProps = Readonly<{
   product: PublicCatalogProductSummary;
+  fallbackSrc?: string | null;
 }>;
 
-export function CatalogProductCard({ product }: CatalogProductCardProps) {
+export function CatalogProductCard({ product, fallbackSrc = null }: CatalogProductCardProps) {
   return (
     <li className="sf-catalog-card group flex min-w-0 flex-col p-2">
       <Link
         href={`/products/${product.slug}`}
         className="
-          sf-catalog-card__media block aspect-square overflow-hidden
+          sf-catalog-card__media relative block aspect-square overflow-hidden
           rounded-[var(--sf-radius-md)] bg-[var(--sf-color-surface)]
         "
       >
         <CatalogMedia
           media={product.primaryMedia}
-          fallbackSrc={getCatalogDevProductImageSrc(product.slug)}
+          fallbackSrc={fallbackSrc}
           alt={product.name}
         />
+        {!product.isAvailable ? (
+          <span
+            className="
+              absolute end-3 top-3 rounded-full bg-[var(--sf-color-canvas)]
+              px-3 py-1 text-xs text-[var(--sf-color-ink)] shadow-sm
+            "
+          >
+            ناموجود
+          </span>
+        ) : null}
       </Link>
 
       <div className="flex flex-1 flex-col pt-4 text-center">
@@ -69,7 +79,7 @@ export function CatalogProductCard({ product }: CatalogProductCardProps) {
 
         <div className="sf-catalog-card__action mt-auto pt-4">
           <ButtonLink href={`/products/${product.slug}`} variant="solid" className="w-full">
-            مشاهده و خرید
+            {product.isAvailable ? 'مشاهده و خرید' : 'مشاهده محصول'}
           </ButtonLink>
         </div>
       </div>

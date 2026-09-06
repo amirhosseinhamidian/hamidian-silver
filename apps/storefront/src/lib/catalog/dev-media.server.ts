@@ -16,6 +16,18 @@ export function getCatalogDevProductImageSrc(slug: string): string | null {
   return resolveDevCatalogAsset(`products/${slug}.webp`);
 }
 
+export function getCatalogDevProductImageSources(
+  products: ReadonlyArray<Readonly<{ id: string; slug: string }>>,
+): Record<string, string> {
+  return Object.fromEntries(
+    products.flatMap((product) => {
+      const src = getCatalogDevProductImageSrc(product.slug);
+
+      return src ? [[product.id, src]] : [];
+    }),
+  );
+}
+
 export function getCatalogDevHeroImageSrc(): string | null {
   return resolveDevCatalogAsset('hero.webp');
 }

@@ -900,6 +900,22 @@ export interface paths {
         patch: operations["NotificationOutboxRecoveryController_resolveOperational_v1"];
         trace?: never;
     };
+    "/api/v1/stock-notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StockNotificationsController_subscribe_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pricing/suppliers": {
         parameters: {
             query?: never;
@@ -2223,6 +2239,17 @@ export interface components {
             /** @enum {string} */
             resolution: "RETRY_APPROVED" | "MARKED_SENT";
             note: string;
+        };
+        CreateStockNotificationDto: {
+            /** Format: uuid */
+            productId: string;
+            /** Format: uuid */
+            variantId?: string;
+        };
+        StockNotificationResponseDto: {
+            /** @enum {string} */
+            target: "PRODUCT" | "VARIANT";
+            subscribed: boolean;
         };
         CreateSupplierDto: {
             code: string;
@@ -3903,6 +3930,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    StockNotificationsController_subscribe_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStockNotificationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockNotificationResponseDto"];
                 };
             };
         };

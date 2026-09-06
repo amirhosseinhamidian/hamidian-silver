@@ -1,11 +1,12 @@
 import Link from 'next/link';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
-import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
+import { CatalogProductGrid } from '@/components/catalog/catalog-product-grid';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FormField } from '@/components/ui/form-field';
 import { Select } from '@/components/ui/select';
+import { getCatalogDevProductImageSources } from '@/lib/catalog/dev-media.server';
 import {
   buildCatalogCollectionHref,
   type CatalogFilters,
@@ -104,49 +105,25 @@ export function CatalogCollectionPage({
 
       {products.items.length > 0 ? (
         <>
-          <ul className="grid grid-cols-2 gap-x-3 gap-y-10 py-10 sm:gap-x-5 md:grid-cols-3 lg:grid-cols-4">
-            {products.items.map((product) => (
-              <CatalogProductCard key={product.id} product={product} />
-            ))}
-          </ul>
-
-          {products.totalPages > 1 ? (
-            <nav
-              aria-label={`صفحه‌بندی محصولات ${title}`}
-              className="
-                flex items-center justify-between gap-4
-                border-t border-[var(--sf-color-border)] pt-6 text-sm
-              "
-            >
-              {products.page > 1 ? (
-                <Link
-                  href={buildCatalogCollectionHref(path, filters, {
-                    page: products.page - 1,
-                  })}
-                >
-                  صفحه قبل
-                </Link>
-              ) : (
-                <span />
-              )}
-
-              <span className="text-[var(--sf-color-muted)]">
-                صفحه {persianNumber.format(products.page)} از{' '}
-                {persianNumber.format(products.totalPages)}
-              </span>
-
-              {products.page < products.totalPages ? (
+          <CatalogProductGrid
+            key={`${path}:${filters.sort}:${filters.page}`}
+            filters={filters}
+            initialProducts={products}
+            initialFallbackSources={getCatalogDevProductImageSources(products.items)}
+            className="py-10 md:grid-cols-3 lg:grid-cols-4"
+          />
+          {products.page < products.totalPages ? (
+            <noscript>
+              <div className="border-t border-[var(--sf-color-border)] pt-6 text-center text-sm">
                 <Link
                   href={buildCatalogCollectionHref(path, filters, {
                     page: products.page + 1,
                   })}
                 >
-                  صفحه بعد
+                  مشاهده محصولات بیشتر
                 </Link>
-              ) : (
-                <span />
-              )}
-            </nav>
+              </div>
+            </noscript>
           ) : null}
         </>
       ) : (

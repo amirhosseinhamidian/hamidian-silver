@@ -16,6 +16,10 @@ import { FiAlertCircle, FiCheck, FiEdit2, FiRefreshCw, FiUser, FiX } from 'react
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-control';
+import {
+  AUTHENTICATION_SUCCEEDED_EVENT,
+  OPEN_AUTH_MODAL_EVENT,
+} from '@/lib/auth/events';
 import { cn } from '@/lib/ui/cn';
 
 const OTP_LENGTH = 5;
@@ -371,6 +375,26 @@ export function AccountAuthButton({ className }: Readonly<{ className?: string }
   const verificationInFlight = useRef(false);
 
   useEffect(() => {
+    function openFromExternalAction() {
+      setStep('phone');
+      setPhone('');
+      setPhoneError('');
+      setPhoneLoading(false);
+      setDigits(Array<string>(OTP_LENGTH).fill(''));
+      setOtpError('');
+      setOtpLoading(false);
+      setResendLoading(false);
+      setExpiresAt(0);
+      setRemainingSeconds(OTP_LIFETIME_SECONDS);
+      setShakeKey(0);
+      setOpen(true);
+    }
+
+    window.addEventListener(OPEN_AUTH_MODAL_EVENT, openFromExternalAction);
+    return () => window.removeEventListener(OPEN_AUTH_MODAL_EVENT, openFromExternalAction);
+  }, []);
+
+  useEffect(() => {
     if (step !== 'otp' || !expiresAt) return;
 
     const update = () => {
@@ -465,6 +489,7 @@ export function AccountAuthButton({ className }: Readonly<{ className?: string }
 
     try {
       await postJson('/api/auth/otp/verify', { phone, code });
+      window.dispatchEvent(new Event(AUTHENTICATION_SUCCEEDED_EVENT));
       setStep('success');
     } catch (error) {
       setOtpError(requestErrorMessage(error, 'verify'));

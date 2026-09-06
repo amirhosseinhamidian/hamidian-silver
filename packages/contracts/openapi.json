@@ -2031,6 +2031,37 @@
         ]
       }
     },
+    "/api/v1/stock-notifications": {
+      "post": {
+        "operationId": "StockNotificationsController_subscribe_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStockNotificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockNotificationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "StockNotifications"
+        ]
+      }
+    },
     "/api/v1/pricing/suppliers": {
       "post": {
         "operationId": "PricingController_createSupplier_v1",
@@ -5468,6 +5499,41 @@
         "required": [
           "resolution",
           "note"
+        ]
+      },
+      "CreateStockNotificationDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "variantId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "productId"
+        ]
+      },
+      "StockNotificationResponseDto": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "enum": [
+              "PRODUCT",
+              "VARIANT"
+            ],
+            "type": "string"
+          },
+          "subscribed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "target",
+          "subscribed"
         ]
       },
       "CreateSupplierDto": {
