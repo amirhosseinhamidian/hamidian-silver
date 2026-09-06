@@ -4310,19 +4310,23 @@
       "VerifyOtpDto": {
         "type": "object",
         "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{5}$",
+            "description": "Five-digit one-time verification code",
+            "example": "12345",
+            "minLength": 5,
+            "maxLength": 5
+          },
           "phone": {
             "type": "string",
             "minLength": 10,
             "maxLength": 20
-          },
-          "code": {
-            "type": "string",
-            "pattern": "^\\d{6}$"
           }
         },
         "required": [
-          "phone",
-          "code"
+          "code",
+          "phone"
         ]
       },
       "AuthUserResponseDto": {

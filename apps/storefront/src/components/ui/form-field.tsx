@@ -35,7 +35,11 @@ export function FormField({
     <div className={cn('flex flex-col gap-2', className)}>
       <label htmlFor={id} className="text-xs text-[var(--sf-color-muted)]">
         {label}
-        {required ? <span aria-hidden="true"> *</span> : null}
+        {required ? (
+          <span aria-hidden="true" className="text-red-600">
+            {' *'}
+          </span>
+        ) : null}
       </label>
 
       {children({

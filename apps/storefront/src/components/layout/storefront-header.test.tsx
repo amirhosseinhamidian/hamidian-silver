@@ -28,10 +28,7 @@ const announcement: StorefrontAnnouncement = {
 describe('StorefrontHeader', () => {
   it('renders the storefront identity, icon actions, and configured categories', () => {
     render(
-      <StorefrontHeader
-        announcement={announcement}
-        navigationCategories={navigationCategories}
-      />,
+      <StorefrontHeader announcement={announcement} navigationCategories={navigationCategories} />,
     );
 
     expect(screen.getByText('فروش ویژه پایان فصل')).toBeInTheDocument();
@@ -45,25 +42,20 @@ describe('StorefrontHeader', () => {
       'href',
       '/wishlist',
     );
-    expect(screen.getByRole('link', { name: 'حساب کاربری' })).toHaveAttribute(
-      'href',
-      '/account',
-    );
+    expect(screen.getAllByRole('button', { name: 'ورود یا ثبت‌نام' })).toHaveLength(2);
     expect(screen.getAllByRole('link', { name: 'سبد خرید' })).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'جستجو در محصولات' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'باز کردن منوی موبایل' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: 'نقره حمیدیان، صفحه اصلی موبایل' }),
-    ).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'نقره حمیدیان، صفحه اصلی موبایل' })).toHaveAttribute(
+      'href',
+      '/',
+    );
 
     expect(screen.getByRole('banner')).toHaveClass('sticky', 'top-0');
 
     const navigation = screen.getByRole('navigation', { name: 'پیمایش اصلی' });
 
-    expect(within(navigation).getByRole('link', { name: 'خانه' })).toHaveAttribute(
-      'href',
-      '/',
-    );
+    expect(within(navigation).getByRole('link', { name: 'خانه' })).toHaveAttribute('href', '/');
     expect(within(navigation).getByRole('link', { name: 'انگشتر' })).toHaveAttribute(
       'href',
       '/categories/rings',

@@ -3,13 +3,14 @@ import {
   StorefrontAnnouncementBar,
   type StorefrontAnnouncement,
 } from '@/components/layout/storefront-announcement';
+import { AccountAuthButton } from '@/components/auth/auth-modal';
 import { CartHeaderLink } from '@/components/cart/cart-header-link';
 import { StorefrontMobileMenu } from '@/components/layout/storefront-mobile-menu';
 import { StorefrontSearch } from '@/components/layout/storefront-search';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { FiHeart, FiMapPin, FiUser } from 'react-icons/fi';
+import { FiHeart, FiMapPin } from 'react-icons/fi';
 
 export type StorefrontNavigationCategory = Readonly<{
   id: string;
@@ -93,9 +94,7 @@ export function StorefrontHeader({
             <IconLink href="/wishlist" label="علاقه‌مندی‌ها">
               <FiHeart aria-hidden="true" size={21} />
             </IconLink>
-            <IconLink href="/account" label="حساب کاربری">
-              <FiUser aria-hidden="true" size={21} />
-            </IconLink>
+            <AccountAuthButton />
             <span className="hidden sm:inline-flex">
               <IconLink href="/contact" label="نشانی گالری">
                 <FiMapPin aria-hidden="true" size={21} />
@@ -166,6 +165,7 @@ export function StorefrontHeader({
           </nav>
 
           <div className="flex items-center justify-end gap-1 lg:hidden">
+            <AccountAuthButton />
             <IconLink href="/contact" label="نشانی گالری">
               <FiMapPin aria-hidden="true" size={21} />
             </IconLink>

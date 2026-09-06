@@ -42,20 +42,6 @@ function jsonResponse(payload: unknown, status = 200): Response {
   } as Response;
 }
 
-function fillShippingAddress() {
-  fireEvent.change(screen.getByLabelText(/^نام گیرنده/), {
-    target: { value: 'امیر حمیدیان' },
-  });
-  fireEvent.change(screen.getByLabelText(/^استان/), { target: { value: 'تهران' } });
-  fireEvent.change(screen.getByLabelText(/^شهر/), { target: { value: 'تهران' } });
-  fireEvent.change(screen.getByLabelText(/^کد پستی ۱۰ رقمی/), {
-    target: { value: '1234567890' },
-  });
-  fireEvent.change(screen.getByLabelText(/^نشانی کامل/), {
-    target: { value: 'خیابان نمونه، پلاک ۱' },
-  });
-}
-
 describe('CheckoutFlow price integrity', () => {
   beforeEach(() => {
     clearCart.mockReset();
@@ -71,6 +57,22 @@ describe('CheckoutFlow price integrity', () => {
 
       if (url === '/api/auth/me') {
         return jsonResponse({ phone: '09120000000' });
+      }
+
+      if (url === '/api/profile/addresses') {
+        return jsonResponse([
+          {
+            id: '33333333-3333-4333-8333-333333333333',
+            title: 'خانه',
+            recipientName: 'امیر حمیدیان',
+            phone: '+989120000000',
+            province: 'تهران',
+            city: 'تهران',
+            addressLine: 'خیابان نمونه، پلاک ۱',
+            postalCode: '1234567890',
+            isDefault: true,
+          },
+        ]);
       }
 
       if (url === '/api/checkout/order') {
@@ -95,11 +97,11 @@ describe('CheckoutFlow price integrity', () => {
     render(<CheckoutFlow />);
 
     await screen.findByText('اطلاعات ارسال');
-    fillShippingAddress();
+    await screen.findByText('آدرس پیش‌فرض');
     fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت' }));
 
     const priceAlert = await screen.findByRole('alert');
-    expect(priceAlert).toHaveTextContent('مبلغ جدید را بررسی و برای ادامه تأیید کنید.');
+    expect(priceAlert).toHaveTextContent('مبلغ جدید را بررسی و تأیید کنید.');
     expect(screen.getByText(formatTomanPrice(800_000))).toHaveClass('line-through');
     expect(screen.getByText(formatTomanPrice(850_000))).toBeInTheDocument();
     expect(

@@ -40,4 +40,39 @@ describe('envValidationSchema production HTTP settings', () => {
       expect.arrayContaining(['HTTP_REQUEST_TIMEOUT_MS', 'HTTP_MAX_REQUESTS_PER_SOCKET']),
     );
   });
+
+  it('allows console OTP delivery outside production', () => {
+    const { error, value } = envValidationSchema.validate(
+      {
+        ...requiredEnvironment,
+        NODE_ENV: 'development',
+        SMS_PROVIDER: 'console',
+      },
+      {
+        allowUnknown: true,
+        abortEarly: false,
+      },
+    );
+
+    expect(error).toBeUndefined();
+    expect(value.SMS_PROVIDER).toBe('console');
+  });
+
+  it('rejects console OTP delivery in production', () => {
+    const { error } = envValidationSchema.validate(
+      {
+        ...requiredEnvironment,
+        NODE_ENV: 'production',
+        MEDIA_STORAGE_ROOT: '.data/media',
+        MEDIA_PUBLIC_BASE_URL: 'https://silver.example/media',
+        SMS_PROVIDER: 'console',
+      },
+      {
+        allowUnknown: true,
+        abortEarly: false,
+      },
+    );
+
+    expect(error?.details.map(({ path }) => path.join('.'))).toContain('SMS_PROVIDER');
+  });
 });

@@ -1953,8 +1953,12 @@ export interface components {
             expiresAt: string;
         };
         VerifyOtpDto: {
-            phone: string;
+            /**
+             * @description Five-digit one-time verification code
+             * @example 12345
+             */
             code: string;
+            phone: string;
         };
         AuthUserResponseDto: {
             id: string;

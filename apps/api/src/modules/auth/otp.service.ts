@@ -123,7 +123,7 @@ export class OtpService {
   async verifyCode(rawPhone: string, code: string): Promise<OtpVerificationResult> {
     const phone = normalizeIranianMobile(rawPhone);
 
-    if (!/^\d{6}$/.test(code)) {
+    if (!/^\d{5}$/.test(code)) {
       throw new UnauthorizedException(INVALID_CODE_MESSAGE);
     }
 

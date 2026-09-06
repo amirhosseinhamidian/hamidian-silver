@@ -75,7 +75,7 @@ describe('AuthService', () => {
       callback(transaction),
     );
 
-    const result = await service.verifyOtp('09123456789', '123456');
+    const result = await service.verifyOtp('09123456789', '12345');
 
     expect(result.accessToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(result.tokenType).toBe('Bearer');
@@ -128,7 +128,7 @@ describe('AuthService', () => {
       callback(transaction),
     );
 
-    await expect(service.verifyOtp('09123456789', '123456')).rejects.toBeInstanceOf(
+    await expect(service.verifyOtp('09123456789', '12345')).rejects.toBeInstanceOf(
       ForbiddenException,
     );
   });

@@ -8,7 +8,7 @@ import type { SmsSender } from './sms-sender.port';
 
 describe('OtpService', () => {
   const pepper = 'test-otp-pepper-that-is-at-least-thirty-two-characters';
-  const code = '123456';
+  const code = '12345';
 
   const prisma = {
     otpChallenge: {
@@ -153,7 +153,7 @@ describe('OtpService', () => {
     });
     prisma.otpChallenge.update.mockResolvedValue({});
 
-    await expect(service.verifyCode('09123456789', '654321')).rejects.toBeInstanceOf(
+    await expect(service.verifyCode('09123456789', '65432')).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
 

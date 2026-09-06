@@ -13,7 +13,7 @@
   --sf-content-max: 90rem;
   --sf-reading-max: 42rem;
   --sf-page-gutter: clamp(1rem, 4vw, 3rem);
-  --sf-section-space: clamp(4rem, 8vw, 8rem);
+  --sf-section-space: clamp(2rem, 4vw, 4rem);
 
   --sf-radius-sm: 0.125rem;
   --sf-radius-md: 0.25rem;

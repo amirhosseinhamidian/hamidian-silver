@@ -22,6 +22,7 @@ type SelectProps = Readonly<{
   options: readonly SelectOption[];
   placeholder?: string;
   disabled?: boolean;
+  required?: boolean;
   invalid?: boolean;
   className?: string;
 }> &
@@ -38,6 +39,7 @@ export function Select({
   options,
   placeholder = 'انتخاب کنید',
   disabled = false,
+  required = false,
   invalid = false,
   className,
   id,
@@ -53,6 +55,7 @@ export function Select({
       defaultValue={defaultValue}
       onValueChange={onValueChange}
       disabled={disabled}
+      required={required}
     >
       <SelectPrimitive.Trigger
         id={id}
