@@ -1,31 +1,17 @@
 import type { components } from '@hamidian/contracts';
 import { cookies } from 'next/headers';
 
-import { createServerApiClient } from '@/lib/api/server-client';
-
+import { hasAdministrativeAccess } from './access-control';
 import {
   createClearedSessionCookieOptions,
   createSessionCookieOptions,
-  hasAdministrativeAccess,
   SESSION_COOKIE_NAME,
   toBrowserLoginResponse,
 } from './session-cookie';
+import { createAdminApiClient } from './server-api';
 
 type RequestOtpBody = components['schemas']['RequestOtpDto'];
 type VerifyOtpBody = components['schemas']['VerifyOtpDto'];
-
-function createApiClient(accessToken?: string) {
-  const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;
-
-  if (!apiOrigin) {
-    throw new Error('HAMIDIAN_API_ORIGIN is required for the frontend auth BFF.');
-  }
-
-  return createServerApiClient({
-    apiOrigin,
-    accessToken,
-  });
-}
 
 function responseFromApi(response: Response, payload: unknown): Response {
   if (response.status === 204) {
@@ -56,7 +42,7 @@ async function clearSessionCookie(): Promise<void> {
 
 export async function requestOtp(request: Request): Promise<Response> {
   const body = (await request.json()) as RequestOtpBody;
-  const client = createApiClient();
+  const client = createAdminApiClient();
   const { data, error, response } = await client.POST('/api/v1/auth/otp/request', {
     body,
   });
@@ -66,7 +52,7 @@ export async function requestOtp(request: Request): Promise<Response> {
 
 export async function verifyOtp(request: Request): Promise<Response> {
   const body = (await request.json()) as VerifyOtpBody;
-  const publicClient = createApiClient();
+  const publicClient = createAdminApiClient();
   const { data, error, response } = await publicClient.POST('/api/v1/auth/otp/verify', {
     body,
   });
@@ -79,7 +65,7 @@ export async function verifyOtp(request: Request): Promise<Response> {
     return upstreamContractError();
   }
 
-  const authenticatedClient = createApiClient(data.accessToken);
+  const authenticatedClient = createAdminApiClient(data.accessToken);
   const currentUserResult = await authenticatedClient.GET('/api/v1/auth/me');
 
   if (!currentUserResult.response.ok) {
@@ -106,7 +92,7 @@ export async function getCurrentUser(): Promise<Response> {
     return Response.json({ message: 'Authentication required.' }, { status: 401 });
   }
 
-  const client = createApiClient(accessToken);
+  const client = createAdminApiClient(accessToken);
   const { data, error, response } = await client.GET('/api/v1/auth/me');
 
   if (response.status === 401) {
@@ -137,7 +123,7 @@ export async function logout(): Promise<Response> {
     return new Response(null, { status: 204 });
   }
 
-  const client = createApiClient(accessToken);
+  const client = createAdminApiClient(accessToken);
 
   try {
     const { error, response } = await client.POST('/api/v1/auth/logout');
@@ -160,7 +146,7 @@ export async function logoutAll(): Promise<Response> {
     return new Response(null, { status: 204 });
   }
 
-  const client = createApiClient(accessToken);
+  const client = createAdminApiClient(accessToken);
 
   try {
     const { error, response } = await client.POST('/api/v1/auth/logout-all');

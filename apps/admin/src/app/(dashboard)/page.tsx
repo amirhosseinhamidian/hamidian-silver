@@ -20,6 +20,7 @@ import { MobileDataCard } from '@/components/ui/mobile-data-card';
 import { Pagination } from '@/components/ui/pagination';
 import { ResponsiveDataView } from '@/components/ui/responsive-data-view';
 import { Select } from '@/components/ui/select';
+import { requireAdminSession } from '@/lib/auth/session';
 import {
   formatAdminDateTime,
   formatAdminInteger,
@@ -226,7 +227,9 @@ const orderColumns: readonly DataTableColumn<PreviewOrder>[] = [
   },
 ];
 
-export default function AdminHomePage() {
+export default async function AdminHomePage() {
+  await requireAdminSession();
+
   return (
     <main className="admin-container py-8 sm:py-10">
       <header className="flex flex-col gap-4 border-b border-[var(--admin-color-border)] pb-6 sm:flex-row sm:items-end sm:justify-between">

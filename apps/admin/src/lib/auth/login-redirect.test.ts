@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeAdminReturnPath } from '@/lib/auth/login-redirect';
+import { buildAdminLoginPath, normalizeAdminReturnPath } from '@/lib/auth/login-redirect';
 
 describe('normalizeAdminReturnPath', () => {
   it('keeps safe internal admin paths', () => {
@@ -13,5 +13,12 @@ describe('normalizeAdminReturnPath', () => {
     expect(normalizeAdminReturnPath('/\\example.com')).toBe('/');
     expect(normalizeAdminReturnPath('/login?next=/orders')).toBe('/');
     expect(normalizeAdminReturnPath(undefined)).toBe('/');
+  });
+
+  it('builds an encoded login redirect from safe internal paths only', () => {
+    expect(buildAdminLoginPath('/orders?status=payment review')).toBe(
+      '/login?next=%2Forders%3Fstatus%3Dpayment%2520review',
+    );
+    expect(buildAdminLoginPath('https://example.com')).toBe('/login?next=%2F');
   });
 });

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { hasAdministrativeAccess } from './access-control';
 import {
   createClearedSessionCookieOptions,
   createSessionCookieOptions,
-  hasAdministrativeAccess,
   SESSION_COOKIE_NAME,
   toBrowserLoginResponse,
 } from './session-cookie';

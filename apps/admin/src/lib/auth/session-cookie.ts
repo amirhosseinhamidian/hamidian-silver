@@ -1,6 +1,5 @@
 import type { components } from '@hamidian/contracts';
 
-type CurrentUser = components['schemas']['CurrentUserResponseDto'];
 type LoginResponse = components['schemas']['LoginResponseDto'];
 
 export type BrowserLoginResponse = Pick<LoginResponse, 'expiresAt' | 'user'>;
@@ -40,8 +39,4 @@ export function toBrowserLoginResponse(login: LoginResponse): BrowserLoginRespon
     expiresAt: login.expiresAt,
     user: login.user,
   };
-}
-
-export function hasAdministrativeAccess(user: CurrentUser): boolean {
-  return user.roles.some((role) => role === 'ADMIN' || role === 'MANAGER');
 }
