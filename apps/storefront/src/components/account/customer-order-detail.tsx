@@ -10,6 +10,7 @@ import {
 } from '@/components/account/account-order-presentation';
 import type { CustomerOrderDetail } from '@/components/account/account-types';
 import { readResponseError, toPersianDigits } from '@/components/account/account-types';
+import { CancelPendingOrder } from '@/components/account/cancel-pending-order';
 import { RetryOrderPaymentButton } from '@/components/account/retry-order-payment-button';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { Button, ButtonLink } from '@/components/ui/button';
@@ -269,6 +270,14 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
                 orderId={order.id}
                 reservationExpiresAt={order.reservationExpiresAt}
               />
+              <div className="mt-3 border-t border-[var(--sf-color-border)] pt-3">
+                <CancelPendingOrder
+                  orderId={order.id}
+                  onCancelled={(cancelledOrder) =>
+                    setState({ status: 'ready', order: cancelledOrder })
+                  }
+                />
+              </div>
             </section>
           ) : null}
 

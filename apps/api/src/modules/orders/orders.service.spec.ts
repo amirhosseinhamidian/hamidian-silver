@@ -344,6 +344,101 @@ describe('OrdersService', () => {
     });
   });
 
+  it('lets a customer cancel only their own pending order', async () => {
+    const orderId = '60000000-0000-4000-8000-000000000001';
+    const cancelledOrder = { id: orderId, status: OrderStatus.CANCELLED };
+    const transaction = {
+      order: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: orderId,
+          userId,
+          warehouseId,
+          status: OrderStatus.PENDING_PAYMENT,
+          items: [{ variantId, quantity: 1 }],
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(cancelledOrder),
+      },
+      inventory: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: inventoryId,
+          onHand: 10,
+          reserved: 1,
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      inventoryMovement: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+      orderStatusHistory: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+    };
+
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+    const getMyOrder = jest.spyOn(service, 'getMyOrder').mockResolvedValue(cancelledOrder as never);
+
+    await expect(
+      service.cancelMyOrder(userId, orderId, { reason: 'Cancelled by customer' }),
+    ).resolves.toEqual(cancelledOrder);
+
+    expect(transaction.order.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: orderId,
+        status: OrderStatus.PENDING_PAYMENT,
+        userId,
+      },
+      data: {
+        status: OrderStatus.CANCELLED,
+        cancelledAt: expect.any(Date),
+      },
+    });
+    expect(getMyOrder).toHaveBeenCalledWith(userId, orderId);
+  });
+
+  it("does not reveal or cancel another customer's order", async () => {
+    const orderId = '60000000-0000-4000-8000-000000000001';
+    const transaction = {
+      order: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: orderId,
+          userId: '10000000-0000-4000-8000-000000000002',
+          warehouseId,
+          status: OrderStatus.PENDING_PAYMENT,
+          items: [{ variantId, quantity: 1 }],
+        }),
+        updateMany: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
+      },
+      inventory: {
+        findUnique: jest.fn(),
+        updateMany: jest.fn(),
+      },
+      inventoryMovement: {
+        create: jest.fn(),
+      },
+      orderStatusHistory: {
+        create: jest.fn(),
+      },
+    };
+
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(
+      service.cancelMyOrder(userId, orderId, { reason: 'Cancelled by customer' }),
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.ORDER_NOT_FOUND,
+    });
+
+    expect(transaction.order.updateMany).not.toHaveBeenCalled();
+    expect(transaction.inventory.findUnique).not.toHaveBeenCalled();
+  });
+
   it('does not release inventory when payment finalization wins the order-state claim', async () => {
     const orderId = '60000000-0000-4000-8000-000000000001';
     const transaction = {

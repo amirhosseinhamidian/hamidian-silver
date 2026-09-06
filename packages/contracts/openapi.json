@@ -2829,6 +2829,46 @@
         ]
       }
     },
+    "/api/v1/orders/me/{orderId}/cancel": {
+      "post": {
+        "operationId": "OrdersController_cancelMyOrder_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerOrderDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
     "/api/v1/orders/{orderId}/status": {
       "patch": {
         "operationId": "OrdersController_updateStatus_v1",
@@ -6273,6 +6313,16 @@
           "count"
         ]
       },
+      "CancelOrderDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
       "UpdateOrderStatusDto": {
         "type": "object",
         "properties": {
@@ -6297,16 +6347,6 @@
         "required": [
           "status"
         ]
-      },
-      "CancelOrderDto": {
-        "type": "object",
-        "properties": {
-          "reason": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 500
-          }
-        }
       },
       "CreateOrderReturnItemDto": {
         "type": "object",

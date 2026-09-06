@@ -49,6 +49,16 @@ export class OrdersController {
     return this.ordersService.getMyOrder(principal.userId, orderId);
   }
 
+  @Post('me/:orderId/cancel')
+  @ApiOkResponse({ type: CustomerOrderDetailDto })
+  cancelMyOrder(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
+    @Body() dto: CancelOrderDto,
+  ) {
+    return this.ordersService.cancelMyOrder(principal.userId, orderId, dto);
+  }
+
   @Get()
   @RequirePermissions(PERMISSION_CODES.ORDERS_READ)
   listOrders(@Query() query: ListOrdersQueryDto) {

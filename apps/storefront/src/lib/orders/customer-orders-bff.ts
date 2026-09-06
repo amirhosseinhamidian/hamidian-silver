@@ -77,3 +77,20 @@ export async function getCustomerOrder(orderId: string): Promise<Response> {
 
   return Response.json(enrichOrder(data as ContractOrderDetail));
 }
+
+export async function cancelCustomerOrder(orderId: string): Promise<Response> {
+  const accessToken = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  if (!accessToken) return authenticationRequired();
+
+  const client = createCustomerOrdersClient(accessToken);
+  const { data, error, response } = await client.POST('/api/v1/orders/me/{orderId}/cancel', {
+    params: { path: { orderId } },
+    body: { reason: 'Cancelled by customer' },
+  });
+
+  if (!response.ok || !data) {
+    return Response.json(error ?? null, { status: response.status });
+  }
+
+  return Response.json(enrichOrder(data as ContractOrderDetail));
+}

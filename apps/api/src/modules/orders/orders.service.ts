@@ -533,6 +533,20 @@ export class OrdersService {
   }
 
   async cancelOrder(orderId: string, dto: CancelOrderDto, actorUserId: string) {
+    return this.cancelOrderReservation(orderId, dto, actorUserId);
+  }
+
+  async cancelMyOrder(userId: string, orderId: string, dto: CancelOrderDto) {
+    await this.cancelOrderReservation(orderId, dto, userId, userId);
+    return this.getMyOrder(userId, orderId);
+  }
+
+  private async cancelOrderReservation(
+    orderId: string,
+    dto: CancelOrderDto,
+    actorUserId: string,
+    ownerUserId?: string,
+  ) {
     return this.prisma.$transaction(async (transaction) => {
       const order = await transaction.order.findUnique({
         where: {
@@ -544,6 +558,10 @@ export class OrdersService {
       });
 
       if (!order) {
+        throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
+      }
+
+      if (ownerUserId && order.userId !== ownerUserId) {
         throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
       }
 
@@ -559,6 +577,7 @@ export class OrdersService {
         where: {
           id: order.id,
           status: OrderStatus.PENDING_PAYMENT,
+          ...(ownerUserId ? { userId: ownerUserId } : {}),
         },
         data: {
           status: OrderStatus.CANCELLED,

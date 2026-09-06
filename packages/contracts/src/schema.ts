@@ -1252,6 +1252,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders/me/{orderId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OrdersController_cancelMyOrder_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orders/{orderId}/status": {
         parameters: {
             query?: never;
@@ -2431,12 +2447,12 @@ export interface components {
         CustomerOrderCountDto: {
             count: number;
         };
+        CancelOrderDto: {
+            reason?: string;
+        };
         UpdateOrderStatusDto: {
             /** @enum {string} */
             status: "CANCELLED" | "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "EXPIRED";
-            reason?: string;
-        };
-        CancelOrderDto: {
             reason?: string;
         };
         CreateOrderReturnItemDto: {
@@ -4506,6 +4522,31 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerOrderDetailDto"];
+                };
+            };
+        };
+    };
+    OrdersController_cancelMyOrder_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelOrderDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
