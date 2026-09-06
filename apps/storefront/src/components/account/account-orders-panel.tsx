@@ -2,39 +2,17 @@
 
 import Link from 'next/link';
 
+import {
+  formatOrderDate,
+  orderItemDetails,
+  orderStatusLabel,
+} from '@/components/account/account-order-presentation';
 import type { CustomerOrder } from '@/components/account/account-types';
 import { toPersianDigits } from '@/components/account/account-types';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
-
-const ORDER_STATUS_LABELS: Record<string, string> = {
-  PENDING_PAYMENT: 'در انتظار پرداخت',
-  PAID: 'پرداخت‌شده',
-  PROCESSING: 'در حال آماده‌سازی',
-  SHIPPED: 'ارسال‌شده',
-  DELIVERED: 'تحویل‌شده',
-  CANCELLED: 'لغوشده',
-  EXPIRED: 'منقضی‌شده',
-};
-
-function formatDate(value: string): string {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium' }).format(date);
-}
-
-function itemDetails(order: CustomerOrder['items'][number]): string {
-  return [
-    order.variantNameSnapshot ? toPersianDigits(order.variantNameSnapshot) : null,
-    order.sizeLabelSnapshot ? `سایز ${toPersianDigits(order.sizeLabelSnapshot)}` : null,
-    `تعداد ${order.quantity.toLocaleString('fa-IR')}`,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}
 
 export function AccountOrdersPanel({ orders }: Readonly<{ orders: CustomerOrder[] }>) {
   return (
@@ -66,13 +44,11 @@ export function AccountOrdersPanel({ orders }: Readonly<{ orders: CustomerOrder[
                 </div>
                 <div>
                   <span className="block text-xs text-[var(--sf-color-subtle)]">تاریخ</span>
-                  <span className="mt-1 block">{formatDate(order.createdAt)}</span>
+                  <span className="mt-1 block">{formatOrderDate(order.createdAt)}</span>
                 </div>
                 <div>
                   <span className="block text-xs text-[var(--sf-color-subtle)]">وضعیت</span>
-                  <span className="mt-1 block font-medium">
-                    {ORDER_STATUS_LABELS[order.status] ?? order.status}
-                  </span>
+                  <span className="mt-1 block font-medium">{orderStatusLabel(order.status)}</span>
                 </div>
                 <div className="sm:text-left">
                   <span className="block text-xs text-[var(--sf-color-subtle)]">مبلغ کل</span>
@@ -104,7 +80,7 @@ export function AccountOrdersPanel({ orders }: Readonly<{ orders: CustomerOrder[
                         {toPersianDigits(item.productNameSnapshot)}
                       </Link>
                       <p className="mt-2 text-xs leading-6 text-[var(--sf-color-muted)]">
-                        {itemDetails(item)}
+                        {orderItemDetails(item)}
                       </p>
                       <p className="mt-2 text-sm">{formatTomanPrice(item.lineTotalToman)}</p>
                     </div>
@@ -112,14 +88,24 @@ export function AccountOrdersPanel({ orders }: Readonly<{ orders: CustomerOrder[
                 ))}
               </ul>
 
-              {order.trackingCode ? (
-                <p className="border-t border-[var(--sf-color-border)] px-4 py-3 text-sm">
-                  کد رهگیری:{' '}
-                  <span className="font-medium" dir="ltr">
-                    {toPersianDigits(order.trackingCode)}
-                  </span>
-                </p>
-              ) : null}
+              <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--sf-color-border)] px-4 py-3 text-sm">
+                {order.trackingCode ? (
+                  <p>
+                    کد رهگیری:{' '}
+                    <span className="font-medium" dir="ltr">
+                      {toPersianDigits(order.trackingCode)}
+                    </span>
+                  </p>
+                ) : (
+                  <span className="text-[var(--sf-color-subtle)]">کد رهگیری ثبت نشده است.</span>
+                )}
+                <Link
+                  href={`/account/orders/${order.id}`}
+                  className="border-b border-[var(--sf-color-border-strong)] font-medium hover:border-[var(--sf-color-ink)]"
+                >
+                  مشاهده جزئیات سفارش
+                </Link>
+              </footer>
             </li>
           ))}
         </ul>

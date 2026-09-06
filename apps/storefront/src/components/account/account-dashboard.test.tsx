@@ -91,6 +91,10 @@ describe('AccountDashboard', () => {
       'https://media.example/ring.webp',
     );
     expect(within(panel).getByText('POST-۱۲۳')).toBeInTheDocument();
+    expect(within(panel).getByRole('link', { name: 'مشاهده جزئیات سفارش' })).toHaveAttribute(
+      'href',
+      '/account/orders/order-1',
+    );
 
     fireEvent.click(screen.getByRole('tab', { name: 'آدرس‌ها' }));
     fireEvent.click(screen.getByRole('button', { name: 'افزودن آدرس جدید' }));
@@ -110,10 +114,7 @@ describe('AccountDashboard', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'اطلاعات حساب' }));
     expect(screen.getByRole('button', { name: 'خروج از حساب کاربری' })).toBeInTheDocument();
-    expect(screen.getByLabelText(/^نام\s*\*?$/)).toHaveAttribute(
-      'placeholder',
-      'مثلاً امیرحسین',
-    );
+    expect(screen.getByLabelText(/^نام\s*\*?$/)).toHaveAttribute('placeholder', 'مثلاً امیرحسین');
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
   });
 });
