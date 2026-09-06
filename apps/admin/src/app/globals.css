@@ -111,6 +111,18 @@ a {
   }
 }
 
+@keyframes admin-bottom-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes admin-bottom-sheet-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
 .admin-dialog-overlay[data-state='open'] {
   animation: admin-overlay-in 160ms ease-out;
 }
@@ -133,6 +145,22 @@ a {
 
 .admin-dropdown-content[data-state='closed'] {
   animation: admin-content-out 90ms ease-in;
+}
+
+.admin-bottom-sheet-overlay[data-state='open'] {
+  animation: admin-overlay-in 200ms ease-out;
+}
+
+.admin-bottom-sheet-overlay[data-state='closed'] {
+  animation: admin-overlay-out 180ms ease-in;
+}
+
+.admin-bottom-sheet-content[data-state='open'] {
+  animation: admin-bottom-sheet-in 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.admin-bottom-sheet-content[data-state='closed'] {
+  animation: admin-bottom-sheet-out 220ms cubic-bezier(0.4, 0, 1, 1);
 }
 
 .admin-spinner {

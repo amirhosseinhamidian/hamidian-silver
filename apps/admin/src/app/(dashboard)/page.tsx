@@ -1,8 +1,11 @@
+import type { ReactNode } from 'react';
+
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { BottomSheetClose } from '@/components/ui/bottom-sheet';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import type { DataTableColumn } from '@/components/ui/data-table';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -13,7 +16,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { FilterBar, SearchField } from '@/components/ui/filter-bar';
+import { MobileDataCard } from '@/components/ui/mobile-data-card';
 import { Pagination } from '@/components/ui/pagination';
+import { ResponsiveDataView } from '@/components/ui/responsive-data-view';
 import { Select } from '@/components/ui/select';
 import {
   formatAdminDateTime,
@@ -27,6 +32,9 @@ type PreviewOrder = Readonly<{
   customer: string;
   amount: number;
   createdAt: string;
+  phone: string;
+  itemCount: number;
+  shippingMethod: string;
   status: 'processing' | 'payment-review' | 'ready' | 'blocked';
 }>;
 
@@ -36,6 +44,9 @@ const previewOrders: readonly PreviewOrder[] = [
     customer: 'سارا محمدی',
     amount: 8_640_000,
     createdAt: '2026-09-06T08:35:00+03:30',
+    phone: '09121234567',
+    itemCount: 3,
+    shippingMethod: 'پست پیشتاز',
     status: 'payment-review',
   },
   {
@@ -43,6 +54,9 @@ const previewOrders: readonly PreviewOrder[] = [
     customer: 'علی رضایی',
     amount: 4_280_000,
     createdAt: '2026-09-06T08:12:00+03:30',
+    phone: '09123334455',
+    itemCount: 1,
+    shippingMethod: 'تیپاکس',
     status: 'processing',
   },
   {
@@ -50,6 +64,9 @@ const previewOrders: readonly PreviewOrder[] = [
     customer: 'مریم کریمی',
     amount: 12_910_000,
     createdAt: '2026-09-05T19:48:00+03:30',
+    phone: '09351234567',
+    itemCount: 4,
+    shippingMethod: 'پست پیشتاز',
     status: 'blocked',
   },
   {
@@ -57,6 +74,9 @@ const previewOrders: readonly PreviewOrder[] = [
     customer: 'رضا احمدی',
     amount: 6_150_000,
     createdAt: '2026-09-05T18:22:00+03:30',
+    phone: '09901234567',
+    itemCount: 2,
+    shippingMethod: 'تحویل حضوری',
     status: 'ready',
   },
 ];
@@ -85,6 +105,73 @@ function OrderActions({ orderId }: Readonly<{ orderId: string }>) {
         <DropdownMenuItem tone="danger">لغو سفارش</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function OrderMobileCard({ order }: Readonly<{ order: PreviewOrder }>) {
+  const status = statusPresentation[order.status];
+
+  return (
+    <MobileDataCard
+      eyebrow={
+        <span dir="ltr" className="inline-block">
+          {toPersianDigits(order.id)}
+        </span>
+      }
+      title={order.customer}
+      status={
+        <Badge tone={status.tone} dot>
+          {status.label}
+        </Badge>
+      }
+      items={[
+        { label: 'مبلغ', value: formatAdminToman(order.amount) },
+        { label: 'تعداد کالا', value: `${formatAdminInteger(order.itemCount)} عدد` },
+      ]}
+      detailsTitle={`سفارش ${toPersianDigits(order.id)}`}
+      detailsDescription="اطلاعات کامل و عملیات سریع سفارش"
+      details={
+        <dl className="divide-y divide-[var(--admin-color-border)]">
+          <OrderDetail label="مشتری" value={order.customer} />
+          <OrderDetail label="شماره همراه" value={toPersianDigits(order.phone)} direction="ltr" />
+          <OrderDetail label="زمان ثبت" value={formatAdminDateTime(order.createdAt)} />
+          <OrderDetail label="مبلغ سفارش" value={formatAdminToman(order.amount)} />
+          <OrderDetail label="تعداد کالا" value={`${formatAdminInteger(order.itemCount)} عدد`} />
+          <OrderDetail label="روش ارسال" value={order.shippingMethod} />
+          <OrderDetail
+            label="وضعیت"
+            value={
+              <Badge tone={status.tone} dot>
+                {status.label}
+              </Badge>
+            }
+          />
+        </dl>
+      }
+      detailsFooter={
+        <>
+          <BottomSheetClose asChild>
+            <Button variant="outline">بستن</Button>
+          </BottomSheetClose>
+          <Button>مشاهده سفارش</Button>
+        </>
+      }
+    />
+  );
+}
+
+function OrderDetail({
+  label,
+  value,
+  direction,
+}: Readonly<{ label: string; value: ReactNode; direction?: 'rtl' | 'ltr' }>) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+      <dt className="text-xs text-[var(--admin-color-muted)]">{label}</dt>
+      <dd className="text-end text-sm font-semibold" dir={direction}>
+        {value}
+      </dd>
+    </div>
   );
 }
 
@@ -179,9 +266,9 @@ export default function AdminHomePage() {
         </div>
       </header>
 
-      <Alert tone="info" title="Stage 0B آماده بازبینی است" className="mt-6">
-        جدول، فیلتر، صفحه‌بندی، منوی عملیات و Dialog از این مرحله در تمام بخش‌های پنل به شکل مشترک
-        استفاده می‌شوند.
+      <Alert tone="info" title="Stage 0C آماده بازبینی است" className="mt-6">
+        در موبایل سفارش‌ها به کارت‌های فشرده تبدیل می‌شوند و جزئیات کامل داخل Bottom Sheet در دسترس
+        است؛ از تبلت به بالا جدول نمایش داده می‌شود.
       </Alert>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -253,7 +340,9 @@ export default function AdminHomePage() {
           />
         </FilterBar>
 
-        <DataTable
+        <ResponsiveDataView
+          mobileLabel="کارت‌های سفارش"
+          renderMobileCard={(order) => <OrderMobileCard order={order} />}
           caption="فهرست سفارش‌های نمونه"
           columns={orderColumns}
           rows={previewOrders}

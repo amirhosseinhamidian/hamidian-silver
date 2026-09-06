@@ -31,7 +31,7 @@ export type DataTableColumn<Row> = Readonly<{
   headerClassName?: string;
 }>;
 
-type DataTableProps<Row> = Readonly<{
+export type DataTableProps<Row> = Readonly<{
   caption: string;
   columns: readonly DataTableColumn<Row>[];
   rows: readonly Row[];
@@ -164,7 +164,7 @@ export function DataTable<Row>({
         </div>
       ) : null}
 
-      {footer ? <div>{footer}</div> : null}
+      {footer && !loading && !error && rows.length > 0 ? <div>{footer}</div> : null}
     </div>
   );
 }
