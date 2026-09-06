@@ -2,6 +2,7 @@
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   type ChangeEvent,
   type ClipboardEvent,
@@ -16,10 +17,7 @@ import { FiAlertCircle, FiCheck, FiEdit2, FiRefreshCw, FiUser, FiX } from 'react
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-control';
-import {
-  AUTHENTICATION_SUCCEEDED_EVENT,
-  OPEN_AUTH_MODAL_EVENT,
-} from '@/lib/auth/events';
+import { AUTHENTICATION_SUCCEEDED_EVENT, OPEN_AUTH_MODAL_EVENT } from '@/lib/auth/events';
 import { cn } from '@/lib/ui/cn';
 
 const OTP_LENGTH = 5;
@@ -700,5 +698,27 @@ export function AccountAuthButton({ className }: Readonly<{ className?: string }
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+  );
+}
+
+export function AccountHeaderAction({
+  authenticated,
+  className,
+}: Readonly<{ authenticated: boolean; className?: string }>) {
+  if (!authenticated) {
+    return <AccountAuthButton className={className} />;
+  }
+
+  return (
+    <Link
+      href="/account"
+      aria-label="حساب کاربری"
+      className={cn(
+        'inline-flex size-9 items-center justify-center transition-opacity duration-150 hover:opacity-55',
+        className,
+      )}
+    >
+      <FiUser aria-hidden="true" size={21} />
+    </Link>
   );
 }

@@ -6,7 +6,11 @@ import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { CustomerOrderDetailDto, CustomerOrderSummaryDto } from './dto/customer-order-response.dto';
+import {
+  CustomerOrderCountDto,
+  CustomerOrderDetailDto,
+  CustomerOrderSummaryDto,
+} from './dto/customer-order-response.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrdersService } from './orders.service';
@@ -28,6 +32,12 @@ export class OrdersController {
     @Query() query: ListOrdersQueryDto,
   ) {
     return this.ordersService.listMyOrders(principal.userId, query);
+  }
+
+  @Get('me/count')
+  @ApiOkResponse({ type: CustomerOrderCountDto })
+  countMyOrders(@CurrentPrincipal() principal: AuthenticatedPrincipal) {
+    return this.ordersService.countMyOrders(principal.userId);
   }
 
   @Get('me/:orderId')

@@ -86,6 +86,16 @@ describe('StorefrontHeader', () => {
     expect(within(navigation).queryByRole('link', { name: 'گردنبند' })).not.toBeInTheDocument();
   });
 
+  it('links authenticated customers directly to their account', () => {
+    render(<StorefrontHeader authenticated />);
+
+    expect(screen.getAllByRole('link', { name: 'حساب کاربری' })).toHaveLength(2);
+    for (const link of screen.getAllByRole('link', { name: 'حساب کاربری' })) {
+      expect(link).toHaveAttribute('href', '/account');
+    }
+    expect(screen.queryByRole('button', { name: 'ورود یا ثبت‌نام' })).not.toBeInTheDocument();
+  });
+
   it('opens a product search form that submits the query to the catalog', () => {
     render(<StorefrontHeader />);
 

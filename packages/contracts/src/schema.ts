@@ -1220,6 +1220,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders/me/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OrdersController_countMyOrders_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orders/me/{orderId}": {
         parameters: {
             query?: never;
@@ -2312,7 +2328,16 @@ export interface components {
             shippingAddress?: components["schemas"]["CreateOrderAddressDto"];
             items: components["schemas"]["CreateOrderItemDto"][];
         };
+        CustomerOrderMediaDto: {
+            /** Format: uri */
+            url: string | null;
+            altText: string | null;
+            width: number | null;
+            height: number | null;
+            mimeType: string;
+        };
         CustomerOrderItemDto: {
+            primaryMedia: components["schemas"]["CustomerOrderMediaDto"] | null;
             variantNameSnapshot: string | null;
             sizeLabelSnapshot: string | null;
             /** @enum {string|null} */
@@ -2325,6 +2350,7 @@ export interface components {
             variantId: string;
             quantity: number;
             productNameSnapshot: string;
+            productSlug: string;
             skuSnapshot: string;
             unitSalePriceToman: number;
             unitPlatingPriceToman: number;
@@ -2351,6 +2377,7 @@ export interface components {
         CustomerOrderDetailDto: {
             /** @enum {string} */
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
+            trackingCode: string | null;
             /** Format: date-time */
             paidAt: string | null;
             /** Format: date-time */
@@ -2378,6 +2405,7 @@ export interface components {
         CustomerOrderSummaryDto: {
             /** @enum {string} */
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
+            trackingCode: string | null;
             /** Format: date-time */
             paidAt: string | null;
             /** Format: date-time */
@@ -2399,6 +2427,9 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        CustomerOrderCountDto: {
+            count: number;
         };
         UpdateOrderStatusDto: {
             /** @enum {string} */
@@ -2475,9 +2506,36 @@ export interface components {
             externalRefundReference: string;
             resolutionNote: string;
         };
+        CustomerProfileDto: {
+            firstName: string | null;
+            lastName: string | null;
+            /** Format: date-time */
+            phoneVerifiedAt: string | null;
+            id: string;
+            phone: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         UpdateProfileDto: {
             firstName?: string;
             lastName?: string;
+        };
+        CustomerAddressDto: {
+            id: string;
+            title: string;
+            recipientName: string;
+            phone: string;
+            province: string;
+            city: string;
+            addressLine: string;
+            postalCode: string;
+            isDefault: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         CreateUserAddressDto: {
             title: string;
@@ -2498,6 +2556,11 @@ export interface components {
             addressLine?: string;
             postalCode?: string;
             isDefault?: boolean;
+        };
+        DeletedCustomerAddressDto: {
+            id: string;
+            /** Format: date-time */
+            deletedAt: string;
         };
         SelectShippingRateDto: {
             serviceCode: string;
@@ -4414,6 +4477,25 @@ export interface operations {
             };
         };
     };
+    OrdersController_countMyOrders_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerOrderCountDto"];
+                };
+            };
+        };
+    };
     OrdersController_getMyOrder_v1: {
         parameters: {
             query?: never;
@@ -5130,7 +5212,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CustomerProfileDto"];
+                };
             };
         };
     };
@@ -5151,7 +5235,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CustomerProfileDto"];
+                };
             };
         };
     };
@@ -5169,7 +5255,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["CustomerAddressDto"][];
                 };
             };
         };
@@ -5191,7 +5277,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CustomerAddressDto"];
+                };
             };
         };
     };
@@ -5210,7 +5298,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeletedCustomerAddressDto"];
+                };
             };
         };
     };
@@ -5233,7 +5323,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CustomerAddressDto"];
+                };
             };
         };
     };
@@ -5252,7 +5344,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CustomerAddressDto"];
+                };
             };
         };
     };

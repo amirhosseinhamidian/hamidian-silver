@@ -1,11 +1,31 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { OrderStatus, PlatingType } from '../../../generated/prisma/enums';
 
+export class CustomerOrderMediaDto {
+  @ApiProperty({ type: String, nullable: true, format: 'uri' })
+  url!: string | null;
+
+  mimeType!: string;
+
+  @ApiProperty({ type: String, nullable: true })
+  altText!: string | null;
+
+  @ApiProperty({ type: Number, nullable: true })
+  width!: number | null;
+
+  @ApiProperty({ type: Number, nullable: true })
+  height!: number | null;
+}
+
 export class CustomerOrderItemDto {
   id!: string;
   variantId!: string;
   quantity!: number;
   productNameSnapshot!: string;
+  productSlug!: string;
+
+  @ApiProperty({ type: () => CustomerOrderMediaDto, nullable: true })
+  primaryMedia!: CustomerOrderMediaDto | null;
 
   @ApiProperty({ type: String, nullable: true })
   variantNameSnapshot!: string | null;
@@ -51,6 +71,9 @@ export class CustomerOrderSummaryDto {
   shippingTotalToman!: number;
   taxTotalToman!: number;
   grandTotalToman!: number;
+
+  @ApiProperty({ type: String, nullable: true })
+  trackingCode!: string | null;
   reservationExpiresAt!: Date;
 
   @ApiProperty({ type: Date, nullable: true })
@@ -67,6 +90,10 @@ export class CustomerOrderSummaryDto {
 
   @ApiProperty({ type: () => CustomerOrderItemDto, isArray: true })
   items!: CustomerOrderItemDto[];
+}
+
+export class CustomerOrderCountDto {
+  count!: number;
 }
 
 export class CustomerOrderShippingAddressDto {

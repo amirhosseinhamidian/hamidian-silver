@@ -8,9 +8,14 @@ import type { ReactNode } from 'react';
 type StorefrontShellProps = Readonly<{
   children: ReactNode;
   footerContent?: StorefrontFooterContent | null;
+  authenticated?: boolean;
 }>;
 
-export function StorefrontShell({ children, footerContent }: StorefrontShellProps) {
+export function StorefrontShell({
+  children,
+  footerContent,
+  authenticated = false,
+}: StorefrontShellProps) {
   return (
     <div
       data-app-shell="storefront"
@@ -22,7 +27,7 @@ export function StorefrontShell({ children, footerContent }: StorefrontShellProp
       <a href="#main-content" className="sf-skip-link">
         رفتن به محتوای اصلی
       </a>
-      <StorefrontHeader />
+      <StorefrontHeader authenticated={authenticated} />
       <div className="flex-1">{children}</div>
       <StorefrontFooter content={footerContent} />
     </div>

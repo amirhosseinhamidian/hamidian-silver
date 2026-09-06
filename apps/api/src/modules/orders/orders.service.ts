@@ -15,6 +15,7 @@ import {
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { normalizeIranianMobile } from '../auth/phone-normalizer';
+import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderAddressDto, CreateOrderDto, CreateOrderItemDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
@@ -39,6 +40,36 @@ const CUSTOMER_ORDER_ITEM_SELECT = {
   unitWeightGrams: true,
   lineTotalToman: true,
   createdAt: true,
+  variant: {
+    select: {
+      product: {
+        select: {
+          slug: true,
+          media: {
+            where: {
+              media: {
+                deletedAt: null,
+              },
+            },
+            orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+            take: 1,
+            select: {
+              altText: true,
+              media: {
+                select: {
+                  storageKey: true,
+                  mimeType: true,
+                  altText: true,
+                  width: true,
+                  height: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
 } satisfies Prisma.OrderItemSelect;
 
 const CUSTOMER_ORDER_LIST_SELECT = {
@@ -57,6 +88,11 @@ const CUSTOMER_ORDER_LIST_SELECT = {
   deliveredAt: true,
   createdAt: true,
   updatedAt: true,
+  shipment: {
+    select: {
+      trackingCode: true,
+    },
+  },
   items: {
     select: CUSTOMER_ORDER_ITEM_SELECT,
   },
@@ -86,6 +122,14 @@ const CUSTOMER_ORDER_DETAIL_SELECT = {
   },
 } satisfies Prisma.OrderSelect;
 
+type CustomerOrderListRecord = Prisma.OrderGetPayload<{
+  select: typeof CUSTOMER_ORDER_LIST_SELECT;
+}>;
+
+type CustomerOrderDetailRecord = Prisma.OrderGetPayload<{
+  select: typeof CUSTOMER_ORDER_DETAIL_SELECT;
+}>;
+
 type PreparedOrderItem = {
   variantId: string;
   quantity: number;
@@ -108,12 +152,15 @@ type PreparedOrderItem = {
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly publicMediaUrl?: PublicMediaUrlService,
+  ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
     this.assertUniqueItemSelections(dto.items);
 
-    return this.prisma.$transaction(async (transaction) => {
+    const order = await this.prisma.$transaction(async (transaction) => {
       const shippingAddress = await this.resolveShippingAddress(transaction, userId, dto);
 
       const warehouse = await transaction.warehouse.findFirst({
@@ -271,10 +318,12 @@ export class OrdersService {
         select: CUSTOMER_ORDER_DETAIL_SELECT,
       });
     });
+
+    return this.toCustomerOrder(order);
   }
 
-  listMyOrders(userId: string, query: ListOrdersQueryDto) {
-    return this.prisma.order.findMany({
+  async listMyOrders(userId: string, query: ListOrdersQueryDto) {
+    const orders = await this.prisma.order.findMany({
       where: {
         userId,
         status: query.status,
@@ -285,6 +334,13 @@ export class OrdersService {
       },
       select: CUSTOMER_ORDER_LIST_SELECT,
     });
+
+    return orders.map((order) => this.toCustomerOrder(order));
+  }
+
+  async countMyOrders(userId: string) {
+    const count = await this.prisma.order.count({ where: { userId } });
+    return { count };
   }
 
   async getMyOrder(userId: string, orderId: string) {
@@ -300,7 +356,35 @@ export class OrdersService {
       throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
     }
 
-    return order;
+    return this.toCustomerOrder(order);
+  }
+
+  private toCustomerOrder(order: CustomerOrderListRecord | CustomerOrderDetailRecord) {
+    const { shipment, items: selectedItems, ...summary } = order;
+    const items = Array.isArray(selectedItems) ? selectedItems : [];
+
+    return {
+      ...summary,
+      trackingCode: shipment?.trackingCode ?? null,
+      items: items.map(({ variant, ...item }) => {
+        const product = variant?.product;
+        const primaryMedia = product?.media[0];
+
+        return {
+          ...item,
+          productSlug: product?.slug ?? '',
+          primaryMedia: primaryMedia
+            ? {
+                url: this.publicMediaUrl?.resolve(primaryMedia.media.storageKey) ?? null,
+                mimeType: primaryMedia.media.mimeType,
+                altText: primaryMedia.altText ?? primaryMedia.media.altText,
+                width: primaryMedia.media.width,
+                height: primaryMedia.media.height,
+              }
+            : null,
+        };
+      }),
+    };
   }
 
   listOrders(query: ListOrdersQueryDto) {

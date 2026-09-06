@@ -3,7 +3,7 @@ import {
   StorefrontAnnouncementBar,
   type StorefrontAnnouncement,
 } from '@/components/layout/storefront-announcement';
-import { AccountAuthButton } from '@/components/auth/auth-modal';
+import { AccountHeaderAction } from '@/components/auth/auth-modal';
 import { CartHeaderLink } from '@/components/cart/cart-header-link';
 import { StorefrontMobileMenu } from '@/components/layout/storefront-mobile-menu';
 import { StorefrontSearch } from '@/components/layout/storefront-search';
@@ -21,6 +21,7 @@ export type StorefrontNavigationCategory = Readonly<{
 type StorefrontHeaderProps = Readonly<{
   announcement?: StorefrontAnnouncement | null;
   navigationCategories?: readonly StorefrontNavigationCategory[];
+  authenticated?: boolean;
 }>;
 
 function IconLink({
@@ -49,6 +50,7 @@ function IconLink({
 export function StorefrontHeader({
   announcement,
   navigationCategories = [],
+  authenticated = false,
 }: StorefrontHeaderProps) {
   const initialRemainingSeconds = announcement
     ? getInitialCountdownSeconds(announcement.countdown)
@@ -94,7 +96,7 @@ export function StorefrontHeader({
             <IconLink href="/wishlist" label="علاقه‌مندی‌ها">
               <FiHeart aria-hidden="true" size={21} />
             </IconLink>
-            <AccountAuthButton />
+            <AccountHeaderAction authenticated={authenticated} />
             <span className="hidden sm:inline-flex">
               <IconLink href="/contact" label="نشانی گالری">
                 <FiMapPin aria-hidden="true" size={21} />
@@ -165,7 +167,7 @@ export function StorefrontHeader({
           </nav>
 
           <div className="flex items-center justify-end gap-1 lg:hidden">
-            <AccountAuthButton />
+            <AccountHeaderAction authenticated={authenticated} />
             <IconLink href="/contact" label="نشانی گالری">
               <FiMapPin aria-hidden="true" size={21} />
             </IconLink>

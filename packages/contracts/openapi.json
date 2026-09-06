@@ -2778,6 +2778,27 @@
         ]
       }
     },
+    "/api/v1/orders/me/count": {
+      "get": {
+        "operationId": "OrdersController_countMyOrders_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerOrderCountDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
     "/api/v1/orders/me/{orderId}": {
       "get": {
         "operationId": "OrdersController_getMyOrder_v1",
@@ -3842,7 +3863,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerProfileDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3864,7 +3892,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerProfileDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3882,7 +3917,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CustomerAddressDto"
+                  }
                 }
               }
             }
@@ -3907,7 +3945,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3940,7 +3985,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3961,7 +4013,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedCustomerAddressDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3984,7 +4043,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5792,9 +5858,50 @@
           "items"
         ]
       },
+      "CustomerOrderMediaDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "altText": {
+            "type": "string",
+            "nullable": true
+          },
+          "width": {
+            "type": "number",
+            "nullable": true
+          },
+          "height": {
+            "type": "number",
+            "nullable": true
+          },
+          "mimeType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "altText",
+          "width",
+          "height",
+          "mimeType"
+        ]
+      },
       "CustomerOrderItemDto": {
         "type": "object",
         "properties": {
+          "primaryMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CustomerOrderMediaDto"
+              }
+            ]
+          },
           "variantNameSnapshot": {
             "type": "string",
             "nullable": true
@@ -5839,6 +5946,9 @@
           "productNameSnapshot": {
             "type": "string"
           },
+          "productSlug": {
+            "type": "string"
+          },
           "skuSnapshot": {
             "type": "string"
           },
@@ -5857,6 +5967,7 @@
           }
         },
         "required": [
+          "primaryMedia",
           "variantNameSnapshot",
           "sizeLabelSnapshot",
           "platingType",
@@ -5868,6 +5979,7 @@
           "variantId",
           "quantity",
           "productNameSnapshot",
+          "productSlug",
           "skuSnapshot",
           "unitSalePriceToman",
           "unitPlatingPriceToman",
@@ -5960,6 +6072,10 @@
             ],
             "type": "string"
           },
+          "trackingCode": {
+            "type": "string",
+            "nullable": true
+          },
           "paidAt": {
             "format": "date-time",
             "type": "string",
@@ -6029,6 +6145,7 @@
         },
         "required": [
           "status",
+          "trackingCode",
           "paidAt",
           "cancelledAt",
           "deliveredAt",
@@ -6062,6 +6179,10 @@
               "EXPIRED"
             ],
             "type": "string"
+          },
+          "trackingCode": {
+            "type": "string",
+            "nullable": true
           },
           "paidAt": {
             "format": "date-time",
@@ -6123,6 +6244,7 @@
         },
         "required": [
           "status",
+          "trackingCode",
           "paidAt",
           "cancelledAt",
           "deliveredAt",
@@ -6138,6 +6260,17 @@
           "reservationExpiresAt",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "CustomerOrderCountDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "count"
         ]
       },
       "UpdateOrderStatusDto": {
@@ -6437,6 +6570,47 @@
           "resolutionNote"
         ]
       },
+      "CustomerProfileDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "phoneVerifiedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "phoneVerifiedAt",
+          "id",
+          "phone",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "UpdateProfileDto": {
         "type": "object",
         "properties": {
@@ -6451,6 +6625,59 @@
             "maxLength": 100
           }
         }
+      },
+      "CustomerAddressDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "province": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "addressLine": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "recipientName",
+          "phone",
+          "province",
+          "city",
+          "addressLine",
+          "postalCode",
+          "isDefault",
+          "createdAt",
+          "updatedAt"
+        ]
       },
       "CreateUserAddressDto": {
         "type": "object",
@@ -6544,6 +6771,22 @@
             "type": "boolean"
           }
         }
+      },
+      "DeletedCustomerAddressDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "deletedAt"
+        ]
       },
       "SelectShippingRateDto": {
         "type": "object",

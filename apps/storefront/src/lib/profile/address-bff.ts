@@ -5,6 +5,7 @@ import { createServerApiClient } from '@/lib/api/server-client';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
 
 type CreateAddressBody = components['schemas']['CreateUserAddressDto'];
+type UpdateAddressBody = components['schemas']['UpdateUserAddressDto'];
 
 function authenticationRequired(): Response {
   return Response.json({ message: 'Authentication required.' }, { status: 401 });
@@ -40,5 +41,41 @@ export async function createAddress(request: Request): Promise<Response> {
   const body = (await request.json()) as CreateAddressBody;
   const client = createApiClient(accessToken);
   const { data, error, response } = await client.POST('/api/v1/profile/addresses', { body });
+  return Response.json(data ?? error ?? null, { status: response.status });
+}
+
+export async function updateAddress(request: Request, addressId: string): Promise<Response> {
+  const accessToken = await sessionToken();
+  if (!accessToken) return authenticationRequired();
+
+  const body = (await request.json()) as UpdateAddressBody;
+  const client = createApiClient(accessToken);
+  const { data, error, response } = await client.PATCH('/api/v1/profile/addresses/{addressId}', {
+    params: { path: { addressId } },
+    body,
+  });
+  return Response.json(data ?? error ?? null, { status: response.status });
+}
+
+export async function deleteAddress(addressId: string): Promise<Response> {
+  const accessToken = await sessionToken();
+  if (!accessToken) return authenticationRequired();
+
+  const client = createApiClient(accessToken);
+  const { data, error, response } = await client.DELETE('/api/v1/profile/addresses/{addressId}', {
+    params: { path: { addressId } },
+  });
+  return Response.json(data ?? error ?? null, { status: response.status });
+}
+
+export async function setDefaultAddress(addressId: string): Promise<Response> {
+  const accessToken = await sessionToken();
+  if (!accessToken) return authenticationRequired();
+
+  const client = createApiClient(accessToken);
+  const { data, error, response } = await client.PATCH(
+    '/api/v1/profile/addresses/{addressId}/default',
+    { params: { path: { addressId } } },
+  );
   return Response.json(data ?? error ?? null, { status: response.status });
 }
