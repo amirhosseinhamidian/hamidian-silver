@@ -102,7 +102,7 @@ export function CheckoutFlow() {
   const { items, itemCount, subtotalToman, clearCart } = useCart();
   const [auth, setAuth] = useState<AuthState>({ status: 'checking' });
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
-  const [addressesLoading, setAddressesLoading] = useState(false);
+  const [addressesLoading, setAddressesLoading] = useState(true);
   const [addressError, setAddressError] = useState<string | null>(null);
   const [selectedAddressId, setSelectedAddressId] = useState(NEW_ADDRESS_VALUE);
   const [addressFields, setAddressFields] = useState<AddressFields>(() => emptyAddress());
@@ -153,8 +153,6 @@ export function CheckoutFlow() {
   useEffect(() => {
     if (auth.status !== 'authenticated') return;
     let active = true;
-    setAddressesLoading(true);
-    setAddressError(null);
     void fetch('/api/profile/addresses', { cache: 'no-store' })
       .then(async (response) => {
         if (!active) return;
