@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 
 import { cn } from '@/lib/ui/cn';
 
@@ -44,19 +44,23 @@ type ButtonProps = ComponentPropsWithoutRef<'button'> & {
   leadingIcon?: ReactNode;
 };
 
-export function Button({
-  variant = 'primary',
-  size = 'md',
-  loading = false,
-  leadingIcon,
-  className,
-  children,
-  disabled,
-  type = 'button',
-  ...props
-}: ButtonProps) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    variant = 'primary',
+    size = 'md',
+    loading = false,
+    leadingIcon,
+    className,
+    children,
+    disabled,
+    type = 'button',
+    ...props
+  },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
@@ -67,7 +71,7 @@ export function Button({
       <span>{children}</span>
     </button>
   );
-}
+});
 
 type ButtonLinkProps = ComponentPropsWithoutRef<typeof Link> & {
   variant?: ButtonVariant;
@@ -99,10 +103,13 @@ type IconButtonProps = Omit<ButtonProps, 'children'> & {
   children: ReactNode;
 };
 
-export function IconButton({ label, children, className, ...props }: IconButtonProps) {
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
+  { label, children, className, ...props },
+  ref,
+) {
   return (
-    <Button aria-label={label} className={cn('aspect-square px-0', className)} {...props}>
+    <Button ref={ref} aria-label={label} className={cn('aspect-square px-0', className)} {...props}>
       <span aria-hidden="true">{children}</span>
     </Button>
   );
-}
+});

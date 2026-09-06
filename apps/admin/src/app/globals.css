@@ -78,6 +78,63 @@ a {
   }
 }
 
+@keyframes admin-overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes admin-dialog-in {
+  from {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
+@keyframes admin-menu-in {
+  from {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
+@keyframes admin-overlay-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes admin-content-out {
+  to {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
+.admin-dialog-overlay[data-state='open'] {
+  animation: admin-overlay-in 160ms ease-out;
+}
+
+.admin-dialog-overlay[data-state='closed'] {
+  animation: admin-overlay-out 120ms ease-in;
+}
+
+.admin-dialog-content[data-state='open'] {
+  animation: admin-dialog-in 180ms ease-out;
+}
+
+.admin-dialog-content[data-state='closed'] {
+  animation: admin-content-out 120ms ease-in;
+}
+
+.admin-dropdown-content[data-state='open'] {
+  animation: admin-menu-in 120ms ease-out;
+}
+
+.admin-dropdown-content[data-state='closed'] {
+  animation: admin-content-out 90ms ease-in;
+}
+
 .admin-spinner {
   animation: admin-spin 700ms linear infinite;
 }
