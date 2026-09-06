@@ -269,7 +269,7 @@ export default async function AdminHomePage() {
         </div>
       </header>
 
-      <Alert tone="info" title="Stage 0C آماده بازبینی است" className="mt-6">
+      <Alert tone="info" title="الگوی نمایش عملیاتی آماده است" className="mt-6">
         در موبایل سفارش‌ها به کارت‌های فشرده تبدیل می‌شوند و جزئیات کامل داخل Bottom Sheet در دسترس
         است؛ از تبلت به بالا جدول نمایش داده می‌شود.
       </Alert>

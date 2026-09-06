@@ -123,6 +123,18 @@ a {
   }
 }
 
+@keyframes admin-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes admin-drawer-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+
 @keyframes admin-auth-step-in {
   from {
     opacity: 0;
@@ -187,6 +199,22 @@ a {
 
 .admin-bottom-sheet-content[data-state='closed'] {
   animation: admin-bottom-sheet-out 220ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.admin-drawer-overlay[data-state='open'] {
+  animation: admin-overlay-in 200ms ease-out;
+}
+
+.admin-drawer-overlay[data-state='closed'] {
+  animation: admin-overlay-out 180ms ease-in;
+}
+
+.admin-drawer-content[data-state='open'] {
+  animation: admin-drawer-in 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.admin-drawer-content[data-state='closed'] {
+  animation: admin-drawer-out 220ms cubic-bezier(0.4, 0, 1, 1);
 }
 
 .admin-auth-step {
