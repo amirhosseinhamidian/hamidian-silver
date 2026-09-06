@@ -123,6 +123,32 @@ a {
   }
 }
 
+@keyframes admin-auth-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+}
+
+@keyframes admin-auth-shake {
+  20%,
+  60% {
+    transform: translateX(-0.3rem);
+  }
+
+  40%,
+  80% {
+    transform: translateX(0.3rem);
+  }
+}
+
+@keyframes admin-auth-success {
+  from {
+    opacity: 0;
+    scale: 0.7;
+  }
+}
+
 .admin-dialog-overlay[data-state='open'] {
   animation: admin-overlay-in 160ms ease-out;
 }
@@ -161,6 +187,18 @@ a {
 
 .admin-bottom-sheet-content[data-state='closed'] {
   animation: admin-bottom-sheet-out 220ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.admin-auth-step {
+  animation: admin-auth-step-in 220ms ease-out;
+}
+
+.admin-auth-otp-error {
+  animation: admin-auth-shake 300ms ease-out;
+}
+
+.admin-auth-success-check {
+  animation: admin-auth-success 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .admin-spinner {
