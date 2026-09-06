@@ -2935,6 +2935,157 @@
         ]
       }
     },
+    "/api/v1/orders/{orderId}/return-authorization": {
+      "post": {
+        "operationId": "OrderReturnsController_authorizeReturn_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorizeOrderReturnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderReturnAuthorizationDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OrderReturns"
+        ]
+      }
+    },
+    "/api/v1/orders/me/{orderId}/returns": {
+      "post": {
+        "operationId": "OrderReturnsController_createMyReturn_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderReturnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerOrderReturnDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OrderReturns"
+        ]
+      },
+      "get": {
+        "operationId": "OrderReturnsController_listMyReturns_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CustomerOrderReturnDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OrderReturns"
+        ]
+      }
+    },
+    "/api/v1/orders/me/returns/{returnId}/cancel": {
+      "post": {
+        "operationId": "OrderReturnsController_cancelMyReturn_v1",
+        "parameters": [
+          {
+            "name": "returnId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelOrderReturnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerOrderReturnDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OrderReturns"
+        ]
+      }
+    },
     "/api/v1/orders/{orderId}/returns": {
       "post": {
         "operationId": "OrderReturnsController_create_v1",
@@ -6001,6 +6152,9 @@
           "lineTotalToman": {
             "type": "number"
           },
+          "returnableQuantity": {
+            "type": "number"
+          },
           "createdAt": {
             "format": "date-time",
             "type": "string"
@@ -6024,6 +6178,7 @@
           "unitSalePriceToman",
           "unitPlatingPriceToman",
           "lineTotalToman",
+          "returnableQuantity",
           "createdAt"
         ]
       },
@@ -6170,6 +6325,9 @@
           "grandTotalToman": {
             "type": "number"
           },
+          "returnAuthorized": {
+            "type": "boolean"
+          },
           "reservationExpiresAt": {
             "format": "date-time",
             "type": "string"
@@ -6200,6 +6358,7 @@
           "shippingTotalToman",
           "taxTotalToman",
           "grandTotalToman",
+          "returnAuthorized",
           "reservationExpiresAt",
           "createdAt",
           "updatedAt"
@@ -6269,6 +6428,9 @@
           "grandTotalToman": {
             "type": "number"
           },
+          "returnAuthorized": {
+            "type": "boolean"
+          },
           "reservationExpiresAt": {
             "format": "date-time",
             "type": "string"
@@ -6297,6 +6459,7 @@
           "shippingTotalToman",
           "taxTotalToman",
           "grandTotalToman",
+          "returnAuthorized",
           "reservationExpiresAt",
           "createdAt",
           "updatedAt"
@@ -6348,6 +6511,39 @@
           "status"
         ]
       },
+      "AuthorizeOrderReturnDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "OrderReturnAuthorizationDto": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string"
+          },
+          "authorizedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderId",
+          "authorizedAt",
+          "reason"
+        ]
+      },
       "CreateOrderReturnItemDto": {
         "type": "object",
         "properties": {
@@ -6385,6 +6581,112 @@
         "required": [
           "items"
         ]
+      },
+      "CustomerOrderReturnItemDto": {
+        "type": "object",
+        "properties": {
+          "disposition": {
+            "nullable": true,
+            "enum": [
+              "RESTOCK",
+              "RETURN_TO_SUPPLIER"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "orderItemId": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "disposition",
+          "id",
+          "orderItemId",
+          "quantity",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CustomerOrderReturnDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "REQUESTED",
+              "RECEIVED",
+              "CANCELLED"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "receivedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "cancelledAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerOrderReturnItemDto"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "reason",
+          "receivedAt",
+          "cancelledAt",
+          "items",
+          "id",
+          "orderId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CancelOrderReturnDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        }
       },
       "ReceiveOrderReturnItemDto": {
         "type": "object",
@@ -6426,16 +6728,6 @@
         "required": [
           "items"
         ]
-      },
-      "CancelOrderReturnDto": {
-        "type": "object",
-        "properties": {
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 1000
-          }
-        }
       },
       "AssignOperationalIncidentDto": {
         "type": "object",

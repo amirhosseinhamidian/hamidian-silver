@@ -42,6 +42,7 @@ model User {
   orderReturnsRequested               OrderReturn[]                    @relation("OrderReturnRequester")
   orderReturnsReceived                OrderReturn[]                    @relation("OrderReturnReceiver")
   orderReturnsCancelled               OrderReturn[]                    @relation("OrderReturnCanceller")
+  orderReturnsAuthorized              Order[]                          @relation("OrderReturnAuthorizer")
   supplierCreditsCreated              SupplierCredit[]                 @relation("SupplierCreditCreator")
   supplierCreditApplicationsApplied   SupplierCreditApplication[]      @relation("SupplierCreditApplicationApplier")
   supplierCreditApplicationsRemoved   SupplierCreditApplication[]      @relation("SupplierCreditApplicationRemover")
@@ -619,9 +620,13 @@ model Order {
   paidAt                DateTime?                     @db.Timestamptz(3)
   cancelledAt           DateTime?                     @db.Timestamptz(3)
   deliveredAt           DateTime?                     @db.Timestamptz(3)
+  returnAuthorizedAt    DateTime?                     @db.Timestamptz(3)
+  returnAuthorizedByUserId String?                    @db.Uuid
+  returnAuthorizationReason String?                   @db.VarChar(500)
   createdAt             DateTime                      @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime                      @updatedAt @db.Timestamptz(3)
   user                  User                          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  returnAuthorizedBy    User?                         @relation("OrderReturnAuthorizer", fields: [returnAuthorizedByUserId], references: [id], onDelete: SetNull)
   warehouse             Warehouse                     @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
   shippingAddress       OrderAddress?
   items                 OrderItem[]
@@ -640,6 +645,7 @@ model Order {
   @@index([userId, createdAt])
   @@index([status, createdAt])
   @@index([reservationExpiresAt])
+  @@index([returnAuthorizedByUserId])
   @@map("orders")
 }
 

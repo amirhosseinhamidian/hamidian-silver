@@ -11,6 +11,7 @@ import {
 import type { CustomerOrderDetail } from '@/components/account/account-types';
 import { readResponseError, toPersianDigits } from '@/components/account/account-types';
 import { CancelPendingOrder } from '@/components/account/cancel-pending-order';
+import { CustomerOrderReturns } from '@/components/account/customer-order-returns';
 import { RetryOrderPaymentButton } from '@/components/account/retry-order-payment-button';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { Button, ButtonLink } from '@/components/ui/button';
@@ -94,6 +95,12 @@ function OrderTimeline({ order }: Readonly<{ order: CustomerOrderDetail }>) {
       </ol>
     </section>
   );
+}
+
+export function canShowCustomerReturns(
+  order: Pick<CustomerOrderDetail, 'returnAuthorized' | 'status'>,
+): boolean {
+  return order.returnAuthorized && (order.status === 'SHIPPED' || order.status === 'DELIVERED');
 }
 
 export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string }>) {
@@ -252,6 +259,8 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
           </section>
 
           <OrderTimeline order={order} />
+
+          {canShowCustomerReturns(order) ? <CustomerOrderReturns order={order} /> : null}
         </div>
 
         <aside className="space-y-6 lg:sticky lg:top-24">

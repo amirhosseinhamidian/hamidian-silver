@@ -39,6 +39,7 @@ const CUSTOMER_ORDER_ITEM_SELECT = {
   platingLeadTimeDays: true,
   unitWeightGrams: true,
   lineTotalToman: true,
+  returnAllocatedQuantity: true,
   createdAt: true,
   variant: {
     select: {
@@ -86,6 +87,7 @@ const CUSTOMER_ORDER_LIST_SELECT = {
   paidAt: true,
   cancelledAt: true,
   deliveredAt: true,
+  returnAuthorizedAt: true,
   createdAt: true,
   updatedAt: true,
   shipment: {
@@ -360,18 +362,20 @@ export class OrdersService {
   }
 
   private toCustomerOrder(order: CustomerOrderListRecord | CustomerOrderDetailRecord) {
-    const { shipment, items: selectedItems, ...summary } = order;
+    const { shipment, items: selectedItems, returnAuthorizedAt, ...summary } = order;
     const items = Array.isArray(selectedItems) ? selectedItems : [];
 
     return {
       ...summary,
+      returnAuthorized: returnAuthorizedAt !== null,
       trackingCode: shipment?.trackingCode ?? null,
-      items: items.map(({ variant, ...item }) => {
+      items: items.map(({ variant, returnAllocatedQuantity, ...item }) => {
         const product = variant?.product;
         const primaryMedia = product?.media[0];
 
         return {
           ...item,
+          returnableQuantity: Math.max(0, item.quantity - returnAllocatedQuantity),
           productSlug: product?.slug ?? '',
           primaryMedia: primaryMedia
             ? {

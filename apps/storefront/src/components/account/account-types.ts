@@ -43,6 +43,7 @@ export type CustomerOrderItem = Readonly<{
   unitSalePriceToman: number;
   unitPlatingPriceToman: number;
   lineTotalToman: number;
+  returnableQuantity: number;
   createdAt: string;
 }>;
 
@@ -56,6 +57,7 @@ export type CustomerOrder = Readonly<{
   shippingTotalToman: number;
   taxTotalToman: number;
   grandTotalToman: number;
+  returnAuthorized: boolean;
   trackingCode: string | null;
   reservationExpiresAt: string;
   paidAt: string | null;
@@ -86,6 +88,27 @@ export type CustomerOrderDetail = CustomerOrder &
     shippingAddress: CustomerOrderShippingAddress;
     statusHistory: CustomerOrderStatusHistory[];
   }>;
+
+export type CustomerOrderReturnItem = Readonly<{
+  id: string;
+  orderItemId: string;
+  quantity: number;
+  disposition: string | null;
+  createdAt: string;
+  updatedAt: string;
+}>;
+
+export type CustomerOrderReturn = Readonly<{
+  id: string;
+  orderId: string;
+  status: string;
+  reason: string | null;
+  receivedAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: CustomerOrderReturnItem[];
+}>;
 
 export type CustomerOrderList = Readonly<{
   items: CustomerOrder[];

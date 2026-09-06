@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,13 +15,121 @@ import {
   OrderStatus,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { AuthorizeOrderReturnDto } from './dto/authorize-order-return.dto';
 import { CancelOrderReturnDto } from './dto/cancel-order-return.dto';
 import { CreateOrderReturnDto } from './dto/create-order-return.dto';
 import { ReceiveOrderReturnDto } from './dto/receive-order-return.dto';
 
+const CUSTOMER_ORDER_RETURN_SELECT = {
+  id: true,
+  orderId: true,
+  status: true,
+  reason: true,
+  receivedAt: true,
+  cancelledAt: true,
+  createdAt: true,
+  updatedAt: true,
+  items: {
+    orderBy: {
+      createdAt: 'asc',
+    },
+    select: {
+      id: true,
+      orderItemId: true,
+      quantity: true,
+      disposition: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
+} satisfies Prisma.OrderReturnSelect;
+
+type CustomerOrderReturnRecord = Prisma.OrderReturnGetPayload<{
+  select: typeof CUSTOMER_ORDER_RETURN_SELECT;
+}>;
+
 @Injectable()
 export class OrderReturnsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async authorizeReturn(orderId: string, actorUserId: string, dto: AuthorizeOrderReturnDto) {
+    const order = await this.prisma.order.findUnique({
+      where: {
+        id: orderId,
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order was not found.');
+    }
+
+    if (order.status !== OrderStatus.SHIPPED && order.status !== OrderStatus.DELIVERED) {
+      throw new ConflictException(
+        'Return authorization is only available for shipped or delivered orders.',
+      );
+    }
+
+    const authorizedAt = new Date();
+    const authorized = await this.prisma.order.update({
+      where: {
+        id: orderId,
+      },
+      data: {
+        returnAuthorizedAt: authorizedAt,
+        returnAuthorizedByUserId: actorUserId,
+        returnAuthorizationReason: dto.reason,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return {
+      orderId: authorized.id,
+      authorizedAt,
+      reason: dto.reason,
+    };
+  }
+
+  async listMyReturns(userId: string, orderId: string) {
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        userId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order was not found.');
+    }
+
+    return this.prisma.orderReturn.findMany({
+      where: {
+        orderId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: CUSTOMER_ORDER_RETURN_SELECT,
+    });
+  }
+
+  async createMyReturn(userId: string, orderId: string, dto: CreateOrderReturnDto) {
+    const orderReturn = await this.createReturn(orderId, userId, dto, userId);
+    return this.toCustomerReturn(orderReturn as CustomerOrderReturnRecord);
+  }
+
+  async cancelMyReturn(userId: string, returnId: string, dto: CancelOrderReturnDto) {
+    const orderReturn = await this.cancelReturn(returnId, userId, dto, userId);
+    return this.toCustomerReturn(orderReturn as CustomerOrderReturnRecord);
+  }
 
   listForOrder(orderId: string) {
     return this.prisma.orderReturn.findMany({
@@ -50,6 +159,15 @@ export class OrderReturnsService {
   }
 
   async create(orderId: string, actorUserId: string, dto: CreateOrderReturnDto) {
+    return this.createReturn(orderId, actorUserId, dto);
+  }
+
+  private async createReturn(
+    orderId: string,
+    actorUserId: string,
+    dto: CreateOrderReturnDto,
+    ownerUserId?: string,
+  ) {
     this.assertUniqueIds(
       dto.items.map(({ orderItemId }) => orderItemId),
       'Duplicate order items are not allowed in one return.',
@@ -67,6 +185,14 @@ export class OrderReturnsService {
 
       if (!order) {
         throw new NotFoundException('Order was not found.');
+      }
+
+      if (ownerUserId && order.userId !== ownerUserId) {
+        throw new NotFoundException('Order was not found.');
+      }
+
+      if (ownerUserId && !order.returnAuthorizedAt) {
+        throw new ForbiddenException('A return has not been authorized for this order.');
       }
 
       if (order.status !== OrderStatus.SHIPPED && order.status !== OrderStatus.DELIVERED) {
@@ -282,6 +408,15 @@ export class OrderReturnsService {
   }
 
   async cancel(returnId: string, actorUserId: string, dto: CancelOrderReturnDto) {
+    return this.cancelReturn(returnId, actorUserId, dto);
+  }
+
+  private async cancelReturn(
+    returnId: string,
+    actorUserId: string,
+    dto: CancelOrderReturnDto,
+    ownerUserId?: string,
+  ) {
     return this.prisma.$transaction(async (transaction) => {
       const orderReturn = await transaction.orderReturn.findUnique({
         where: {
@@ -289,10 +424,22 @@ export class OrderReturnsService {
         },
         include: {
           items: true,
+          order: {
+            select: {
+              userId: true,
+            },
+          },
         },
       });
 
       if (!orderReturn) {
+        throw new NotFoundException('Order return was not found.');
+      }
+
+      if (
+        ownerUserId &&
+        (orderReturn.requestedByUserId !== ownerUserId || orderReturn.order.userId !== ownerUserId)
+      ) {
         throw new NotFoundException('Order return was not found.');
       }
 
@@ -313,6 +460,7 @@ export class OrderReturnsService {
         where: {
           id: orderReturn.id,
           status: OrderReturnStatus.REQUESTED,
+          ...(ownerUserId ? { requestedByUserId: ownerUserId } : {}),
         },
         data: {
           status: OrderReturnStatus.CANCELLED,
@@ -571,5 +719,26 @@ export class OrderReturnsService {
     if (new Set(ids).size !== ids.length) {
       throw new BadRequestException(message);
     }
+  }
+
+  private toCustomerReturn(orderReturn: CustomerOrderReturnRecord) {
+    return {
+      id: orderReturn.id,
+      orderId: orderReturn.orderId,
+      status: orderReturn.status,
+      reason: orderReturn.reason,
+      receivedAt: orderReturn.receivedAt,
+      cancelledAt: orderReturn.cancelledAt,
+      createdAt: orderReturn.createdAt,
+      updatedAt: orderReturn.updatedAt,
+      items: orderReturn.items.map((item) => ({
+        id: item.id,
+        orderItemId: item.orderItemId,
+        quantity: item.quantity,
+        disposition: item.disposition,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      })),
+    };
   }
 }

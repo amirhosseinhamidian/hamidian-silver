@@ -1,7 +1,10 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { CustomerOrderDetailView } from '@/components/account/customer-order-detail';
+import {
+  canShowCustomerReturns,
+  CustomerOrderDetailView,
+} from '@/components/account/customer-order-detail';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -16,8 +19,15 @@ afterEach(() => {
 });
 
 describe('CustomerOrderDetailView', () => {
+  it('only exposes customer returns for an authorized shipped or delivered order', () => {
+    expect(canShowCustomerReturns({ status: 'DELIVERED', returnAuthorized: false })).toBe(false);
+    expect(canShowCustomerReturns({ status: 'DELIVERED', returnAuthorized: true })).toBe(true);
+    expect(canShowCustomerReturns({ status: 'SHIPPED', returnAuthorized: true })).toBe(true);
+    expect(canShowCustomerReturns({ status: 'PROCESSING', returnAuthorized: true })).toBe(false);
+  });
+
   it('renders the customer order items, timeline, address, totals, and tracking code', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
+    const fetchMock = vi.fn().mockResolvedValueOnce(
       jsonResponse({
         id: 'order/1',
         orderNumber: 'HS-1001',
@@ -28,6 +38,7 @@ describe('CustomerOrderDetailView', () => {
         shippingTotalToman: 50_000,
         taxTotalToman: 0,
         grandTotalToman: 2_950_000,
+        returnAuthorized: true,
         trackingCode: 'POST-123',
         reservationExpiresAt: '2026-09-05T13:00:00.000Z',
         paidAt: '2026-09-05T12:10:00.000Z',
@@ -81,11 +92,13 @@ describe('CustomerOrderDetailView', () => {
             unitSalePriceToman: 1_500_000,
             unitPlatingPriceToman: 50_000,
             lineTotalToman: 3_100_000,
+            returnableQuantity: 2,
             createdAt: '2026-09-05T12:00:00.000Z',
           },
         ],
       }),
     );
+    fetchMock.mockResolvedValueOnce(jsonResponse([]));
     vi.stubGlobal('fetch', fetchMock);
 
     render(<CustomerOrderDetailView orderId="order/1" />);
@@ -107,6 +120,7 @@ describe('CustomerOrderDetailView', () => {
     expect(screen.getByText('خیابان ولیعصر، پلاک ۱۲', { exact: false })).toBeInTheDocument();
     expect(screen.getByText('POST-۱۲۳')).toBeInTheDocument();
     expect(screen.getByText(formatTomanPrice(2_950_000))).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'مرجوعی سفارش' })).toBeInTheDocument();
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith('/api/orders/order%2F1', { cache: 'no-store' }),

@@ -1300,6 +1300,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders/{orderId}/return-authorization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OrderReturnsController_authorizeReturn_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/me/{orderId}/returns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OrderReturnsController_listMyReturns_v1"];
+        put?: never;
+        post: operations["OrderReturnsController_createMyReturn_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/me/returns/{returnId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OrderReturnsController_cancelMyReturn_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orders/{orderId}/returns": {
         parameters: {
             query?: never;
@@ -2371,6 +2419,7 @@ export interface components {
             unitSalePriceToman: number;
             unitPlatingPriceToman: number;
             lineTotalToman: number;
+            returnableQuantity: number;
             /** Format: date-time */
             createdAt: string;
         };
@@ -2411,6 +2460,7 @@ export interface components {
             shippingTotalToman: number;
             taxTotalToman: number;
             grandTotalToman: number;
+            returnAuthorized: boolean;
             /** Format: date-time */
             reservationExpiresAt: string;
             /** Format: date-time */
@@ -2437,6 +2487,7 @@ export interface components {
             shippingTotalToman: number;
             taxTotalToman: number;
             grandTotalToman: number;
+            returnAuthorized: boolean;
             /** Format: date-time */
             reservationExpiresAt: string;
             /** Format: date-time */
@@ -2455,6 +2506,15 @@ export interface components {
             status: "CANCELLED" | "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "EXPIRED";
             reason?: string;
         };
+        AuthorizeOrderReturnDto: {
+            reason: string;
+        };
+        OrderReturnAuthorizationDto: {
+            orderId: string;
+            /** Format: date-time */
+            authorizedAt: string;
+            reason: string;
+        };
         CreateOrderReturnItemDto: {
             /** Format: uuid */
             orderItemId: string;
@@ -2462,6 +2522,36 @@ export interface components {
         };
         CreateOrderReturnDto: {
             items: components["schemas"]["CreateOrderReturnItemDto"][];
+            reason?: string;
+        };
+        CustomerOrderReturnItemDto: {
+            /** @enum {string|null} */
+            disposition: "RESTOCK" | "RETURN_TO_SUPPLIER" | null;
+            id: string;
+            orderItemId: string;
+            quantity: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CustomerOrderReturnDto: {
+            /** @enum {string} */
+            status: "REQUESTED" | "RECEIVED" | "CANCELLED";
+            reason: string | null;
+            /** Format: date-time */
+            receivedAt: string | null;
+            /** Format: date-time */
+            cancelledAt: string | null;
+            items: components["schemas"]["CustomerOrderReturnItemDto"][];
+            id: string;
+            orderId: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CancelOrderReturnDto: {
             reason?: string;
         };
         ReceiveOrderReturnItemDto: {
@@ -2473,9 +2563,6 @@ export interface components {
         ReceiveOrderReturnDto: {
             items: components["schemas"]["ReceiveOrderReturnItemDto"][];
             note?: string;
-        };
-        CancelOrderReturnDto: {
-            reason?: string;
         };
         AssignOperationalIncidentDto: {
             /** Format: uuid */
@@ -4601,6 +4688,102 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    OrderReturnsController_authorizeReturn_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthorizeOrderReturnDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderReturnAuthorizationDto"];
+                };
+            };
+        };
+    };
+    OrderReturnsController_listMyReturns_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerOrderReturnDto"][];
+                };
+            };
+        };
+    };
+    OrderReturnsController_createMyReturn_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrderReturnDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerOrderReturnDto"];
+                };
+            };
+        };
+    };
+    OrderReturnsController_cancelMyReturn_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                returnId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelOrderReturnDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerOrderReturnDto"];
+                };
             };
         };
     };

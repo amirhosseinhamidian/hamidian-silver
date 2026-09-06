@@ -16,6 +16,45 @@ describe('OrderReturnsService', () => {
   const variantId = '60000000-0000-4000-8000-000000000001';
   const warehouseId = '70000000-0000-4000-8000-000000000001';
 
+  it('authorizes returns for a delivered order after an admin review', async () => {
+    const authorizedAt = new Date('2026-09-06T13:00:00.000Z');
+    jest.useFakeTimers().setSystemTime(authorizedAt);
+    const prisma = {
+      order: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: orderId,
+          status: OrderStatus.DELIVERED,
+        }),
+        update: jest.fn().mockResolvedValue({ id: orderId }),
+      },
+    };
+    const service = new OrderReturnsService(prisma as unknown as PrismaService);
+
+    try {
+      await expect(
+        service.authorizeReturn(orderId, actorUserId, {
+          reason: 'Wrong item shipment confirmed by support.',
+        }),
+      ).resolves.toEqual({
+        orderId,
+        authorizedAt,
+        reason: 'Wrong item shipment confirmed by support.',
+      });
+
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: orderId },
+        data: {
+          returnAuthorizedAt: authorizedAt,
+          returnAuthorizedByUserId: actorUserId,
+          returnAuthorizationReason: 'Wrong item shipment confirmed by support.',
+        },
+        select: { id: true },
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('atomically reserves return quantity when a return is created', async () => {
     const transaction = {
       order: {
@@ -71,6 +110,150 @@ describe('OrderReturnsService', () => {
         },
       },
     });
+  });
+
+  it('creates a sanitized return request for the customer who owns the order', async () => {
+    const createdAt = new Date('2026-09-06T12:00:00.000Z');
+    const orderReturn = {
+      id: returnId,
+      orderId,
+      status: OrderReturnStatus.REQUESTED,
+      reason: 'Wrong item shipment.',
+      receivedAt: null,
+      cancelledAt: null,
+      createdAt,
+      updatedAt: createdAt,
+      items: [
+        {
+          id: returnItemId,
+          orderItemId,
+          quantity: 1,
+          disposition: null,
+          createdAt,
+          updatedAt: createdAt,
+          orderItem: { supplierNameSnapshot: 'Internal supplier' },
+        },
+      ],
+      requestedBy: { id: actorUserId, phone: '09123456789' },
+    };
+    const transaction = {
+      order: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: orderId,
+          userId: actorUserId,
+          status: OrderStatus.DELIVERED,
+          returnAuthorizedAt: createdAt,
+          items: [{ id: orderItemId, quantity: 2, returnAllocatedQuantity: 0 }],
+        }),
+      },
+      orderItem: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      orderReturn: {
+        create: jest.fn().mockResolvedValue(orderReturn),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
+    };
+    const service = new OrderReturnsService(prisma as unknown as PrismaService);
+
+    const result = await service.createMyReturn(actorUserId, orderId, {
+      items: [{ orderItemId, quantity: 1 }],
+      reason: 'Wrong item shipment.',
+    });
+
+    expect(result).toEqual({
+      id: returnId,
+      orderId,
+      status: OrderReturnStatus.REQUESTED,
+      reason: 'Wrong item shipment.',
+      receivedAt: null,
+      cancelledAt: null,
+      createdAt,
+      updatedAt: createdAt,
+      items: [
+        expect.objectContaining({
+          id: returnItemId,
+          orderItemId,
+          quantity: 1,
+        }),
+      ],
+    });
+    expect(result).not.toHaveProperty('requestedBy');
+    expect(result.items[0]).not.toHaveProperty('orderItem');
+  });
+
+  it('rejects a customer return request until an admin authorizes the order', async () => {
+    const transaction = {
+      order: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: orderId,
+          userId: actorUserId,
+          status: OrderStatus.DELIVERED,
+          returnAuthorizedAt: null,
+          items: [{ id: orderItemId, quantity: 1, returnAllocatedQuantity: 0 }],
+        }),
+      },
+      orderItem: {
+        updateMany: jest.fn(),
+      },
+      orderReturn: {
+        create: jest.fn(),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
+    };
+    const service = new OrderReturnsService(prisma as unknown as PrismaService);
+
+    await expect(
+      service.createMyReturn(actorUserId, orderId, {
+        items: [{ orderItemId, quantity: 1 }],
+        reason: 'Wrong item shipment.',
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+
+    expect(transaction.orderItem.updateMany).not.toHaveBeenCalled();
+    expect(transaction.orderReturn.create).not.toHaveBeenCalled();
+  });
+
+  it("does not create a return request for another customer's order", async () => {
+    const transaction = {
+      order: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: orderId,
+          userId: '10000000-0000-4000-8000-000000000002',
+          status: OrderStatus.DELIVERED,
+          items: [{ id: orderItemId, quantity: 1, returnAllocatedQuantity: 0 }],
+        }),
+      },
+      orderItem: {
+        updateMany: jest.fn(),
+      },
+      orderReturn: {
+        create: jest.fn(),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
+    };
+    const service = new OrderReturnsService(prisma as unknown as PrismaService);
+
+    await expect(
+      service.createMyReturn(actorUserId, orderId, {
+        items: [{ orderItemId, quantity: 1 }],
+      }),
+    ).rejects.toMatchObject({ status: 404 });
+
+    expect(transaction.orderItem.updateMany).not.toHaveBeenCalled();
+    expect(transaction.orderReturn.create).not.toHaveBeenCalled();
   });
 
   it('restocks a received return with a RETURN inventory movement', async () => {
@@ -288,5 +471,37 @@ describe('OrderReturnsService', () => {
         },
       },
     });
+  });
+
+  it('does not cancel a return request created by another customer', async () => {
+    const transaction = {
+      orderReturn: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: returnId,
+          requestedByUserId: '10000000-0000-4000-8000-000000000002',
+          status: OrderReturnStatus.REQUESTED,
+          order: { userId: actorUserId },
+          items: [{ id: returnItemId, orderItemId, quantity: 1 }],
+        }),
+        updateMany: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
+      },
+      orderItem: {
+        updateMany: jest.fn(),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
+    };
+    const service = new OrderReturnsService(prisma as unknown as PrismaService);
+
+    await expect(
+      service.cancelMyReturn(actorUserId, returnId, { reason: 'Changed my mind' }),
+    ).rejects.toMatchObject({ status: 404 });
+
+    expect(transaction.orderReturn.updateMany).not.toHaveBeenCalled();
+    expect(transaction.orderItem.updateMany).not.toHaveBeenCalled();
   });
 });

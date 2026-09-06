@@ -55,6 +55,7 @@ export class CustomerOrderItemDto {
   unitWeightGrams!: string | null;
 
   lineTotalToman!: number;
+  returnableQuantity!: number;
   createdAt!: Date;
 }
 
@@ -71,6 +72,7 @@ export class CustomerOrderSummaryDto {
   shippingTotalToman!: number;
   taxTotalToman!: number;
   grandTotalToman!: number;
+  returnAuthorized!: boolean;
 
   @ApiProperty({ type: String, nullable: true })
   trackingCode!: string | null;

@@ -39,7 +39,6 @@ describe('OrdersService customer projection security', () => {
     expect(itemSelect).not.toHaveProperty('unitSupplierPriceToman');
     expect(itemSelect).not.toHaveProperty('supplierIdSnapshot');
     expect(itemSelect).not.toHaveProperty('supplierNameSnapshot');
-    expect(itemSelect).not.toHaveProperty('returnAllocatedQuantity');
   });
 
   it('scopes customer order detail and hides staff audit metadata', async () => {
@@ -76,11 +75,14 @@ describe('OrdersService customer projection security', () => {
     prisma.order.findMany.mockResolvedValue([
       {
         id: orderId,
+        returnAuthorizedAt: new Date('2026-09-06T13:00:00.000Z'),
         shipment: { trackingCode: 'POST-123' },
         items: [
           {
             id: '30000000-0000-4000-8000-000000000001',
             productNameSnapshot: 'انگشتر نقره',
+            quantity: 2,
+            returnAllocatedQuantity: 1,
             variant: {
               product: {
                 slug: 'silver-ring',
@@ -108,9 +110,11 @@ describe('OrdersService customer projection security', () => {
     expect(order).toEqual(
       expect.objectContaining({
         trackingCode: 'POST-123',
+        returnAuthorized: true,
         items: [
           expect.objectContaining({
             productSlug: 'silver-ring',
+            returnableQuantity: 1,
             primaryMedia: expect.objectContaining({
               url: 'https://media.example/products/ring.webp',
               mimeType: 'image/webp',
@@ -120,6 +124,8 @@ describe('OrdersService customer projection security', () => {
       }),
     );
     expect(order.items[0]).not.toHaveProperty('variant');
+    expect(order.items[0]).not.toHaveProperty('returnAllocatedQuantity');
+    expect(order).not.toHaveProperty('returnAuthorizedAt');
   });
 
   it('counts every order owned by the authenticated customer', async () => {
