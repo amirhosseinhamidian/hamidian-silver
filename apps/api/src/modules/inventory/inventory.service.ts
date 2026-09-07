@@ -7,8 +7,10 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { AdjustStockDto } from './dto/adjust-stock.dto';
 import { BulkSetStockDto } from './dto/bulk-set-stock.dto';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
+import { InventoryCatalogQueryDto } from './dto/inventory-catalog-query.dto';
 import { ListInventoryQueryDto } from './dto/list-inventory-query.dto';
 import { SetLowStockThresholdDto } from './dto/set-low-stock-threshold.dto';
+import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
 
 type InventorySnapshot = {
   id: string;
@@ -23,38 +25,65 @@ type InventorySnapshot = {
 export class InventoryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  createWarehouse(dto: CreateWarehouseDto) {
-    if (!dto.isDefault) {
-      return this.prisma.warehouse.create({
-        data: {
-          code: dto.code,
-          name: dto.name,
-          isDefault: false,
-          isActive: dto.isActive ?? true,
-        },
-      });
+  async createWarehouse(dto: CreateWarehouseDto) {
+    const code = dto.code.trim();
+    const name = dto.name.trim();
+
+    if (!code || !name) {
+      throw new DomainException(
+        ErrorCode.INVENTORY_STATE_CHANGED,
+        'Warehouse code and name are required.',
+      );
     }
 
-    return this.prisma.$transaction(async (transaction) => {
-      await transaction.warehouse.updateMany({
-        where: {
-          isDefault: true,
-          deletedAt: null,
-        },
-        data: {
-          isDefault: false,
-        },
-      });
+    if (dto.isDefault && dto.isActive === false) {
+      throw new DomainException(
+        ErrorCode.INVENTORY_STATE_CHANGED,
+        'The default warehouse must be active.',
+      );
+    }
 
-      return transaction.warehouse.create({
-        data: {
-          code: dto.code,
-          name: dto.name,
-          isDefault: true,
-          isActive: dto.isActive ?? true,
-        },
+    try {
+      if (!dto.isDefault) {
+        return await this.prisma.warehouse.create({
+          data: {
+            code,
+            name,
+            isDefault: false,
+            isActive: dto.isActive ?? true,
+          },
+        });
+      }
+
+      return await this.prisma.$transaction(async (transaction) => {
+        await transaction.warehouse.updateMany({
+          where: {
+            isDefault: true,
+            deletedAt: null,
+          },
+          data: {
+            isDefault: false,
+          },
+        });
+
+        return transaction.warehouse.create({
+          data: {
+            code,
+            name,
+            isDefault: true,
+            isActive: dto.isActive ?? true,
+          },
+        });
       });
-    });
+    } catch (error) {
+      if (this.isUniqueConstraintError(error)) {
+        throw new DomainException(
+          ErrorCode.INVENTORY_STATE_CHANGED,
+          'Another warehouse already uses this code.',
+        );
+      }
+      throw error;
+    }
   }
 
   listWarehouses() {
@@ -63,6 +92,73 @@ export class InventoryService {
         deletedAt: null,
       },
       orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+    });
+  }
+
+  async updateWarehouse(warehouseId: string, dto: UpdateWarehouseDto) {
+    const code = dto.code?.trim();
+    const name = dto.name?.trim();
+
+    if (code === '' || name === '') {
+      throw new DomainException(
+        ErrorCode.INVENTORY_STATE_CHANGED,
+        'Warehouse code and name are required.',
+      );
+    }
+
+    return this.prisma.$transaction(async (transaction) => {
+      const current = await transaction.warehouse.findFirst({
+        where: { id: warehouseId, deletedAt: null },
+        select: { id: true, isDefault: true, isActive: true },
+      });
+
+      if (!current) {
+        throw new DomainException(ErrorCode.NOT_FOUND, 'Warehouse was not found.');
+      }
+
+      const nextDefault = dto.isDefault ?? current.isDefault;
+      const nextActive = dto.isActive ?? current.isActive;
+
+      if (current.isDefault && dto.isDefault === false) {
+        throw new DomainException(
+          ErrorCode.INVENTORY_STATE_CHANGED,
+          'Select another default warehouse before removing this default.',
+        );
+      }
+
+      if (nextDefault && !nextActive) {
+        throw new DomainException(
+          ErrorCode.INVENTORY_STATE_CHANGED,
+          'The default warehouse must be active.',
+        );
+      }
+
+      if (dto.isDefault === true) {
+        await transaction.warehouse.updateMany({
+          where: { id: { not: warehouseId }, isDefault: true, deletedAt: null },
+          data: { isDefault: false },
+        });
+      }
+
+      try {
+        return await transaction.warehouse.update({
+          where: { id: warehouseId },
+          data: {
+            ...(code !== undefined ? { code } : {}),
+            ...(name !== undefined ? { name } : {}),
+            ...(dto.isDefault !== undefined ? { isDefault: dto.isDefault } : {}),
+            ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+          },
+        });
+      } catch (error) {
+        if (this.isUniqueConstraintError(error)) {
+          throw new DomainException(
+            ErrorCode.INVENTORY_STATE_CHANGED,
+            'Another warehouse already uses this code.',
+          );
+        }
+        throw error;
+      }
     });
   }
 
@@ -452,6 +548,79 @@ export class InventoryService {
       available: item.onHand - item.reserved,
       isLowStock: item.onHand - item.reserved <= item.lowStockThreshold,
     }));
+  }
+
+  async listStockCatalog(query: InventoryCatalogQueryDto) {
+    const warehouse = await this.prisma.warehouse.findFirst({
+      where: { id: query.warehouseId, deletedAt: null },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        isDefault: true,
+        isActive: true,
+      },
+    });
+
+    if (!warehouse) {
+      throw new DomainException(ErrorCode.NOT_FOUND, 'Warehouse was not found.');
+    }
+
+    const variants = await this.prisma.productVariant.findMany({
+      where: {
+        deletedAt: null,
+        product: { deletedAt: null },
+      },
+      orderBy: [{ productId: 'asc' }, { sku: 'asc' }],
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        isActive: true,
+        size: { select: { label: true } },
+        product: {
+          select: { id: true, name: true, slug: true, status: true },
+        },
+        inventories: {
+          where: { warehouseId: query.warehouseId },
+          take: 1,
+          select: {
+            id: true,
+            onHand: true,
+            reserved: true,
+            lowStockThreshold: true,
+            updatedAt: true,
+          },
+        },
+      },
+    });
+
+    return variants.map((variant) => {
+      const inventory = variant.inventories[0];
+      const onHand = inventory?.onHand ?? 0;
+      const reserved = inventory?.reserved ?? 0;
+      const lowStockThreshold = inventory?.lowStockThreshold ?? 0;
+      const available = onHand - reserved;
+
+      return {
+        inventoryId: inventory?.id ?? null,
+        warehouse,
+        variant: {
+          id: variant.id,
+          sku: variant.sku,
+          name: variant.name,
+          isActive: variant.isActive,
+          size: variant.size,
+        },
+        product: variant.product,
+        onHand,
+        reserved,
+        available,
+        lowStockThreshold,
+        isLowStock: available <= lowStockThreshold,
+        updatedAt: inventory?.updatedAt ?? null,
+      };
+    });
   }
 
   private toStockView(inventory: InventorySnapshot) {

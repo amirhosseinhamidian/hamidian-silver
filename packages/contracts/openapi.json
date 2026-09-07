@@ -2661,6 +2661,39 @@
         ]
       }
     },
+    "/api/v1/inventory/warehouses/{warehouseId}": {
+      "patch": {
+        "operationId": "InventoryController_updateWarehouse_v1",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWarehouseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
     "/api/v1/inventory/stock/adjust": {
       "post": {
         "operationId": "InventoryController_adjustStock_v1",
@@ -2740,6 +2773,30 @@
           {
             "name": "warehouseId",
             "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/stock/catalog": {
+      "get": {
+        "operationId": "InventoryController_listStockCatalog_v1",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "required": true,
             "in": "query",
             "schema": {
               "format": "uuid",
@@ -6945,6 +7002,27 @@
           "code",
           "name"
         ]
+      },
+      "UpdateWarehouseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
       },
       "AdjustStockDto": {
         "type": "object",

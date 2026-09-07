@@ -1012,6 +1012,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventory/warehouses/{warehouseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["InventoryController_updateWarehouse_v1"];
+        trace?: never;
+    };
     "/api/v1/inventory/stock/adjust": {
         parameters: {
             query?: never;
@@ -1068,6 +1084,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["InventoryController_listStock_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/stock/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["InventoryController_listStockCatalog_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2682,6 +2714,12 @@ export interface components {
         CreateWarehouseDto: {
             code: string;
             name: string;
+            isDefault?: boolean;
+            isActive?: boolean;
+        };
+        UpdateWarehouseDto: {
+            code?: string;
+            name?: string;
             isDefault?: boolean;
             isActive?: boolean;
         };
@@ -5006,6 +5044,29 @@ export interface operations {
             };
         };
     };
+    InventoryController_updateWarehouse_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                warehouseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWarehouseDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     InventoryController_adjustStock_v1: {
         parameters: {
             query?: never;
@@ -5073,6 +5134,25 @@ export interface operations {
         parameters: {
             query?: {
                 warehouseId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InventoryController_listStockCatalog_v1: {
+        parameters: {
+            query: {
+                warehouseId: string;
             };
             header?: never;
             path?: never;
