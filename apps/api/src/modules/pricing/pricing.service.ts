@@ -71,6 +71,59 @@ export class PricingService {
     ]).then(([suppliers, products]) => ({ suppliers, products }));
   }
 
+  async getPricingCatalog() {
+    const [products, platingRates, productHistory, platingHistory] = await Promise.all([
+      this.prisma.product.findMany({
+        where: { deletedAt: null },
+        orderBy: { name: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          salePriceToman: true,
+          compareAtPriceToman: true,
+          suppliers: {
+            where: {
+              isActive: true,
+              supplier: { isActive: true, deletedAt: null },
+            },
+            orderBy: [{ isPreferred: 'desc' }, { updatedAt: 'desc' }],
+            take: 1,
+            select: {
+              supplierPriceToman: true,
+              isPreferred: true,
+              supplier: { select: { id: true, code: true, name: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.platingRate.findMany({ orderBy: { type: 'asc' } }),
+      this.prisma.productPriceHistory.findMany({
+        take: 100,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          product: { select: { id: true, name: true, slug: true } },
+          changedBy: {
+            select: { id: true, phone: true, firstName: true, lastName: true },
+          },
+        },
+      }),
+      this.prisma.platingRateHistory.findMany({
+        take: 100,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          platingRate: { select: { id: true, type: true } },
+          changedBy: {
+            select: { id: true, phone: true, firstName: true, lastName: true },
+          },
+        },
+      }),
+    ]);
+
+    return { products, platingRates, productHistory, platingHistory };
+  }
+
   async updateSupplier(supplierId: string, dto: UpdateSupplierDto) {
     const code = dto.code?.trim().toUpperCase();
     const name = dto.name?.trim();
@@ -201,6 +254,7 @@ export class PricingService {
         name: true,
         slug: true,
         salePriceToman: true,
+        compareAtPriceToman: true,
         suppliers: {
           where: {
             isActive: true,
@@ -234,6 +288,7 @@ export class PricingService {
         select: {
           id: true,
           salePriceToman: true,
+          compareAtPriceToman: true,
         },
       });
 
@@ -241,7 +296,19 @@ export class PricingService {
         throw new NotFoundException('Product was not found.');
       }
 
-      if (product.salePriceToman === dto.salePriceToman) {
+      const compareAtPriceToman =
+        dto.compareAtPriceToman === undefined
+          ? product.compareAtPriceToman
+          : dto.compareAtPriceToman;
+
+      if (compareAtPriceToman !== null && compareAtPriceToman <= dto.salePriceToman) {
+        throw new BadRequestException('Compare-at price must be greater than sale price.');
+      }
+
+      if (
+        product.salePriceToman === dto.salePriceToman &&
+        product.compareAtPriceToman === compareAtPriceToman
+      ) {
         return transaction.product.findUniqueOrThrow({
           where: {
             id: productId,
@@ -251,6 +318,7 @@ export class PricingService {
             name: true,
             slug: true,
             salePriceToman: true,
+            compareAtPriceToman: true,
           },
         });
       }
@@ -261,6 +329,8 @@ export class PricingService {
           changedByUserId: actorUserId,
           previousPriceToman: product.salePriceToman,
           newPriceToman: dto.salePriceToman,
+          previousCompareAtPriceToman: product.compareAtPriceToman,
+          newCompareAtPriceToman: compareAtPriceToman,
           reason: dto.reason,
         },
       });
@@ -271,12 +341,14 @@ export class PricingService {
         },
         data: {
           salePriceToman: dto.salePriceToman,
+          compareAtPriceToman,
         },
         select: {
           id: true,
           name: true,
           slug: true,
           salePriceToman: true,
+          compareAtPriceToman: true,
         },
       });
     });

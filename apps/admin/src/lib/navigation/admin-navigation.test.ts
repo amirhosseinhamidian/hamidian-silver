@@ -53,12 +53,17 @@ describe('admin navigation', () => {
     ]);
   });
 
-  it('exposes plating and supplier settings to pricing readers', () => {
+  it('exposes plating, pricing and supplier settings to pricing readers', () => {
     const items = getAdminNavigation(user({ permissions: ['pricing.read'] })).flatMap(
       (group) => group.items,
     );
 
-    expect(items.map((item) => item.id)).toEqual(['dashboard', 'plating-settings', 'suppliers']);
+    expect(items.map((item) => item.id)).toEqual([
+      'dashboard',
+      'plating-settings',
+      'pricing',
+      'suppliers',
+    ]);
   });
 
   it('resolves sections and nested active navigation paths', () => {

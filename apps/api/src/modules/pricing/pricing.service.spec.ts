@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { PricingService } from './pricing.service';
 
@@ -17,6 +17,12 @@ describe('PricingService', () => {
       findMany: jest.fn(),
     },
     productPriceHistory: {
+      findMany: jest.fn(),
+    },
+    platingRate: {
+      findMany: jest.fn(),
+    },
+    platingRateHistory: {
       findMany: jest.fn(),
     },
     $transaction: jest.fn(),
@@ -152,12 +158,14 @@ describe('PricingService', () => {
         findFirst: jest.fn().mockResolvedValue({
           id: productId,
           salePriceToman: 1_200_000,
+          compareAtPriceToman: null,
         }),
         update: jest.fn().mockResolvedValue({
           id: productId,
           name: 'Silver Ring',
           slug: 'silver-ring',
           salePriceToman: 1_350_000,
+          compareAtPriceToman: 1_500_000,
         }),
         findUniqueOrThrow: jest.fn(),
       },
@@ -174,6 +182,7 @@ describe('PricingService', () => {
       productId,
       {
         salePriceToman: 1_350_000,
+        compareAtPriceToman: 1_500_000,
         reason: 'Manager price update',
       },
       actorUserId,
@@ -185,6 +194,8 @@ describe('PricingService', () => {
         changedByUserId: actorUserId,
         previousPriceToman: 1_200_000,
         newPriceToman: 1_350_000,
+        previousCompareAtPriceToman: null,
+        newCompareAtPriceToman: 1_500_000,
         reason: 'Manager price update',
       },
     });
@@ -193,6 +204,7 @@ describe('PricingService', () => {
       expect.objectContaining({
         data: {
           salePriceToman: 1_350_000,
+          compareAtPriceToman: 1_500_000,
         },
       }),
     );
@@ -204,6 +216,7 @@ describe('PricingService', () => {
         findFirst: jest.fn().mockResolvedValue({
           id: productId,
           salePriceToman: 1_350_000,
+          compareAtPriceToman: null,
         }),
         update: jest.fn(),
         findUniqueOrThrow: jest.fn().mockResolvedValue({
@@ -211,6 +224,7 @@ describe('PricingService', () => {
           name: 'Silver Ring',
           slug: 'silver-ring',
           salePriceToman: 1_350_000,
+          compareAtPriceToman: null,
         }),
       },
       productPriceHistory: {
@@ -232,5 +246,46 @@ describe('PricingService', () => {
 
     expect(transaction.productPriceHistory.create).not.toHaveBeenCalled();
     expect(transaction.product.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a compare-at price that is not greater than the sale price', async () => {
+    const transaction = {
+      product: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: productId,
+          salePriceToman: 1_200_000,
+          compareAtPriceToman: null,
+        }),
+        update: jest.fn(),
+      },
+      productPriceHistory: { create: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(
+      service.setSalePrice(
+        productId,
+        { salePriceToman: 1_300_000, compareAtPriceToman: 1_300_000 },
+        actorUserId,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(transaction.productPriceHistory.create).not.toHaveBeenCalled();
+    expect(transaction.product.update).not.toHaveBeenCalled();
+  });
+
+  it('returns product prices, plating rates and both histories as one catalog', async () => {
+    prisma.product.findMany.mockResolvedValue([{ id: productId, name: 'Product One' }]);
+    prisma.platingRate.findMany.mockResolvedValue([{ id: 'rate-1', type: 'GOLD' }]);
+    prisma.productPriceHistory.findMany.mockResolvedValue([{ id: 'history-1' }]);
+    prisma.platingRateHistory.findMany.mockResolvedValue([{ id: 'history-2' }]);
+
+    await expect(service.getPricingCatalog()).resolves.toEqual({
+      products: [{ id: productId, name: 'Product One' }],
+      platingRates: [{ id: 'rate-1', type: 'GOLD' }],
+      productHistory: [{ id: 'history-1' }],
+      platingHistory: [{ id: 'history-2' }],
+    });
   });
 });

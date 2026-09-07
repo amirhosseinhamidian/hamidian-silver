@@ -128,6 +128,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['pricing.read'],
       },
       {
+        id: 'pricing',
+        label: 'مدیریت قیمت‌گذاری',
+        shortLabel: 'قیمت‌گذاری',
+        href: '/pricing',
+        icon: 'finance',
+        description: 'قیمت فروش، تخفیف و تاریخچه تغییرات',
+        roadmapStage: 14,
+        permissions: ['pricing.read'],
+      },
+      {
         id: 'inventory',
         label: 'انبار و موجودی',
         shortLabel: 'انبار',

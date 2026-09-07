@@ -3010,6 +3010,20 @@
         ]
       }
     },
+    "/api/v1/pricing/catalog": {
+      "get": {
+        "operationId": "PricingController_getPricingCatalog_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Pricing"
+        ]
+      }
+    },
     "/api/v1/pricing/suppliers/{supplierId}": {
       "patch": {
         "operationId": "PricingController_updateSupplier_v1",
@@ -7314,6 +7328,12 @@
         "properties": {
           "salePriceToman": {
             "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "compareAtPriceToman": {
+            "type": "number",
+            "nullable": true,
             "minimum": 0,
             "maximum": 2147483647
           },

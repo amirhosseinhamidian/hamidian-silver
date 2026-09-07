@@ -1220,6 +1220,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pricing/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PricingController_getPricingCatalog_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pricing/suppliers/{supplierId}": {
         parameters: {
             query?: never;
@@ -2830,6 +2846,7 @@ export interface components {
         };
         SetSalePriceDto: {
             salePriceToman: number;
+            compareAtPriceToman?: number | null;
             reason?: string;
         };
         SetPlatingRateDto: {
@@ -5371,6 +5388,23 @@ export interface operations {
         };
     };
     PricingController_getSupplierCatalog_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PricingController_getPricingCatalog_v1: {
         parameters: {
             query?: never;
             header?: never;

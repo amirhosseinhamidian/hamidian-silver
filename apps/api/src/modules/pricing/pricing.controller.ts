@@ -31,6 +31,12 @@ export class PricingController {
     return this.pricingService.getSupplierCatalog();
   }
 
+  @Get('catalog')
+  @RequirePermissions(PERMISSION_CODES.PRICING_READ)
+  getPricingCatalog() {
+    return this.pricingService.getPricingCatalog();
+  }
+
   @Patch('suppliers/:supplierId')
   @RequirePermissions(PERMISSION_CODES.PRICING_WRITE)
   updateSupplier(
