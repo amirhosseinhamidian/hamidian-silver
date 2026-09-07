@@ -1,10 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CatalogMediaService } from './catalog-media.service';
-import type {
-  CatalogUploadFile,
-  LocalMediaStorageService,
-} from './local-media-storage.service';
+import type { CatalogUploadFile, LocalMediaStorageService } from './local-media-storage.service';
 import type { PublicMediaUrlService } from './public-media-url.service';
 
 describe('CatalogMediaService', () => {
@@ -13,6 +10,9 @@ describe('CatalogMediaService', () => {
       create: jest.fn(),
     },
     product: {
+      findFirst: jest.fn(),
+    },
+    category: {
       findFirst: jest.fn(),
     },
     productMedia: {
@@ -87,9 +87,7 @@ describe('CatalogMediaService', () => {
 
     await expect(service.upload(file, {})).rejects.toThrow('database unavailable');
 
-    expect(localMediaStorage.delete).toHaveBeenCalledWith(
-      'catalog/2026/09/orphan.png',
-    );
+    expect(localMediaStorage.delete).toHaveBeenCalledWith('catalog/2026/09/orphan.png');
   });
 
   it('stores and attaches an uploaded product image with a public VPS URL', async () => {
@@ -149,6 +147,88 @@ describe('CatalogMediaService', () => {
       BadRequestException,
     );
     expect(localMediaStorage.storeImage).not.toHaveBeenCalled();
+  });
+
+  it('stores and replaces a category image on the configured media disk', async () => {
+    const categoryId = '10000000-0000-4000-8000-000000000001';
+    const mediaId = '10000000-0000-4000-8000-000000000002';
+    prisma.category.findFirst.mockResolvedValue({ id: categoryId });
+    localMediaStorage.storeImage.mockResolvedValue({
+      storageKey: 'catalog/2026/09/category.png',
+      mimeType: 'image/png',
+      sizeBytes: 11,
+    });
+    const transaction = {
+      category: {
+        findFirst: jest.fn().mockResolvedValue({ id: categoryId, imageId: null }),
+        update: jest.fn(),
+      },
+      media: {
+        create: jest.fn().mockResolvedValue({
+          id: mediaId,
+          storageKey: 'catalog/2026/09/category.png',
+          mimeType: 'image/png',
+          altText: 'انگشتر',
+        }),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(
+      service.uploadForCategory(categoryId, file, { altText: 'انگشتر' }),
+    ).resolves.toEqual({
+      categoryId,
+      image: {
+        id: mediaId,
+        url: 'https://media.example/catalog/2026/09/category.png',
+        mimeType: 'image/png',
+        altText: 'انگشتر',
+      },
+    });
+    expect(transaction.category.update).toHaveBeenCalledWith({
+      where: { id: categoryId },
+      data: { imageId: mediaId },
+    });
+  });
+
+  it('detaches and deletes an orphaned category image from disk', async () => {
+    const categoryId = '10000000-0000-4000-8000-000000000001';
+    const mediaId = '10000000-0000-4000-8000-000000000002';
+    const transaction = {
+      category: {
+        findFirst: jest.fn().mockResolvedValue({ id: categoryId, imageId: mediaId }),
+        update: jest.fn(),
+      },
+      media: {
+        findUnique: jest.fn().mockResolvedValue({
+          storageKey: 'catalog/2026/09/category.webp',
+          _count: {
+            productMedia: 0,
+            categoryImages: 0,
+            brandImages: 0,
+            countryImages: 0,
+            siteSettingsCatalogHero: 0,
+          },
+        }),
+        update: jest.fn(),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(service.removeCategoryImage(categoryId)).resolves.toEqual({ removed: true });
+    expect(transaction.category.update).toHaveBeenCalledWith({
+      where: { id: categoryId },
+      data: { imageId: null },
+    });
+    expect(transaction.media.update).toHaveBeenCalledWith({
+      where: { id: mediaId },
+      data: { deletedAt: expect.any(Date) },
+    });
+    expect(localMediaStorage.delete).toHaveBeenCalledWith('catalog/2026/09/category.webp');
   });
 
   it('sets one product image as primary and clears the previous primary atomically', async () => {

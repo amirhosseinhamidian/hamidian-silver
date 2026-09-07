@@ -27,6 +27,7 @@ describe('admin navigation', () => {
       'alerts',
       'orders',
       'products',
+      'categories',
       'inventory',
       'plating',
       'fulfillment',

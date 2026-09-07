@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   parseAdminProduct,
+  parseAdminCategories,
   parseCatalogFilters,
   parseCatalogSizes,
   parseProductList,
@@ -102,5 +103,39 @@ describe('catalog model', () => {
       ]),
     ).toEqual([{ id: 'size-1', code: '52', label: 'سایز ۵۲', sortOrder: 2, active: false }]);
     expect(parseCatalogSizes([{ id: 'size-1', label: 'ناقص' }])).toBeNull();
+  });
+
+  it('parses category hierarchy, counts and public image URLs', () => {
+    expect(
+      parseAdminCategories([
+        {
+          id: 'category-2',
+          name: 'انگشتر زنانه',
+          slug: 'women-rings',
+          description: null,
+          parentId: 'category-1',
+          parent: { id: 'category-1', name: 'انگشتر' },
+          sortOrder: 2,
+          isActive: true,
+          childCount: 0,
+          productCount: 4,
+          createdAt: '2026-09-07T10:00:00.000Z',
+          updatedAt: '2026-09-07T11:00:00.000Z',
+          image: {
+            id: 'media-1',
+            url: 'https://api.example/media/category.webp',
+            mimeType: 'image/webp',
+            altText: 'انگشتر زنانه',
+          },
+        },
+      ]),
+    ).toMatchObject([
+      {
+        id: 'category-2',
+        parent: { id: 'category-1', name: 'انگشتر' },
+        productCount: 4,
+        image: { id: 'media-1', url: 'https://api.example/media/category.webp' },
+      },
+    ]);
   });
 });

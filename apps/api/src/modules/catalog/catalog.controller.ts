@@ -18,6 +18,7 @@ import { Public } from '../auth/public.decorator';
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CatalogMediaService } from './catalog-media.service';
+import { CatalogCategoriesService } from './catalog-categories.service';
 import { CatalogService } from './catalog.service';
 import { CatalogVariantsService } from './catalog-variants.service';
 import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query.dto';
@@ -38,6 +39,7 @@ import { UploadMediaDto } from './dto/upload-media.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateProductMediaDto } from './dto/update-product-media.dto';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
 import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
 import { UpdateSizeDto } from './dto/update-size.dto';
 import type { CatalogUploadFile } from './local-media-storage.service';
@@ -46,6 +48,7 @@ import type { CatalogUploadFile } from './local-media-storage.service';
 export class CatalogController {
   constructor(
     private readonly catalogService: CatalogService,
+    private readonly catalogCategoriesService: CatalogCategoriesService,
     private readonly catalogMediaService: CatalogMediaService,
     private readonly catalogVariantsService: CatalogVariantsService,
   ) {}
@@ -114,13 +117,62 @@ export class CatalogController {
   @Post('categories')
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
   createCategory(@Body() dto: CreateCategoryDto) {
-    return this.catalogService.createCategory(dto);
+    return this.catalogCategoriesService.create(dto);
+  }
+
+  @Post('categories/:categoryId/image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MEDIA_UPLOAD_LIMIT_BYTES, files: 1 },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        altText: { type: 'string', minLength: 1, maxLength: 255 },
+      },
+    },
+  })
+  uploadCategoryImage(
+    @Param('categoryId', new ParseUUIDPipe({ version: '4' })) categoryId: string,
+    @UploadedFile() file: CatalogUploadFile | undefined,
+    @Body() dto: UploadMediaDto,
+  ) {
+    return this.catalogMediaService.uploadForCategory(categoryId, file, dto);
+  }
+
+  @Delete('categories/:categoryId/image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  removeCategoryImage(
+    @Param('categoryId', new ParseUUIDPipe({ version: '4' })) categoryId: string,
+  ) {
+    return this.catalogMediaService.removeCategoryImage(categoryId);
   }
 
   @Get('categories')
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
   listCategories() {
-    return this.catalogService.listCategories();
+    return this.catalogCategoriesService.list();
+  }
+
+  @Patch('categories/:categoryId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  updateCategory(
+    @Param('categoryId', new ParseUUIDPipe({ version: '4' })) categoryId: string,
+    @Body() dto: UpdateCategoryDto,
+  ) {
+    return this.catalogCategoriesService.update(categoryId, dto);
+  }
+
+  @Delete('categories/:categoryId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  archiveCategory(@Param('categoryId', new ParseUUIDPipe({ version: '4' })) categoryId: string) {
+    return this.catalogCategoriesService.archive(categoryId);
   }
 
   @Post('brands')

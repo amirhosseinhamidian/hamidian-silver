@@ -4,7 +4,6 @@ import { ProductStatus, SizeMode } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query.dto';
-import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { PublicCatalogQueryDto, PublicCatalogSort } from './dto/public-catalog-query.dto';
@@ -17,31 +16,6 @@ export class CatalogService {
     private readonly prisma: PrismaService,
     private readonly publicMediaUrl: PublicMediaUrlService,
   ) {}
-
-  async createCategory(dto: CreateCategoryDto) {
-    if (dto.parentId) {
-      await this.requireCategory(dto.parentId);
-    }
-
-    if (dto.imageId) {
-      await this.requireMedia(dto.imageId);
-    }
-
-    return this.prisma.category.create({
-      data: {
-        name: dto.name,
-        slug: dto.slug,
-        description: dto.description,
-        parentId: dto.parentId,
-        imageId: dto.imageId,
-        sortOrder: dto.sortOrder ?? 0,
-        isActive: dto.isActive ?? true,
-      },
-      include: {
-        image: true,
-      },
-    });
-  }
 
   async createBrand(dto: CreateBrandDto) {
     if (dto.imageId) {
@@ -275,18 +249,6 @@ export class CatalogService {
           },
         },
       });
-    });
-  }
-
-  listCategories() {
-    return this.prisma.category.findMany({
-      where: {
-        deletedAt: null,
-      },
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      include: {
-        image: true,
-      },
     });
   }
 

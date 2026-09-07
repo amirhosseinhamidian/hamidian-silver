@@ -52,20 +52,6 @@ describe('CatalogService', () => {
     );
   });
 
-  it('requires category image media to exist', async () => {
-    prisma.media.findFirst.mockResolvedValue(null);
-
-    await expect(
-      service.createCategory({
-        name: 'Rings',
-        slug: 'rings',
-        imageId: '10000000-0000-4000-8000-000000000001',
-      }),
-    ).rejects.toBeInstanceOf(NotFoundException);
-
-    expect(prisma.category.create).not.toHaveBeenCalled();
-  });
-
   it('normalizes country ISO codes to uppercase', async () => {
     prisma.country.create.mockResolvedValue({
       id: '10000000-0000-4000-8000-000000000001',

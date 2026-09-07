@@ -8,6 +8,29 @@ export type CatalogLookup = Readonly<{
   name: string;
 }>;
 
+export type AdminCategoryImage = Readonly<{
+  id: string;
+  url: string;
+  altText: string | null;
+  mimeType: string;
+}>;
+
+export type AdminCategory = Readonly<{
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  sortOrder: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  parent: CatalogLookup | null;
+  parentId: string | null;
+  image: AdminCategoryImage | null;
+  childCount: number;
+  productCount: number;
+}>;
+
 export type CatalogSize = Readonly<{
   id: string;
   code: string;
@@ -228,6 +251,54 @@ export function parseCatalogLookups(value: unknown): readonly CatalogLookup[] | 
     .map((item) => lookup(item))
     .filter((item): item is CatalogLookup => item !== null);
   return items.length === value.length ? items : null;
+}
+
+function parseCategory(value: unknown): AdminCategory | null {
+  const item = record(value);
+  const id = text(item?.id);
+  const name = text(item?.name);
+  const slug = text(item?.slug);
+  const createdAt = text(item?.createdAt);
+  const updatedAt = text(item?.updatedAt);
+  if (!id || !name || !slug || !createdAt || !updatedAt) return null;
+
+  const rawImage = record(item?.image);
+  const imageId = text(rawImage?.id);
+  const imageUrl = text(rawImage?.url);
+  const imageMimeType = text(rawImage?.mimeType);
+  const image =
+    imageId && imageUrl && imageMimeType
+      ? {
+          id: imageId,
+          url: imageUrl,
+          altText: text(rawImage?.altText),
+          mimeType: imageMimeType,
+        }
+      : null;
+
+  return {
+    id,
+    name,
+    slug,
+    description: text(item?.description),
+    sortOrder: number(item?.sortOrder) ?? 0,
+    active: item?.isActive !== false,
+    createdAt,
+    updatedAt,
+    parent: lookup(item?.parent),
+    parentId: text(item?.parentId),
+    image,
+    childCount: number(item?.childCount) ?? 0,
+    productCount: number(item?.productCount) ?? 0,
+  };
+}
+
+export function parseAdminCategories(value: unknown): readonly AdminCategory[] | null {
+  if (!Array.isArray(value)) return null;
+  const categories = value
+    .map(parseCategory)
+    .filter((category): category is AdminCategory => category !== null);
+  return categories.length === value.length ? categories : null;
 }
 
 export function parseCatalogSizes(value: unknown): readonly CatalogSize[] | null {

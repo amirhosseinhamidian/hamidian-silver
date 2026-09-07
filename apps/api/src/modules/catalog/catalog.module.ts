@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
 import { CatalogController } from './catalog.controller';
+import { CatalogCategoriesService } from './catalog-categories.service';
 import { CatalogMediaService } from './catalog-media.service';
 import { CatalogService } from './catalog.service';
 import { CatalogVariantsService } from './catalog-variants.service';
@@ -12,6 +13,7 @@ import { PublicMediaUrlService } from './public-media-url.service';
   controllers: [CatalogController],
   providers: [
     CatalogService,
+    CatalogCategoriesService,
     CatalogMediaService,
     CatalogVariantsService,
     LocalMediaStorageService,
