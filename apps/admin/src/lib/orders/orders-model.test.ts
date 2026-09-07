@@ -21,6 +21,12 @@ const payload = [
     paidAt: '2026-09-07T12:05:00.000Z',
     cancelledAt: null,
     deliveredAt: null,
+    returnAuthorizedAt: '2026-09-07T15:00:00.000Z',
+    returnAuthorizationReason: 'ارسال کالای اشتباه تأیید شد.',
+    returnAuthorizedBy: {
+      firstName: 'مدیر',
+      lastName: 'فروش',
+    },
     createdAt: '2026-09-07T12:00:00.000Z',
     updatedAt: '2026-09-07T12:05:00.000Z',
     user: {
@@ -100,6 +106,11 @@ describe('admin orders model', () => {
         customer: expect.objectContaining({ name: 'علی رضایی' }),
         address: expect.objectContaining({ postalCode: '1234567890' }),
         payment: expect.objectContaining({ status: 'PAID' }),
+        returnAuthorization: {
+          authorizedAt: '2026-09-07T15:00:00.000Z',
+          reason: 'ارسال کالای اشتباه تأیید شد.',
+          actor: 'مدیر فروش',
+        },
       }),
     );
     expect(orders?.[0]?.items[0]).toEqual(

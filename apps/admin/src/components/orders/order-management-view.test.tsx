@@ -1,8 +1,12 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { OrderManagementView } from '@/components/orders/order-management-view';
 import type { AdminOrder } from '@/lib/orders/orders-model';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 const order: AdminOrder = {
   id: 'order-1',
@@ -18,6 +22,7 @@ const order: AdminOrder = {
   paidAt: '2026-09-07T12:05:00.000Z',
   cancelledAt: null,
   deliveredAt: null,
+  returnAuthorization: null,
   createdAt: '2026-09-07T12:00:00.000Z',
   updatedAt: '2026-09-07T12:05:00.000Z',
   customer: { id: 'user-1', name: 'علی رضایی', phone: '09121234567' },

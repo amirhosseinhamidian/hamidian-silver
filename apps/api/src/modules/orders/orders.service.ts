@@ -133,6 +133,14 @@ const ADMIN_ORDER_LIST_INCLUDE = {
       lastName: true,
     },
   },
+  returnAuthorizedBy: {
+    select: {
+      id: true,
+      phone: true,
+      firstName: true,
+      lastName: true,
+    },
+  },
   items: true,
   shippingAddress: true,
   payment: {

@@ -86,6 +86,12 @@ export type AdminOrderTimelineEntry = Readonly<{
   createdAt: string;
 }>;
 
+export type AdminOrderReturnAuthorization = Readonly<{
+  authorizedAt: string;
+  reason: string | null;
+  actor: string;
+}>;
+
 export type AdminOrder = Readonly<{
   id: string;
   orderNumber: string;
@@ -100,6 +106,7 @@ export type AdminOrder = Readonly<{
   paidAt: string | null;
   cancelledAt: string | null;
   deliveredAt: string | null;
+  returnAuthorization: AdminOrderReturnAuthorization | null;
   createdAt: string;
   updatedAt: string;
   customer: AdminOrderCustomer;
@@ -372,6 +379,7 @@ function parseOrder(value: unknown): AdminOrder | null {
   const paidAt = nullableDate(order.paidAt);
   const cancelledAt = nullableDate(order.cancelledAt);
   const deliveredAt = nullableDate(order.deliveredAt);
+  const returnAuthorizedAt = nullableDate(order.returnAuthorizedAt);
   const createdAt = date(order.createdAt);
   const updatedAt = date(order.updatedAt);
   const merchandiseTotalToman = number(order.merchandiseTotalToman);
@@ -399,6 +407,7 @@ function parseOrder(value: unknown): AdminOrder | null {
     (order.paidAt != null && !paidAt) ||
     (order.cancelledAt != null && !cancelledAt) ||
     (order.deliveredAt != null && !deliveredAt) ||
+    (order.returnAuthorizedAt != null && !returnAuthorizedAt) ||
     !Array.isArray(order.items) ||
     !Array.isArray(order.statusHistory)
   )
@@ -432,6 +441,13 @@ function parseOrder(value: unknown): AdminOrder | null {
     paidAt,
     cancelledAt,
     deliveredAt,
+    returnAuthorization: returnAuthorizedAt
+      ? {
+          authorizedAt: returnAuthorizedAt,
+          reason: text(order.returnAuthorizationReason),
+          actor: actorLabel(order.returnAuthorizedBy),
+        }
+      : null,
     createdAt,
     updatedAt,
     customer: { id: customerId, name: customerName, phone: customerPhone },

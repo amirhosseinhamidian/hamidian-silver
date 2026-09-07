@@ -450,6 +450,7 @@ describe('OrdersService', () => {
         take: 25,
         include: expect.objectContaining({
           user: expect.any(Object),
+          returnAuthorizedBy: expect.any(Object),
           items: true,
           shippingAddress: true,
           payment: expect.any(Object),

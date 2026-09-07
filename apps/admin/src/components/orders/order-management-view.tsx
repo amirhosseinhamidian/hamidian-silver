@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
+import { OrderOperations } from '@/components/orders/order-operations';
 import { Alert } from '@/components/ui/alert';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { BottomSheet, BottomSheetContent, BottomSheetTrigger } from '@/components/ui/bottom-sheet';
@@ -35,6 +36,8 @@ import {
 type OrderManagementViewProps = Readonly<{
   orders: readonly AdminOrder[];
   failed: boolean;
+  canUpdateStatus?: boolean;
+  canCancel?: boolean;
 }>;
 
 const orderStatusPresentation: Record<AdminOrderStatus, { label: string; tone: BadgeTone }> = {
@@ -150,7 +153,15 @@ function OrderItemCard({ item }: Readonly<{ item: AdminOrderItem }>) {
   );
 }
 
-function OrderDetails({ order }: Readonly<{ order: AdminOrder }>) {
+function OrderDetails({
+  order,
+  canUpdateStatus,
+  canCancel,
+}: Readonly<{
+  order: AdminOrder;
+  canUpdateStatus: boolean;
+  canCancel: boolean;
+}>) {
   const latestAttempt = order.payment?.attempts[0];
   return (
     <div className="space-y-4">
@@ -169,6 +180,12 @@ function OrderDetails({ order }: Readonly<{ order: AdminOrder }>) {
           </Badge>
         ) : null}
       </div>
+
+      <OrderOperations
+        order={order}
+        canUpdateStatus={canUpdateStatus}
+        canCancel={canCancel}
+      />
 
       <Card title="خلاصه مالی" description="مبالغ ثبت‌شده در زمان سفارش">
         <DetailRows
@@ -322,8 +339,15 @@ function OrderDetails({ order }: Readonly<{ order: AdminOrder }>) {
 
 function OrderDetailsSheet({
   order,
+  canUpdateStatus,
+  canCancel,
   triggerLabel = 'مشاهده',
-}: Readonly<{ order: AdminOrder; triggerLabel?: string }>) {
+}: Readonly<{
+  order: AdminOrder;
+  canUpdateStatus: boolean;
+  canCancel: boolean;
+  triggerLabel?: string;
+}>) {
   return (
     <BottomSheet>
       <BottomSheetTrigger asChild>
@@ -336,13 +360,25 @@ function OrderDetailsSheet({
         description={`ثبت‌شده در ${formatAdminDateTime(order.createdAt)}`}
         height="full"
       >
-        <OrderDetails order={order} />
+        <OrderDetails
+          order={order}
+          canUpdateStatus={canUpdateStatus}
+          canCancel={canCancel}
+        />
       </BottomSheetContent>
     </BottomSheet>
   );
 }
 
-function OrderMobileCard({ order }: Readonly<{ order: AdminOrder }>) {
+function OrderMobileCard({
+  order,
+  canUpdateStatus,
+  canCancel,
+}: Readonly<{
+  order: AdminOrder;
+  canUpdateStatus: boolean;
+  canCancel: boolean;
+}>) {
   return (
     <MobileDataCard
       eyebrow={toPersianDigits(order.orderNumber)}
@@ -360,12 +396,23 @@ function OrderMobileCard({ order }: Readonly<{ order: AdminOrder }>) {
       ]}
       detailsTitle={`سفارش ${toPersianDigits(order.orderNumber)}`}
       detailsDescription={`مشتری: ${order.customer.name ?? formatAdminPhone(order.customer.phone)}`}
-      details={<OrderDetails order={order} />}
+      details={
+        <OrderDetails
+          order={order}
+          canUpdateStatus={canUpdateStatus}
+          canCancel={canCancel}
+        />
+      }
     />
   );
 }
 
-export function OrderManagementView({ orders, failed }: OrderManagementViewProps) {
+export function OrderManagementView({
+  orders,
+  failed,
+  canUpdateStatus = false,
+  canCancel = false,
+}: OrderManagementViewProps) {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
@@ -459,7 +506,13 @@ export function OrderManagementView({ orders, failed }: OrderManagementViewProps
       id: 'action',
       header: 'عملیات',
       align: 'end',
-      cell: (order) => <OrderDetailsSheet order={order} />,
+      cell: (order) => (
+        <OrderDetailsSheet
+          order={order}
+          canUpdateStatus={canUpdateStatus}
+          canCancel={canCancel}
+        />
+      ),
     },
   ];
 
@@ -603,7 +656,13 @@ export function OrderManagementView({ orders, failed }: OrderManagementViewProps
         </FilterBar>
         <ResponsiveDataView
           mobileLabel="کارت‌های سفارش"
-          renderMobileCard={(order) => <OrderMobileCard order={order} />}
+          renderMobileCard={(order) => (
+            <OrderMobileCard
+              order={order}
+              canUpdateStatus={canUpdateStatus}
+              canCancel={canCancel}
+            />
+          )}
           caption="جدول سفارش‌ها"
           columns={columns}
           rows={filteredOrders}
