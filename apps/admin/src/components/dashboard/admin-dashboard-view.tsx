@@ -140,7 +140,7 @@ function PeriodSelector({ period }: Readonly<{ period: DashboardPeriod }>) {
           className={cn(
             'rounded-md px-3 py-1.5 text-xs font-bold outline-none transition-colors focus-visible:shadow-[var(--admin-focus-ring)]',
             option === period
-              ? 'bg-[var(--admin-color-ink)] text-white'
+              ? 'bg-[var(--admin-color-ink)] text-white!'
               : 'text-[var(--admin-color-muted)] hover:bg-[var(--admin-color-surface-hover)] hover:text-[var(--admin-color-ink)]',
           )}
         >

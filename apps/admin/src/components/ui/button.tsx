@@ -11,7 +11,7 @@ const baseClassName =
 
 const variantClassNames: Record<ButtonVariant, string> = {
   primary:
-    'border border-[var(--admin-color-primary)] bg-[var(--admin-color-primary)] text-white hover:border-[var(--admin-color-primary-hover)] hover:bg-[var(--admin-color-primary-hover)]',
+    'border border-[var(--admin-color-primary)] bg-[var(--admin-color-primary)] !text-white hover:border-[var(--admin-color-primary-hover)] hover:bg-[var(--admin-color-primary-hover)]',
   secondary:
     'border border-[var(--admin-color-primary-soft)] bg-[var(--admin-color-primary-soft)] text-[var(--admin-color-primary)] hover:border-blue-100 hover:bg-blue-100',
   outline:
@@ -89,8 +89,8 @@ export function ButtonLink({
 }: ButtonLinkProps) {
   return (
     <Link
-      className={cn(baseClassName, variantClassNames[variant], sizeClassNames[size], className)}
       {...props}
+      className={cn(baseClassName, variantClassNames[variant], sizeClassNames[size], className)}
     >
       {leadingIcon}
       <span>{children}</span>

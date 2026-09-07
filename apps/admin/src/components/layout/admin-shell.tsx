@@ -101,7 +101,7 @@ function OperationalStatus({ inverse = false }: Readonly<{ inverse?: boolean }>)
         <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:animate-none" />
         <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
       </span>
-      نشست مدیریتی فعال
+      اتصال مدیریتی فعال
     </div>
   );
 }

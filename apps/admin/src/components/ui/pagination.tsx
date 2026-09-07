@@ -94,7 +94,7 @@ export function Pagination({
               className={cn(
                 pageClassName,
                 item === safeCurrentPage
-                  ? 'border-[var(--admin-color-primary)] bg-[var(--admin-color-primary)] text-white'
+                  ? 'border-[var(--admin-color-primary)] bg-[var(--admin-color-primary)] text-white!'
                   : 'border-transparent text-[var(--admin-color-muted)] hover:border-[var(--admin-color-border)] hover:bg-[var(--admin-color-surface-hover)] hover:text-[var(--admin-color-ink)]',
               )}
             >
