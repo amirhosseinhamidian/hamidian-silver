@@ -33,6 +33,7 @@ describe('CatalogService', () => {
       findMany: jest.fn(),
       findFirst: jest.fn(),
       count: jest.fn(),
+      update: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -265,6 +266,83 @@ describe('CatalogService', () => {
     };
 
     await expect(service.createProduct(dto)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('filters and paginates the administrative product list', async () => {
+    const products = [{ id: '10000000-0000-4000-8000-000000000001' }];
+    prisma.$transaction.mockResolvedValue([products, 21]);
+
+    await expect(
+      service.listProducts({ q: 'ring', status: ProductStatus.ACTIVE, page: 2, limit: 10 }),
+    ).resolves.toEqual({ items: products, total: 21, page: 2, limit: 10 });
+
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 10,
+        take: 10,
+        where: expect.objectContaining({ status: ProductStatus.ACTIVE }),
+      }),
+    );
+  });
+
+  it('updates product fields and replaces category assignments atomically', async () => {
+    const productId = '10000000-0000-4000-8000-000000000001';
+    const categoryId = '10000000-0000-4000-8000-000000000002';
+    const transaction = {
+      product: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: productId,
+          salePriceToman: 4_000_000,
+          compareAtPriceToman: 5_000_000,
+        }),
+        update: jest.fn(),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ id: productId, name: 'Updated ring' }),
+      },
+      brand: { findFirst: jest.fn() },
+      country: { findFirst: jest.fn() },
+      category: { findMany: jest.fn().mockResolvedValue([{ id: categoryId }]) },
+      productCategory: {
+        deleteMany: jest.fn(),
+        createMany: jest.fn(),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(
+      service.updateProduct(productId, {
+        name: 'Updated ring',
+        salePriceToman: 4_200_000,
+        categoryIds: [categoryId],
+      }),
+    ).resolves.toEqual({ id: productId, name: 'Updated ring' });
+
+    expect(transaction.product.update).toHaveBeenCalledWith({
+      where: { id: productId },
+      data: expect.objectContaining({ name: 'Updated ring', salePriceToman: 4_200_000 }),
+    });
+    expect(transaction.productCategory.deleteMany).toHaveBeenCalledWith({
+      where: { productId },
+    });
+    expect(transaction.productCategory.createMany).toHaveBeenCalledWith({
+      data: [{ productId, categoryId }],
+    });
+  });
+
+  it('archives a product through the shared status transition', async () => {
+    const productId = '10000000-0000-4000-8000-000000000001';
+    prisma.product.findFirst.mockResolvedValue({ id: productId });
+    prisma.product.update.mockResolvedValue({ id: productId, status: ProductStatus.ARCHIVED });
+
+    await expect(service.updateProductStatus(productId, ProductStatus.ARCHIVED)).resolves.toEqual({
+      id: productId,
+      status: ProductStatus.ARCHIVED,
+    });
+    expect(prisma.product.update).toHaveBeenCalledWith({
+      where: { id: productId },
+      data: { status: ProductStatus.ARCHIVED },
+    });
   });
 
   it('returns only active categories through the public catalog projection', async () => {

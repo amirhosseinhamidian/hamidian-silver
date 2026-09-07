@@ -3,24 +3,22 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
+  ParseUUIDPipe,
   Post,
   Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import {
-  ApiBody,
-  ApiConsumes,
-  ApiNotFoundResponse,
-  ApiOkResponse,
-} from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
 import { MEDIA_UPLOAD_LIMIT_BYTES } from '../../config/media-storage';
 import { Public } from '../auth/public.decorator';
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CatalogMediaService } from './catalog-media.service';
 import { CatalogService } from './catalog.service';
+import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query.dto';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
@@ -34,6 +32,8 @@ import {
   PublicCatalogProductListDto,
 } from './dto/public-catalog-response.dto';
 import { UploadMediaDto } from './dto/upload-media.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
+import { UpdateProductStatusDto } from './dto/update-product-status.dto';
 import type { CatalogUploadFile } from './local-media-storage.service';
 
 @Controller('catalog')
@@ -100,10 +100,7 @@ export class CatalogController {
       },
     },
   })
-  uploadMedia(
-    @UploadedFile() file: CatalogUploadFile | undefined,
-    @Body() dto: UploadMediaDto,
-  ) {
+  uploadMedia(@UploadedFile() file: CatalogUploadFile | undefined, @Body() dto: UploadMediaDto) {
     return this.catalogMediaService.upload(file, dto);
   }
 
@@ -163,7 +160,31 @@ export class CatalogController {
 
   @Get('products')
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
-  listProducts() {
-    return this.catalogService.listProducts();
+  listProducts(@Query() query: AdminCatalogProductsQueryDto) {
+    return this.catalogService.listProducts(query);
+  }
+
+  @Get('products/:productId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
+  getProduct(@Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string) {
+    return this.catalogService.getProduct(productId);
+  }
+
+  @Patch('products/:productId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  updateProduct(
+    @Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string,
+    @Body() dto: UpdateProductDto,
+  ) {
+    return this.catalogService.updateProduct(productId, dto);
+  }
+
+  @Patch('products/:productId/status')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  updateProductStatus(
+    @Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string,
+    @Body() dto: UpdateProductStatusDto,
+  ) {
+    return this.catalogService.updateProductStatus(productId, dto.status);
   }
 }

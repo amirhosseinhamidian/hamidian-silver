@@ -3,11 +3,13 @@ import { calculatePlatingPriceToman } from '../../common/plating-price';
 import { ProductStatus, SizeMode } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
+import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CreateSizeDto } from './dto/create-size.dto';
 import { PublicCatalogQueryDto, PublicCatalogSort } from './dto/public-catalog-query.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 import { PublicMediaUrlService } from './public-media-url.service';
 
 @Injectable()
@@ -331,39 +333,190 @@ export class CatalogService {
     });
   }
 
-  listProducts() {
-    return this.prisma.product.findMany({
-      where: {
-        deletedAt: null,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+  async listProducts(query: AdminCatalogProductsQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const search = query.q?.trim();
+    const where = {
+      deletedAt: null,
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.brandId ? { brandId: query.brandId } : {}),
+      ...(query.categoryId ? { categories: { some: { categoryId: query.categoryId } } } : {}),
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' as const } },
+              { slug: { contains: search, mode: 'insensitive' as const } },
+              {
+                variants: {
+                  some: {
+                    deletedAt: null,
+                    sku: { contains: search, mode: 'insensitive' as const },
+                  },
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.product.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          brand: true,
+          country: true,
+          categories: {
+            include: {
+              category: true,
+            },
+          },
+          variants: {
+            where: {
+              deletedAt: null,
+            },
+            include: {
+              size: true,
+            },
+          },
+          media: {
+            orderBy: {
+              sortOrder: 'asc',
+            },
+            include: {
+              media: true,
+            },
+          },
+        },
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return { items, total, page, limit };
+  }
+
+  async getProduct(productId: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, deletedAt: null },
       include: {
         brand: true,
         country: true,
-        categories: {
-          include: {
-            category: true,
-          },
-        },
+        categories: { include: { category: true } },
         variants: {
-          where: {
-            deletedAt: null,
-          },
-          include: {
-            size: true,
-          },
+          where: { deletedAt: null },
+          include: { size: true },
         },
         media: {
-          orderBy: {
-            sortOrder: 'asc',
-          },
-          include: {
-            media: true,
-          },
+          orderBy: { sortOrder: 'asc' },
+          include: { media: true },
         },
       },
+    });
+
+    if (!product) throw new NotFoundException('Product was not found.');
+    return product;
+  }
+
+  async updateProduct(productId: string, dto: UpdateProductDto) {
+    return this.prisma.$transaction(async (transaction) => {
+      const current = await transaction.product.findFirst({
+        where: { id: productId, deletedAt: null },
+        select: { id: true, salePriceToman: true, compareAtPriceToman: true },
+      });
+
+      if (!current) throw new NotFoundException('Product was not found.');
+
+      if (dto.brandId) {
+        const brand = await transaction.brand.findFirst({
+          where: { id: dto.brandId, isActive: true, deletedAt: null },
+          select: { id: true },
+        });
+        if (!brand) throw new NotFoundException('Brand was not found.');
+      }
+
+      if (dto.countryId) {
+        const country = await transaction.country.findFirst({
+          where: { id: dto.countryId, isActive: true, deletedAt: null },
+          select: { id: true },
+        });
+        if (!country) throw new NotFoundException('Country was not found.');
+      }
+
+      if (dto.categoryIds) {
+        const categories = await transaction.category.findMany({
+          where: { id: { in: dto.categoryIds }, isActive: true, deletedAt: null },
+          select: { id: true },
+        });
+        if (categories.length !== dto.categoryIds.length) {
+          throw new NotFoundException('One or more categories were not found.');
+        }
+      }
+
+      const salePriceToman =
+        dto.salePriceToman === undefined ? current.salePriceToman : dto.salePriceToman;
+      const compareAtPriceToman =
+        dto.compareAtPriceToman === undefined
+          ? current.compareAtPriceToman
+          : dto.compareAtPriceToman;
+      if (
+        salePriceToman !== null &&
+        compareAtPriceToman !== null &&
+        compareAtPriceToman <= salePriceToman
+      ) {
+        throw new BadRequestException('Compare price must be greater than sale price.');
+      }
+
+      await transaction.product.update({
+        where: { id: productId },
+        data: {
+          name: dto.name,
+          slug: dto.slug,
+          shortDescription: dto.shortDescription,
+          description: dto.description,
+          brandId: dto.brandId,
+          countryId: dto.countryId,
+          salePriceToman: dto.salePriceToman,
+          compareAtPriceToman: dto.compareAtPriceToman,
+        },
+      });
+
+      if (dto.categoryIds) {
+        await transaction.productCategory.deleteMany({ where: { productId } });
+        if (dto.categoryIds.length > 0) {
+          await transaction.productCategory.createMany({
+            data: dto.categoryIds.map((categoryId) => ({ productId, categoryId })),
+          });
+        }
+      }
+
+      return transaction.product.findUniqueOrThrow({
+        where: { id: productId },
+        include: {
+          brand: true,
+          country: true,
+          categories: { include: { category: true } },
+          variants: { where: { deletedAt: null }, include: { size: true } },
+          media: { orderBy: { sortOrder: 'asc' }, include: { media: true } },
+        },
+      });
+    });
+  }
+
+  async updateProductStatus(productId: string, status: ProductStatus) {
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!product) throw new NotFoundException('Product was not found.');
+
+    return this.prisma.product.update({
+      where: { id: productId },
+      data: { status },
     });
   }
 

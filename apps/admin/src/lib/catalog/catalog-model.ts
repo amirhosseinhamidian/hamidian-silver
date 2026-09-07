@@ -1,0 +1,221 @@
+import { toAsciiDigits } from '@/lib/presentation/formatters';
+
+export type ProductStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+export type ProductSizeMode = 'NONE' | 'FREE_SIZE' | 'SIZED';
+
+export type CatalogLookup = Readonly<{
+  id: string;
+  name: string;
+}>;
+
+export type CatalogSize = Readonly<{
+  id: string;
+  label: string;
+}>;
+
+export type AdminProductVariant = Readonly<{
+  id: string;
+  sku: string;
+  name: string | null;
+  weightGrams: number | null;
+  active: boolean;
+  size: CatalogSize | null;
+}>;
+
+export type AdminProduct = Readonly<{
+  id: string;
+  name: string;
+  slug: string;
+  shortDescription: string | null;
+  description: string | null;
+  status: ProductStatus;
+  sizeMode: ProductSizeMode;
+  salePriceToman: number | null;
+  compareAtPriceToman: number | null;
+  createdAt: string;
+  updatedAt: string;
+  brand: CatalogLookup | null;
+  country: CatalogLookup | null;
+  categories: readonly CatalogLookup[];
+  variants: readonly AdminProductVariant[];
+  mediaCount: number;
+}>;
+
+export type CatalogFilters = Readonly<{
+  q: string;
+  status: ProductStatus | '';
+  brandId: string;
+  categoryId: string;
+  page: number;
+  limit: number;
+}>;
+
+export type ProductListResult = Readonly<{
+  items: readonly AdminProduct[];
+  total: number;
+  page: number;
+  limit: number;
+}>;
+
+const STATUSES = new Set<ProductStatus>(['DRAFT', 'ACTIVE', 'ARCHIVED']);
+const SIZE_MODES = new Set<ProductSizeMode>(['NONE', 'FREE_SIZE', 'SIZED']);
+
+function record(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+}
+
+function text(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+function number(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function lookup(value: unknown, labelKey: 'name' | 'label' = 'name'): CatalogLookup | null {
+  const item = record(value);
+  const id = text(item?.id);
+  const name = text(item?.[labelKey]);
+  return id && name ? { id, name } : null;
+}
+
+function parseVariant(value: unknown): AdminProductVariant | null {
+  const item = record(value);
+  const id = text(item?.id);
+  const sku = text(item?.sku);
+  if (!id || !sku) return null;
+
+  const parsedSize = lookup(item?.size, 'label');
+  return {
+    id,
+    sku,
+    name: text(item?.name),
+    weightGrams: number(item?.weightGrams),
+    active: item?.isActive !== false,
+    size: parsedSize ? { id: parsedSize.id, label: parsedSize.name } : null,
+  };
+}
+
+export function parseAdminProduct(value: unknown): AdminProduct | null {
+  const item = record(value);
+  const id = text(item?.id);
+  const name = text(item?.name);
+  const slug = text(item?.slug);
+  const status = text(item?.status) as ProductStatus | null;
+  const sizeMode = text(item?.sizeMode) as ProductSizeMode | null;
+  const createdAt = text(item?.createdAt);
+  const updatedAt = text(item?.updatedAt);
+  if (
+    !id ||
+    !name ||
+    !slug ||
+    !status ||
+    !STATUSES.has(status) ||
+    !sizeMode ||
+    !SIZE_MODES.has(sizeMode) ||
+    !createdAt ||
+    !updatedAt
+  ) {
+    return null;
+  }
+
+  const categoryRelations = Array.isArray(item?.categories) ? item.categories : [];
+  const categories = categoryRelations
+    .map((relation) => lookup(record(relation)?.category ?? relation))
+    .filter((category): category is CatalogLookup => category !== null);
+  const variants = (Array.isArray(item?.variants) ? item.variants : [])
+    .map(parseVariant)
+    .filter((variant): variant is AdminProductVariant => variant !== null);
+
+  return {
+    id,
+    name,
+    slug,
+    shortDescription: text(item?.shortDescription),
+    description: text(item?.description),
+    status,
+    sizeMode,
+    salePriceToman: number(item?.salePriceToman),
+    compareAtPriceToman: number(item?.compareAtPriceToman),
+    createdAt,
+    updatedAt,
+    brand: lookup(item?.brand),
+    country: lookup(item?.country),
+    categories,
+    variants,
+    mediaCount: Array.isArray(item?.media) ? item.media.length : 0,
+  };
+}
+
+export function parseProductList(value: unknown): ProductListResult | null {
+  const payload = record(value);
+  const rawItems = Array.isArray(value)
+    ? value
+    : Array.isArray(payload?.items)
+      ? payload.items
+      : null;
+  if (!rawItems) return null;
+
+  const items = rawItems
+    .map(parseAdminProduct)
+    .filter((product): product is AdminProduct => product !== null);
+  if (items.length !== rawItems.length) return null;
+
+  return {
+    items,
+    total: number(payload?.total) ?? items.length,
+    page: number(payload?.page) ?? 1,
+    limit: number(payload?.limit) ?? Math.max(items.length, 1),
+  };
+}
+
+export function parseCatalogLookups(value: unknown): readonly CatalogLookup[] | null {
+  if (!Array.isArray(value)) return null;
+  const items = value
+    .map((item) => lookup(item))
+    .filter((item): item is CatalogLookup => item !== null);
+  return items.length === value.length ? items : null;
+}
+
+export function parseCatalogSizes(value: unknown): readonly CatalogSize[] | null {
+  if (!Array.isArray(value)) return null;
+  const items = value
+    .map((item) => lookup(item, 'label'))
+    .filter((item): item is CatalogLookup => item !== null)
+    .map((item) => ({ id: item.id, label: item.name }));
+  return items.length === value.length ? items : null;
+}
+
+function first(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
+}
+
+export function parseCatalogFilters(
+  params: Record<string, string | string[] | undefined>,
+): CatalogFilters {
+  const statusValue = first(params.status) as ProductStatus;
+  const parsedPage = Number(toAsciiDigits(first(params.page)));
+  const parsedLimit = Number(toAsciiDigits(first(params.limit)));
+
+  return {
+    q: first(params.q).trim().slice(0, 100),
+    status: STATUSES.has(statusValue) ? statusValue : '',
+    brandId: first(params.brandId) === 'all' ? '' : first(params.brandId),
+    categoryId: first(params.categoryId) === 'all' ? '' : first(params.categoryId),
+    page: Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1,
+    limit: [10, 20, 50].includes(parsedLimit) ? parsedLimit : 20,
+  };
+}
+
+export function productStatusLabel(status: ProductStatus): string {
+  return status === 'ACTIVE' ? 'منتشرشده' : status === 'DRAFT' ? 'پیش‌نویس' : 'آرشیوشده';
+}
+
+export function productSizeModeLabel(mode: ProductSizeMode): string {
+  return mode === 'SIZED' ? 'سایزبندی‌شده' : mode === 'FREE_SIZE' ? 'فری‌سایز' : 'بدون سایز';
+}

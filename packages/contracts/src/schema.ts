@@ -244,6 +244,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/products/{productId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_getProduct_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogController_updateProduct_v1"];
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogController_updateProductStatus_v1"];
+        trace?: never;
+    };
     "/api/v1/finance/supplier-payables": {
         parameters: {
             query?: never;
@@ -2232,6 +2264,23 @@ export interface components {
             variants: components["schemas"]["CreateProductVariantDto"][];
             media?: components["schemas"]["CreateProductMediaDto"][];
         };
+        UpdateProductDto: {
+            name?: string;
+            slug?: string;
+            shortDescription?: string | null;
+            description?: string | null;
+            /** Format: uuid */
+            brandId?: string | null;
+            /** Format: uuid */
+            countryId?: string | null;
+            salePriceToman?: number | null;
+            compareAtPriceToman?: number | null;
+            categoryIds?: string[];
+        };
+        UpdateProductStatusDto: {
+            /** @enum {string} */
+            status: "DRAFT" | "ACTIVE" | "ARCHIVED";
+        };
         MarkSupplierPayablePaidDto: {
             paymentReference?: string;
             note?: string;
@@ -3101,7 +3150,14 @@ export interface operations {
     };
     CatalogController_listProducts_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                q?: string;
+                status?: "DRAFT" | "ACTIVE" | "ARCHIVED";
+                brandId?: string;
+                categoryId?: string;
+                page?: number;
+                limit?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3112,9 +3168,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": Record<string, never>;
-                };
+                content?: never;
             };
         };
     };
@@ -3138,6 +3192,75 @@ export interface operations {
                 content: {
                     "application/json": Record<string, never>;
                 };
+            };
+        };
+    };
+    CatalogController_getProduct_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    CatalogController_updateProduct_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    CatalogController_updateProductStatus_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductStatusDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
