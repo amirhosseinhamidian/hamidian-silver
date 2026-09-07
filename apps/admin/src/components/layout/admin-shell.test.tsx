@@ -52,6 +52,8 @@ describe('AdminShell', () => {
     renderShell();
 
     expect(screen.getByTestId('desktop-admin-sidebar')).toHaveClass('hidden', 'lg:flex');
+    expect(screen.getByTestId('desktop-admin-sidebar')).toHaveClass('right-0');
+    expect(screen.getByTestId('desktop-admin-sidebar').parentElement).toHaveClass('lg:pr-72');
     expect(screen.getByTestId('mobile-admin-navigation')).toHaveClass('lg:hidden');
     expect(screen.getByRole('navigation', { name: 'مسیر صفحه' })).toHaveTextContent('محصولات');
     expect(screen.getAllByRole('link', { name: 'محصولات' })).toHaveLength(1);
@@ -62,7 +64,7 @@ describe('AdminShell', () => {
     renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: 'بازکردن منوی مدیریت' }));
-    expect(await screen.findByRole('dialog', { name: 'منوی مدیریت' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'منوی مدیریت' })).toHaveClass('right-0');
     expect(screen.queryByRole('link', { name: 'پرداخت و مالی' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'بستن منوی مدیریت' }));

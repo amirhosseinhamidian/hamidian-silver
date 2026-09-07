@@ -135,10 +135,10 @@ export function AdminShell({ children, account, navigation }: AdminShellProps) {
   }
 
   return (
-    <div data-app-shell="admin" className="min-h-dvh bg-[var(--admin-color-canvas)] lg:pe-72">
+    <div data-app-shell="admin" className="min-h-dvh bg-[var(--admin-color-canvas)] lg:pr-72">
       <aside
         data-testid="desktop-admin-sidebar"
-        className="fixed inset-y-0 end-0 z-40 hidden w-72 flex-col border-s border-slate-800 bg-slate-950 text-white lg:flex"
+        className="fixed inset-y-0 right-0 z-40 hidden w-72 flex-col border-l border-slate-800 bg-slate-950 text-white lg:flex"
       >
         <div className="border-b border-white/10 px-5 py-5">
           <AdminBrand inverse />
@@ -293,7 +293,7 @@ export function AdminShell({ children, account, navigation }: AdminShellProps) {
           <DialogPrimitive.Overlay className="admin-drawer-overlay fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[2px] lg:hidden" />
           <DialogPrimitive.Content
             aria-describedby="admin-mobile-navigation-description"
-            className="admin-drawer-content fixed inset-y-0 end-0 z-[51] flex w-[min(88vw,22rem)] flex-col border-s border-slate-800 bg-slate-950 text-white shadow-[var(--admin-shadow-lg)] outline-none lg:hidden"
+            className="admin-drawer-content fixed inset-y-0 right-0 z-[51] flex w-[min(88vw,22rem)] flex-col border-l border-slate-800 bg-slate-950 text-white shadow-[var(--admin-shadow-lg)] outline-none lg:hidden"
           >
             <header className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-4">
               <DialogPrimitive.Title className="sr-only">منوی مدیریت</DialogPrimitive.Title>
