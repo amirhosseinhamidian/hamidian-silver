@@ -32,4 +32,28 @@ export class PublicSiteSettingsDto {
     type: () => PublicSiteSettingsMediaDto,
   })
   catalogHeroMedia!: PublicSiteSettingsMediaDto | null;
+
+  @ApiProperty({ nullable: true })
+  galleryName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  footerAbout!: string | null;
+
+  @ApiProperty({ nullable: true })
+  contactAddress!: string | null;
+
+  @ApiProperty({ type: String, isArray: true })
+  contactPhoneNumbers!: string[];
+
+  @ApiProperty({ nullable: true })
+  contactEmail!: string | null;
+
+  @ApiProperty({ nullable: true, format: 'uri' })
+  instagramUrl!: string | null;
+
+  @ApiProperty({ nullable: true, format: 'uri' })
+  telegramUrl!: string | null;
+
+  @ApiProperty({ nullable: true, format: 'uri' })
+  baleUrl!: string | null;
 }

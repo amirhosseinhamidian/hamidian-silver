@@ -6,6 +6,16 @@ import { SiteSettingsService } from './site-settings.service';
 
 const actorUserId = '30000000-0000-4000-8000-000000000001';
 const mediaId = '40000000-0000-4000-8000-000000000001';
+const contentSettings = {
+  galleryName: 'گالری نقره حمیدیان',
+  footerAbout: 'مجموعه‌ای منتخب از زیورآلات نقره',
+  contactAddress: 'تهران',
+  contactPhoneNumbers: ['02112345678'],
+  contactEmail: 'hello@hamidian.test',
+  instagramUrl: 'https://instagram.com/hamidian',
+  telegramUrl: null,
+  baleUrl: null,
+};
 
 function settingsRecord(overrides: Record<string, unknown> = {}) {
   return {
@@ -20,6 +30,7 @@ function settingsRecord(overrides: Record<string, unknown> = {}) {
       altText: 'کالکشن نقره',
       deletedAt: null,
     },
+    ...contentSettings,
     ...overrides,
   };
 }
@@ -56,6 +67,14 @@ describe('SiteSettingsService', () => {
       catalogHeroTitle: null,
       catalogHeroSubtitle: null,
       catalogHeroMedia: null,
+      galleryName: null,
+      footerAbout: null,
+      contactAddress: null,
+      contactPhoneNumbers: [],
+      contactEmail: null,
+      instagramUrl: null,
+      telegramUrl: null,
+      baleUrl: null,
     });
   });
 
@@ -70,6 +89,7 @@ describe('SiteSettingsService', () => {
         url: 'https://media.hamidian.test/catalog/2026/09/hero.webp',
         altText: 'کالکشن نقره',
       },
+      ...contentSettings,
     });
   });
 
@@ -122,7 +142,6 @@ describe('SiteSettingsService', () => {
     expect(prisma.siteSettings.upsert).not.toHaveBeenCalled();
   });
 
-
   it('allows nullable hero copy to be cleared explicitly', async () => {
     prisma.siteSettings.findUnique.mockResolvedValue({
       catalogHeroEnabled: false,
@@ -136,6 +155,14 @@ describe('SiteSettingsService', () => {
         catalogHeroTitle: null,
         catalogHeroSubtitle: null,
         catalogHeroMediaId: null,
+        galleryName: null,
+        footerAbout: null,
+        contactAddress: null,
+        contactPhoneNumbers: [],
+        contactEmail: null,
+        instagramUrl: null,
+        telegramUrl: null,
+        baleUrl: null,
         catalogHeroMedia: null,
       }),
     );
@@ -186,6 +213,14 @@ describe('SiteSettingsService', () => {
         catalogHeroTitle: 'کالکشن جدید',
         catalogHeroSubtitle: null,
         catalogHeroMediaId: mediaId,
+        galleryName: null,
+        footerAbout: null,
+        contactAddress: null,
+        contactPhoneNumbers: [],
+        contactEmail: null,
+        instagramUrl: null,
+        telegramUrl: null,
+        baleUrl: null,
         updatedByUserId: actorUserId,
       },
       update: {
@@ -193,11 +228,43 @@ describe('SiteSettingsService', () => {
         catalogHeroTitle: 'کالکشن جدید',
         catalogHeroSubtitle: null,
         catalogHeroMediaId: mediaId,
+        galleryName: null,
+        footerAbout: null,
+        contactAddress: null,
+        contactPhoneNumbers: [],
+        contactEmail: null,
+        instagramUrl: null,
+        telegramUrl: null,
+        baleUrl: null,
         updatedByUserId: actorUserId,
       },
       include: {
         catalogHeroMedia: true,
       },
     });
+  });
+
+  it('normalizes public contact and social settings', async () => {
+    prisma.siteSettings.findUnique.mockResolvedValue(null);
+    prisma.siteSettings.upsert.mockResolvedValue(settingsRecord());
+
+    await service.updateSettings(
+      {
+        galleryName: '  گالری نقره حمیدیان  ',
+        contactPhoneNumbers: [' 02112345678 ', '09121234567'],
+        instagramUrl: ' https://instagram.com/hamidian ',
+      },
+      actorUserId,
+    );
+
+    expect(prisma.siteSettings.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({
+          galleryName: 'گالری نقره حمیدیان',
+          contactPhoneNumbers: ['02112345678', '09121234567'],
+          instagramUrl: 'https://instagram.com/hamidian',
+        }),
+      }),
+    );
   });
 });

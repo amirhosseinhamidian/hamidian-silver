@@ -2116,6 +2116,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/site-settings/public/pages/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SiteSettingsController_getPublicContentPage_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/site-settings/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SiteSettingsController_getAdminContentPages_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/site-settings/pages/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SiteSettingsController_updateContentPage_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/site-settings/homepage": {
         parameters: {
             query?: never;
@@ -2829,6 +2877,17 @@ export interface components {
             catalogHeroTitle: string | null;
             catalogHeroSubtitle: string | null;
             catalogHeroMedia: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
+            galleryName: string | null;
+            footerAbout: string | null;
+            contactAddress: string | null;
+            contactPhoneNumbers: string[];
+            contactEmail: string | null;
+            /** Format: uri */
+            instagramUrl: string | null;
+            /** Format: uri */
+            telegramUrl: string | null;
+            /** Format: uri */
+            baleUrl: string | null;
         };
         PublicHomepageHeroSlideDto: {
             title: string | null;
@@ -2854,6 +2913,62 @@ export interface components {
             featuredCategories: components["schemas"]["PublicHomepageFeaturedCategoryDto"][];
             popularProducts: components["schemas"]["PublicCatalogProductSummaryDto"][];
             featuredBrands: components["schemas"]["PublicCatalogBrandDto"][];
+        };
+        /** @enum {string} */
+        StorefrontContentPageKey: "ABOUT" | "CONTACT" | "SERVICES" | "TERMS" | "PRIVACY";
+        PublicContentPageMediaDto: {
+            /** Format: uri */
+            url: string | null;
+            altText: string | null;
+            width: number | null;
+            height: number | null;
+        };
+        PublicContentPageSectionDto: {
+            title: string;
+            body: string | null;
+        };
+        PublicContentPageDto: {
+            key: components["schemas"]["StorefrontContentPageKey"];
+            title: string;
+            eyebrow: string | null;
+            subtitle: string | null;
+            body: string | null;
+            heroMedia: components["schemas"]["PublicContentPageMediaDto"] | null;
+            sections: components["schemas"]["PublicContentPageSectionDto"][];
+            seoTitle: string | null;
+            seoDescription: string | null;
+        };
+        AdminContentPageDto: {
+            key: components["schemas"]["StorefrontContentPageKey"];
+            eyebrow: string | null;
+            subtitle: string | null;
+            body: string | null;
+            /** Format: uuid */
+            heroMediaId: string | null;
+            heroMedia: components["schemas"]["PublicContentPageMediaDto"] | null;
+            sections: components["schemas"]["PublicContentPageSectionDto"][];
+            seoTitle: string | null;
+            seoDescription: string | null;
+            /** Format: uuid */
+            updatedByUserId: string | null;
+            /** Format: date-time */
+            updatedAt: string | null;
+            title: string;
+        };
+        UpdateContentPageSectionDto: {
+            title: string;
+            body?: string | null;
+        };
+        UpdateContentPageDto: {
+            title: string;
+            eyebrow?: string | null;
+            subtitle?: string | null;
+            body?: string | null;
+            /** Format: uuid */
+            heroMediaId?: string | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            sections: components["schemas"]["UpdateContentPageSectionDto"][];
         };
         AdminHomepageHeroSlideDto: {
             title: string | null;
@@ -2899,6 +3014,17 @@ export interface components {
             /** Format: uuid */
             catalogHeroMediaId: string | null;
             catalogHeroMedia: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
+            galleryName: string | null;
+            footerAbout: string | null;
+            contactAddress: string | null;
+            contactPhoneNumbers: string[];
+            contactEmail: string | null;
+            /** Format: uri */
+            instagramUrl: string | null;
+            /** Format: uri */
+            telegramUrl: string | null;
+            /** Format: uri */
+            baleUrl: string | null;
             /** Format: uuid */
             updatedByUserId: string | null;
             /** Format: date-time */
@@ -2910,6 +3036,18 @@ export interface components {
             catalogHeroSubtitle?: string | null;
             /** Format: uuid */
             catalogHeroMediaId?: string | null;
+            galleryName?: string | null;
+            footerAbout?: string | null;
+            contactAddress?: string | null;
+            contactPhoneNumbers?: string[];
+            /** Format: email */
+            contactEmail?: string | null;
+            /** Format: uri */
+            instagramUrl?: string | null;
+            /** Format: uri */
+            telegramUrl?: string | null;
+            /** Format: uri */
+            baleUrl?: string | null;
         };
     };
     responses: never;
@@ -6146,6 +6284,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicHomepageDto"];
+                };
+            };
+        };
+    };
+    SiteSettingsController_getPublicContentPage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: "ABOUT" | "CONTACT" | "SERVICES" | "TERMS" | "PRIVACY";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicContentPageDto"];
+                };
+            };
+        };
+    };
+    SiteSettingsController_getAdminContentPages_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminContentPageDto"][];
+                };
+            };
+        };
+    };
+    SiteSettingsController_updateContentPage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: "ABOUT" | "CONTACT" | "SERVICES" | "TERMS" | "PRIVACY";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateContentPageDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminContentPageDto"];
                 };
             };
         };

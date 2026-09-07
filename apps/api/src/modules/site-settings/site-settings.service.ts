@@ -19,6 +19,14 @@ type SiteSettingsRecord = Readonly<{
   catalogHeroTitle: string | null;
   catalogHeroSubtitle: string | null;
   catalogHeroMediaId: string | null;
+  galleryName: string | null;
+  footerAbout: string | null;
+  contactAddress: string | null;
+  contactPhoneNumbers: string[];
+  contactEmail: string | null;
+  instagramUrl: string | null;
+  telegramUrl: string | null;
+  baleUrl: string | null;
   updatedByUserId: string | null;
   updatedAt: Date;
   catalogHeroMedia: SiteSettingsMedia | null;
@@ -32,6 +40,18 @@ function normalizeNullableText(value: string | null | undefined): string | null 
   const normalized = value?.trim();
 
   return normalized || null;
+}
+
+function normalizeStringArray(values: string[] | undefined): string[] | undefined {
+  return values?.map((value) => value.trim()).filter(Boolean);
+}
+
+function resolveNullableText(
+  value: string | null | undefined,
+  current: string | null | undefined,
+): string | null {
+  const normalized = normalizeNullableText(value);
+  return normalized === undefined ? (current ?? null) : normalized;
 }
 
 @Injectable()
@@ -53,6 +73,14 @@ export class SiteSettingsService {
       catalogHeroTitle: settings.catalogHeroTitle,
       catalogHeroSubtitle: settings.catalogHeroSubtitle,
       catalogHeroMedia: this.projectPublicMedia(settings.catalogHeroMedia),
+      galleryName: settings.galleryName,
+      footerAbout: settings.footerAbout,
+      contactAddress: settings.contactAddress,
+      contactPhoneNumbers: settings.contactPhoneNumbers,
+      contactEmail: settings.contactEmail,
+      instagramUrl: settings.instagramUrl,
+      telegramUrl: settings.telegramUrl,
+      baleUrl: settings.baleUrl,
     };
   }
 
@@ -82,6 +110,14 @@ export class SiteSettingsService {
         catalogHeroTitle: true,
         catalogHeroSubtitle: true,
         catalogHeroMediaId: true,
+        galleryName: true,
+        footerAbout: true,
+        contactAddress: true,
+        contactPhoneNumbers: true,
+        contactEmail: true,
+        instagramUrl: true,
+        telegramUrl: true,
+        baleUrl: true,
       },
     });
 
@@ -100,6 +136,15 @@ export class SiteSettingsService {
       dto.catalogHeroMediaId !== undefined
         ? dto.catalogHeroMediaId
         : (current?.catalogHeroMediaId ?? null);
+    const galleryName = resolveNullableText(dto.galleryName, current?.galleryName);
+    const footerAbout = resolveNullableText(dto.footerAbout, current?.footerAbout);
+    const contactAddress = resolveNullableText(dto.contactAddress, current?.contactAddress);
+    const contactPhoneNumbers =
+      normalizeStringArray(dto.contactPhoneNumbers) ?? current?.contactPhoneNumbers ?? [];
+    const contactEmail = resolveNullableText(dto.contactEmail, current?.contactEmail);
+    const instagramUrl = resolveNullableText(dto.instagramUrl, current?.instagramUrl);
+    const telegramUrl = resolveNullableText(dto.telegramUrl, current?.telegramUrl);
+    const baleUrl = resolveNullableText(dto.baleUrl, current?.baleUrl);
 
     await this.validateCatalogHeroMedia(catalogHeroEnabled, catalogHeroMediaId, dto);
 
@@ -111,6 +156,14 @@ export class SiteSettingsService {
         catalogHeroTitle,
         catalogHeroSubtitle,
         catalogHeroMediaId,
+        galleryName,
+        footerAbout,
+        contactAddress,
+        contactPhoneNumbers,
+        contactEmail,
+        instagramUrl,
+        telegramUrl,
+        baleUrl,
         updatedByUserId: actorUserId,
       },
       update: {
@@ -118,6 +171,14 @@ export class SiteSettingsService {
         catalogHeroTitle,
         catalogHeroSubtitle,
         catalogHeroMediaId,
+        galleryName,
+        footerAbout,
+        contactAddress,
+        contactPhoneNumbers,
+        contactEmail,
+        instagramUrl,
+        telegramUrl,
+        baleUrl,
         updatedByUserId: actorUserId,
       },
       include: {
@@ -171,6 +232,14 @@ export class SiteSettingsService {
       catalogHeroTitle: null,
       catalogHeroSubtitle: null,
       catalogHeroMedia: null,
+      galleryName: null,
+      footerAbout: null,
+      contactAddress: null,
+      contactPhoneNumbers: [],
+      contactEmail: null,
+      instagramUrl: null,
+      telegramUrl: null,
+      baleUrl: null,
     };
   }
 
@@ -181,6 +250,14 @@ export class SiteSettingsService {
       catalogHeroSubtitle: settings.catalogHeroSubtitle,
       catalogHeroMediaId: settings.catalogHeroMediaId,
       catalogHeroMedia: this.projectPublicMedia(settings.catalogHeroMedia),
+      galleryName: settings.galleryName,
+      footerAbout: settings.footerAbout,
+      contactAddress: settings.contactAddress,
+      contactPhoneNumbers: settings.contactPhoneNumbers,
+      contactEmail: settings.contactEmail,
+      instagramUrl: settings.instagramUrl,
+      telegramUrl: settings.telegramUrl,
+      baleUrl: settings.baleUrl,
       updatedByUserId: settings.updatedByUserId,
       updatedAt: settings.updatedAt.toISOString(),
     };

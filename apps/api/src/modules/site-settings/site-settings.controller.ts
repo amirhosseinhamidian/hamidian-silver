@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Patch, Put } from '@nestjs/common';
-import { ApiOkResponse } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, ParseEnumPipe, Patch, Put } from '@nestjs/common';
+import { ApiOkResponse, ApiParam } from '@nestjs/swagger';
 
+import { StorefrontContentPageKey } from '../../generated/prisma/enums';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { Public } from '../auth/public.decorator';
 import type { AuthenticatedPrincipal } from '../authorization/authorization.types';
@@ -8,10 +9,14 @@ import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { AdminSiteSettingsDto } from './dto/admin-site-settings.dto';
 import { AdminHomepageDto } from './dto/admin-homepage.dto';
+import { AdminContentPageDto } from './dto/admin-content-page.dto';
+import { PublicContentPageDto } from './dto/public-content-page.dto';
 import { PublicHomepageDto } from './dto/public-homepage.dto';
 import { PublicSiteSettingsDto } from './dto/public-site-settings.dto';
 import { UpdateSiteSettingsDto } from './dto/update-site-settings.dto';
 import { UpdateHomepageDto } from './dto/update-homepage.dto';
+import { UpdateContentPageDto } from './dto/update-content-page.dto';
+import { ContentPagesService } from './content-pages.service';
 import { HomepageService } from './homepage.service';
 import { SiteSettingsService } from './site-settings.service';
 
@@ -23,6 +28,7 @@ export class SiteSettingsController {
   constructor(
     private readonly siteSettingsService: SiteSettingsService,
     private readonly homepageService: HomepageService,
+    private readonly contentPagesService: ContentPagesService,
   ) {}
 
   @Public()
@@ -37,6 +43,35 @@ export class SiteSettingsController {
   @ApiOkResponse({ type: PublicHomepageDto })
   getPublicHomepage(): Promise<PublicHomepageDto> {
     return this.homepageService.getPublicHomepage();
+  }
+
+  @Public()
+  @Get('public/pages/:key')
+  @ApiParam({ name: 'key', enum: StorefrontContentPageKey })
+  @ApiOkResponse({ type: PublicContentPageDto })
+  getPublicContentPage(
+    @Param('key', new ParseEnumPipe(StorefrontContentPageKey)) key: StorefrontContentPageKey,
+  ): Promise<PublicContentPageDto> {
+    return this.contentPagesService.getPublicPage(key);
+  }
+
+  @Get('pages')
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_READ)
+  @ApiOkResponse({ type: AdminContentPageDto, isArray: true })
+  getAdminContentPages(): Promise<AdminContentPageDto[]> {
+    return this.contentPagesService.getAdminPages();
+  }
+
+  @Put('pages/:key')
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_WRITE)
+  @ApiParam({ name: 'key', enum: StorefrontContentPageKey })
+  @ApiOkResponse({ type: AdminContentPageDto })
+  updateContentPage(
+    @Param('key', new ParseEnumPipe(StorefrontContentPageKey)) key: StorefrontContentPageKey,
+    @Body() dto: UpdateContentPageDto,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ): Promise<AdminContentPageDto> {
+    return this.contentPagesService.updatePage(key, dto, principal.userId);
   }
 
   @Get('homepage')

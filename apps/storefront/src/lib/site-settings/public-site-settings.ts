@@ -1,4 +1,5 @@
 import type { components } from '@hamidian/contracts';
+import { cache } from 'react';
 
 import { createServerApiClient } from '@/lib/api/server-client';
 
@@ -9,9 +10,17 @@ const DEFAULT_PUBLIC_SITE_SETTINGS: PublicSiteSettings = {
   catalogHeroTitle: null,
   catalogHeroSubtitle: null,
   catalogHeroMedia: null,
+  galleryName: null,
+  footerAbout: null,
+  contactAddress: null,
+  contactPhoneNumbers: [],
+  contactEmail: null,
+  instagramUrl: null,
+  telegramUrl: null,
+  baleUrl: null,
 };
 
-export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
+export const getPublicSiteSettings = cache(async (): Promise<PublicSiteSettings> => {
   const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;
 
   if (!apiOrigin) {
@@ -32,4 +41,4 @@ export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
   } catch {
     return DEFAULT_PUBLIC_SITE_SETTINGS;
   }
-}
+});

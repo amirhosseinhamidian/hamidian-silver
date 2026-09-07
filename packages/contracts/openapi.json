@@ -4822,6 +4822,114 @@
         ]
       }
     },
+    "/api/v1/site-settings/public/pages/{key}": {
+      "get": {
+        "operationId": "SiteSettingsController_getPublicContentPage_v1",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "ABOUT",
+                "CONTACT",
+                "SERVICES",
+                "TERMS",
+                "PRIVACY"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicContentPageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SiteSettings"
+        ]
+      }
+    },
+    "/api/v1/site-settings/pages": {
+      "get": {
+        "operationId": "SiteSettingsController_getAdminContentPages_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminContentPageDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SiteSettings"
+        ]
+      }
+    },
+    "/api/v1/site-settings/pages/{key}": {
+      "put": {
+        "operationId": "SiteSettingsController_updateContentPage_v1",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "ABOUT",
+                "CONTACT",
+                "SERVICES",
+                "TERMS",
+                "PRIVACY"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateContentPageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminContentPageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SiteSettings"
+        ]
+      }
+    },
     "/api/v1/site-settings/homepage": {
       "get": {
         "operationId": "SiteSettingsController_getAdminHomepage_v1",
@@ -5140,15 +5248,6 @@
               }
             ]
           },
-          "originCountry": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PublicCatalogCountryDto"
-              }
-            ]
-          },
           "id": {
             "type": "string"
           },
@@ -5208,6 +5307,15 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "originCountry": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogCountryDto"
               }
             ]
           },
@@ -7715,13 +7823,58 @@
                 "$ref": "#/components/schemas/PublicSiteSettingsMediaDto"
               }
             ]
+          },
+          "galleryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "footerAbout": {
+            "type": "string",
+            "nullable": true
+          },
+          "contactAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "contactPhoneNumbers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contactEmail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instagramUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "telegramUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "baleUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
           }
         },
         "required": [
           "catalogHeroEnabled",
           "catalogHeroTitle",
           "catalogHeroSubtitle",
-          "catalogHeroMedia"
+          "catalogHeroMedia",
+          "galleryName",
+          "footerAbout",
+          "contactAddress",
+          "contactPhoneNumbers",
+          "contactEmail",
+          "instagramUrl",
+          "telegramUrl",
+          "baleUrl"
         ]
       },
       "PublicHomepageHeroSlideDto": {
@@ -7852,6 +8005,269 @@
           "featuredCategories",
           "popularProducts",
           "featuredBrands"
+        ]
+      },
+      "StorefrontContentPageKey": {
+        "type": "string",
+        "enum": [
+          "ABOUT",
+          "CONTACT",
+          "SERVICES",
+          "TERMS",
+          "PRIVACY"
+        ]
+      },
+      "PublicContentPageMediaDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "altText": {
+            "type": "string",
+            "nullable": true
+          },
+          "width": {
+            "type": "number",
+            "nullable": true
+          },
+          "height": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "url",
+          "altText",
+          "width",
+          "height"
+        ]
+      },
+      "PublicContentPageSectionDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "title",
+          "body"
+        ]
+      },
+      "PublicContentPageDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StorefrontContentPageKey"
+              }
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "eyebrow": {
+            "type": "string",
+            "nullable": true
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "body": {
+            "type": "string",
+            "nullable": true
+          },
+          "heroMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicContentPageMediaDto"
+              }
+            ]
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicContentPageSectionDto"
+            }
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "eyebrow",
+          "subtitle",
+          "body",
+          "heroMedia",
+          "sections",
+          "seoTitle",
+          "seoDescription"
+        ]
+      },
+      "AdminContentPageDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StorefrontContentPageKey"
+              }
+            ]
+          },
+          "eyebrow": {
+            "type": "string",
+            "nullable": true
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "body": {
+            "type": "string",
+            "nullable": true
+          },
+          "heroMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "heroMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicContentPageMediaDto"
+              }
+            ]
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicContentPageSectionDto"
+            }
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedByUserId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "eyebrow",
+          "subtitle",
+          "body",
+          "heroMediaId",
+          "heroMedia",
+          "sections",
+          "seoTitle",
+          "seoDescription",
+          "updatedByUserId",
+          "updatedAt",
+          "title"
+        ]
+      },
+      "UpdateContentPageSectionDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "body": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 5000
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "UpdateContentPageDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "eyebrow": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 100
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "body": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 20000
+          },
+          "heroMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "sections": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpdateContentPageSectionDto"
+            }
+          }
+        },
+        "required": [
+          "title",
+          "sections"
         ]
       },
       "AdminHomepageHeroSlideDto": {
@@ -8065,6 +8481,43 @@
               }
             ]
           },
+          "galleryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "footerAbout": {
+            "type": "string",
+            "nullable": true
+          },
+          "contactAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "contactPhoneNumbers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contactEmail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instagramUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "telegramUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "baleUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
           "updatedByUserId": {
             "type": "string",
             "nullable": true,
@@ -8082,6 +8535,14 @@
           "catalogHeroSubtitle",
           "catalogHeroMediaId",
           "catalogHeroMedia",
+          "galleryName",
+          "footerAbout",
+          "contactAddress",
+          "contactPhoneNumbers",
+          "contactEmail",
+          "instagramUrl",
+          "telegramUrl",
+          "baleUrl",
           "updatedByUserId",
           "updatedAt"
         ]
@@ -8106,6 +8567,53 @@
             "type": "string",
             "nullable": true,
             "format": "uuid"
+          },
+          "galleryName": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 150
+          },
+          "footerAbout": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "contactAddress": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "contactPhoneNumbers": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 20
+            }
+          },
+          "contactEmail": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 320,
+            "format": "email"
+          },
+          "instagramUrl": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000,
+            "format": "uri"
+          },
+          "telegramUrl": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000,
+            "format": "uri"
+          },
+          "baleUrl": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000,
+            "format": "uri"
           }
         }
       }

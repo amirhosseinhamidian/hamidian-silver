@@ -1,7 +1,13 @@
 import type { components } from '@hamidian/contracts';
 
 type CatalogHeroProps = {
-  settings: components['schemas']['PublicSiteSettingsDto'];
+  settings: Pick<
+    components['schemas']['PublicSiteSettingsDto'],
+    | 'catalogHeroEnabled'
+    | 'catalogHeroTitle'
+    | 'catalogHeroSubtitle'
+    | 'catalogHeroMedia'
+  >;
   devFallbackSrc?: string | null;
 };
 

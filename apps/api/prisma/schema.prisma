@@ -57,6 +57,7 @@ model User {
   operationalIncidentsAssigned        OperationalIncident[]            @relation("OperationalIncidentAssignee")
   operationalIncidentActivities       OperationalIncidentActivity[]    @relation("OperationalIncidentActivityActor")
   stockNotificationSubscriptions      StockNotificationSubscription[]
+  storefrontContentPageChanges        StorefrontContentPage[]           @relation("StorefrontContentPageUpdater")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -191,6 +192,14 @@ enum HomepageHeroPlacement {
   SECONDARY
 }
 
+enum StorefrontContentPageKey {
+  ABOUT
+  CONTACT
+  SERVICES
+  TERMS
+  PRIVACY
+}
+
 model Media {
   id                      String         @id @default(uuid()) @db.Uuid
   storageKey              String         @unique @db.VarChar(500)
@@ -209,6 +218,7 @@ model Media {
   productMedia            ProductMedia[]
   siteSettingsCatalogHero SiteSettings[] @relation("SiteSettingsCatalogHero")
   homepageHeroSlides      HomepageHeroSlide[]
+  storefrontContentHeroes StorefrontContentPage[] @relation("StorefrontContentPageHero")
 
   @@index([deletedAt])
   @@map("media")
@@ -220,6 +230,14 @@ model SiteSettings {
   catalogHeroTitle    String?  @db.VarChar(200)
   catalogHeroSubtitle String?  @db.VarChar(500)
   catalogHeroMediaId  String?  @db.Uuid
+  galleryName         String?  @db.VarChar(150)
+  footerAbout         String?  @db.VarChar(1000)
+  contactAddress      String?  @db.VarChar(1000)
+  contactPhoneNumbers String[] @default([]) @db.VarChar(20)
+  contactEmail        String?  @db.VarChar(320)
+  instagramUrl        String?  @db.VarChar(1000)
+  telegramUrl         String?  @db.VarChar(1000)
+  baleUrl             String?  @db.VarChar(1000)
   updatedByUserId     String?  @db.Uuid
   createdAt           DateTime @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime @updatedAt @db.Timestamptz(3)
@@ -229,6 +247,41 @@ model SiteSettings {
   @@index([catalogHeroMediaId])
   @@index([updatedByUserId])
   @@map("site_settings")
+}
+
+model StorefrontContentPage {
+  key             StorefrontContentPageKey @id
+  title           String                   @db.VarChar(200)
+  eyebrow         String?                  @db.VarChar(100)
+  subtitle        String?                  @db.VarChar(500)
+  body            String?
+  heroMediaId     String?                  @db.Uuid
+  seoTitle        String?                  @db.VarChar(200)
+  seoDescription  String?                  @db.VarChar(500)
+  updatedByUserId String?                  @db.Uuid
+  createdAt       DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                 @updatedAt @db.Timestamptz(3)
+  heroMedia       Media?                   @relation("StorefrontContentPageHero", fields: [heroMediaId], references: [id], onDelete: SetNull)
+  updatedBy       User?                    @relation("StorefrontContentPageUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  sections        StorefrontContentSection[]
+
+  @@index([heroMediaId])
+  @@index([updatedByUserId])
+  @@map("storefront_content_pages")
+}
+
+model StorefrontContentSection {
+  id        String                   @id @default(uuid()) @db.Uuid
+  pageKey   StorefrontContentPageKey
+  title     String                   @db.VarChar(200)
+  body      String?
+  sortOrder Int                      @default(0)
+  createdAt DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime                 @updatedAt @db.Timestamptz(3)
+  page      StorefrontContentPage    @relation(fields: [pageKey], references: [key], onDelete: Cascade)
+
+  @@index([pageKey, sortOrder])
+  @@map("storefront_content_sections")
 }
 
 model Category {
