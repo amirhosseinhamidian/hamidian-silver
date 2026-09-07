@@ -165,6 +165,15 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         انتخاب و خرید
       </h2>
 
+      {isSizeSelection && !hasMultipleVariants ? (
+        <Link
+          href="/size-guide"
+          className="mt-4 inline-flex border-b border-[var(--sf-color-border-strong)] text-xs"
+        >
+          راهنمای انتخاب سایز
+        </Link>
+      ) : null}
+
       {hasMultipleVariants ? (
         <fieldset ref={variantSelectorRef} className="mt-5 scroll-mt-28">
           <legend className="sr-only">{selectorLabel}</legend>

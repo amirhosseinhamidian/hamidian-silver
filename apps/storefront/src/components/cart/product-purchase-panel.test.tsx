@@ -162,6 +162,10 @@ describe('ProductPurchasePanel', () => {
 
     render(<ProductPurchasePanel product={singleVariantProduct} />);
 
+    expect(screen.getByRole('link', { name: 'راهنمای انتخاب سایز' })).toHaveAttribute(
+      'href',
+      '/size-guide',
+    );
     screen.getAllByRole('group', { name: 'تعداد' }).forEach((control) => {
       expect(within(control).getByText('۲')).toBeInTheDocument();
     });

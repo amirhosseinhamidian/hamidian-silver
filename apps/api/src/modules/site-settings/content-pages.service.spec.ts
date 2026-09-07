@@ -45,6 +45,21 @@ describe('ContentPagesService', () => {
     expect(page.sections).toHaveLength(3);
   });
 
+  it('provides a configurable size-guide default with practical guidance', async () => {
+    prisma.storefrontContentPage.findUnique.mockResolvedValue(null);
+
+    const page = await service.getPublicPage(StorefrontContentPageKey.SIZE_GUIDE);
+
+    expect(page).toEqual(
+      expect.objectContaining({
+        key: StorefrontContentPageKey.SIZE_GUIDE,
+        title: 'راهنمای انتخاب سایز',
+        heroMedia: null,
+      }),
+    );
+    expect(page.sections).toHaveLength(3);
+  });
+
   it('requires an active image for about, contact, and services updates', async () => {
     prisma.storefrontContentPage.findUnique.mockResolvedValue(null);
 
