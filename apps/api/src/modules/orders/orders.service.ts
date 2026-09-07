@@ -124,6 +124,81 @@ const CUSTOMER_ORDER_DETAIL_SELECT = {
   },
 } satisfies Prisma.OrderSelect;
 
+const ADMIN_ORDER_LIST_INCLUDE = {
+  user: {
+    select: {
+      id: true,
+      phone: true,
+      firstName: true,
+      lastName: true,
+    },
+  },
+  items: true,
+  shippingAddress: true,
+  payment: {
+    select: {
+      id: true,
+      status: true,
+      amountToman: true,
+      refundedAmountToman: true,
+      paidAt: true,
+      createdAt: true,
+      updatedAt: true,
+      attempts: {
+        take: 3,
+        orderBy: {
+          createdAt: 'desc' as const,
+        },
+        select: {
+          id: true,
+          provider: true,
+          status: true,
+          amountToman: true,
+          providerReference: true,
+          failureCode: true,
+          failureMessage: true,
+          verifiedAt: true,
+          createdAt: true,
+        },
+      },
+    },
+  },
+  shipment: {
+    select: {
+      id: true,
+      provider: true,
+      providerServiceName: true,
+      status: true,
+      shippingCostToman: true,
+      estimatedDeliveryDays: true,
+      trackingCode: true,
+      shippedAt: true,
+      deliveredAt: true,
+      updatedAt: true,
+    },
+  },
+  statusHistory: {
+    orderBy: {
+      createdAt: 'asc' as const,
+    },
+    select: {
+      id: true,
+      fromStatus: true,
+      toStatus: true,
+      reason: true,
+      createdAt: true,
+      actor: {
+        select: {
+          id: true,
+          phone: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.OrderInclude;
+
 type CustomerOrderListRecord = Prisma.OrderGetPayload<{
   select: typeof CUSTOMER_ORDER_LIST_SELECT;
 }>;
@@ -400,17 +475,7 @@ export class OrdersService {
       orderBy: {
         createdAt: 'desc',
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            phone: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        items: true,
-      },
+      include: ADMIN_ORDER_LIST_INCLUDE,
     });
   }
 

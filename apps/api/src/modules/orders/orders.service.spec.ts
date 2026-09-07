@@ -439,6 +439,27 @@ describe('OrdersService', () => {
     expect(transaction.inventory.findUnique).not.toHaveBeenCalled();
   });
 
+  it('loads operational order details for authorized staff lists', async () => {
+    prisma.order.findMany.mockResolvedValue([]);
+
+    await service.listOrders({ limit: 25, status: OrderStatus.PAID });
+
+    expect(prisma.order.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: OrderStatus.PAID },
+        take: 25,
+        include: expect.objectContaining({
+          user: expect.any(Object),
+          items: true,
+          shippingAddress: true,
+          payment: expect.any(Object),
+          shipment: expect.any(Object),
+          statusHistory: expect.any(Object),
+        }),
+      }),
+    );
+  });
+
   it('does not release inventory when payment finalization wins the order-state claim', async () => {
     const orderId = '60000000-0000-4000-8000-000000000001';
     const transaction = {
