@@ -3102,7 +3102,7 @@ export interface components {
             featuredBrands: components["schemas"]["PublicCatalogBrandDto"][];
         };
         /** @enum {string} */
-        StorefrontContentPageKey: "ABOUT" | "CONTACT" | "SERVICES" | "TERMS" | "PRIVACY" | "SIZE_GUIDE";
+        StorefrontContentPageKey: "ABOUT" | "CONTACT" | "SERVICES" | "TERMS" | "PRIVACY" | "SIZE_GUIDE" | "FAQ";
         PublicContentPageMediaDto: {
             /** Format: uri */
             url: string | null;
@@ -6824,7 +6824,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                key: "ABOUT" | "CONTACT" | "SERVICES" | "TERMS" | "PRIVACY" | "SIZE_GUIDE";
+                key: "ABOUT" | "CONTACT" | "SERVICES" | "TERMS" | "PRIVACY" | "SIZE_GUIDE" | "FAQ";
             };
             cookie?: never;
         };
@@ -6864,7 +6864,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                key: "ABOUT" | "CONTACT" | "SERVICES" | "TERMS" | "PRIVACY" | "SIZE_GUIDE";
+                key: "ABOUT" | "CONTACT" | "SERVICES" | "TERMS" | "PRIVACY" | "SIZE_GUIDE" | "FAQ";
             };
             cookie?: never;
         };

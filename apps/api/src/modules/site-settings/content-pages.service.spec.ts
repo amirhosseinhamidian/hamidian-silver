@@ -60,6 +60,24 @@ describe('ContentPagesService', () => {
     expect(page.sections).toHaveLength(3);
   });
 
+  it('provides purchase-support FAQs without offering unrestricted returns', async () => {
+    prisma.storefrontContentPage.findUnique.mockResolvedValue(null);
+
+    const page = await service.getPublicPage(StorefrontContentPageKey.FAQ);
+
+    expect(page).toEqual(
+      expect.objectContaining({
+        key: StorefrontContentPageKey.FAQ,
+        title: 'سوالات متداول',
+        heroMedia: null,
+      }),
+    );
+    expect(page.sections).toHaveLength(10);
+    expect(page.sections.find((section) => section.title.includes('مرجوع'))?.body).toContain(
+      'پس از تأیید ادمین',
+    );
+  });
+
   it('requires an active image for about, contact, and services updates', async () => {
     prisma.storefrontContentPage.findUnique.mockResolvedValue(null);
 

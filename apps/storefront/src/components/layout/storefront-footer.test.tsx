@@ -47,6 +47,7 @@ describe('StorefrontFooter', () => {
       'href',
       'https://ble.ir/hamidian',
     );
+    expect(screen.getByRole('link', { name: 'سوالات متداول' })).toHaveAttribute('href', '/faq');
   });
 
   it('hides optional gallery details when settings are unavailable', () => {

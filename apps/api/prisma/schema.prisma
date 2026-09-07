@@ -199,6 +199,7 @@ enum StorefrontContentPageKey {
   TERMS
   PRIVACY
   SIZE_GUIDE
+  FAQ
 }
 
 model Media {

@@ -30,6 +30,8 @@ const informationLinks = [
   { label: 'درباره گالری حمیدیان', href: '/about' },
   { label: 'تماس با ما', href: '/contact' },
   { label: 'خدمات ما', href: '/services' },
+  { label: 'راهنمای انتخاب سایز', href: '/size-guide' },
+  { label: 'سوالات متداول', href: '/faq' },
 ] as const;
 
 function normalizeValues(values?: readonly string[] | null): string[] {

@@ -5354,7 +5354,8 @@
                 "SERVICES",
                 "TERMS",
                 "PRIVACY",
-                "SIZE_GUIDE"
+                "SIZE_GUIDE",
+                "FAQ"
               ],
               "type": "string"
             }
@@ -5416,7 +5417,8 @@
                 "SERVICES",
                 "TERMS",
                 "PRIVACY",
-                "SIZE_GUIDE"
+                "SIZE_GUIDE",
+                "FAQ"
               ],
               "type": "string"
             }
@@ -8682,7 +8684,8 @@
           "SERVICES",
           "TERMS",
           "PRIVACY",
-          "SIZE_GUIDE"
+          "SIZE_GUIDE",
+          "FAQ"
         ]
       },
       "PublicContentPageMediaDto": {

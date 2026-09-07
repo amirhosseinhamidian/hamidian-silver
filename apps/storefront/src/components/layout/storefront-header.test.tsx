@@ -46,6 +46,7 @@ describe('StorefrontHeader', () => {
     expect(screen.getAllByRole('link', { name: 'سبد خرید' })).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'جستجو در محصولات' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'باز کردن منوی موبایل' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'سوالات متداول' })).toHaveAttribute('href', '/faq');
     expect(screen.getByRole('link', { name: 'نقره حمیدیان، صفحه اصلی موبایل' })).toHaveAttribute(
       'href',
       '/',
@@ -131,6 +132,9 @@ describe('StorefrontHeader', () => {
       'href',
       '/wishlist',
     );
+    expect(
+      within(mobileNavigation).getByRole('link', { name: 'سوالات متداول' }),
+    ).toHaveAttribute('href', '/faq');
     expect(screen.getByRole('button', { name: 'بستن منوی موبایل' })).toBeInTheDocument();
   });
 });

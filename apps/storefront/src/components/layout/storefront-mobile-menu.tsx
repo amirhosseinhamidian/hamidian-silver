@@ -16,6 +16,7 @@ const utilityLinks = [
   { href: '/wishlist', label: 'علاقه‌مندی‌ها' },
   { href: '/account', label: 'حساب کاربری' },
   { href: '/services', label: 'خدمات ما' },
+  { href: '/faq', label: 'سوالات متداول' },
   { href: '/contact', label: 'تماس با ما' },
   { href: '/about', label: 'درباره گالری حمیدیان' },
 ] as const;
