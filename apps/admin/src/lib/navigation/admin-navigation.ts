@@ -137,6 +137,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         roadmapStage: 11,
         permissions: ['inventory.read'],
       },
+      {
+        id: 'inventory-alerts',
+        label: 'هشدار موجودی',
+        shortLabel: 'هشدار موجودی',
+        href: '/inventory-alerts',
+        icon: 'alerts',
+        description: 'کمبود، ناموجودی و تقاضای اطلاع‌رسانی',
+        roadmapStage: 12,
+        permissions: ['inventory.read'],
+      },
     ],
   },
   {

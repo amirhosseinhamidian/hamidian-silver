@@ -9,10 +9,15 @@ describe('StockNotificationsService', () => {
   const prisma = {
     product: {
       findFirst: jest.fn(),
+      findMany: jest.fn(),
+    },
+    productVariant: {
+      findMany: jest.fn(),
     },
     stockNotificationSubscription: {
       findFirst: jest.fn(),
       create: jest.fn(),
+      groupBy: jest.fn(),
     },
   };
   const service = new StockNotificationsService(prisma as unknown as PrismaService);
@@ -70,6 +75,55 @@ describe('StockNotificationsService', () => {
 
     await expect(service.subscribe(userId, { productId, variantId })).rejects.toMatchObject({
       code: ErrorCode.STOCK_ALREADY_AVAILABLE,
+    });
+  });
+
+  it('returns aggregated notification demand without exposing customer data', async () => {
+    prisma.stockNotificationSubscription.groupBy.mockResolvedValue([
+      {
+        productId,
+        variantId,
+        status: 'ACTIVE',
+        _count: { _all: 3 },
+        _max: { createdAt: new Date('2026-09-07T10:00:00.000Z'), notifiedAt: null },
+      },
+      {
+        productId,
+        variantId,
+        status: 'NOTIFIED',
+        _count: { _all: 2 },
+        _max: {
+          createdAt: new Date('2026-09-06T10:00:00.000Z'),
+          notifiedAt: new Date('2026-09-07T11:00:00.000Z'),
+        },
+      },
+    ]);
+    prisma.product.findMany.mockResolvedValue([
+      { id: productId, name: 'Ring', slug: 'ring', status: 'ACTIVE' },
+    ]);
+    prisma.productVariant.findMany.mockResolvedValue([
+      {
+        id: variantId,
+        productId,
+        sku: 'RING-52',
+        name: null,
+        isActive: true,
+        size: { label: '52' },
+      },
+    ]);
+
+    await expect(service.getAdminSummary()).resolves.toEqual({
+      totals: { active: 3, queued: 0, notified: 2, cancelled: 0 },
+      targets: [
+        expect.objectContaining({
+          productId,
+          variantId,
+          activeCount: 3,
+          notifiedCount: 2,
+          product: expect.objectContaining({ name: 'Ring' }),
+          variant: expect.objectContaining({ sku: 'RING-52' }),
+        }),
+      ],
     });
   });
 });

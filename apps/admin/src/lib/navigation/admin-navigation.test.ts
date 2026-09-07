@@ -30,6 +30,7 @@ describe('admin navigation', () => {
       'categories',
       'brands',
       'inventory',
+      'inventory-alerts',
       'plating',
       'fulfillment',
       'content',

@@ -2939,6 +2939,20 @@
         ]
       }
     },
+    "/api/v1/stock-notifications/admin/summary": {
+      "get": {
+        "operationId": "StockNotificationsController_getAdminSummary_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StockNotifications"
+        ]
+      }
+    },
     "/api/v1/pricing/suppliers": {
       "post": {
         "operationId": "PricingController_createSupplier_v1",

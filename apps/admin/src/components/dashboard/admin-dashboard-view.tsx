@@ -218,8 +218,8 @@ function InventorySummary({ data }: Readonly<{ data: AdminDashboardData }>) {
       title="سلامت موجودی"
       description="خلاصه موجودی قابل فروش و رزرو"
       action={
-        <ButtonLink href="/inventory" variant="ghost" size="sm">
-          انبار
+        <ButtonLink href="/inventory-alerts" variant="ghost" size="sm">
+          مشاهده هشدارها
         </ButtonLink>
       }
     >
@@ -618,7 +618,7 @@ export function AdminDashboardView({ data }: Readonly<{ data: AdminDashboardData
               : 'داده موجودی دریافت نشد'
           }
           icon="inventory"
-          href="/inventory"
+          href="/inventory-alerts"
           tone={inventory?.lowStockCount ? 'warning' : 'success'}
         />
       </section>
