@@ -75,4 +75,18 @@ describe('envValidationSchema production HTTP settings', () => {
 
     expect(error?.details.map(({ path }) => path.join('.'))).toContain('SMS_PROVIDER');
   });
+
+  it('requires an absolute persistent media path in production', () => {
+    const { error } = envValidationSchema.validate(
+      {
+        ...requiredEnvironment,
+        NODE_ENV: 'production',
+        MEDIA_STORAGE_ROOT: '.data/media',
+        MEDIA_PUBLIC_BASE_URL: 'https://silver.example/media',
+      },
+      { allowUnknown: true, abortEarly: false },
+    );
+
+    expect(error?.details.map(({ path }) => path.join('.'))).toContain('MEDIA_STORAGE_ROOT');
+  });
 });

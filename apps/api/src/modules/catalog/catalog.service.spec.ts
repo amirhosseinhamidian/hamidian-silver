@@ -269,7 +269,7 @@ describe('CatalogService', () => {
   });
 
   it('filters and paginates the administrative product list', async () => {
-    const products = [{ id: '10000000-0000-4000-8000-000000000001' }];
+    const products = [{ id: '10000000-0000-4000-8000-000000000001', media: [] }];
     prisma.$transaction.mockResolvedValue([products, 21]);
 
     await expect(
@@ -296,7 +296,9 @@ describe('CatalogService', () => {
           compareAtPriceToman: 5_000_000,
         }),
         update: jest.fn(),
-        findUniqueOrThrow: jest.fn().mockResolvedValue({ id: productId, name: 'Updated ring' }),
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValue({ id: productId, name: 'Updated ring', media: [] }),
       },
       brand: { findFirst: jest.fn() },
       country: { findFirst: jest.fn() },
@@ -316,7 +318,7 @@ describe('CatalogService', () => {
         salePriceToman: 4_200_000,
         categoryIds: [categoryId],
       }),
-    ).resolves.toEqual({ id: productId, name: 'Updated ring' });
+    ).resolves.toEqual({ id: productId, name: 'Updated ring', media: [] });
 
     expect(transaction.product.update).toHaveBeenCalledWith({
       where: { id: productId },

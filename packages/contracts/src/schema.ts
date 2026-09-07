@@ -244,6 +244,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/products/{productId}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_uploadProductMedia_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/products/{productId}": {
         parameters: {
             query?: never;
@@ -274,6 +290,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["CatalogController_updateProductStatus_v1"];
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/media/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogController_reorderProductMedia_v1"];
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/media/{mediaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["CatalogController_removeProductMedia_v1"];
+        options?: never;
+        head?: never;
+        patch: operations["CatalogController_updateProductMedia_v1"];
         trace?: never;
     };
     "/api/v1/finance/supplier-payables": {
@@ -2281,6 +2329,14 @@ export interface components {
             /** @enum {string} */
             status: "DRAFT" | "ACTIVE" | "ARCHIVED";
         };
+        ReorderProductMediaDto: {
+            mediaIds: string[];
+        };
+        UpdateProductMediaDto: {
+            altText?: string | null;
+            isPrimary?: boolean;
+            sortOrder?: number;
+        };
         MarkSupplierPayablePaidDto: {
             paymentReference?: string;
             note?: string;
@@ -3195,6 +3251,33 @@ export interface operations {
             };
         };
     };
+    CatalogController_uploadProductMedia_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    altText?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     CatalogController_getProduct_v1: {
         parameters: {
             query?: never;
@@ -3253,6 +3336,73 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateProductStatusDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_reorderProductMedia_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderProductMediaDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_removeProductMedia_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+                mediaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_updateProductMedia_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+                mediaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductMediaDto"];
             };
         };
         responses: {

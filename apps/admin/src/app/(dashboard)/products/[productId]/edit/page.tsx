@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { ProductForm } from '@/components/products/product-form';
+import { ProductMediaManager } from '@/components/products/product-media-manager';
 import { Badge } from '@/components/ui/badge';
 import { requireAdminSession } from '@/lib/auth/session';
 import { loadProductForm } from '@/lib/catalog/catalog-data';
@@ -28,6 +29,13 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
           اطلاعات کاتالوگ و قیمت محصول را به‌روزرسانی کنید.
         </p>
       </header>
+      <div className="mt-6">
+        <ProductMediaManager
+          productId={data.product.id}
+          productName={data.product.name}
+          media={data.product.media}
+        />
+      </div>
       <ProductForm data={data} mode="edit" />
     </main>
   );

@@ -32,7 +32,24 @@ const product = {
       size: { id: 'size-1', label: '۵۲' },
     },
   ],
-  media: [{ mediaId: 'media-1' }],
+  media: [
+    {
+      mediaId: 'media-1',
+      url: 'http://localhost:3000/media/catalog/ring.webp',
+      altText: 'نمای روبه‌رو',
+      isPrimary: true,
+      sortOrder: 0,
+      media: {
+        id: 'media-1',
+        mimeType: 'image/webp',
+        originalName: 'ring.webp',
+        sizeBytes: 2048,
+        width: null,
+        height: null,
+        altText: null,
+      },
+    },
+  ],
 };
 
 describe('catalog model', () => {
@@ -41,6 +58,7 @@ describe('catalog model', () => {
       name: 'انگشتر نقره',
       status: 'ACTIVE',
       mediaCount: 1,
+      media: [{ id: 'media-1', isPrimary: true, altText: 'نمای روبه‌رو' }],
       categories: [{ id: 'category-1', name: 'انگشتر' }],
       variants: [{ sku: 'RING-52', weightGrams: 4.25, size: { label: '۵۲' } }],
     });

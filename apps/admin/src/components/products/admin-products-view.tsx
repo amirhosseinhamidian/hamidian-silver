@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element -- media host is runtime-configured on the API/VPS. */
+
 import Link from 'next/link';
 
 import { ProductStatusActions } from '@/components/products/product-status-actions';
@@ -48,10 +50,20 @@ function StatusBadge({ status }: Readonly<{ status: ProductStatus }>) {
 }
 
 function ProductIdentity({ product }: Readonly<{ product: AdminProduct }>) {
+  const preview = product.media.find((item) => item.isPrimary) ?? product.media[0];
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <span className="grid size-10 shrink-0 place-items-center rounded-[var(--admin-radius-md)] bg-[var(--admin-color-primary-soft)] text-sm font-black text-[var(--admin-color-primary)]">
-        {product.name.slice(0, 1)}
+      <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-[var(--admin-radius-md)] bg-[var(--admin-color-primary-soft)] text-sm font-black text-[var(--admin-color-primary)]">
+        {preview?.url ? (
+          <img
+            src={preview.url}
+            alt=""
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          product.name.slice(0, 1)
+        )}
       </span>
       <div className="min-w-0">
         <p className="truncate font-bold">{product.name}</p>

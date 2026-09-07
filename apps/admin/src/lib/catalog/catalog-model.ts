@@ -22,6 +22,19 @@ export type AdminProductVariant = Readonly<{
   size: CatalogSize | null;
 }>;
 
+export type AdminProductMedia = Readonly<{
+  id: string;
+  url: string | null;
+  altText: string | null;
+  isPrimary: boolean;
+  sortOrder: number;
+  mimeType: string;
+  originalName: string | null;
+  sizeBytes: number;
+  width: number | null;
+  height: number | null;
+}>;
+
 export type AdminProduct = Readonly<{
   id: string;
   name: string;
@@ -38,6 +51,7 @@ export type AdminProduct = Readonly<{
   country: CatalogLookup | null;
   categories: readonly CatalogLookup[];
   variants: readonly AdminProductVariant[];
+  media: readonly AdminProductMedia[];
   mediaCount: number;
 }>;
 
@@ -101,6 +115,28 @@ function parseVariant(value: unknown): AdminProductVariant | null {
   };
 }
 
+function parseProductMedia(value: unknown): AdminProductMedia | null {
+  const item = record(value);
+  const media = record(item?.media);
+  const id = text(item?.mediaId) ?? text(item?.id) ?? text(media?.id);
+  const mimeType = text(item?.mimeType) ?? text(media?.mimeType);
+  const sizeBytes = number(item?.sizeBytes) ?? number(media?.sizeBytes);
+  if (!id || !mimeType || sizeBytes === null) return null;
+
+  return {
+    id,
+    url: text(item?.url),
+    altText: text(item?.altText) ?? text(media?.altText),
+    isPrimary: item?.isPrimary === true,
+    sortOrder: number(item?.sortOrder) ?? 0,
+    mimeType,
+    originalName: text(item?.originalName) ?? text(media?.originalName),
+    sizeBytes,
+    width: number(item?.width) ?? number(media?.width),
+    height: number(item?.height) ?? number(media?.height),
+  };
+}
+
 export function parseAdminProduct(value: unknown): AdminProduct | null {
   const item = record(value);
   const id = text(item?.id);
@@ -131,6 +167,12 @@ export function parseAdminProduct(value: unknown): AdminProduct | null {
   const variants = (Array.isArray(item?.variants) ? item.variants : [])
     .map(parseVariant)
     .filter((variant): variant is AdminProductVariant => variant !== null);
+  const rawMedia = Array.isArray(item?.media) ? item.media : [];
+  const media = rawMedia
+    .map(parseProductMedia)
+    .filter((mediaItem): mediaItem is AdminProductMedia => mediaItem !== null)
+    .sort((left, right) => left.sortOrder - right.sortOrder);
+  if (media.length !== rawMedia.length) return null;
 
   return {
     id,
@@ -148,7 +190,8 @@ export function parseAdminProduct(value: unknown): AdminProduct | null {
     country: lookup(item?.country),
     categories,
     variants,
-    mediaCount: Array.isArray(item?.media) ? item.media.length : 0,
+    media,
+    mediaCount: media.length,
   };
 }
 

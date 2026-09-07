@@ -15,6 +15,10 @@ describe('CatalogController', () => {
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.getProduct)).toBeUndefined();
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.updateProduct)).toBeUndefined();
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.updateProductStatus)).toBeUndefined();
+    expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.uploadProductMedia)).toBeUndefined();
+    expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.reorderProductMedia)).toBeUndefined();
+    expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.updateProductMedia)).toBeUndefined();
+    expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.removeProductMedia)).toBeUndefined();
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.uploadMedia)).toBeUndefined();
   });
 });

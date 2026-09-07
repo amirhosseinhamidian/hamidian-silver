@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -25,6 +26,7 @@ import { CreateCountryDto } from './dto/create-country.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CreateSizeDto } from './dto/create-size.dto';
 import { PublicCatalogQueryDto } from './dto/public-catalog-query.dto';
+import { ReorderProductMediaDto } from './dto/reorder-product-media.dto';
 import {
   PublicCatalogBrandDto,
   PublicCatalogCategoryDto,
@@ -33,6 +35,7 @@ import {
 } from './dto/public-catalog-response.dto';
 import { UploadMediaDto } from './dto/upload-media.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { UpdateProductMediaDto } from './dto/update-product-media.dto';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
 import type { CatalogUploadFile } from './local-media-storage.service';
 
@@ -158,6 +161,35 @@ export class CatalogController {
     return this.catalogService.createProduct(dto);
   }
 
+  @Post('products/:productId/media')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: MEDIA_UPLOAD_LIMIT_BYTES,
+        files: 1,
+      },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        altText: { type: 'string', minLength: 1, maxLength: 255 },
+      },
+    },
+  })
+  uploadProductMedia(
+    @Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string,
+    @UploadedFile() file: CatalogUploadFile | undefined,
+    @Body() dto: UploadMediaDto,
+  ) {
+    return this.catalogMediaService.uploadForProduct(productId, file, dto);
+  }
+
   @Get('products')
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
   listProducts(@Query() query: AdminCatalogProductsQueryDto) {
@@ -186,5 +218,33 @@ export class CatalogController {
     @Body() dto: UpdateProductStatusDto,
   ) {
     return this.catalogService.updateProductStatus(productId, dto.status);
+  }
+
+  @Patch('products/:productId/media/order')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  reorderProductMedia(
+    @Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string,
+    @Body() dto: ReorderProductMediaDto,
+  ) {
+    return this.catalogMediaService.reorderProductMedia(productId, dto.mediaIds);
+  }
+
+  @Patch('products/:productId/media/:mediaId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  updateProductMedia(
+    @Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string,
+    @Param('mediaId', new ParseUUIDPipe({ version: '4' })) mediaId: string,
+    @Body() dto: UpdateProductMediaDto,
+  ) {
+    return this.catalogMediaService.updateProductMedia(productId, mediaId, dto);
+  }
+
+  @Delete('products/:productId/media/:mediaId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  removeProductMedia(
+    @Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string,
+    @Param('mediaId', new ParseUUIDPipe({ version: '4' })) mediaId: string,
+  ) {
+    return this.catalogMediaService.removeProductMedia(productId, mediaId);
   }
 }

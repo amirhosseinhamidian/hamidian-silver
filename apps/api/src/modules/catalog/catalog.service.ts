@@ -397,7 +397,12 @@ export class CatalogService {
       this.prisma.product.count({ where }),
     ]);
 
-    return { items, total, page, limit };
+    return {
+      items: items.map((product) => this.withAdminMediaUrls(product)),
+      total,
+      page,
+      limit,
+    };
   }
 
   async getProduct(productId: string) {
@@ -419,11 +424,11 @@ export class CatalogService {
     });
 
     if (!product) throw new NotFoundException('Product was not found.');
-    return product;
+    return this.withAdminMediaUrls(product);
   }
 
   async updateProduct(productId: string, dto: UpdateProductDto) {
-    return this.prisma.$transaction(async (transaction) => {
+    const updated = await this.prisma.$transaction(async (transaction) => {
       const current = await transaction.product.findFirst({
         where: { id: productId, deletedAt: null },
         select: { id: true, salePriceToman: true, compareAtPriceToman: true },
@@ -505,6 +510,8 @@ export class CatalogService {
         },
       });
     });
+
+    return this.withAdminMediaUrls(updated);
   }
 
   async updateProductStatus(productId: string, status: ProductStatus) {
@@ -1291,5 +1298,21 @@ export class CatalogService {
     if (primaryMediaCount > 1) {
       throw new BadRequestException('A product can have only one primary media item.');
     }
+  }
+
+  private withAdminMediaUrls<
+    T extends {
+      media: readonly {
+        media: { storageKey: string };
+      }[];
+    },
+  >(product: T) {
+    return {
+      ...product,
+      media: product.media.map((item) => ({
+        ...item,
+        url: this.publicMediaUrl.resolve(item.media.storageKey),
+      })),
+    };
   }
 }

@@ -25,6 +25,11 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Media storage
+
+Product images are stored on local disk in development and on a persistent VPS path in production.
+See [MEDIA_STORAGE.md](./MEDIA_STORAGE.md) for configuration, serving and backup requirements.
+
 ## Project setup
 
 ```bash

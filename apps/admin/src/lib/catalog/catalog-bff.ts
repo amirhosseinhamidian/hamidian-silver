@@ -13,20 +13,36 @@ function responseFromUpstream(response: Response, payload: unknown): Response {
 export async function forwardCatalogMutation(
   request: Request,
   apiPath: string,
-  method: 'POST' | 'PATCH',
+  method: 'POST' | 'PATCH' | 'DELETE',
 ): Promise<Response> {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token) return Response.json({ message: 'Authentication required.' }, { status: 401 });
 
   try {
-    const body = await request.text();
+    const body = method === 'DELETE' ? undefined : await request.text();
     const response = await requestAdminCatalog(apiPath, token, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
       body,
     });
     return responseFromUpstream(response, await readJsonResponse(response));
   } catch {
     return Response.json({ message: 'Catalog service is unavailable.' }, { status: 502 });
+  }
+}
+
+export async function forwardCatalogUpload(request: Request, apiPath: string): Promise<Response> {
+  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  if (!token) return Response.json({ message: 'Authentication required.' }, { status: 401 });
+
+  try {
+    const formData = await request.formData();
+    const response = await requestAdminCatalog(apiPath, token, {
+      method: 'POST',
+      body: formData,
+    });
+    return responseFromUpstream(response, await readJsonResponse(response));
+  } catch {
+    return Response.json({ message: 'Catalog upload service is unavailable.' }, { status: 502 });
   }
 }

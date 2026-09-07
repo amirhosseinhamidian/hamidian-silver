@@ -1,4 +1,15 @@
 import * as Joi from 'joi';
+import { isAbsolute } from 'node:path';
+
+const absoluteProductionPath = Joi.string()
+  .min(1)
+  .empty('')
+  .custom((value: string, helpers) =>
+    isAbsolute(value) ? value : helpers.error('string.absolutePath'),
+  )
+  .messages({
+    'string.absolutePath': '{{#label}} must be an absolute filesystem path in production',
+  });
 
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
@@ -12,7 +23,7 @@ export const envValidationSchema = Joi.object({
   MEDIA_STORAGE_ROOT: Joi.when('NODE_ENV', {
     is: 'production',
     // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
-    then: Joi.string().min(1).empty('').required(),
+    then: absoluteProductionPath.required(),
     otherwise: Joi.string().min(1).empty('').default('.data/media'),
   }),
   MEDIA_PUBLIC_BASE_URL: Joi.when('NODE_ENV', {
