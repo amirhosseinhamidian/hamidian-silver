@@ -1,5 +1,4 @@
 import type { CustomerOrderDetail } from '@/components/account/account-types';
-import { toPersianDigits } from '@/components/account/account-types';
 import { PaymentResult, type PaymentResultStatus } from '@/components/checkout/payment-result';
 import { getCustomerOrder } from '@/lib/orders/customer-orders-bff';
 
@@ -48,7 +47,7 @@ export default async function PaymentResultPage({ searchParams }: PaymentResultP
     <PaymentResult
       status={verifiedResultStatus(requestedStatus, order?.status)}
       orderId={orderId}
-      orderNumber={order ? toPersianDigits(order.orderNumber) : undefined}
+      order={order}
     />
   );
 }
