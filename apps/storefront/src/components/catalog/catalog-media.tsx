@@ -5,9 +5,16 @@ type CatalogMediaProps = Readonly<{
   alt: string;
   eager?: boolean;
   fallbackSrc?: string | null;
+  imageClassName?: string;
 }>;
 
-export function CatalogMedia({ media, alt, eager = false, fallbackSrc = null }: CatalogMediaProps) {
+export function CatalogMedia({
+  media,
+  alt,
+  eager = false,
+  fallbackSrc = null,
+  imageClassName = 'object-cover',
+}: CatalogMediaProps) {
   const accessibleAlt = media?.altText?.trim() || alt;
   const src =
     media?.url && media.mimeType.startsWith('image/') ? media.url : fallbackSrc?.trim() || null;
@@ -34,7 +41,7 @@ export function CatalogMedia({ media, alt, eager = false, fallbackSrc = null }: 
       height={media?.height ?? undefined}
       loading={eager ? 'eager' : 'lazy'}
       decoding="async"
-      className="h-full w-full object-cover"
+      className={`h-full w-full ${imageClassName}`}
     />
   );
 }

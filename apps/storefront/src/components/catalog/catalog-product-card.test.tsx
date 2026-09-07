@@ -62,4 +62,10 @@ describe('CatalogProductCard', () => {
     );
     expect(screen.queryByRole('link', { name: 'مشاهده و خرید' })).not.toBeInTheDocument();
   });
+
+  it('renders an optional merchandising badge', () => {
+    render(<CatalogProductCard product={product} badge="جدید" />);
+
+    expect(screen.getByText('جدید')).toHaveClass('bg-[var(--sf-color-ink)]', 'text-white');
+  });
 });

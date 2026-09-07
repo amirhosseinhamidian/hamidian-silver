@@ -18,6 +18,10 @@ export class CreateBrandDto {
   imageId?: string;
 
   @IsOptional()
+  @IsUUID('4')
+  originCountryId?: string;
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 }

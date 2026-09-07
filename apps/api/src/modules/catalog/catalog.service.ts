@@ -49,16 +49,22 @@ export class CatalogService {
       await this.requireMedia(dto.imageId);
     }
 
+    if (dto.originCountryId) {
+      await this.requireCountry(dto.originCountryId);
+    }
+
     return this.prisma.brand.create({
       data: {
         name: dto.name,
         slug: dto.slug,
         description: dto.description,
         imageId: dto.imageId,
+        originCountryId: dto.originCountryId,
         isActive: dto.isActive ?? true,
       },
       include: {
         image: true,
+        originCountry: true,
       },
     });
   }
@@ -306,6 +312,7 @@ export class CatalogService {
       },
       include: {
         image: true,
+        originCountry: true,
       },
     });
   }
@@ -588,6 +595,16 @@ export class CatalogService {
         name: true,
         slug: true,
         description: true,
+        originCountry: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            isoCode: true,
+            isActive: true,
+            deletedAt: true,
+          },
+        },
         image: {
           select: {
             storageKey: true,
@@ -606,6 +623,15 @@ export class CatalogService {
       name: brand.name,
       slug: brand.slug,
       description: brand.description,
+      originCountry:
+        brand.originCountry?.isActive && !brand.originCountry.deletedAt
+          ? {
+              id: brand.originCountry.id,
+              name: brand.originCountry.name,
+              slug: brand.originCountry.slug,
+              isoCode: brand.originCountry.isoCode,
+            }
+          : null,
       image:
         brand.image && !brand.image.deletedAt
           ? {
@@ -768,6 +794,16 @@ export class CatalogService {
                   description: true,
                   isActive: true,
                   deletedAt: true,
+                  originCountry: {
+                    select: {
+                      id: true,
+                      name: true,
+                      slug: true,
+                      isoCode: true,
+                      isActive: true,
+                      deletedAt: true,
+                    },
+                  },
                   image: {
                     select: {
                       storageKey: true,
@@ -847,6 +883,15 @@ export class CatalogService {
                 name: product.brand.name,
                 slug: product.brand.slug,
                 description: product.brand.description,
+                originCountry:
+                  product.brand.originCountry?.isActive && !product.brand.originCountry.deletedAt
+                    ? {
+                        id: product.brand.originCountry.id,
+                        name: product.brand.originCountry.name,
+                        slug: product.brand.originCountry.slug,
+                        isoCode: product.brand.originCountry.isoCode,
+                      }
+                    : null,
                 image:
                   product.brand.image && !product.brand.image.deletedAt
                     ? {
@@ -933,6 +978,16 @@ export class CatalogService {
             description: true,
             isActive: true,
             deletedAt: true,
+            originCountry: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                isoCode: true,
+                isActive: true,
+                deletedAt: true,
+              },
+            },
             image: {
               select: {
                 storageKey: true,
@@ -1133,6 +1188,15 @@ export class CatalogService {
               name: product.brand.name,
               slug: product.brand.slug,
               description: product.brand.description,
+              originCountry:
+                product.brand.originCountry?.isActive && !product.brand.originCountry.deletedAt
+                  ? {
+                      id: product.brand.originCountry.id,
+                      name: product.brand.originCountry.name,
+                      slug: product.brand.originCountry.slug,
+                      isoCode: product.brand.originCountry.isoCode,
+                    }
+                  : null,
               image:
                 product.brand.image && !product.brand.image.deletedAt
                   ? {
@@ -1250,6 +1314,21 @@ export class CatalogService {
 
     if (!media) {
       throw new NotFoundException('Media was not found.');
+    }
+  }
+
+  private async requireCountry(countryId: string): Promise<void> {
+    const country = await this.prisma.country.findFirst({
+      where: {
+        id: countryId,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+
+    if (!country) {
+      throw new NotFoundException('Country was not found.');
     }
   }
 

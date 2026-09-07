@@ -2100,6 +2100,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/site-settings/public/homepage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SiteSettingsController_getPublicHomepage_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/site-settings/homepage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SiteSettingsController_getAdminHomepage_v1"];
+        put: operations["SiteSettingsController_updateHomepage_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/site-settings": {
         parameters: {
             query?: never;
@@ -2171,9 +2203,16 @@ export interface components {
             slug: string;
             sortOrder: number;
         };
+        PublicCatalogCountryDto: {
+            id: string;
+            name: string;
+            slug: string;
+            isoCode: string;
+        };
         PublicCatalogBrandDto: {
             description: string | null;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            originCountry: components["schemas"]["PublicCatalogCountryDto"] | null;
             id: string;
             name: string;
             slug: string;
@@ -2199,12 +2238,6 @@ export interface components {
             pageSize: number;
             total: number;
             totalPages: number;
-        };
-        PublicCatalogCountryDto: {
-            id: string;
-            name: string;
-            slug: string;
-            isoCode: string;
         };
         PublicCatalogSizeDto: {
             id: string;
@@ -2262,6 +2295,8 @@ export interface components {
             description?: string;
             /** Format: uuid */
             imageId?: string;
+            /** Format: uuid */
+            originCountryId?: string;
             isActive?: boolean;
         };
         CreateCountryDto: {
@@ -2794,6 +2829,68 @@ export interface components {
             catalogHeroTitle: string | null;
             catalogHeroSubtitle: string | null;
             catalogHeroMedia: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
+        };
+        PublicHomepageHeroSlideDto: {
+            title: string | null;
+            subtitle: string | null;
+            actionLabel: string | null;
+            actionHref: string | null;
+            media: components["schemas"]["PublicCatalogMediaDto"];
+        };
+        PublicHomepageFeaturedCategoryDto: {
+            description: string | null;
+            parentId: string | null;
+            image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            id: string;
+            name: string;
+            slug: string;
+            sortOrder: number;
+            priority: number;
+        };
+        PublicHomepageDto: {
+            primaryHeroSlides: components["schemas"]["PublicHomepageHeroSlideDto"][];
+            secondaryHero: components["schemas"]["PublicHomepageHeroSlideDto"] | null;
+            newProducts: components["schemas"]["PublicCatalogProductSummaryDto"][];
+            featuredCategories: components["schemas"]["PublicHomepageFeaturedCategoryDto"][];
+            popularProducts: components["schemas"]["PublicCatalogProductSummaryDto"][];
+            featuredBrands: components["schemas"]["PublicCatalogBrandDto"][];
+        };
+        AdminHomepageHeroSlideDto: {
+            title: string | null;
+            subtitle: string | null;
+            actionLabel: string | null;
+            actionHref: string | null;
+            id: string;
+            mediaId: string;
+            sortOrder: number;
+            isActive: boolean;
+        };
+        AdminHomepageSelectionDto: {
+            id: string;
+            priority: number;
+        };
+        AdminHomepageDto: {
+            primaryHeroSlides: components["schemas"]["AdminHomepageHeroSlideDto"][];
+            secondaryHero: components["schemas"]["AdminHomepageHeroSlideDto"] | null;
+            featuredCategories: components["schemas"]["AdminHomepageSelectionDto"][];
+            popularProducts: components["schemas"]["AdminHomepageSelectionDto"][];
+            /** Format: date-time */
+            updatedAt: string | null;
+        };
+        UpdateHomepageHeroSlideDto: {
+            /** Format: uuid */
+            mediaId: string;
+            title?: string | null;
+            subtitle?: string | null;
+            actionLabel?: string | null;
+            actionHref?: string | null;
+            isActive?: boolean;
+        };
+        UpdateHomepageDto: {
+            primaryHeroSlides: components["schemas"]["UpdateHomepageHeroSlideDto"][];
+            secondaryHero?: components["schemas"]["UpdateHomepageHeroSlideDto"] | null;
+            categoryIds: string[];
+            popularProductIds: string[];
         };
         AdminSiteSettingsDto: {
             catalogHeroEnabled: boolean;
@@ -6030,6 +6127,67 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicSiteSettingsDto"];
+                };
+            };
+        };
+    };
+    SiteSettingsController_getPublicHomepage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicHomepageDto"];
+                };
+            };
+        };
+    };
+    SiteSettingsController_getAdminHomepage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminHomepageDto"];
+                };
+            };
+        };
+    };
+    SiteSettingsController_updateHomepage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateHomepageDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminHomepageDto"];
                 };
             };
         };

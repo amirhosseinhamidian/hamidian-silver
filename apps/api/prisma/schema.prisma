@@ -186,6 +186,11 @@ enum ProductStatus {
   ARCHIVED
 }
 
+enum HomepageHeroPlacement {
+  PRIMARY
+  SECONDARY
+}
+
 model Media {
   id                      String         @id @default(uuid()) @db.Uuid
   storageKey              String         @unique @db.VarChar(500)
@@ -203,6 +208,7 @@ model Media {
   countryImages           Country[]      @relation("CountryImage")
   productMedia            ProductMedia[]
   siteSettingsCatalogHero SiteSettings[] @relation("SiteSettingsCatalogHero")
+  homepageHeroSlides      HomepageHeroSlide[]
 
   @@index([deletedAt])
   @@map("media")
@@ -241,6 +247,7 @@ model Category {
   children    Category[]        @relation("CategoryTree")
   image       Media?            @relation("CategoryImage", fields: [imageId], references: [id], onDelete: SetNull)
   products    ProductCategory[]
+  homepageFeature HomepageFeaturedCategory?
 
   @@index([parentId])
   @@index([imageId])
@@ -255,14 +262,17 @@ model Brand {
   slug        String    @unique @db.VarChar(180)
   description String?
   imageId     String?   @db.Uuid
+  originCountryId String? @db.Uuid
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt   DateTime? @db.Timestamptz(3)
   image       Media?    @relation("BrandImage", fields: [imageId], references: [id], onDelete: SetNull)
+  originCountry Country? @relation("BrandOriginCountry", fields: [originCountryId], references: [id], onDelete: SetNull)
   products    Product[]
 
   @@index([imageId])
+  @@index([originCountryId])
   @@index([isActive])
   @@index([deletedAt])
   @@map("brands")
@@ -280,6 +290,7 @@ model Country {
   deletedAt DateTime? @db.Timestamptz(3)
   image     Media?    @relation("CountryImage", fields: [imageId], references: [id], onDelete: SetNull)
   products  Product[]
+  originBrands Brand[] @relation("BrandOriginCountry")
 
   @@index([imageId])
   @@index([isActive])
@@ -326,12 +337,52 @@ model Product {
   suppliers        ProductSupplier[]
   priceHistory     ProductPriceHistory[]
   stockNotificationSubscriptions StockNotificationSubscription[]
+  homepagePopularFeature HomepagePopularProduct?
 
   @@index([brandId])
   @@index([countryId])
   @@index([status])
   @@index([deletedAt])
   @@map("products")
+}
+
+model HomepageHeroSlide {
+  id          String                @id @default(uuid()) @db.Uuid
+  placement   HomepageHeroPlacement
+  mediaId     String                @db.Uuid
+  title       String?               @db.VarChar(200)
+  subtitle    String?               @db.VarChar(500)
+  actionLabel String?               @db.VarChar(100)
+  actionHref  String?               @db.VarChar(1000)
+  sortOrder   Int                   @default(0)
+  isActive    Boolean               @default(true)
+  createdAt   DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime              @updatedAt @db.Timestamptz(3)
+  media       Media                 @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@index([placement, isActive, sortOrder])
+  @@index([mediaId])
+  @@map("homepage_hero_slides")
+}
+
+model HomepageFeaturedCategory {
+  categoryId String   @id @db.Uuid
+  priority   Int      @unique
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("homepage_featured_categories")
+}
+
+model HomepagePopularProduct {
+  productId String   @id @db.Uuid
+  priority  Int      @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("homepage_popular_products")
 }
 
 model ProductVariant {

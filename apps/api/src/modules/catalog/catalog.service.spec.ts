@@ -395,6 +395,38 @@ describe('CatalogService', () => {
     );
   });
 
+  it('projects the active origin country for public brands', async () => {
+    prisma.brand.findMany.mockResolvedValue([
+      {
+        id: '10000000-0000-4000-8000-000000000001',
+        name: 'Hamidian',
+        slug: 'hamidian',
+        description: null,
+        originCountry: {
+          id: '20000000-0000-4000-8000-000000000001',
+          name: 'ایران',
+          slug: 'iran',
+          isoCode: 'IR',
+          isActive: true,
+          deletedAt: null,
+        },
+        image: null,
+      },
+    ]);
+
+    await expect(service.listPublicBrands()).resolves.toEqual([
+      expect.objectContaining({
+        id: '10000000-0000-4000-8000-000000000001',
+        originCountry: {
+          id: '20000000-0000-4000-8000-000000000001',
+          name: 'ایران',
+          slug: 'iran',
+          isoCode: 'IR',
+        },
+      }),
+    ]);
+  });
+
   it('paginates public products and excludes internal supplier data from the query', async () => {
     prisma.category.findMany.mockResolvedValue([
       {

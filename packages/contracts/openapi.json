@@ -4801,6 +4801,77 @@
         ]
       }
     },
+    "/api/v1/site-settings/public/homepage": {
+      "get": {
+        "operationId": "SiteSettingsController_getPublicHomepage_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicHomepageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SiteSettings"
+        ]
+      }
+    },
+    "/api/v1/site-settings/homepage": {
+      "get": {
+        "operationId": "SiteSettingsController_getAdminHomepage_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminHomepageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SiteSettings"
+        ]
+      },
+      "put": {
+        "operationId": "SiteSettingsController_updateHomepage_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateHomepageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminHomepageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SiteSettings"
+        ]
+      }
+    },
     "/api/v1/site-settings": {
       "get": {
         "operationId": "SiteSettingsController_getAdminSettings_v1",
@@ -5069,6 +5140,15 @@
               }
             ]
           },
+          "originCountry": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogCountryDto"
+              }
+            ]
+          },
           "id": {
             "type": "string"
           },
@@ -5090,6 +5170,29 @@
           "name",
           "slug",
           "sortOrder"
+        ]
+      },
+      "PublicCatalogCountryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "isoCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "isoCode"
         ]
       },
       "PublicCatalogBrandDto": {
@@ -5121,6 +5224,7 @@
         "required": [
           "description",
           "image",
+          "originCountry",
           "id",
           "name",
           "slug"
@@ -5232,29 +5336,6 @@
           "pageSize",
           "total",
           "totalPages"
-        ]
-      },
-      "PublicCatalogCountryDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          },
-          "isoCode": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "isoCode"
         ]
       },
       "PublicCatalogSizeDto": {
@@ -5506,6 +5587,10 @@
             "type": "string"
           },
           "imageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "originCountryId": {
             "type": "string",
             "format": "uuid"
           },
@@ -7637,6 +7722,319 @@
           "catalogHeroTitle",
           "catalogHeroSubtitle",
           "catalogHeroMedia"
+        ]
+      },
+      "PublicHomepageHeroSlideDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "actionLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "actionHref": {
+            "type": "string",
+            "nullable": true
+          },
+          "media": {
+            "$ref": "#/components/schemas/PublicCatalogMediaDto"
+          }
+        },
+        "required": [
+          "title",
+          "subtitle",
+          "actionLabel",
+          "actionHref",
+          "media"
+        ]
+      },
+      "PublicHomepageFeaturedCategoryDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "parentId": {
+            "type": "string",
+            "nullable": true
+          },
+          "image": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "priority": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "description",
+          "parentId",
+          "image",
+          "id",
+          "name",
+          "slug",
+          "sortOrder",
+          "priority"
+        ]
+      },
+      "PublicHomepageDto": {
+        "type": "object",
+        "properties": {
+          "primaryHeroSlides": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicHomepageHeroSlideDto"
+            }
+          },
+          "secondaryHero": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicHomepageHeroSlideDto"
+              }
+            ]
+          },
+          "newProducts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogProductSummaryDto"
+            }
+          },
+          "featuredCategories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicHomepageFeaturedCategoryDto"
+            }
+          },
+          "popularProducts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogProductSummaryDto"
+            }
+          },
+          "featuredBrands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogBrandDto"
+            }
+          }
+        },
+        "required": [
+          "primaryHeroSlides",
+          "secondaryHero",
+          "newProducts",
+          "featuredCategories",
+          "popularProducts",
+          "featuredBrands"
+        ]
+      },
+      "AdminHomepageHeroSlideDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "actionLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "actionHref": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "mediaId": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "title",
+          "subtitle",
+          "actionLabel",
+          "actionHref",
+          "id",
+          "mediaId",
+          "sortOrder",
+          "isActive"
+        ]
+      },
+      "AdminHomepageSelectionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "priority"
+        ]
+      },
+      "AdminHomepageDto": {
+        "type": "object",
+        "properties": {
+          "primaryHeroSlides": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminHomepageHeroSlideDto"
+            }
+          },
+          "secondaryHero": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AdminHomepageHeroSlideDto"
+              }
+            ]
+          },
+          "featuredCategories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminHomepageSelectionDto"
+            }
+          },
+          "popularProducts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminHomepageSelectionDto"
+            }
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "primaryHeroSlides",
+          "secondaryHero",
+          "featuredCategories",
+          "popularProducts",
+          "updatedAt"
+        ]
+      },
+      "UpdateHomepageHeroSlideDto": {
+        "type": "object",
+        "properties": {
+          "mediaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "actionLabel": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "actionHref": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "mediaId"
+        ]
+      },
+      "UpdateHomepageDto": {
+        "type": "object",
+        "properties": {
+          "primaryHeroSlides": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpdateHomepageHeroSlideDto"
+            }
+          },
+          "secondaryHero": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UpdateHomepageHeroSlideDto"
+              }
+            ]
+          },
+          "categoryIds": {
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "popularProductIds": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "primaryHeroSlides",
+          "categoryIds",
+          "popularProductIds"
         ]
       },
       "AdminSiteSettingsDto": {

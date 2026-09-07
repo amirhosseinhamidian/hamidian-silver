@@ -10,9 +10,14 @@ import { getDiscountPercent } from '@/lib/catalog/pricing';
 type CatalogProductCardProps = Readonly<{
   product: PublicCatalogProductSummary;
   fallbackSrc?: string | null;
+  badge?: string | null;
 }>;
 
-export function CatalogProductCard({ product, fallbackSrc = null }: CatalogProductCardProps) {
+export function CatalogProductCard({
+  product,
+  fallbackSrc = null,
+  badge = null,
+}: CatalogProductCardProps) {
   return (
     <li className="sf-catalog-card group flex min-w-0 flex-col p-2">
       <Link
@@ -27,6 +32,11 @@ export function CatalogProductCard({ product, fallbackSrc = null }: CatalogProdu
           fallbackSrc={fallbackSrc}
           alt={product.name}
         />
+        {badge ? (
+          <span className="absolute start-3 top-3 bg-[var(--sf-color-ink)] px-2.5 py-1 text-xs text-white">
+            {badge}
+          </span>
+        ) : null}
         {!product.isAvailable ? (
           <span
             className="

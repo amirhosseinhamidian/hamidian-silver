@@ -34,6 +34,13 @@ export class PublicCatalogCategoryDto {
   image!: PublicCatalogMediaDto | null;
 }
 
+export class PublicCatalogCountryDto {
+  id!: string;
+  name!: string;
+  slug!: string;
+  isoCode!: string;
+}
+
 export class PublicCatalogBrandDto {
   id!: string;
   name!: string;
@@ -44,13 +51,9 @@ export class PublicCatalogBrandDto {
 
   @ApiProperty({ type: () => PublicCatalogMediaDto, nullable: true })
   image!: PublicCatalogMediaDto | null;
-}
 
-export class PublicCatalogCountryDto {
-  id!: string;
-  name!: string;
-  slug!: string;
-  isoCode!: string;
+  @ApiProperty({ type: () => PublicCatalogCountryDto, nullable: true })
+  originCountry!: PublicCatalogCountryDto | null;
 }
 
 export class PublicCatalogSizeDto {
