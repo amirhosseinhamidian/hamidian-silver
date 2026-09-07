@@ -15,6 +15,12 @@ describe('CatalogMediaService', () => {
     category: {
       findFirst: jest.fn(),
     },
+    brand: {
+      findFirst: jest.fn(),
+    },
+    country: {
+      findFirst: jest.fn(),
+    },
     productMedia: {
       count: jest.fn(),
       findMany: jest.fn(),
@@ -229,6 +235,48 @@ describe('CatalogMediaService', () => {
       data: { deletedAt: expect.any(Date) },
     });
     expect(localMediaStorage.delete).toHaveBeenCalledWith('catalog/2026/09/category.webp');
+  });
+
+  it('stores and attaches a brand image through the shared media disk', async () => {
+    const brandId = '10000000-0000-4000-8000-000000000001';
+    const mediaId = '10000000-0000-4000-8000-000000000002';
+    prisma.brand.findFirst.mockResolvedValue({ id: brandId });
+    localMediaStorage.storeImage.mockResolvedValue({
+      storageKey: 'catalog/2026/09/brand.png',
+      mimeType: 'image/png',
+      sizeBytes: 11,
+    });
+    const transaction = {
+      brand: {
+        findFirst: jest.fn().mockResolvedValue({ id: brandId, imageId: null }),
+        update: jest.fn(),
+      },
+      media: {
+        create: jest.fn().mockResolvedValue({
+          id: mediaId,
+          storageKey: 'catalog/2026/09/brand.png',
+          mimeType: 'image/png',
+          altText: 'حمیدیان',
+        }),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(service.uploadForBrand(brandId, file, { altText: 'حمیدیان' })).resolves.toEqual({
+      brandId,
+      image: {
+        id: mediaId,
+        url: 'https://media.example/catalog/2026/09/brand.png',
+        mimeType: 'image/png',
+        altText: 'حمیدیان',
+      },
+    });
+    expect(transaction.brand.update).toHaveBeenCalledWith({
+      where: { id: brandId },
+      data: { imageId: mediaId },
+    });
   });
 
   it('sets one product image as primary and clears the previous primary atomically', async () => {

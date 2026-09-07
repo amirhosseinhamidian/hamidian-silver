@@ -228,6 +228,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/brands/{brandId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["CatalogController_archiveBrand_v1"];
+        options?: never;
+        head?: never;
+        patch: operations["CatalogController_updateBrand_v1"];
+        trace?: never;
+    };
+    "/api/v1/catalog/brands/{brandId}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_uploadBrandImage_v1"];
+        delete: operations["CatalogController_removeBrandImage_v1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/countries": {
         parameters: {
             query?: never;
@@ -239,6 +271,38 @@ export interface paths {
         put?: never;
         post: operations["CatalogController_createCountry_v1"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/countries/{countryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["CatalogController_archiveCountry_v1"];
+        options?: never;
+        head?: never;
+        patch: operations["CatalogController_updateCountry_v1"];
+        trace?: never;
+    };
+    "/api/v1/catalog/countries/{countryId}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_uploadCountryImage_v1"];
+        delete: operations["CatalogController_removeCountryImage_v1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2438,12 +2502,30 @@ export interface components {
             originCountryId?: string;
             isActive?: boolean;
         };
+        UpdateBrandDto: {
+            name?: string;
+            slug?: string;
+            description?: string | null;
+            /** Format: uuid */
+            imageId?: string | null;
+            isActive?: boolean;
+        };
         CreateCountryDto: {
             name: string;
             slug: string;
             isoCode: string;
+            description?: string;
             /** Format: uuid */
             imageId?: string;
+            isActive?: boolean;
+        };
+        UpdateCountryDto: {
+            name?: string;
+            slug?: string;
+            isoCode?: string;
+            description?: string | null;
+            /** Format: uuid */
+            imageId?: string | null;
             isActive?: boolean;
         };
         CreateSizeDto: {
@@ -3524,7 +3606,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": Record<string, never>[];
                 };
             };
         };
@@ -3552,6 +3634,96 @@ export interface operations {
             };
         };
     };
+    CatalogController_archiveBrand_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brandId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_updateBrand_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brandId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBrandDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    CatalogController_uploadBrandImage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brandId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    altText?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_removeBrandImage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brandId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     CatalogController_listCountries_v1: {
         parameters: {
             query?: never;
@@ -3566,7 +3738,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": Record<string, never>[];
                 };
             };
         };
@@ -3591,6 +3763,96 @@ export interface operations {
                 content: {
                     "application/json": Record<string, never>;
                 };
+            };
+        };
+    };
+    CatalogController_archiveCountry_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                countryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_updateCountry_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                countryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCountryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    CatalogController_uploadCountryImage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                countryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    altText?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_removeCountryImage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                countryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

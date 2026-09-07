@@ -19,6 +19,7 @@ import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CatalogMediaService } from './catalog-media.service';
 import { CatalogCategoriesService } from './catalog-categories.service';
+import { CatalogReferencesService } from './catalog-references.service';
 import { CatalogService } from './catalog.service';
 import { CatalogVariantsService } from './catalog-variants.service';
 import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query.dto';
@@ -40,6 +41,8 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateProductMediaDto } from './dto/update-product-media.dto';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { UpdateBrandDto } from './dto/update-brand.dto';
+import { UpdateCountryDto } from './dto/update-country.dto';
 import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
 import { UpdateSizeDto } from './dto/update-size.dto';
 import type { CatalogUploadFile } from './local-media-storage.service';
@@ -50,6 +53,7 @@ export class CatalogController {
     private readonly catalogService: CatalogService,
     private readonly catalogCategoriesService: CatalogCategoriesService,
     private readonly catalogMediaService: CatalogMediaService,
+    private readonly catalogReferencesService: CatalogReferencesService,
     private readonly catalogVariantsService: CatalogVariantsService,
   ) {}
 
@@ -178,25 +182,115 @@ export class CatalogController {
   @Post('brands')
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
   createBrand(@Body() dto: CreateBrandDto) {
-    return this.catalogService.createBrand(dto);
+    return this.catalogReferencesService.createBrand(dto);
   }
 
   @Get('brands')
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
   listBrands() {
-    return this.catalogService.listBrands();
+    return this.catalogReferencesService.listBrands();
+  }
+
+  @Patch('brands/:brandId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  updateBrand(
+    @Param('brandId', new ParseUUIDPipe({ version: '4' })) brandId: string,
+    @Body() dto: UpdateBrandDto,
+  ) {
+    return this.catalogReferencesService.updateBrand(brandId, dto);
+  }
+
+  @Delete('brands/:brandId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  archiveBrand(@Param('brandId', new ParseUUIDPipe({ version: '4' })) brandId: string) {
+    return this.catalogReferencesService.archiveBrand(brandId);
+  }
+
+  @Post('brands/:brandId/image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MEDIA_UPLOAD_LIMIT_BYTES, files: 1 } }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        altText: { type: 'string', minLength: 1, maxLength: 255 },
+      },
+    },
+  })
+  uploadBrandImage(
+    @Param('brandId', new ParseUUIDPipe({ version: '4' })) brandId: string,
+    @UploadedFile() file: CatalogUploadFile | undefined,
+    @Body() dto: UploadMediaDto,
+  ) {
+    return this.catalogMediaService.uploadForBrand(brandId, file, dto);
+  }
+
+  @Delete('brands/:brandId/image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  removeBrandImage(@Param('brandId', new ParseUUIDPipe({ version: '4' })) brandId: string) {
+    return this.catalogMediaService.removeBrandImage(brandId);
   }
 
   @Post('countries')
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
   createCountry(@Body() dto: CreateCountryDto) {
-    return this.catalogService.createCountry(dto);
+    return this.catalogReferencesService.createCountry(dto);
   }
 
   @Get('countries')
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
   listCountries() {
-    return this.catalogService.listCountries();
+    return this.catalogReferencesService.listCountries();
+  }
+
+  @Patch('countries/:countryId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  updateCountry(
+    @Param('countryId', new ParseUUIDPipe({ version: '4' })) countryId: string,
+    @Body() dto: UpdateCountryDto,
+  ) {
+    return this.catalogReferencesService.updateCountry(countryId, dto);
+  }
+
+  @Delete('countries/:countryId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  archiveCountry(@Param('countryId', new ParseUUIDPipe({ version: '4' })) countryId: string) {
+    return this.catalogReferencesService.archiveCountry(countryId);
+  }
+
+  @Post('countries/:countryId/image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MEDIA_UPLOAD_LIMIT_BYTES, files: 1 } }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        altText: { type: 'string', minLength: 1, maxLength: 255 },
+      },
+    },
+  })
+  uploadCountryImage(
+    @Param('countryId', new ParseUUIDPipe({ version: '4' })) countryId: string,
+    @UploadedFile() file: CatalogUploadFile | undefined,
+    @Body() dto: UploadMediaDto,
+  ) {
+    return this.catalogMediaService.uploadForCountry(countryId, file, dto);
+  }
+
+  @Delete('countries/:countryId/image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  removeCountryImage(@Param('countryId', new ParseUUIDPipe({ version: '4' })) countryId: string) {
+    return this.catalogMediaService.removeCountryImage(countryId);
   }
 
   @Post('sizes')

@@ -5,12 +5,16 @@ import { cookies } from 'next/headers';
 import { requestAdminCatalog, readJsonResponse } from '@/lib/catalog/catalog-api';
 import {
   parseAdminProduct,
+  parseAdminBrands,
   parseAdminCategories,
+  parseAdminCountries,
   parseCatalogLookups,
   parseCatalogSizes,
   parseProductList,
   type AdminProduct,
+  type AdminBrand,
   type AdminCategory,
+  type AdminCountry,
   type CatalogFilters,
   type CatalogLookup,
   type CatalogSize,
@@ -35,6 +39,11 @@ export type ProductFormData = Readonly<{
 }>;
 
 export type CategoryManagementData = CatalogResource<readonly AdminCategory[]>;
+
+export type ReferenceManagementData = Readonly<{
+  brands: CatalogResource<readonly AdminBrand[]>;
+  countries: CatalogResource<readonly AdminCountry[]>;
+}>;
 
 async function load<T>(
   request: Promise<Response>,
@@ -122,4 +131,13 @@ export async function loadProductForm(productId?: string): Promise<ProductFormDa
 export async function loadCategoryManagement(): Promise<CategoryManagementData> {
   const token = await accessToken();
   return load(requestAdminCatalog('/api/v1/catalog/categories', token), parseAdminCategories);
+}
+
+export async function loadReferenceManagement(): Promise<ReferenceManagementData> {
+  const token = await accessToken();
+  const [brands, countries] = await Promise.all([
+    load(requestAdminCatalog('/api/v1/catalog/brands', token), parseAdminBrands),
+    load(requestAdminCatalog('/api/v1/catalog/countries', token), parseAdminCountries),
+  ]);
+  return { brands, countries };
 }

@@ -336,6 +336,7 @@ model Country {
   name      String    @db.VarChar(120)
   slug      String    @unique @db.VarChar(160)
   isoCode   String    @unique @db.Char(2)
+  description String?
   imageId   String?   @db.Uuid
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now()) @db.Timestamptz(3)

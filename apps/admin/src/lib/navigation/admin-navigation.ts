@@ -108,6 +108,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['catalog.read'],
       },
       {
+        id: 'brands',
+        label: 'برندها و کشورها',
+        shortLabel: 'برندها',
+        href: '/brands',
+        icon: 'products',
+        description: 'برند، کشور سازنده، تصویر و وضعیت',
+        roadmapStage: 9,
+        permissions: ['catalog.read'],
+      },
+      {
         id: 'inventory',
         label: 'انبار و موجودی',
         shortLabel: 'انبار',

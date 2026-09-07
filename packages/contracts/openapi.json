@@ -555,10 +555,142 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/brands/{brandId}": {
+      "patch": {
+        "operationId": "CatalogController_updateBrand_v1",
+        "parameters": [
+          {
+            "name": "brandId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBrandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
                   "type": "object"
                 }
               }
             }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogController_archiveBrand_v1",
+        "parameters": [
+          {
+            "name": "brandId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/brands/{brandId}/image": {
+      "post": {
+        "operationId": "CatalogController_uploadBrandImage_v1",
+        "parameters": [
+          {
+            "name": "brandId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "altText": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogController_removeBrandImage_v1",
+        "parameters": [
+          {
+            "name": "brandId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
           }
         },
         "tags": [
@@ -605,10 +737,142 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/countries/{countryId}": {
+      "patch": {
+        "operationId": "CatalogController_updateCountry_v1",
+        "parameters": [
+          {
+            "name": "countryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCountryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
                   "type": "object"
                 }
               }
             }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogController_archiveCountry_v1",
+        "parameters": [
+          {
+            "name": "countryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/countries/{countryId}/image": {
+      "post": {
+        "operationId": "CatalogController_uploadCountryImage_v1",
+        "parameters": [
+          {
+            "name": "countryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "altText": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogController_removeCountryImage_v1",
+        "parameters": [
+          {
+            "name": "countryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
           }
         },
         "tags": [
@@ -6000,6 +6264,33 @@
           "slug"
         ]
       },
+      "UpdateBrandDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
       "CreateCountryDto": {
         "type": "object",
         "properties": {
@@ -6017,6 +6308,9 @@
             "type": "string",
             "pattern": "^[A-Za-z]{2}$"
           },
+          "description": {
+            "type": "string"
+          },
           "imageId": {
             "type": "string",
             "format": "uuid"
@@ -6030,6 +6324,37 @@
           "slug",
           "isoCode"
         ]
+      },
+      "UpdateCountryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "isoCode": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
       },
       "CreateSizeDto": {
         "type": "object",

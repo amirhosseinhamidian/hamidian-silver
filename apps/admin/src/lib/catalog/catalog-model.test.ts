@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  parseAdminBrands,
   parseAdminProduct,
   parseAdminCategories,
+  parseAdminCountries,
   parseCatalogFilters,
   parseCatalogSizes,
   parseProductList,
@@ -137,5 +139,32 @@ describe('catalog model', () => {
         image: { id: 'media-1', url: 'https://api.example/media/category.webp' },
       },
     ]);
+  });
+
+  it('parses operational brand and country metadata', () => {
+    const base = {
+      id: 'reference-1',
+      name: 'حمیدیان',
+      slug: 'hamidian',
+      description: 'توضیحات',
+      isActive: true,
+      productCount: 4,
+      createdAt: '2026-09-07T10:00:00.000Z',
+      updatedAt: '2026-09-07T11:00:00.000Z',
+      image: {
+        id: 'media-1',
+        url: 'https://api.example/media/logo.webp',
+        mimeType: 'image/webp',
+        altText: null,
+      },
+    };
+
+    expect(parseAdminBrands([base])).toEqual([
+      expect.objectContaining({ name: 'حمیدیان', productCount: 4, active: true }),
+    ]);
+    expect(parseAdminCountries([{ ...base, name: 'ایران', isoCode: 'IR' }])).toEqual([
+      expect.objectContaining({ name: 'ایران', isoCode: 'IR', productCount: 4 }),
+    ]);
+    expect(parseAdminCountries([{ ...base, isoCode: null }])).toBeNull();
   });
 });

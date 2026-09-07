@@ -3,10 +3,7 @@ import { PRODUCT_MEDIA_LIMIT } from '../../config/media-storage';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { UploadMediaDto } from './dto/upload-media.dto';
 import { UpdateProductMediaDto } from './dto/update-product-media.dto';
-import {
-  type CatalogUploadFile,
-  LocalMediaStorageService,
-} from './local-media-storage.service';
+import { type CatalogUploadFile, LocalMediaStorageService } from './local-media-storage.service';
 import { PublicMediaUrlService } from './public-media-url.service';
 
 function normalizeOptionalText(
@@ -194,11 +191,153 @@ export class CatalogMediaService {
     return { removed: true };
   }
 
-  async updateProductMedia(
-    productId: string,
-    mediaId: string,
-    dto: UpdateProductMediaDto,
+  async uploadForBrand(brandId: string, file: CatalogUploadFile | undefined, dto: UploadMediaDto) {
+    if (!file) throw new BadRequestException('Image file is required.');
+    const brand = await this.prisma.brand.findFirst({
+      where: { id: brandId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!brand) throw new NotFoundException('Brand was not found.');
+
+    const stored = await this.localMediaStorage.storeImage(file);
+    try {
+      const result = await this.prisma.$transaction(async (transaction) => {
+        const current = await transaction.brand.findFirst({
+          where: { id: brandId, deletedAt: null },
+          select: { id: true, imageId: true },
+        });
+        if (!current) throw new NotFoundException('Brand was not found.');
+
+        const media = await transaction.media.create({
+          data: {
+            storageKey: stored.storageKey,
+            originalName: normalizeOptionalText(file.originalname, 255),
+            mimeType: stored.mimeType,
+            sizeBytes: stored.sizeBytes,
+            altText: normalizeOptionalText(dto.altText, 255),
+          },
+        });
+        await transaction.brand.update({
+          where: { id: brandId },
+          data: { imageId: media.id },
+        });
+        const orphanedStorageKey = current.imageId
+          ? await this.markMediaDeletedWhenOrphaned(transaction, current.imageId)
+          : null;
+        return { media, orphanedStorageKey };
+      });
+
+      if (result.orphanedStorageKey) {
+        await this.localMediaStorage.delete(result.orphanedStorageKey).catch(() => undefined);
+      }
+      return {
+        brandId,
+        image: {
+          id: result.media.id,
+          url: this.publicMediaUrl.resolve(result.media.storageKey),
+          mimeType: result.media.mimeType,
+          altText: result.media.altText,
+        },
+      };
+    } catch (error) {
+      await this.localMediaStorage.delete(stored.storageKey).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async removeBrandImage(brandId: string) {
+    const orphanedStorageKey = await this.prisma.$transaction(async (transaction) => {
+      const brand = await transaction.brand.findFirst({
+        where: { id: brandId, deletedAt: null },
+        select: { id: true, imageId: true },
+      });
+      if (!brand) throw new NotFoundException('Brand was not found.');
+      if (!brand.imageId) return null;
+      await transaction.brand.update({ where: { id: brandId }, data: { imageId: null } });
+      return this.markMediaDeletedWhenOrphaned(transaction, brand.imageId);
+    });
+    if (orphanedStorageKey) {
+      await this.localMediaStorage.delete(orphanedStorageKey).catch(() => undefined);
+    }
+    return { removed: true };
+  }
+
+  async uploadForCountry(
+    countryId: string,
+    file: CatalogUploadFile | undefined,
+    dto: UploadMediaDto,
   ) {
+    if (!file) throw new BadRequestException('Image file is required.');
+    const country = await this.prisma.country.findFirst({
+      where: { id: countryId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!country) throw new NotFoundException('Country was not found.');
+
+    const stored = await this.localMediaStorage.storeImage(file);
+    try {
+      const result = await this.prisma.$transaction(async (transaction) => {
+        const current = await transaction.country.findFirst({
+          where: { id: countryId, deletedAt: null },
+          select: { id: true, imageId: true },
+        });
+        if (!current) throw new NotFoundException('Country was not found.');
+
+        const media = await transaction.media.create({
+          data: {
+            storageKey: stored.storageKey,
+            originalName: normalizeOptionalText(file.originalname, 255),
+            mimeType: stored.mimeType,
+            sizeBytes: stored.sizeBytes,
+            altText: normalizeOptionalText(dto.altText, 255),
+          },
+        });
+        await transaction.country.update({
+          where: { id: countryId },
+          data: { imageId: media.id },
+        });
+        const orphanedStorageKey = current.imageId
+          ? await this.markMediaDeletedWhenOrphaned(transaction, current.imageId)
+          : null;
+        return { media, orphanedStorageKey };
+      });
+
+      if (result.orphanedStorageKey) {
+        await this.localMediaStorage.delete(result.orphanedStorageKey).catch(() => undefined);
+      }
+      return {
+        countryId,
+        image: {
+          id: result.media.id,
+          url: this.publicMediaUrl.resolve(result.media.storageKey),
+          mimeType: result.media.mimeType,
+          altText: result.media.altText,
+        },
+      };
+    } catch (error) {
+      await this.localMediaStorage.delete(stored.storageKey).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async removeCountryImage(countryId: string) {
+    const orphanedStorageKey = await this.prisma.$transaction(async (transaction) => {
+      const country = await transaction.country.findFirst({
+        where: { id: countryId, deletedAt: null },
+        select: { id: true, imageId: true },
+      });
+      if (!country) throw new NotFoundException('Country was not found.');
+      if (!country.imageId) return null;
+      await transaction.country.update({ where: { id: countryId }, data: { imageId: null } });
+      return this.markMediaDeletedWhenOrphaned(transaction, country.imageId);
+    });
+    if (orphanedStorageKey) {
+      await this.localMediaStorage.delete(orphanedStorageKey).catch(() => undefined);
+    }
+    return { removed: true };
+  }
+
+  async updateProductMedia(productId: string, mediaId: string, dto: UpdateProductMediaDto) {
     const productMedia = await this.prisma.$transaction(async (transaction) => {
       const existing = await transaction.productMedia.findUnique({
         where: { productId_mediaId: { productId, mediaId } },
@@ -233,7 +372,10 @@ export class CatalogMediaService {
       select: { mediaId: true },
     });
     const currentIds = new Set(current.map(({ mediaId }) => mediaId));
-    if (current.length !== mediaIds.length || mediaIds.some((mediaId) => !currentIds.has(mediaId))) {
+    if (
+      current.length !== mediaIds.length ||
+      mediaIds.some((mediaId) => !currentIds.has(mediaId))
+    ) {
       throw new BadRequestException('Image order must include every current product image once.');
     }
 
@@ -310,21 +452,23 @@ export class CatalogMediaService {
     return { removed: true };
   }
 
-  private projectProductMedia<T extends {
-    altText: string | null;
-    isPrimary: boolean;
-    mediaId: string;
-    sortOrder: number;
-    media: {
+  private projectProductMedia<
+    T extends {
       altText: string | null;
-      height: number | null;
-      mimeType: string;
-      originalName: string | null;
-      sizeBytes: number;
-      storageKey: string;
-      width: number | null;
-    };
-  }>(item: T) {
+      isPrimary: boolean;
+      mediaId: string;
+      sortOrder: number;
+      media: {
+        altText: string | null;
+        height: number | null;
+        mimeType: string;
+        originalName: string | null;
+        sizeBytes: number;
+        storageKey: string;
+        width: number | null;
+      };
+    },
+  >(item: T) {
     return {
       id: item.mediaId,
       url: this.publicMediaUrl.resolve(item.media.storageKey),

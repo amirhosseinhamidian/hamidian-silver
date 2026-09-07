@@ -31,6 +31,31 @@ export type AdminCategory = Readonly<{
   productCount: number;
 }>;
 
+export type AdminBrand = Readonly<{
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  image: AdminCategoryImage | null;
+  productCount: number;
+}>;
+
+export type AdminCountry = Readonly<{
+  id: string;
+  name: string;
+  slug: string;
+  isoCode: string;
+  description: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  image: AdminCategoryImage | null;
+  productCount: number;
+}>;
+
 export type CatalogSize = Readonly<{
   id: string;
   code: string;
@@ -299,6 +324,70 @@ export function parseAdminCategories(value: unknown): readonly AdminCategory[] |
     .map(parseCategory)
     .filter((category): category is AdminCategory => category !== null);
   return categories.length === value.length ? categories : null;
+}
+
+function parseReferenceImage(value: unknown): AdminCategoryImage | null {
+  const item = record(value);
+  const id = text(item?.id);
+  const url = text(item?.url);
+  const mimeType = text(item?.mimeType);
+  return id && url && mimeType ? { id, url, mimeType, altText: text(item?.altText) } : null;
+}
+
+function parseAdminBrand(value: unknown): AdminBrand | null {
+  const item = record(value);
+  const id = text(item?.id);
+  const name = text(item?.name);
+  const slug = text(item?.slug);
+  const createdAt = text(item?.createdAt);
+  const updatedAt = text(item?.updatedAt);
+  if (!id || !name || !slug || !createdAt || !updatedAt) return null;
+  return {
+    id,
+    name,
+    slug,
+    description: text(item?.description),
+    active: item?.isActive !== false,
+    createdAt,
+    updatedAt,
+    image: parseReferenceImage(item?.image),
+    productCount: number(item?.productCount) ?? 0,
+  };
+}
+
+export function parseAdminBrands(value: unknown): readonly AdminBrand[] | null {
+  if (!Array.isArray(value)) return null;
+  const items = value.map(parseAdminBrand).filter((item): item is AdminBrand => item !== null);
+  return items.length === value.length ? items : null;
+}
+
+function parseAdminCountry(value: unknown): AdminCountry | null {
+  const item = record(value);
+  const id = text(item?.id);
+  const name = text(item?.name);
+  const slug = text(item?.slug);
+  const isoCode = text(item?.isoCode);
+  const createdAt = text(item?.createdAt);
+  const updatedAt = text(item?.updatedAt);
+  if (!id || !name || !slug || !isoCode || !createdAt || !updatedAt) return null;
+  return {
+    id,
+    name,
+    slug,
+    isoCode,
+    description: text(item?.description),
+    active: item?.isActive !== false,
+    createdAt,
+    updatedAt,
+    image: parseReferenceImage(item?.image),
+    productCount: number(item?.productCount) ?? 0,
+  };
+}
+
+export function parseAdminCountries(value: unknown): readonly AdminCountry[] | null {
+  if (!Array.isArray(value)) return null;
+  const items = value.map(parseAdminCountry).filter((item): item is AdminCountry => item !== null);
+  return items.length === value.length ? items : null;
 }
 
 export function parseCatalogSizes(value: unknown): readonly CatalogSize[] | null {
