@@ -6,6 +6,7 @@ import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { SetProductSupplierDto } from './dto/set-product-supplier.dto';
 import { SetSalePriceDto } from './dto/set-sale-price.dto';
+import { UpdateSupplierDto } from './dto/update-supplier.dto';
 import { PricingService } from './pricing.service';
 
 @Controller('pricing')
@@ -22,6 +23,21 @@ export class PricingController {
   @RequirePermissions(PERMISSION_CODES.PRICING_READ)
   listSuppliers() {
     return this.pricingService.listSuppliers();
+  }
+
+  @Get('suppliers/catalog')
+  @RequirePermissions(PERMISSION_CODES.PRICING_READ)
+  getSupplierCatalog() {
+    return this.pricingService.getSupplierCatalog();
+  }
+
+  @Patch('suppliers/:supplierId')
+  @RequirePermissions(PERMISSION_CODES.PRICING_WRITE)
+  updateSupplier(
+    @Param('supplierId', new ParseUUIDPipe({ version: '4' })) supplierId: string,
+    @Body() dto: UpdateSupplierDto,
+  ) {
+    return this.pricingService.updateSupplier(supplierId, dto);
   }
 
   @Put('products/:productId/suppliers/:supplierId')

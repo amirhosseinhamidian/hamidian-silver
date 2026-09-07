@@ -11,7 +11,7 @@ export class SetProductSupplierDto {
   @IsNumber({ maxDecimalPlaces: 3 })
   @Min(0)
   @Max(10000)
-  markupPercent?: number;
+  markupPercent?: number | null;
 
   @IsOptional()
   @IsBoolean()

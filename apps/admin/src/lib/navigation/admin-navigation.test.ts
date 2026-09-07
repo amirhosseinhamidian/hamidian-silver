@@ -47,19 +47,18 @@ describe('admin navigation', () => {
     expect(items.map((item) => item.id)).toEqual([
       'dashboard',
       'finance',
-      'suppliers',
       'users',
       'settings',
       'audit',
     ]);
   });
 
-  it('exposes plating settings to pricing readers', () => {
+  it('exposes plating and supplier settings to pricing readers', () => {
     const items = getAdminNavigation(user({ permissions: ['pricing.read'] })).flatMap(
       (group) => group.items,
     );
 
-    expect(items.map((item) => item.id)).toEqual(['dashboard', 'plating-settings']);
+    expect(items.map((item) => item.id)).toEqual(['dashboard', 'plating-settings', 'suppliers']);
   });
 
   it('resolves sections and nested active navigation paths', () => {

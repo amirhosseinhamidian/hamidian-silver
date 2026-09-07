@@ -1204,6 +1204,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pricing/suppliers/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PricingController_getSupplierCatalog_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pricing/suppliers/{supplierId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PricingController_updateSupplier_v1"];
+        trace?: never;
+    };
     "/api/v1/pricing/products/{productId}/suppliers/{supplierId}": {
         parameters: {
             query?: never;
@@ -2783,9 +2815,16 @@ export interface components {
             phone?: string;
             isActive?: boolean;
         };
+        UpdateSupplierDto: {
+            code?: string;
+            name?: string;
+            contactName?: string | null;
+            phone?: string | null;
+            isActive?: boolean;
+        };
         SetProductSupplierDto: {
             supplierPriceToman: number;
-            markupPercent?: number;
+            markupPercent?: number | null;
             isPreferred?: boolean;
             isActive?: boolean;
         };
@@ -5324,6 +5363,46 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PricingController_getSupplierCatalog_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PricingController_updateSupplier_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSupplierDto"];
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

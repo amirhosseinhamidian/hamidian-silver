@@ -197,7 +197,7 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         icon: 'suppliers',
         description: 'بدهی، اعتبار و تسویه',
         roadmapStage: 13,
-        permissions: ['finance.read'],
+        permissions: ['pricing.read'],
       },
     ],
   },

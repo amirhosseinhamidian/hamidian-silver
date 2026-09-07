@@ -2996,6 +2996,53 @@
         ]
       }
     },
+    "/api/v1/pricing/suppliers/catalog": {
+      "get": {
+        "operationId": "PricingController_getSupplierCatalog_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Pricing"
+        ]
+      }
+    },
+    "/api/v1/pricing/suppliers/{supplierId}": {
+      "patch": {
+        "operationId": "PricingController_updateSupplier_v1",
+        "parameters": [
+          {
+            "name": "supplierId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSupplierDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Pricing"
+        ]
+      }
+    },
     "/api/v1/pricing/products/{productId}/suppliers/{supplierId}": {
       "put": {
         "operationId": "PricingController_setProductSupplier_v1",
@@ -7194,7 +7241,8 @@
           "phone": {
             "type": "string",
             "minLength": 5,
-            "maxLength": 20
+            "maxLength": 20,
+            "pattern": "^\\+?\\d{5,20}$"
           },
           "isActive": {
             "type": "boolean"
@@ -7204,6 +7252,37 @@
           "code",
           "name"
         ]
+      },
+      "UpdateSupplierDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "contactName": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 5,
+            "maxLength": 20,
+            "pattern": "^\\+?\\d{5,20}$"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
       },
       "SetProductSupplierDto": {
         "type": "object",
@@ -7215,6 +7294,7 @@
           },
           "markupPercent": {
             "type": "number",
+            "nullable": true,
             "minimum": 0,
             "maximum": 10000
           },

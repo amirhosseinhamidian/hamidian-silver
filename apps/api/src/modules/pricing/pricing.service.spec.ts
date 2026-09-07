@@ -14,6 +14,7 @@ describe('PricingService', () => {
     },
     product: {
       findFirst: jest.fn(),
+      findMany: jest.fn(),
     },
     productPriceHistory: {
       findMany: jest.fn(),
@@ -107,6 +108,42 @@ describe('PricingService', () => {
         supplierPriceToman: 1_000_000,
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('deactivates product links when a supplier is disabled', async () => {
+    const transaction = {
+      supplier: {
+        findFirst: jest.fn().mockResolvedValue({ id: supplierId }),
+        update: jest.fn().mockResolvedValue({ id: supplierId, isActive: false }),
+      },
+      productSupplier: {
+        updateMany: jest.fn().mockResolvedValue({ count: 2 }),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await service.updateSupplier(supplierId, { isActive: false });
+
+    expect(transaction.productSupplier.updateMany).toHaveBeenCalledWith({
+      where: { supplierId, OR: [{ isActive: true }, { isPreferred: true }] },
+      data: { isActive: false, isPreferred: false },
+    });
+    expect(transaction.supplier.update).toHaveBeenCalledWith({
+      where: { id: supplierId },
+      data: { isActive: false },
+    });
+  });
+
+  it('returns the supplier directory and product sourcing catalog together', async () => {
+    prisma.supplier.findMany.mockResolvedValue([{ id: supplierId, name: 'Supplier One' }]);
+    prisma.product.findMany.mockResolvedValue([{ id: productId, name: 'Product One' }]);
+
+    await expect(service.getSupplierCatalog()).resolves.toEqual({
+      suppliers: [{ id: supplierId, name: 'Supplier One' }],
+      products: [{ id: productId, name: 'Product One' }],
+    });
   });
 
   it('records sale-price history before changing the current price', async () => {
