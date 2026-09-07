@@ -10,8 +10,13 @@ export type CatalogLookup = Readonly<{
 
 export type CatalogSize = Readonly<{
   id: string;
+  code: string;
   label: string;
+  sortOrder: number;
+  active: boolean;
 }>;
+
+export type VariantSize = Readonly<{ id: string; label: string }>;
 
 export type AdminProductVariant = Readonly<{
   id: string;
@@ -19,7 +24,7 @@ export type AdminProductVariant = Readonly<{
   name: string | null;
   weightGrams: number | null;
   active: boolean;
-  size: CatalogSize | null;
+  size: VariantSize | null;
 }>;
 
 export type AdminProductMedia = Readonly<{
@@ -228,9 +233,21 @@ export function parseCatalogLookups(value: unknown): readonly CatalogLookup[] | 
 export function parseCatalogSizes(value: unknown): readonly CatalogSize[] | null {
   if (!Array.isArray(value)) return null;
   const items = value
-    .map((item) => lookup(item, 'label'))
-    .filter((item): item is CatalogLookup => item !== null)
-    .map((item) => ({ id: item.id, label: item.name }));
+    .map((value): CatalogSize | null => {
+      const item = record(value);
+      const id = text(item?.id);
+      const code = text(item?.code);
+      const label = text(item?.label);
+      if (!id || !code || !label) return null;
+      return {
+        id,
+        code,
+        label,
+        sortOrder: number(item?.sortOrder) ?? 0,
+        active: item?.isActive !== false,
+      };
+    })
+    .filter((item): item is CatalogSize => item !== null);
   return items.length === value.length ? items : null;
 }
 

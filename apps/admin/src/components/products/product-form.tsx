@@ -354,7 +354,9 @@ export function ProductForm({ data, mode }: ProductFormProps) {
                     required
                     options={[
                       { value: 'none', label: 'انتخاب سایز' },
-                      ...data.sizes.map((size) => ({ value: size.id, label: size.label })),
+                      ...data.sizes
+                        .filter((size) => size.active)
+                        .map((size) => ({ value: size.id, label: size.label })),
                     ]}
                   />
                 )}
@@ -380,9 +382,9 @@ export function ProductForm({ data, mode }: ProductFormProps) {
           </div>
         </Card>
       ) : (
-        <Alert tone="info" title="مدیریت تنوع‌ها جدا انجام می‌شود">
-          این محصول {toPersianDigits(product?.variants.length ?? 0)} تنوع دارد. ویرایش SKU، سایز و
-          وزن در مرحله مدیریت تنوع‌ها اضافه می‌شود.
+        <Alert tone="info" title="تنوع‌ها از بخش عملیاتی بالای صفحه مدیریت می‌شوند">
+          این محصول {toPersianDigits(product?.variants.length ?? 0)} تنوع دارد. برای تغییر SKU،
+          سایز، وزن یا وضعیت از بخش «تنوع‌ها و SKU» استفاده کنید.
         </Alert>
       )}
 

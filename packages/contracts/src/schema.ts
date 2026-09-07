@@ -228,6 +228,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/sizes/{sizeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogController_updateSize_v1"];
+        trace?: never;
+    };
     "/api/v1/catalog/products": {
         parameters: {
             query?: never;
@@ -274,6 +290,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["CatalogController_updateProduct_v1"];
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/variants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_createProductVariant_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/variants/{variantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogController_updateProductVariant_v1"];
         trace?: never;
     };
     "/api/v1/catalog/products/{productId}/status": {
@@ -2361,6 +2409,12 @@ export interface components {
             sortOrder?: number;
             isActive?: boolean;
         };
+        UpdateSizeDto: {
+            code?: string;
+            label?: string;
+            sortOrder?: number;
+            isActive?: boolean;
+        };
         CreateProductVariantDto: {
             sku: string;
             name?: string;
@@ -2394,6 +2448,14 @@ export interface components {
             categoryIds?: string[];
             variants: components["schemas"]["CreateProductVariantDto"][];
             media?: components["schemas"]["CreateProductMediaDto"][];
+        };
+        UpdateProductVariantDto: {
+            sku?: string;
+            name?: string | null;
+            /** Format: uuid */
+            sizeId?: string | null;
+            weightGrams?: number | null;
+            isActive?: boolean;
         };
         UpdateProductDto: {
             name?: string;
@@ -3439,6 +3501,29 @@ export interface operations {
             };
         };
     };
+    CatalogController_updateSize_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sizeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSizeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     CatalogController_listProducts_v1: {
         parameters: {
             query?: {
@@ -3546,6 +3631,57 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateProductDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    CatalogController_createProductVariant_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductVariantDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    CatalogController_updateProductVariant_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+                variantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductVariantDto"];
             };
         };
         responses: {

@@ -19,11 +19,12 @@ import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CatalogMediaService } from './catalog-media.service';
 import { CatalogService } from './catalog.service';
+import { CatalogVariantsService } from './catalog-variants.service';
 import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query.dto';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
-import { CreateProductDto } from './dto/create-product.dto';
+import { CreateProductDto, CreateProductVariantDto } from './dto/create-product.dto';
 import { CreateSizeDto } from './dto/create-size.dto';
 import { PublicCatalogQueryDto } from './dto/public-catalog-query.dto';
 import { ReorderProductMediaDto } from './dto/reorder-product-media.dto';
@@ -37,6 +38,8 @@ import { UploadMediaDto } from './dto/upload-media.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateProductMediaDto } from './dto/update-product-media.dto';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
+import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
+import { UpdateSizeDto } from './dto/update-size.dto';
 import type { CatalogUploadFile } from './local-media-storage.service';
 
 @Controller('catalog')
@@ -44,6 +47,7 @@ export class CatalogController {
   constructor(
     private readonly catalogService: CatalogService,
     private readonly catalogMediaService: CatalogMediaService,
+    private readonly catalogVariantsService: CatalogVariantsService,
   ) {}
 
   @Public()
@@ -146,13 +150,22 @@ export class CatalogController {
   @Post('sizes')
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
   createSize(@Body() dto: CreateSizeDto) {
-    return this.catalogService.createSize(dto);
+    return this.catalogVariantsService.createSize(dto);
   }
 
   @Get('sizes')
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
   listSizes() {
-    return this.catalogService.listSizes();
+    return this.catalogVariantsService.listSizes();
+  }
+
+  @Patch('sizes/:sizeId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  updateSize(
+    @Param('sizeId', new ParseUUIDPipe({ version: '4' })) sizeId: string,
+    @Body() dto: UpdateSizeDto,
+  ) {
+    return this.catalogVariantsService.updateSize(sizeId, dto);
   }
 
   @Post('products')
@@ -200,6 +213,25 @@ export class CatalogController {
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
   getProduct(@Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string) {
     return this.catalogService.getProduct(productId);
+  }
+
+  @Post('products/:productId/variants')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  createProductVariant(
+    @Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string,
+    @Body() dto: CreateProductVariantDto,
+  ) {
+    return this.catalogVariantsService.createVariant(productId, dto);
+  }
+
+  @Patch('products/:productId/variants/:variantId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  updateProductVariant(
+    @Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string,
+    @Param('variantId', new ParseUUIDPipe({ version: '4' })) variantId: string,
+    @Body() dto: UpdateProductVariantDto,
+  ) {
+    return this.catalogVariantsService.updateVariant(productId, variantId, dto);
   }
 
   @Patch('products/:productId')

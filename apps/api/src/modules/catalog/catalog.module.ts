@@ -3,6 +3,7 @@ import { DatabaseModule } from '../../infrastructure/database/database.module';
 import { CatalogController } from './catalog.controller';
 import { CatalogMediaService } from './catalog-media.service';
 import { CatalogService } from './catalog.service';
+import { CatalogVariantsService } from './catalog-variants.service';
 import { LocalMediaStorageService } from './local-media-storage.service';
 import { PublicMediaUrlService } from './public-media-url.service';
 
@@ -12,6 +13,7 @@ import { PublicMediaUrlService } from './public-media-url.service';
   providers: [
     CatalogService,
     CatalogMediaService,
+    CatalogVariantsService,
     LocalMediaStorageService,
     PublicMediaUrlService,
   ],

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   parseAdminProduct,
   parseCatalogFilters,
+  parseCatalogSizes,
   parseProductList,
   productStatusLabel,
 } from '@/lib/catalog/catalog-model';
@@ -92,5 +93,14 @@ describe('catalog model', () => {
       limit: 50,
     });
     expect(productStatusLabel('ARCHIVED')).toBe('آرشیوشده');
+  });
+
+  it('parses operational size metadata', () => {
+    expect(
+      parseCatalogSizes([
+        { id: 'size-1', code: '52', label: 'سایز ۵۲', sortOrder: 2, isActive: false },
+      ]),
+    ).toEqual([{ id: 'size-1', code: '52', label: 'سایز ۵۲', sortOrder: 2, active: false }]);
+    expect(parseCatalogSizes([{ id: 'size-1', label: 'ناقص' }])).toBeNull();
   });
 });

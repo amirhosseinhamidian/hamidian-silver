@@ -7,7 +7,6 @@ import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
 import { CreateProductDto } from './dto/create-product.dto';
-import { CreateSizeDto } from './dto/create-size.dto';
 import { PublicCatalogQueryDto, PublicCatalogSort } from './dto/public-catalog-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PublicMediaUrlService } from './public-media-url.service';
@@ -84,17 +83,6 @@ export class CatalogService {
       },
       include: {
         image: true,
-      },
-    });
-  }
-
-  createSize(dto: CreateSizeDto) {
-    return this.prisma.size.create({
-      data: {
-        code: dto.code,
-        label: dto.label,
-        sortOrder: dto.sortOrder ?? 0,
-        isActive: dto.isActive ?? true,
       },
     });
   }
@@ -328,15 +316,6 @@ export class CatalogService {
       include: {
         image: true,
       },
-    });
-  }
-
-  listSizes() {
-    return this.prisma.size.findMany({
-      where: {
-        deletedAt: null,
-      },
-      orderBy: [{ sortOrder: 'asc' }, { label: 'asc' }],
     });
   }
 

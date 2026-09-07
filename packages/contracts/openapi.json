@@ -527,6 +527,39 @@
         ]
       }
     },
+    "/api/v1/catalog/sizes/{sizeId}": {
+      "patch": {
+        "operationId": "CatalogController_updateSize_v1",
+        "parameters": [
+          {
+            "name": "sizeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSizeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/api/v1/catalog/products": {
       "post": {
         "operationId": "CatalogController_createProduct_v1",
@@ -723,6 +756,94 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/UpdateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{productId}/variants": {
+      "post": {
+        "operationId": "CatalogController_createProductVariant_v1",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductVariantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{productId}/variants/{variantId}": {
+      "patch": {
+        "operationId": "CatalogController_updateProductVariant_v1",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "variantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductVariantDto"
               }
             }
           }
@@ -5768,6 +5889,28 @@
           "label"
         ]
       },
+      "UpdateSizeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 0
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
       "CreateProductVariantDto": {
         "type": "object",
         "properties": {
@@ -5901,6 +6044,35 @@
           "sizeMode",
           "variants"
         ]
+      },
+      "UpdateProductVariantDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "sizeId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "weightGrams": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
       },
       "UpdateProductDto": {
         "type": "object",
