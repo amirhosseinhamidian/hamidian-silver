@@ -3083,6 +3083,27 @@
         ]
       }
     },
+    "/api/v1/plating/catalog": {
+      "get": {
+        "operationId": "PlatingController_listCatalogConfiguration_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Plating"
+        ]
+      }
+    },
     "/api/v1/plating/rates/{type}": {
       "put": {
         "operationId": "PlatingController_setRate_v1",

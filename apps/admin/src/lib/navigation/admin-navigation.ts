@@ -118,6 +118,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['catalog.read'],
       },
       {
+        id: 'plating-settings',
+        label: 'تنظیمات آبکاری',
+        shortLabel: 'آبکاری محصول',
+        href: '/plating-settings',
+        icon: 'plating',
+        description: 'نرخ، زمان و گزینه‌های آبکاری محصول',
+        roadmapStage: 10,
+        permissions: ['pricing.read'],
+      },
+      {
         id: 'inventory',
         label: 'انبار و موجودی',
         shortLabel: 'انبار',
