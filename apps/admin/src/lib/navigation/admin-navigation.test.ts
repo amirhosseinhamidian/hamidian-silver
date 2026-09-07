@@ -46,6 +46,7 @@ describe('admin navigation', () => {
 
     expect(items.map((item) => item.id)).toEqual([
       'dashboard',
+      'payments',
       'finance',
       'users',
       'settings',
