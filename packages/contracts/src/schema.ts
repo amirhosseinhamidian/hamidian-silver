@@ -2276,6 +2276,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/shipping/orders/{orderId}/manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ShippingController_createManualShipment_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/shipping/orders/{orderId}/create": {
         parameters: {
             query?: never;
@@ -3168,6 +3184,11 @@ export interface components {
         };
         SelectShippingRateDto: {
             serviceCode: string;
+        };
+        CreateManualShipmentDto: {
+            serviceName: string;
+            estimatedDeliveryDays?: number;
+            reason: string;
         };
         ResetShipmentProviderCreationDto: {
             confirmNoProviderShipment: boolean;
@@ -6947,6 +6968,31 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    ShippingController_createManualShipment_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateManualShipmentDto"];
+            };
+        };
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -164,6 +164,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
     label: 'عملیات اجرایی',
     items: [
       {
+        id: 'shipping',
+        label: 'مدیریت ارسال',
+        shortLabel: 'ارسال',
+        href: '/shipping',
+        icon: 'fulfillment',
+        description: 'ساخت مرسوله، رهگیری و timeline',
+        roadmapStage: 17,
+        permissions: ['orders.read'],
+      },
+      {
         id: 'plating',
         label: 'صف آبکاری',
         shortLabel: 'آبکاری',
@@ -196,7 +206,7 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         href: '/payments',
         icon: 'finance',
         description: 'بازیابی پرداخت و رفع مغایرت',
-        roadmapStage: 17,
+        roadmapStage: 19,
         permissions: ['finance.read'],
       },
       {
@@ -206,7 +216,7 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         href: '/finance',
         icon: 'finance',
         description: 'گزارش درآمد، هزینه و سود',
-        roadmapStage: 19,
+        roadmapStage: 31,
         permissions: ['finance.read'],
       },
       {

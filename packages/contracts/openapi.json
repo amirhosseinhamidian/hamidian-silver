@@ -5331,6 +5331,46 @@
         ]
       }
     },
+    "/api/v1/shipping/orders/{orderId}/manual": {
+      "post": {
+        "operationId": "ShippingController_createManualShipment_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateManualShipmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      }
+    },
     "/api/v1/shipping/orders/{orderId}/create": {
       "post": {
         "operationId": "ShippingController_createProviderShipment_v1",
@@ -8611,6 +8651,30 @@
         },
         "required": [
           "serviceCode"
+        ]
+      },
+      "CreateManualShipmentDto": {
+        "type": "object",
+        "properties": {
+          "serviceName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "estimatedDeliveryDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "serviceName",
+          "reason"
         ]
       },
       "ResetShipmentProviderCreationDto": {

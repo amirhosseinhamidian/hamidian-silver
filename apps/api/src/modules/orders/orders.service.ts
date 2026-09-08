@@ -175,14 +175,32 @@ const ADMIN_ORDER_LIST_INCLUDE = {
     select: {
       id: true,
       provider: true,
+      providerServiceCode: true,
       providerServiceName: true,
       status: true,
+      providerCreationState: true,
       shippingCostToman: true,
+      totalWeightGrams: true,
       estimatedDeliveryDays: true,
+      providerShipmentId: true,
       trackingCode: true,
       shippedAt: true,
       deliveredAt: true,
+      createdAt: true,
       updatedAt: true,
+      statusHistory: {
+        orderBy: { createdAt: 'asc' as const },
+        select: {
+          id: true,
+          fromStatus: true,
+          toStatus: true,
+          reason: true,
+          createdAt: true,
+          actor: {
+            select: { id: true, phone: true, firstName: true, lastName: true },
+          },
+        },
+      },
     },
   },
   statusHistory: {

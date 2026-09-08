@@ -10,6 +10,9 @@ export type AdminPaymentAttemptStatus =
 export type AdminShipmentStatus =
   'PENDING' | 'READY' | 'HANDED_OVER' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED' | 'CANCELLED';
 
+export type AdminShipmentProviderCreationState =
+  'NOT_STARTED' | 'IN_PROGRESS' | 'CREATED' | 'UNKNOWN';
+
 export type AdminOrderCustomer = Readonly<{
   id: string;
   name: string | null;
@@ -67,14 +70,29 @@ export type AdminOrderPayment = Readonly<{
 export type AdminOrderShipment = Readonly<{
   id: string;
   provider: string;
+  serviceCode: string;
   serviceName: string | null;
   status: AdminShipmentStatus;
+  providerCreationState: AdminShipmentProviderCreationState;
   shippingCostToman: number;
+  totalWeightGrams: number;
   estimatedDeliveryDays: number | null;
+  providerShipmentId: string | null;
   trackingCode: string | null;
   shippedAt: string | null;
   deliveredAt: string | null;
+  createdAt: string;
   updatedAt: string;
+  timeline: readonly AdminShipmentTimelineEntry[];
+}>;
+
+export type AdminShipmentTimelineEntry = Readonly<{
+  id: string;
+  fromStatus: AdminShipmentStatus | null;
+  toStatus: AdminShipmentStatus;
+  reason: string | null;
+  actor: string;
+  createdAt: string;
 }>;
 
 export type AdminOrderTimelineEntry = Readonly<{
@@ -150,6 +168,12 @@ const SHIPMENT_STATUSES = new Set<AdminShipmentStatus>([
   'DELIVERED',
   'FAILED',
   'CANCELLED',
+]);
+const SHIPMENT_PROVIDER_CREATION_STATES = new Set<AdminShipmentProviderCreationState>([
+  'NOT_STARTED',
+  'IN_PROGRESS',
+  'CREATED',
+  'UNKNOWN',
 ]);
 const PLATING_TYPES = new Set<NonNullable<AdminOrderItem['platingType']>>(['GOLD', 'RHODIUM']);
 
@@ -310,33 +334,78 @@ function parseShipment(value: unknown): AdminOrderShipment | null {
   if (!shipment) return null;
   const id = text(shipment.id);
   const provider = text(shipment.provider);
+  const serviceCode = text(shipment.providerServiceCode);
   const status = text(shipment.status) as AdminShipmentStatus | null;
+  const providerCreationState = text(
+    shipment.providerCreationState,
+  ) as AdminShipmentProviderCreationState | null;
   const shippingCostToman = number(shipment.shippingCostToman);
+  const totalWeightGrams = number(shipment.totalWeightGrams);
   const shippedAt = nullableDate(shipment.shippedAt);
   const deliveredAt = nullableDate(shipment.deliveredAt);
+  const createdAt = date(shipment.createdAt);
   const updatedAt = date(shipment.updatedAt);
   if (
     !id ||
     !provider ||
+    !serviceCode ||
     !status ||
     !SHIPMENT_STATUSES.has(status) ||
+    !providerCreationState ||
+    !SHIPMENT_PROVIDER_CREATION_STATES.has(providerCreationState) ||
     shippingCostToman === null ||
+    totalWeightGrams === null ||
+    !createdAt ||
     !updatedAt ||
+    !Array.isArray(shipment.statusHistory) ||
     (shipment.shippedAt != null && !shippedAt) ||
     (shipment.deliveredAt != null && !deliveredAt)
   )
     return null;
+  const timeline = shipment.statusHistory.map(parseShipmentTimelineEntry);
+  if (timeline.some((entry) => !entry)) return null;
   return {
     id,
     provider,
+    serviceCode,
     serviceName: text(shipment.providerServiceName),
     status,
+    providerCreationState,
     shippingCostToman,
+    totalWeightGrams,
     estimatedDeliveryDays: number(shipment.estimatedDeliveryDays),
+    providerShipmentId: text(shipment.providerShipmentId),
     trackingCode: text(shipment.trackingCode),
     shippedAt,
     deliveredAt,
+    createdAt,
     updatedAt,
+    timeline: timeline as AdminShipmentTimelineEntry[],
+  };
+}
+
+function parseShipmentTimelineEntry(value: unknown): AdminShipmentTimelineEntry | null {
+  const entry = record(value);
+  if (!entry) return null;
+  const id = text(entry.id);
+  const fromStatus = text(entry.fromStatus) as AdminShipmentStatus | null;
+  const toStatus = text(entry.toStatus) as AdminShipmentStatus | null;
+  const createdAt = date(entry.createdAt);
+  if (
+    !id ||
+    !toStatus ||
+    !SHIPMENT_STATUSES.has(toStatus) ||
+    (fromStatus !== null && !SHIPMENT_STATUSES.has(fromStatus)) ||
+    !createdAt
+  )
+    return null;
+  return {
+    id,
+    fromStatus,
+    toStatus,
+    reason: text(entry.reason),
+    actor: actorLabel(entry.actor),
+    createdAt,
   };
 }
 

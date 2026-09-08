@@ -3,6 +3,7 @@ import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import type { AuthenticatedPrincipal } from '../authorization/authorization.types';
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
+import { CreateManualShipmentDto } from './dto/create-manual-shipment.dto';
 import { SelectShippingRateDto } from './dto/select-shipping-rate.dto';
 import { ResetShipmentProviderCreationDto } from './dto/reset-shipment-provider-creation.dto';
 import { UpdateShipmentStatusDto } from './dto/update-shipment-status.dto';
@@ -41,6 +42,16 @@ export class ShippingController {
   @RequirePermissions(PERMISSION_CODES.ORDERS_READ)
   getShipment(@Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string) {
     return this.shippingService.getShipment(orderId);
+  }
+
+  @Post('orders/:orderId/manual')
+  @RequirePermissions(PERMISSION_CODES.ORDERS_TRACKING_WRITE)
+  createManualShipment(
+    @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
+    @Body() dto: CreateManualShipmentDto,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ) {
+    return this.shippingService.createManualShipment(orderId, dto, principal.userId);
   }
 
   @Post('orders/:orderId/create')

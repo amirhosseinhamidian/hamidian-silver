@@ -131,6 +131,44 @@ describe('admin orders model', () => {
     ).toBe(true);
   });
 
+  it('parses manual shipment details and its timeline', () => {
+    const raw = structuredClone(payload);
+    raw[0].shipment = {
+      id: 'shipment-1',
+      provider: 'manual',
+      providerServiceCode: 'manual-standard',
+      providerServiceName: 'پست پیشتاز',
+      status: 'READY',
+      providerCreationState: 'CREATED',
+      shippingCostToman: 0,
+      totalWeightGrams: '8.500',
+      estimatedDeliveryDays: 3,
+      providerShipmentId: 'manual:order-1',
+      trackingCode: null,
+      shippedAt: null,
+      deliveredAt: null,
+      createdAt: '2026-09-07T13:00:00.000Z',
+      updatedAt: '2026-09-07T13:00:00.000Z',
+      statusHistory: [
+        {
+          id: 'shipment-history-1',
+          fromStatus: null,
+          toStatus: 'READY',
+          reason: 'بسته آماده شد',
+          createdAt: '2026-09-07T13:00:00.000Z',
+          actor: { firstName: 'مدیر', lastName: 'ارسال' },
+        },
+      ],
+    } as never;
+    expect(parseAdminOrders(raw)?.[0]?.shipment).toEqual(
+      expect.objectContaining({
+        provider: 'manual',
+        totalWeightGrams: 8.5,
+        timeline: [expect.objectContaining({ actor: 'مدیر ارسال', toStatus: 'READY' })],
+      }),
+    );
+  });
+
   it('rejects incomplete or unknown order records', () => {
     expect(parseAdminOrders([{ id: 'order-1', status: 'UNKNOWN' }])).toBeNull();
   });

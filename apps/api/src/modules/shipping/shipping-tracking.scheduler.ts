@@ -96,6 +96,7 @@ export class ShippingTrackingScheduler {
 
       const shipments = await this.prisma.shipment.findMany({
         where: {
+          provider: { not: 'manual' },
           status: {
             in: activeStatuses,
           },

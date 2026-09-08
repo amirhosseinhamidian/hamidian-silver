@@ -53,9 +53,9 @@ describe('OrderOperations', () => {
   });
 
   it('confirms an allowed status transition and refreshes server data', async () => {
-    const fetchMock = vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ status: 'PROCESSING' }), { status: 200 }),
-    );
+    const fetchMock = vi
+      .mocked(fetch)
+      .mockResolvedValue(new Response(JSON.stringify({ status: 'PROCESSING' }), { status: 200 }));
 
     render(<OrderOperations order={makeOrder()} canUpdateStatus canCancel={false} />);
     fireEvent.click(screen.getByRole('button', { name: 'شروع پردازش سفارش' }));
@@ -116,14 +116,20 @@ describe('OrderOperations', () => {
       shipment: {
         id: 'shipment-1',
         provider: 'POSTEX',
+        serviceCode: 'EXPRESS',
         serviceName: 'پست پیشتاز',
         status: 'DELIVERED',
+        providerCreationState: 'CREATED',
         shippingCostToman: 80_000,
+        totalWeightGrams: 12.5,
         estimatedDeliveryDays: 3,
+        providerShipmentId: 'provider-shipment-1',
         trackingCode: 'TRACK-123',
         shippedAt: '2026-09-07T15:00:00.000Z',
         deliveredAt: '2026-09-08T12:00:00.000Z',
+        createdAt: '2026-09-07T14:00:00.000Z',
         updatedAt: '2026-09-08T12:00:00.000Z',
+        timeline: [],
       },
     });
 
