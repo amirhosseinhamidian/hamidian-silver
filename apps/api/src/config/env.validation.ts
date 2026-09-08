@@ -68,6 +68,16 @@ export const envValidationSchema = Joi.object({
   ZARINPAL_MERCHANT_ID: Joi.string().guid().allow('').optional(),
   ZARINPAL_SANDBOX: Joi.boolean().truthy('true').falsy('false').default(true),
   ZIBAL_MERCHANT_ID: Joi.string().min(1).allow('').optional(),
+  MELLAT_TERMINAL_ID: Joi.string().pattern(/^\d+$/).allow('').optional(),
+  MELLAT_USERNAME: Joi.string().min(1).allow('').optional(),
+  MELLAT_PASSWORD: Joi.string().min(1).allow('').optional(),
+  MELLAT_SOAP_URL: Joi.string()
+    .uri({ scheme: ['https'] })
+    .default('https://bpm.shaparak.ir/pgwchannel/services/pgw'),
+  MELLAT_START_PAY_URL: Joi.string()
+    .uri({ scheme: ['https'] })
+    .default('https://bpm.shaparak.ir/pgwchannel/startpay.mellat'),
+  MELLAT_REQUEST_TIMEOUT_MS: Joi.number().integer().min(1000).max(60000).default(10000),
   SHIPPING_PROVIDER: Joi.string().valid('disabled', 'postex').default('disabled'),
   POSTEX_API_BASE_URL: Joi.string()
     .uri({ scheme: ['https'] })

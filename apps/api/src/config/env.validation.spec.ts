@@ -89,4 +89,22 @@ describe('envValidationSchema production HTTP settings', () => {
 
     expect(error?.details.map(({ path }) => path.join('.'))).toContain('MEDIA_STORAGE_ROOT');
   });
+
+  it('validates Mellat gateway endpoints and operational timeout', () => {
+    const { error } = envValidationSchema.validate(
+      {
+        ...requiredEnvironment,
+        MELLAT_TERMINAL_ID: '1234567',
+        MELLAT_USERNAME: 'merchant-user',
+        MELLAT_PASSWORD: 'merchant-password',
+        MELLAT_SOAP_URL: 'http://unsafe.example.test/soap',
+        MELLAT_REQUEST_TIMEOUT_MS: 500,
+      },
+      { allowUnknown: true, abortEarly: false },
+    );
+
+    expect(error?.details.map(({ path }) => path.join('.'))).toEqual(
+      expect.arrayContaining(['MELLAT_SOAP_URL', 'MELLAT_REQUEST_TIMEOUT_MS']),
+    );
+  });
 });

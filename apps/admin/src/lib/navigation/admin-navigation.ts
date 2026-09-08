@@ -200,6 +200,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
     label: 'مالی و تأمین',
     items: [
       {
+        id: 'payment-gateways',
+        label: 'تنظیم درگاه‌ها',
+        shortLabel: 'درگاه‌ها',
+        href: '/payment-gateways',
+        icon: 'settings',
+        description: 'فعال‌سازی زرین‌پال، زیبال و بانک ملت',
+        roadmapStage: 18,
+        permissions: ['settings.read'],
+      },
+      {
         id: 'payments',
         label: 'عملیات پرداخت',
         shortLabel: 'پرداخت',
