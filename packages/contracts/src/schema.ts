@@ -1700,6 +1700,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders/returns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OrderReturnsController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orders/returns/{returnId}": {
         parameters: {
             query?: never;
@@ -6167,6 +6183,26 @@ export interface operations {
                 content: {
                     "application/json": Record<string, never>;
                 };
+            };
+        };
+    };
+    OrderReturnsController_list_v1: {
+        parameters: {
+            query?: {
+                status?: "REQUESTED" | "RECEIVED" | "CANCELLED";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

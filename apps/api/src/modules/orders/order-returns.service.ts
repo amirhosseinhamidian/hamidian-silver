@@ -18,6 +18,7 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { AuthorizeOrderReturnDto } from './dto/authorize-order-return.dto';
 import { CancelOrderReturnDto } from './dto/cancel-order-return.dto';
 import { CreateOrderReturnDto } from './dto/create-order-return.dto';
+import { ListOrderReturnsQueryDto } from './dto/list-order-returns-query.dto';
 import { ReceiveOrderReturnDto } from './dto/receive-order-return.dto';
 
 const CUSTOMER_ORDER_RETURN_SELECT = {
@@ -136,6 +137,19 @@ export class OrderReturnsService {
       where: {
         orderId,
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: this.returnInclude(),
+    });
+  }
+
+  list(query: ListOrderReturnsQueryDto) {
+    return this.prisma.orderReturn.findMany({
+      where: {
+        status: query.status,
+      },
+      take: query.limit ?? 100,
       orderBy: {
         createdAt: 'desc',
       },

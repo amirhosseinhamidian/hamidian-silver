@@ -203,6 +203,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         roadmapStage: 24,
         permissions: ['orders.read'],
       },
+      {
+        id: 'returns',
+        label: 'مدیریت مرجوعی',
+        shortLabel: 'مرجوعی',
+        href: '/returns',
+        icon: 'orders',
+        description: 'درخواست، دریافت و تعیین تکلیف اقلام',
+        roadmapStage: 27,
+        permissions: ['orders.read'],
+      },
     ],
   },
   {

@@ -35,6 +35,7 @@ describe('admin navigation', () => {
       'shipping',
       'plating',
       'fulfillment',
+      'returns',
       'content',
     ]);
     expect(items.some((item) => item.id === 'finance')).toBe(false);

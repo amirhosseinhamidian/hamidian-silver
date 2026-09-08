@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import type { AuthenticatedPrincipal } from '../authorization/authorization.types';
@@ -11,6 +11,7 @@ import {
   CustomerOrderReturnDto,
   OrderReturnAuthorizationDto,
 } from './dto/customer-order-return-response.dto';
+import { ListOrderReturnsQueryDto } from './dto/list-order-returns-query.dto';
 import { ReceiveOrderReturnDto } from './dto/receive-order-return.dto';
 import { OrderReturnsService } from './order-returns.service';
 
@@ -67,6 +68,12 @@ export class OrderReturnsController {
     @CurrentPrincipal() principal: AuthenticatedPrincipal,
   ) {
     return this.orderReturnsService.create(orderId, principal.userId, dto);
+  }
+
+  @Get('returns')
+  @RequirePermissions(PERMISSION_CODES.ORDERS_READ)
+  list(@Query() query: ListOrderReturnsQueryDto) {
+    return this.orderReturnsService.list(query);
   }
 
   @Get(':orderId/returns')

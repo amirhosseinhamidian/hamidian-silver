@@ -16,6 +16,26 @@ describe('OrderReturnsService', () => {
   const variantId = '60000000-0000-4000-8000-000000000001';
   const warehouseId = '70000000-0000-4000-8000-000000000001';
 
+  it('lists the newest return requests with an optional status filter', async () => {
+    const prisma = {
+      orderReturn: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    const service = new OrderReturnsService(prisma as unknown as PrismaService);
+
+    await expect(service.list({ status: OrderReturnStatus.REQUESTED, limit: 25 })).resolves.toEqual(
+      [],
+    );
+    expect(prisma.orderReturn.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: OrderReturnStatus.REQUESTED },
+        take: 25,
+        orderBy: { createdAt: 'desc' },
+      }),
+    );
+  });
+
   it('authorizes returns for a delivered order after an admin review', async () => {
     const authorizedAt = new Date('2026-09-06T13:00:00.000Z');
     jest.useFakeTimers().setSystemTime(authorizedAt);
