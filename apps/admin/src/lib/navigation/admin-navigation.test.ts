@@ -55,6 +55,7 @@ describe('admin navigation', () => {
       'refunds',
       'payments',
       'supplier-credits',
+      'supplier-payables',
       'finance',
       'users',
       'settings',

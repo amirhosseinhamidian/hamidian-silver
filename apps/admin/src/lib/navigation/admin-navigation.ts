@@ -280,6 +280,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['finance.read'],
       },
       {
+        id: 'supplier-payables',
+        label: 'بدهی تأمین‌کنندگان',
+        shortLabel: 'بدهی تأمین',
+        href: '/supplier-payables',
+        icon: 'suppliers',
+        description: 'بدهی‌ها، دوره‌ها و وضعیت تسویه',
+        roadmapStage: 29,
+        permissions: ['finance.read'],
+      },
+      {
         id: 'finance',
         label: 'گزارش‌های مالی',
         shortLabel: 'مالی',
