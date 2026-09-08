@@ -2388,6 +2388,22 @@ export interface paths {
         patch: operations["ShippingController_updateStatus_v1"];
         trace?: never;
     };
+    "/api/v1/site-settings/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SiteSettingsController_uploadSiteMedia_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/site-settings/public": {
         parameters: {
             query?: never;
@@ -3233,12 +3249,39 @@ export interface components {
             providerShipmentId?: string;
             reason?: string;
         };
+        AdminSiteMediaDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uri */
+            url: string | null;
+            mimeType: string;
+            altText: string | null;
+        };
+        PublicSiteSettingsHeaderCategoryDto: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            slug: string;
+        };
+        PublicSiteAnnouncementDto: {
+            enabled: boolean;
+            message: string | null;
+            /** @enum {string} */
+            countdownMode: "NONE" | "FIXED" | "DEADLINE";
+            durationSeconds: number | null;
+            /** Format: date-time */
+            endsAt: string | null;
+            ctaLabel: string | null;
+            ctaHref: string | null;
+        };
         PublicSiteSettingsMediaDto: {
             /** Format: uri */
             url: string | null;
             altText: string | null;
         };
         PublicSiteSettingsDto: {
+            headerCategories: components["schemas"]["PublicSiteSettingsHeaderCategoryDto"][];
+            announcement: components["schemas"]["PublicSiteAnnouncementDto"];
             catalogHeroEnabled: boolean;
             catalogHeroTitle: string | null;
             catalogHeroSubtitle: string | null;
@@ -3336,7 +3379,15 @@ export interface components {
             seoDescription?: string | null;
             sections: components["schemas"]["UpdateContentPageSectionDto"][];
         };
+        AdminHomepageHeroMediaDto: {
+            /** Format: uri */
+            url: string | null;
+            altText: string | null;
+            id: string;
+            mimeType: string;
+        };
         AdminHomepageHeroSlideDto: {
+            media: components["schemas"]["AdminHomepageHeroMediaDto"];
             title: string | null;
             subtitle: string | null;
             actionLabel: string | null;
@@ -3374,6 +3425,8 @@ export interface components {
             popularProductIds: string[];
         };
         AdminSiteSettingsDto: {
+            headerCategoryIds: string[];
+            announcement: components["schemas"]["PublicSiteAnnouncementDto"];
             catalogHeroEnabled: boolean;
             catalogHeroTitle: string | null;
             catalogHeroSubtitle: string | null;
@@ -3396,7 +3449,20 @@ export interface components {
             /** Format: date-time */
             updatedAt: string | null;
         };
+        UpdateSiteAnnouncementDto: {
+            enabled?: boolean;
+            message?: string | null;
+            /** @enum {string} */
+            countdownMode?: "NONE" | "FIXED" | "DEADLINE";
+            durationSeconds?: number | null;
+            /** Format: date-time */
+            endsAt?: string | null;
+            ctaLabel?: string | null;
+            ctaHref?: string | null;
+        };
         UpdateSiteSettingsDto: {
+            headerCategoryIds?: string[];
+            announcement?: components["schemas"]["UpdateSiteAnnouncementDto"];
             catalogHeroEnabled?: boolean;
             catalogHeroTitle?: string | null;
             catalogHeroSubtitle?: string | null;
@@ -6189,7 +6255,7 @@ export interface operations {
     OrderReturnsController_list_v1: {
         parameters: {
             query?: {
-                status?: "REQUESTED" | "RECEIVED" | "CANCELLED";
+                status?: "CANCELLED" | "REQUESTED" | "RECEIVED";
                 limit?: number;
             };
             header?: never;
@@ -6202,7 +6268,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": Record<string, never>;
+                };
             };
         };
     };
@@ -7160,6 +7228,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    SiteSettingsController_uploadSiteMedia_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    altText?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSiteMediaDto"];
+                };
             };
         };
     };

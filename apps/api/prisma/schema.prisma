@@ -228,6 +228,14 @@ model Media {
 
 model SiteSettings {
   id                  String   @id @default("site") @db.VarChar(32)
+  headerCategoryIds   String[] @default([]) @db.Uuid
+  announcementEnabled Boolean  @default(false)
+  announcementMessage String?  @db.VarChar(500)
+  announcementCountdownMode String @default("NONE") @db.VarChar(16)
+  announcementDurationSeconds Int?
+  announcementEndsAt DateTime? @db.Timestamptz(3)
+  announcementCtaLabel String? @db.VarChar(100)
+  announcementCtaHref String?  @db.VarChar(1000)
   catalogHeroEnabled  Boolean  @default(false)
   catalogHeroTitle    String?  @db.VarChar(200)
   catalogHeroSubtitle String?  @db.VarChar(500)

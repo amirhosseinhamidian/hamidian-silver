@@ -13,7 +13,47 @@ export class PublicSiteSettingsMediaDto {
   altText!: string | null;
 }
 
+export class PublicSiteSettingsHeaderCategoryDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty()
+  label!: string;
+
+  @ApiProperty()
+  slug!: string;
+}
+
+export class PublicSiteAnnouncementDto {
+  @ApiProperty()
+  enabled!: boolean;
+
+  @ApiProperty({ nullable: true })
+  message!: string | null;
+
+  @ApiProperty({ enum: ['NONE', 'FIXED', 'DEADLINE'] })
+  countdownMode!: 'NONE' | 'FIXED' | 'DEADLINE';
+
+  @ApiProperty({ nullable: true })
+  durationSeconds!: number | null;
+
+  @ApiProperty({ nullable: true, format: 'date-time' })
+  endsAt!: string | null;
+
+  @ApiProperty({ nullable: true })
+  ctaLabel!: string | null;
+
+  @ApiProperty({ nullable: true })
+  ctaHref!: string | null;
+}
+
 export class PublicSiteSettingsDto {
+  @ApiProperty({ type: () => PublicSiteSettingsHeaderCategoryDto, isArray: true })
+  headerCategories!: PublicSiteSettingsHeaderCategoryDto[];
+
+  @ApiProperty({ type: () => PublicSiteAnnouncementDto })
+  announcement!: PublicSiteAnnouncementDto;
+
   @ApiProperty()
   catalogHeroEnabled!: boolean;
 

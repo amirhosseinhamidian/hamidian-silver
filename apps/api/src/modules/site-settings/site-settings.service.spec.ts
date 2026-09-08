@@ -19,6 +19,14 @@ const contentSettings = {
 
 function settingsRecord(overrides: Record<string, unknown> = {}) {
   return {
+    headerCategoryIds: [],
+    announcementEnabled: false,
+    announcementMessage: null,
+    announcementCountdownMode: 'NONE',
+    announcementDurationSeconds: null,
+    announcementEndsAt: null,
+    announcementCtaLabel: null,
+    announcementCtaHref: null,
     catalogHeroEnabled: true,
     catalogHeroTitle: 'کالکشن جدید',
     catalogHeroSubtitle: 'انتخاب‌های تازه نقره',
@@ -44,6 +52,10 @@ describe('SiteSettingsService', () => {
     media: {
       findFirst: jest.fn(),
     },
+    category: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
   };
   const publicMediaUrlService = {
     resolve: jest.fn((storageKey: string) => `https://media.hamidian.test/${storageKey}`),
@@ -63,6 +75,16 @@ describe('SiteSettingsService', () => {
     prisma.siteSettings.findUnique.mockResolvedValue(null);
 
     await expect(service.getPublicSettings()).resolves.toEqual({
+      headerCategories: [],
+      announcement: {
+        enabled: false,
+        message: null,
+        countdownMode: 'NONE',
+        durationSeconds: null,
+        endsAt: null,
+        ctaLabel: null,
+        ctaHref: null,
+      },
       catalogHeroEnabled: false,
       catalogHeroTitle: null,
       catalogHeroSubtitle: null,
@@ -82,6 +104,16 @@ describe('SiteSettingsService', () => {
     prisma.siteSettings.findUnique.mockResolvedValue(settingsRecord());
 
     await expect(service.getPublicSettings()).resolves.toEqual({
+      headerCategories: [],
+      announcement: {
+        enabled: false,
+        message: null,
+        countdownMode: 'NONE',
+        durationSeconds: null,
+        endsAt: null,
+        ctaLabel: null,
+        ctaHref: null,
+      },
       catalogHeroEnabled: true,
       catalogHeroTitle: 'کالکشن جدید',
       catalogHeroSubtitle: 'انتخاب‌های تازه نقره',
@@ -209,6 +241,14 @@ describe('SiteSettingsService', () => {
       where: { id: 'site' },
       create: {
         id: 'site',
+        headerCategoryIds: [],
+        announcementEnabled: false,
+        announcementMessage: null,
+        announcementCountdownMode: 'NONE',
+        announcementDurationSeconds: null,
+        announcementEndsAt: null,
+        announcementCtaLabel: null,
+        announcementCtaHref: null,
         catalogHeroEnabled: true,
         catalogHeroTitle: 'کالکشن جدید',
         catalogHeroSubtitle: null,
@@ -224,6 +264,14 @@ describe('SiteSettingsService', () => {
         updatedByUserId: actorUserId,
       },
       update: {
+        headerCategoryIds: [],
+        announcementEnabled: false,
+        announcementMessage: null,
+        announcementCountdownMode: 'NONE',
+        announcementDurationSeconds: null,
+        announcementEndsAt: null,
+        announcementCtaLabel: null,
+        announcementCtaHref: null,
         catalogHeroEnabled: true,
         catalogHeroTitle: 'کالکشن جدید',
         catalogHeroSubtitle: null,
@@ -266,5 +314,67 @@ describe('SiteSettingsService', () => {
         }),
       }),
     );
+  });
+
+  it('preserves configured header category order and projects announcement settings', async () => {
+    prisma.category.findMany.mockResolvedValue([
+      { id: 'category-2', name: 'گردنبند', slug: 'necklaces' },
+      { id: 'category-1', name: 'انگشتر', slug: 'rings' },
+    ]);
+    prisma.siteSettings.findUnique.mockResolvedValue(
+      settingsRecord({
+        headerCategoryIds: ['category-1', 'category-2'],
+        announcementEnabled: true,
+        announcementMessage: 'ارسال رایگان سفارش‌ها',
+        announcementCountdownMode: 'DEADLINE',
+        announcementEndsAt: new Date('2026-09-10T12:00:00.000Z'),
+        announcementCtaLabel: 'مشاهده محصولات',
+        announcementCtaHref: '/products',
+      }),
+    );
+
+    const result = await service.getPublicSettings();
+
+    expect(result.headerCategories.map(({ id }) => id)).toEqual(['category-1', 'category-2']);
+    expect(result.announcement).toEqual({
+      enabled: true,
+      message: 'ارسال رایگان سفارش‌ها',
+      countdownMode: 'DEADLINE',
+      durationSeconds: null,
+      endsAt: '2026-09-10T12:00:00.000Z',
+      ctaLabel: 'مشاهده محصولات',
+      ctaHref: '/products',
+    });
+  });
+
+  it('validates header categories and announcement coherence before writing', async () => {
+    prisma.siteSettings.findUnique.mockResolvedValue(null);
+    prisma.category.count.mockResolvedValue(1);
+
+    await expect(
+      service.updateSettings(
+        {
+          headerCategoryIds: [
+            '10000000-0000-4000-8000-000000000001',
+            '10000000-0000-4000-8000-000000000002',
+          ],
+        },
+        actorUserId,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    prisma.category.count.mockResolvedValue(0);
+    await expect(
+      service.updateSettings(
+        {
+          announcement: {
+            enabled: true,
+            message: 'فروش ویژه',
+            countdownMode: 'FIXED',
+          },
+        },
+        actorUserId,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

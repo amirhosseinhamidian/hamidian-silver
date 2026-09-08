@@ -1,17 +1,79 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
+  IsDateString,
   IsEmail,
+  IsIn,
+  IsInt,
   IsOptional,
   IsString,
   IsUrl,
   IsUUID,
+  Max,
   MaxLength,
+  Min,
+  ValidateNested,
 } from 'class-validator';
 
+export class UpdateSiteAnnouncementDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  @ApiPropertyOptional({ nullable: true, maxLength: 500 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  message?: string | null;
+
+  @ApiPropertyOptional({ enum: ['NONE', 'FIXED', 'DEADLINE'] })
+  @IsOptional()
+  @IsIn(['NONE', 'FIXED', 'DEADLINE'])
+  countdownMode?: 'NONE' | 'FIXED' | 'DEADLINE';
+
+  @ApiPropertyOptional({ nullable: true, minimum: 60, maximum: 604800 })
+  @IsOptional()
+  @IsInt()
+  @Min(60)
+  @Max(604800)
+  durationSeconds?: number | null;
+
+  @ApiPropertyOptional({ nullable: true, format: 'date-time' })
+  @IsOptional()
+  @IsDateString()
+  endsAt?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, maxLength: 100 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  ctaLabel?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, maxLength: 1000 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  ctaHref?: string | null;
+}
+
 export class UpdateSiteSettingsDto {
+  @ApiPropertyOptional({ type: String, isArray: true, maxItems: 8, format: 'uuid' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(8)
+  @IsUUID('4', { each: true })
+  headerCategoryIds?: string[];
+
+  @ApiPropertyOptional({ type: () => UpdateSiteAnnouncementDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateSiteAnnouncementDto)
+  announcement?: UpdateSiteAnnouncementDto;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()

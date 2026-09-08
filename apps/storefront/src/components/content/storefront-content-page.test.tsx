@@ -23,6 +23,16 @@ const aboutPage: PublicContentPage = {
 };
 
 const settings: PublicSiteSettings = {
+  headerCategories: [],
+  announcement: {
+    enabled: false,
+    message: null,
+    countdownMode: 'NONE',
+    durationSeconds: null,
+    endsAt: null,
+    ctaLabel: null,
+    ctaHref: null,
+  },
   catalogHeroEnabled: false,
   catalogHeroTitle: null,
   catalogHeroSubtitle: null,

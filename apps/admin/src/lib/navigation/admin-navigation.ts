@@ -331,8 +331,8 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         shortLabel: 'محتوا',
         href: '/content',
         icon: 'content',
-        description: 'صفحات، بخش‌ها و تنظیمات نمایشی',
-        roadmapStage: 32,
+        description: 'درباره ما، خدمات، تماس و قوانین',
+        roadmapStage: 33,
         permissions: ['cms.read'],
       },
       {

@@ -134,6 +134,35 @@ describe('HomepageService', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it('includes an admin preview for configured hero media', async () => {
+    prisma.homepageHeroSlide.findMany.mockResolvedValue([
+      {
+        id: 'hero-1',
+        placement: HomepageHeroPlacement.PRIMARY,
+        mediaId: 'media-1',
+        title: 'کالکشن تازه',
+        subtitle: null,
+        actionLabel: null,
+        actionHref: null,
+        sortOrder: 1,
+        isActive: true,
+        media: { id: 'media-1', ...media },
+      },
+    ]);
+    prisma.homepageFeaturedCategory.findMany.mockResolvedValue([]);
+    prisma.homepagePopularProduct.findMany.mockResolvedValue([]);
+    prisma.siteSettings.findUnique.mockResolvedValue(null);
+
+    const result = await service.getAdminHomepage();
+
+    expect(result.primaryHeroSlides[0]?.media).toEqual({
+      id: 'media-1',
+      url: 'https://media.hamidian.test/homepage/hero.webp',
+      mimeType: 'image/webp',
+      altText: 'تصویر هیرو',
+    });
+  });
+
   it('replaces homepage configuration transactionally in the requested order', async () => {
     prisma.media.findMany.mockResolvedValue([{ id: '10000000-0000-4000-8000-000000000001' }]);
     prisma.category.findMany.mockResolvedValue([

@@ -1,8 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+export class AdminHomepageHeroMediaDto {
+  id!: string;
+
+  @ApiProperty({ nullable: true, format: 'uri' })
+  url!: string | null;
+
+  mimeType!: string;
+
+  @ApiProperty({ nullable: true })
+  altText!: string | null;
+}
+
 export class AdminHomepageHeroSlideDto {
   id!: string;
   mediaId!: string;
+
+  @ApiProperty({ type: () => AdminHomepageHeroMediaDto })
+  media!: AdminHomepageHeroMediaDto;
 
   @ApiProperty({ type: String, nullable: true })
   title!: string | null;

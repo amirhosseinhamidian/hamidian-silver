@@ -86,6 +86,7 @@ export class HomepageService {
     const [slides, categories, products, settings] = await Promise.all([
       this.prisma.homepageHeroSlide.findMany({
         orderBy: [{ placement: 'asc' }, { sortOrder: 'asc' }, { id: 'asc' }],
+        include: { media: true },
       }),
       this.prisma.homepageFeaturedCategory.findMany({ orderBy: { priority: 'asc' } }),
       this.prisma.homepagePopularProduct.findMany({ orderBy: { priority: 'asc' } }),
@@ -98,6 +99,14 @@ export class HomepageService {
     const projectSlide = (slide: (typeof slides)[number]) => ({
       id: slide.id,
       mediaId: slide.mediaId,
+      media: {
+        id: slide.media.id,
+        url: slide.media.deletedAt
+          ? null
+          : this.publicMediaUrlService.resolve(slide.media.storageKey),
+        mimeType: slide.media.mimeType,
+        altText: slide.media.altText,
+      },
       title: slide.title,
       subtitle: slide.subtitle,
       actionLabel: slide.actionLabel,

@@ -1,8 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { PublicSiteSettingsMediaDto } from './public-site-settings.dto';
+import {
+  PublicSiteAnnouncementDto,
+  PublicSiteSettingsMediaDto,
+} from './public-site-settings.dto';
 
 export class AdminSiteSettingsDto {
+  @ApiProperty({ type: String, isArray: true, format: 'uuid' })
+  headerCategoryIds!: string[];
+
+  @ApiProperty({ type: () => PublicSiteAnnouncementDto })
+  announcement!: PublicSiteAnnouncementDto;
+
   @ApiProperty()
   catalogHeroEnabled!: boolean;
 

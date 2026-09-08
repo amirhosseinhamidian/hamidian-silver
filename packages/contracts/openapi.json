@@ -4138,9 +4138,9 @@
             "schema": {
               "type": "string",
               "enum": [
+                "CANCELLED",
                 "REQUESTED",
-                "RECEIVED",
-                "CANCELLED"
+                "RECEIVED"
               ]
             }
           },
@@ -4157,7 +4157,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5598,6 +5605,51 @@
         },
         "tags": [
           "Shipping"
+        ]
+      }
+    },
+    "/api/v1/site-settings/media": {
+      "post": {
+        "operationId": "SiteSettingsController_uploadSiteMedia_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "altText": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSiteMediaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SiteSettings"
         ]
       }
     },
@@ -8840,6 +8892,99 @@
           "status"
         ]
       },
+      "AdminSiteMediaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "altText": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "mimeType",
+          "altText"
+        ]
+      },
+      "PublicSiteSettingsHeaderCategoryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "slug"
+        ]
+      },
+      "PublicSiteAnnouncementDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "countdownMode": {
+            "enum": [
+              "NONE",
+              "FIXED",
+              "DEADLINE"
+            ],
+            "type": "string"
+          },
+          "durationSeconds": {
+            "type": "number",
+            "nullable": true
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "ctaLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "ctaHref": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "enabled",
+          "message",
+          "countdownMode",
+          "durationSeconds",
+          "endsAt",
+          "ctaLabel",
+          "ctaHref"
+        ]
+      },
       "PublicSiteSettingsMediaDto": {
         "type": "object",
         "properties": {
@@ -8861,6 +9006,15 @@
       "PublicSiteSettingsDto": {
         "type": "object",
         "properties": {
+          "headerCategories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicSiteSettingsHeaderCategoryDto"
+            }
+          },
+          "announcement": {
+            "$ref": "#/components/schemas/PublicSiteAnnouncementDto"
+          },
           "catalogHeroEnabled": {
             "type": "boolean"
           },
@@ -8920,6 +9074,8 @@
           }
         },
         "required": [
+          "headerCategories",
+          "announcement",
           "catalogHeroEnabled",
           "catalogHeroTitle",
           "catalogHeroSubtitle",
@@ -9329,9 +9485,38 @@
           "sections"
         ]
       },
+      "AdminHomepageHeroMediaDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "altText": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "altText",
+          "id",
+          "mimeType"
+        ]
+      },
       "AdminHomepageHeroSlideDto": {
         "type": "object",
         "properties": {
+          "media": {
+            "$ref": "#/components/schemas/AdminHomepageHeroMediaDto"
+          },
           "title": {
             "type": "string",
             "nullable": true
@@ -9362,6 +9547,7 @@
           }
         },
         "required": [
+          "media",
           "title",
           "subtitle",
           "actionLabel",
@@ -9515,6 +9701,16 @@
       "AdminSiteSettingsDto": {
         "type": "object",
         "properties": {
+          "headerCategoryIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "announcement": {
+            "$ref": "#/components/schemas/PublicSiteAnnouncementDto"
+          },
           "catalogHeroEnabled": {
             "type": "boolean"
           },
@@ -9589,6 +9785,8 @@
           }
         },
         "required": [
+          "headerCategoryIds",
+          "announcement",
           "catalogHeroEnabled",
           "catalogHeroTitle",
           "catalogHeroSubtitle",
@@ -9606,9 +9804,62 @@
           "updatedAt"
         ]
       },
+      "UpdateSiteAnnouncementDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "countdownMode": {
+            "enum": [
+              "NONE",
+              "FIXED",
+              "DEADLINE"
+            ],
+            "type": "string"
+          },
+          "durationSeconds": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 60,
+            "maximum": 604800
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "ctaLabel": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 100
+          },
+          "ctaHref": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          }
+        }
+      },
       "UpdateSiteSettingsDto": {
         "type": "object",
         "properties": {
+          "headerCategoryIds": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "announcement": {
+            "$ref": "#/components/schemas/UpdateSiteAnnouncementDto"
+          },
           "catalogHeroEnabled": {
             "type": "boolean"
           },

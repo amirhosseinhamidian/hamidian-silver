@@ -3,7 +3,12 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { AdminSiteSettingsDto } from './dto/admin-site-settings.dto';
-import { PublicSiteSettingsDto, PublicSiteSettingsMediaDto } from './dto/public-site-settings.dto';
+import {
+  PublicSiteAnnouncementDto,
+  PublicSiteSettingsDto,
+  PublicSiteSettingsHeaderCategoryDto,
+  PublicSiteSettingsMediaDto,
+} from './dto/public-site-settings.dto';
 import { UpdateSiteSettingsDto } from './dto/update-site-settings.dto';
 
 const SITE_SETTINGS_ID = 'site';
@@ -15,6 +20,14 @@ type SiteSettingsMedia = Readonly<{
 }>;
 
 type SiteSettingsRecord = Readonly<{
+  headerCategoryIds: string[];
+  announcementEnabled: boolean;
+  announcementMessage: string | null;
+  announcementCountdownMode: string;
+  announcementDurationSeconds: number | null;
+  announcementEndsAt: Date | null;
+  announcementCtaLabel: string | null;
+  announcementCtaHref: string | null;
   catalogHeroEnabled: boolean;
   catalogHeroTitle: string | null;
   catalogHeroSubtitle: string | null;
@@ -30,6 +43,16 @@ type SiteSettingsRecord = Readonly<{
   updatedByUserId: string | null;
   updatedAt: Date;
   catalogHeroMedia: SiteSettingsMedia | null;
+}>;
+
+type AnnouncementSettings = Readonly<{
+  enabled: boolean;
+  message: string | null;
+  countdownMode: 'NONE' | 'FIXED' | 'DEADLINE';
+  durationSeconds: number | null;
+  endsAt: Date | null;
+  ctaLabel: string | null;
+  ctaHref: string | null;
 }>;
 
 function normalizeNullableText(value: string | null | undefined): string | null | undefined {
@@ -69,6 +92,8 @@ export class SiteSettingsService {
     }
 
     return {
+      headerCategories: await this.projectHeaderCategories(settings.headerCategoryIds),
+      announcement: this.projectAnnouncement(settings),
       catalogHeroEnabled: settings.catalogHeroEnabled,
       catalogHeroTitle: settings.catalogHeroTitle,
       catalogHeroSubtitle: settings.catalogHeroSubtitle,
@@ -88,8 +113,22 @@ export class SiteSettingsService {
     const settings = await this.findSettings();
 
     if (!settings) {
+      const defaults = this.defaultPublicSettings();
       return {
-        ...this.defaultPublicSettings(),
+        headerCategoryIds: [],
+        announcement: defaults.announcement,
+        catalogHeroEnabled: defaults.catalogHeroEnabled,
+        catalogHeroTitle: defaults.catalogHeroTitle,
+        catalogHeroSubtitle: defaults.catalogHeroSubtitle,
+        catalogHeroMedia: defaults.catalogHeroMedia,
+        galleryName: defaults.galleryName,
+        footerAbout: defaults.footerAbout,
+        contactAddress: defaults.contactAddress,
+        contactPhoneNumbers: defaults.contactPhoneNumbers,
+        contactEmail: defaults.contactEmail,
+        instagramUrl: defaults.instagramUrl,
+        telegramUrl: defaults.telegramUrl,
+        baleUrl: defaults.baleUrl,
         catalogHeroMediaId: null,
         updatedByUserId: null,
         updatedAt: null,
@@ -106,6 +145,14 @@ export class SiteSettingsService {
     const current = await this.prisma.siteSettings.findUnique({
       where: { id: SITE_SETTINGS_ID },
       select: {
+        headerCategoryIds: true,
+        announcementEnabled: true,
+        announcementMessage: true,
+        announcementCountdownMode: true,
+        announcementDurationSeconds: true,
+        announcementEndsAt: true,
+        announcementCtaLabel: true,
+        announcementCtaHref: true,
         catalogHeroEnabled: true,
         catalogHeroTitle: true,
         catalogHeroSubtitle: true,
@@ -120,6 +167,9 @@ export class SiteSettingsService {
         baleUrl: true,
       },
     });
+
+    const headerCategoryIds = dto.headerCategoryIds ?? current?.headerCategoryIds ?? [];
+    const announcement = this.resolveAnnouncement(dto, current);
 
     const catalogHeroEnabled = dto.catalogHeroEnabled ?? current?.catalogHeroEnabled ?? false;
     const normalizedCatalogHeroTitle = normalizeNullableText(dto.catalogHeroTitle);
@@ -146,12 +196,24 @@ export class SiteSettingsService {
     const telegramUrl = resolveNullableText(dto.telegramUrl, current?.telegramUrl);
     const baleUrl = resolveNullableText(dto.baleUrl, current?.baleUrl);
 
-    await this.validateCatalogHeroMedia(catalogHeroEnabled, catalogHeroMediaId, dto);
+    await Promise.all([
+      this.validateCatalogHeroMedia(catalogHeroEnabled, catalogHeroMediaId, dto),
+      this.validateHeaderCategories(headerCategoryIds),
+    ]);
+    this.validateAnnouncement(announcement);
 
     const settings = await this.prisma.siteSettings.upsert({
       where: { id: SITE_SETTINGS_ID },
       create: {
         id: SITE_SETTINGS_ID,
+        headerCategoryIds,
+        announcementEnabled: announcement.enabled,
+        announcementMessage: announcement.message,
+        announcementCountdownMode: announcement.countdownMode,
+        announcementDurationSeconds: announcement.durationSeconds,
+        announcementEndsAt: announcement.endsAt,
+        announcementCtaLabel: announcement.ctaLabel,
+        announcementCtaHref: announcement.ctaHref,
         catalogHeroEnabled,
         catalogHeroTitle,
         catalogHeroSubtitle,
@@ -167,6 +229,14 @@ export class SiteSettingsService {
         updatedByUserId: actorUserId,
       },
       update: {
+        headerCategoryIds,
+        announcementEnabled: announcement.enabled,
+        announcementMessage: announcement.message,
+        announcementCountdownMode: announcement.countdownMode,
+        announcementDurationSeconds: announcement.durationSeconds,
+        announcementEndsAt: announcement.endsAt,
+        announcementCtaLabel: announcement.ctaLabel,
+        announcementCtaHref: announcement.ctaHref,
         catalogHeroEnabled,
         catalogHeroTitle,
         catalogHeroSubtitle,
@@ -196,6 +266,137 @@ export class SiteSettingsService {
         catalogHeroMedia: true,
       },
     });
+  }
+
+  private resolveAnnouncement(
+    dto: UpdateSiteSettingsDto,
+    current:
+      | Readonly<{
+          announcementEnabled: boolean;
+          announcementMessage: string | null;
+          announcementCountdownMode: string;
+          announcementDurationSeconds: number | null;
+          announcementEndsAt: Date | null;
+          announcementCtaLabel: string | null;
+          announcementCtaHref: string | null;
+        }>
+      | null,
+  ): AnnouncementSettings {
+    const update = dto.announcement;
+    const candidateMode = update?.countdownMode ?? current?.announcementCountdownMode ?? 'NONE';
+    const countdownMode = ['NONE', 'FIXED', 'DEADLINE'].includes(candidateMode)
+      ? (candidateMode as AnnouncementSettings['countdownMode'])
+      : 'NONE';
+    const endsAtValue = update?.endsAt;
+    const endsAt =
+      countdownMode === 'DEADLINE'
+        ? endsAtValue === undefined
+          ? (current?.announcementEndsAt ?? null)
+          : endsAtValue
+            ? new Date(endsAtValue)
+            : null
+        : null;
+
+    return {
+      enabled: update?.enabled ?? current?.announcementEnabled ?? false,
+      message: resolveNullableText(update?.message, current?.announcementMessage),
+      countdownMode,
+      durationSeconds:
+        countdownMode === 'FIXED'
+          ? (update?.durationSeconds ?? current?.announcementDurationSeconds ?? null)
+          : null,
+      endsAt,
+      ctaLabel: resolveNullableText(update?.ctaLabel, current?.announcementCtaLabel),
+      ctaHref: resolveNullableText(update?.ctaHref, current?.announcementCtaHref),
+    };
+  }
+
+  private validateAnnouncement(announcement: AnnouncementSettings): void {
+    if (announcement.enabled && !announcement.message) {
+      throw new BadRequestException('Announcement message is required when it is enabled.');
+    }
+    if (
+      announcement.countdownMode === 'FIXED' &&
+      (announcement.durationSeconds === null ||
+        announcement.durationSeconds < 60 ||
+        announcement.durationSeconds > 604800)
+    ) {
+      throw new BadRequestException('Announcement duration must be between 60 and 604800 seconds.');
+    }
+    if (announcement.countdownMode === 'DEADLINE' && !announcement.endsAt) {
+      throw new BadRequestException('Announcement end date is required for deadline countdown.');
+    }
+    if (Boolean(announcement.ctaLabel) !== Boolean(announcement.ctaHref)) {
+      throw new BadRequestException('Announcement action label and link must be provided together.');
+    }
+    if (announcement.ctaHref && !this.isAllowedActionHref(announcement.ctaHref)) {
+      throw new BadRequestException('Announcement action link must be an internal path or HTTP URL.');
+    }
+  }
+
+  private async validateHeaderCategories(categoryIds: string[]): Promise<void> {
+    if (new Set(categoryIds).size !== categoryIds.length) {
+      throw new BadRequestException('Header categories must be unique.');
+    }
+    if (categoryIds.length === 0) return;
+
+    const count = await this.prisma.category.count({
+      where: { id: { in: categoryIds }, isActive: true, deletedAt: null },
+    });
+    if (count !== categoryIds.length) {
+      throw new BadRequestException('Header categories must reference active categories.');
+    }
+  }
+
+  private async projectHeaderCategories(
+    categoryIds: string[],
+  ): Promise<PublicSiteSettingsHeaderCategoryDto[]> {
+    if (categoryIds.length === 0) return [];
+    const categories = await this.prisma.category.findMany({
+      where: { id: { in: categoryIds }, isActive: true, deletedAt: null },
+      select: { id: true, name: true, slug: true },
+    });
+    const byId = new Map(categories.map((category) => [category.id, category] as const));
+    return categoryIds.flatMap((categoryId) => {
+      const category = byId.get(categoryId);
+      return category ? [{ id: category.id, label: category.name, slug: category.slug }] : [];
+    });
+  }
+
+  private projectAnnouncement(settings: {
+    announcementEnabled: boolean;
+    announcementMessage: string | null;
+    announcementCountdownMode: string;
+    announcementDurationSeconds: number | null;
+    announcementEndsAt: Date | null;
+    announcementCtaLabel: string | null;
+    announcementCtaHref: string | null;
+  }): PublicSiteAnnouncementDto {
+    const mode = ['NONE', 'FIXED', 'DEADLINE'].includes(settings.announcementCountdownMode)
+      ? (settings.announcementCountdownMode as PublicSiteAnnouncementDto['countdownMode'])
+      : 'NONE';
+    return {
+      enabled: settings.announcementEnabled,
+      message: settings.announcementMessage,
+      countdownMode: mode,
+      durationSeconds: mode === 'FIXED' ? settings.announcementDurationSeconds : null,
+      endsAt:
+        mode === 'DEADLINE' && settings.announcementEndsAt
+          ? settings.announcementEndsAt.toISOString()
+          : null,
+      ctaLabel: settings.announcementCtaLabel,
+      ctaHref: settings.announcementCtaHref,
+    };
+  }
+
+  private isAllowedActionHref(href: string): boolean {
+    if (href.startsWith('/') && !href.startsWith('//')) return true;
+    try {
+      const url = new URL(href);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+      return false;
+    }
   }
 
   private async validateCatalogHeroMedia(
@@ -228,6 +429,16 @@ export class SiteSettingsService {
 
   private defaultPublicSettings(): PublicSiteSettingsDto {
     return {
+      headerCategories: [],
+      announcement: {
+        enabled: false,
+        message: null,
+        countdownMode: 'NONE',
+        durationSeconds: null,
+        endsAt: null,
+        ctaLabel: null,
+        ctaHref: null,
+      },
       catalogHeroEnabled: false,
       catalogHeroTitle: null,
       catalogHeroSubtitle: null,
@@ -245,6 +456,8 @@ export class SiteSettingsService {
 
   private projectAdminSettings(settings: SiteSettingsRecord): AdminSiteSettingsDto {
     return {
+      headerCategoryIds: settings.headerCategoryIds,
+      announcement: this.projectAnnouncement(settings),
       catalogHeroEnabled: settings.catalogHeroEnabled,
       catalogHeroTitle: settings.catalogHeroTitle,
       catalogHeroSubtitle: settings.catalogHeroSubtitle,
