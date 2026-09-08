@@ -83,6 +83,38 @@ export class SiteSettingsController {
     };
   }
 
+  @Post('pages/media')
+  @RequirePermissions(PERMISSION_CODES.CMS_WRITE)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MEDIA_UPLOAD_LIMIT_BYTES, files: 1 },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        altText: { type: 'string', minLength: 1, maxLength: 255 },
+      },
+    },
+  })
+  @ApiOkResponse({ type: AdminSiteMediaDto })
+  async uploadContentPageMedia(
+    @UploadedFile() file: CatalogUploadFile | undefined,
+    @Body() dto: UploadMediaDto,
+  ): Promise<AdminSiteMediaDto> {
+    const media = await this.catalogMediaService.upload(file, dto);
+    return {
+      id: media.id,
+      url: this.publicMediaUrlService.resolve(media.storageKey),
+      mimeType: media.mimeType,
+      altText: media.altText,
+    };
+  }
+
   @Public()
   @Get('public')
   @ApiOkResponse({ type: PublicSiteSettingsDto })
@@ -108,14 +140,14 @@ export class SiteSettingsController {
   }
 
   @Get('pages')
-  @RequirePermissions(PERMISSION_CODES.SETTINGS_READ)
+  @RequirePermissions(PERMISSION_CODES.CMS_READ)
   @ApiOkResponse({ type: AdminContentPageDto, isArray: true })
   getAdminContentPages(): Promise<AdminContentPageDto[]> {
     return this.contentPagesService.getAdminPages();
   }
 
   @Put('pages/:key')
-  @RequirePermissions(PERMISSION_CODES.SETTINGS_WRITE)
+  @RequirePermissions(PERMISSION_CODES.CMS_WRITE)
   @ApiParam({ name: 'key', enum: StorefrontContentPageKey })
   @ApiOkResponse({ type: AdminContentPageDto })
   updateContentPage(

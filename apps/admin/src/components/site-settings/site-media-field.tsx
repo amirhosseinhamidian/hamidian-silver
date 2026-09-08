@@ -24,6 +24,7 @@ export function SiteMediaField({
   media,
   altText,
   disabled = false,
+  uploadUrl = '/api/site-settings/media',
   onUploaded,
   onClear,
 }: Readonly<{
@@ -31,6 +32,7 @@ export function SiteMediaField({
   media: SiteMedia | null;
   altText: string;
   disabled?: boolean;
+  uploadUrl?: string;
   onUploaded: (media: SiteMedia) => void;
   onClear?: () => void;
 }>) {
@@ -51,7 +53,7 @@ export function SiteMediaField({
     setPending(true);
     setError(null);
     try {
-      const response = await fetch('/api/site-settings/media', { method: 'POST', body });
+      const response = await fetch(uploadUrl, { method: 'POST', body });
       const payload = (await response.json().catch(() => null)) as unknown;
       if (!response.ok) throw new Error(responseMessage(payload));
       const source = payload as Partial<SiteMedia> | null;
@@ -82,16 +84,28 @@ export function SiteMediaField({
             className="object-cover"
           />
         ) : (
-          <div className="grid h-full place-items-center p-6 text-center text-xs text-[var(--admin-color-muted)]">برای {label} تصویر بارگذاری کنید.</div>
+          <div className="grid h-full place-items-center p-6 text-center text-xs text-[var(--admin-color-muted)]">
+            برای {label} تصویر بارگذاری کنید.
+          </div>
         )}
       </div>
       {error ? <Alert tone="danger">{error}</Alert> : null}
       <div className="flex flex-wrap gap-2">
         <label className="inline-flex min-h-9 cursor-pointer items-center justify-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] bg-white px-3 text-xs font-semibold hover:border-[var(--admin-color-border-strong)]">
           {pending ? 'در حال آپلود…' : media ? 'جایگزینی تصویر' : 'انتخاب تصویر'}
-          <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" disabled={disabled || pending} onChange={(event) => void upload(event)} className="sr-only" />
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/avif"
+            disabled={disabled || pending}
+            onChange={(event) => void upload(event)}
+            className="sr-only"
+          />
         </label>
-        {media && onClear ? <Button variant="ghost" size="sm" disabled={disabled || pending} onClick={onClear}>حذف تصویر</Button> : null}
+        {media && onClear ? (
+          <Button variant="ghost" size="sm" disabled={disabled || pending} onClick={onClear}>
+            حذف تصویر
+          </Button>
+        ) : null}
       </div>
     </div>
   );
