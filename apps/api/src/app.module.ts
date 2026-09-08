@@ -18,6 +18,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
 import { SiteSettingsModule } from './modules/site-settings/site-settings.module';
+import { UserManagementModule } from './modules/user-management/user-management.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { SiteSettingsModule } from './modules/site-settings/site-settings.module
     ProfileModule,
     ShippingModule,
     SiteSettingsModule,
+    UserManagementModule,
   ],
   providers: [
     {

@@ -1,6 +1,45 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api/v1/admin-users": {
+      "get": {
+        "operationId": "UserManagementController_list_v1",
+        "parameters": [
+          { "name": "search", "required": false, "in": "query", "schema": { "maxLength": 100, "type": "string" } },
+          { "name": "status", "required": false, "in": "query", "schema": { "type": "string", "enum": ["ACTIVE", "INACTIVE"] } },
+          { "name": "role", "required": false, "in": "query", "schema": { "type": "string", "enum": ["MANAGER", "ADMIN", "USER"] } },
+          { "name": "limit", "required": false, "in": "query", "schema": { "minimum": 1, "maximum": 200, "type": "number" } }
+        ],
+        "responses": { "200": { "description": "", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserManagementSnapshotDto" } } } } },
+        "tags": ["UserManagement"]
+      }
+    },
+    "/api/v1/admin-users/{userId}/status": {
+      "patch": {
+        "operationId": "UserManagementController_updateStatus_v1",
+        "parameters": [{ "name": "userId", "required": true, "in": "path", "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateAdminUserStatusDto" } } } },
+        "responses": { "200": { "description": "", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminManagedUserDto" } } } } },
+        "tags": ["UserManagement"]
+      }
+    },
+    "/api/v1/admin-users/{userId}/roles": {
+      "put": {
+        "operationId": "UserManagementController_updateRoles_v1",
+        "parameters": [{ "name": "userId", "required": true, "in": "path", "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateAdminUserRolesDto" } } } },
+        "responses": { "200": { "description": "", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminManagedUserDto" } } } } },
+        "tags": ["UserManagement"]
+      }
+    },
+    "/api/v1/admin-users/{userId}/sessions/revoke": {
+      "post": {
+        "operationId": "UserManagementController_revokeSessions_v1",
+        "parameters": [{ "name": "userId", "required": true, "in": "path", "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RevokeAdminUserSessionsResultDto" } } } } },
+        "tags": ["UserManagement"]
+      }
+    },
     "/api/v1/auth/otp/request": {
       "post": {
         "operationId": "AuthController_requestCode_v1",
@@ -5970,6 +6009,78 @@
       }
     },
     "schemas": {
+      "AdminPermissionCatalogDto": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "enum": ["catalog.read", "catalog.write", "inventory.read", "inventory.write", "orders.read", "orders.status.write", "orders.tracking.write", "orders.cancel", "cms.read", "cms.write", "pricing.read", "pricing.write", "finance.read", "finance.write", "settings.read", "settings.write", "users.read", "users.write", "audit.read"] },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true }
+        },
+        "required": ["code", "name", "description"]
+      },
+      "AdminRoleCatalogDto": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "enum": ["MANAGER", "ADMIN", "USER"] },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "permissions": { "type": "array", "items": { "$ref": "#/components/schemas/AdminPermissionCatalogDto" } }
+        },
+        "required": ["code", "name", "description", "permissions"]
+      },
+      "AdminManagedUserRoleDto": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "enum": ["MANAGER", "ADMIN", "USER"] },
+          "name": { "type": "string" },
+          "assignedAt": { "type": "string", "format": "date-time" },
+          "permissions": { "type": "array", "items": { "type": "string", "enum": ["catalog.read", "catalog.write", "inventory.read", "inventory.write", "orders.read", "orders.status.write", "orders.tracking.write", "orders.cancel", "cms.read", "cms.write", "pricing.read", "pricing.write", "finance.read", "finance.write", "settings.read", "settings.write", "users.read", "users.write", "audit.read"] } }
+        },
+        "required": ["code", "name", "assignedAt", "permissions"]
+      },
+      "AdminManagedUserDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "phone": { "type": "string" },
+          "firstName": { "type": "string", "nullable": true },
+          "lastName": { "type": "string", "nullable": true },
+          "isActive": { "type": "boolean" },
+          "phoneVerifiedAt": { "type": "string", "nullable": true, "format": "date-time" },
+          "lastLoginAt": { "type": "string", "nullable": true, "format": "date-time" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "activeSessionCount": { "type": "number" },
+          "roles": { "type": "array", "items": { "$ref": "#/components/schemas/AdminManagedUserRoleDto" } },
+          "effectivePermissions": { "type": "array", "items": { "type": "string", "enum": ["catalog.read", "catalog.write", "inventory.read", "inventory.write", "orders.read", "orders.status.write", "orders.tracking.write", "orders.cancel", "cms.read", "cms.write", "pricing.read", "pricing.write", "finance.read", "finance.write", "settings.read", "settings.write", "users.read", "users.write", "audit.read"] } }
+        },
+        "required": ["id", "phone", "firstName", "lastName", "isActive", "phoneVerifiedAt", "lastLoginAt", "createdAt", "updatedAt", "activeSessionCount", "roles", "effectivePermissions"]
+      },
+      "AdminUserManagementSnapshotDto": {
+        "type": "object",
+        "properties": {
+          "users": { "type": "array", "items": { "$ref": "#/components/schemas/AdminManagedUserDto" } },
+          "roles": { "type": "array", "items": { "$ref": "#/components/schemas/AdminRoleCatalogDto" } }
+        },
+        "required": ["users", "roles"]
+      },
+      "RevokeAdminUserSessionsResultDto": {
+        "type": "object",
+        "properties": { "userId": { "type": "string", "format": "uuid" }, "revokedSessionCount": { "type": "number" } },
+        "required": ["userId", "revokedSessionCount"]
+      },
+      "UpdateAdminUserStatusDto": {
+        "type": "object",
+        "properties": { "isActive": { "type": "boolean" } },
+        "required": ["isActive"]
+      },
+      "UpdateAdminUserRolesDto": {
+        "type": "object",
+        "properties": {
+          "roleCodes": { "minItems": 1, "maxItems": 3, "uniqueItems": true, "type": "array", "items": { "type": "string", "enum": ["MANAGER", "ADMIN", "USER"] } }
+        },
+        "required": ["roleCodes"]
+      },
       "RequestOtpDto": {
         "type": "object",
         "properties": {
