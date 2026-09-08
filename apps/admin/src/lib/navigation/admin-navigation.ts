@@ -240,6 +240,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['finance.read'],
       },
       {
+        id: 'refunds',
+        label: 'مدیریت بازپرداخت',
+        shortLabel: 'بازپرداخت',
+        href: '/refunds',
+        icon: 'finance',
+        description: 'درخواست، تأیید و کنترل بازپرداخت‌ها',
+        roadmapStage: 21,
+        permissions: ['finance.read'],
+      },
+      {
         id: 'finance',
         label: 'گزارش‌های مالی',
         shortLabel: 'مالی',
