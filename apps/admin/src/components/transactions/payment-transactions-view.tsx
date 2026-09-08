@@ -117,7 +117,11 @@ function TransactionDetails({ attempt }: Readonly<{ attempt: AdminPaymentAttempt
           tone="warning"
           title="نیازمند بررسی عملیاتی"
           action={
-            <ButtonLink href="/payments" size="sm" variant="outline">
+            <ButtonLink
+              href={attempt.reconciliation ? '/reconciliations' : '/payments'}
+              size="sm"
+              variant="outline"
+            >
               ورود به صف بررسی
             </ButtonLink>
           }
