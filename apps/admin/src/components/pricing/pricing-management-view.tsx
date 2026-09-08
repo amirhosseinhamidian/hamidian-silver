@@ -450,9 +450,14 @@ function HistorySheet({ item }: Readonly<{ item: AdminPricingHistory }>) {
 }
 
 export function PricingManagementView({ catalog, failed, canWrite }: PricingManagementViewProps) {
-  const products = catalog?.products ?? [];
-  const rates = catalog?.platingRates ?? [];
-  const history = catalog?.history ?? [];
+  const { products, rates, history } = useMemo(
+    () => ({
+      products: catalog?.products ?? [],
+      rates: catalog?.platingRates ?? [],
+      history: catalog?.history ?? [],
+    }),
+    [catalog],
+  );
   const [productQuery, setProductQuery] = useState('');
   const [productFilter, setProductFilter] = useState('all');
   const [historyFilter, setHistoryFilter] = useState('all');

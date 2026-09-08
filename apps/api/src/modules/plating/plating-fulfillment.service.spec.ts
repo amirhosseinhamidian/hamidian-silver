@@ -12,6 +12,57 @@ describe('PlatingFulfillmentService', () => {
   const orderId = '20000000-0000-4000-8000-000000000001';
   const fulfillmentId = '30000000-0000-4000-8000-000000000001';
 
+  it('returns planned and actual costs in the operational queue', async () => {
+    const prisma = {
+      order: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: orderId,
+            orderNumber: 'HS-2301',
+            status: OrderStatus.PROCESSING,
+            paidAt: new Date('2026-09-01T10:00:00.000Z'),
+            platingTotalToman: 250_000,
+            financeSnapshot: { id: 'snapshot-1' },
+            items: [],
+            platingFulfillment: {
+              id: fulfillmentId,
+              orderId,
+              status: PlatingFulfillmentStatus.COMPLETED,
+              actualCostToman: 140_000,
+              externalReference: 'PLATING-INVOICE-001',
+              startNote: null,
+              completionNote: 'Completed.',
+              cancellationReason: null,
+              startedAt: new Date('2026-09-01T12:00:00.000Z'),
+              completedAt: new Date('2026-09-02T12:00:00.000Z'),
+              cancelledAt: null,
+              createdAt: new Date('2026-09-01T12:00:00.000Z'),
+              updatedAt: new Date('2026-09-02T12:00:00.000Z'),
+              startedBy: null,
+              completedBy: null,
+              cancelledBy: null,
+            },
+          },
+        ]),
+      },
+    };
+    const service = new PlatingFulfillmentService(
+      prisma as unknown as PrismaService,
+      {} as OrderCostsService,
+    );
+
+    await expect(service.list({ limit: 50 })).resolves.toEqual([
+      expect.objectContaining({
+        orderId,
+        platingTotalToman: 250_000,
+        fulfillment: expect.objectContaining({
+          actualCostToman: 140_000,
+          externalReference: 'PLATING-INVOICE-001',
+        }),
+      }),
+    ]);
+  });
+
   it('starts plating idempotently for a paid plating order', async () => {
     const transaction = {
       order: {
