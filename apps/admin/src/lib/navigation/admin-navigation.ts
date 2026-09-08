@@ -290,6 +290,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['finance.read'],
       },
       {
+        id: 'supplier-settlements',
+        label: 'دوره‌های تسویه تأمین',
+        shortLabel: 'تسویه تأمین',
+        href: '/supplier-settlements',
+        icon: 'suppliers',
+        description: 'ایجاد batch، اعمال اعتبار و ثبت پرداخت',
+        roadmapStage: 30,
+        permissions: ['finance.read'],
+      },
+      {
         id: 'finance',
         label: 'گزارش‌های مالی',
         shortLabel: 'مالی',

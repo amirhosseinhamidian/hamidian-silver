@@ -56,6 +56,7 @@ describe('admin navigation', () => {
       'payments',
       'supplier-credits',
       'supplier-payables',
+      'supplier-settlements',
       'finance',
       'users',
       'settings',
@@ -86,6 +87,7 @@ describe('admin navigation', () => {
     expect(getAdminSection('refunds')?.permissions).toEqual(['finance.read']);
     expect(getAdminSection('payments')?.permissions).toEqual(['finance.read']);
     expect(getAdminSection('supplier-credits')?.permissions).toEqual(['finance.read']);
+    expect(getAdminSection('supplier-settlements')?.permissions).toEqual(['finance.read']);
     expect(getAdminSection('incidents')?.permissions).toEqual(['orders.read']);
     expect(getAdminSection('unknown')).toBeUndefined();
     expect(findAdminNavigationItem('/orders/HS-1042', navigation)?.id).toBe('orders');
