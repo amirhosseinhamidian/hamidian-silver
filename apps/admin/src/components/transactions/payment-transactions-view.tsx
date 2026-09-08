@@ -352,7 +352,7 @@ export function PaymentTransactionsView({ initialPage, failed }: PaymentTransact
         title="تأیید پرداخت فقط از callback معتبر درگاه انجام می‌شود"
         action={
           <ButtonLink href="/payments" variant="outline" size="sm">
-            صف مغایرت و بازیابی
+            صف بازیابی پرداخت
           </ButtonLink>
         }
       >

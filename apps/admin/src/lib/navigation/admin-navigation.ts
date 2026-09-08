@@ -250,6 +250,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['finance.read'],
       },
       {
+        id: 'payments',
+        label: 'بازیابی پرداخت',
+        shortLabel: 'بازیابی',
+        href: '/payments',
+        icon: 'finance',
+        description: 'بررسی و تعیین تکلیف شروع پرداخت نامشخص',
+        roadmapStage: 22,
+        permissions: ['finance.read'],
+      },
+      {
         id: 'finance',
         label: 'گزارش‌های مالی',
         shortLabel: 'مالی',
