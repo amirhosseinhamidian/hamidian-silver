@@ -2148,6 +2148,22 @@ export interface paths {
         patch: operations["PaymentReconciliationController_resolveExternalRefund_v1"];
         trace?: never;
     };
+    "/api/v1/payments/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PaymentTransactionsController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/profile": {
         parameters: {
             query?: never;
@@ -6735,6 +6751,29 @@ export interface operations {
                 "application/json": components["schemas"]["ResolvePaymentReconciliationDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PaymentTransactionsController_list_v1: {
+        parameters: {
+            query?: {
+                q?: string;
+                provider?: "zarinpal" | "mellat" | "zibal";
+                status?: "FAILED" | "RECONCILIATION_REQUIRED" | "CREATED" | "REDIRECTED" | "VERIFIED" | "RECONCILED";
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

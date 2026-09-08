@@ -13,9 +13,9 @@ export default async function PaymentsPage() {
     <main className="admin-container py-6 sm:py-8 lg:py-10">
       <header className="border-b border-[var(--admin-color-border)] pb-6">
         <Badge tone="info">
-          مراحل {formatAdminInteger(19)}، {formatAdminInteger(20)} و {formatAdminInteger(22)}
+          مراحل {formatAdminInteger(20)} و {formatAdminInteger(22)}
         </Badge>
-        <h1 className="mt-3 text-2xl font-black sm:text-3xl">عملیات پرداخت و مغایرت‌گیری</h1>
+        <h1 className="mt-3 text-2xl font-black sm:text-3xl">مغایرت و بازیابی پرداخت</h1>
         <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--admin-color-muted)]">
           تلاش‌های پرداخت نامشخص و مغایرت‌های درگاه را بررسی کنید؛ هر اقدام مالی با مرجع و یادداشت
           اپراتور ثبت می‌شود.

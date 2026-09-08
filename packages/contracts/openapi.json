@@ -5021,6 +5021,79 @@
         ]
       }
     },
+    "/api/v1/payments/attempts": {
+      "get": {
+        "operationId": "PaymentTransactionsController_list_v1",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 120,
+              "type": "string"
+            }
+          },
+          {
+            "name": "provider",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "zarinpal",
+                "mellat",
+                "zibal"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "FAILED",
+                "RECONCILIATION_REQUIRED",
+                "CREATED",
+                "REDIRECTED",
+                "VERIFIED",
+                "RECONCILED"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PaymentTransactions"
+        ]
+      }
+    },
     "/api/v1/profile": {
       "get": {
         "operationId": "ProfileController_getProfile_v1",

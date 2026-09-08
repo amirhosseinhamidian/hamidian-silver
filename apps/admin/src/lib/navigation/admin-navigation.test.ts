@@ -48,6 +48,7 @@ describe('admin navigation', () => {
     expect(items.map((item) => item.id)).toEqual([
       'dashboard',
       'payment-gateways',
+      'transactions',
       'payments',
       'finance',
       'users',
@@ -74,6 +75,7 @@ describe('admin navigation', () => {
 
     expect(getAdminSection('products')?.permissions).toEqual(['catalog.read']);
     expect(getAdminSection('payment-gateways')?.permissions).toEqual(['settings.read']);
+    expect(getAdminSection('transactions')?.permissions).toEqual(['finance.read']);
     expect(getAdminSection('unknown')).toBeUndefined();
     expect(findAdminNavigationItem('/orders/HS-1042', navigation)?.id).toBe('orders');
     expect(findAdminNavigationItem('/unknown', navigation)).toBeUndefined();

@@ -16,6 +16,8 @@ import { PaymentOperationalObservabilityScheduler } from './payment-operational-
 import { PaymentOperationalObservabilityService } from './payment-operational-observability.service';
 import { PaymentReconciliationController } from './payment-reconciliation.controller';
 import { PaymentReconciliationService } from './payment-reconciliation.service';
+import { PaymentTransactionsController } from './payment-transactions.controller';
+import { PaymentTransactionsService } from './payment-transactions.service';
 import { PaymentsController } from './payments.controller';
 import { ZibalPaymentCallbackController } from './zibal-payment-callback.controller';
 import { PaymentsService } from './payments.service';
@@ -31,6 +33,7 @@ import { PaymentsService } from './payments.service';
     PaymentInitiationRecoveryController,
     PaymentOperationalObservabilityController,
     PaymentReconciliationController,
+    PaymentTransactionsController,
   ],
   providers: [
     PaymentsService,
@@ -43,6 +46,7 @@ import { PaymentsService } from './payments.service';
     PaymentOperationalObservabilityService,
     PaymentOperationalObservabilityScheduler,
     PaymentReconciliationService,
+    PaymentTransactionsService,
     {
       provide: PAYMENT_GATEWAY_REGISTRY,
       useExisting: PaymentGatewayRegistry,
