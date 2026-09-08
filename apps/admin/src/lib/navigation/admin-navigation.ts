@@ -270,6 +270,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['finance.read'],
       },
       {
+        id: 'supplier-credits',
+        label: 'اعتبار تأمین‌کنندگان',
+        shortLabel: 'اعتبار تأمین',
+        href: '/supplier-credits',
+        icon: 'suppliers',
+        description: 'اعتبارهای ناشی از مرجوعی تأمین‌کننده',
+        roadmapStage: 28,
+        permissions: ['finance.read'],
+      },
+      {
         id: 'finance',
         label: 'گزارش‌های مالی',
         shortLabel: 'مالی',

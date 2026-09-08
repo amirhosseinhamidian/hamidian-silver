@@ -16,6 +16,7 @@ type MobileDataCardProps = Readonly<{
   items: readonly MobileDataCardItem[];
   detailsTitle: ReactNode;
   detailsDescription?: ReactNode;
+  detailsLabel?: ReactNode;
   details: ReactNode;
   detailsFooter?: ReactNode;
   detailsOpen?: boolean;
@@ -30,6 +31,7 @@ export function MobileDataCard({
   items,
   detailsTitle,
   detailsDescription,
+  detailsLabel = 'مشاهده جزئیات و عملیات',
   details,
   detailsFooter,
   detailsOpen,
@@ -69,7 +71,7 @@ export function MobileDataCard({
       <BottomSheet open={detailsOpen} onOpenChange={onDetailsOpenChange}>
         <BottomSheetTrigger asChild>
           <Button variant="ghost" size="sm" className="mt-2 w-full">
-            مشاهده جزئیات و عملیات
+            {detailsLabel}
           </Button>
         </BottomSheetTrigger>
         <BottomSheetContent
