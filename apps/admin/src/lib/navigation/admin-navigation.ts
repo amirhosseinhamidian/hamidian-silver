@@ -71,6 +71,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         roadmapStage: 25,
         permissions: ['orders.read'],
       },
+      {
+        id: 'incidents',
+        label: 'مدیریت رخدادها',
+        shortLabel: 'رخدادها',
+        href: '/incidents',
+        icon: 'alerts',
+        description: 'تخصیص، یادداشت و timeline رخدادها',
+        roadmapStage: 26,
+        permissions: ['orders.read'],
+      },
     ],
   },
   {
