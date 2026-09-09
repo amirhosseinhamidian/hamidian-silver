@@ -1,6 +1,10 @@
 import Link from 'next/link';
 
-import type { PublicContentPage } from '@/lib/content/public-content-page';
+import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
+import {
+  PUBLIC_CONTENT_PAGE_ROUTES,
+  type PublicContentPage,
+} from '@/lib/content/public-content-page';
 
 type StorefrontSizeGuideProps = Readonly<{
   page: PublicContentPage;
@@ -67,6 +71,13 @@ function GuideHero({ page }: Readonly<{ page: PublicContentPage }>) {
         className={`sf-container flex min-h-[70svh] items-end pb-12 pt-28 sm:min-h-[78svh] sm:pb-20 ${page.heroMedia?.url ? 'text-white' : ''}`}
       >
         <div className="max-w-3xl">
+          <StorefrontBreadcrumbs
+            items={[
+              { label: 'خانه', href: '/' },
+              { label: page.title, href: PUBLIC_CONTENT_PAGE_ROUTES[page.key] },
+            ]}
+            className={`mb-7 ${page.heroMedia?.url ? 'text-white/70' : 'text-[var(--sf-color-muted)]'}`}
+          />
           {page.eyebrow ? (
             <p
               className={`text-xs tracking-[0.16em] ${page.heroMedia?.url ? 'text-white/75' : 'text-[var(--sf-color-muted)]'}`}

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
+import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import { getPublicCatalogBrands } from '@/lib/catalog/public-catalog';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
@@ -21,6 +22,13 @@ export default async function BrandsPage() {
   return (
     <main id="main-content" className="sf-container py-[var(--sf-section-space)]">
       <header className="border-b border-[var(--sf-color-border)] pb-8">
+        <StorefrontBreadcrumbs
+          items={[
+            { label: 'خانه', href: '/' },
+            { label: 'برندها', href: '/brands' },
+          ]}
+          className="mb-7 text-[var(--sf-color-muted)]"
+        />
         <p className="text-sm text-[var(--sf-color-muted)]">کاتالوگ فروشگاه</p>
         <h1 className="mt-3 text-4xl font-normal sm:text-5xl">برندها</h1>
         <p className="mt-4 max-w-2xl text-sm leading-8 text-[var(--sf-color-muted)]">

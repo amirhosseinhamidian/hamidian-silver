@@ -7117,6 +7117,13 @@
             "type": "string",
             "nullable": true
           },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
           "salePriceToman": {
             "type": "number",
             "nullable": true
@@ -7313,6 +7320,13 @@
             "type": "string",
             "nullable": true
           },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
           "salePriceToman": {
             "type": "number",
             "nullable": true
@@ -7364,13 +7378,6 @@
           "seoDescription": {
             "type": "string",
             "nullable": true
-          },
-          "seoCanonicalPath": {
-            "type": "string",
-            "nullable": true
-          },
-          "seoNoIndex": {
-            "type": "boolean"
           },
           "seoOgMedia": {
             "nullable": true,

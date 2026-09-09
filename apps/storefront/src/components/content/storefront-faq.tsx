@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { FiArrowLeft, FiMinus, FiPlus, FiSearch } from 'react-icons/fi';
 
 import type { PublicContentPage } from '@/lib/content/public-content-page';
 
 type StorefrontFaqProps = Readonly<{
   page: PublicContentPage;
+  breadcrumbs?: ReactNode;
 }>;
 
 const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
@@ -41,7 +42,7 @@ const supportLinks = [
   },
 ] as const;
 
-export function StorefrontFaq({ page }: StorefrontFaqProps) {
+export function StorefrontFaq({ page, breadcrumbs }: StorefrontFaqProps) {
   const [query, setQuery] = useState('');
   const [openQuestion, setOpenQuestion] = useState<string | null>(null);
   const normalizedQuery = normalizeSearchValue(query);
@@ -77,6 +78,7 @@ export function StorefrontFaq({ page }: StorefrontFaqProps) {
         <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/75 via-black/20 to-black/25" />
         <div className="sf-container flex min-h-[58svh] items-end pb-12 pt-28 sm:min-h-[66svh] sm:pb-20">
           <div className="max-w-3xl">
+            {breadcrumbs}
             {page.eyebrow ? (
               <p className="text-xs tracking-[0.16em] text-white/65">{page.eyebrow}</p>
             ) : null}

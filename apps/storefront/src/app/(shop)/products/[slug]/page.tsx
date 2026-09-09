@@ -6,6 +6,8 @@ import { ProductPurchasePanel } from '@/components/cart/product-purchase-panel';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { ProductMediaGallery } from '@/components/catalog/product-media-gallery';
+import { JsonLd } from '@/components/seo/json-ld';
+import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { getCatalogDevProductImageSrc } from '@/lib/catalog/dev-media.server';
 import {
@@ -16,6 +18,7 @@ import {
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
+import { buildProductStructuredData } from '@/lib/seo/structured-data';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
 type ProductDetailPageProps = Readonly<{
@@ -70,7 +73,10 @@ function getSizeModeLabel(sizeMode: PublicCatalogProductDetail['sizeMode']): str
 
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
   const { slug } = await params;
-  const product = await getPublicCatalogProduct(slug);
+  const [product, settings] = await Promise.all([
+    getPublicCatalogProduct(slug),
+    getPublicSiteSettings(),
+  ]);
 
   if (!product) {
     notFound();
@@ -98,17 +104,20 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   ].filter((feature): feature is [string, string] => feature !== null);
 
   return (
-    <main
-      id="main-content"
-      className="sf-container pb-36 pt-8 sm:pt-10 lg:pb-[var(--sf-section-space)]"
-    >
-      <nav aria-label="مسیر صفحه" className="mb-5 text-xs text-[var(--sf-color-muted)] sm:mb-7">
-        <Link href="/products">محصولات</Link>
-        <span aria-hidden="true" className="mx-2">
-          /
-        </span>
-        <span>{product.name}</span>
-      </nav>
+    <>
+      <JsonLd data={buildProductStructuredData(product, settings)} />
+      <main
+        id="main-content"
+        className="sf-container pb-36 pt-8 sm:pt-10 lg:pb-[var(--sf-section-space)]"
+      >
+        <StorefrontBreadcrumbs
+          items={[
+            { label: 'خانه', href: '/' },
+            { label: 'محصولات', href: '/products' },
+            { label: product.name, href: `/products/${product.slug}` },
+          ]}
+          className="mb-5 text-[var(--sf-color-muted)] sm:mb-7"
+        />
 
       <div className="grid gap-9 lg:grid-cols-[minmax(0,1.1fr)_minmax(22rem,0.9fr)] lg:gap-14">
         <section aria-label="رسانه محصول">
@@ -236,7 +245,8 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             </section>
           ) : null}
         </section>
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }

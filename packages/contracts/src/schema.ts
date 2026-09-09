@@ -2851,6 +2851,8 @@ export interface components {
         };
         PublicCatalogProductSummaryDto: {
             shortDescription: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
             salePriceToman: number | null;
             compareAtPriceToman: number | null;
             /** @enum {string} */
@@ -2893,6 +2895,8 @@ export interface components {
         };
         PublicCatalogProductDetailDto: {
             shortDescription: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
             salePriceToman: number | null;
             compareAtPriceToman: number | null;
             /** @enum {string} */
@@ -2903,8 +2907,6 @@ export interface components {
             description: string | null;
             seoTitle?: string | null;
             seoDescription?: string | null;
-            seoCanonicalPath?: string | null;
-            seoNoIndex?: boolean;
             seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
             country: components["schemas"]["PublicCatalogCountryDto"] | null;
             variants: components["schemas"]["PublicCatalogVariantDto"][];

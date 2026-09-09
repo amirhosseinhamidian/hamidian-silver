@@ -591,6 +591,8 @@ describe('CatalogService', () => {
           name: 'Available first',
           slug: 'available-first',
           shortDescription: null,
+          seoCanonicalPath: '/products/available-first-canonical',
+          seoNoIndex: true,
           salePriceToman: 800_000,
           compareAtPriceToman: null,
           sizeMode: SizeMode.NONE,
@@ -612,6 +614,8 @@ describe('CatalogService', () => {
             id: availableFirstId,
             availableQuantity: 1,
             isAvailable: true,
+            seoCanonicalPath: '/products/available-first-canonical',
+            seoNoIndex: true,
           }),
           expect.objectContaining({
             id: availableSecondId,
@@ -634,6 +638,12 @@ describe('CatalogService', () => {
             in: [availableFirstId, availableSecondId],
           },
         },
+      }),
+    );
+    expect(prisma.product.findMany.mock.calls[1]?.[0]?.select).toEqual(
+      expect.objectContaining({
+        seoCanonicalPath: true,
+        seoNoIndex: true,
       }),
     );
   });

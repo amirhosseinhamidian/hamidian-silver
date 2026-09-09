@@ -52,7 +52,7 @@ describe('ProductDetailPage', () => {
   it('shows only the numeric percentage beside discounted product prices', async () => {
     getPublicCatalogProduct.mockResolvedValue(product);
 
-    render(
+    const { container } = render(
       await ProductDetailPage({
         params: Promise.resolve({ slug: product.slug }),
       }),
@@ -66,5 +66,20 @@ describe('ProductDetailPage', () => {
       'data-compare-at-price',
       '1000000',
     );
+    const structuredData = [...container.querySelectorAll('script[type="application/ld+json"]')]
+      .map((script) => JSON.parse(script.textContent ?? '{}'))
+      .find((value: unknown) =>
+        typeof value === 'object' && value !== null && '@type' in value
+          ? value['@type'] === 'Product'
+          : false,
+      );
+    expect(structuredData).toMatchObject({
+      name: product.name,
+      offers: {
+        priceCurrency: 'IRR',
+        price: 8_000_000,
+        availability: 'https://schema.org/InStock',
+      },
+    });
   });
 });

@@ -16,9 +16,7 @@ export type StorefrontSeoMedia = Readonly<{
   height?: number | null;
 }>;
 
-export type StorefrontSearchParams = Readonly<
-  Record<string, string | string[] | undefined>
->;
+export type StorefrontSearchParams = Readonly<Record<string, string | string[] | undefined>>;
 
 export type StorefrontPageMetadataInput = Readonly<{
   pathname: string;
@@ -97,6 +95,13 @@ function normalizeOrigin(value: string): URL {
 
 export function getStorefrontMetadataBase(): URL {
   return normalizeOrigin(process.env.STOREFRONT_PUBLIC_ORIGIN?.trim() || DEVELOPMENT_ORIGIN);
+}
+
+export function getStorefrontAbsoluteUrl(
+  pathname: string,
+  metadataBase: URL = getStorefrontMetadataBase(),
+): string {
+  return new URL(pathname, metadataBase).href;
 }
 
 function resolveMedia(

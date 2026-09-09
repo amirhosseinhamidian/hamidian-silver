@@ -3,7 +3,11 @@ import { FaInstagram, FaTelegramPlane } from 'react-icons/fa';
 import { FiMail, FiMapPin, FiPhone } from 'react-icons/fi';
 
 import { ContentPageHero } from '@/components/content/content-page-hero';
-import type { PublicContentPage } from '@/lib/content/public-content-page';
+import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
+import {
+  PUBLIC_CONTENT_PAGE_ROUTES,
+  type PublicContentPage,
+} from '@/lib/content/public-content-page';
 import type { PublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
 type ContentPageKind = 'about' | 'contact' | 'services' | 'legal';
@@ -108,10 +112,7 @@ function ContactContent({
     socialLinks.push({ href: settings.baleUrl, label: 'بله', kind: 'bale' });
   }
   const hasContactDetails = Boolean(
-    settings?.contactAddress ||
-      phoneNumbers.length ||
-      settings?.contactEmail ||
-      socialLinks.length,
+    settings?.contactAddress || phoneNumbers.length || settings?.contactEmail || socialLinks.length,
   );
 
   return (
@@ -233,6 +234,13 @@ function LegalContent({ page }: Readonly<{ page: PublicContentPage }>) {
   return (
     <main id="main-content" className="sf-container py-12 sm:py-20">
       <header className="max-w-4xl border-b border-[var(--sf-color-border)] pb-10 sm:pb-14">
+        <StorefrontBreadcrumbs
+          items={[
+            { label: 'خانه', href: '/' },
+            { label: page.title, href: PUBLIC_CONTENT_PAGE_ROUTES[page.key] },
+          ]}
+          className="mb-8 text-[var(--sf-color-muted)]"
+        />
         {page.eyebrow ? (
           <p className="text-sm text-[var(--sf-color-muted)]">{page.eyebrow}</p>
         ) : null}

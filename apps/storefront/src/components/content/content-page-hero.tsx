@@ -1,4 +1,8 @@
-import type { PublicContentPage } from '@/lib/content/public-content-page';
+import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
+import {
+  PUBLIC_CONTENT_PAGE_ROUTES,
+  type PublicContentPage,
+} from '@/lib/content/public-content-page';
 
 type ContentPageHeroProps = Readonly<{
   page: PublicContentPage;
@@ -25,6 +29,13 @@ export function ContentPageHero({ page }: ContentPageHeroProps) {
       <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/75 via-black/15 to-black/10" />
       <div className="sf-container w-full pb-12 sm:pb-16 lg:pb-20">
         <div className="max-w-3xl">
+          <StorefrontBreadcrumbs
+            items={[
+              { label: 'خانه', href: '/' },
+              { label: page.title, href: PUBLIC_CONTENT_PAGE_ROUTES[page.key] },
+            ]}
+            className="mb-7 text-white/70"
+          />
           {page.eyebrow ? (
             <p className="text-xs tracking-[0.16em] text-white/75 sm:text-sm">{page.eyebrow}</p>
           ) : null}

@@ -134,6 +134,12 @@ export class PublicCatalogProductSummaryDto {
   @ApiProperty({ type: String, nullable: true })
   shortDescription!: string | null;
 
+  @ApiPropertyOptional({ type: String, nullable: true })
+  seoCanonicalPath?: string | null;
+
+  @ApiPropertyOptional()
+  seoNoIndex?: boolean;
+
   @ApiProperty({ type: Number, nullable: true })
   salePriceToman!: number | null;
 
@@ -165,12 +171,6 @@ export class PublicCatalogProductDetailDto extends PublicCatalogProductSummaryDt
 
   @ApiPropertyOptional({ type: String, nullable: true })
   seoDescription?: string | null;
-
-  @ApiPropertyOptional({ type: String, nullable: true })
-  seoCanonicalPath?: string | null;
-
-  @ApiPropertyOptional()
-  seoNoIndex?: boolean;
 
   @ApiPropertyOptional({ type: () => PublicCatalogMediaDto, nullable: true })
   seoOgMedia?: PublicCatalogMediaDto | null;

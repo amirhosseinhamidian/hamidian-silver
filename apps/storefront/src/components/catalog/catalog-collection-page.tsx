@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { CatalogProductGrid } from '@/components/catalog/catalog-product-grid';
+import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FormField } from '@/components/ui/form-field';
@@ -34,24 +35,23 @@ const sortOptions = [
 ] as const;
 
 function CollectionHero({
+  path,
   eyebrow,
   title,
   description,
   image,
   total,
-}: Pick<
-  CatalogCollectionPageProps,
-  'eyebrow' | 'title' | 'description' | 'image'
-> &
+}: Pick<CatalogCollectionPageProps, 'path' | 'eyebrow' | 'title' | 'description' | 'image'> &
   Readonly<{ total: number }>) {
+  const parent = path.startsWith('/brands/')
+    ? { label: 'برندها', href: '/brands' }
+    : { label: 'محصولات', href: '/products' };
   const copy = (
     <div className="max-w-2xl">
-      <Link
-        href="/products"
-        className="text-xs transition-opacity hover:opacity-60"
-      >
-        محصولات
-      </Link>
+      <StorefrontBreadcrumbs
+        items={[{ label: 'خانه', href: '/' }, parent, { label: title, href: path }]}
+        className="opacity-80"
+      />
       <p className="mt-6 text-sm opacity-75">{eyebrow}</p>
       <h1 className="mt-3 text-4xl font-normal sm:text-5xl lg:text-6xl">{title}</h1>
       {description ? <p className="mt-5 text-sm leading-8 opacity-80">{description}</p> : null}
@@ -92,6 +92,7 @@ export function CatalogCollectionPage({
   return (
     <main id="main-content">
       <CollectionHero
+        path={path}
         eyebrow={eyebrow}
         title={title}
         description={description}

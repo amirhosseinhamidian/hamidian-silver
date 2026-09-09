@@ -5,6 +5,7 @@ import { CatalogFilterForm } from '@/components/catalog/catalog-filter-form';
 import { CatalogHero } from '@/components/catalog/catalog-hero';
 import { CatalogFilterSheet } from '@/components/catalog/catalog-filter-sheet';
 import { CatalogProductGrid } from '@/components/catalog/catalog-product-grid';
+import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Select } from '@/components/ui/select';
@@ -36,8 +37,7 @@ export async function generateMetadata({ searchParams }: ProductsPageProps): Pro
     pathname: '/products',
     searchParams: rawSearchParams,
     title: filters.q ? `نتایج جستجوی «${filters.q}»` : 'محصولات نقره',
-    description:
-      settings.catalogHeroSubtitle ?? 'مجموعه محصولات نقره گالری حمیدیان را مرور کنید.',
+    description: settings.catalogHeroSubtitle ?? 'مجموعه محصولات نقره گالری حمیدیان را مرور کنید.',
     fallbackMedia: settings.catalogHeroMedia,
   });
 }
@@ -57,6 +57,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       <CatalogHero settings={siteSettings} devFallbackSrc={heroImageSrc} />
 
       <section className="sf-container pt-8">
+        <StorefrontBreadcrumbs
+          items={[
+            { label: 'خانه', href: '/' },
+            { label: 'محصولات', href: '/products' },
+          ]}
+          className="mb-6 text-[var(--sf-color-muted)]"
+        />
         <div
           className="
             flex flex-wrap items-center justify-between gap-4
