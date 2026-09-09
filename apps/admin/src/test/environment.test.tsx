@@ -18,6 +18,7 @@ describe('admin test environment', () => {
           initials: 'اد',
         }}
         navigation={[]}
+        profile={{ firstName: 'ادمین', lastName: 'حمیدیان' }}
       >
         <main>Admin test environment</main>
       </AdminShell>,

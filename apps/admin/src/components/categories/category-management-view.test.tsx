@@ -74,7 +74,7 @@ describe('CategoryManagementView', () => {
       target: { value: 'necklaces' },
     });
     const image = new File(['image'], 'necklace.webp', { type: 'image/webp' });
-    fireEvent.change(within(dialog).getByLabelText('تصویر دسته‌بندی'), {
+    fireEvent.change(within(dialog).getByLabelText('تصویر Hero دسته‌بندی'), {
       target: { files: [image] },
     });
     fireEvent.click(within(dialog).getByRole('button', { name: 'ذخیره دسته‌بندی' }));

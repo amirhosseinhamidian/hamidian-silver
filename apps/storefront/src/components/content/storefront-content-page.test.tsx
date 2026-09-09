@@ -43,8 +43,8 @@ const settings: PublicSiteSettings = {
   contactPhoneNumbers: ['02112345678'],
   contactEmail: 'hello@hamidian.test',
   instagramUrl: 'https://instagram.com/hamidian',
-  telegramUrl: null,
-  baleUrl: null,
+  telegramUrl: 'https://t.me/hamidian',
+  baleUrl: 'https://ble.ir/hamidian',
 };
 
 describe('StorefrontContentPage', () => {
@@ -78,5 +78,13 @@ describe('StorefrontContentPage', () => {
       'href',
       'https://instagram.com/hamidian',
     );
+    expect(screen.getByRole('link', { name: 'تلگرام' })).toHaveAttribute(
+      'href',
+      'https://t.me/hamidian',
+    );
+    const baleLink = screen.getByRole('link', { name: 'بله' });
+    expect(baleLink).toHaveAttribute('href', 'https://ble.ir/hamidian');
+    expect(baleLink.querySelector('img')).toHaveAttribute('src', '/icons/social/bale.svg');
+    expect(screen.getByRole('heading', { name: 'شبکه‌های اجتماعی' })).toBeInTheDocument();
   });
 });

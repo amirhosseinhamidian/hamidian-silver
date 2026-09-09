@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { ButtonLink } from '@/components/ui/button';
+import { CatalogWishlistButton } from '@/components/wishlist/catalog-wishlist-button';
 import type { PublicCatalogProductSummary } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
@@ -18,36 +19,51 @@ export function CatalogProductCard({
   fallbackSrc = null,
   badge = null,
 }: CatalogProductCardProps) {
+  const wishlistItem = {
+    productId: product.id,
+    slug: product.slug,
+    name: product.name,
+    brandName: product.brand?.name ?? null,
+    media: product.primaryMedia,
+    salePriceToman: product.salePriceToman,
+    compareAtPriceToman: product.compareAtPriceToman,
+  };
+
   return (
     <li className="sf-catalog-card group flex min-w-0 flex-col p-2">
-      <Link
-        href={`/products/${product.slug}`}
-        className="
-          sf-catalog-card__media relative block aspect-square overflow-hidden
-          rounded-[var(--sf-radius-md)] bg-[var(--sf-color-surface)]
-        "
-      >
-        <CatalogMedia
-          media={product.primaryMedia}
-          fallbackSrc={fallbackSrc}
-          alt={product.name}
-        />
-        {badge ? (
-          <span className="absolute start-3 top-3 bg-[var(--sf-color-ink)] px-2.5 py-1 text-xs text-white">
-            {badge}
-          </span>
-        ) : null}
-        {!product.isAvailable ? (
-          <span
-            className="
-              absolute end-3 top-3 rounded-full bg-[var(--sf-color-canvas)]
-              px-3 py-1 text-xs text-[var(--sf-color-ink)] shadow-sm
-            "
-          >
-            ناموجود
-          </span>
-        ) : null}
-      </Link>
+      <div className="relative">
+        <Link
+          href={`/products/${product.slug}`}
+          className="
+            sf-catalog-card__media relative block aspect-square overflow-hidden
+            rounded-[var(--sf-radius-md)] bg-[var(--sf-color-surface)]
+          "
+        >
+          <CatalogMedia
+            media={product.primaryMedia}
+            fallbackSrc={fallbackSrc}
+            alt={product.name}
+          />
+          {badge ? (
+            <span className="absolute left-3 top-3 bg-[var(--sf-color-ink)] px-2.5 py-1 text-xs text-white">
+              {badge}
+            </span>
+          ) : null}
+          {!product.isAvailable ? (
+            <span
+              className={`
+                absolute left-3 rounded-full bg-[var(--sf-color-canvas)] px-3 py-1
+                text-xs text-[var(--sf-color-ink)] shadow-sm
+                ${badge ? 'top-12' : 'top-3'}
+              `}
+            >
+              ناموجود
+            </span>
+          ) : null}
+        </Link>
+
+        <CatalogWishlistButton item={wishlistItem} />
+      </div>
 
       <div className="flex flex-1 flex-col pt-4 text-center">
         {product.brand ? (

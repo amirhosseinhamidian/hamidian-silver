@@ -1,9 +1,18 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import type { PublicCatalogProductSummary } from '@/lib/catalog/public-catalog';
+
+const { hasItem, toggleItem } = vi.hoisted(() => ({
+  hasItem: vi.fn(),
+  toggleItem: vi.fn(),
+}));
+
+vi.mock('@/lib/wishlist/wishlist-store', () => ({
+  useWishlist: () => ({ hasItem, toggleItem }),
+}));
 
 const product: PublicCatalogProductSummary = {
   id: '10000000-0000-4000-8000-000000000010',
@@ -21,6 +30,12 @@ const product: PublicCatalogProductSummary = {
 };
 
 describe('CatalogProductCard', () => {
+  beforeEach(() => {
+    hasItem.mockReset();
+    hasItem.mockReturnValue(false);
+    toggleItem.mockReset();
+  });
+
   it('shows the compare price, sale price, and percentage without a discount label', () => {
     render(<CatalogProductCard product={product} />);
 
@@ -67,5 +82,35 @@ describe('CatalogProductCard', () => {
     render(<CatalogProductCard product={product} badge="جدید" />);
 
     expect(screen.getByText('جدید')).toHaveClass('bg-[var(--sf-color-ink)]', 'text-white');
+  });
+
+  it('offers a card wishlist action with the current product snapshot', () => {
+    render(<CatalogProductCard product={product} />);
+
+    const button = screen.getByRole('button', { name: 'افزودن به علاقه‌مندی‌ها' });
+    expect(button).toHaveClass('sf-catalog-card__wishlist');
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(button);
+
+    expect(toggleItem).toHaveBeenCalledWith({
+      productId: product.id,
+      slug: product.slug,
+      name: product.name,
+      brandName: null,
+      media: null,
+      salePriceToman: product.salePriceToman,
+      compareAtPriceToman: product.compareAtPriceToman,
+    });
+  });
+
+  it('shows a filled removal action when the product is already saved', () => {
+    hasItem.mockReturnValue(true);
+
+    render(<CatalogProductCard product={product} />);
+
+    const button = screen.getByRole('button', { name: 'حذف از علاقه‌مندی‌ها' });
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    expect(button.querySelector('svg')).toHaveAttribute('fill', 'currentColor');
   });
 });

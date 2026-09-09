@@ -78,7 +78,7 @@ export class HomepageService {
         return category ? [{ ...category, priority }] : [];
       }),
       popularProducts,
-      featuredBrands: brands.slice(0, 8),
+      featuredBrands: brands.slice(0, 4),
     };
   }
 

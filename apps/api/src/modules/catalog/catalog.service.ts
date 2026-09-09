@@ -556,6 +556,16 @@ export class CatalogService {
             deletedAt: true,
           },
         },
+        heroImage: {
+          select: {
+            storageKey: true,
+            mimeType: true,
+            altText: true,
+            width: true,
+            height: true,
+            deletedAt: true,
+          },
+        },
       },
     });
 
@@ -581,6 +591,16 @@ export class CatalogService {
               altText: brand.image.altText,
               width: brand.image.width,
               height: brand.image.height,
+            }
+          : null,
+      heroImage:
+        brand.heroImage && !brand.heroImage.deletedAt
+          ? {
+              url: this.publicMediaUrl.resolve(brand.heroImage.storageKey),
+              mimeType: brand.heroImage.mimeType,
+              altText: brand.heroImage.altText,
+              width: brand.heroImage.width,
+              height: brand.heroImage.height,
             }
           : null,
     }));

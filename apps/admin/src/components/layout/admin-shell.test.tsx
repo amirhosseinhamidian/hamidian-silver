@@ -34,7 +34,11 @@ const user: AdminCurrentUser = {
 
 function renderShell() {
   return render(
-    <AdminShell account={account} navigation={getAdminNavigation(user)}>
+    <AdminShell
+      account={account}
+      navigation={getAdminNavigation(user)}
+      profile={{ firstName: 'ادمین', lastName: 'حمیدیان' }}
+    >
       <main>محتوای صفحه</main>
     </AdminShell>,
   );

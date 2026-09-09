@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 
+import { AdminProfileCompletionGate } from '@/components/auth/admin-profile-completion-gate';
 import { AdminBrand } from '@/components/layout/admin-brand';
 import { AdminIcon } from '@/components/layout/admin-icon';
 import { AdminNavigationList } from '@/components/layout/admin-navigation-list';
@@ -24,6 +25,7 @@ import {
   type AdminNavigationItem,
 } from '@/lib/navigation/admin-navigation';
 import { toPersianDigits } from '@/lib/presentation/formatters';
+import type { AdminProfileIdentity } from '@/lib/profile/admin-profile-model';
 import { cn } from '@/lib/ui/cn';
 
 export type AdminShellAccount = Readonly<{
@@ -36,6 +38,7 @@ type AdminShellProps = Readonly<{
   children: ReactNode;
   account: AdminShellAccount;
   navigation: readonly AdminNavigationGroup[];
+  profile: AdminProfileIdentity | null;
 }>;
 
 const MOBILE_QUICK_LINK_IDS = ['dashboard', 'orders', 'inventory', 'alerts'] as const;
@@ -106,7 +109,7 @@ function OperationalStatus({ inverse = false }: Readonly<{ inverse?: boolean }>)
   );
 }
 
-export function AdminShell({ children, account, navigation }: AdminShellProps) {
+export function AdminShell({ children, account, navigation, profile }: AdminShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
@@ -136,6 +139,7 @@ export function AdminShell({ children, account, navigation }: AdminShellProps) {
 
   return (
     <div data-app-shell="admin" className="min-h-dvh bg-[var(--admin-color-canvas)] lg:pr-72">
+      <AdminProfileCompletionGate profile={profile} />
       <aside
         data-testid="desktop-admin-sidebar"
         className="fixed inset-y-0 right-0 z-40 hidden w-72 flex-col border-l border-slate-800 bg-slate-950 text-white lg:flex"

@@ -236,6 +236,36 @@ export class CatalogController {
     return this.catalogMediaService.removeBrandImage(brandId);
   }
 
+  @Post('brands/:brandId/hero-image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MEDIA_UPLOAD_LIMIT_BYTES, files: 1 } }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        altText: { type: 'string', minLength: 1, maxLength: 255 },
+      },
+    },
+  })
+  uploadBrandHero(
+    @Param('brandId', new ParseUUIDPipe({ version: '4' })) brandId: string,
+    @UploadedFile() file: CatalogUploadFile | undefined,
+    @Body() dto: UploadMediaDto,
+  ) {
+    return this.catalogMediaService.uploadForBrandHero(brandId, file, dto);
+  }
+
+  @Delete('brands/:brandId/hero-image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  removeBrandHero(@Param('brandId', new ParseUUIDPipe({ version: '4' })) brandId: string) {
+    return this.catalogMediaService.removeBrandHero(brandId);
+  }
+
   @Post('countries')
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
   createCountry(@Body() dto: CreateCountryDto) {

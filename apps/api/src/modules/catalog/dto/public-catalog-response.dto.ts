@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PlatingType, SizeMode } from '../../../generated/prisma/enums';
 
 export class PublicCatalogMediaDto {
@@ -51,6 +51,9 @@ export class PublicCatalogBrandDto {
 
   @ApiProperty({ type: () => PublicCatalogMediaDto, nullable: true })
   image!: PublicCatalogMediaDto | null;
+
+  @ApiPropertyOptional({ type: () => PublicCatalogMediaDto, nullable: true })
+  heroImage?: PublicCatalogMediaDto | null;
 
   @ApiProperty({ type: () => PublicCatalogCountryDto, nullable: true })
   originCountry!: PublicCatalogCountryDto | null;

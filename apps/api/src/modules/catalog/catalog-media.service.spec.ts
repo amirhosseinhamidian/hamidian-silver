@@ -214,8 +214,11 @@ describe('CatalogMediaService', () => {
             productMedia: 0,
             categoryImages: 0,
             brandImages: 0,
+            brandHeroImages: 0,
             countryImages: 0,
             siteSettingsCatalogHero: 0,
+            homepageHeroSlides: 0,
+            storefrontContentHeroes: 0,
           },
         }),
         update: jest.fn(),
@@ -276,6 +279,50 @@ describe('CatalogMediaService', () => {
     expect(transaction.brand.update).toHaveBeenCalledWith({
       where: { id: brandId },
       data: { imageId: mediaId },
+    });
+  });
+
+  it('stores the brand hero separately from its logo', async () => {
+    const brandId = '10000000-0000-4000-8000-000000000001';
+    const mediaId = '10000000-0000-4000-8000-000000000003';
+    prisma.brand.findFirst.mockResolvedValue({ id: brandId });
+    localMediaStorage.storeImage.mockResolvedValue({
+      storageKey: 'catalog/2026/09/brand-hero.webp',
+      mimeType: 'image/webp',
+      sizeBytes: 11,
+    });
+    const transaction = {
+      brand: {
+        findFirst: jest.fn().mockResolvedValue({ id: brandId, heroImageId: null }),
+        update: jest.fn(),
+      },
+      media: {
+        create: jest.fn().mockResolvedValue({
+          id: mediaId,
+          storageKey: 'catalog/2026/09/brand-hero.webp',
+          mimeType: 'image/webp',
+          altText: 'کالکشن حمیدیان',
+        }),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(
+      service.uploadForBrandHero(brandId, file, { altText: 'کالکشن حمیدیان' }),
+    ).resolves.toEqual({
+      brandId,
+      heroImage: {
+        id: mediaId,
+        url: 'https://media.example/catalog/2026/09/brand-hero.webp',
+        mimeType: 'image/webp',
+        altText: 'کالکشن حمیدیان',
+      },
+    });
+    expect(transaction.brand.update).toHaveBeenCalledWith({
+      where: { id: brandId },
+      data: { heroImageId: mediaId },
     });
   });
 
@@ -340,8 +387,11 @@ describe('CatalogMediaService', () => {
             productMedia: 0,
             categoryImages: 0,
             brandImages: 0,
+            brandHeroImages: 0,
             countryImages: 0,
             siteSettingsCatalogHero: 0,
+            homepageHeroSlides: 0,
+            storefrontContentHeroes: 0,
           },
         }),
         update: jest.fn(),

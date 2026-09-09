@@ -397,6 +397,14 @@ describe('CatalogService', () => {
           deletedAt: null,
         },
         image: null,
+        heroImage: {
+          storageKey: 'brands/hamidian-hero.webp',
+          mimeType: 'image/webp',
+          altText: 'کالکشن حمیدیان',
+          width: 1920,
+          height: 900,
+          deletedAt: null,
+        },
       },
     ]);
 
@@ -408,6 +416,13 @@ describe('CatalogService', () => {
           name: 'ایران',
           slug: 'iran',
           isoCode: 'IR',
+        },
+        heroImage: {
+          url: 'https://media.hamidian.shop/brands/hamidian-hero.webp',
+          mimeType: 'image/webp',
+          altText: 'کالکشن حمیدیان',
+          width: 1920,
+          height: 900,
         },
       }),
     ]);

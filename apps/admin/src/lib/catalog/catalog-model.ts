@@ -40,6 +40,7 @@ export type AdminBrand = Readonly<{
   createdAt: string;
   updatedAt: string;
   image: AdminCategoryImage | null;
+  heroImage: AdminCategoryImage | null;
   productCount: number;
 }>;
 
@@ -351,6 +352,7 @@ function parseAdminBrand(value: unknown): AdminBrand | null {
     createdAt,
     updatedAt,
     image: parseReferenceImage(item?.image),
+    heroImage: parseReferenceImage(item?.heroImage),
     productCount: number(item?.productCount) ?? 0,
   };
 }

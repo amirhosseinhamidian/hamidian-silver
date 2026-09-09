@@ -71,6 +71,7 @@ export function StorefrontHome({ homepage }: StorefrontHomeProps) {
     { title: 'پیگیری سفارش', description: 'مشاهده وضعیت سفارش از حساب کاربری', Icon: FiPackage },
     { title: 'ضمانت کیفیت', description: 'کنترل کیفیت دقیق پیش از ارسال', Icon: FiShield },
   ];
+  const featuredBrands = homepage.featuredBrands.slice(0, 4);
 
   return (
     <main id="main-content">
@@ -104,14 +105,14 @@ export function StorefrontHome({ homepage }: StorefrontHomeProps) {
         </section>
       ) : null}
 
-      {homepage.featuredBrands.length > 0 ? (
+      {featuredBrands.length > 0 ? (
         <section
           aria-labelledby="brands-title"
           className="sf-container py-[var(--sf-section-space)]"
         >
           <SectionHeading title="برندها" href="/brands" />
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-4 lg:grid-cols-8">
-            {homepage.featuredBrands.map((brand) => (
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-4">
+            {featuredBrands.map((brand) => (
               <li key={brand.id}>
                 <Link href={`/brands/${brand.slug}`} className="group block text-center">
                   <div className="mx-auto aspect-[4/3] w-full max-w-40 overflow-hidden">

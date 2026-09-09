@@ -1,5 +1,6 @@
+import Image from 'next/image';
 import { FaInstagram, FaTelegramPlane } from 'react-icons/fa';
-import { FiMail, FiMapPin, FiMessageCircle, FiPhone } from 'react-icons/fi';
+import { FiMail, FiMapPin, FiPhone } from 'react-icons/fi';
 
 import { ContentPageHero } from '@/components/content/content-page-hero';
 import type { PublicContentPage } from '@/lib/content/public-content-page';
@@ -11,6 +12,12 @@ type StorefrontContentPageProps = Readonly<{
   page: PublicContentPage;
   kind: ContentPageKind;
   settings?: PublicSiteSettings;
+}>;
+
+type ContactSocialLink = Readonly<{
+  href: string;
+  label: string;
+  kind: 'instagram' | 'telegram' | 'bale';
 }>;
 
 function toPersianDigits(value: string): string {
@@ -90,17 +97,16 @@ function ContactContent({
   settings,
 }: Readonly<{ page: PublicContentPage; settings?: PublicSiteSettings }>) {
   const phoneNumbers = settings?.contactPhoneNumbers ?? [];
-  const socialLinks = [
-    settings?.instagramUrl
-      ? { href: settings.instagramUrl, label: 'اینستاگرام', icon: FaInstagram }
-      : null,
-    settings?.telegramUrl
-      ? { href: settings.telegramUrl, label: 'تلگرام', icon: FaTelegramPlane }
-      : null,
-    settings?.baleUrl
-      ? { href: settings.baleUrl, label: 'بله', icon: FiMessageCircle }
-      : null,
-  ].filter((item): item is NonNullable<typeof item> => Boolean(item));
+  const socialLinks: ContactSocialLink[] = [];
+  if (settings?.instagramUrl) {
+    socialLinks.push({ href: settings.instagramUrl, label: 'اینستاگرام', kind: 'instagram' });
+  }
+  if (settings?.telegramUrl) {
+    socialLinks.push({ href: settings.telegramUrl, label: 'تلگرام', kind: 'telegram' });
+  }
+  if (settings?.baleUrl) {
+    socialLinks.push({ href: settings.baleUrl, label: 'بله', kind: 'bale' });
+  }
   const hasContactDetails = Boolean(
     settings?.contactAddress ||
       phoneNumbers.length ||
@@ -167,20 +173,55 @@ function ContactContent({
             </div>
           ) : null}
           {socialLinks.length ? (
-            <div className="flex items-center gap-5 py-7">
-              {socialLinks.map(({ href, label, icon: Icon }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={label}
-                  className="flex size-11 items-center justify-center border border-[var(--sf-color-border)] transition-colors hover:border-[var(--sf-color-ink)]"
-                >
-                  <Icon aria-hidden="true" className="size-5" />
-                </a>
-              ))}
-            </div>
+            <section aria-labelledby="contact-social-title" className="py-8">
+              <h2 id="contact-social-title" className="text-sm font-medium">
+                شبکه‌های اجتماعی
+              </h2>
+              <p className="mt-2 text-xs leading-6 text-[var(--sf-color-subtle)]">
+                تازه‌ترین محصولات و خبرهای گالری را دنبال کنید.
+              </p>
+              <div className="mt-5 flex flex-wrap items-center gap-x-8 gap-y-3">
+                {socialLinks.map(({ href, label, kind }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={label}
+                    className="
+                      group relative inline-flex items-center gap-2.5 py-2 text-sm
+                      text-[var(--sf-color-muted)] outline-none transition-colors
+                      duration-500 ease-out hover:text-[var(--sf-color-ink)]
+                      focus-visible:text-[var(--sf-color-ink)]
+                    "
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="
+                        grid size-6 place-items-center transition-transform duration-700
+                        ease-out group-hover:-translate-y-0.5 group-hover:scale-105
+                        group-focus-visible:-translate-y-0.5 group-focus-visible:scale-105
+                      "
+                    >
+                      {kind === 'instagram' ? <FaInstagram className="size-5" /> : null}
+                      {kind === 'telegram' ? <FaTelegramPlane className="size-5" /> : null}
+                      {kind === 'bale' ? (
+                        <Image src="/icons/social/bale.svg" alt="" width={20} height={20} />
+                      ) : null}
+                    </span>
+                    <span>{label}</span>
+                    <span
+                      aria-hidden="true"
+                      className="
+                        absolute inset-x-0 bottom-0 h-px origin-right scale-x-0
+                        bg-[var(--sf-color-ink)] transition-transform duration-700 ease-out
+                        group-hover:scale-x-100 group-focus-visible:scale-x-100
+                      "
+                    />
+                  </a>
+                ))}
+              </div>
+            </section>
           ) : null}
         </div>
       </div>

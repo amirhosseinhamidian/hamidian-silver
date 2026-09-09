@@ -1,7 +1,7 @@
 import {
   getInitialCountdownSeconds,
   type StorefrontAnnouncementCountdown,
-} from '@/components/layout/storefront-announcement';
+} from '@/components/layout/storefront-announcement-config';
 import { describe, expect, it } from 'vitest';
 
 describe('getInitialCountdownSeconds', () => {

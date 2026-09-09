@@ -262,6 +262,81 @@ export class CatalogMediaService {
     return { removed: true };
   }
 
+  async uploadForBrandHero(
+    brandId: string,
+    file: CatalogUploadFile | undefined,
+    dto: UploadMediaDto,
+  ) {
+    if (!file) throw new BadRequestException('Image file is required.');
+    const brand = await this.prisma.brand.findFirst({
+      where: { id: brandId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!brand) throw new NotFoundException('Brand was not found.');
+
+    const stored = await this.localMediaStorage.storeImage(file);
+    try {
+      const result = await this.prisma.$transaction(async (transaction) => {
+        const current = await transaction.brand.findFirst({
+          where: { id: brandId, deletedAt: null },
+          select: { id: true, heroImageId: true },
+        });
+        if (!current) throw new NotFoundException('Brand was not found.');
+
+        const media = await transaction.media.create({
+          data: {
+            storageKey: stored.storageKey,
+            originalName: normalizeOptionalText(file.originalname, 255),
+            mimeType: stored.mimeType,
+            sizeBytes: stored.sizeBytes,
+            altText: normalizeOptionalText(dto.altText, 255),
+          },
+        });
+        await transaction.brand.update({
+          where: { id: brandId },
+          data: { heroImageId: media.id },
+        });
+        const orphanedStorageKey = current.heroImageId
+          ? await this.markMediaDeletedWhenOrphaned(transaction, current.heroImageId)
+          : null;
+        return { media, orphanedStorageKey };
+      });
+
+      if (result.orphanedStorageKey) {
+        await this.localMediaStorage.delete(result.orphanedStorageKey).catch(() => undefined);
+      }
+      return {
+        brandId,
+        heroImage: {
+          id: result.media.id,
+          url: this.publicMediaUrl.resolve(result.media.storageKey),
+          mimeType: result.media.mimeType,
+          altText: result.media.altText,
+        },
+      };
+    } catch (error) {
+      await this.localMediaStorage.delete(stored.storageKey).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async removeBrandHero(brandId: string) {
+    const orphanedStorageKey = await this.prisma.$transaction(async (transaction) => {
+      const brand = await transaction.brand.findFirst({
+        where: { id: brandId, deletedAt: null },
+        select: { id: true, heroImageId: true },
+      });
+      if (!brand) throw new NotFoundException('Brand was not found.');
+      if (!brand.heroImageId) return null;
+      await transaction.brand.update({ where: { id: brandId }, data: { heroImageId: null } });
+      return this.markMediaDeletedWhenOrphaned(transaction, brand.heroImageId);
+    });
+    if (orphanedStorageKey) {
+      await this.localMediaStorage.delete(orphanedStorageKey).catch(() => undefined);
+    }
+    return { removed: true };
+  }
+
   async uploadForCountry(
     countryId: string,
     file: CatalogUploadFile | undefined,
@@ -431,8 +506,11 @@ export class CatalogMediaService {
               productMedia: true,
               categoryImages: true,
               brandImages: true,
+              brandHeroImages: true,
               countryImages: true,
               siteSettingsCatalogHero: true,
+              homepageHeroSlides: true,
+              storefrontContentHeroes: true,
             },
           },
         },
@@ -496,8 +574,11 @@ export class CatalogMediaService {
             productMedia: true,
             categoryImages: true,
             brandImages: true,
+            brandHeroImages: true,
             countryImages: true,
             siteSettingsCatalogHero: true,
+            homepageHeroSlides: true,
+            storefrontContentHeroes: true,
           },
         },
       },

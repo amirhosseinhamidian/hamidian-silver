@@ -46,7 +46,7 @@ describe('HomepageService', () => {
     );
   });
 
-  it('assembles ordered public merchandising and limits brands to eight', async () => {
+  it('assembles ordered public merchandising and limits brands to four', async () => {
     prisma.homepageHeroSlide.findMany.mockResolvedValue([
       {
         id: 'hero-1',
@@ -110,7 +110,7 @@ describe('HomepageService', () => {
       expect.objectContaining({ id: 'popular-1', slug: 'popular-ring' }),
     ]);
     expect(result.popularProducts[0]).not.toHaveProperty('description');
-    expect(result.featuredBrands).toHaveLength(8);
+    expect(result.featuredBrands).toHaveLength(4);
   });
 
   it('rejects incomplete or unsafe hero actions before writing', async () => {

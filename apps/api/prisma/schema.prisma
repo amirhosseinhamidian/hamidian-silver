@@ -71,7 +71,7 @@ enum AuditOutcome {
 }
 
 model AuditLog {
-  id          String       @id @default(uuid()) @db.Uuid
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   actorUserId String       @db.Uuid
   action      String       @db.VarChar(180)
   resource    String       @db.VarChar(80)
@@ -248,6 +248,7 @@ model Media {
   deletedAt               DateTime?      @db.Timestamptz(3)
   categoryImages          Category[]     @relation("CategoryImage")
   brandImages             Brand[]        @relation("BrandImage")
+  brandHeroImages         Brand[]        @relation("BrandHeroImage")
   countryImages           Country[]      @relation("CountryImage")
   productMedia            ProductMedia[]
   siteSettingsCatalogHero SiteSettings[] @relation("SiteSettingsCatalogHero")
@@ -357,16 +358,19 @@ model Brand {
   slug        String    @unique @db.VarChar(180)
   description String?
   imageId     String?   @db.Uuid
+  heroImageId String?   @db.Uuid
   originCountryId String? @db.Uuid
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt   DateTime? @db.Timestamptz(3)
   image       Media?    @relation("BrandImage", fields: [imageId], references: [id], onDelete: SetNull)
+  heroImage   Media?    @relation("BrandHeroImage", fields: [heroImageId], references: [id], onDelete: SetNull)
   originCountry Country? @relation("BrandOriginCountry", fields: [originCountryId], references: [id], onDelete: SetNull)
   products    Product[]
 
   @@index([imageId])
+  @@index([heroImageId])
   @@index([originCountryId])
   @@index([isActive])
   @@index([deletedAt])

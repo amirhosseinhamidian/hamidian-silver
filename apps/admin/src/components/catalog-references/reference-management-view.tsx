@@ -93,7 +93,7 @@ function ReferenceIdentity({ reference }: Readonly<{ reference: CatalogReference
           <img
             src={reference.image.url}
             alt=""
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain p-1"
             loading="lazy"
           />
         ) : (
@@ -132,12 +132,16 @@ type ReferenceFormProps = Readonly<{
 function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: ReferenceFormProps) {
   const router = useRouter();
   const fileInputId = useId();
+  const heroFileInputId = useId();
   const [file, setFile] = useState<File | null>(null);
+  const [heroFile, setHeroFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
+  const [removeHeroImage, setRemoveHeroImage] = useState(false);
   const [archiveConfirmation, setArchiveConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const copy = COPY[kind];
   const resource = kind === 'brand' ? 'brands' : 'countries';
+  const brandReference = kind === 'brand' ? (reference as AdminBrand | undefined) : undefined;
   const archiveBlocked = Boolean(reference && reference.productCount > 0);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -154,7 +158,15 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
       return setError('کد کشور باید دقیقاً دو حرف انگلیسی باشد.');
     }
     if (file && (!ACCEPTED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
-      return setError('تصویر باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
+      return setError(
+        `${kind === 'brand' ? 'لوگو' : 'تصویر'} باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.`,
+      );
+    }
+    if (
+      heroFile &&
+      (!ACCEPTED_IMAGE_TYPES.has(heroFile.type) || heroFile.size > MAX_IMAGE_BYTES)
+    ) {
+      return setError('تصویر Hero باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
     }
 
     setError(null);
@@ -192,6 +204,20 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
         if (!response.ok) throw new Error(responseError(imagePayload));
       } else if (reference?.image && removeImage) {
         await requestJson(`/api/catalog/${resource}/${reference.id}/image`, 'DELETE');
+      }
+
+      if (kind === 'brand' && heroFile) {
+        const heroData = new FormData();
+        heroData.set('file', heroFile);
+        heroData.set('altText', `تصویر Hero ${name}`);
+        const response = await fetch(`/api/catalog/brands/${savedId}/hero-image`, {
+          method: 'POST',
+          body: heroData,
+        });
+        const heroPayload = (await response.json().catch(() => null)) as unknown;
+        if (!response.ok) throw new Error(responseError(heroPayload));
+      } else if (brandReference?.heroImage && removeHeroImage) {
+        await requestJson(`/api/catalog/brands/${savedId}/hero-image`, 'DELETE');
       }
 
       onSaved();
@@ -308,16 +334,16 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
             <img
               src={reference.image.url}
               alt={reference.image.altText ?? reference.name}
-              className="size-16 rounded-[var(--admin-radius-md)] object-cover"
+              className={`size-16 rounded-[var(--admin-radius-md)] ${kind === 'brand' ? 'object-contain p-1' : 'object-cover'}`}
             />
           ) : (
             <span className="grid size-16 place-items-center rounded-[var(--admin-radius-md)] bg-[var(--admin-color-surface-subtle)] text-xs text-[var(--admin-color-muted)]">
-              بدون تصویر
+              {kind === 'brand' ? 'بدون لوگو' : 'بدون تصویر'}
             </span>
           )}
           <div className="min-w-0 flex-1">
             <label htmlFor={fileInputId} className="text-sm font-bold">
-              تصویر {copy.singular}
+              {kind === 'brand' ? 'لوگوی برند' : `تصویر ${copy.singular}`}
             </label>
             <p className="mt-1 truncate text-xs text-[var(--admin-color-muted)]">
               {file ? file.name : 'JPEG، PNG، WebP یا AVIF تا ۱۰ مگابایت'}
@@ -329,7 +355,7 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
             htmlFor={fileInputId}
             className="inline-flex min-h-9 cursor-pointer items-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] px-3 text-xs font-semibold hover:bg-[var(--admin-color-surface-subtle)]"
           >
-            انتخاب تصویر
+            {kind === 'brand' ? 'انتخاب لوگو' : 'انتخاب تصویر'}
           </label>
           <input
             id={fileInputId}
@@ -348,11 +374,69 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
               variant="ghost"
               onClick={() => setRemoveImage((current) => !current)}
             >
-              {removeImage ? 'لغو حذف تصویر' : 'حذف تصویر فعلی'}
+              {removeImage
+                ? `لغو حذف ${kind === 'brand' ? 'لوگو' : 'تصویر'}`
+                : `حذف ${kind === 'brand' ? 'لوگوی' : 'تصویر'} فعلی`}
             </Button>
           ) : null}
         </div>
       </section>
+
+      {kind === 'brand' ? (
+        <section className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] p-3">
+          <div className="overflow-hidden rounded-[var(--admin-radius-md)] bg-[var(--admin-color-surface-subtle)]">
+            {brandReference?.heroImage && !removeHeroImage && !heroFile ? (
+              <img
+                src={brandReference.heroImage.url}
+                alt={brandReference.heroImage.altText ?? `تصویر Hero ${brandReference.name}`}
+                className="aspect-[16/7] w-full object-cover"
+              />
+            ) : (
+              <span className="grid aspect-[16/7] w-full place-items-center text-xs text-[var(--admin-color-muted)]">
+                بدون تصویر Hero
+              </span>
+            )}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <label htmlFor={heroFileInputId} className="text-sm font-bold">
+                تصویر Hero صفحه برند
+              </label>
+              <p className="mt-1 truncate text-xs text-[var(--admin-color-muted)]">
+                {heroFile ? heroFile.name : 'تصویر افقی JPEG، PNG، WebP یا AVIF تا ۱۰ مگابایت'}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <label
+                htmlFor={heroFileInputId}
+                className="inline-flex min-h-9 cursor-pointer items-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] px-3 text-xs font-semibold hover:bg-[var(--admin-color-surface-subtle)]"
+              >
+                انتخاب تصویر Hero
+              </label>
+              <input
+                id={heroFileInputId}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                className="sr-only"
+                onChange={(event) => {
+                  setHeroFile(event.target.files?.[0] ?? null);
+                  setRemoveHeroImage(false);
+                }}
+              />
+              {brandReference?.heroImage && !heroFile ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setRemoveHeroImage((current) => !current)}
+                >
+                  {removeHeroImage ? 'لغو حذف Hero' : 'حذف Hero فعلی'}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <Checkbox
         id={`${formId}-active`}
@@ -414,7 +498,11 @@ function ReferenceSheet({
       </BottomSheetTrigger>
       <BottomSheetContent
         title={reference ? `ویرایش ${reference.name}` : copy.add}
-        description={`اطلاعات، تصویر و وضعیت ${copy.singular} را تنظیم کنید.`}
+        description={
+          kind === 'brand'
+            ? 'اطلاعات، لوگو، تصویر Hero و وضعیت برند را تنظیم کنید.'
+            : `اطلاعات، تصویر و وضعیت ${copy.singular} را تنظیم کنید.`
+        }
         height="large"
         footer={
           <>
@@ -450,7 +538,10 @@ function ReadonlyDetails({
     ...(kind === 'country' && 'isoCode' in reference ? [['کد کشور', reference.isoCode]] : []),
     ['محصول متصل', formatAdminInteger(reference.productCount)],
     ['توضیحات', reference.description ?? 'ثبت نشده'],
-    ['تصویر', reference.image ? 'ثبت شده' : 'ثبت نشده'],
+    [kind === 'brand' ? 'لوگو' : 'تصویر', reference.image ? 'ثبت شده' : 'ثبت نشده'],
+    ...(kind === 'brand'
+      ? [['تصویر Hero', (reference as AdminBrand).heroImage ? 'ثبت شده' : 'ثبت نشده']]
+      : []),
     ['آخرین ویرایش', formatAdminDateTime(reference.updatedAt)],
   ];
   return (
@@ -480,7 +571,15 @@ function ReferenceMobileCard({
       status={referenceStatus(reference)}
       items={[
         { label: 'محصول', value: formatAdminInteger(reference.productCount) },
-        { label: 'تصویر', value: reference.image ? 'دارد' : 'ندارد' },
+        {
+          label: kind === 'brand' ? 'رسانه‌ها' : 'تصویر',
+          value:
+            kind === 'brand'
+              ? `${reference.image ? 'لوگو' : 'بدون لوگو'} / ${(reference as AdminBrand).heroImage ? 'Hero' : 'بدون Hero'}`
+              : reference.image
+                ? 'دارد'
+                : 'ندارد',
+        },
         {
           label: kind === 'country' ? 'کد کشور' : 'وضعیت',
           value:
@@ -572,9 +671,14 @@ function ReferencePanel({
     },
     {
       id: 'image',
-      header: 'تصویر',
+      header: kind === 'brand' ? 'رسانه‌ها' : 'تصویر',
       align: 'center',
-      cell: (item) => (item.image ? 'ثبت شده' : 'ندارد'),
+      cell: (item) =>
+        kind === 'brand'
+          ? `${item.image ? 'لوگو' : '—'} / ${(item as AdminBrand).heroImage ? 'Hero' : '—'}`
+          : item.image
+            ? 'ثبت شده'
+            : 'ندارد',
     },
     { id: 'status', header: 'وضعیت', cell: referenceStatus },
     {

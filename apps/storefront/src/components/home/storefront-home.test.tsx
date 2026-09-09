@@ -50,16 +50,14 @@ const homepage: PublicHomepage = {
     },
   ],
   popularProducts: [{ ...product, id: 'popular-1', slug: 'popular-1' }],
-  featuredBrands: [
-    {
-      id: 'brand-1',
-      name: 'حمیدیان',
-      slug: 'hamidian',
-      description: null,
-      image: null,
-      originCountry: { id: 'country-1', name: 'ایران', slug: 'iran', isoCode: 'IR' },
-    },
-  ],
+  featuredBrands: Array.from({ length: 6 }, (_, index) => ({
+    id: `brand-${index + 1}`,
+    name: `برند ${index + 1}`,
+    slug: `brand-${index + 1}`,
+    description: null,
+    image: null,
+    originCountry: { id: 'country-1', name: 'ایران', slug: 'iran', isoCode: 'IR' },
+  })),
 };
 
 describe('StorefrontHome', () => {
@@ -67,7 +65,9 @@ describe('StorefrontHome', () => {
     render(<StorefrontHome homepage={homepage} />);
 
     expect(screen.getAllByText('جدید')).toHaveLength(4);
-    expect(screen.getByText('برند ایران')).toBeInTheDocument();
+    expect(screen.getAllByText('برند ایران')).toHaveLength(4);
+    expect(screen.getByRole('heading', { name: 'برند 4' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'برند 5' })).not.toBeInTheDocument();
     expect(screen.getByText('ضمانت کیفیت')).toBeInTheDocument();
 
     const newProducts = screen.getByRole('heading', { name: 'جدیدترین محصولات' });

@@ -1,8 +1,8 @@
+import { StorefrontAnnouncementBar } from '@/components/layout/storefront-announcement';
 import {
   getInitialCountdownSeconds,
-  StorefrontAnnouncementBar,
   type StorefrontAnnouncement,
-} from '@/components/layout/storefront-announcement';
+} from '@/components/layout/storefront-announcement-config';
 import { AccountHeaderAction } from '@/components/auth/auth-modal';
 import { CartHeaderLink } from '@/components/cart/cart-header-link';
 import { StorefrontMobileMenu } from '@/components/layout/storefront-mobile-menu';

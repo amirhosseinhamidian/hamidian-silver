@@ -4,21 +4,12 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { FiArrowLeft } from 'react-icons/fi';
 
-export type StorefrontAnnouncementCountdown =
-  | Readonly<{ mode: 'none' }>
-  | Readonly<{ mode: 'fixed'; durationSeconds: number }>
-  | Readonly<{ mode: 'deadline'; endsAt: string }>;
+import type { StorefrontAnnouncement } from '@/components/layout/storefront-announcement-config';
 
-export type StorefrontAnnouncement = Readonly<{
-  enabled: boolean;
-  message: string;
-  countdown: StorefrontAnnouncementCountdown;
-  cta?: Readonly<{
-    enabled: boolean;
-    label: string;
-    href: string;
-  }>;
-}>;
+export type {
+  StorefrontAnnouncement,
+  StorefrontAnnouncementCountdown,
+} from '@/components/layout/storefront-announcement-config';
 
 type StorefrontAnnouncementBarProps = Readonly<{
   announcement?: StorefrontAnnouncement | null;
@@ -29,27 +20,6 @@ const numberFormatter = new Intl.NumberFormat('fa-IR', {
   minimumIntegerDigits: 2,
   useGrouping: false,
 });
-
-export function getInitialCountdownSeconds(
-  countdown: StorefrontAnnouncementCountdown,
-  now = Date.now(),
-): number | null {
-  if (countdown.mode === 'none') {
-    return null;
-  }
-
-  if (countdown.mode === 'fixed') {
-    return Math.max(0, Math.floor(countdown.durationSeconds));
-  }
-
-  const endsAt = Date.parse(countdown.endsAt);
-
-  if (Number.isNaN(endsAt)) {
-    return 0;
-  }
-
-  return Math.max(0, Math.ceil((endsAt - now) / 1000));
-}
 
 function Countdown({ initialSeconds }: Readonly<{ initialSeconds: number }>) {
   const [remainingSeconds, setRemainingSeconds] = useState(initialSeconds);

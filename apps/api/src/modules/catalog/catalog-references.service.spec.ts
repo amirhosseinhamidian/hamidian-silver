@@ -62,6 +62,14 @@ describe('CatalogReferencesService', () => {
           width: 200,
           height: 100,
         },
+        heroImage: {
+          id: 'media-2',
+          storageKey: 'brands/hero.webp',
+          mimeType: 'image/webp',
+          altText: 'هیرو حمیدیان',
+          width: 1920,
+          height: 900,
+        },
         _count: { products: 2 },
       },
     ]);
@@ -71,6 +79,7 @@ describe('CatalogReferencesService', () => {
         id: 'brand-1',
         productCount: 2,
         image: expect.objectContaining({ url: 'https://media.example/brands/logo.webp' }),
+        heroImage: expect.objectContaining({ url: 'https://media.example/brands/hero.webp' }),
       }),
     ]);
   });

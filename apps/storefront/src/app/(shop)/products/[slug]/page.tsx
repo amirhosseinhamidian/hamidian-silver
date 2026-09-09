@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { ProductPurchasePanel } from '@/components/cart/product-purchase-panel';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
+import { ProductMediaGallery } from '@/components/catalog/product-media-gallery';
 import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { getCatalogDevProductImageSrc } from '@/lib/catalog/dev-media.server';
 import {
@@ -74,31 +75,12 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
       <div className="grid gap-9 lg:grid-cols-[minmax(0,1.1fr)_minmax(22rem,0.9fr)] lg:gap-14">
         <section aria-label="رسانه محصول">
-          {publicImages.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {publicImages.map((media, index) => (
-                <div
-                  key={media.url ?? index}
-                  className={
-                    index === 0
-                      ? 'aspect-[4/5] overflow-hidden bg-[var(--sf-color-surface)] sm:col-span-2'
-                      : 'aspect-square overflow-hidden bg-[var(--sf-color-surface)]'
-                  }
-                >
-                  <CatalogMedia media={media} alt={product.name} eager={index === 0} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="aspect-[4/5] overflow-hidden bg-[var(--sf-color-surface)]">
-              <CatalogMedia
-                media={product.primaryMedia}
-                fallbackSrc={devImageSrc}
-                alt={product.name}
-                eager
-              />
-            </div>
-          )}
+          <ProductMediaGallery
+            productName={product.name}
+            media={publicImages}
+            fallbackMedia={product.primaryMedia}
+            fallbackSrc={devImageSrc}
+          />
         </section>
 
         <section aria-labelledby="product-title" className="lg:pt-2">

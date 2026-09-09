@@ -178,7 +178,7 @@ function CategoryForm({
     if (!name || !slug) return setError('نام و اسلاگ دسته‌بندی الزامی هستند.');
     if (sortOrder === null) return setError('ترتیب نمایش باید عدد صحیح صفر یا بزرگ‌تر باشد.');
     if (file && (!ACCEPTED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
-      return setError('تصویر باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
+      return setError('تصویر Hero باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
     }
 
     setError(null);
@@ -345,12 +345,12 @@ function CategoryForm({
             />
           ) : (
             <span className="grid size-16 place-items-center rounded-[var(--admin-radius-md)] bg-[var(--admin-color-surface-subtle)] text-xs text-[var(--admin-color-muted)]">
-              بدون تصویر
+              بدون تصویر Hero
             </span>
           )}
           <div className="min-w-0 flex-1">
             <label htmlFor={fileInputId} className="text-sm font-bold">
-              تصویر دسته‌بندی
+              تصویر Hero دسته‌بندی
             </label>
             <p className="mt-1 truncate text-xs text-[var(--admin-color-muted)]">
               {file ? file.name : 'JPEG، PNG، WebP یا AVIF تا ۱۰ مگابایت'}
@@ -362,7 +362,7 @@ function CategoryForm({
             htmlFor={fileInputId}
             className="inline-flex min-h-9 cursor-pointer items-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] px-3 text-xs font-semibold hover:bg-[var(--admin-color-surface-subtle)]"
           >
-            انتخاب تصویر
+            انتخاب تصویر Hero
           </label>
           <input
             id={fileInputId}
@@ -376,7 +376,7 @@ function CategoryForm({
           />
           {category?.image && !file ? (
             <Button size="sm" variant="ghost" onClick={() => setRemoveImage((current) => !current)}>
-              {removeImage ? 'لغو حذف تصویر' : 'حذف تصویر فعلی'}
+              {removeImage ? 'لغو حذف تصویر Hero' : 'حذف تصویر Hero فعلی'}
             </Button>
           ) : null}
         </div>
@@ -441,7 +441,7 @@ function CategorySheet({
       </BottomSheetTrigger>
       <BottomSheetContent
         title={category ? `ویرایش ${category.name}` : 'افزودن دسته‌بندی'}
-        description="ساختار، وضعیت، ترتیب و تصویر دسته را تنظیم کنید."
+        description="ساختار، وضعیت، ترتیب و تصویر Hero دسته را تنظیم کنید."
         height="large"
         footer={
           <>
@@ -478,7 +478,7 @@ function ReadonlyCategoryDetails({ category }: Readonly<{ category: AdminCategor
         ['زیرمجموعه', formatAdminInteger(category.childCount)],
         ['محصول', formatAdminInteger(category.productCount)],
         ['توضیحات', category.description ?? 'ثبت نشده'],
-        ['تصویر', category.image ? 'ثبت شده' : 'ثبت نشده'],
+        ['تصویر Hero', category.image ? 'ثبت شده' : 'ثبت نشده'],
         ['آخرین ویرایش', formatAdminDateTime(category.updatedAt)],
       ].map(([label, value]) => (
         <div key={label} className="flex justify-between gap-4 py-3 text-sm">

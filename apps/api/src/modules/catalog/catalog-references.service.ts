@@ -16,6 +16,11 @@ const referenceInclude = {
   _count: { select: { products: { where: { deletedAt: null } } } },
 } as const;
 
+const brandReferenceInclude = {
+  ...referenceInclude,
+  heroImage: true,
+} as const;
+
 @Injectable()
 export class CatalogReferencesService {
   constructor(
@@ -39,10 +44,10 @@ export class CatalogReferencesService {
             imageId: dto.imageId,
             isActive: dto.isActive ?? true,
           },
-          include: referenceInclude,
+          include: brandReferenceInclude,
         });
       });
-      return this.project(brand);
+      return this.projectBrand(brand);
     } catch (error) {
       this.throwUniqueConflict(error, 'brand');
     }
@@ -52,9 +57,9 @@ export class CatalogReferencesService {
     const brands = await this.prisma.brand.findMany({
       where: { deletedAt: null },
       orderBy: { name: 'asc' },
-      include: referenceInclude,
+      include: brandReferenceInclude,
     });
-    return brands.map((brand) => this.project(brand));
+    return brands.map((brand) => this.projectBrand(brand));
   }
 
   async updateBrand(brandId: string, dto: UpdateBrandDto) {
@@ -83,10 +88,10 @@ export class CatalogReferencesService {
             imageId: dto.imageId,
             isActive: dto.isActive,
           },
-          include: referenceInclude,
+          include: brandReferenceInclude,
         });
       });
-      return this.project(brand);
+      return this.projectBrand(brand);
     } catch (error) {
       this.throwUniqueConflict(error, 'brand');
     }
@@ -237,6 +242,42 @@ export class CatalogReferencesService {
             altText: image.altText,
             width: image.width,
             height: image.height,
+          }
+        : null,
+    };
+  }
+
+  private projectBrand<
+    T extends {
+      _count: { products: number };
+      image: {
+        id: string;
+        storageKey: string;
+        mimeType: string;
+        altText: string | null;
+        width: number | null;
+        height: number | null;
+      } | null;
+      heroImage: {
+        id: string;
+        storageKey: string;
+        mimeType: string;
+        altText: string | null;
+        width: number | null;
+        height: number | null;
+      } | null;
+    },
+  >(brand: T) {
+    return {
+      ...this.project(brand),
+      heroImage: brand.heroImage
+        ? {
+            id: brand.heroImage.id,
+            url: this.publicMediaUrl.resolve(brand.heroImage.storageKey),
+            mimeType: brand.heroImage.mimeType,
+            altText: brand.heroImage.altText,
+            width: brand.heroImage.width,
+            height: brand.heroImage.height,
           }
         : null,
     };

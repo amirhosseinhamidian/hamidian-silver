@@ -42,7 +42,7 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
       eyebrow="برند"
       title={brand.name}
       description={brand.description}
-      image={brand.image}
+      image={brand.heroImage ?? null}
       filters={filters}
       products={products}
     />

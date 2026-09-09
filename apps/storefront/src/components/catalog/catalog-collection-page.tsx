@@ -33,6 +33,53 @@ const sortOptions = [
   { value: 'name-asc', label: 'نام محصول' },
 ] as const;
 
+function CollectionHero({
+  eyebrow,
+  title,
+  description,
+  image,
+  total,
+}: Pick<
+  CatalogCollectionPageProps,
+  'eyebrow' | 'title' | 'description' | 'image'
+> &
+  Readonly<{ total: number }>) {
+  const copy = (
+    <div className="max-w-2xl">
+      <Link
+        href="/products"
+        className="text-xs transition-opacity hover:opacity-60"
+      >
+        محصولات
+      </Link>
+      <p className="mt-6 text-sm opacity-75">{eyebrow}</p>
+      <h1 className="mt-3 text-4xl font-normal sm:text-5xl lg:text-6xl">{title}</h1>
+      {description ? <p className="mt-5 text-sm leading-8 opacity-80">{description}</p> : null}
+      <p className="mt-5 text-sm opacity-65">{persianNumber.format(total)} محصول</p>
+    </div>
+  );
+
+  if (!image) {
+    return (
+      <header className="sf-container pt-[var(--sf-section-space)]">
+        <div className="text-[var(--sf-color-ink)]">{copy}</div>
+      </header>
+    );
+  }
+
+  return (
+    <header className="relative isolate min-h-[18rem] overflow-hidden bg-[var(--sf-color-surface)] sm:min-h-[24rem] lg:min-h-[30rem]">
+      <div className="absolute inset-0 -z-20">
+        <CatalogMedia media={image} alt={title} eager imageClassName="object-cover" />
+      </div>
+      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/65 via-black/15 to-black/5" />
+      <div className="sf-container flex min-h-[inherit] items-end py-10 text-white sm:py-14">
+        {copy}
+      </div>
+    </header>
+  );
+}
+
 export function CatalogCollectionPage({
   path,
   eyebrow,
@@ -43,100 +90,70 @@ export function CatalogCollectionPage({
   products,
 }: CatalogCollectionPageProps) {
   return (
-    <main id="main-content" className="sf-container py-[var(--sf-section-space)]">
-      <header
-        className={`
-          grid gap-8 border-b border-[var(--sf-color-border)] pb-10
-          ${image ? 'md:grid-cols-[minmax(0,1fr)_minmax(18rem,0.55fr)] md:items-center' : ''}
-        `}
-      >
-        <div>
-          <Link
-            href="/products"
-            className="text-xs text-[var(--sf-color-muted)] transition-opacity hover:opacity-60"
-          >
-            محصولات
-          </Link>
-          <p className="mt-6 text-sm text-[var(--sf-color-muted)]">{eyebrow}</p>
-          <h1 className="mt-3 text-4xl font-normal sm:text-5xl">{title}</h1>
-          {description ? (
-            <p className="mt-5 max-w-2xl text-sm leading-8 text-[var(--sf-color-muted)]">
-              {description}
-            </p>
-          ) : null}
-          <p className="mt-5 text-sm text-[var(--sf-color-subtle)]">
-            {persianNumber.format(products.total)} محصول
-          </p>
-        </div>
+    <main id="main-content">
+      <CollectionHero
+        eyebrow={eyebrow}
+        title={title}
+        description={description}
+        image={image}
+        total={products.total}
+      />
 
-        {image ? (
-          <div
-            className="
-              aspect-[4/3] overflow-hidden rounded-[var(--sf-radius-md)]
-              bg-[var(--sf-color-surface)]
-            "
-          >
-            <CatalogMedia media={image} alt={title} eager />
-          </div>
-        ) : null}
-      </header>
+      <div className="sf-container">
+        <form
+          action={path}
+          method="get"
+          className="flex flex-wrap items-end justify-between gap-4 border-b border-[var(--sf-color-border)] py-6"
+        >
+          <FormField id={`collection-sort-${path}`} label="مرتب‌سازی" className="min-w-52">
+            {(controlProps) => (
+              <Select
+                {...controlProps}
+                name="sort"
+                defaultValue={filters.sort}
+                options={sortOptions}
+              />
+            )}
+          </FormField>
 
-      <form
-        action={path}
-        method="get"
-        className="
-          flex flex-wrap items-end justify-between gap-4
-          border-b border-[var(--sf-color-border)] py-6
-        "
-      >
-        <FormField id={`collection-sort-${path}`} label="مرتب‌سازی" className="min-w-52">
-          {(controlProps) => (
-            <Select
-              {...controlProps}
-              name="sort"
-              defaultValue={filters.sort}
-              options={sortOptions}
+          <Button type="submit">اعمال</Button>
+        </form>
+
+        {products.items.length > 0 ? (
+          <>
+            <CatalogProductGrid
+              key={`${path}:${filters.sort}:${filters.page}`}
+              filters={filters}
+              initialProducts={products}
+              initialFallbackSources={getCatalogDevProductImageSources(products.items)}
+              className="py-10 md:grid-cols-3 lg:grid-cols-4"
             />
-          )}
-        </FormField>
-
-        <Button type="submit">اعمال</Button>
-      </form>
-
-      {products.items.length > 0 ? (
-        <>
-          <CatalogProductGrid
-            key={`${path}:${filters.sort}:${filters.page}`}
-            filters={filters}
-            initialProducts={products}
-            initialFallbackSources={getCatalogDevProductImageSources(products.items)}
-            className="py-10 md:grid-cols-3 lg:grid-cols-4"
+            {products.page < products.totalPages ? (
+              <noscript>
+                <div className="border-t border-[var(--sf-color-border)] pt-6 text-center text-sm">
+                  <Link
+                    href={buildCatalogCollectionHref(path, filters, {
+                      page: products.page + 1,
+                    })}
+                  >
+                    مشاهده محصولات بیشتر
+                  </Link>
+                </div>
+              </noscript>
+            ) : null}
+          </>
+        ) : (
+          <EmptyState
+            title="هنوز محصولی در این مجموعه نیست"
+            description="می‌توانید سایر محصولات گالری را مشاهده کنید."
+            action={
+              <ButtonLink href="/products" variant="text" size="sm">
+                مشاهده همه محصولات
+              </ButtonLink>
+            }
           />
-          {products.page < products.totalPages ? (
-            <noscript>
-              <div className="border-t border-[var(--sf-color-border)] pt-6 text-center text-sm">
-                <Link
-                  href={buildCatalogCollectionHref(path, filters, {
-                    page: products.page + 1,
-                  })}
-                >
-                  مشاهده محصولات بیشتر
-                </Link>
-              </div>
-            </noscript>
-          ) : null}
-        </>
-      ) : (
-        <EmptyState
-          title="هنوز محصولی در این مجموعه نیست"
-          description="می‌توانید سایر محصولات گالری را مشاهده کنید."
-          action={
-            <ButtonLink href="/products" variant="text" size="sm">
-              مشاهده همه محصولات
-            </ButtonLink>
-          }
-        />
-      )}
+        )}
+      </div>
     </main>
   );
 }
