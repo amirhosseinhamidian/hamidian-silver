@@ -1204,6 +1204,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AuditController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications/recovery/outbox": {
         parameters: {
             query?: never;
@@ -3108,6 +3124,49 @@ export interface components {
             /** Format: uuid */
             variantId: string;
             lowStockThreshold: number;
+        };
+        AuditLogActorDto: {
+            /** Format: uuid */
+            id: string;
+            phone: string;
+            name: string | null;
+        };
+        AuditLogEntryDto: {
+            /** Format: uuid */
+            id: string;
+            actor: components["schemas"]["AuditLogActorDto"];
+            action: string;
+            resource: string;
+            /** Format: uuid */
+            resourceId: string | null;
+            method: string;
+            path: string;
+            statusCode: number;
+            /** @enum {string} */
+            outcome: "SUCCESS" | "FAILURE";
+            ipAddress: string | null;
+            userAgent: string | null;
+            requestId: string | null;
+            durationMs: number;
+            metadata: {
+                [key: string]: unknown;
+            } | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AuditLogSummaryDto: {
+            total: number;
+            succeeded: number;
+            failed: number;
+            actors: number;
+            last24Hours: number;
+        };
+        AuditLogSnapshotDto: {
+            items: components["schemas"]["AuditLogEntryDto"][];
+            summary: components["schemas"]["AuditLogSummaryDto"];
+            resources: string[];
+            /** Format: date-time */
+            generatedAt: string;
         };
         NotificationOutboxRecoveryHistoryDto: {
             /** Format: uuid */
@@ -5790,6 +5849,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    AuditController_list_v1: {
+        parameters: {
+            query?: {
+                search?: string;
+                outcome?: "SUCCESS" | "FAILURE";
+                resource?: string;
+                actorUserId?: string;
+                from?: string;
+                to?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogSnapshotDto"];
+                };
             };
         };
     };

@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { envValidationSchema } from './config/env.validation';
 import { AuthModule } from './modules/auth/auth.module';
+import { AuditModule } from './modules/audit/audit.module';
 import { AuthenticationGuard } from './modules/auth/authentication.guard';
 import { PermissionsGuard } from './modules/authorization/permissions.guard';
 import { CatalogModule } from './modules/catalog/catalog.module';
@@ -35,6 +36,7 @@ import { UserManagementModule } from './modules/user-management/user-management.
     }),
     ScheduleModule.forRoot(),
     AuthModule,
+    AuditModule,
     CatalogModule,
     FinanceModule,
     HealthModule,
