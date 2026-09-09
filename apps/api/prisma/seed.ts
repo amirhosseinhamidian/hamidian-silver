@@ -7,6 +7,7 @@ import {
   ROLE_CODES,
   SYSTEM_ROLE_DEFINITIONS,
   SYSTEM_ROLE_PERMISSION_CODES,
+  type RoleCode,
 } from '../src/modules/authorization/rbac.constants';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -271,7 +272,7 @@ async function syncSystemRolePermissions(): Promise<void> {
   const [roles, permissions] = await Promise.all([
     prisma.role.findMany({
       where: { code: { in: roleCodes } },
-      select: { id: true, code: true },
+      select: { id: true, code: true, _count: { select: { permissions: true } } },
     }),
     prisma.permission.findMany({
       where: { code: { in: permissionCodes } },
@@ -284,8 +285,16 @@ async function syncSystemRolePermissions(): Promise<void> {
     permissions.map((permission) => [permission.code, permission.id]),
   );
 
-  const systemRoleIds = roles.map(({ id }) => id);
-  const grants = roleCodes.flatMap((roleCode) => {
+  const immutableRoleCodes: readonly RoleCode[] = [ROLE_CODES.MANAGER, ROLE_CODES.USER];
+  const adminRole = roles.find(({ code }) => code === ROLE_CODES.ADMIN);
+  const rolesToGrant: readonly RoleCode[] =
+    adminRole?._count.permissions === 0
+      ? [...immutableRoleCodes, ROLE_CODES.ADMIN]
+      : immutableRoleCodes;
+  const immutableRoleIds = immutableRoleCodes
+    .map((code) => roleIdByCode.get(code))
+    .filter(Boolean) as string[];
+  const grants = rolesToGrant.flatMap((roleCode) => {
     const roleId = roleIdByCode.get(roleCode);
 
     if (!roleId) {
@@ -310,7 +319,7 @@ async function syncSystemRolePermissions(): Promise<void> {
     await transaction.rolePermission.deleteMany({
       where: {
         roleId: {
-          in: systemRoleIds,
+          in: immutableRoleIds,
         },
       },
     });

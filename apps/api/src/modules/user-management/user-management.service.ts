@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,11 +11,13 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import {
   isPermissionCode,
   isRoleCode,
+  PERMISSION_CODES,
   ROLE_CODES,
   type PermissionCode,
   type RoleCode,
 } from '../authorization/rbac.constants';
 import { ListAdminUsersQueryDto } from './dto/list-admin-users-query.dto';
+import { UpdateAdminRolePermissionsDto } from './dto/update-admin-role-permissions.dto';
 import { UpdateAdminUserRolesDto } from './dto/update-admin-user-roles.dto';
 import { UpdateAdminUserStatusDto } from './dto/update-admin-user-status.dto';
 
@@ -86,6 +89,84 @@ export class UserManagementService {
           })),
       })),
     };
+  }
+
+  async listRoles() {
+    const [roles, permissions] = await Promise.all([
+      this.prisma.role.findMany({
+        where: { code: { in: Object.values(ROLE_CODES) }, isActive: true, deletedAt: null },
+        orderBy: { code: 'asc' },
+        include: {
+          permissions: { include: { permission: true } },
+          _count: { select: { users: true } },
+        },
+      }),
+      this.prisma.permission.findMany({
+        where: { code: { in: Object.values(PERMISSION_CODES) } },
+        orderBy: { code: 'asc' },
+      }),
+    ]);
+    return {
+      roles: roles
+        .filter(({ code }) => isRoleCode(code))
+        .map((role) => ({
+          code: role.code,
+          name: role.name,
+          description: role.description,
+          isEditable: role.code === ROLE_CODES.ADMIN,
+          assignedUserCount: role._count.users,
+          permissionCodes: role.permissions
+            .map(({ permission }) => permission.code)
+            .filter(isPermissionCode)
+            .sort(),
+        })),
+      permissions: permissions
+        .filter(({ code }) => isPermissionCode(code))
+        .map((permission) => ({
+          code: permission.code,
+          name: permission.name,
+          description: permission.description,
+        })),
+    };
+  }
+
+  async updateRolePermissions(
+    roleCode: string,
+    dto: UpdateAdminRolePermissionsDto,
+    actorRoleCodes: readonly RoleCode[],
+  ) {
+    if (!actorRoleCodes.includes(ROLE_CODES.MANAGER)) {
+      throw new ForbiddenException('Only a manager can change role permissions.');
+    }
+    if (roleCode !== ROLE_CODES.ADMIN) {
+      throw new BadRequestException('Only the operational admin role is editable.');
+    }
+    this.ensurePermissionDependencies(dto.permissionCodes);
+    await this.prisma.$transaction(
+      async (transaction) => {
+        const role = await transaction.role.findFirst({
+          where: { code: roleCode, isActive: true, deletedAt: null },
+        });
+        if (!role) throw new NotFoundException('Role was not found.');
+        const permissions = await transaction.permission.findMany({
+          where: { code: { in: dto.permissionCodes } },
+          select: { id: true, code: true },
+        });
+        if (permissions.length !== dto.permissionCodes.length) {
+          throw new BadRequestException('One or more requested permissions are unavailable.');
+        }
+        await transaction.rolePermission.deleteMany({ where: { roleId: role.id } });
+        await transaction.rolePermission.createMany({
+          data: permissions.map((permission) => ({ roleId: role.id, permissionId: permission.id })),
+        });
+        await transaction.authSession.updateMany({
+          where: { revokedAt: null, user: { roles: { some: { roleId: role.id } } } },
+          data: { revokedAt: new Date() },
+        });
+      },
+      { isolationLevel: 'Serializable' },
+    );
+    return this.listRoles();
   }
 
   async updateStatus(userId: string, actorUserId: string, dto: UpdateAdminUserStatusDto) {
@@ -215,6 +296,24 @@ export class UserManagementService {
 
   private hasManagerRole(codes: readonly string[]): boolean {
     return codes.includes(ROLE_CODES.MANAGER);
+  }
+
+  private ensurePermissionDependencies(codes: readonly PermissionCode[]): void {
+    const granted = new Set(codes);
+    const dependencies: readonly (readonly [PermissionCode, PermissionCode])[] = [
+      [PERMISSION_CODES.CATALOG_WRITE, PERMISSION_CODES.CATALOG_READ],
+      [PERMISSION_CODES.INVENTORY_WRITE, PERMISSION_CODES.INVENTORY_READ],
+      [PERMISSION_CODES.ORDERS_STATUS_WRITE, PERMISSION_CODES.ORDERS_READ],
+      [PERMISSION_CODES.ORDERS_TRACKING_WRITE, PERMISSION_CODES.ORDERS_READ],
+      [PERMISSION_CODES.ORDERS_CANCEL, PERMISSION_CODES.ORDERS_READ],
+      [PERMISSION_CODES.CMS_WRITE, PERMISSION_CODES.CMS_READ],
+      [PERMISSION_CODES.PRICING_WRITE, PERMISSION_CODES.PRICING_READ],
+      [PERMISSION_CODES.FINANCE_WRITE, PERMISSION_CODES.FINANCE_READ],
+      [PERMISSION_CODES.SETTINGS_WRITE, PERMISSION_CODES.SETTINGS_READ],
+      [PERMISSION_CODES.USERS_WRITE, PERMISSION_CODES.USERS_READ],
+    ];
+    const invalid = dependencies.find(([write, read]) => granted.has(write) && !granted.has(read));
+    if (invalid) throw new BadRequestException(`${invalid[0]} requires ${invalid[1]}.`);
   }
 
   private async ensureAnotherActiveManager(

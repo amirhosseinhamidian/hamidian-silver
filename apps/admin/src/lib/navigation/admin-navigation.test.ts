@@ -59,6 +59,7 @@ describe('admin navigation', () => {
       'supplier-settlements',
       'finance',
       'users',
+      'roles',
       'settings',
       'audit',
     ]);

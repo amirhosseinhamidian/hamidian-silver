@@ -1,6 +1,23 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api/v1/admin-roles": {
+      "get": {
+        "operationId": "AdminRoleManagementController_list_v1",
+        "parameters": [],
+        "responses": { "200": { "description": "", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminRoleManagementSnapshotDto" } } } } },
+        "tags": ["AdminRoleManagement"]
+      }
+    },
+    "/api/v1/admin-roles/{roleCode}/permissions": {
+      "put": {
+        "operationId": "AdminRoleManagementController_updatePermissions_v1",
+        "parameters": [{ "name": "roleCode", "required": true, "in": "path", "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateAdminRolePermissionsDto" } } } },
+        "responses": { "200": { "description": "", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminRoleManagementSnapshotDto" } } } } },
+        "tags": ["AdminRoleManagement"]
+      }
+    },
     "/api/v1/admin-users": {
       "get": {
         "operationId": "UserManagementController_list_v1",
@@ -6009,6 +6026,42 @@
       }
     },
     "schemas": {
+      "AdminManagedPermissionDto": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "enum": ["catalog.read", "catalog.write", "inventory.read", "inventory.write", "orders.read", "orders.status.write", "orders.tracking.write", "orders.cancel", "cms.read", "cms.write", "pricing.read", "pricing.write", "finance.read", "finance.write", "settings.read", "settings.write", "users.read", "users.write", "audit.read"] },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true }
+        },
+        "required": ["code", "name", "description"]
+      },
+      "AdminManagedRoleDto": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "enum": ["MANAGER", "ADMIN", "USER"] },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "isEditable": { "type": "boolean" },
+          "assignedUserCount": { "type": "number" },
+          "permissionCodes": { "type": "array", "items": { "type": "string", "enum": ["catalog.read", "catalog.write", "inventory.read", "inventory.write", "orders.read", "orders.status.write", "orders.tracking.write", "orders.cancel", "cms.read", "cms.write", "pricing.read", "pricing.write", "finance.read", "finance.write", "settings.read", "settings.write", "users.read", "users.write", "audit.read"] } }
+        },
+        "required": ["code", "name", "description", "isEditable", "assignedUserCount", "permissionCodes"]
+      },
+      "AdminRoleManagementSnapshotDto": {
+        "type": "object",
+        "properties": {
+          "roles": { "type": "array", "items": { "$ref": "#/components/schemas/AdminManagedRoleDto" } },
+          "permissions": { "type": "array", "items": { "$ref": "#/components/schemas/AdminManagedPermissionDto" } }
+        },
+        "required": ["roles", "permissions"]
+      },
+      "UpdateAdminRolePermissionsDto": {
+        "type": "object",
+        "properties": {
+          "permissionCodes": { "minItems": 1, "maxItems": 19, "uniqueItems": true, "type": "array", "items": { "type": "string", "enum": ["catalog.read", "catalog.write", "inventory.read", "inventory.write", "orders.read", "orders.status.write", "orders.tracking.write", "orders.cancel", "cms.read", "cms.write", "pricing.read", "pricing.write", "finance.read", "finance.write", "settings.read", "settings.write", "users.read", "users.write", "audit.read"] } }
+        },
+        "required": ["permissionCodes"]
+      },
       "AdminPermissionCatalogDto": {
         "type": "object",
         "properties": {

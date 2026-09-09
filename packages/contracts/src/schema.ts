@@ -4,28 +4,101 @@
  */
 
 export interface paths {
+    "/api/v1/admin-roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AdminRoleManagementController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin-roles/{roleCode}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["AdminRoleManagementController_updatePermissions_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin-users": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         get: operations["UserManagementController_list_v1"];
-        put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/api/v1/admin-users/{userId}/status": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never };
-        get?: never; put?: never; post?: never; delete?: never; options?: never; head?: never;
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
         patch: operations["UserManagementController_updateStatus_v1"];
         trace?: never;
     };
     "/api/v1/admin-users/{userId}/roles": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         get?: never;
         put: operations["UserManagementController_updateRoles_v1"];
-        post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/api/v1/admin-users/{userId}/sessions/revoke": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never };
-        get?: never; put?: never;
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
         post: operations["UserManagementController_revokeSessions_v1"];
-        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/api/v1/auth/otp/request": {
         parameters: {
@@ -2559,18 +2632,43 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AdminManagedPermissionDto: {
+            /** @enum {string} */
+            code: "catalog.read" | "catalog.write" | "inventory.read" | "inventory.write" | "orders.read" | "orders.status.write" | "orders.tracking.write" | "orders.cancel" | "cms.read" | "cms.write" | "pricing.read" | "pricing.write" | "finance.read" | "finance.write" | "settings.read" | "settings.write" | "users.read" | "users.write" | "audit.read";
+            name: string;
+            description: string | null;
+        };
+        AdminManagedRoleDto: {
+            /** @enum {string} */
+            code: "MANAGER" | "ADMIN" | "USER";
+            name: string;
+            description: string | null;
+            isEditable: boolean;
+            assignedUserCount: number;
+            permissionCodes: ("catalog.read" | "catalog.write" | "inventory.read" | "inventory.write" | "orders.read" | "orders.status.write" | "orders.tracking.write" | "orders.cancel" | "cms.read" | "cms.write" | "pricing.read" | "pricing.write" | "finance.read" | "finance.write" | "settings.read" | "settings.write" | "users.read" | "users.write" | "audit.read")[];
+        };
+        AdminRoleManagementSnapshotDto: {
+            roles: components["schemas"]["AdminManagedRoleDto"][];
+            permissions: components["schemas"]["AdminManagedPermissionDto"][];
+        };
+        UpdateAdminRolePermissionsDto: {
+            permissionCodes: ("catalog.read" | "catalog.write" | "inventory.read" | "inventory.write" | "orders.read" | "orders.status.write" | "orders.tracking.write" | "orders.cancel" | "cms.read" | "cms.write" | "pricing.read" | "pricing.write" | "finance.read" | "finance.write" | "settings.read" | "settings.write" | "users.read" | "users.write" | "audit.read")[];
+        };
         AdminPermissionCatalogDto: {
+            /** @enum {string} */
             code: "catalog.read" | "catalog.write" | "inventory.read" | "inventory.write" | "orders.read" | "orders.status.write" | "orders.tracking.write" | "orders.cancel" | "cms.read" | "cms.write" | "pricing.read" | "pricing.write" | "finance.read" | "finance.write" | "settings.read" | "settings.write" | "users.read" | "users.write" | "audit.read";
             name: string;
             description: string | null;
         };
         AdminRoleCatalogDto: {
+            /** @enum {string} */
             code: "MANAGER" | "ADMIN" | "USER";
             name: string;
             description: string | null;
             permissions: components["schemas"]["AdminPermissionCatalogDto"][];
         };
         AdminManagedUserRoleDto: {
+            /** @enum {string} */
             code: "MANAGER" | "ADMIN" | "USER";
             name: string;
             /** Format: date-time */
@@ -2605,8 +2703,12 @@ export interface components {
             userId: string;
             revokedSessionCount: number;
         };
-        UpdateAdminUserStatusDto: { isActive: boolean };
-        UpdateAdminUserRolesDto: { roleCodes: ("MANAGER" | "ADMIN" | "USER")[] };
+        UpdateAdminUserStatusDto: {
+            isActive: boolean;
+        };
+        UpdateAdminUserRolesDto: {
+            roleCodes: ("MANAGER" | "ADMIN" | "USER")[];
+        };
         RequestOtpDto: {
             phone: string;
         };
@@ -3577,28 +3679,144 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    UserManagementController_list_v1: {
+    AdminRoleManagementController_list_v1: {
         parameters: {
-            query?: { search?: string; status?: "ACTIVE" | "INACTIVE"; role?: "MANAGER" | "ADMIN" | "USER"; limit?: number };
-            header?: never; path?: never; cookie?: never;
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
         requestBody?: never;
-        responses: { 200: { headers: { [name: string]: unknown }; content: { "application/json": components["schemas"]["AdminUserManagementSnapshotDto"] } } };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRoleManagementSnapshotDto"];
+                };
+            };
+        };
+    };
+    AdminRoleManagementController_updatePermissions_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                roleCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAdminRolePermissionsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRoleManagementSnapshotDto"];
+                };
+            };
+        };
+    };
+    UserManagementController_list_v1: {
+        parameters: {
+            query?: {
+                search?: string;
+                status?: "ACTIVE" | "INACTIVE";
+                role?: "MANAGER" | "ADMIN" | "USER";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserManagementSnapshotDto"];
+                };
+            };
+        };
     };
     UserManagementController_updateStatus_v1: {
-        parameters: { query?: never; header?: never; path: { userId: string }; cookie?: never };
-        requestBody: { content: { "application/json": components["schemas"]["UpdateAdminUserStatusDto"] } };
-        responses: { 200: { headers: { [name: string]: unknown }; content: { "application/json": components["schemas"]["AdminManagedUserDto"] } } };
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAdminUserStatusDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminManagedUserDto"];
+                };
+            };
+        };
     };
     UserManagementController_updateRoles_v1: {
-        parameters: { query?: never; header?: never; path: { userId: string }; cookie?: never };
-        requestBody: { content: { "application/json": components["schemas"]["UpdateAdminUserRolesDto"] } };
-        responses: { 200: { headers: { [name: string]: unknown }; content: { "application/json": components["schemas"]["AdminManagedUserDto"] } } };
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAdminUserRolesDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminManagedUserDto"];
+                };
+            };
+        };
     };
     UserManagementController_revokeSessions_v1: {
-        parameters: { query?: never; header?: never; path: { userId: string }; cookie?: never };
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
         requestBody?: never;
-        responses: { 200: { headers: { [name: string]: unknown }; content: { "application/json": components["schemas"]["RevokeAdminUserSessionsResultDto"] } } };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevokeAdminUserSessionsResultDto"];
+                };
+            };
+        };
     };
     AuthController_requestCode_v1: {
         parameters: {
