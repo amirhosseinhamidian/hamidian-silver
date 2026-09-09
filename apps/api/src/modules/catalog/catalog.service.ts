@@ -95,6 +95,10 @@ export class CatalogService {
         }
       }
 
+      if (dto.seoOgMediaId) {
+        await this.requireSeoImage(transaction, dto.seoOgMediaId);
+      }
+
       const categoryIds = dto.categoryIds ?? [];
 
       if (categoryIds.length > 0) {
@@ -176,6 +180,11 @@ export class CatalogService {
           compareAtPriceToman: dto.compareAtPriceToman,
           shortDescription: dto.shortDescription,
           description: dto.description,
+          seoTitle: dto.seoTitle?.trim() || null,
+          seoDescription: dto.seoDescription?.trim() || null,
+          seoCanonicalPath: dto.seoCanonicalPath?.trim() || null,
+          seoNoIndex: dto.seoNoIndex ?? false,
+          seoOgMediaId: dto.seoOgMediaId,
           status: dto.status ?? ProductStatus.DRAFT,
           sizeMode: dto.sizeMode,
           brandId: dto.brandId,
@@ -399,6 +408,9 @@ export class CatalogService {
         });
         if (!country) throw new NotFoundException('Country was not found.');
       }
+      if (dto.seoOgMediaId) {
+        await this.requireSeoImage(transaction, dto.seoOgMediaId);
+      }
 
       if (dto.categoryIds) {
         const categories = await transaction.category.findMany({
@@ -431,6 +443,18 @@ export class CatalogService {
           slug: dto.slug,
           shortDescription: dto.shortDescription,
           description: dto.description,
+          seoTitle:
+            dto.seoTitle === undefined ? undefined : (dto.seoTitle?.trim() || null),
+          seoDescription:
+            dto.seoDescription === undefined
+              ? undefined
+              : (dto.seoDescription?.trim() || null),
+          seoCanonicalPath:
+            dto.seoCanonicalPath === undefined
+              ? undefined
+              : (dto.seoCanonicalPath?.trim() || null),
+          seoNoIndex: dto.seoNoIndex,
+          seoOgMediaId: dto.seoOgMediaId,
           brandId: dto.brandId,
           countryId: dto.countryId,
           salePriceToman: dto.salePriceToman,
@@ -487,9 +511,23 @@ export class CatalogService {
         name: true,
         slug: true,
         description: true,
+        seoTitle: true,
+        seoDescription: true,
+        seoCanonicalPath: true,
+        seoNoIndex: true,
         parentId: true,
         sortOrder: true,
         image: {
+          select: {
+            storageKey: true,
+            mimeType: true,
+            altText: true,
+            width: true,
+            height: true,
+            deletedAt: true,
+          },
+        },
+        seoOgMedia: {
           select: {
             storageKey: true,
             mimeType: true,
@@ -507,6 +545,10 @@ export class CatalogService {
       name: category.name,
       slug: category.slug,
       description: category.description,
+      seoTitle: category.seoTitle,
+      seoDescription: category.seoDescription,
+      seoCanonicalPath: category.seoCanonicalPath,
+      seoNoIndex: category.seoNoIndex,
       parentId: category.parentId,
       sortOrder: category.sortOrder,
       image:
@@ -517,6 +559,16 @@ export class CatalogService {
               altText: category.image.altText,
               width: category.image.width,
               height: category.image.height,
+            }
+          : null,
+      seoOgMedia:
+        category.seoOgMedia && !category.seoOgMedia.deletedAt
+          ? {
+              url: this.publicMediaUrl.resolve(category.seoOgMedia.storageKey),
+              mimeType: category.seoOgMedia.mimeType,
+              altText: category.seoOgMedia.altText,
+              width: category.seoOgMedia.width,
+              height: category.seoOgMedia.height,
             }
           : null,
     }));
@@ -536,6 +588,10 @@ export class CatalogService {
         name: true,
         slug: true,
         description: true,
+        seoTitle: true,
+        seoDescription: true,
+        seoCanonicalPath: true,
+        seoNoIndex: true,
         originCountry: {
           select: {
             id: true,
@@ -566,6 +622,16 @@ export class CatalogService {
             deletedAt: true,
           },
         },
+        seoOgMedia: {
+          select: {
+            storageKey: true,
+            mimeType: true,
+            altText: true,
+            width: true,
+            height: true,
+            deletedAt: true,
+          },
+        },
       },
     });
 
@@ -574,6 +640,10 @@ export class CatalogService {
       name: brand.name,
       slug: brand.slug,
       description: brand.description,
+      seoTitle: brand.seoTitle,
+      seoDescription: brand.seoDescription,
+      seoCanonicalPath: brand.seoCanonicalPath,
+      seoNoIndex: brand.seoNoIndex,
       originCountry:
         brand.originCountry?.isActive && !brand.originCountry.deletedAt
           ? {
@@ -601,6 +671,16 @@ export class CatalogService {
               altText: brand.heroImage.altText,
               width: brand.heroImage.width,
               height: brand.heroImage.height,
+            }
+          : null,
+      seoOgMedia:
+        brand.seoOgMedia && !brand.seoOgMedia.deletedAt
+          ? {
+              url: this.publicMediaUrl.resolve(brand.seoOgMedia.storageKey),
+              mimeType: brand.seoOgMedia.mimeType,
+              altText: brand.seoOgMedia.altText,
+              width: brand.seoOgMedia.width,
+              height: brand.seoOgMedia.height,
             }
           : null,
     }));
@@ -928,6 +1008,10 @@ export class CatalogService {
         slug: true,
         shortDescription: true,
         description: true,
+        seoTitle: true,
+        seoDescription: true,
+        seoCanonicalPath: true,
+        seoNoIndex: true,
         salePriceToman: true,
         compareAtPriceToman: true,
         sizeMode: true,
@@ -959,6 +1043,16 @@ export class CatalogService {
                 deletedAt: true,
               },
             },
+          },
+        },
+        seoOgMedia: {
+          select: {
+            storageKey: true,
+            mimeType: true,
+            altText: true,
+            width: true,
+            height: true,
+            deletedAt: true,
           },
         },
         country: {
@@ -1139,6 +1233,20 @@ export class CatalogService {
       slug: product.slug,
       shortDescription: product.shortDescription,
       description: product.description,
+      seoTitle: product.seoTitle,
+      seoDescription: product.seoDescription,
+      seoCanonicalPath: product.seoCanonicalPath,
+      seoNoIndex: product.seoNoIndex,
+      seoOgMedia:
+        product.seoOgMedia && !product.seoOgMedia.deletedAt
+          ? {
+              url: this.publicMediaUrl.resolve(product.seoOgMedia.storageKey),
+              mimeType: product.seoOgMedia.mimeType,
+              altText: product.seoOgMedia.altText,
+              width: product.seoOgMedia.width,
+              height: product.seoOgMedia.height,
+            }
+          : null,
       salePriceToman: product.salePriceToman,
       compareAtPriceToman: product.compareAtPriceToman,
       sizeMode: product.sizeMode,
@@ -1276,6 +1384,17 @@ export class CatalogService {
     if (!media) {
       throw new NotFoundException('Media was not found.');
     }
+  }
+
+  private async requireSeoImage(
+    transaction: Pick<PrismaService, 'media'>,
+    mediaId: string,
+  ): Promise<void> {
+    const media = await transaction.media.findFirst({
+      where: { id: mediaId, deletedAt: null, mimeType: { startsWith: 'image/' } },
+      select: { id: true },
+    });
+    if (!media) throw new NotFoundException('SEO social image was not found.');
   }
 
   private async requireCountry(countryId: string): Promise<void> {

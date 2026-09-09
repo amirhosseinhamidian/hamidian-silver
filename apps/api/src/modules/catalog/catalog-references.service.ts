@@ -19,6 +19,7 @@ const referenceInclude = {
 const brandReferenceInclude = {
   ...referenceInclude,
   heroImage: true,
+  seoOgMedia: true,
 } as const;
 
 @Injectable()
@@ -36,11 +37,17 @@ export class CatalogReferencesService {
     try {
       const brand = await this.prisma.$transaction(async (transaction) => {
         if (dto.imageId) await this.requireMedia(transaction, dto.imageId);
+        if (dto.seoOgMediaId) await this.requireImageMedia(transaction, dto.seoOgMediaId);
         return transaction.brand.create({
           data: {
             name,
             slug,
             description: this.optionalText(dto.description),
+            seoTitle: this.optionalText(dto.seoTitle),
+            seoDescription: this.optionalText(dto.seoDescription),
+            seoCanonicalPath: this.optionalText(dto.seoCanonicalPath),
+            seoNoIndex: dto.seoNoIndex ?? false,
+            seoOgMediaId: dto.seoOgMediaId,
             imageId: dto.imageId,
             isActive: dto.isActive ?? true,
           },
@@ -78,6 +85,7 @@ export class CatalogReferencesService {
         });
         if (!current) throw new NotFoundException('Brand was not found.');
         if (dto.imageId) await this.requireMedia(transaction, dto.imageId);
+        if (dto.seoOgMediaId) await this.requireImageMedia(transaction, dto.seoOgMediaId);
         return transaction.brand.update({
           where: { id: brandId },
           data: {
@@ -85,6 +93,17 @@ export class CatalogReferencesService {
             slug: dto.slug?.trim(),
             description:
               dto.description === undefined ? undefined : this.optionalText(dto.description),
+            seoTitle: dto.seoTitle === undefined ? undefined : this.optionalText(dto.seoTitle),
+            seoDescription:
+              dto.seoDescription === undefined
+                ? undefined
+                : this.optionalText(dto.seoDescription),
+            seoCanonicalPath:
+              dto.seoCanonicalPath === undefined
+                ? undefined
+                : this.optionalText(dto.seoCanonicalPath),
+            seoNoIndex: dto.seoNoIndex,
+            seoOgMediaId: dto.seoOgMediaId,
             imageId: dto.imageId,
             isActive: dto.isActive,
           },
@@ -212,6 +231,14 @@ export class CatalogReferencesService {
     if (!media) throw new NotFoundException('Media was not found.');
   }
 
+  private async requireImageMedia(transaction: Pick<PrismaService, 'media'>, mediaId: string) {
+    const media = await transaction.media.findFirst({
+      where: { id: mediaId, deletedAt: null, mimeType: { startsWith: 'image/' } },
+      select: { id: true },
+    });
+    if (!media) throw new NotFoundException('SEO social image was not found.');
+  }
+
   private optionalText(value: string | null | undefined): string | null | undefined {
     if (value === undefined) return undefined;
     return value?.trim() || null;
@@ -228,9 +255,17 @@ export class CatalogReferencesService {
         width: number | null;
         height: number | null;
       } | null;
+      seoOgMedia?: {
+        id: string;
+        storageKey: string;
+        mimeType: string;
+        altText: string | null;
+        width: number | null;
+        height: number | null;
+      } | null;
     },
   >(reference: T) {
-    const { _count, image, ...fields } = reference;
+    const { _count, image, seoOgMedia, ...fields } = reference;
     return {
       ...fields,
       productCount: _count.products,
@@ -244,6 +279,20 @@ export class CatalogReferencesService {
             height: image.height,
           }
         : null,
+      ...('seoOgMedia' in reference
+        ? {
+            seoOgMedia: seoOgMedia
+              ? {
+                  id: seoOgMedia.id,
+                  url: this.publicMediaUrl.resolve(seoOgMedia.storageKey),
+                  mimeType: seoOgMedia.mimeType,
+                  altText: seoOgMedia.altText,
+                  width: seoOgMedia.width,
+                  height: seoOgMedia.height,
+                }
+              : null,
+          }
+        : {}),
     };
   }
 

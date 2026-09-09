@@ -1,4 +1,14 @@
-import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, Length, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Matches,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class CreateCategoryDto {
   @IsString()
@@ -12,6 +22,30 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  seoTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  seoDescription?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  @Matches(/^\/(?!\/)[^\s?#]*$/)
+  seoCanonicalPath?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  seoNoIndex?: boolean;
+
+  @IsOptional()
+  @IsUUID('4')
+  seoOgMediaId?: string;
 
   @IsOptional()
   @IsUUID('4')

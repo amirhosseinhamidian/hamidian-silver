@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { StorefrontContentPageKey } from '../../../generated/prisma/enums';
 import { PublicContentPageMediaDto, PublicContentPageSectionDto } from './public-content-page.dto';
@@ -32,6 +32,18 @@ export class AdminContentPageDto {
 
   @ApiProperty({ nullable: true })
   seoDescription!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  seoCanonicalPath?: string | null;
+
+  @ApiPropertyOptional()
+  seoNoIndex?: boolean;
+
+  @ApiPropertyOptional({ nullable: true, format: 'uuid' })
+  seoOgMediaId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: () => PublicContentPageMediaDto })
+  seoOgMedia?: PublicContentPageMediaDto | null;
 
   @ApiProperty({ nullable: true, format: 'uuid' })
   updatedByUserId!: string | null;

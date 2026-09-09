@@ -1,4 +1,14 @@
-import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, Length, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Matches,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class UpdateCategoryDto {
   @IsOptional()
@@ -14,6 +24,30 @@ export class UpdateCategoryDto {
   @IsOptional()
   @IsString()
   description?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  seoTitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  seoDescription?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  @Matches(/^\/(?!\/)[^\s?#]*$/)
+  seoCanonicalPath?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  seoNoIndex?: boolean;
+
+  @IsOptional()
+  @IsUUID('4')
+  seoOgMediaId?: string | null;
 
   @IsOptional()
   @IsUUID('4')

@@ -34,6 +34,23 @@ export class PublicCatalogCategoryDto {
   image!: PublicCatalogMediaDto | null;
 }
 
+export class PublicCatalogCategoryPageDto extends PublicCatalogCategoryDto {
+  @ApiPropertyOptional({ type: String, nullable: true })
+  seoTitle?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  seoDescription?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  seoCanonicalPath?: string | null;
+
+  @ApiPropertyOptional()
+  seoNoIndex?: boolean;
+
+  @ApiPropertyOptional({ type: () => PublicCatalogMediaDto, nullable: true })
+  seoOgMedia?: PublicCatalogMediaDto | null;
+}
+
 export class PublicCatalogCountryDto {
   id!: string;
   name!: string;
@@ -57,6 +74,23 @@ export class PublicCatalogBrandDto {
 
   @ApiProperty({ type: () => PublicCatalogCountryDto, nullable: true })
   originCountry!: PublicCatalogCountryDto | null;
+}
+
+export class PublicCatalogBrandPageDto extends PublicCatalogBrandDto {
+  @ApiPropertyOptional({ type: String, nullable: true })
+  seoTitle?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  seoDescription?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  seoCanonicalPath?: string | null;
+
+  @ApiPropertyOptional()
+  seoNoIndex?: boolean;
+
+  @ApiPropertyOptional({ type: () => PublicCatalogMediaDto, nullable: true })
+  seoOgMedia?: PublicCatalogMediaDto | null;
 }
 
 export class PublicCatalogSizeDto {
@@ -125,6 +159,21 @@ export class PublicCatalogProductSummaryDto {
 export class PublicCatalogProductDetailDto extends PublicCatalogProductSummaryDto {
   @ApiProperty({ type: String, nullable: true })
   description!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  seoTitle?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  seoDescription?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  seoCanonicalPath?: string | null;
+
+  @ApiPropertyOptional()
+  seoNoIndex?: boolean;
+
+  @ApiPropertyOptional({ type: () => PublicCatalogMediaDto, nullable: true })
+  seoOgMedia?: PublicCatalogMediaDto | null;
 
   @ApiProperty({ type: () => PublicCatalogCountryDto, nullable: true })
   country!: PublicCatalogCountryDto | null;

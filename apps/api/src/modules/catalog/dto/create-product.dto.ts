@@ -10,6 +10,8 @@ import {
   IsString,
   IsUUID,
   Length,
+  Matches,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -73,6 +75,30 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  seoTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  seoDescription?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  @Matches(/^\/(?!\/)[^\s?#]*$/)
+  seoCanonicalPath?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  seoNoIndex?: boolean;
+
+  @IsOptional()
+  @IsUUID('4')
+  seoOgMediaId?: string;
 
   @IsOptional()
   @IsEnum(ProductStatus)

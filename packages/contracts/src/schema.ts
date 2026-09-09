@@ -2797,10 +2797,15 @@ export interface components {
             height: number | null;
             mimeType: string;
         };
-        PublicCatalogCategoryDto: {
+        PublicCatalogCategoryPageDto: {
             description: string | null;
             parentId: string | null;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
             id: string;
             name: string;
             slug: string;
@@ -2812,6 +2817,20 @@ export interface components {
             slug: string;
             isoCode: string;
         };
+        PublicCatalogBrandPageDto: {
+            description: string | null;
+            image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            heroImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            originCountry: components["schemas"]["PublicCatalogCountryDto"] | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            id: string;
+            name: string;
+            slug: string;
+        };
         PublicCatalogBrandDto: {
             description: string | null;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
@@ -2820,6 +2839,15 @@ export interface components {
             id: string;
             name: string;
             slug: string;
+        };
+        PublicCatalogCategoryDto: {
+            description: string | null;
+            parentId: string | null;
+            image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            id: string;
+            name: string;
+            slug: string;
+            sortOrder: number;
         };
         PublicCatalogProductSummaryDto: {
             shortDescription: string | null;
@@ -2873,6 +2901,11 @@ export interface components {
             categories: components["schemas"]["PublicCatalogCategoryDto"][];
             primaryMedia: components["schemas"]["PublicCatalogMediaDto"] | null;
             description: string | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
             country: components["schemas"]["PublicCatalogCountryDto"] | null;
             variants: components["schemas"]["PublicCatalogVariantDto"][];
             media: components["schemas"]["PublicCatalogMediaDto"][];
@@ -2886,6 +2919,12 @@ export interface components {
             name: string;
             slug: string;
             description?: string;
+            seoTitle?: string;
+            seoDescription?: string;
+            seoCanonicalPath?: string;
+            seoNoIndex?: boolean;
+            /** Format: uuid */
+            seoOgMediaId?: string;
             /** Format: uuid */
             parentId?: string;
             /** Format: uuid */
@@ -2897,6 +2936,12 @@ export interface components {
             name?: string;
             slug?: string;
             description?: string | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            /** Format: uuid */
+            seoOgMediaId?: string | null;
             /** Format: uuid */
             parentId?: string | null;
             /** Format: uuid */
@@ -2908,6 +2953,12 @@ export interface components {
             name: string;
             slug: string;
             description?: string;
+            seoTitle?: string;
+            seoDescription?: string;
+            seoCanonicalPath?: string;
+            seoNoIndex?: boolean;
+            /** Format: uuid */
+            seoOgMediaId?: string;
             /** Format: uuid */
             imageId?: string;
             /** Format: uuid */
@@ -2918,6 +2969,12 @@ export interface components {
             name?: string;
             slug?: string;
             description?: string | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            /** Format: uuid */
+            seoOgMediaId?: string | null;
             /** Format: uuid */
             imageId?: string | null;
             isActive?: boolean;
@@ -2972,6 +3029,12 @@ export interface components {
             slug: string;
             shortDescription?: string;
             description?: string;
+            seoTitle?: string;
+            seoDescription?: string;
+            seoCanonicalPath?: string;
+            seoNoIndex?: boolean;
+            /** Format: uuid */
+            seoOgMediaId?: string;
             /** @enum {string} */
             status?: "DRAFT" | "ACTIVE" | "ARCHIVED";
             /** @enum {string} */
@@ -2999,6 +3062,12 @@ export interface components {
             slug?: string;
             shortDescription?: string | null;
             description?: string | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            /** Format: uuid */
+            seoOgMediaId?: string | null;
             /** Format: uuid */
             brandId?: string | null;
             /** Format: uuid */
@@ -3591,6 +3660,17 @@ export interface components {
             telegramUrl: string | null;
             /** Format: uri */
             baleUrl: string | null;
+            seoSiteName?: string;
+            seoDefaultTitle?: string;
+            seoTitleTemplate?: string;
+            seoDefaultDescription?: string;
+            seoDefaultOgMedia?: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
+            seoOrganizationName?: string;
+            seoOrganizationLogoMedia?: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
+            seoSocialProfileUrls?: string[];
+            seoHomeTitle?: string | null;
+            seoHomeDescription?: string | null;
+            seoHomeOgMedia?: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
         };
         PublicHomepageHeroSlideDto: {
             title: string | null;
@@ -3640,6 +3720,9 @@ export interface components {
             sections: components["schemas"]["PublicContentPageSectionDto"][];
             seoTitle: string | null;
             seoDescription: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            seoOgMedia?: components["schemas"]["PublicContentPageMediaDto"] | null;
         };
         AdminContentPageDto: {
             key: components["schemas"]["StorefrontContentPageKey"];
@@ -3652,6 +3735,11 @@ export interface components {
             sections: components["schemas"]["PublicContentPageSectionDto"][];
             seoTitle: string | null;
             seoDescription: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            /** Format: uuid */
+            seoOgMediaId?: string | null;
+            seoOgMedia?: components["schemas"]["PublicContentPageMediaDto"] | null;
             /** Format: uuid */
             updatedByUserId: string | null;
             /** Format: date-time */
@@ -3671,6 +3759,10 @@ export interface components {
             heroMediaId?: string | null;
             seoTitle?: string | null;
             seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            /** Format: uuid */
+            seoOgMediaId?: string | null;
             sections: components["schemas"]["UpdateContentPageSectionDto"][];
         };
         AdminHomepageHeroMediaDto: {
@@ -3738,6 +3830,23 @@ export interface components {
             telegramUrl: string | null;
             /** Format: uri */
             baleUrl: string | null;
+            seoSiteName?: string;
+            seoDefaultTitle?: string;
+            seoTitleTemplate?: string;
+            seoDefaultDescription?: string;
+            /** Format: uuid */
+            seoDefaultOgMediaId?: string | null;
+            seoDefaultOgMedia?: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
+            seoOrganizationName?: string;
+            /** Format: uuid */
+            seoOrganizationLogoMediaId?: string | null;
+            seoOrganizationLogoMedia?: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
+            seoSocialProfileUrls?: string[];
+            seoHomeTitle?: string | null;
+            seoHomeDescription?: string | null;
+            /** Format: uuid */
+            seoHomeOgMediaId?: string | null;
+            seoHomeOgMedia?: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
             /** Format: uuid */
             updatedByUserId: string | null;
             /** Format: date-time */
@@ -3774,6 +3883,20 @@ export interface components {
             telegramUrl?: string | null;
             /** Format: uri */
             baleUrl?: string | null;
+            seoSiteName?: string;
+            seoDefaultTitle?: string;
+            seoTitleTemplate?: string;
+            seoDefaultDescription?: string;
+            /** Format: uuid */
+            seoDefaultOgMediaId?: string | null;
+            seoOrganizationName?: string;
+            /** Format: uuid */
+            seoOrganizationLogoMediaId?: string | null;
+            seoSocialProfileUrls?: string[];
+            seoHomeTitle?: string | null;
+            seoHomeDescription?: string | null;
+            /** Format: uuid */
+            seoHomeOgMediaId?: string | null;
         };
         AdminManagedUserRoleDto: {
             /** @enum {string} */
@@ -4001,7 +4124,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PublicCatalogCategoryDto"][];
+                    "application/json": components["schemas"]["PublicCatalogCategoryPageDto"][];
                 };
             };
         };
@@ -4020,7 +4143,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PublicCatalogBrandDto"][];
+                    "application/json": components["schemas"]["PublicCatalogBrandPageDto"][];
                 };
             };
         };

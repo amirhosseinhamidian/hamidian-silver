@@ -31,8 +31,8 @@ import { CreateSizeDto } from './dto/create-size.dto';
 import { PublicCatalogQueryDto } from './dto/public-catalog-query.dto';
 import { ReorderProductMediaDto } from './dto/reorder-product-media.dto';
 import {
-  PublicCatalogBrandDto,
-  PublicCatalogCategoryDto,
+  PublicCatalogBrandPageDto,
+  PublicCatalogCategoryPageDto,
   PublicCatalogProductDetailDto,
   PublicCatalogProductListDto,
 } from './dto/public-catalog-response.dto';
@@ -59,14 +59,14 @@ export class CatalogController {
 
   @Public()
   @Get('public/categories')
-  @ApiOkResponse({ type: PublicCatalogCategoryDto, isArray: true })
+  @ApiOkResponse({ type: PublicCatalogCategoryPageDto, isArray: true })
   listPublicCategories() {
     return this.catalogService.listPublicCategories();
   }
 
   @Public()
   @Get('public/brands')
-  @ApiOkResponse({ type: PublicCatalogBrandDto, isArray: true })
+  @ApiOkResponse({ type: PublicCatalogBrandPageDto, isArray: true })
   listPublicBrands() {
     return this.catalogService.listPublicBrands();
   }

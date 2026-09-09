@@ -16,6 +16,19 @@ const contentSettings = {
   telegramUrl: null,
   baleUrl: null,
 };
+const publicSeoSettings = {
+  seoSiteName: 'نقره حمیدیان',
+  seoDefaultTitle: 'نقره حمیدیان',
+  seoTitleTemplate: '%s | نقره حمیدیان',
+  seoDefaultDescription: 'فروشگاه آنلاین و گالری نقره حمیدیان',
+  seoDefaultOgMedia: null,
+  seoOrganizationName: 'نقره حمیدیان',
+  seoOrganizationLogoMedia: null,
+  seoSocialProfileUrls: [],
+  seoHomeTitle: null,
+  seoHomeDescription: null,
+  seoHomeOgMedia: null,
+};
 
 function settingsRecord(overrides: Record<string, unknown> = {}) {
   return {
@@ -38,6 +51,20 @@ function settingsRecord(overrides: Record<string, unknown> = {}) {
       altText: 'کالکشن نقره',
       deletedAt: null,
     },
+    seoSiteName: 'نقره حمیدیان',
+    seoDefaultTitle: 'نقره حمیدیان',
+    seoTitleTemplate: '%s | نقره حمیدیان',
+    seoDefaultDescription: 'فروشگاه آنلاین و گالری نقره حمیدیان',
+    seoDefaultOgMediaId: null,
+    seoDefaultOgMedia: null,
+    seoOrganizationName: 'نقره حمیدیان',
+    seoOrganizationLogoMediaId: null,
+    seoOrganizationLogoMedia: null,
+    seoSocialProfileUrls: [],
+    seoHomeTitle: null,
+    seoHomeDescription: null,
+    seoHomeOgMediaId: null,
+    seoHomeOgMedia: null,
     ...contentSettings,
     ...overrides,
   };
@@ -97,6 +124,7 @@ describe('SiteSettingsService', () => {
       instagramUrl: null,
       telegramUrl: null,
       baleUrl: null,
+      ...publicSeoSettings,
     });
   });
 
@@ -122,6 +150,7 @@ describe('SiteSettingsService', () => {
         altText: 'کالکشن نقره',
       },
       ...contentSettings,
+      ...publicSeoSettings,
     });
   });
 
@@ -261,6 +290,17 @@ describe('SiteSettingsService', () => {
         instagramUrl: null,
         telegramUrl: null,
         baleUrl: null,
+        seoSiteName: 'نقره حمیدیان',
+        seoDefaultTitle: 'نقره حمیدیان',
+        seoTitleTemplate: '%s | نقره حمیدیان',
+        seoDefaultDescription: 'فروشگاه آنلاین و گالری نقره حمیدیان',
+        seoDefaultOgMediaId: null,
+        seoOrganizationName: 'نقره حمیدیان',
+        seoOrganizationLogoMediaId: null,
+        seoSocialProfileUrls: [],
+        seoHomeTitle: null,
+        seoHomeDescription: null,
+        seoHomeOgMediaId: null,
         updatedByUserId: actorUserId,
       },
       update: {
@@ -284,10 +324,24 @@ describe('SiteSettingsService', () => {
         instagramUrl: null,
         telegramUrl: null,
         baleUrl: null,
+        seoSiteName: 'نقره حمیدیان',
+        seoDefaultTitle: 'نقره حمیدیان',
+        seoTitleTemplate: '%s | نقره حمیدیان',
+        seoDefaultDescription: 'فروشگاه آنلاین و گالری نقره حمیدیان',
+        seoDefaultOgMediaId: null,
+        seoOrganizationName: 'نقره حمیدیان',
+        seoOrganizationLogoMediaId: null,
+        seoSocialProfileUrls: [],
+        seoHomeTitle: null,
+        seoHomeDescription: null,
+        seoHomeOgMediaId: null,
         updatedByUserId: actorUserId,
       },
       include: {
         catalogHeroMedia: true,
+        seoDefaultOgMedia: true,
+        seoOrganizationLogoMedia: true,
+        seoHomeOgMedia: true,
       },
     });
   });

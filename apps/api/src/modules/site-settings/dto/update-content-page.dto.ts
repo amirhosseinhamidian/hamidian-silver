@@ -2,9 +2,11 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   MinLength,
   ValidateNested,
@@ -56,6 +58,20 @@ export class UpdateContentPageDto {
   @IsString()
   @MaxLength(500)
   seoDescription?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  @Matches(/^\/(?!\/)[^\s?#]*$/)
+  seoCanonicalPath?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  seoNoIndex?: boolean;
+
+  @IsOptional()
+  @IsUUID('4')
+  seoOgMediaId?: string | null;
 
   @IsArray()
   @ArrayMaxSize(12)

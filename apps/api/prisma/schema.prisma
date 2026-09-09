@@ -252,8 +252,15 @@ model Media {
   countryImages           Country[]      @relation("CountryImage")
   productMedia            ProductMedia[]
   siteSettingsCatalogHero SiteSettings[] @relation("SiteSettingsCatalogHero")
+  siteSettingsSeoDefaultOg        SiteSettings[] @relation("SiteSettingsSeoDefaultOg")
+  siteSettingsSeoOrganizationLogo SiteSettings[] @relation("SiteSettingsSeoOrganizationLogo")
+  siteSettingsSeoHomeOg           SiteSettings[] @relation("SiteSettingsSeoHomeOg")
   homepageHeroSlides      HomepageHeroSlide[]
   storefrontContentHeroes StorefrontContentPage[] @relation("StorefrontContentPageHero")
+  storefrontContentSeoOg          StorefrontContentPage[] @relation("StorefrontContentPageSeoOg")
+  categorySeoOgImages     Category[] @relation("CategorySeoOgImage")
+  brandSeoOgImages        Brand[]    @relation("BrandSeoOgImage")
+  productSeoOgImages      Product[]  @relation("ProductSeoOgImage")
 
   @@index([deletedAt])
   @@map("media")
@@ -281,13 +288,30 @@ model SiteSettings {
   instagramUrl        String?  @db.VarChar(1000)
   telegramUrl         String?  @db.VarChar(1000)
   baleUrl             String?  @db.VarChar(1000)
+  seoSiteName                 String   @default("نقره حمیدیان") @db.VarChar(120)
+  seoDefaultTitle             String   @default("نقره حمیدیان") @db.VarChar(200)
+  seoTitleTemplate            String   @default("%s | نقره حمیدیان") @db.VarChar(200)
+  seoDefaultDescription       String   @default("فروشگاه آنلاین و گالری نقره حمیدیان") @db.VarChar(500)
+  seoDefaultOgMediaId         String?  @db.Uuid
+  seoOrganizationName         String   @default("نقره حمیدیان") @db.VarChar(200)
+  seoOrganizationLogoMediaId String?  @db.Uuid
+  seoSocialProfileUrls        String[] @default([]) @db.VarChar(1000)
+  seoHomeTitle                String?  @db.VarChar(200)
+  seoHomeDescription          String?  @db.VarChar(500)
+  seoHomeOgMediaId            String?  @db.Uuid
   updatedByUserId     String?  @db.Uuid
   createdAt           DateTime @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime @updatedAt @db.Timestamptz(3)
   catalogHeroMedia    Media?   @relation("SiteSettingsCatalogHero", fields: [catalogHeroMediaId], references: [id], onDelete: SetNull)
+  seoDefaultOgMedia   Media?   @relation("SiteSettingsSeoDefaultOg", fields: [seoDefaultOgMediaId], references: [id], onDelete: SetNull)
+  seoOrganizationLogoMedia Media? @relation("SiteSettingsSeoOrganizationLogo", fields: [seoOrganizationLogoMediaId], references: [id], onDelete: SetNull)
+  seoHomeOgMedia      Media?   @relation("SiteSettingsSeoHomeOg", fields: [seoHomeOgMediaId], references: [id], onDelete: SetNull)
   updatedBy           User?    @relation("SiteSettingsUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
 
   @@index([catalogHeroMediaId])
+  @@index([seoDefaultOgMediaId])
+  @@index([seoOrganizationLogoMediaId])
+  @@index([seoHomeOgMediaId])
   @@index([updatedByUserId])
   @@map("site_settings")
 }
@@ -301,14 +325,19 @@ model StorefrontContentPage {
   heroMediaId     String?                  @db.Uuid
   seoTitle        String?                  @db.VarChar(200)
   seoDescription  String?                  @db.VarChar(500)
+  seoCanonicalPath String?                  @db.VarChar(1000)
+  seoNoIndex       Boolean                  @default(false)
+  seoOgMediaId     String?                  @db.Uuid
   updatedByUserId String?                  @db.Uuid
   createdAt       DateTime                 @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime                 @updatedAt @db.Timestamptz(3)
   heroMedia       Media?                   @relation("StorefrontContentPageHero", fields: [heroMediaId], references: [id], onDelete: SetNull)
+  seoOgMedia       Media?                   @relation("StorefrontContentPageSeoOg", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   updatedBy       User?                    @relation("StorefrontContentPageUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
   sections        StorefrontContentSection[]
 
   @@index([heroMediaId])
+  @@index([seoOgMediaId])
   @@index([updatedByUserId])
   @@map("storefront_content_pages")
 }
@@ -332,6 +361,11 @@ model Category {
   name        String            @db.VarChar(150)
   slug        String            @unique @db.VarChar(180)
   description String?
+  seoTitle         String?           @db.VarChar(200)
+  seoDescription   String?           @db.VarChar(500)
+  seoCanonicalPath String?           @db.VarChar(1000)
+  seoNoIndex       Boolean           @default(false)
+  seoOgMediaId     String?           @db.Uuid
   parentId    String?           @db.Uuid
   imageId     String?           @db.Uuid
   sortOrder   Int               @default(0)
@@ -342,11 +376,13 @@ model Category {
   parent      Category?         @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
   children    Category[]        @relation("CategoryTree")
   image       Media?            @relation("CategoryImage", fields: [imageId], references: [id], onDelete: SetNull)
+  seoOgMedia       Media?            @relation("CategorySeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   products    ProductCategory[]
   homepageFeature HomepageFeaturedCategory?
 
   @@index([parentId])
   @@index([imageId])
+  @@index([seoOgMediaId])
   @@index([isActive, sortOrder])
   @@index([deletedAt])
   @@map("categories")
@@ -357,6 +393,11 @@ model Brand {
   name        String    @db.VarChar(150)
   slug        String    @unique @db.VarChar(180)
   description String?
+  seoTitle         String?   @db.VarChar(200)
+  seoDescription   String?   @db.VarChar(500)
+  seoCanonicalPath String?   @db.VarChar(1000)
+  seoNoIndex       Boolean   @default(false)
+  seoOgMediaId     String?   @db.Uuid
   imageId     String?   @db.Uuid
   heroImageId String?   @db.Uuid
   originCountryId String? @db.Uuid
@@ -366,11 +407,13 @@ model Brand {
   deletedAt   DateTime? @db.Timestamptz(3)
   image       Media?    @relation("BrandImage", fields: [imageId], references: [id], onDelete: SetNull)
   heroImage   Media?    @relation("BrandHeroImage", fields: [heroImageId], references: [id], onDelete: SetNull)
+  seoOgMedia       Media?    @relation("BrandSeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   originCountry Country? @relation("BrandOriginCountry", fields: [originCountryId], references: [id], onDelete: SetNull)
   products    Product[]
 
   @@index([imageId])
   @@index([heroImageId])
+  @@index([seoOgMediaId])
   @@index([originCountryId])
   @@index([isActive])
   @@index([deletedAt])
@@ -420,6 +463,11 @@ model Product {
   slug             String                @unique @db.VarChar(220)
   shortDescription String?
   description      String?
+  seoTitle         String?               @db.VarChar(200)
+  seoDescription   String?               @db.VarChar(500)
+  seoCanonicalPath String?               @db.VarChar(1000)
+  seoNoIndex       Boolean                @default(false)
+  seoOgMediaId     String?               @db.Uuid
   status           ProductStatus         @default(DRAFT)
   sizeMode         SizeMode              @default(NONE)
   brandId          String?               @db.Uuid
@@ -430,6 +478,7 @@ model Product {
   updatedAt        DateTime              @updatedAt @db.Timestamptz(3)
   deletedAt        DateTime?             @db.Timestamptz(3)
   brand            Brand?                @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  seoOgMedia       Media?                @relation("ProductSeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   country          Country?              @relation(fields: [countryId], references: [id], onDelete: SetNull)
   categories       ProductCategory[]
   variants         ProductVariant[]
@@ -441,6 +490,7 @@ model Product {
 
   @@index([brandId])
   @@index([countryId])
+  @@index([seoOgMediaId])
   @@index([status])
   @@index([deletedAt])
   @@map("products")

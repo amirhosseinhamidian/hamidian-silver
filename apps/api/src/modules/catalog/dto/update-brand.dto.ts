@@ -1,4 +1,12 @@
-import { IsBoolean, IsOptional, IsString, IsUUID, Length } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 export class UpdateBrandDto {
   @IsOptional()
@@ -14,6 +22,30 @@ export class UpdateBrandDto {
   @IsOptional()
   @IsString()
   description?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  seoTitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  seoDescription?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  @Matches(/^\/(?!\/)[^\s?#]*$/)
+  seoCanonicalPath?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  seoNoIndex?: boolean;
+
+  @IsOptional()
+  @IsUUID('4')
+  seoOgMediaId?: string | null;
 
   @IsOptional()
   @IsUUID('4')

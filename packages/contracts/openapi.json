@@ -226,7 +226,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PublicCatalogCategoryDto"
+                    "$ref": "#/components/schemas/PublicCatalogCategoryPageDto"
                   }
                 }
               }
@@ -250,7 +250,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PublicCatalogBrandDto"
+                    "$ref": "#/components/schemas/PublicCatalogBrandPageDto"
                   }
                 }
               }
@@ -6840,7 +6840,7 @@
           "mimeType"
         ]
       },
-      "PublicCatalogCategoryDto": {
+      "PublicCatalogCategoryPageDto": {
         "type": "object",
         "properties": {
           "description": {
@@ -6852,6 +6852,30 @@
             "nullable": true
           },
           "image": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMedia": {
             "nullable": true,
             "type": "object",
             "allOf": [
@@ -6906,6 +6930,83 @@
           "isoCode"
         ]
       },
+      "PublicCatalogBrandPageDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "image": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "heroImage": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "originCountry": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogCountryDto"
+              }
+            ]
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "image",
+          "originCountry",
+          "id",
+          "name",
+          "slug"
+        ]
+      },
       "PublicCatalogBrandDto": {
         "type": "object",
         "properties": {
@@ -6957,6 +7058,49 @@
           "id",
           "name",
           "slug"
+        ]
+      },
+      "PublicCatalogCategoryDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "parentId": {
+            "type": "string",
+            "nullable": true
+          },
+          "image": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "description",
+          "parentId",
+          "image",
+          "id",
+          "name",
+          "slug",
+          "sortOrder"
         ]
       },
       "PublicCatalogProductSummaryDto": {
@@ -7206,6 +7350,30 @@
             "type": "string",
             "nullable": true
           },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
           "country": {
             "nullable": true,
             "type": "object",
@@ -7278,6 +7446,26 @@
           "description": {
             "type": "string"
           },
+          "seoTitle": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "seoDescription": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "maxLength": 1000,
+            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMediaId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "parentId": {
             "type": "string",
             "format": "uuid"
@@ -7316,6 +7504,30 @@
             "type": "string",
             "nullable": true
           },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000,
+            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
           "parentId": {
             "type": "string",
             "nullable": true,
@@ -7351,6 +7563,26 @@
           "description": {
             "type": "string"
           },
+          "seoTitle": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "seoDescription": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "maxLength": 1000,
+            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMediaId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "imageId": {
             "type": "string",
             "format": "uuid"
@@ -7384,6 +7616,30 @@
           "description": {
             "type": "string",
             "nullable": true
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000,
+            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
           },
           "imageId": {
             "type": "string",
@@ -7580,6 +7836,26 @@
           "description": {
             "type": "string"
           },
+          "seoTitle": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "seoDescription": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "maxLength": 1000,
+            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMediaId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -7691,6 +7967,30 @@
           "description": {
             "type": "string",
             "nullable": true
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000,
+            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
           },
           "brandId": {
             "type": "string",
@@ -10028,6 +10328,63 @@
             "type": "string",
             "nullable": true,
             "format": "uri"
+          },
+          "seoSiteName": {
+            "type": "string"
+          },
+          "seoDefaultTitle": {
+            "type": "string"
+          },
+          "seoTitleTemplate": {
+            "type": "string"
+          },
+          "seoDefaultDescription": {
+            "type": "string"
+          },
+          "seoDefaultOgMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicSiteSettingsMediaDto"
+              }
+            ]
+          },
+          "seoOrganizationName": {
+            "type": "string"
+          },
+          "seoOrganizationLogoMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicSiteSettingsMediaDto"
+              }
+            ]
+          },
+          "seoSocialProfileUrls": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "seoHomeTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoHomeDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoHomeOgMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicSiteSettingsMediaDto"
+              }
+            ]
           }
         },
         "required": [
@@ -10280,6 +10637,22 @@
           "seoDescription": {
             "type": "string",
             "nullable": true
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicContentPageMediaDto"
+              }
+            ]
           }
         },
         "required": [
@@ -10343,6 +10716,27 @@
           "seoDescription": {
             "type": "string",
             "nullable": true
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seoOgMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicContentPageMediaDto"
+              }
+            ]
           },
           "updatedByUserId": {
             "type": "string",
@@ -10428,6 +10822,20 @@
             "type": "string",
             "nullable": true,
             "maxLength": 500
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000,
+            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
           },
           "sections": {
             "maxItems": 12,
@@ -10730,6 +11138,78 @@
             "nullable": true,
             "format": "uri"
           },
+          "seoSiteName": {
+            "type": "string"
+          },
+          "seoDefaultTitle": {
+            "type": "string"
+          },
+          "seoTitleTemplate": {
+            "type": "string"
+          },
+          "seoDefaultDescription": {
+            "type": "string"
+          },
+          "seoDefaultOgMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seoDefaultOgMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicSiteSettingsMediaDto"
+              }
+            ]
+          },
+          "seoOrganizationName": {
+            "type": "string"
+          },
+          "seoOrganizationLogoMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seoOrganizationLogoMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicSiteSettingsMediaDto"
+              }
+            ]
+          },
+          "seoSocialProfileUrls": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "seoHomeTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoHomeDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoHomeOgMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seoHomeOgMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicSiteSettingsMediaDto"
+              }
+            ]
+          },
           "updatedByUserId": {
             "type": "string",
             "nullable": true,
@@ -10881,6 +11361,65 @@
             "nullable": true,
             "maxLength": 1000,
             "format": "uri"
+          },
+          "seoSiteName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "seoDefaultTitle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "seoTitleTemplate": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "seoDefaultDescription": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "seoDefaultOgMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seoOrganizationName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "seoOrganizationLogoMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seoSocialProfileUrls": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri",
+              "maxLength": 1000
+            }
+          },
+          "seoHomeTitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "seoHomeDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "seoHomeOgMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
           }
         }
       },

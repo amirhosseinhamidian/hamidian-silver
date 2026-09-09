@@ -12,6 +12,10 @@ import {
 import { UpdateSiteSettingsDto } from './dto/update-site-settings.dto';
 
 const SITE_SETTINGS_ID = 'site';
+const DEFAULT_SEO_SITE_NAME = 'نقره حمیدیان';
+const DEFAULT_SEO_TITLE = 'نقره حمیدیان';
+const DEFAULT_SEO_TITLE_TEMPLATE = '%s | نقره حمیدیان';
+const DEFAULT_SEO_DESCRIPTION = 'فروشگاه آنلاین و گالری نقره حمیدیان';
 
 type SiteSettingsMedia = Readonly<{
   storageKey: string;
@@ -40,9 +44,23 @@ type SiteSettingsRecord = Readonly<{
   instagramUrl: string | null;
   telegramUrl: string | null;
   baleUrl: string | null;
+  seoSiteName: string;
+  seoDefaultTitle: string;
+  seoTitleTemplate: string;
+  seoDefaultDescription: string;
+  seoDefaultOgMediaId: string | null;
+  seoOrganizationName: string;
+  seoOrganizationLogoMediaId: string | null;
+  seoSocialProfileUrls: string[];
+  seoHomeTitle: string | null;
+  seoHomeDescription: string | null;
+  seoHomeOgMediaId: string | null;
   updatedByUserId: string | null;
   updatedAt: Date;
   catalogHeroMedia: SiteSettingsMedia | null;
+  seoDefaultOgMedia: SiteSettingsMedia | null;
+  seoOrganizationLogoMedia: SiteSettingsMedia | null;
+  seoHomeOgMedia: SiteSettingsMedia | null;
 }>;
 
 type AnnouncementSettings = Readonly<{
@@ -106,6 +124,17 @@ export class SiteSettingsService {
       instagramUrl: settings.instagramUrl,
       telegramUrl: settings.telegramUrl,
       baleUrl: settings.baleUrl,
+      seoSiteName: settings.seoSiteName,
+      seoDefaultTitle: settings.seoDefaultTitle,
+      seoTitleTemplate: settings.seoTitleTemplate,
+      seoDefaultDescription: settings.seoDefaultDescription,
+      seoDefaultOgMedia: this.projectPublicMedia(settings.seoDefaultOgMedia),
+      seoOrganizationName: settings.seoOrganizationName,
+      seoOrganizationLogoMedia: this.projectPublicMedia(settings.seoOrganizationLogoMedia),
+      seoSocialProfileUrls: settings.seoSocialProfileUrls,
+      seoHomeTitle: settings.seoHomeTitle,
+      seoHomeDescription: settings.seoHomeDescription,
+      seoHomeOgMedia: this.projectPublicMedia(settings.seoHomeOgMedia),
     };
   }
 
@@ -129,6 +158,20 @@ export class SiteSettingsService {
         instagramUrl: defaults.instagramUrl,
         telegramUrl: defaults.telegramUrl,
         baleUrl: defaults.baleUrl,
+        seoSiteName: defaults.seoSiteName,
+        seoDefaultTitle: defaults.seoDefaultTitle,
+        seoTitleTemplate: defaults.seoTitleTemplate,
+        seoDefaultDescription: defaults.seoDefaultDescription,
+        seoDefaultOgMediaId: null,
+        seoDefaultOgMedia: defaults.seoDefaultOgMedia,
+        seoOrganizationName: defaults.seoOrganizationName,
+        seoOrganizationLogoMediaId: null,
+        seoOrganizationLogoMedia: defaults.seoOrganizationLogoMedia,
+        seoSocialProfileUrls: defaults.seoSocialProfileUrls,
+        seoHomeTitle: defaults.seoHomeTitle,
+        seoHomeDescription: defaults.seoHomeDescription,
+        seoHomeOgMediaId: null,
+        seoHomeOgMedia: defaults.seoHomeOgMedia,
         catalogHeroMediaId: null,
         updatedByUserId: null,
         updatedAt: null,
@@ -165,6 +208,17 @@ export class SiteSettingsService {
         instagramUrl: true,
         telegramUrl: true,
         baleUrl: true,
+        seoSiteName: true,
+        seoDefaultTitle: true,
+        seoTitleTemplate: true,
+        seoDefaultDescription: true,
+        seoDefaultOgMediaId: true,
+        seoOrganizationName: true,
+        seoOrganizationLogoMediaId: true,
+        seoSocialProfileUrls: true,
+        seoHomeTitle: true,
+        seoHomeDescription: true,
+        seoHomeOgMediaId: true,
       },
     });
 
@@ -195,12 +249,48 @@ export class SiteSettingsService {
     const instagramUrl = resolveNullableText(dto.instagramUrl, current?.instagramUrl);
     const telegramUrl = resolveNullableText(dto.telegramUrl, current?.telegramUrl);
     const baleUrl = resolveNullableText(dto.baleUrl, current?.baleUrl);
+    const seoSiteName = dto.seoSiteName?.trim() || current?.seoSiteName || DEFAULT_SEO_SITE_NAME;
+    const seoDefaultTitle =
+      dto.seoDefaultTitle?.trim() || current?.seoDefaultTitle || DEFAULT_SEO_TITLE;
+    const seoTitleTemplate =
+      dto.seoTitleTemplate?.trim() || current?.seoTitleTemplate || DEFAULT_SEO_TITLE_TEMPLATE;
+    const seoDefaultDescription =
+      dto.seoDefaultDescription?.trim() ||
+      current?.seoDefaultDescription ||
+      DEFAULT_SEO_DESCRIPTION;
+    const seoDefaultOgMediaId =
+      dto.seoDefaultOgMediaId === undefined
+        ? (current?.seoDefaultOgMediaId ?? null)
+        : dto.seoDefaultOgMediaId;
+    const seoOrganizationName =
+      dto.seoOrganizationName?.trim() || current?.seoOrganizationName || seoSiteName;
+    const seoOrganizationLogoMediaId =
+      dto.seoOrganizationLogoMediaId === undefined
+        ? (current?.seoOrganizationLogoMediaId ?? null)
+        : dto.seoOrganizationLogoMediaId;
+    const seoSocialProfileUrls =
+      normalizeStringArray(dto.seoSocialProfileUrls) ?? current?.seoSocialProfileUrls ?? [];
+    const seoHomeTitle = resolveNullableText(dto.seoHomeTitle, current?.seoHomeTitle);
+    const seoHomeDescription = resolveNullableText(
+      dto.seoHomeDescription,
+      current?.seoHomeDescription,
+    );
+    const seoHomeOgMediaId =
+      dto.seoHomeOgMediaId === undefined
+        ? (current?.seoHomeOgMediaId ?? null)
+        : dto.seoHomeOgMediaId;
 
     await Promise.all([
       this.validateCatalogHeroMedia(catalogHeroEnabled, catalogHeroMediaId, dto),
       this.validateHeaderCategories(headerCategoryIds),
+      this.validateSeoMediaIds([
+        seoDefaultOgMediaId,
+        seoOrganizationLogoMediaId,
+        seoHomeOgMediaId,
+      ]),
     ]);
     this.validateAnnouncement(announcement);
+    this.validateSeoTitleTemplate(seoTitleTemplate);
 
     const settings = await this.prisma.siteSettings.upsert({
       where: { id: SITE_SETTINGS_ID },
@@ -226,6 +316,17 @@ export class SiteSettingsService {
         instagramUrl,
         telegramUrl,
         baleUrl,
+        seoSiteName,
+        seoDefaultTitle,
+        seoTitleTemplate,
+        seoDefaultDescription,
+        seoDefaultOgMediaId,
+        seoOrganizationName,
+        seoOrganizationLogoMediaId,
+        seoSocialProfileUrls,
+        seoHomeTitle,
+        seoHomeDescription,
+        seoHomeOgMediaId,
         updatedByUserId: actorUserId,
       },
       update: {
@@ -249,10 +350,24 @@ export class SiteSettingsService {
         instagramUrl,
         telegramUrl,
         baleUrl,
+        seoSiteName,
+        seoDefaultTitle,
+        seoTitleTemplate,
+        seoDefaultDescription,
+        seoDefaultOgMediaId,
+        seoOrganizationName,
+        seoOrganizationLogoMediaId,
+        seoSocialProfileUrls,
+        seoHomeTitle,
+        seoHomeDescription,
+        seoHomeOgMediaId,
         updatedByUserId: actorUserId,
       },
       include: {
         catalogHeroMedia: true,
+        seoDefaultOgMedia: true,
+        seoOrganizationLogoMedia: true,
+        seoHomeOgMedia: true,
       },
     });
 
@@ -264,6 +379,9 @@ export class SiteSettingsService {
       where: { id: SITE_SETTINGS_ID },
       include: {
         catalogHeroMedia: true,
+        seoDefaultOgMedia: true,
+        seoOrganizationLogoMedia: true,
+        seoHomeOgMedia: true,
       },
     });
   }
@@ -345,6 +463,27 @@ export class SiteSettingsService {
     });
     if (count !== categoryIds.length) {
       throw new BadRequestException('Header categories must reference active categories.');
+    }
+  }
+
+  private validateSeoTitleTemplate(template: string): void {
+    if (template.split('%s').length !== 2) {
+      throw new BadRequestException('SEO title template must contain exactly one %s placeholder.');
+    }
+  }
+
+  private async validateSeoMediaIds(mediaIds: Array<string | null>): Promise<void> {
+    const uniqueIds = [...new Set(mediaIds.filter((id): id is string => Boolean(id)))];
+    if (uniqueIds.length === 0) return;
+    const count = await this.prisma.media.count({
+      where: {
+        id: { in: uniqueIds },
+        deletedAt: null,
+        mimeType: { startsWith: 'image/' },
+      },
+    });
+    if (count !== uniqueIds.length) {
+      throw new BadRequestException('SEO media must reference active images.');
     }
   }
 
@@ -451,6 +590,17 @@ export class SiteSettingsService {
       instagramUrl: null,
       telegramUrl: null,
       baleUrl: null,
+      seoSiteName: DEFAULT_SEO_SITE_NAME,
+      seoDefaultTitle: DEFAULT_SEO_TITLE,
+      seoTitleTemplate: DEFAULT_SEO_TITLE_TEMPLATE,
+      seoDefaultDescription: DEFAULT_SEO_DESCRIPTION,
+      seoDefaultOgMedia: null,
+      seoOrganizationName: DEFAULT_SEO_SITE_NAME,
+      seoOrganizationLogoMedia: null,
+      seoSocialProfileUrls: [],
+      seoHomeTitle: null,
+      seoHomeDescription: null,
+      seoHomeOgMedia: null,
     };
   }
 
@@ -471,6 +621,20 @@ export class SiteSettingsService {
       instagramUrl: settings.instagramUrl,
       telegramUrl: settings.telegramUrl,
       baleUrl: settings.baleUrl,
+      seoSiteName: settings.seoSiteName,
+      seoDefaultTitle: settings.seoDefaultTitle,
+      seoTitleTemplate: settings.seoTitleTemplate,
+      seoDefaultDescription: settings.seoDefaultDescription,
+      seoDefaultOgMediaId: settings.seoDefaultOgMediaId,
+      seoDefaultOgMedia: this.projectPublicMedia(settings.seoDefaultOgMedia),
+      seoOrganizationName: settings.seoOrganizationName,
+      seoOrganizationLogoMediaId: settings.seoOrganizationLogoMediaId,
+      seoOrganizationLogoMedia: this.projectPublicMedia(settings.seoOrganizationLogoMedia),
+      seoSocialProfileUrls: settings.seoSocialProfileUrls,
+      seoHomeTitle: settings.seoHomeTitle,
+      seoHomeDescription: settings.seoHomeDescription,
+      seoHomeOgMediaId: settings.seoHomeOgMediaId,
+      seoHomeOgMedia: this.projectPublicMedia(settings.seoHomeOgMedia),
       updatedByUserId: settings.updatedByUserId,
       updatedAt: settings.updatedAt.toISOString(),
     };

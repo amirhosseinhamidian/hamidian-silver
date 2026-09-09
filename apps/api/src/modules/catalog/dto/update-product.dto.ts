@@ -1,11 +1,14 @@
 import {
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   Length,
+  Matches,
+  MaxLength,
   Min,
 } from 'class-validator';
 
@@ -27,6 +30,30 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   description?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  seoTitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  seoDescription?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  @Matches(/^\/(?!\/)[^\s?#]*$/)
+  seoCanonicalPath?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  seoNoIndex?: boolean;
+
+  @IsOptional()
+  @IsUUID('4')
+  seoOgMediaId?: string | null;
 
   @IsOptional()
   @IsUUID('4')

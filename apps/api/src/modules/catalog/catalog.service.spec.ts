@@ -340,6 +340,11 @@ describe('CatalogService', () => {
         name: 'Rings',
         slug: 'rings',
         description: null,
+        seoTitle: null,
+        seoDescription: null,
+        seoCanonicalPath: null,
+        seoNoIndex: false,
+        seoOgMedia: null,
         parentId: null,
         sortOrder: 0,
         image: {
@@ -359,6 +364,11 @@ describe('CatalogService', () => {
         name: 'Rings',
         slug: 'rings',
         description: null,
+        seoTitle: null,
+        seoDescription: null,
+        seoCanonicalPath: null,
+        seoNoIndex: false,
+        seoOgMedia: null,
         parentId: null,
         sortOrder: 0,
         image: {

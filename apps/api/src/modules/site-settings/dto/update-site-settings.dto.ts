@@ -15,6 +15,7 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
   ValidateNested,
 } from 'class-validator';
 
@@ -137,4 +138,63 @@ export class UpdateSiteSettingsDto {
   @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
   @MaxLength(1000)
   baleUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  seoSiteName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  seoDefaultTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  seoTitleTemplate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  seoDefaultDescription?: string;
+
+  @IsOptional()
+  @IsUUID('4')
+  seoDefaultOgMediaId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  seoOrganizationName?: string;
+
+  @IsOptional()
+  @IsUUID('4')
+  seoOrganizationLogoMediaId?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true }, { each: true })
+  @MaxLength(1000, { each: true })
+  seoSocialProfileUrls?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  seoHomeTitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  seoHomeDescription?: string | null;
+
+  @IsOptional()
+  @IsUUID('4')
+  seoHomeOgMediaId?: string | null;
 }

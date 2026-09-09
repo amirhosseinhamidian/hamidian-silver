@@ -12,6 +12,7 @@ import { PublicMediaUrlService } from './public-media-url.service';
 const categoryInclude = {
   parent: { select: { id: true, name: true } },
   image: true,
+  seoOgMedia: true,
   _count: {
     select: {
       children: { where: { deletedAt: null } },
@@ -36,12 +37,18 @@ export class CatalogCategoriesService {
       const category = await this.prisma.$transaction(async (transaction) => {
         if (dto.parentId) await this.requireActiveParent(transaction, dto.parentId);
         if (dto.imageId) await this.requireMedia(transaction, dto.imageId);
+        if (dto.seoOgMediaId) await this.requireImageMedia(transaction, dto.seoOgMediaId);
 
         return transaction.category.create({
           data: {
             name,
             slug,
             description: this.optionalText(dto.description),
+            seoTitle: this.optionalText(dto.seoTitle),
+            seoDescription: this.optionalText(dto.seoDescription),
+            seoCanonicalPath: this.optionalText(dto.seoCanonicalPath),
+            seoNoIndex: dto.seoNoIndex ?? false,
+            seoOgMediaId: dto.seoOgMediaId,
             parentId: dto.parentId,
             imageId: dto.imageId,
             sortOrder: dto.sortOrder ?? 0,
@@ -94,6 +101,7 @@ export class CatalogCategoriesService {
           }
         }
         if (dto.imageId) await this.requireMedia(transaction, dto.imageId);
+        if (dto.seoOgMediaId) await this.requireImageMedia(transaction, dto.seoOgMediaId);
 
         if (current.isActive && dto.isActive === false) {
           const activeChildren = await transaction.category.count({
@@ -111,6 +119,17 @@ export class CatalogCategoriesService {
             slug: dto.slug?.trim(),
             description:
               dto.description === undefined ? undefined : this.optionalText(dto.description),
+            seoTitle: dto.seoTitle === undefined ? undefined : this.optionalText(dto.seoTitle),
+            seoDescription:
+              dto.seoDescription === undefined
+                ? undefined
+                : this.optionalText(dto.seoDescription),
+            seoCanonicalPath:
+              dto.seoCanonicalPath === undefined
+                ? undefined
+                : this.optionalText(dto.seoCanonicalPath),
+            seoNoIndex: dto.seoNoIndex,
+            seoOgMediaId: dto.seoOgMediaId,
             parentId: dto.parentId,
             imageId: dto.imageId,
             sortOrder: dto.sortOrder,
@@ -169,6 +188,14 @@ export class CatalogCategoriesService {
     if (!media) throw new NotFoundException('Media was not found.');
   }
 
+  private async requireImageMedia(transaction: Pick<PrismaService, 'media'>, mediaId: string) {
+    const media = await transaction.media.findFirst({
+      where: { id: mediaId, deletedAt: null, mimeType: { startsWith: 'image/' } },
+      select: { id: true },
+    });
+    if (!media) throw new NotFoundException('SEO social image was not found.');
+  }
+
   private async assertNoCycle(
     transaction: Pick<PrismaService, 'category'>,
     categoryId: string,
@@ -209,9 +236,17 @@ export class CatalogCategoriesService {
         width: number | null;
         height: number | null;
       } | null;
+      seoOgMedia: {
+        id: string;
+        storageKey: string;
+        mimeType: string;
+        altText: string | null;
+        width: number | null;
+        height: number | null;
+      } | null;
     },
   >(category: T) {
-    const { _count, image, ...categoryFields } = category;
+    const { _count, image, seoOgMedia, ...categoryFields } = category;
     return {
       ...categoryFields,
       childCount: _count.children,
@@ -224,6 +259,16 @@ export class CatalogCategoriesService {
             altText: image.altText,
             width: image.width,
             height: image.height,
+          }
+        : null,
+      seoOgMedia: seoOgMedia
+        ? {
+            id: seoOgMedia.id,
+            url: this.publicMediaUrl.resolve(seoOgMedia.storageKey),
+            mimeType: seoOgMedia.mimeType,
+            altText: seoOgMedia.altText,
+            width: seoOgMedia.width,
+            height: seoOgMedia.height,
           }
         : null,
     };

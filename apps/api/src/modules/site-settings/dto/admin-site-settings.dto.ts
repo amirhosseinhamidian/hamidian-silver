@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import {
   PublicSiteAnnouncementDto,
@@ -50,6 +50,48 @@ export class AdminSiteSettingsDto {
 
   @ApiProperty({ nullable: true, format: 'uri' })
   baleUrl!: string | null;
+
+  @ApiPropertyOptional()
+  seoSiteName?: string;
+
+  @ApiPropertyOptional()
+  seoDefaultTitle?: string;
+
+  @ApiPropertyOptional()
+  seoTitleTemplate?: string;
+
+  @ApiPropertyOptional()
+  seoDefaultDescription?: string;
+
+  @ApiPropertyOptional({ nullable: true, format: 'uuid' })
+  seoDefaultOgMediaId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: () => PublicSiteSettingsMediaDto })
+  seoDefaultOgMedia?: PublicSiteSettingsMediaDto | null;
+
+  @ApiPropertyOptional()
+  seoOrganizationName?: string;
+
+  @ApiPropertyOptional({ nullable: true, format: 'uuid' })
+  seoOrganizationLogoMediaId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: () => PublicSiteSettingsMediaDto })
+  seoOrganizationLogoMedia?: PublicSiteSettingsMediaDto | null;
+
+  @ApiPropertyOptional({ type: String, isArray: true, format: 'uri' })
+  seoSocialProfileUrls?: string[];
+
+  @ApiPropertyOptional({ nullable: true })
+  seoHomeTitle?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  seoHomeDescription?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, format: 'uuid' })
+  seoHomeOgMediaId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: () => PublicSiteSettingsMediaDto })
+  seoHomeOgMedia?: PublicSiteSettingsMediaDto | null;
 
   @ApiProperty({ nullable: true, format: 'uuid' })
   updatedByUserId!: string | null;

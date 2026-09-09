@@ -31,9 +31,13 @@ type ContentPageRecord = Readonly<{
   heroMediaId: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  seoCanonicalPath: string | null;
+  seoNoIndex: boolean;
+  seoOgMediaId: string | null;
   updatedByUserId: string | null;
   updatedAt: Date;
   heroMedia: ContentMedia | null;
+  seoOgMedia: ContentMedia | null;
   sections: ReadonlyArray<Readonly<{ title: string; body: string | null }>>;
 }>;
 
@@ -58,6 +62,9 @@ const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPageDto> = 
     ],
     seoTitle: 'درباره نقره حمیدیان',
     seoDescription: 'با داستان، ارزش‌ها و نگاه گالری نقره حمیدیان آشنا شوید.',
+    seoCanonicalPath: null,
+    seoNoIndex: false,
+    seoOgMedia: null,
   },
   [StorefrontContentPageKey.CONTACT]: {
     key: StorefrontContentPageKey.CONTACT,
@@ -69,6 +76,9 @@ const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPageDto> = 
     sections: [],
     seoTitle: 'تماس با نقره حمیدیان',
     seoDescription: 'راه‌های ارتباط با گالری نقره حمیدیان و دریافت مشاوره.',
+    seoCanonicalPath: null,
+    seoNoIndex: false,
+    seoOgMedia: null,
   },
   [StorefrontContentPageKey.SERVICES]: {
     key: StorefrontContentPageKey.SERVICES,
@@ -87,6 +97,9 @@ const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPageDto> = 
     ],
     seoTitle: 'خدمات نقره حمیدیان',
     seoDescription: 'آشنایی با خدمات مشاوره، نگهداری و پشتیبانی گالری نقره حمیدیان.',
+    seoCanonicalPath: null,
+    seoNoIndex: false,
+    seoOgMedia: null,
   },
   [StorefrontContentPageKey.TERMS]: {
     key: StorefrontContentPageKey.TERMS,
@@ -98,6 +111,9 @@ const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPageDto> = 
     sections: [],
     seoTitle: 'شرایط و قوانین نقره حمیدیان',
     seoDescription: 'شرایط استفاده، ثبت سفارش و خرید از فروشگاه نقره حمیدیان.',
+    seoCanonicalPath: null,
+    seoNoIndex: false,
+    seoOgMedia: null,
   },
   [StorefrontContentPageKey.PRIVACY]: {
     key: StorefrontContentPageKey.PRIVACY,
@@ -109,6 +125,9 @@ const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPageDto> = 
     sections: [],
     seoTitle: 'حریم خصوصی نقره حمیدیان',
     seoDescription: 'سیاست حفظ حریم خصوصی و نحوه استفاده از اطلاعات کاربران نقره حمیدیان.',
+    seoCanonicalPath: null,
+    seoNoIndex: false,
+    seoOgMedia: null,
   },
   [StorefrontContentPageKey.SIZE_GUIDE]: {
     key: StorefrontContentPageKey.SIZE_GUIDE,
@@ -134,6 +153,9 @@ const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPageDto> = 
     seoTitle: 'راهنمای انتخاب سایز زیورآلات نقره',
     seoDescription:
       'راهنمای اندازه‌گیری سایز انگشتر، دستبند و گردنبند برای خرید مطمئن از نقره حمیدیان.',
+    seoCanonicalPath: null,
+    seoNoIndex: false,
+    seoOgMedia: null,
   },
   [StorefrontContentPageKey.FAQ]: {
     key: StorefrontContentPageKey.FAQ,
@@ -186,6 +208,9 @@ const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPageDto> = 
     ],
     seoTitle: null,
     seoDescription: null,
+    seoCanonicalPath: null,
+    seoNoIndex: false,
+    seoOgMedia: null,
   },
 };
 
@@ -207,7 +232,11 @@ export class ContentPagesService {
 
   async getAdminPages(): Promise<AdminContentPageDto[]> {
     const pages = await this.prisma.storefrontContentPage.findMany({
-      include: { heroMedia: true, sections: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] } },
+      include: {
+        heroMedia: true,
+        seoOgMedia: true,
+        sections: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] },
+      },
     });
     const pageByKey = new Map(pages.map((page) => [page.key, page] as const));
 
@@ -219,6 +248,7 @@ export class ContentPagesService {
       return {
         ...fallback,
         heroMediaId: null,
+        seoOgMediaId: null,
         updatedByUserId: null,
         updatedAt: null,
       };
@@ -232,12 +262,20 @@ export class ContentPagesService {
   ): Promise<AdminContentPageDto> {
     const current = await this.prisma.storefrontContentPage.findUnique({
       where: { key },
-      select: { heroMediaId: true },
+      select: {
+        heroMediaId: true,
+        seoCanonicalPath: true,
+        seoNoIndex: true,
+        seoOgMediaId: true,
+      },
     });
     const heroMediaId =
       dto.heroMediaId === undefined ? (current?.heroMediaId ?? null) : dto.heroMediaId;
+    const seoOgMediaId =
+      dto.seoOgMediaId === undefined ? (current?.seoOgMediaId ?? null) : dto.seoOgMediaId;
 
     await this.validateHeroMedia(key, heroMediaId);
+    await this.validateSeoMedia(seoOgMediaId);
 
     const normalized = {
       title: dto.title.trim(),
@@ -247,6 +285,12 @@ export class ContentPagesService {
       heroMediaId,
       seoTitle: nullableText(dto.seoTitle),
       seoDescription: nullableText(dto.seoDescription),
+      seoCanonicalPath:
+        dto.seoCanonicalPath === undefined
+          ? (current?.seoCanonicalPath ?? null)
+          : nullableText(dto.seoCanonicalPath),
+      seoNoIndex: dto.seoNoIndex ?? current?.seoNoIndex ?? false,
+      seoOgMediaId,
       updatedByUserId: actorUserId,
     };
     const sections = dto.sections.map((section, index) => ({
@@ -276,7 +320,11 @@ export class ContentPagesService {
   private findPage(key: StorefrontContentPageKey): Promise<ContentPageRecord | null> {
     return this.prisma.storefrontContentPage.findUnique({
       where: { key },
-      include: { heroMedia: true, sections: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] } },
+      include: {
+        heroMedia: true,
+        seoOgMedia: true,
+        sections: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] },
+      },
     });
   }
 
@@ -298,6 +346,17 @@ export class ContentPagesService {
     }
   }
 
+  private async validateSeoMedia(mediaId: string | null): Promise<void> {
+    if (!mediaId) return;
+    const media = await this.prisma.media.findFirst({
+      where: { id: mediaId, deletedAt: null, mimeType: { startsWith: 'image/' } },
+      select: { id: true },
+    });
+    if (!media) {
+      throw new BadRequestException('SEO social media must reference an active image.');
+    }
+  }
+
   private projectPublic(page: ContentPageRecord): PublicContentPageDto {
     return {
       key: page.key,
@@ -309,6 +368,9 @@ export class ContentPagesService {
       sections: page.sections.map(({ title, body }) => ({ title, body })),
       seoTitle: page.seoTitle,
       seoDescription: page.seoDescription,
+      seoCanonicalPath: page.seoCanonicalPath,
+      seoNoIndex: page.seoNoIndex,
+      seoOgMedia: this.projectMedia(page.seoOgMedia),
     };
   }
 
@@ -316,6 +378,7 @@ export class ContentPagesService {
     return {
       ...this.projectPublic(page),
       heroMediaId: page.heroMediaId,
+      seoOgMediaId: page.seoOgMediaId,
       updatedByUserId: page.updatedByUserId,
       updatedAt: page.updatedAt.toISOString(),
     };

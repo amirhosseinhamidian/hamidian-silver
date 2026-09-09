@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { StorefrontContentPageKey } from '../../../generated/prisma/enums';
 
@@ -51,4 +51,13 @@ export class PublicContentPageDto {
 
   @ApiProperty({ nullable: true })
   seoDescription!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  seoCanonicalPath?: string | null;
+
+  @ApiPropertyOptional()
+  seoNoIndex?: boolean;
+
+  @ApiPropertyOptional({ nullable: true, type: () => PublicContentPageMediaDto })
+  seoOgMedia?: PublicContentPageMediaDto | null;
 }
