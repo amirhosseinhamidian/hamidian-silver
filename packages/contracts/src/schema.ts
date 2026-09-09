@@ -1204,6 +1204,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications/recovery/outbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NotificationOutboxRecoveryController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/recovery/outbox/customer/{eventId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["NotificationOutboxRecoveryController_retryCustomer_v1"];
+        trace?: never;
+    };
+    "/api/v1/notifications/recovery/outbox/operational/{eventId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["NotificationOutboxRecoveryController_retryOperational_v1"];
+        trace?: never;
+    };
     "/api/v1/notifications/recovery/unknown": {
         parameters: {
             query?: never;
@@ -3060,6 +3108,64 @@ export interface components {
             /** Format: uuid */
             variantId: string;
             lowStockThreshold: number;
+        };
+        NotificationOutboxRecoveryHistoryDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            resolution: "RETRY_APPROVED" | "MARKED_SENT";
+            note: string;
+            unknownReasonSnapshot: string | null;
+            /** Format: uuid */
+            resolvedByUserId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        NotificationOutboxItemDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            source: "CUSTOMER" | "OPERATIONAL";
+            eventType: string;
+            aggregateType: string;
+            /** Format: uuid */
+            aggregateId: string;
+            recipientPhone: string | null;
+            priority: string | null;
+            level: string | null;
+            /** @enum {string} */
+            status: "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT" | "FAILED" | "UNKNOWN";
+            attempts: number;
+            /** Format: date-time */
+            nextAttemptAt: string;
+            /** Format: date-time */
+            claimedAt: string | null;
+            /** Format: date-time */
+            processedAt: string | null;
+            lastError: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            recoveries: components["schemas"]["NotificationOutboxRecoveryHistoryDto"][];
+        };
+        NotificationOutboxSummaryDto: {
+            total: number;
+            pending: number;
+            processing: number;
+            dispatching: number;
+            sent: number;
+            failed: number;
+            unknown: number;
+        };
+        NotificationOutboxManagementSnapshotDto: {
+            items: components["schemas"]["NotificationOutboxItemDto"][];
+            summary: components["schemas"]["NotificationOutboxSummaryDto"];
+            /** Format: date-time */
+            generatedAt: string;
+        };
+        RetryNotificationOutboxDto: {
+            note: string;
         };
         ResolveNotificationOutboxRecoveryDto: {
             /** @enum {string} */
@@ -5684,6 +5790,79 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    NotificationOutboxRecoveryController_list_v1: {
+        parameters: {
+            query?: {
+                status?: "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT" | "FAILED" | "UNKNOWN";
+                source?: "CUSTOMER" | "OPERATIONAL";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationOutboxManagementSnapshotDto"];
+                };
+            };
+        };
+    };
+    NotificationOutboxRecoveryController_retryCustomer_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetryNotificationOutboxDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationOutboxManagementSnapshotDto"];
+                };
+            };
+        };
+    };
+    NotificationOutboxRecoveryController_retryOperational_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetryNotificationOutboxDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationOutboxManagementSnapshotDto"];
+                };
             };
         };
     };

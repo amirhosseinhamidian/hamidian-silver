@@ -2870,6 +2870,36 @@
         ]
       }
     },
+    "/api/v1/notifications/recovery/outbox": {
+      "get": {
+        "operationId": "NotificationOutboxRecoveryController_list_v1",
+        "parameters": [
+          { "name": "status", "required": false, "in": "query", "schema": { "type": "string", "enum": ["PENDING", "PROCESSING", "DISPATCHING", "SENT", "FAILED", "UNKNOWN"] } },
+          { "name": "source", "required": false, "in": "query", "schema": { "type": "string", "enum": ["CUSTOMER", "OPERATIONAL"] } },
+          { "name": "limit", "required": false, "in": "query", "schema": { "minimum": 1, "maximum": 200, "type": "number" } }
+        ],
+        "responses": { "200": { "description": "", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationOutboxManagementSnapshotDto" } } } } },
+        "tags": ["NotificationOutboxRecovery"]
+      }
+    },
+    "/api/v1/notifications/recovery/outbox/customer/{eventId}/retry": {
+      "patch": {
+        "operationId": "NotificationOutboxRecoveryController_retryCustomer_v1",
+        "parameters": [{ "name": "eventId", "required": true, "in": "path", "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RetryNotificationOutboxDto" } } } },
+        "responses": { "200": { "description": "", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationOutboxManagementSnapshotDto" } } } } },
+        "tags": ["NotificationOutboxRecovery"]
+      }
+    },
+    "/api/v1/notifications/recovery/outbox/operational/{eventId}/retry": {
+      "patch": {
+        "operationId": "NotificationOutboxRecoveryController_retryOperational_v1",
+        "parameters": [{ "name": "eventId", "required": true, "in": "path", "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RetryNotificationOutboxDto" } } } },
+        "responses": { "200": { "description": "", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationOutboxManagementSnapshotDto" } } } } },
+        "tags": ["NotificationOutboxRecovery"]
+      }
+    },
     "/api/v1/notifications/recovery/unknown": {
       "get": {
         "operationId": "NotificationOutboxRecoveryController_listUnknown_v1",
@@ -7589,6 +7619,34 @@
           "variantId",
           "lowStockThreshold"
         ]
+      },
+      "NotificationOutboxRecoveryHistoryDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "resolution": { "type": "string", "enum": ["RETRY_APPROVED", "MARKED_SENT"] },
+          "note": { "type": "string" },
+          "unknownReasonSnapshot": { "type": "string", "nullable": true },
+          "resolvedByUserId": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "resolution", "note", "unknownReasonSnapshot", "resolvedByUserId", "createdAt"]
+      },
+      "NotificationOutboxItemDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" }, "source": { "type": "string", "enum": ["CUSTOMER", "OPERATIONAL"] }, "eventType": { "type": "string" }, "aggregateType": { "type": "string" }, "aggregateId": { "type": "string", "format": "uuid" }, "recipientPhone": { "type": "string", "nullable": true }, "priority": { "type": "string", "nullable": true }, "level": { "type": "string", "nullable": true }, "status": { "type": "string", "enum": ["PENDING", "PROCESSING", "DISPATCHING", "SENT", "FAILED", "UNKNOWN"] }, "attempts": { "type": "number" }, "nextAttemptAt": { "type": "string", "format": "date-time" }, "claimedAt": { "type": "string", "nullable": true, "format": "date-time" }, "processedAt": { "type": "string", "nullable": true, "format": "date-time" }, "lastError": { "type": "string", "nullable": true }, "createdAt": { "type": "string", "format": "date-time" }, "updatedAt": { "type": "string", "format": "date-time" }, "recoveries": { "type": "array", "items": { "$ref": "#/components/schemas/NotificationOutboxRecoveryHistoryDto" } }
+        },
+        "required": ["id", "source", "eventType", "aggregateType", "aggregateId", "recipientPhone", "priority", "level", "status", "attempts", "nextAttemptAt", "claimedAt", "processedAt", "lastError", "createdAt", "updatedAt", "recoveries"]
+      },
+      "NotificationOutboxSummaryDto": {
+        "type": "object", "properties": { "total": { "type": "number" }, "pending": { "type": "number" }, "processing": { "type": "number" }, "dispatching": { "type": "number" }, "sent": { "type": "number" }, "failed": { "type": "number" }, "unknown": { "type": "number" } }, "required": ["total", "pending", "processing", "dispatching", "sent", "failed", "unknown"]
+      },
+      "NotificationOutboxManagementSnapshotDto": {
+        "type": "object", "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/NotificationOutboxItemDto" } }, "summary": { "$ref": "#/components/schemas/NotificationOutboxSummaryDto" }, "generatedAt": { "type": "string", "format": "date-time" } }, "required": ["items", "summary", "generatedAt"]
+      },
+      "RetryNotificationOutboxDto": {
+        "type": "object", "properties": { "note": { "type": "string", "minLength": 3, "maxLength": 1000 } }, "required": ["note"]
       },
       "ResolveNotificationOutboxRecoveryDto": {
         "type": "object",

@@ -37,6 +37,7 @@ describe('admin navigation', () => {
       'fulfillment',
       'returns',
       'content',
+      'notification-outbox',
     ]);
     expect(items.some((item) => item.id === 'finance')).toBe(false);
     expect(items.some((item) => item.id === 'users')).toBe(false);

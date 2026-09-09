@@ -356,6 +356,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['users.read'],
       },
       {
+        id: 'notification-outbox',
+        label: 'صف ارسال اعلان‌ها',
+        shortLabel: 'Outbox',
+        href: '/notification-outbox',
+        icon: 'alerts',
+        description: 'خطاهای ارسال، retry و recovery',
+        roadmapStage: 36,
+        permissions: ['orders.read'],
+      },
+      {
         id: 'settings',
         label: 'تنظیمات سامانه',
         shortLabel: 'تنظیمات',
