@@ -1,7 +1,19 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { getPublicCatalogBrands } from '@/lib/catalog/public-catalog';
+import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
+import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getPublicSiteSettings();
+  return buildStorefrontPageMetadata(settings, {
+    pathname: '/brands',
+    title: 'برندهای نقره و جواهر',
+    description: 'مجموعه برندهای فعال گالری نقره حمیدیان را مرور کنید.',
+  });
+}
 
 export default async function BrandsPage() {
   const brands = await getPublicCatalogBrands();

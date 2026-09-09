@@ -1,9 +1,12 @@
 import type { components } from '@hamidian/contracts';
+import { cache } from 'react';
 
 import { createServerApiClient } from '@/lib/api/server-client';
 
 export type PublicCatalogCategory = components['schemas']['PublicCatalogCategoryDto'];
 export type PublicCatalogBrand = components['schemas']['PublicCatalogBrandDto'];
+export type PublicCatalogCategoryPage = components['schemas']['PublicCatalogCategoryPageDto'];
+export type PublicCatalogBrandPage = components['schemas']['PublicCatalogBrandPageDto'];
 export type PublicCatalogMedia = components['schemas']['PublicCatalogMediaDto'];
 export type PublicCatalogProductSummary = components['schemas']['PublicCatalogProductSummaryDto'];
 export type PublicCatalogProductDetail = components['schemas']['PublicCatalogProductDetailDto'];
@@ -160,23 +163,23 @@ export async function getPublicCatalogProducts(
   return result.data;
 }
 
-export async function getPublicCatalogCategories(): Promise<PublicCatalogCategory[]> {
+export const getPublicCatalogCategories = cache(async (): Promise<PublicCatalogCategoryPage[]> => {
   const client = createPublicCatalogClient();
   const result = await client.GET('/api/v1/catalog/public/categories');
 
   assertSuccessfulResponse(result.response, result.data, 'storefront categories');
 
   return result.data;
-}
+});
 
-export async function getPublicCatalogBrands(): Promise<PublicCatalogBrand[]> {
+export const getPublicCatalogBrands = cache(async (): Promise<PublicCatalogBrandPage[]> => {
   const client = createPublicCatalogClient();
   const result = await client.GET('/api/v1/catalog/public/brands');
 
   assertSuccessfulResponse(result.response, result.data, 'storefront brands');
 
   return result.data;
-}
+});
 
 export async function getPublicCatalogIndex(filters: CatalogFilters): Promise<{
   products: PublicCatalogProductList;
@@ -196,9 +199,9 @@ export async function getPublicCatalogIndex(filters: CatalogFilters): Promise<{
   };
 }
 
-export async function getPublicCatalogProduct(
+export const getPublicCatalogProduct = cache(async (
   slug: string,
-): Promise<PublicCatalogProductDetail | null> {
+): Promise<PublicCatalogProductDetail | null> => {
   const client = createPublicCatalogClient();
   const result = await client.GET('/api/v1/catalog/public/products/{slug}', {
     params: {
@@ -215,4 +218,4 @@ export async function getPublicCatalogProduct(
   assertSuccessfulResponse(result.response, result.data, 'storefront product');
 
   return result.data;
-}
+});

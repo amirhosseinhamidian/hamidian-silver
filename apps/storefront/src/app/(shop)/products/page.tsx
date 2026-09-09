@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 
 import { CatalogFilterForm } from '@/components/catalog/catalog-filter-form';
 import { CatalogHero } from '@/components/catalog/catalog-hero';
@@ -17,6 +18,7 @@ import {
   parseCatalogSearchParams,
   type CatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
+import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
 type ProductsPageProps = Readonly<{
@@ -24,6 +26,21 @@ type ProductsPageProps = Readonly<{
 }>;
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
+
+export async function generateMetadata({ searchParams }: ProductsPageProps): Promise<Metadata> {
+  const rawSearchParams = await searchParams;
+  const filters = parseCatalogSearchParams(rawSearchParams);
+  const settings = await getPublicSiteSettings();
+
+  return buildStorefrontPageMetadata(settings, {
+    pathname: '/products',
+    searchParams: rawSearchParams,
+    title: filters.q ? `نتایج جستجوی «${filters.q}»` : 'محصولات نقره',
+    description:
+      settings.catalogHeroSubtitle ?? 'مجموعه محصولات نقره گالری حمیدیان را مرور کنید.',
+    fallbackMedia: settings.catalogHeroMedia,
+  });
+}
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const filters = parseCatalogSearchParams(await searchParams);

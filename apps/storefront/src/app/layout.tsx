@@ -1,15 +1,15 @@
-import { peyda } from '@/styles/fonts';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+
+import { buildStorefrontRootMetadata } from '@/lib/seo/metadata';
+import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
+import { peyda } from '@/styles/fonts';
+
 import './globals.css';
 
-export const metadata: Metadata = {
-  title: {
-    default: 'نقره حمیدیان',
-    template: '%s | نقره حمیدیان',
-  },
-  description: 'فروشگاه آنلاین و گالری نقره حمیدیان',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildStorefrontRootMetadata(await getPublicSiteSettings());
+}
 
 type RootLayoutProps = Readonly<{
   children: ReactNode;

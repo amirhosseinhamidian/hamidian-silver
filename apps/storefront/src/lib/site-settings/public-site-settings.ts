@@ -25,6 +25,17 @@ export type PublicSiteSettings = Readonly<{
   instagramUrl: string | null;
   telegramUrl: string | null;
   baleUrl: string | null;
+  seoSiteName?: string;
+  seoDefaultTitle?: string;
+  seoTitleTemplate?: string;
+  seoDefaultDescription?: string;
+  seoDefaultOgMedia?: Readonly<{ url: string | null; altText: string | null }> | null;
+  seoOrganizationName?: string;
+  seoOrganizationLogoMedia?: Readonly<{ url: string | null; altText: string | null }> | null;
+  seoSocialProfileUrls?: readonly string[];
+  seoHomeTitle?: string | null;
+  seoHomeDescription?: string | null;
+  seoHomeOgMedia?: Readonly<{ url: string | null; altText: string | null }> | null;
 }>;
 
 const DEFAULT_PUBLIC_SITE_SETTINGS: PublicSiteSettings = {
@@ -50,6 +61,17 @@ const DEFAULT_PUBLIC_SITE_SETTINGS: PublicSiteSettings = {
   instagramUrl: null,
   telegramUrl: null,
   baleUrl: null,
+  seoSiteName: 'نقره حمیدیان',
+  seoDefaultTitle: 'نقره حمیدیان',
+  seoTitleTemplate: '%s | نقره حمیدیان',
+  seoDefaultDescription: 'فروشگاه آنلاین و گالری نقره حمیدیان',
+  seoDefaultOgMedia: null,
+  seoOrganizationName: 'نقره حمیدیان',
+  seoOrganizationLogoMedia: null,
+  seoSocialProfileUrls: [],
+  seoHomeTitle: null,
+  seoHomeDescription: null,
+  seoHomeOgMedia: null,
 };
 
 type UnknownRecord = Record<string, unknown>;
@@ -62,6 +84,24 @@ function record(value: unknown): UnknownRecord | null {
 
 function nullableText(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value : null;
+}
+
+function siteSettingsMedia(value: unknown): Readonly<{
+  url: string | null;
+  altText: string | null;
+}> | null {
+  const media = record(value);
+  return media
+    ? { url: nullableText(media.url), altText: nullableText(media.altText) }
+    : null;
+}
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    const text = nullableText(entry);
+    return text ? [text] : [];
+  });
 }
 
 function parsePublicSettings(value: unknown): PublicSiteSettings | null {
@@ -116,6 +156,23 @@ function parsePublicSettings(value: unknown): PublicSiteSettings | null {
     instagramUrl: nullableText(source.instagramUrl),
     telegramUrl: nullableText(source.telegramUrl),
     baleUrl: nullableText(source.baleUrl),
+    seoSiteName: nullableText(source.seoSiteName) ?? DEFAULT_PUBLIC_SITE_SETTINGS.seoSiteName,
+    seoDefaultTitle:
+      nullableText(source.seoDefaultTitle) ?? DEFAULT_PUBLIC_SITE_SETTINGS.seoDefaultTitle,
+    seoTitleTemplate:
+      nullableText(source.seoTitleTemplate) ?? DEFAULT_PUBLIC_SITE_SETTINGS.seoTitleTemplate,
+    seoDefaultDescription:
+      nullableText(source.seoDefaultDescription) ??
+      DEFAULT_PUBLIC_SITE_SETTINGS.seoDefaultDescription,
+    seoDefaultOgMedia: siteSettingsMedia(source.seoDefaultOgMedia),
+    seoOrganizationName:
+      nullableText(source.seoOrganizationName) ??
+      DEFAULT_PUBLIC_SITE_SETTINGS.seoOrganizationName,
+    seoOrganizationLogoMedia: siteSettingsMedia(source.seoOrganizationLogoMedia),
+    seoSocialProfileUrls: stringList(source.seoSocialProfileUrls),
+    seoHomeTitle: nullableText(source.seoHomeTitle),
+    seoHomeDescription: nullableText(source.seoHomeDescription),
+    seoHomeOgMedia: siteSettingsMedia(source.seoHomeOgMedia),
   };
 }
 

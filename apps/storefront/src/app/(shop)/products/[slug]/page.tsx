@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { ProductPurchasePanel } from '@/components/cart/product-purchase-panel';
@@ -9,16 +10,52 @@ import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { getCatalogDevProductImageSrc } from '@/lib/catalog/dev-media.server';
 import {
   getPublicCatalogProduct,
+  type CatalogSearchParams,
   type PublicCatalogProductDetail,
 } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
+import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
+import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
 type ProductDetailPageProps = Readonly<{
   params: Promise<{
     slug: string;
   }>;
+  searchParams?: Promise<CatalogSearchParams>;
 }>;
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: ProductDetailPageProps): Promise<Metadata> {
+  const [{ slug }, rawSearchParams, settings] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve({}),
+    getPublicSiteSettings(),
+  ]);
+  const product = await getPublicCatalogProduct(slug);
+
+  if (!product) {
+    return {
+      title: 'محصول یافت نشد',
+      robots: { index: false, follow: false },
+    };
+  }
+
+  return buildStorefrontPageMetadata(settings, {
+    pathname: `/products/${product.slug}`,
+    searchParams: rawSearchParams,
+    title: product.name,
+    description: product.shortDescription ?? product.description,
+    seoTitle: product.seoTitle,
+    seoDescription: product.seoDescription,
+    seoCanonicalPath: product.seoCanonicalPath,
+    seoNoIndex: product.seoNoIndex,
+    seoOgMedia: product.seoOgMedia,
+    fallbackMedia: product.primaryMedia,
+  });
+}
 
 function getSizeModeLabel(sizeMode: PublicCatalogProductDetail['sizeMode']): string {
   switch (sizeMode) {
