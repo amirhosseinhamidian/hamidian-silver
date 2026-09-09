@@ -27,6 +27,12 @@ export type AdminCategory = Readonly<{
   parent: CatalogLookup | null;
   parentId: string | null;
   image: AdminCategoryImage | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  seoCanonicalPath: string | null;
+  seoNoIndex: boolean;
+  seoOgMediaId: string | null;
+  seoOgMedia: AdminCategoryImage | null;
   childCount: number;
   productCount: number;
 }>;
@@ -41,6 +47,12 @@ export type AdminBrand = Readonly<{
   updatedAt: string;
   image: AdminCategoryImage | null;
   heroImage: AdminCategoryImage | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  seoCanonicalPath: string | null;
+  seoNoIndex: boolean;
+  seoOgMediaId: string | null;
+  seoOgMedia: AdminCategoryImage | null;
   productCount: number;
 }>;
 
@@ -99,6 +111,12 @@ export type AdminProduct = Readonly<{
   sizeMode: ProductSizeMode;
   salePriceToman: number | null;
   compareAtPriceToman: number | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  seoCanonicalPath: string | null;
+  seoNoIndex: boolean;
+  seoOgMediaId: string | null;
+  seoOgMedia: AdminCategoryImage | null;
   createdAt: string;
   updatedAt: string;
   brand: CatalogLookup | null;
@@ -191,6 +209,14 @@ function parseProductMedia(value: unknown): AdminProductMedia | null {
   };
 }
 
+function parseReferenceImage(value: unknown): AdminCategoryImage | null {
+  const item = record(value);
+  const id = text(item?.id);
+  const url = text(item?.url);
+  const mimeType = text(item?.mimeType);
+  return id && url && mimeType ? { id, url, mimeType, altText: text(item?.altText) } : null;
+}
+
 export function parseAdminProduct(value: unknown): AdminProduct | null {
   const item = record(value);
   const id = text(item?.id);
@@ -238,6 +264,12 @@ export function parseAdminProduct(value: unknown): AdminProduct | null {
     sizeMode,
     salePriceToman: number(item?.salePriceToman),
     compareAtPriceToman: number(item?.compareAtPriceToman),
+    seoTitle: text(item?.seoTitle),
+    seoDescription: text(item?.seoDescription),
+    seoCanonicalPath: text(item?.seoCanonicalPath),
+    seoNoIndex: item?.seoNoIndex === true,
+    seoOgMediaId: text(item?.seoOgMediaId),
+    seoOgMedia: parseReferenceImage(item?.seoOgMedia),
     createdAt,
     updatedAt,
     brand: lookup(item?.brand),
@@ -314,6 +346,12 @@ function parseCategory(value: unknown): AdminCategory | null {
     parent: lookup(item?.parent),
     parentId: text(item?.parentId),
     image,
+    seoTitle: text(item?.seoTitle),
+    seoDescription: text(item?.seoDescription),
+    seoCanonicalPath: text(item?.seoCanonicalPath),
+    seoNoIndex: item?.seoNoIndex === true,
+    seoOgMediaId: text(item?.seoOgMediaId),
+    seoOgMedia: parseReferenceImage(item?.seoOgMedia),
     childCount: number(item?.childCount) ?? 0,
     productCount: number(item?.productCount) ?? 0,
   };
@@ -325,14 +363,6 @@ export function parseAdminCategories(value: unknown): readonly AdminCategory[] |
     .map(parseCategory)
     .filter((category): category is AdminCategory => category !== null);
   return categories.length === value.length ? categories : null;
-}
-
-function parseReferenceImage(value: unknown): AdminCategoryImage | null {
-  const item = record(value);
-  const id = text(item?.id);
-  const url = text(item?.url);
-  const mimeType = text(item?.mimeType);
-  return id && url && mimeType ? { id, url, mimeType, altText: text(item?.altText) } : null;
 }
 
 function parseAdminBrand(value: unknown): AdminBrand | null {
@@ -353,6 +383,12 @@ function parseAdminBrand(value: unknown): AdminBrand | null {
     updatedAt,
     image: parseReferenceImage(item?.image),
     heroImage: parseReferenceImage(item?.heroImage),
+    seoTitle: text(item?.seoTitle),
+    seoDescription: text(item?.seoDescription),
+    seoCanonicalPath: text(item?.seoCanonicalPath),
+    seoNoIndex: item?.seoNoIndex === true,
+    seoOgMediaId: text(item?.seoOgMediaId),
+    seoOgMedia: parseReferenceImage(item?.seoOgMedia),
     productCount: number(item?.productCount) ?? 0,
   };
 }

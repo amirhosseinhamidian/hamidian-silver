@@ -30,6 +30,10 @@ export type AdminContentPage = Readonly<{
   sections: readonly ContentPageSection[];
   seoTitle: string | null;
   seoDescription: string | null;
+  seoCanonicalPath: string | null;
+  seoNoIndex: boolean;
+  seoOgMediaId: string | null;
+  seoOgMedia: ContentPageMedia | null;
   updatedByUserId: string | null;
   updatedAt: string | null;
 }>;
@@ -56,6 +60,10 @@ function nullableNumber(value: unknown): number | null | undefined {
     : typeof value === 'number' && Number.isFinite(value)
       ? value
       : undefined;
+}
+
+function nullableBoolean(value: unknown): boolean | undefined {
+  return typeof value === 'boolean' ? value : undefined;
 }
 
 function isKey(value: unknown): value is ContentPageKey {
@@ -99,10 +107,14 @@ function page(value: unknown): AdminContentPage | null {
     nullableText(source?.heroMediaId),
     nullableText(source?.seoTitle),
     nullableText(source?.seoDescription),
+    nullableText(source?.seoCanonicalPath),
+    nullableText(source?.seoOgMediaId),
     nullableText(source?.updatedByUserId),
     nullableText(source?.updatedAt),
   ];
   const heroMedia = media(source?.heroMedia);
+  const seoOgMedia = media(source?.seoOgMedia);
+  const seoNoIndex = nullableBoolean(source?.seoNoIndex);
   const sections = Array.isArray(source?.sections) ? source.sections.map(section) : null;
   if (
     !source ||
@@ -110,6 +122,8 @@ function page(value: unknown): AdminContentPage | null {
     !title ||
     fields.some((field) => field === undefined) ||
     heroMedia === undefined ||
+    seoOgMedia === undefined ||
+    seoNoIndex === undefined ||
     !sections ||
     sections.some((item) => item === null)
   ) {
@@ -126,8 +140,12 @@ function page(value: unknown): AdminContentPage | null {
     sections: sections as ContentPageSection[],
     seoTitle: fields[4]!,
     seoDescription: fields[5]!,
-    updatedByUserId: fields[6]!,
-    updatedAt: fields[7]!,
+    seoCanonicalPath: fields[6]!,
+    seoNoIndex,
+    seoOgMediaId: fields[7]!,
+    seoOgMedia,
+    updatedByUserId: fields[8]!,
+    updatedAt: fields[9]!,
   };
 }
 

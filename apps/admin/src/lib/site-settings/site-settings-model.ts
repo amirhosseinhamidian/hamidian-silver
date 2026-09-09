@@ -31,6 +31,20 @@ export type AdminSiteSettings = Readonly<{
   instagramUrl: string | null;
   telegramUrl: string | null;
   baleUrl: string | null;
+  seoSiteName: string;
+  seoDefaultTitle: string;
+  seoTitleTemplate: string;
+  seoDefaultDescription: string;
+  seoDefaultOgMediaId: string | null;
+  seoDefaultOgMedia: SiteMedia | null;
+  seoOrganizationName: string;
+  seoOrganizationLogoMediaId: string | null;
+  seoOrganizationLogoMedia: SiteMedia | null;
+  seoSocialProfileUrls: readonly string[];
+  seoHomeTitle: string | null;
+  seoHomeDescription: string | null;
+  seoHomeOgMediaId: string | null;
+  seoHomeOgMedia: SiteMedia | null;
   updatedAt: string | null;
 }>;
 
@@ -61,11 +75,7 @@ export type SiteSettingsReference = Readonly<{
 
 type UnknownRecord = Record<string, unknown>;
 
-const COUNTDOWN_MODES = new Set<SiteAnnouncement['countdownMode']>([
-  'NONE',
-  'FIXED',
-  'DEADLINE',
-]);
+const COUNTDOWN_MODES = new Set<SiteAnnouncement['countdownMode']>(['NONE', 'FIXED', 'DEADLINE']);
 
 function record(value: unknown): UnknownRecord | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -132,6 +142,15 @@ function parseAnnouncement(value: unknown): SiteAnnouncement | null {
   };
 }
 
+function settingsSeoMedia(id: string | null, value: unknown): SiteMedia | null | undefined {
+  if (!id) return value === null || value === undefined ? null : undefined;
+  const source = record(value);
+  const url = nullableText(source?.url);
+  const altText = nullableText(source?.altText);
+  if (!source || url === undefined || altText === undefined) return undefined;
+  return { id, url, altText, mimeType: 'image/*' };
+}
+
 export function parseAdminSiteSettings(value: unknown): AdminSiteSettings | null {
   const source = record(value);
   const headerCategoryIds = stringArray(source?.headerCategoryIds);
@@ -154,6 +173,42 @@ export function parseAdminSiteSettings(value: unknown): AdminSiteSettings | null
   const mediaSource = rawMedia === null ? null : record(rawMedia);
   const mediaUrl = mediaSource ? nullableText(mediaSource.url) : null;
   const mediaAltText = mediaSource ? nullableText(mediaSource.altText) : null;
+  const seoDefaultOgMediaId =
+    source?.seoDefaultOgMediaId === undefined ? null : nullableText(source?.seoDefaultOgMediaId);
+  const seoOrganizationLogoMediaId =
+    source?.seoOrganizationLogoMediaId === undefined
+      ? null
+      : nullableText(source?.seoOrganizationLogoMediaId);
+  const seoHomeOgMediaId =
+    source?.seoHomeOgMediaId === undefined ? null : nullableText(source?.seoHomeOgMediaId);
+  const seoDefaultOgMedia = settingsSeoMedia(
+    seoDefaultOgMediaId ?? null,
+    source?.seoDefaultOgMedia,
+  );
+  const seoOrganizationLogoMedia = settingsSeoMedia(
+    seoOrganizationLogoMediaId ?? null,
+    source?.seoOrganizationLogoMedia,
+  );
+  const seoHomeOgMedia = settingsSeoMedia(seoHomeOgMediaId ?? null, source?.seoHomeOgMedia);
+  const seoSocialProfileUrls =
+    source?.seoSocialProfileUrls === undefined ? [] : stringArray(source?.seoSocialProfileUrls);
+  const seoHomeTitle =
+    source?.seoHomeTitle === undefined ? null : nullableText(source?.seoHomeTitle);
+  const seoHomeDescription =
+    source?.seoHomeDescription === undefined ? null : nullableText(source?.seoHomeDescription);
+  const seoSiteName = source?.seoSiteName === undefined ? 'نقره حمیدیان' : text(source?.seoSiteName);
+  const seoDefaultTitle =
+    source?.seoDefaultTitle === undefined ? 'فروشگاه نقره حمیدیان' : text(source?.seoDefaultTitle);
+  const seoTitleTemplate =
+    source?.seoTitleTemplate === undefined ? '%s | نقره حمیدیان' : text(source?.seoTitleTemplate);
+  const seoDefaultDescription =
+    source?.seoDefaultDescription === undefined
+      ? 'خرید آنلاین زیورآلات نقره از گالری حمیدیان'
+      : text(source?.seoDefaultDescription);
+  const seoOrganizationName =
+    source?.seoOrganizationName === undefined
+      ? 'گالری نقره حمیدیان'
+      : text(source?.seoOrganizationName);
 
   if (
     !source ||
@@ -163,7 +218,21 @@ export function parseAdminSiteSettings(value: unknown): AdminSiteSettings | null
     fields.some((field) => field === undefined) ||
     mediaId === undefined ||
     typeof source.catalogHeroEnabled !== 'boolean' ||
-    (rawMedia !== null && (!mediaSource || mediaUrl === undefined || mediaAltText === undefined))
+    (rawMedia !== null && (!mediaSource || mediaUrl === undefined || mediaAltText === undefined)) ||
+    seoDefaultOgMediaId === undefined ||
+    seoOrganizationLogoMediaId === undefined ||
+    seoHomeOgMediaId === undefined ||
+    seoDefaultOgMedia === undefined ||
+    seoOrganizationLogoMedia === undefined ||
+    seoHomeOgMedia === undefined ||
+    !seoSocialProfileUrls ||
+    seoHomeTitle === undefined ||
+    seoHomeDescription === undefined ||
+    !seoSiteName ||
+    !seoDefaultTitle ||
+    !seoTitleTemplate ||
+    !seoDefaultDescription ||
+    !seoOrganizationName
   ) {
     return null;
   }
@@ -184,6 +253,20 @@ export function parseAdminSiteSettings(value: unknown): AdminSiteSettings | null
     instagramUrl: fields[6]!,
     telegramUrl: fields[7]!,
     baleUrl: fields[8]!,
+    seoSiteName,
+    seoDefaultTitle,
+    seoTitleTemplate,
+    seoDefaultDescription,
+    seoDefaultOgMediaId,
+    seoDefaultOgMedia,
+    seoOrganizationName,
+    seoOrganizationLogoMediaId,
+    seoOrganizationLogoMedia,
+    seoSocialProfileUrls,
+    seoHomeTitle,
+    seoHomeDescription,
+    seoHomeOgMediaId,
+    seoHomeOgMedia,
     updatedAt: fields[9]!,
   };
 }

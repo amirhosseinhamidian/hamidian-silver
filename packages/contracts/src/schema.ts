@@ -2915,6 +2915,14 @@ export interface components {
             availableQuantity: number;
             isAvailable: boolean;
         };
+        AdminCatalogMediaDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uri */
+            url: string | null;
+            mimeType: string;
+            altText: string | null;
+        };
         CreateCategoryDto: {
             name: string;
             slug: string;
@@ -4222,7 +4230,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AdminCatalogMediaDto"];
+                };
             };
         };
     };

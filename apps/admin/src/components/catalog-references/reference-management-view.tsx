@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation';
 import { type FormEvent, useId, useMemo, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import {
+  createSeoEditorValue,
+  isValidSeoCanonicalPath,
+  SeoEditor,
+  seoEditorPayload,
+} from '@/components/seo/seo-editor';
 import { Badge } from '@/components/ui/badge';
 import { BottomSheet, BottomSheetContent, BottomSheetTrigger } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
@@ -142,6 +148,7 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
   const copy = COPY[kind];
   const resource = kind === 'brand' ? 'brands' : 'countries';
   const brandReference = kind === 'brand' ? (reference as AdminBrand | undefined) : undefined;
+  const [seo, setSeo] = useState(() => createSeoEditorValue(brandReference));
   const archiveBlocked = Boolean(reference && reference.productCount > 0);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -157,15 +164,14 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
     if (kind === 'country' && !/^[A-Z]{2}$/.test(isoCode)) {
       return setError('کد کشور باید دقیقاً دو حرف انگلیسی باشد.');
     }
+    if (kind === 'brand' && !isValidSeoCanonicalPath(seo.canonicalPath.trim()))
+      return setError('مسیر canonical باید یک مسیر داخلی بدون query یا fragment باشد.');
     if (file && (!ACCEPTED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
       return setError(
         `${kind === 'brand' ? 'لوگو' : 'تصویر'} باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.`,
       );
     }
-    if (
-      heroFile &&
-      (!ACCEPTED_IMAGE_TYPES.has(heroFile.type) || heroFile.size > MAX_IMAGE_BYTES)
-    ) {
+    if (heroFile && (!ACCEPTED_IMAGE_TYPES.has(heroFile.type) || heroFile.size > MAX_IMAGE_BYTES)) {
       return setError('تصویر Hero باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
     }
 
@@ -181,6 +187,7 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
           slug,
           description: description || null,
           ...(kind === 'country' ? { isoCode } : {}),
+          ...(kind === 'brand' ? seoEditorPayload(seo) : {}),
           isActive: formData.get('isActive') === 'on',
         },
       );
@@ -436,6 +443,17 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
             </div>
           </div>
         </section>
+      ) : null}
+
+      {kind === 'brand' ? (
+        <SeoEditor
+          value={seo}
+          onChange={setSeo}
+          canonicalPlaceholder={`/brands/${brandReference?.slug ?? 'brand-slug'}`}
+          defaultTitle={brandReference?.name ?? 'نام برند'}
+          uploadUrl="/api/catalog/media"
+          idPrefix={`${formId}-seo`}
+        />
       ) : null}
 
       <Checkbox

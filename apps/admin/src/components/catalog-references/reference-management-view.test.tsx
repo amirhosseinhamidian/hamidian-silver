@@ -21,6 +21,12 @@ const brand: AdminBrand = {
   productCount: 3,
   image: null,
   heroImage: null,
+  seoTitle: null,
+  seoDescription: null,
+  seoCanonicalPath: null,
+  seoNoIndex: false,
+  seoOgMediaId: null,
+  seoOgMedia: null,
   createdAt: '2026-09-07T10:00:00.000Z',
   updatedAt: '2026-09-07T11:00:00.000Z',
 };

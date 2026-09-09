@@ -18,6 +18,10 @@ function page(key: string) {
     sections: [],
     seoTitle: null,
     seoDescription: null,
+    seoCanonicalPath: null,
+    seoNoIndex: false,
+    seoOgMediaId: null,
+    seoOgMedia: null,
     updatedByUserId: null,
     updatedAt: null,
   };

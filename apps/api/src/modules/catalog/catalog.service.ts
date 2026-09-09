@@ -256,6 +256,7 @@ export class CatalogService {
               media: true,
             },
           },
+          seoOgMedia: true,
         },
       });
     });
@@ -349,6 +350,7 @@ export class CatalogService {
               media: true,
             },
           },
+          seoOgMedia: true,
         },
       }),
       this.prisma.product.count({ where }),
@@ -377,6 +379,7 @@ export class CatalogService {
           orderBy: { sortOrder: 'asc' },
           include: { media: true },
         },
+        seoOgMedia: true,
       },
     });
 
@@ -443,16 +446,11 @@ export class CatalogService {
           slug: dto.slug,
           shortDescription: dto.shortDescription,
           description: dto.description,
-          seoTitle:
-            dto.seoTitle === undefined ? undefined : (dto.seoTitle?.trim() || null),
+          seoTitle: dto.seoTitle === undefined ? undefined : dto.seoTitle?.trim() || null,
           seoDescription:
-            dto.seoDescription === undefined
-              ? undefined
-              : (dto.seoDescription?.trim() || null),
+            dto.seoDescription === undefined ? undefined : dto.seoDescription?.trim() || null,
           seoCanonicalPath:
-            dto.seoCanonicalPath === undefined
-              ? undefined
-              : (dto.seoCanonicalPath?.trim() || null),
+            dto.seoCanonicalPath === undefined ? undefined : dto.seoCanonicalPath?.trim() || null,
           seoNoIndex: dto.seoNoIndex,
           seoOgMediaId: dto.seoOgMediaId,
           brandId: dto.brandId,
@@ -479,6 +477,7 @@ export class CatalogService {
           categories: { include: { category: true } },
           variants: { where: { deletedAt: null }, include: { size: true } },
           media: { orderBy: { sortOrder: 'asc' }, include: { media: true } },
+          seoOgMedia: true,
         },
       });
     });
@@ -785,31 +784,31 @@ export class CatalogService {
       },
     });
     const availabilityByProductId = new Map(
-      orderedProducts.map((product) => [
-        product.id,
-        product.variants.reduce(
-          (productTotal, variant) =>
-            productTotal +
-            variant.inventories.reduce((variantTotal, inventory) => {
-              if (!inventory.warehouse.isActive || inventory.warehouse.deletedAt) {
-                return variantTotal;
-              }
+      orderedProducts.map(
+        (product) =>
+          [
+            product.id,
+            product.variants.reduce(
+              (productTotal, variant) =>
+                productTotal +
+                variant.inventories.reduce((variantTotal, inventory) => {
+                  if (!inventory.warehouse.isActive || inventory.warehouse.deletedAt) {
+                    return variantTotal;
+                  }
 
-              return variantTotal + Math.max(0, inventory.onHand - inventory.reserved);
-            }, 0),
-          0,
-        ),
-      ] as const),
+                  return variantTotal + Math.max(0, inventory.onHand - inventory.reserved);
+                }, 0),
+              0,
+            ),
+          ] as const,
+      ),
     );
     const prioritizedProductIds = [
       ...orderedProducts.filter((product) => (availabilityByProductId.get(product.id) ?? 0) > 0),
       ...orderedProducts.filter((product) => (availabilityByProductId.get(product.id) ?? 0) === 0),
     ].map((product) => product.id);
     const total = prioritizedProductIds.length;
-    const pageProductIds = prioritizedProductIds.slice(
-      (page - 1) * pageSize,
-      page * pageSize,
-    );
+    const pageProductIds = prioritizedProductIds.slice((page - 1) * pageSize, page * pageSize);
     const products =
       pageProductIds.length === 0
         ? []
@@ -1464,6 +1463,13 @@ export class CatalogService {
       media: readonly {
         media: { storageKey: string };
       }[];
+      seoOgMedia?: {
+        id: string;
+        storageKey: string;
+        mimeType: string;
+        altText: string | null;
+        deletedAt: Date | null;
+      } | null;
     },
   >(product: T) {
     return {
@@ -1472,6 +1478,19 @@ export class CatalogService {
         ...item,
         url: this.publicMediaUrl.resolve(item.media.storageKey),
       })),
+      ...(Object.prototype.hasOwnProperty.call(product, 'seoOgMedia')
+        ? {
+            seoOgMedia:
+              product.seoOgMedia && !product.seoOgMedia.deletedAt
+                ? {
+                    id: product.seoOgMedia.id,
+                    url: this.publicMediaUrl.resolve(product.seoOgMedia.storageKey),
+                    mimeType: product.seoOgMedia.mimeType,
+                    altText: product.seoOgMedia.altText,
+                  }
+                : null,
+          }
+        : {}),
     };
   }
 }

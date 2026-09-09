@@ -413,7 +413,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCatalogMediaDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -7428,6 +7435,33 @@
           "slug",
           "availableQuantity",
           "isAvailable"
+        ]
+      },
+      "AdminCatalogMediaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "altText": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "mimeType",
+          "altText"
         ]
       },
       "CreateCategoryDto": {

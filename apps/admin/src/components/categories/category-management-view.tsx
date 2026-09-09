@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation';
 import { type FormEvent, type InputEvent, useId, useMemo, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import {
+  createSeoEditorValue,
+  isValidSeoCanonicalPath,
+  SeoEditor,
+  seoEditorPayload,
+} from '@/components/seo/seo-editor';
 import { Badge } from '@/components/ui/badge';
 import { BottomSheet, BottomSheetContent, BottomSheetTrigger } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
@@ -137,6 +143,7 @@ function CategoryForm({
   const fileInputId = useId();
   const [file, setFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
+  const [seo, setSeo] = useState(() => createSeoEditorValue(category));
   const [error, setError] = useState<string | null>(null);
   const [archiveConfirmation, setArchiveConfirmation] = useState(false);
   const blockedParents = category ? descendantIds(categories, category.id) : new Set<string>();
@@ -177,6 +184,8 @@ function CategoryForm({
     const sortOrder = normalizeInteger(formData.get('sortOrder'));
     if (!name || !slug) return setError('نام و اسلاگ دسته‌بندی الزامی هستند.');
     if (sortOrder === null) return setError('ترتیب نمایش باید عدد صحیح صفر یا بزرگ‌تر باشد.');
+    if (!isValidSeoCanonicalPath(seo.canonicalPath.trim()))
+      return setError('مسیر canonical باید یک مسیر داخلی بدون query یا fragment باشد.');
     if (file && (!ACCEPTED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
       return setError('تصویر Hero باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
     }
@@ -195,6 +204,7 @@ function CategoryForm({
           parentId: parentId === 'root' ? null : parentId,
           sortOrder,
           isActive: formData.get('isActive') === 'on',
+          ...seoEditorPayload(seo),
         },
       );
       const payloadRecord =
@@ -381,6 +391,15 @@ function CategoryForm({
           ) : null}
         </div>
       </section>
+
+      <SeoEditor
+        value={seo}
+        onChange={setSeo}
+        canonicalPlaceholder={`/categories/${category?.slug ?? 'category-slug'}`}
+        defaultTitle={category?.name ?? 'نام دسته‌بندی'}
+        uploadUrl="/api/catalog/media"
+        idPrefix={`${formId}-seo`}
+      />
 
       <Checkbox
         id={`${formId}-active`}

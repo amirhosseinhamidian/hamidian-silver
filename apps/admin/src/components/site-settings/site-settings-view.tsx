@@ -23,7 +23,7 @@ import type {
 } from '@/lib/site-settings/site-settings-model';
 import { cn } from '@/lib/ui/cn';
 
-type Section = 'homepage' | 'header' | 'footer';
+type Section = 'homepage' | 'header' | 'footer' | 'seo';
 type EditableSlide = Omit<AdminHomepageSlide, 'mediaId' | 'media'> & {
   mediaId: string | null;
   media: SiteMedia | null;
@@ -37,6 +37,7 @@ const SECTION_LABELS: Readonly<Record<Section, string>> = {
   homepage: 'صفحه اصلی و Hero',
   header: 'هدر و اعلان',
   footer: 'فوتر و تماس',
+  seo: 'سئو عمومی',
 };
 
 function errorMessage(payload: unknown): string {
@@ -375,6 +376,44 @@ function FooterSection({ settings, canWrite, pending, onChange, onSave }: Readon
   );
 }
 
+function SeoSettingsSection({ settings, canWrite, pending, onChange, onSave }: Readonly<{
+  settings: AdminSiteSettings;
+  canWrite: boolean;
+  pending: string | null;
+  onChange: (settings: AdminSiteSettings) => void;
+  onSave: () => void;
+}>) {
+  const disabled = !canWrite || pending !== null;
+  return (
+    <div className="space-y-5">
+      <Card title="پیش‌فرض‌های جست‌وجو" description="Fallback تمام routeهایی که SEO اختصاصی ندارند.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField id="seo-site-name" label="نام سایت" required>{(props) => <Input {...props} value={settings.seoSiteName} maxLength={120} placeholder="نقره حمیدیان" disabled={disabled} onChange={(event) => onChange({ ...settings, seoSiteName: event.currentTarget.value })} />}</FormField>
+          <FormField id="seo-default-title" label="عنوان پیش‌فرض" required>{(props) => <Input {...props} value={settings.seoDefaultTitle} maxLength={200} placeholder="فروشگاه نقره حمیدیان" disabled={disabled} onChange={(event) => onChange({ ...settings, seoDefaultTitle: event.currentTarget.value })} />}</FormField>
+          <FormField id="seo-title-template" label="قالب عنوان" hint="باید دقیقاً یک %s داشته باشد." required>{(props) => <Input {...props} dir="ltr" value={settings.seoTitleTemplate} maxLength={200} placeholder="%s | نقره حمیدیان" disabled={disabled} onChange={(event) => onChange({ ...settings, seoTitleTemplate: event.currentTarget.value })} />}</FormField>
+          <FormField id="seo-default-description" label="توضیح پیش‌فرض" className="sm:col-span-2" required>{(props) => <Textarea {...props} value={settings.seoDefaultDescription} maxLength={500} placeholder="معرفی کوتاه فروشگاه برای موتورهای جست‌وجو" disabled={disabled} onChange={(event) => onChange({ ...settings, seoDefaultDescription: event.currentTarget.value })} />}</FormField>
+        </div>
+        <div className="mt-5"><SiteMediaField label="تصویر پیش‌فرض Open Graph" media={settings.seoDefaultOgMedia} altText={settings.seoDefaultTitle} disabled={disabled} onUploaded={(media) => onChange({ ...settings, seoDefaultOgMediaId: media.id, seoDefaultOgMedia: media })} onClear={() => onChange({ ...settings, seoDefaultOgMediaId: null, seoDefaultOgMedia: null })} /></div>
+      </Card>
+      <Card title="صفحه اصلی" description="در صورت خالی‌بودن از پیش‌فرض‌های عمومی استفاده می‌شود.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField id="seo-home-title" label="عنوان صفحه اصلی">{(props) => <Input {...props} value={settings.seoHomeTitle ?? ''} maxLength={200} placeholder={settings.seoDefaultTitle} disabled={disabled} onChange={(event) => onChange({ ...settings, seoHomeTitle: event.currentTarget.value || null })} />}</FormField>
+          <FormField id="seo-home-description" label="توضیح صفحه اصلی" className="sm:col-span-2">{(props) => <Textarea {...props} value={settings.seoHomeDescription ?? ''} maxLength={500} placeholder={settings.seoDefaultDescription} disabled={disabled} onChange={(event) => onChange({ ...settings, seoHomeDescription: event.currentTarget.value || null })} />}</FormField>
+        </div>
+        <div className="mt-5"><SiteMediaField label="تصویر Open Graph صفحه اصلی" media={settings.seoHomeOgMedia} altText={settings.seoHomeTitle ?? settings.seoDefaultTitle} disabled={disabled} onUploaded={(media) => onChange({ ...settings, seoHomeOgMediaId: media.id, seoHomeOgMedia: media })} onClear={() => onChange({ ...settings, seoHomeOgMediaId: null, seoHomeOgMedia: null })} /></div>
+      </Card>
+      <Card title="هویت سازمان" description="مبنای Organization structured data در مرحله خروجی SEO.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField id="seo-organization-name" label="نام رسمی مجموعه" required>{(props) => <Input {...props} value={settings.seoOrganizationName} maxLength={200} placeholder="گالری نقره حمیدیان" disabled={disabled} onChange={(event) => onChange({ ...settings, seoOrganizationName: event.currentTarget.value })} />}</FormField>
+          <FormField id="seo-social-profiles" label="پروفایل‌های رسمی" hint="هر URL کامل در یک خط؛ حداکثر ۱۲ مورد" className="sm:col-span-2">{(props) => <Textarea {...props} dir="ltr" value={settings.seoSocialProfileUrls.join('\n')} placeholder={'https://instagram.com/...\nhttps://t.me/...'} disabled={disabled} onChange={(event) => onChange({ ...settings, seoSocialProfileUrls: event.currentTarget.value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean).slice(0, 12) })} />}</FormField>
+        </div>
+        <div className="mt-5"><SiteMediaField label="لوگوی رسمی مجموعه" media={settings.seoOrganizationLogoMedia} altText={settings.seoOrganizationName} disabled={disabled} onUploaded={(media) => onChange({ ...settings, seoOrganizationLogoMediaId: media.id, seoOrganizationLogoMedia: media })} onClear={() => onChange({ ...settings, seoOrganizationLogoMediaId: null, seoOrganizationLogoMedia: null })} /></div>
+      </Card>
+      <div className="flex justify-end"><Button loading={pending === 'settings'} disabled={disabled} onClick={onSave}>ذخیره تنظیمات سئو</Button></div>
+    </div>
+  );
+}
+
 export function SiteSettingsView({ data, canWrite }: Readonly<{ data: SiteSettingsData; canWrite: boolean }>) {
   const router = useRouter();
   const [section, setSection] = useState<Section>('homepage');
@@ -398,6 +437,11 @@ export function SiteSettingsView({ data, canWrite }: Readonly<{ data: SiteSettin
       setError('برای فعال‌کردن Hero محصولات ابتدا تصویر انتخاب کنید.');
       return;
     }
+    const titleTokens = currentSettings.seoTitleTemplate.match(/%s/g)?.length ?? 0;
+    if (!currentSettings.seoSiteName.trim() || !currentSettings.seoDefaultTitle.trim() || !currentSettings.seoDefaultDescription.trim() || !currentSettings.seoOrganizationName.trim() || titleTokens !== 1) {
+      setError('فیلدهای الزامی SEO را کامل کنید؛ قالب عنوان باید دقیقاً یک %s داشته باشد.');
+      return;
+    }
     setPending('settings');
     setError(null);
     setSuccess(null);
@@ -417,6 +461,17 @@ export function SiteSettingsView({ data, canWrite }: Readonly<{ data: SiteSettin
         instagramUrl: currentSettings.instagramUrl,
         telegramUrl: currentSettings.telegramUrl,
         baleUrl: currentSettings.baleUrl,
+        seoSiteName: currentSettings.seoSiteName.trim(),
+        seoDefaultTitle: currentSettings.seoDefaultTitle.trim(),
+        seoTitleTemplate: currentSettings.seoTitleTemplate.trim(),
+        seoDefaultDescription: currentSettings.seoDefaultDescription.trim(),
+        seoDefaultOgMediaId: currentSettings.seoDefaultOgMediaId,
+        seoOrganizationName: currentSettings.seoOrganizationName.trim(),
+        seoOrganizationLogoMediaId: currentSettings.seoOrganizationLogoMediaId,
+        seoSocialProfileUrls: currentSettings.seoSocialProfileUrls,
+        seoHomeTitle: currentSettings.seoHomeTitle?.trim() || null,
+        seoHomeDescription: currentSettings.seoHomeDescription?.trim() || null,
+        seoHomeOgMediaId: currentSettings.seoHomeOgMediaId,
       });
       setSuccess('تنظیمات عمومی سایت ذخیره شد.');
       router.refresh();
@@ -486,6 +541,7 @@ export function SiteSettingsView({ data, canWrite }: Readonly<{ data: SiteSettin
         {section === 'homepage' ? <HomepageSection settings={settings} homepage={homepage} data={data} canWrite={canWrite} pending={pending} setSettings={setSettings} setHomepage={setHomepage} onSaveSettings={() => void saveSettings()} onSaveHomepage={() => void saveHomepage()} /> : null}
         {section === 'header' ? <HeaderSection settings={settings} categories={data.categories} canWrite={canWrite} pending={pending} onChange={setSettings} onSave={() => void saveSettings()} /> : null}
         {section === 'footer' ? <FooterSection settings={settings} canWrite={canWrite} pending={pending} onChange={setSettings} onSave={() => void saveSettings()} /> : null}
+        {section === 'seo' ? <SeoSettingsSection settings={settings} canWrite={canWrite} pending={pending} onChange={setSettings} onSave={() => void saveSettings()} /> : null}
       </section>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--admin-color-border)] pt-4 text-xs text-[var(--admin-color-subtle)]">

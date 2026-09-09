@@ -12,7 +12,13 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+} from '@nestjs/swagger';
 import { MEDIA_UPLOAD_LIMIT_BYTES } from '../../config/media-storage';
 import { Public } from '../auth/public.decorator';
 import { RequirePermissions } from '../authorization/permissions.decorator';
@@ -23,6 +29,7 @@ import { CatalogReferencesService } from './catalog-references.service';
 import { CatalogService } from './catalog.service';
 import { CatalogVariantsService } from './catalog-variants.service';
 import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query.dto';
+import { AdminCatalogMediaDto } from './dto/admin-catalog-media.dto';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
@@ -46,6 +53,7 @@ import { UpdateCountryDto } from './dto/update-country.dto';
 import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
 import { UpdateSizeDto } from './dto/update-size.dto';
 import type { CatalogUploadFile } from './local-media-storage.service';
+import { PublicMediaUrlService } from './public-media-url.service';
 
 @Controller('catalog')
 export class CatalogController {
@@ -55,6 +63,7 @@ export class CatalogController {
     private readonly catalogMediaService: CatalogMediaService,
     private readonly catalogReferencesService: CatalogReferencesService,
     private readonly catalogVariantsService: CatalogVariantsService,
+    private readonly publicMediaUrlService: PublicMediaUrlService,
   ) {}
 
   @Public()
@@ -114,8 +123,18 @@ export class CatalogController {
       },
     },
   })
-  uploadMedia(@UploadedFile() file: CatalogUploadFile | undefined, @Body() dto: UploadMediaDto) {
-    return this.catalogMediaService.upload(file, dto);
+  @ApiCreatedResponse({ type: AdminCatalogMediaDto })
+  async uploadMedia(
+    @UploadedFile() file: CatalogUploadFile | undefined,
+    @Body() dto: UploadMediaDto,
+  ): Promise<AdminCatalogMediaDto> {
+    const media = await this.catalogMediaService.upload(file, dto);
+    return {
+      id: media.id,
+      url: this.publicMediaUrlService.resolve(media.storageKey),
+      mimeType: media.mimeType,
+      altText: media.altText,
+    };
   }
 
   @Post('categories')

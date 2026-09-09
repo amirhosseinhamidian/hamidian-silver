@@ -4,6 +4,12 @@ import { useRouter } from 'next/navigation';
 import { type FormEvent, type InputEvent, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import {
+  createSeoEditorValue,
+  isValidSeoCanonicalPath,
+  SeoEditor,
+  seoEditorPayload,
+} from '@/components/seo/seo-editor';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -52,6 +58,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
   const router = useRouter();
   const product = data.product;
   const [sizeMode, setSizeMode] = useState<ProductSizeMode>(product?.sizeMode ?? 'NONE');
+  const [seo, setSeo] = useState(() => createSeoEditorValue(product));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +86,10 @@ export function ProductForm({ data, mode }: ProductFormProps) {
       setError('قیمت قبل از تخفیف باید بیشتر از قیمت فروش باشد.');
       return;
     }
+    if (!isValidSeoCanonicalPath(seo.canonicalPath.trim())) {
+      setError('مسیر canonical باید یک مسیر داخلی بدون دامنه، query یا fragment باشد.');
+      return;
+    }
 
     const brandId = String(formData.get('brandId') ?? 'none');
     const countryId = String(formData.get('countryId') ?? 'none');
@@ -92,6 +103,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
       salePriceToman: salePriceToman ?? null,
       compareAtPriceToman: compareAtPriceToman ?? null,
       categoryIds: formData.getAll('categoryIds').map(String),
+      ...seoEditorPayload(seo),
     };
 
     if (mode === 'create') {
@@ -307,6 +319,16 @@ export function ProductForm({ data, mode }: ProductFormProps) {
           </p>
         )}
       </Card>
+
+      <SeoEditor
+        value={seo}
+        onChange={setSeo}
+        canonicalPlaceholder={`/products/${product?.slug ?? 'product-slug'}`}
+        defaultTitle={product?.name ?? 'نام محصول'}
+        uploadUrl="/api/catalog/media"
+        idPrefix="product-seo"
+        disabled={pending}
+      />
 
       {mode === 'create' ? (
         <Card

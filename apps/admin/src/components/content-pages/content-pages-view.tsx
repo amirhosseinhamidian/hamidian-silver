@@ -3,6 +3,11 @@
 import { useMemo, useState, type FormEvent } from 'react';
 
 import { SiteMediaField } from '@/components/site-settings/site-media-field';
+import {
+  isValidSeoCanonicalPath,
+  SeoEditor,
+  type SeoEditorValue,
+} from '@/components/seo/seo-editor';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button, ButtonLink } from '@/components/ui/button';
@@ -40,6 +45,10 @@ type Draft = Readonly<{
   heroMedia: SiteMedia | null;
   seoTitle: string;
   seoDescription: string;
+  seoCanonicalPath: string;
+  seoNoIndex: boolean;
+  seoOgMediaId: string | null;
+  seoOgMedia: SiteMedia | null;
   sections: readonly ContentPageSection[];
 }>;
 
@@ -75,6 +84,17 @@ function toDraft(page: AdminContentPage): Draft {
       : null,
     seoTitle: page.seoTitle ?? '',
     seoDescription: page.seoDescription ?? '',
+    seoCanonicalPath: page.seoCanonicalPath ?? '',
+    seoNoIndex: page.seoNoIndex,
+    seoOgMediaId: page.seoOgMediaId,
+    seoOgMedia: page.seoOgMediaId
+      ? {
+          id: page.seoOgMediaId,
+          url: page.seoOgMedia?.url ?? null,
+          mimeType: 'image/*',
+          altText: page.seoOgMedia?.altText ?? null,
+        }
+      : null,
     sections: page.sections.map((section) => ({ ...section })),
   };
 }
@@ -96,6 +116,8 @@ function validateDraft(key: ContentPageKey, draft: Draft): string | null {
   if (draft.body.trim().length > 20_000) return 'متن اصلی حداکثر ۲۰٬۰۰۰ نویسه است.';
   if (draft.seoTitle.trim().length > 200) return 'عنوان SEO حداکثر ۲۰۰ نویسه است.';
   if (draft.seoDescription.trim().length > 500) return 'توضیح SEO حداکثر ۵۰۰ نویسه است.';
+  if (!isValidSeoCanonicalPath(draft.seoCanonicalPath.trim()))
+    return 'مسیر canonical باید یک مسیر داخلی بدون query یا fragment باشد.';
   if (IMAGE_REQUIRED.has(key) && !draft.heroMediaId) return 'تصویر Hero برای این صفحه الزامی است.';
   if (draft.sections.length > 12) return 'هر صفحه حداکثر ۱۲ بخش محتوایی دارد.';
   if (draft.sections.some((section) => !section.title.trim()))
@@ -292,6 +314,9 @@ export function ContentPagesView({ pages: initialPages, failed, canWrite }: Prop
           heroMediaId: draft.heroMediaId,
           seoTitle: draft.seoTitle.trim() || null,
           seoDescription: draft.seoDescription.trim() || null,
+          seoCanonicalPath: draft.seoCanonicalPath.trim() || null,
+          seoNoIndex: draft.seoNoIndex,
+          seoOgMediaId: draft.seoOgMediaId,
           sections: draft.sections.map((section) => ({
             title: section.title.trim(),
             body: section.body?.trim() || null,
@@ -488,44 +513,31 @@ export function ContentPagesView({ pages: initialPages, failed, canWrite }: Prop
             onChange={(sections) => updateDraft({ sections })}
           />
 
-          <Card
-            title="تنظیمات SEO"
-            description="در صورت خالی‌بودن، عنوان و متن صفحه مبنای metadata قرار می‌گیرد."
-          >
-            <div className="grid gap-4">
-              <FormField
-                id="content-seo-title"
-                label="عنوان SEO"
-                hint={`${toPersianDigits(String(draft.seoTitle.length))} از ۲۰۰ نویسه`}
-              >
-                {(controlProps) => (
-                  <Input
-                    {...controlProps}
-                    dir="rtl"
-                    value={draft.seoTitle}
-                    maxLength={200}
-                    disabled={!canWrite || pending}
-                    onChange={(event) => updateDraft({ seoTitle: event.target.value })}
-                  />
-                )}
-              </FormField>
-              <FormField
-                id="content-seo-description"
-                label="توضیح SEO"
-                hint={`${toPersianDigits(String(draft.seoDescription.length))} از ۵۰۰ نویسه`}
-              >
-                {(controlProps) => (
-                  <Textarea
-                    {...controlProps}
-                    value={draft.seoDescription}
-                    maxLength={500}
-                    disabled={!canWrite || pending}
-                    onChange={(event) => updateDraft({ seoDescription: event.target.value })}
-                  />
-                )}
-              </FormField>
-            </div>
-          </Card>
+          <SeoEditor
+            value={{
+              title: draft.seoTitle,
+              description: draft.seoDescription,
+              canonicalPath: draft.seoCanonicalPath,
+              noIndex: draft.seoNoIndex,
+              ogMediaId: draft.seoOgMediaId,
+              ogMedia: draft.seoOgMedia,
+            }}
+            onChange={(seo: SeoEditorValue) =>
+              updateDraft({
+                seoTitle: seo.title,
+                seoDescription: seo.description,
+                seoCanonicalPath: seo.canonicalPath,
+                seoNoIndex: seo.noIndex,
+                seoOgMediaId: seo.ogMediaId,
+                seoOgMedia: seo.ogMedia,
+              })
+            }
+            canonicalPlaceholder={pageMeta.href}
+            defaultTitle={draft.title || pageMeta.label}
+            uploadUrl="/api/content-pages/media"
+            idPrefix={`content-${selectedKey.toLowerCase()}-seo`}
+            disabled={!canWrite || pending}
+          />
 
           {canWrite ? (
             <div className="sticky bottom-3 z-10 flex justify-end rounded-[var(--admin-radius-lg)] border border-[var(--admin-color-border)] bg-white/95 p-3 shadow-[var(--admin-shadow-md)] backdrop-blur">
