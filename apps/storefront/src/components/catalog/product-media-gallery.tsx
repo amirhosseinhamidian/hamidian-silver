@@ -1,7 +1,7 @@
 'use client';
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { useRef, useState } from 'react';
+import { useRef, useState, type TouchEvent } from 'react';
 import { FiChevronLeft, FiChevronRight, FiX } from 'react-icons/fi';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
@@ -60,6 +60,32 @@ export function ProductMediaGallery({
     setActiveIndex((current) => (current + 1) % items.length);
   }
 
+  function handleTouchStart(event: TouchEvent<HTMLElement>) {
+    touchStartX.current = event.changedTouches[0]?.clientX ?? null;
+  }
+
+  function handleTouchCancel() {
+    touchStartX.current = null;
+  }
+
+  function handleTouchEnd(event: TouchEvent<HTMLElement>) {
+    const startX = touchStartX.current;
+    const endX = event.changedTouches[0]?.clientX;
+    touchStartX.current = null;
+
+    if (!hasMultipleImages || startX === null || endX === undefined) {
+      return;
+    }
+
+    const distance = startX - endX;
+
+    if (distance > swipeThreshold) {
+      showNext();
+    } else if (distance < -swipeThreshold) {
+      showPrevious();
+    }
+  }
+
   return (
     <DialogPrimitive.Root
       open={open}
@@ -71,7 +97,88 @@ export function ProductMediaGallery({
         }
       }}
     >
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div
+        data-testid="mobile-product-gallery"
+        role="group"
+        aria-label={`تصاویر محصول ${productName}`}
+        aria-roledescription={hasMultipleImages ? 'carousel' : undefined}
+        onTouchStart={hasMultipleImages ? handleTouchStart : undefined}
+        onTouchCancel={hasMultipleImages ? handleTouchCancel : undefined}
+        onTouchEnd={hasMultipleImages ? handleTouchEnd : undefined}
+        className="
+          relative isolate aspect-[4/5] touch-pan-y overflow-hidden
+          rounded-[var(--sf-radius-md)] bg-[var(--sf-color-surface)] lg:hidden
+        "
+      >
+        {items.map((item, index) => (
+          <div
+            key={`mobile-${item.media?.url ?? item.fallbackSrc ?? 'placeholder'}-${index}`}
+            aria-hidden={index !== activeIndex}
+            className={`absolute inset-0 transition-opacity duration-700 ${
+              index === activeIndex ? 'opacity-100' : 'pointer-events-none opacity-0'
+            }`}
+          >
+            <CatalogMedia
+              media={item.media}
+              fallbackSrc={item.fallbackSrc}
+              alt={`${productName}، تصویر ${persianNumber.format(
+                index + 1,
+              )} از ${persianNumber.format(items.length)}`}
+              eager={index === 0}
+              imageClassName="object-cover select-none"
+            />
+          </div>
+        ))}
+
+        {hasMultipleImages ? (
+          <>
+            <button
+              type="button"
+              aria-label="تصویر قبلی گالری محصول"
+              onClick={showPrevious}
+              className="
+                absolute start-3 top-1/2 z-20 flex size-11 -translate-y-1/2
+                items-center justify-center border border-white/70 bg-black/15
+                text-white transition-colors hover:bg-black/40
+              "
+            >
+              <FiChevronRight aria-hidden="true" className="size-6" />
+            </button>
+            <button
+              type="button"
+              aria-label="تصویر بعدی گالری محصول"
+              onClick={showNext}
+              className="
+                absolute end-3 top-1/2 z-20 flex size-11 -translate-y-1/2
+                items-center justify-center border border-white/70 bg-black/15
+                text-white transition-colors hover:bg-black/40
+              "
+            >
+              <FiChevronLeft aria-hidden="true" className="size-6" />
+            </button>
+
+            <div
+              data-testid="product-gallery-indicators"
+              className="absolute inset-x-0 bottom-5 z-20 flex justify-center gap-2"
+            >
+              {items.map((item, index) => (
+                <button
+                  key={`indicator-${item.media?.url ?? item.fallbackSrc ?? 'placeholder'}-${index}`}
+                  type="button"
+                  aria-label={`نمایش تصویر ${persianNumber.format(index + 1)}`}
+                  aria-current={index === activeIndex ? 'true' : undefined}
+                  onClick={() => setActiveIndex(index)}
+                  className={`h-1 transition-all ${
+                    index === activeIndex ? 'w-10 bg-white' : 'w-5 bg-white/50 hover:bg-white/80'
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        ) : null}
+      </div>
+
+      <div className="hidden gap-3 lg:grid lg:grid-cols-2">
         {items.map((item, index) => {
           const tileClassName =
             index === 0
@@ -95,7 +202,7 @@ export function ProductMediaGallery({
                 items.length,
               )} محصول ${productName}`}
               onClick={() => openAt(index)}
-              className={`group block h-full w-full cursor-zoom-in ${tileClassName}`}
+              className={`group hidden h-full w-full cursor-zoom-in lg:block ${tileClassName}`}
             >
               {mediaContent}
             </button>
@@ -127,10 +234,11 @@ export function ProductMediaGallery({
             }
           }}
           className="
-            fixed inset-0 z-[110] grid h-[100dvh] grid-rows-[auto_minmax(0,1fr)]
+            fixed inset-0 z-[110] hidden h-[100dvh] grid-rows-[auto_minmax(0,1fr)]
             overflow-hidden bg-[var(--sf-color-canvas)]
             data-[state=closed]:animate-[sf-overlay-close_240ms_ease-in_forwards]
             data-[state=open]:animate-[sf-overlay-open_300ms_ease-out]
+            lg:grid
           "
         >
           <header
@@ -139,9 +247,7 @@ export function ProductMediaGallery({
               border-b border-[var(--sf-color-border)] px-16 sm:min-h-20
             "
           >
-            <DialogPrimitive.Title
-              className="flex min-w-0 items-center justify-center gap-2 text-sm font-medium sm:text-base"
-            >
+            <DialogPrimitive.Title className="flex min-w-0 items-center justify-center gap-2 text-sm font-medium sm:text-base">
               <span className="truncate">{productName}</span>
               <span
                 aria-live="polite"
@@ -166,37 +272,17 @@ export function ProductMediaGallery({
           </header>
 
           <DialogPrimitive.Description id="product-gallery-description" className="sr-only">
-            نمایش تمام‌صفحه تصاویر محصول. با کلیدهای جهت یا حرکت دست روی تصویر، بین تصاویر
-            جابه‌جا شوید و برای بستن کلید Escape را فشار دهید.
+            نمایش تمام‌صفحه تصاویر محصول. با کلیدهای جهت یا حرکت دست روی تصویر، بین تصاویر جابه‌جا
+            شوید و برای بستن کلید Escape را فشار دهید.
           </DialogPrimitive.Description>
 
           <div
             role="group"
             aria-label="تصاویر تمام‌صفحه محصول"
             aria-roledescription="carousel"
-            onTouchStart={(event) => {
-              touchStartX.current = event.changedTouches[0]?.clientX ?? null;
-            }}
-            onTouchCancel={() => {
-              touchStartX.current = null;
-            }}
-            onTouchEnd={(event) => {
-              const startX = touchStartX.current;
-              const endX = event.changedTouches[0]?.clientX;
-              touchStartX.current = null;
-
-              if (!hasMultipleImages || startX === null || endX === undefined) {
-                return;
-              }
-
-              const distance = startX - endX;
-
-              if (distance > swipeThreshold) {
-                showNext();
-              } else if (distance < -swipeThreshold) {
-                showPrevious();
-              }
-            }}
+            onTouchStart={handleTouchStart}
+            onTouchCancel={handleTouchCancel}
+            onTouchEnd={handleTouchEnd}
             className="relative min-h-0 touch-pan-y overflow-hidden p-4 sm:p-8 lg:px-24 lg:py-10"
           >
             <div

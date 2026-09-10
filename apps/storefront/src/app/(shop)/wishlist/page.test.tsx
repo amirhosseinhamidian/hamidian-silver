@@ -28,7 +28,7 @@ vi.mock('@/lib/wishlist/wishlist-store', () => ({
 }));
 
 describe('WishlistPage', () => {
-  it('shows discount pricing and removes the selected snapshot', () => {
+  it('matches catalog cards and removes the selected snapshot from the icon action', () => {
     render(<WishlistPage />);
 
     expect(screen.getByText(formatTomanPrice(4_000_000))).toHaveClass('line-through');
@@ -36,7 +36,21 @@ describe('WishlistPage', () => {
     expect(screen.getByText('۲۰٪')).toHaveClass('bg-[var(--sf-color-ink)]', 'text-white');
     expect(screen.queryByText(/تخفیف/)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'حذف از علاقه‌مندی‌ها' }));
+    const removeButton = screen.getByRole('button', { name: 'حذف از علاقه‌مندی‌ها' });
+    expect(removeButton).toHaveClass(
+      'sf-catalog-card__wishlist',
+      'sf-catalog-card__remove',
+      'left-3',
+    );
+    expect(removeButton).toHaveAttribute('title', 'حذف از علاقه‌مندی‌ها');
+    expect(removeButton).toHaveAttribute('data-tooltip', 'حذف از علاقه‌مندی‌ها');
+    expect(removeButton.closest('a')).toBeNull();
+    expect(screen.getByRole('link', { name: 'مشاهده و خرید' })).toHaveAttribute(
+      'href',
+      '/products/silver-ring-azar',
+    );
+
+    fireEvent.click(removeButton);
     expect(toggleItem).toHaveBeenCalledWith(item);
   });
 });

@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { FiTrash2 } from 'react-icons/fi';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
-import { Button, ButtonLink } from '@/components/ui/button';
+import { ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
@@ -36,56 +37,83 @@ export default function WishlistPage() {
         <h1 className="mt-2 text-4xl font-normal sm:text-5xl">علاقه‌مندی‌ها</h1>
       </header>
 
-      <ul className="grid gap-6 py-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-x-3 gap-y-10 py-8 sm:gap-x-5 lg:grid-cols-3 xl:grid-cols-4">
         {items.map((item) => {
-          const discountPercent = getDiscountPercent(
-            item.compareAtPriceToman,
-            item.salePriceToman,
-          );
+          const discountPercent = getDiscountPercent(item.compareAtPriceToman, item.salePriceToman);
 
           return (
-            <li key={item.productId} className="flex min-w-0 flex-col">
-              <Link
-                href={`/products/${item.slug}`}
-                className="aspect-square overflow-hidden bg-[var(--sf-color-surface)]"
-              >
-                <CatalogMedia
-                  media={item.media}
-                  fallbackSrc={
-                    process.env.NODE_ENV === 'development'
-                      ? `/dev-catalog/products/${item.slug}.webp`
-                      : null
-                  }
-                  alt={item.name}
-                />
-              </Link>
-              <div className="pt-4">
-                {item.brandName ? (
-                  <p className="text-xs text-[var(--sf-color-subtle)]">{item.brandName}</p>
-                ) : null}
-                <Link href={`/products/${item.slug}`} className="mt-1 block text-base font-medium">
-                  {item.name}
-                </Link>
-                {discountPercent !== null ? (
-                  <div className="mt-2 flex items-center gap-2 text-xs text-[var(--sf-color-muted)]">
-                    <span className="line-through">
-                      {formatTomanPrice(item.compareAtPriceToman)}
-                    </span>
-                    <DiscountBadge percent={discountPercent} />
-                  </div>
-                ) : null}
-                <p className={discountPercent !== null ? 'mt-1 text-sm' : 'mt-2 text-sm'}>
-                  {formatTomanPrice(item.salePriceToman)}
-                </p>
-                <Button
-                  type="button"
-                  variant="text"
-                  size="sm"
-                  className="mt-3"
-                  onClick={() => toggleItem(item)}
+            <li key={item.productId} className="sf-catalog-card group flex min-w-0 flex-col p-2">
+              <div className="relative">
+                <Link
+                  href={`/products/${item.slug}`}
+                  className="
+                    sf-catalog-card__media relative block aspect-square overflow-hidden
+                    rounded-[var(--sf-radius-md)] bg-[var(--sf-color-surface)]
+                  "
                 >
-                  حذف از علاقه‌مندی‌ها
-                </Button>
+                  <CatalogMedia
+                    media={item.media}
+                    fallbackSrc={
+                      process.env.NODE_ENV === 'development'
+                        ? `/dev-catalog/products/${item.slug}.webp`
+                        : null
+                    }
+                    alt={item.name}
+                  />
+                </Link>
+
+                <button
+                  type="button"
+                  aria-label="حذف از علاقه‌مندی‌ها"
+                  title="حذف از علاقه‌مندی‌ها"
+                  data-tooltip="حذف از علاقه‌مندی‌ها"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleItem(item);
+                  }}
+                  className="
+                    sf-catalog-card__wishlist sf-catalog-card__remove absolute left-3 top-3
+                    z-20 inline-flex size-11 items-center justify-center rounded-full border
+                    border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)]
+                    text-[var(--sf-color-ink)] shadow-sm outline-none
+                    hover:border-[var(--sf-color-ink)]
+                    focus-visible:border-[var(--sf-color-ink)]
+                  "
+                >
+                  <FiTrash2 aria-hidden="true" size={20} />
+                </button>
+              </div>
+
+              <div className="flex flex-1 flex-col pt-4 text-center">
+                {item.brandName ? (
+                  <p className="text-[0.7rem] text-[var(--sf-color-subtle)]">{item.brandName}</p>
+                ) : null}
+
+                <Link href={`/products/${item.slug}`} className="mt-2 block">
+                  <h2 className="text-sm font-medium leading-6 sm:text-base">{item.name}</h2>
+                </Link>
+
+                <div className="mt-3 flex flex-col items-center gap-1">
+                  {discountPercent !== null ? (
+                    <div className="flex items-center gap-2 text-xs text-[var(--sf-color-muted)]">
+                      <span className="line-through">
+                        {formatTomanPrice(item.compareAtPriceToman)}
+                      </span>
+                      <DiscountBadge percent={discountPercent} />
+                    </div>
+                  ) : null}
+
+                  <p className="text-sm font-medium sm:text-base">
+                    {formatTomanPrice(item.salePriceToman)}
+                  </p>
+                </div>
+
+                <div className="sf-catalog-card__action mt-auto pt-4">
+                  <ButtonLink href={`/products/${item.slug}`} variant="solid" className="w-full">
+                    مشاهده و خرید
+                  </ButtonLink>
+                </div>
               </div>
             </li>
           );
