@@ -4,7 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { SeoRedirectEntityType } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { recordSeoSlugChange } from '../seo/seo-redirects.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
 import { UpdateBrandDto } from './dto/update-brand.dto';
@@ -81,23 +83,22 @@ export class CatalogReferencesService {
       const brand = await this.prisma.$transaction(async (transaction) => {
         const current = await transaction.brand.findFirst({
           where: { id: brandId, deletedAt: null },
-          select: { id: true },
+          select: { id: true, slug: true },
         });
         if (!current) throw new NotFoundException('Brand was not found.');
         if (dto.imageId) await this.requireMedia(transaction, dto.imageId);
         if (dto.seoOgMediaId) await this.requireImageMedia(transaction, dto.seoOgMediaId);
-        return transaction.brand.update({
+        const nextSlug = dto.slug?.trim();
+        const brand = await transaction.brand.update({
           where: { id: brandId },
           data: {
             name: dto.name?.trim(),
-            slug: dto.slug?.trim(),
+            slug: nextSlug,
             description:
               dto.description === undefined ? undefined : this.optionalText(dto.description),
             seoTitle: dto.seoTitle === undefined ? undefined : this.optionalText(dto.seoTitle),
             seoDescription:
-              dto.seoDescription === undefined
-                ? undefined
-                : this.optionalText(dto.seoDescription),
+              dto.seoDescription === undefined ? undefined : this.optionalText(dto.seoDescription),
             seoCanonicalPath:
               dto.seoCanonicalPath === undefined
                 ? undefined
@@ -109,6 +110,18 @@ export class CatalogReferencesService {
           },
           include: brandReferenceInclude,
         });
+
+        if (nextSlug && nextSlug !== current.slug) {
+          await recordSeoSlugChange(
+            transaction,
+            SeoRedirectEntityType.BRAND,
+            brandId,
+            current.slug,
+            nextSlug,
+          );
+        }
+
+        return brand;
       });
       return this.projectBrand(brand);
     } catch (error) {

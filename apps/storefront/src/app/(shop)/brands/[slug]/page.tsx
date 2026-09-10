@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 
 import { CatalogCollectionPage } from '@/components/catalog/catalog-collection-page';
 import {
@@ -10,6 +10,7 @@ import {
   type CatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
+import { getPublicSeoRedirect } from '@/lib/seo/redirects';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
 type BrandPageProps = Readonly<{
@@ -69,6 +70,8 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
   const brand = brands.find((candidate) => candidate.slug === slug);
 
   if (!brand) {
+    const destinationPath = await getPublicSeoRedirect(`/brands/${slug}`);
+    if (destinationPath) permanentRedirect(destinationPath);
     notFound();
   }
 

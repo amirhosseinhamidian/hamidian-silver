@@ -4,7 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { SeoRedirectEntityType } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { recordSeoSlugChange } from '../seo/seo-redirects.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { PublicMediaUrlService } from './public-media-url.service';
@@ -87,7 +89,7 @@ export class CatalogCategoriesService {
       const category = await this.prisma.$transaction(async (transaction) => {
         const current = await transaction.category.findFirst({
           where: { id: categoryId, deletedAt: null },
-          select: { id: true, isActive: true, parentId: true },
+          select: { id: true, slug: true, isActive: true, parentId: true },
         });
         if (!current) throw new NotFoundException('Category was not found.');
 
@@ -112,18 +114,17 @@ export class CatalogCategoriesService {
           }
         }
 
-        return transaction.category.update({
+        const nextSlug = dto.slug?.trim();
+        const category = await transaction.category.update({
           where: { id: categoryId },
           data: {
             name: dto.name?.trim(),
-            slug: dto.slug?.trim(),
+            slug: nextSlug,
             description:
               dto.description === undefined ? undefined : this.optionalText(dto.description),
             seoTitle: dto.seoTitle === undefined ? undefined : this.optionalText(dto.seoTitle),
             seoDescription:
-              dto.seoDescription === undefined
-                ? undefined
-                : this.optionalText(dto.seoDescription),
+              dto.seoDescription === undefined ? undefined : this.optionalText(dto.seoDescription),
             seoCanonicalPath:
               dto.seoCanonicalPath === undefined
                 ? undefined
@@ -137,6 +138,18 @@ export class CatalogCategoriesService {
           },
           include: categoryInclude,
         });
+
+        if (nextSlug && nextSlug !== current.slug) {
+          await recordSeoSlugChange(
+            transaction,
+            SeoRedirectEntityType.CATEGORY,
+            categoryId,
+            current.slug,
+            nextSlug,
+          );
+        }
+
+        return category;
       });
       return this.project(category);
     } catch (error) {

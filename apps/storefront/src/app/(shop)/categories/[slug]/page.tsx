@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 
 import { CatalogCollectionPage } from '@/components/catalog/catalog-collection-page';
 import {
@@ -10,6 +10,7 @@ import {
   type CatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
+import { getPublicSeoRedirect } from '@/lib/seo/redirects';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
 type CategoryPageProps = Readonly<{
@@ -69,6 +70,8 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   const category = categories.find((candidate) => candidate.slug === slug);
 
   if (!category) {
+    const destinationPath = await getPublicSeoRedirect(`/categories/${slug}`);
+    if (destinationPath) permanentRedirect(destinationPath);
     notFound();
   }
 

@@ -128,6 +128,7 @@ function openGraphImage(media: StorefrontSeoMedia | null) {
 export function buildStorefrontRootMetadata(
   settings: PublicSiteSettings,
   metadataBase: URL = getStorefrontMetadataBase(),
+  googleSiteVerification: string | undefined = process.env.GOOGLE_SITE_VERIFICATION?.trim(),
 ): Metadata {
   const title = defaultTitle(settings);
   const description = defaultDescription(settings);
@@ -141,6 +142,7 @@ export function buildStorefrontRootMetadata(
       template: titleTemplate(settings),
     },
     description,
+    ...(googleSiteVerification ? { verification: { google: googleSiteVerification } } : {}),
     openGraph: {
       type: 'website',
       locale: 'fa_IR',

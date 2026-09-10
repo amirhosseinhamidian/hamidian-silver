@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { calculatePlatingPriceToman } from '../../common/plating-price';
-import { ProductStatus, SizeMode } from '../../generated/prisma/enums';
+import { ProductStatus, SeoRedirectEntityType, SizeMode } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { recordSeoSlugChange } from '../seo/seo-redirects.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
@@ -391,7 +392,7 @@ export class CatalogService {
     const updated = await this.prisma.$transaction(async (transaction) => {
       const current = await transaction.product.findFirst({
         where: { id: productId, deletedAt: null },
-        select: { id: true, salePriceToman: true, compareAtPriceToman: true },
+        select: { id: true, slug: true, salePriceToman: true, compareAtPriceToman: true },
       });
 
       if (!current) throw new NotFoundException('Product was not found.');
@@ -439,11 +440,13 @@ export class CatalogService {
         throw new BadRequestException('Compare price must be greater than sale price.');
       }
 
+      const nextSlug = dto.slug?.trim();
+
       await transaction.product.update({
         where: { id: productId },
         data: {
           name: dto.name,
-          slug: dto.slug,
+          slug: nextSlug,
           shortDescription: dto.shortDescription,
           description: dto.description,
           seoTitle: dto.seoTitle === undefined ? undefined : dto.seoTitle?.trim() || null,
@@ -459,6 +462,16 @@ export class CatalogService {
           compareAtPriceToman: dto.compareAtPriceToman,
         },
       });
+
+      if (nextSlug && nextSlug !== current.slug) {
+        await recordSeoSlugChange(
+          transaction,
+          SeoRedirectEntityType.PRODUCT,
+          productId,
+          current.slug,
+          nextSlug,
+        );
+      }
 
       if (dto.categoryIds) {
         await transaction.productCategory.deleteMany({ where: { productId } });

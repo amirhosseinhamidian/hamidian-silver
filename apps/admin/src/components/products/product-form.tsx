@@ -191,7 +191,11 @@ export function ProductForm({ data, mode }: ProductFormProps) {
           <FormField
             id="product-slug"
             label="اسلاگ محصول"
-            hint="برای آدرس صفحه محصول؛ یکتا و بدون فاصله"
+            hint={
+              mode === 'edit'
+                ? 'با تغییر اسلاگ، آدرس قبلی به‌صورت دائمی به آدرس جدید منتقل می‌شود.'
+                : 'برای آدرس صفحه محصول؛ یکتا و بدون فاصله'
+            }
             required
           >
             {(props) => (

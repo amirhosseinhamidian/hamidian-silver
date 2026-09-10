@@ -1,4 +1,5 @@
 import { ConflictException } from '@nestjs/common';
+import { SeoRedirectEntityType } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CatalogReferencesService } from './catalog-references.service';
 import type { PublicMediaUrlService } from './public-media-url.service';
@@ -97,6 +98,42 @@ describe('CatalogReferencesService', () => {
 
     await expect(service.archiveBrand('brand-1')).rejects.toBeInstanceOf(ConflictException);
     expect(transaction.brand.update).not.toHaveBeenCalled();
+  });
+
+  it('records a permanent redirect when a brand slug changes', async () => {
+    const transaction = {
+      brand: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'brand-1', slug: 'old-brand' }),
+        update: jest.fn().mockResolvedValue({
+          id: 'brand-1',
+          slug: 'new-brand',
+          image: null,
+          heroImage: null,
+          seoOgMedia: null,
+          _count: { products: 0 },
+        }),
+      },
+      seoRedirect: {
+        deleteMany: jest.fn(),
+        updateMany: jest.fn(),
+        upsert: jest.fn(),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await service.updateBrand('brand-1', { slug: 'new-brand' });
+
+    expect(transaction.seoRedirect.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          sourcePath: '/brands/old-brand',
+          destinationPath: '/brands/new-brand',
+          entityType: SeoRedirectEntityType.BRAND,
+        }),
+      }),
+    );
   });
 
   it('maps duplicate country identifiers to a conflict response', async () => {

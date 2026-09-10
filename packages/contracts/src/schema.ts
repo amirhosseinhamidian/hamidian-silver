@@ -2612,6 +2612,22 @@ export interface paths {
         patch: operations["SiteSettingsController_updateSettings_v1"];
         trace?: never;
     };
+    "/api/v1/seo/redirects/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoController_resolveRedirect_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin-users": {
         parameters: {
             query?: never;
@@ -3907,6 +3923,10 @@ export interface components {
             seoHomeDescription?: string | null;
             /** Format: uuid */
             seoHomeOgMediaId?: string | null;
+        };
+        SeoRedirectResponseDto: {
+            destinationPath: string;
+            permanent: boolean;
         };
         AdminManagedUserRoleDto: {
             /** @enum {string} */
@@ -8121,6 +8141,33 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AdminSiteSettingsDto"];
                 };
+            };
+        };
+    };
+    SeoController_resolveRedirect_v1: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoRedirectResponseDto"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -291,7 +291,16 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
             />
           )}
         </FormField>
-        <FormField id={`${formId}-slug`} label="اسلاگ" required>
+        <FormField
+          id={`${formId}-slug`}
+          label="اسلاگ"
+          hint={
+            kind === 'brand' && reference
+              ? 'تغییر اسلاگ، آدرس قبلی برند را با انتقال دائمی حفظ می‌کند.'
+              : undefined
+          }
+          required
+        >
           {(props) => (
             <Input
               {...props}

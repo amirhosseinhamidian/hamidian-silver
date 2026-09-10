@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 
 import { ProductPurchasePanel } from '@/components/cart/product-purchase-panel';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
@@ -18,6 +18,7 @@ import {
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
+import { getPublicSeoRedirect } from '@/lib/seo/redirects';
 import { buildProductStructuredData } from '@/lib/seo/structured-data';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
@@ -79,6 +80,8 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   ]);
 
   if (!product) {
+    const destinationPath = await getPublicSeoRedirect(`/products/${slug}`);
+    if (destinationPath) permanentRedirect(destinationPath);
     notFound();
   }
 

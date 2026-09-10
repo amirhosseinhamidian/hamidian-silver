@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { ProductStatus, SizeMode } from '../../generated/prisma/enums';
+import { ProductStatus, SeoRedirectEntityType, SizeMode } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CatalogService } from './catalog.service';
 import type { PublicMediaUrlService } from './public-media-url.service';
@@ -316,6 +316,43 @@ describe('CatalogService', () => {
     expect(transaction.productCategory.createMany).toHaveBeenCalledWith({
       data: [{ productId, categoryId }],
     });
+  });
+
+  it('records a permanent redirect when the product slug changes', async () => {
+    const productId = '10000000-0000-4000-8000-000000000001';
+    const transaction = {
+      product: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: productId,
+          slug: 'old-ring',
+          salePriceToman: 4_000_000,
+          compareAtPriceToman: null,
+        }),
+        update: jest.fn(),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ id: productId, media: [] }),
+      },
+      seoRedirect: {
+        deleteMany: jest.fn(),
+        updateMany: jest.fn(),
+        upsert: jest.fn(),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await service.updateProduct(productId, { slug: 'new-ring' });
+
+    expect(transaction.seoRedirect.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { sourcePath: '/products/old-ring' },
+        create: expect.objectContaining({
+          destinationPath: '/products/new-ring',
+          entityType: SeoRedirectEntityType.PRODUCT,
+          entityId: productId,
+        }),
+      }),
+    );
   });
 
   it('archives a product through the shared status transition', async () => {

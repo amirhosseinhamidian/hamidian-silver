@@ -5,12 +5,25 @@ import ProductDetailPage from '@/app/(shop)/products/[slug]/page';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import type { PublicCatalogProductDetail } from '@/lib/catalog/public-catalog';
 
-const { getPublicCatalogProduct } = vi.hoisted(() => ({
+const { getPublicCatalogProduct, getPublicSeoRedirect, permanentRedirect } = vi.hoisted(() => ({
   getPublicCatalogProduct: vi.fn(),
+  getPublicSeoRedirect: vi.fn(),
+  permanentRedirect: vi.fn((destinationPath: string) => {
+    throw new Error(`NEXT_REDIRECT:${destinationPath}`);
+  }),
 }));
 
 vi.mock('@/lib/catalog/public-catalog', () => ({
   getPublicCatalogProduct,
+}));
+
+vi.mock('@/lib/seo/redirects', () => ({
+  getPublicSeoRedirect,
+}));
+
+vi.mock('next/navigation', () => ({
+  notFound: vi.fn(),
+  permanentRedirect,
 }));
 
 vi.mock('@/components/cart/product-purchase-panel', () => ({
@@ -81,5 +94,15 @@ describe('ProductDetailPage', () => {
         availability: 'https://schema.org/InStock',
       },
     });
+  });
+
+  it('permanently redirects a historical product slug to its current path', async () => {
+    getPublicCatalogProduct.mockResolvedValue(null);
+    getPublicSeoRedirect.mockResolvedValue('/products/new-ring');
+
+    await expect(
+      ProductDetailPage({ params: Promise.resolve({ slug: 'old-ring' }) }),
+    ).rejects.toThrow('NEXT_REDIRECT:/products/new-ring');
+    expect(permanentRedirect).toHaveBeenCalledWith('/products/new-ring');
   });
 });

@@ -6254,6 +6254,41 @@
         ]
       }
     },
+    "/api/v1/seo/redirects/resolve": {
+      "get": {
+        "operationId": "SeoController_resolveRedirect_v1",
+        "parameters": [
+          {
+            "name": "path",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "maxLength": 1000,
+              "pattern": "^\\/(?:products|categories|brands)\\/[^/?#\\s]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoRedirectResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
     "/api/v1/admin-users": {
       "get": {
         "operationId": "UserManagementController_list_v1",
@@ -11463,6 +11498,21 @@
             "format": "uuid"
           }
         }
+      },
+      "SeoRedirectResponseDto": {
+        "type": "object",
+        "properties": {
+          "destinationPath": {
+            "type": "string"
+          },
+          "permanent": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "destinationPath",
+          "permanent"
+        ]
       },
       "AdminManagedUserRoleDto": {
         "type": "object",

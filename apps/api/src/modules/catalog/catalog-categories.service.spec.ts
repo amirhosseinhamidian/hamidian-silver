@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
+import { SeoRedirectEntityType } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CatalogCategoriesService } from './catalog-categories.service';
 import type { PublicMediaUrlService } from './public-media-url.service';
@@ -94,6 +95,47 @@ describe('CatalogCategoriesService', () => {
       ConflictException,
     );
     expect(transaction.category.update).not.toHaveBeenCalled();
+  });
+
+  it('records a permanent redirect when a category slug changes', async () => {
+    const transaction = {
+      category: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'category-1',
+          slug: 'old-rings',
+          isActive: true,
+          parentId: null,
+        }),
+        update: jest.fn().mockResolvedValue({
+          id: 'category-1',
+          slug: 'new-rings',
+          parent: null,
+          image: null,
+          seoOgMedia: null,
+          _count: { children: 0, products: 0 },
+        }),
+      },
+      seoRedirect: {
+        deleteMany: jest.fn(),
+        updateMany: jest.fn(),
+        upsert: jest.fn(),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await service.update('category-1', { slug: 'new-rings' });
+
+    expect(transaction.seoRedirect.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          sourcePath: '/categories/old-rings',
+          destinationPath: '/categories/new-rings',
+          entityType: SeoRedirectEntityType.CATEGORY,
+        }),
+      }),
+    );
   });
 
   it('blocks archiving categories still assigned to products', async () => {

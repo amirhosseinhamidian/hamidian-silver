@@ -296,7 +296,14 @@ function CategoryForm({
             />
           )}
         </FormField>
-        <FormField id={`${formId}-slug`} label="اسلاگ" required>
+        <FormField
+          id={`${formId}-slug`}
+          label="اسلاگ"
+          hint={
+            category ? 'تغییر اسلاگ، آدرس قبلی دسته‌بندی را با انتقال دائمی حفظ می‌کند.' : undefined
+          }
+          required
+        >
           {(props) => (
             <Input
               {...props}

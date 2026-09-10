@@ -234,6 +234,26 @@ enum StorefrontContentPageKey {
   FAQ
 }
 
+enum SeoRedirectEntityType {
+  PRODUCT
+  CATEGORY
+  BRAND
+}
+
+model SeoRedirect {
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourcePath      String                @unique @db.VarChar(1000)
+  destinationPath String                @db.VarChar(1000)
+  entityType      SeoRedirectEntityType
+  entityId        String                @db.Uuid
+  createdAt       DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime              @updatedAt @db.Timestamptz(3)
+
+  @@index([entityType, entityId])
+  @@index([destinationPath])
+  @@map("seo_redirects")
+}
+
 model Media {
   id                      String         @id @default(uuid()) @db.Uuid
   storageKey              String         @unique @db.VarChar(500)

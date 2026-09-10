@@ -20,6 +20,7 @@
     "storefront:typecheck": "pnpm --filter @hamidian/storefront typecheck",
     "storefront:test": "pnpm --filter @hamidian/storefront test",
     "storefront:build": "pnpm --filter @hamidian/storefront build",
+    "seo:audit": "tsx apps/storefront/scripts/seo-production-audit.ts",
     "admin:lint": "pnpm --filter @hamidian/admin lint",
     "admin:typecheck": "pnpm --filter @hamidian/admin typecheck",
     "admin:test": "pnpm --filter @hamidian/admin test",

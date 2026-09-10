@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  buildStorefrontPageMetadata,
-  buildStorefrontRootMetadata,
-} from '@/lib/seo/metadata';
+import { buildStorefrontPageMetadata, buildStorefrontRootMetadata } from '@/lib/seo/metadata';
 import type { PublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
 const settings: PublicSiteSettings = {
@@ -49,7 +46,7 @@ const origin = new URL('https://silver.example');
 
 describe('storefront metadata engine', () => {
   it('builds global title, description, Open Graph and Twitter defaults', () => {
-    expect(buildStorefrontRootMetadata(settings, origin)).toMatchObject({
+    expect(buildStorefrontRootMetadata(settings, origin, 'search-console-token')).toMatchObject({
       metadataBase: origin,
       applicationName: 'گالری حمیدیان',
       title: {
@@ -57,6 +54,7 @@ describe('storefront metadata engine', () => {
         template: '%s — گالری حمیدیان',
       },
       description: 'توضیح پیش‌فرض',
+      verification: { google: 'search-console-token' },
       openGraph: {
         locale: 'fa_IR',
         siteName: 'گالری حمیدیان',
