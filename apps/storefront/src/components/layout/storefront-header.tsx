@@ -118,10 +118,13 @@ export function StorefrontHeader({
           dir="ltr"
           className="
             sf-container grid min-h-16 grid-cols-[1fr_auto_1fr] items-center gap-2
-            lg:flex lg:min-h-0 lg:flex-row-reverse lg:gap-4
+            lg:min-h-0
           "
         >
-          <div className="flex items-center justify-start gap-1 lg:contents">
+          <div
+            data-testid="storefront-header-search-slot"
+            className="flex items-center justify-start gap-1 lg:col-start-3 lg:row-start-1 lg:justify-self-end"
+          >
             <div className="lg:hidden">
               <StorefrontMobileMenu navigationCategories={navigationCategories} />
             </div>
@@ -145,9 +148,9 @@ export function StorefrontHeader({
           <nav
             dir="rtl"
             aria-label="پیمایش اصلی"
-            className="hidden min-w-0 flex-1 overflow-x-auto lg:block"
+            className="hidden min-w-0 overflow-x-auto lg:col-start-2 lg:row-start-1 lg:block lg:justify-self-center"
           >
-            <ul className="flex min-w-max items-center gap-9 py-4 text-sm">
+            <ul className="flex min-w-max items-center justify-center gap-9 py-4 text-sm">
               <li>
                 <Link href="/">خانه</Link>
               </li>

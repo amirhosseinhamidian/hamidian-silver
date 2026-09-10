@@ -314,7 +314,7 @@ function HeaderSection({ settings, categories, canWrite, pending, onChange, onSa
             {(props) => <Input {...props} value={announcement.message ?? ''} onChange={(event) => updateAnnouncement({ message: event.currentTarget.value || null })} placeholder="مثلاً ارسال رایگان برای سفارش‌های بالای سه میلیون تومان" disabled={!canWrite || pending !== null} />}
           </FormField>
           {announcement.countdownMode === 'FIXED' ? (
-            <FormField id="announcement-duration" label="مدت شمارش" hint="دقیقه؛ بین ۱ تا ۱۰٬۰۸۰">
+            <FormField id="announcement-duration" label="مدت پایه شمارش" hint="دقیقه؛ زمان نمایش در سایت دو برابر این مقدار است و با بارگذاری مجدد از ابتدا شروع نمی‌شود.">
               {(props) => <Input {...props} inputMode="numeric" value={minutes} onChange={(event) => { const value = Number(toAsciiDigits(event.currentTarget.value)); updateAnnouncement({ durationSeconds: Number.isFinite(value) && value > 0 ? Math.round(value * 60) : null }); }} placeholder="مثلاً ۹۰" disabled={!canWrite || pending !== null} />}
             </FormField>
           ) : null}

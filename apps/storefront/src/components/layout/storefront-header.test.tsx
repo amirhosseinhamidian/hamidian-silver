@@ -59,6 +59,15 @@ describe('StorefrontHeader', () => {
     expect(screen.getByRole('banner')).toHaveClass('sticky', 'top-0');
 
     const navigation = screen.getByRole('navigation', { name: 'پیمایش اصلی' });
+    expect(navigation).toHaveClass('lg:col-start-2', 'lg:justify-self-center');
+    expect(screen.getByTestId('storefront-header-search-slot')).toHaveClass(
+      'lg:col-start-3',
+      'lg:justify-self-end',
+    );
+    expect(screen.getByText('فروش ویژه پایان فصل').parentElement).toHaveClass(
+      'text-sm',
+      'leading-6',
+    );
 
     expect(within(navigation).getByRole('link', { name: 'خانه' })).toHaveAttribute('href', '/');
     expect(within(navigation).getByRole('link', { name: 'انگشتر' })).toHaveAttribute(

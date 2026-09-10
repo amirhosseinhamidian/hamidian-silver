@@ -4,7 +4,12 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { FiArrowLeft } from 'react-icons/fi';
 
-import type { StorefrontAnnouncement } from '@/components/layout/storefront-announcement-config';
+import {
+  getFixedCountdownStorageKey,
+  getInitialCountdownSeconds,
+  resolveFixedCountdownDeadline,
+  type StorefrontAnnouncement,
+} from '@/components/layout/storefront-announcement-config';
 
 export type {
   StorefrontAnnouncement,
@@ -21,7 +26,10 @@ const numberFormatter = new Intl.NumberFormat('fa-IR', {
   useGrouping: false,
 });
 
-function Countdown({ initialSeconds }: Readonly<{ initialSeconds: number }>) {
+function Countdown({
+  announcement,
+  initialSeconds,
+}: Readonly<{ announcement: StorefrontAnnouncement; initialSeconds: number }>) {
   const [remainingSeconds, setRemainingSeconds] = useState(initialSeconds);
 
   useEffect(() => {
@@ -29,15 +37,47 @@ function Countdown({ initialSeconds }: Readonly<{ initialSeconds: number }>) {
       return;
     }
 
-    const clientDeadline = Date.now() + initialSeconds * 1000;
-    const intervalId = window.setInterval(() => {
+    const now = Date.now();
+    let clientDeadline = now + initialSeconds * 1000;
+
+    if (announcement.countdown.mode === 'fixed') {
+      const storageKey = getFixedCountdownStorageKey(announcement);
+
+      if (storageKey) {
+        try {
+          const resolution = resolveFixedCountdownDeadline(
+            window.localStorage.getItem(storageKey),
+            announcement.countdown.durationSeconds,
+            now,
+          );
+          clientDeadline = resolution.deadlineMs;
+          if (resolution.shouldPersist) {
+            window.localStorage.setItem(storageKey, String(resolution.deadlineMs));
+          }
+        } catch {
+          clientDeadline =
+            now +
+            (getInitialCountdownSeconds(announcement.countdown, now) ?? initialSeconds) * 1000;
+        }
+      }
+    } else if (announcement.countdown.mode === 'deadline') {
+      const absoluteDeadline = Date.parse(announcement.countdown.endsAt);
+      if (!Number.isNaN(absoluteDeadline)) clientDeadline = absoluteDeadline;
+    }
+
+    const updateRemainingSeconds = () => {
       setRemainingSeconds(Math.max(0, Math.ceil((clientDeadline - Date.now()) / 1000)));
+    };
+    const initialUpdateId = window.setTimeout(updateRemainingSeconds, 0);
+    const intervalId = window.setInterval(() => {
+      updateRemainingSeconds();
     }, 1000);
 
     return () => {
+      window.clearTimeout(initialUpdateId);
       window.clearInterval(intervalId);
     };
-  }, [initialSeconds]);
+  }, [announcement, initialSeconds]);
 
   if (remainingSeconds <= 0) {
     return null;
@@ -52,7 +92,7 @@ function Countdown({ initialSeconds }: Readonly<{ initialSeconds: number }>) {
     <span
       aria-label="شمارش معکوس"
       dir="rtl"
-      className="inline-flex items-baseline gap-2 text-[0.68rem] sm:text-xs"
+      className="inline-flex items-baseline gap-2 text-xs sm:text-sm"
     >
       <span>{numberFormatter.format(days)} روز</span>
       <span>{numberFormatter.format(hours)} ساعت</span>
@@ -84,13 +124,13 @@ export function StorefrontAnnouncementBar({
       <div
         className="
           sf-container flex min-h-7 flex-wrap items-center justify-center
-          gap-x-5 gap-y-2 text-center text-xs
+          gap-x-5 gap-y-2 text-center text-sm leading-6
         "
       >
         <span>{announcement.message}</span>
 
         {initialRemainingSeconds !== null ? (
-          <Countdown initialSeconds={initialRemainingSeconds} />
+          <Countdown announcement={announcement} initialSeconds={initialRemainingSeconds} />
         ) : null}
 
         {cta ? (
