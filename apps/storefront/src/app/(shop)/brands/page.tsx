@@ -42,7 +42,11 @@ export default async function BrandsPage() {
             <li key={brand.id}>
               <Link href={`/brands/${brand.slug}`} className="group block">
                 <div className="aspect-[4/3] overflow-hidden bg-[var(--sf-color-surface)]">
-                  <CatalogMedia media={brand.image} alt={brand.name} />
+                  <CatalogMedia
+                    media={brand.heroImage ?? null}
+                    alt={brand.name}
+                    imageClassName="object-cover"
+                  />
                 </div>
                 <h2 className="mt-4 text-lg font-medium transition-opacity group-hover:opacity-55">
                   {brand.name}

@@ -68,7 +68,7 @@ function CollectionHero({
   }
 
   return (
-    <header className="relative isolate min-h-[18rem] overflow-hidden bg-[var(--sf-color-surface)] sm:min-h-[24rem] lg:min-h-[30rem]">
+    <header className="relative isolate min-h-[18rem] overflow-hidden bg-[var(--sf-color-surface)] sm:min-h-[24rem] lg:min-h-[calc(100svh-9.25rem)]">
       <div className="absolute inset-0 -z-20">
         <CatalogMedia media={image} alt={title} eager imageClassName="object-cover" />
       </div>

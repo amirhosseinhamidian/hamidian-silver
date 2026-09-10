@@ -45,11 +45,11 @@ function EditorialContent({ page }: Readonly<{ page: PublicContentPage }>) {
         <PageBody body={page.body} />
       </div>
       {page.sections.length ? (
-        <div className="mt-16 grid border-t border-[var(--sf-color-border)] sm:grid-cols-3 sm:divide-x sm:divide-x-reverse sm:divide-[var(--sf-color-border)]">
+        <div className="mt-16 grid border-t border-[var(--sf-color-border)] sm:grid-cols-3">
           {page.sections.map((section, index) => (
             <article
               key={`${section.title}-${index}`}
-              className="border-b border-[var(--sf-color-border)] py-9 sm:border-b-0 sm:px-8 sm:first:pr-0 sm:last:pl-0"
+              className="border-b border-[var(--sf-color-border)] py-9 last:border-b-0 sm:border-r sm:border-b-0 sm:px-8 sm:first:border-r-0 sm:first:pr-0 sm:last:pl-0"
             >
               <p className="text-xs text-[var(--sf-color-subtle)]">
                 {toPersianDigits(String(index + 1).padStart(2, '0'))}
