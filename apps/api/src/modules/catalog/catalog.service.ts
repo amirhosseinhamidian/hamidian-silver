@@ -705,6 +705,7 @@ export class CatalogService {
     const search = query.q?.trim();
     const category = query.category?.trim();
     const brand = query.brand?.trim();
+    const country = query.country?.trim();
     const categoryIds = category ? await this.resolvePublicCategoryIds(category) : undefined;
 
     const where = {
@@ -734,6 +735,17 @@ export class CatalogService {
             brand: {
               is: {
                 slug: brand,
+                isActive: true,
+                deletedAt: null,
+              },
+            },
+          }
+        : {}),
+      ...(country
+        ? {
+            country: {
+              is: {
+                slug: country,
                 isActive: true,
                 deletedAt: null,
               },

@@ -63,6 +63,14 @@ export class UpdateHomepageDto {
   @ArrayMaxSize(8)
   @IsUUID('4', { each: true })
   popularProductIds!: string[];
+
+  @IsBoolean()
+  manufacturerCountriesEnabled!: boolean;
+
+  @IsArray()
+  @ArrayMaxSize(8)
+  @IsUUID('4', { each: true })
+  manufacturerCountryIds!: string[];
 }
 
 export class HomepagePriorityDto {

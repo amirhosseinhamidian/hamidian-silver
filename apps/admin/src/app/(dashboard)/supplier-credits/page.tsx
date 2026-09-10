@@ -19,8 +19,8 @@ export default async function SupplierCreditsPage() {
         <Badge tone="info">مرحله {formatAdminInteger(28)}</Badge>
         <h1 className="mt-3 text-2xl font-black sm:text-3xl">اعتبار تأمین‌کنندگان</h1>
         <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--admin-color-muted)]">
-          اعتبارهای ایجادشده از اقلام مرجوعیِ بازگشتی به تأمین‌کننده را همراه با منبع، مانده و
-          سابقه مصرف آن‌ها بررسی کنید.
+          اعتبارهای ایجادشده از اقلام مرجوعیِ بازگشتی به تأمین‌کننده را همراه با منبع، مانده و سابقه
+          مصرف آن‌ها بررسی کنید.
         </p>
       </header>
 

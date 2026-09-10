@@ -3,10 +3,7 @@ import type { components } from '@hamidian/contracts';
 type CatalogHeroProps = {
   settings: Pick<
     components['schemas']['PublicSiteSettingsDto'],
-    | 'catalogHeroEnabled'
-    | 'catalogHeroTitle'
-    | 'catalogHeroSubtitle'
-    | 'catalogHeroMedia'
+    'catalogHeroEnabled' | 'catalogHeroTitle' | 'catalogHeroSubtitle' | 'catalogHeroMedia'
   >;
   devFallbackSrc?: string | null;
 };
@@ -16,7 +13,9 @@ const DEFAULT_TITLE = 'محصولات نقره حمیدیان';
 export function CatalogHero({ settings, devFallbackSrc }: CatalogHeroProps) {
   const configuredImage = settings.catalogHeroEnabled ? settings.catalogHeroMedia?.url : null;
   const image = configuredImage ?? devFallbackSrc ?? null;
-  const title = settings.catalogHeroEnabled ? (settings.catalogHeroTitle ?? DEFAULT_TITLE) : DEFAULT_TITLE;
+  const title = settings.catalogHeroEnabled
+    ? (settings.catalogHeroTitle ?? DEFAULT_TITLE)
+    : DEFAULT_TITLE;
   const subtitle = settings.catalogHeroEnabled ? settings.catalogHeroSubtitle : null;
 
   if (!image) {

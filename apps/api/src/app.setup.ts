@@ -5,10 +5,7 @@ import helmet from 'helmet';
 import type { Server } from 'node:http';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { requestIdMiddleware } from './common/request-id.middleware';
-import {
-  MEDIA_PUBLIC_ROUTE_PREFIX,
-  resolveMediaStorageRoot,
-} from './config/media-storage';
+import { MEDIA_PUBLIC_ROUTE_PREFIX, resolveMediaStorageRoot } from './config/media-storage';
 
 export type ListenOptions = {
   host: string;

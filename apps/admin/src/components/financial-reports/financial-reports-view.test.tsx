@@ -125,27 +125,24 @@ describe('FinancialReportsView', () => {
     expect(screen.getByText('دریافت خالص مشتری')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'نمودار جریان نقدی دوره' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /ترکیب هزینه‌های عملیاتی سفارش/ })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'کارت‌های گزارش تأمین‌کنندگان' })).toHaveClass('md:hidden');
-    expect(screen.getByRole('region', { name: 'کارت‌های مغایرت هزینه سفارش' })).toHaveClass('md:hidden');
+    expect(screen.getByRole('region', { name: 'کارت‌های گزارش تأمین‌کنندگان' })).toHaveClass(
+      'md:hidden',
+    );
+    expect(screen.getByRole('region', { name: 'کارت‌های مغایرت هزینه سفارش' })).toHaveClass(
+      'md:hidden',
+    );
     expect(screen.getAllByText('نقره‌سازی پارس').length).toBeGreaterThan(1);
     expect(screen.getAllByText('هزینه ارسال').length).toBeGreaterThan(1);
-    expect(screen.getAllByRole('link', { name: /رفتن به سفارش‌ها|بررسی سفارش‌ها/ })[0]).toHaveAttribute(
-      'href',
-      '/orders',
-    );
+    expect(
+      screen.getAllByRole('link', { name: /رفتن به سفارش‌ها|بررسی سفارش‌ها/ })[0],
+    ).toHaveAttribute('href', '/orders');
   });
 
   it('keeps available sections visible when one financial source fails', () => {
-    render(
-      <FinancialReportsView
-        data={{ ...data, cashflow: { data: null, failed: true } }}
-      />,
-    );
+    render(<FinancialReportsView data={{ ...data, cashflow: { data: null, failed: true } }} />);
 
     expect(screen.getByText('گزارش با داده ناقص نمایش داده شده است')).toBeInTheDocument();
     expect(screen.getByText('داده جریان نقدی از سرویس مالی دریافت نشد.')).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: 'وضعیت مالی تأمین‌کنندگان' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'وضعیت مالی تأمین‌کنندگان' })).toBeInTheDocument();
   });
 });

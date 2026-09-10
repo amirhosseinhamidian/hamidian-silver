@@ -1,9 +1,6 @@
 import type { Metadata } from 'next';
 
-import {
-  getPublicContentPage,
-  type PublicContentPageKey,
-} from '@/lib/content/public-content-page';
+import { getPublicContentPage, type PublicContentPageKey } from '@/lib/content/public-content-page';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
@@ -11,10 +8,7 @@ export async function getContentPageMetadata(
   key: PublicContentPageKey,
   pathname: string,
 ): Promise<Metadata> {
-  const [page, settings] = await Promise.all([
-    getPublicContentPage(key),
-    getPublicSiteSettings(),
-  ]);
+  const [page, settings] = await Promise.all([getPublicContentPage(key), getPublicSiteSettings()]);
 
   return buildStorefrontPageMetadata(settings, {
     pathname,

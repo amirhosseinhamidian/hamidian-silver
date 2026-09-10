@@ -39,11 +39,7 @@ export function CatalogProductCard({
             rounded-[var(--sf-radius-md)] bg-[var(--sf-color-surface)]
           "
         >
-          <CatalogMedia
-            media={product.primaryMedia}
-            fallbackSrc={fallbackSrc}
-            alt={product.name}
-          />
+          <CatalogMedia media={product.primaryMedia} fallbackSrc={fallbackSrc} alt={product.name} />
           {badge ? (
             <span className="absolute left-3 top-3 bg-[var(--sf-color-ink)] px-2.5 py-1 text-xs text-white">
               {badge}

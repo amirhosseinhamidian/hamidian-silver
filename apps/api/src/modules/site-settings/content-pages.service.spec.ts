@@ -100,28 +100,26 @@ describe('ContentPagesService', () => {
   });
 
   it('replaces ordered sections transactionally and projects the configured hero', async () => {
-    prisma.storefrontContentPage.findUnique
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({
-        key: StorefrontContentPageKey.ABOUT,
-        title: 'داستان ما',
-        eyebrow: 'درباره ما',
-        subtitle: null,
-        body: 'متن صفحه',
-        heroMediaId: mediaId,
-        seoTitle: null,
-        seoDescription: null,
-        updatedByUserId: actorUserId,
-        updatedAt: new Date('2026-09-07T12:00:00.000Z'),
-        heroMedia: {
-          storageKey: 'content/about.webp',
-          altText: 'زیورآلات نقره',
-          width: 1920,
-          height: 1080,
-          deletedAt: null,
-        },
-        sections: [{ title: 'اصالت', body: 'تعهد به کیفیت' }],
-      });
+    prisma.storefrontContentPage.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      key: StorefrontContentPageKey.ABOUT,
+      title: 'داستان ما',
+      eyebrow: 'درباره ما',
+      subtitle: null,
+      body: 'متن صفحه',
+      heroMediaId: mediaId,
+      seoTitle: null,
+      seoDescription: null,
+      updatedByUserId: actorUserId,
+      updatedAt: new Date('2026-09-07T12:00:00.000Z'),
+      heroMedia: {
+        storageKey: 'content/about.webp',
+        altText: 'زیورآلات نقره',
+        width: 1920,
+        height: 1080,
+        deletedAt: null,
+      },
+      sections: [{ title: 'اصالت', body: 'تعهد به کیفیت' }],
+    });
     prisma.media.findFirst.mockResolvedValue({ mimeType: 'image/webp' });
     const transaction = {
       storefrontContentPage: { upsert: jest.fn() },

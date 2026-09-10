@@ -551,6 +551,22 @@ describe('CatalogService', () => {
     expect(categoryIds).toHaveLength(3);
   });
 
+  it('filters public products by an active manufacturer country slug', async () => {
+    prisma.product.findMany.mockResolvedValue([]);
+
+    await service.listPublicProducts({ country: 'italy' });
+
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          country: {
+            is: { slug: 'italy', isActive: true, deletedAt: null },
+          },
+        }),
+      }),
+    );
+  });
+
   it('uses deterministic price ordering and keeps null prices last', async () => {
     prisma.product.findMany.mockResolvedValue([]);
 

@@ -20,10 +20,12 @@ describe('HomepageService', () => {
     homepageHeroSlide: { findMany: jest.fn() },
     homepageFeaturedCategory: { findMany: jest.fn() },
     homepagePopularProduct: { findMany: jest.fn() },
+    homepageManufacturerCountry: { findMany: jest.fn() },
     siteSettings: { findUnique: jest.fn() },
     media: { findMany: jest.fn() },
     category: { findMany: jest.fn() },
     product: { findMany: jest.fn() },
+    country: { findMany: jest.fn() },
     $transaction: jest.fn(),
   };
   const catalogService = {
@@ -73,6 +75,49 @@ describe('HomepageService', () => {
     prisma.homepagePopularProduct.findMany.mockResolvedValue([
       { product: { slug: 'popular-ring' } },
     ]);
+    prisma.homepageManufacturerCountry.findMany.mockResolvedValue([
+      {
+        priority: 1,
+        country: {
+          id: 'country-2',
+          name: 'ایتالیا',
+          slug: 'italy',
+          isoCode: 'IT',
+          image: { ...media, storageKey: 'countries/italy.webp' },
+        },
+      },
+      {
+        priority: 2,
+        country: {
+          id: 'country-1',
+          name: 'ایران',
+          slug: 'iran',
+          isoCode: 'IR',
+          image: null,
+        },
+      },
+      {
+        priority: 3,
+        country: {
+          id: 'country-3',
+          name: 'ترکیه',
+          slug: 'turkey',
+          isoCode: 'TR',
+          image: null,
+        },
+      },
+      {
+        priority: 4,
+        country: {
+          id: 'country-4',
+          name: 'تایلند',
+          slug: 'thailand',
+          isoCode: 'TH',
+          image: null,
+        },
+      },
+    ]);
+    prisma.siteSettings.findUnique.mockResolvedValue({ manufacturerCountriesEnabled: true });
     catalogService.listPublicProducts.mockResolvedValue({ items: [{ id: 'new-1' }] });
     catalogService.listPublicBrands.mockResolvedValue(
       Array.from({ length: 9 }, (_, index) => ({ id: `brand-${index + 1}` })),
@@ -111,6 +156,12 @@ describe('HomepageService', () => {
     ]);
     expect(result.popularProducts[0]).not.toHaveProperty('description');
     expect(result.featuredBrands).toHaveLength(4);
+    expect(result.manufacturerCountries.map(({ slug }) => slug)).toEqual([
+      'italy',
+      'iran',
+      'turkey',
+      'thailand',
+    ]);
   });
 
   it('rejects incomplete or unsafe hero actions before writing', async () => {
@@ -126,6 +177,8 @@ describe('HomepageService', () => {
           ],
           categoryIds: [],
           popularProductIds: [],
+          manufacturerCountriesEnabled: false,
+          manufacturerCountryIds: [],
         },
         '20000000-0000-4000-8000-000000000001',
       ),
@@ -151,6 +204,7 @@ describe('HomepageService', () => {
     ]);
     prisma.homepageFeaturedCategory.findMany.mockResolvedValue([]);
     prisma.homepagePopularProduct.findMany.mockResolvedValue([]);
+    prisma.homepageManufacturerCountry.findMany.mockResolvedValue([]);
     prisma.siteSettings.findUnique.mockResolvedValue(null);
 
     const result = await service.getAdminHomepage();
@@ -170,10 +224,17 @@ describe('HomepageService', () => {
       { id: '30000000-0000-4000-8000-000000000002' },
     ]);
     prisma.product.findMany.mockResolvedValue([{ id: '40000000-0000-4000-8000-000000000001' }]);
+    prisma.country.findMany.mockResolvedValue([
+      { id: '50000000-0000-4000-8000-000000000001' },
+      { id: '50000000-0000-4000-8000-000000000002' },
+      { id: '50000000-0000-4000-8000-000000000003' },
+      { id: '50000000-0000-4000-8000-000000000004' },
+    ]);
     const transaction = {
       homepageHeroSlide: { deleteMany: jest.fn(), createMany: jest.fn() },
       homepageFeaturedCategory: { deleteMany: jest.fn(), createMany: jest.fn() },
       homepagePopularProduct: { deleteMany: jest.fn(), createMany: jest.fn() },
+      homepageManufacturerCountry: { deleteMany: jest.fn(), createMany: jest.fn() },
       siteSettings: { upsert: jest.fn() },
     };
     prisma.$transaction.mockImplementation(
@@ -182,7 +243,9 @@ describe('HomepageService', () => {
     prisma.homepageHeroSlide.findMany.mockResolvedValue([]);
     prisma.homepageFeaturedCategory.findMany.mockResolvedValue([]);
     prisma.homepagePopularProduct.findMany.mockResolvedValue([]);
+    prisma.homepageManufacturerCountry.findMany.mockResolvedValue([]);
     prisma.siteSettings.findUnique.mockResolvedValue({
+      manufacturerCountriesEnabled: true,
       updatedAt: new Date('2026-09-07T09:00:00.000Z'),
     });
 
@@ -201,6 +264,13 @@ describe('HomepageService', () => {
           '30000000-0000-4000-8000-000000000002',
         ],
         popularProductIds: ['40000000-0000-4000-8000-000000000001'],
+        manufacturerCountriesEnabled: true,
+        manufacturerCountryIds: [
+          '50000000-0000-4000-8000-000000000004',
+          '50000000-0000-4000-8000-000000000002',
+          '50000000-0000-4000-8000-000000000001',
+          '50000000-0000-4000-8000-000000000003',
+        ],
       },
       '20000000-0000-4000-8000-000000000001',
     );
@@ -220,10 +290,85 @@ describe('HomepageService', () => {
         { categoryId: '30000000-0000-4000-8000-000000000002', priority: 2 },
       ],
     });
+    expect(transaction.homepageManufacturerCountry.createMany).toHaveBeenCalledWith({
+      data: [
+        { countryId: '50000000-0000-4000-8000-000000000004', priority: 1 },
+        { countryId: '50000000-0000-4000-8000-000000000002', priority: 2 },
+        { countryId: '50000000-0000-4000-8000-000000000001', priority: 3 },
+        { countryId: '50000000-0000-4000-8000-000000000003', priority: 4 },
+      ],
+    });
     expect(transaction.siteSettings.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: { updatedByUserId: '20000000-0000-4000-8000-000000000001' },
+        update: {
+          manufacturerCountriesEnabled: true,
+          updatedByUserId: '20000000-0000-4000-8000-000000000001',
+        },
       }),
     );
+  });
+
+  it('rejects an enabled manufacturer section with fewer than four countries', async () => {
+    await expect(
+      service.updateHomepage(
+        {
+          primaryHeroSlides: [],
+          secondaryHero: null,
+          categoryIds: [],
+          popularProductIds: [],
+          manufacturerCountriesEnabled: true,
+          manufacturerCountryIds: [
+            '50000000-0000-4000-8000-000000000001',
+            '50000000-0000-4000-8000-000000000002',
+            '50000000-0000-4000-8000-000000000003',
+          ],
+        },
+        '20000000-0000-4000-8000-000000000001',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('returns no manufacturer countries while the section is disabled', async () => {
+    prisma.homepageHeroSlide.findMany.mockResolvedValue([]);
+    prisma.homepageFeaturedCategory.findMany.mockResolvedValue([]);
+    prisma.homepagePopularProduct.findMany.mockResolvedValue([]);
+    prisma.homepageManufacturerCountry.findMany.mockResolvedValue([
+      {
+        priority: 1,
+        country: { id: 'country-1', name: 'ایران', slug: 'iran', isoCode: 'IR', image: null },
+      },
+    ]);
+    prisma.siteSettings.findUnique.mockResolvedValue({ manufacturerCountriesEnabled: false });
+    catalogService.listPublicProducts.mockResolvedValue({ items: [] });
+    catalogService.listPublicBrands.mockResolvedValue([]);
+    catalogService.listPublicCategories.mockResolvedValue([]);
+
+    const result = await service.getPublicHomepage();
+
+    expect(result.manufacturerCountriesEnabled).toBe(false);
+    expect(result.manufacturerCountries).toEqual([]);
+  });
+
+  it('rejects more than eight manufacturer countries even while disabled', async () => {
+    await expect(
+      service.updateHomepage(
+        {
+          primaryHeroSlides: [],
+          secondaryHero: null,
+          categoryIds: [],
+          popularProductIds: [],
+          manufacturerCountriesEnabled: false,
+          manufacturerCountryIds: Array.from(
+            { length: 9 },
+            (_, index) => `50000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+          ),
+        },
+        '20000000-0000-4000-8000-000000000001',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

@@ -53,6 +53,11 @@ export class AdminHomepageDto {
   @ApiProperty({ type: () => AdminHomepageSelectionDto, isArray: true })
   popularProducts!: AdminHomepageSelectionDto[];
 
+  manufacturerCountriesEnabled!: boolean;
+
+  @ApiProperty({ type: () => AdminHomepageSelectionDto, isArray: true })
+  manufacturerCountries!: AdminHomepageSelectionDto[];
+
   @ApiProperty({ type: String, nullable: true, format: 'date-time' })
   updatedAt!: string | null;
 }

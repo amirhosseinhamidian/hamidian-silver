@@ -131,9 +131,7 @@ describe('ProductPurchasePanel', () => {
     fireEvent.click(within(quantityControls[0]!).getByRole('button', { name: 'افزایش تعداد' }));
     expect(cartStoreMock.setQuantity).toHaveBeenCalledWith(`${addedItem.variantId}:GOLD`, 2);
 
-    fireEvent.click(
-      within(quantityControls[0]!).getByRole('button', { name: 'حذف از سبد خرید' }),
-    );
+    fireEvent.click(within(quantityControls[0]!).getByRole('button', { name: 'حذف از سبد خرید' }));
     expect(cartStoreMock.removeItem).toHaveBeenCalledWith(`${addedItem.variantId}:GOLD`);
   });
 

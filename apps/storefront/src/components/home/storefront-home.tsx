@@ -135,6 +135,34 @@ export function StorefrontHome({ homepage }: StorefrontHomeProps) {
         </section>
       ) : null}
 
+      {homepage.manufacturerCountriesEnabled && homepage.manufacturerCountries.length > 0 ? (
+        <section aria-label="کشورهای سازنده" className="sf-container py-[var(--sf-section-space)]">
+          <SectionHeading title="کشورهای سازنده" />
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-4 lg:grid-cols-8">
+            {homepage.manufacturerCountries.map((country) => (
+              <li key={country.id}>
+                <Link
+                  href={`/products?country=${encodeURIComponent(country.slug)}`}
+                  className="group block text-center"
+                >
+                  <div className="mx-auto aspect-square w-full overflow-hidden rounded-full bg-[var(--sf-color-surface)]">
+                    <CatalogMedia
+                      media={country.image}
+                      alt={country.name}
+                      imageClassName="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                    />
+                  </div>
+                  <h3 className="mt-4 text-sm font-medium">{country.name}</h3>
+                  <span className="mt-1 block text-xs text-[var(--sf-color-muted)]">
+                    مشاهده محصولات
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {homepage.secondaryHero ? (
         <HomepageHero slides={[homepage.secondaryHero]} label="تصویر ویژه فروشگاه" compact />
       ) : null}

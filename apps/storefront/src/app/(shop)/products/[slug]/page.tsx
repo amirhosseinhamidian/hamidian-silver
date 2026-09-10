@@ -122,132 +122,132 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           className="mb-5 text-[var(--sf-color-muted)] sm:mb-7"
         />
 
-      <div className="grid gap-9 lg:grid-cols-[minmax(0,1.1fr)_minmax(22rem,0.9fr)] lg:gap-14">
-        <section aria-label="رسانه محصول">
-          <ProductMediaGallery
-            productName={product.name}
-            media={publicImages}
-            fallbackMedia={product.primaryMedia}
-            fallbackSrc={devImageSrc}
-          />
-        </section>
-
-        <section aria-labelledby="product-title" className="lg:pt-2">
-          {product.brand ? (
-            <Link
-              href={`/brands/${product.brand.slug}`}
-              className="inline-flex items-center gap-3 text-[var(--sf-color-ink)]"
-            >
-              {product.brand.image?.url ? (
-                <span className="size-10 overflow-hidden rounded-full bg-[var(--sf-color-surface)]">
-                  <CatalogMedia media={product.brand.image} alt={`لوگوی ${product.brand.name}`} />
-                </span>
-              ) : null}
-              <span className="flex flex-col gap-0.5">
-                <span className="text-[0.68rem] text-[var(--sf-color-subtle)]">برند محصول</span>
-                <span className="text-sm font-medium">{product.brand.name}</span>
-              </span>
-            </Link>
-          ) : null}
-
-          <h1 id="product-title" className="mt-4 text-4xl font-normal sm:text-5xl">
-            {product.name}
-          </h1>
-
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              {product.compareAtPriceToman &&
-              product.salePriceToman &&
-              product.compareAtPriceToman > product.salePriceToman ? (
-                <div className="flex items-center gap-3 text-sm text-[var(--sf-color-muted)]">
-                  <span className="line-through">
-                    {formatTomanPrice(product.compareAtPriceToman)}
-                  </span>
-
-                  <DiscountBadge
-                    percent={getDiscountPercent(
-                      product.compareAtPriceToman,
-                      product.salePriceToman,
-                    )!}
-                  />
-                </div>
-              ) : null}
-
-              <p className="text-2xl font-medium sm:text-3xl">
-                {formatTomanPrice(product.salePriceToman)}
-              </p>
-            </div>
-            <WishlistButton
-              item={{
-                productId: product.id,
-                slug: product.slug,
-                name: product.name,
-                brandName: product.brand?.name ?? null,
-                media: product.primaryMedia,
-                salePriceToman: product.salePriceToman,
-                compareAtPriceToman: product.compareAtPriceToman,
-              }}
+        <div className="grid gap-9 lg:grid-cols-[minmax(0,1.1fr)_minmax(22rem,0.9fr)] lg:gap-14">
+          <section aria-label="رسانه محصول">
+            <ProductMediaGallery
+              productName={product.name}
+              media={publicImages}
+              fallbackMedia={product.primaryMedia}
+              fallbackSrc={devImageSrc}
             />
-          </div>
+          </section>
 
-          {product.shortDescription ? (
-            <p className="mt-7 text-base leading-8 text-[var(--sf-color-muted)]">
-              {product.shortDescription}
-            </p>
-          ) : null}
+          <section aria-labelledby="product-title" className="lg:pt-2">
+            {product.brand ? (
+              <Link
+                href={`/brands/${product.brand.slug}`}
+                className="inline-flex items-center gap-3 text-[var(--sf-color-ink)]"
+              >
+                {product.brand.image?.url ? (
+                  <span className="size-10 overflow-hidden rounded-full bg-[var(--sf-color-surface)]">
+                    <CatalogMedia media={product.brand.image} alt={`لوگوی ${product.brand.name}`} />
+                  </span>
+                ) : null}
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-[0.68rem] text-[var(--sf-color-subtle)]">برند محصول</span>
+                  <span className="text-sm font-medium">{product.brand.name}</span>
+                </span>
+              </Link>
+            ) : null}
 
-          {product.categories.length > 0 ? (
-            <div className="mt-7 flex flex-wrap gap-2">
-              {product.categories.map((category) => (
-                <Link
-                  key={category.id}
-                  href={`/categories/${category.slug}`}
-                  className="
+            <h1 id="product-title" className="mt-4 text-4xl font-normal sm:text-5xl">
+              {product.name}
+            </h1>
+
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                {product.compareAtPriceToman &&
+                product.salePriceToman &&
+                product.compareAtPriceToman > product.salePriceToman ? (
+                  <div className="flex items-center gap-3 text-sm text-[var(--sf-color-muted)]">
+                    <span className="line-through">
+                      {formatTomanPrice(product.compareAtPriceToman)}
+                    </span>
+
+                    <DiscountBadge
+                      percent={getDiscountPercent(
+                        product.compareAtPriceToman,
+                        product.salePriceToman,
+                      )!}
+                    />
+                  </div>
+                ) : null}
+
+                <p className="text-2xl font-medium sm:text-3xl">
+                  {formatTomanPrice(product.salePriceToman)}
+                </p>
+              </div>
+              <WishlistButton
+                item={{
+                  productId: product.id,
+                  slug: product.slug,
+                  name: product.name,
+                  brandName: product.brand?.name ?? null,
+                  media: product.primaryMedia,
+                  salePriceToman: product.salePriceToman,
+                  compareAtPriceToman: product.compareAtPriceToman,
+                }}
+              />
+            </div>
+
+            {product.shortDescription ? (
+              <p className="mt-7 text-base leading-8 text-[var(--sf-color-muted)]">
+                {product.shortDescription}
+              </p>
+            ) : null}
+
+            {product.categories.length > 0 ? (
+              <div className="mt-7 flex flex-wrap gap-2">
+                {product.categories.map((category) => (
+                  <Link
+                    key={category.id}
+                    href={`/categories/${category.slug}`}
+                    className="
                     border border-[var(--sf-color-border)] px-3 py-2
                     text-xs text-[var(--sf-color-muted)]
                   "
-                >
-                  {category.name}
-                </Link>
-              ))}
-            </div>
-          ) : null}
-
-          <ProductPurchasePanel product={product} />
-
-          {features.length > 0 ? (
-            <section
-              aria-labelledby="features-title"
-              className="mt-10 border-t border-[var(--sf-color-border)] pt-8"
-            >
-              <h2 id="features-title" className="text-sm font-medium">
-                ویژگی‌های محصول
-              </h2>
-              <dl className="mt-5 divide-y divide-[var(--sf-color-border)] text-sm">
-                {features.map(([label, value]) => (
-                  <div key={label} className="grid grid-cols-[8rem_1fr] gap-4 py-3">
-                    <dt className="text-[var(--sf-color-muted)]">{label}</dt>
-                    <dd>{value}</dd>
-                  </div>
+                  >
+                    {category.name}
+                  </Link>
                 ))}
-              </dl>
-            </section>
-          ) : null}
+              </div>
+            ) : null}
 
-          {product.description ? (
-            <section
-              aria-labelledby="description-title"
-              className="mt-10 border-t border-[var(--sf-color-border)] pt-8"
-            >
-              <h2 id="description-title" className="text-sm font-medium">
-                توضیحات محصول
-              </h2>
-              <p className="mt-4 whitespace-pre-line text-sm leading-8 text-[var(--sf-color-muted)]">
-                {product.description}
-              </p>
-            </section>
-          ) : null}
-        </section>
+            <ProductPurchasePanel product={product} />
+
+            {features.length > 0 ? (
+              <section
+                aria-labelledby="features-title"
+                className="mt-10 border-t border-[var(--sf-color-border)] pt-8"
+              >
+                <h2 id="features-title" className="text-sm font-medium">
+                  ویژگی‌های محصول
+                </h2>
+                <dl className="mt-5 divide-y divide-[var(--sf-color-border)] text-sm">
+                  {features.map(([label, value]) => (
+                    <div key={label} className="grid grid-cols-[8rem_1fr] gap-4 py-3">
+                      <dt className="text-[var(--sf-color-muted)]">{label}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ) : null}
+
+            {product.description ? (
+              <section
+                aria-labelledby="description-title"
+                className="mt-10 border-t border-[var(--sf-color-border)] pt-8"
+              >
+                <h2 id="description-title" className="text-sm font-medium">
+                  توضیحات محصول
+                </h2>
+                <p className="mt-4 whitespace-pre-line text-sm leading-8 text-[var(--sf-color-muted)]">
+                  {product.description}
+                </p>
+              </section>
+            ) : null}
+          </section>
         </div>
       </main>
     </>

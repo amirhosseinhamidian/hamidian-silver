@@ -4,8 +4,14 @@ import { cookies } from 'next/headers';
 
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
 import { requestAdminCatalog, readJsonResponse } from '@/lib/catalog/catalog-api';
-import { parseSupplierCredits, type AdminSupplierCredit } from '@/lib/supplier-credits/supplier-credits-model';
-import { parseSupplierPayables, type AdminSupplierPayable } from '@/lib/supplier-payables/supplier-payables-model';
+import {
+  parseSupplierCredits,
+  type AdminSupplierCredit,
+} from '@/lib/supplier-credits/supplier-credits-model';
+import {
+  parseSupplierPayables,
+  type AdminSupplierPayable,
+} from '@/lib/supplier-payables/supplier-payables-model';
 import {
   parseSupplierSettlements,
   type AdminSupplierSettlement,

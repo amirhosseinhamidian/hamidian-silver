@@ -21,9 +21,7 @@ const utilityLinks = [
   { href: '/about', label: 'درباره گالری حمیدیان' },
 ] as const;
 
-export function StorefrontMobileMenu({
-  navigationCategories,
-}: StorefrontMobileMenuProps) {
+export function StorefrontMobileMenu({ navigationCategories }: StorefrontMobileMenuProps) {
   return (
     <DialogPrimitive.Root>
       <DialogPrimitive.Trigger asChild>

@@ -1,9 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
-import {
-  PAYMENT_GATEWAY_CODES,
-  type PaymentGatewayCode,
-} from '../payment-gateway.constants';
+import { PAYMENT_GATEWAY_CODES, type PaymentGatewayCode } from '../payment-gateway.constants';
 
 export class InitiatePaymentDto {
   @IsString()

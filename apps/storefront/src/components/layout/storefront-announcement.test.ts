@@ -23,9 +23,9 @@ describe('getInitialCountdownSeconds', () => {
       endsAt: '2026-09-04T00:00:00.000Z',
     };
 
-    expect(
-      getInitialCountdownSeconds(countdown, Date.parse('2026-09-03T22:30:00.000Z')),
-    ).toBe(5400);
+    expect(getInitialCountdownSeconds(countdown, Date.parse('2026-09-03T22:30:00.000Z'))).toBe(
+      5400,
+    );
   });
 
   it('returns no countdown when the timer is disabled', () => {

@@ -72,11 +72,7 @@ export async function loadAdminFinancialReports(
       token,
       parseFinanceManagementReport,
     ),
-    loadResource(
-      reportPath('/api/v1/finance/cashflow', range),
-      token,
-      parseFinanceCashflowReport,
-    ),
+    loadResource(reportPath('/api/v1/finance/cashflow', range), token, parseFinanceCashflowReport),
     loadResource(
       reportPath('/api/v1/finance/dashboard/contribution', range),
       token,

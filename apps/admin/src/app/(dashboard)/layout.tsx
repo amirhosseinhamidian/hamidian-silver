@@ -10,10 +10,7 @@ type DashboardLayoutProps = Readonly<{
 }>;
 
 export default async function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [user, profile] = await Promise.all([
-    requireAdminSession(),
-    loadAdminProfileIdentity(),
-  ]);
+  const [user, profile] = await Promise.all([requireAdminSession(), loadAdminProfileIdentity()]);
   const navigation = getAdminNavigation(user);
   const roleLabel = user.roles.includes('MANAGER') ? 'مدیر ارشد' : 'ادمین عملیات';
 

@@ -20,6 +20,7 @@ export type CatalogFilters = Readonly<{
   q?: string;
   category?: string;
   brand?: string;
+  country?: string;
   sort: CatalogSort;
 }>;
 
@@ -57,6 +58,7 @@ export function parseCatalogSearchParams(searchParams: CatalogSearchParams): Cat
     q: normalizedText(searchParams.q),
     category: normalizedText(searchParams.category),
     brand: normalizedText(searchParams.brand),
+    country: normalizedText(searchParams.country),
     sort,
   };
 }
@@ -84,6 +86,10 @@ export function buildCatalogHref(
 
   if (next.brand) {
     searchParams.set('brand', next.brand);
+  }
+
+  if (next.country) {
+    searchParams.set('country', next.country);
   }
 
   if (next.sort !== 'newest') {
@@ -153,6 +159,7 @@ export async function getPublicCatalogProducts(
         q: filters.q,
         category: filters.category,
         brand: filters.brand,
+        country: filters.country,
         sort: filters.sort,
       },
     },
@@ -199,23 +206,23 @@ export async function getPublicCatalogIndex(filters: CatalogFilters): Promise<{
   };
 }
 
-export const getPublicCatalogProduct = cache(async (
-  slug: string,
-): Promise<PublicCatalogProductDetail | null> => {
-  const client = createPublicCatalogClient();
-  const result = await client.GET('/api/v1/catalog/public/products/{slug}', {
-    params: {
-      path: {
-        slug,
+export const getPublicCatalogProduct = cache(
+  async (slug: string): Promise<PublicCatalogProductDetail | null> => {
+    const client = createPublicCatalogClient();
+    const result = await client.GET('/api/v1/catalog/public/products/{slug}', {
+      params: {
+        path: {
+          slug,
+        },
       },
-    },
-  });
+    });
 
-  if (result.response.status === 404) {
-    return null;
-  }
+    if (result.response.status === 404) {
+      return null;
+    }
 
-  assertSuccessfulResponse(result.response, result.data, 'storefront product');
+    assertSuccessfulResponse(result.response, result.data, 'storefront product');
 
-  return result.data;
-});
+    return result.data;
+  },
+);

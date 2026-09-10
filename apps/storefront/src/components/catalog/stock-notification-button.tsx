@@ -4,10 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FiBell, FiCheck } from 'react-icons/fi';
 
 import { Button } from '@/components/ui/button';
-import {
-  AUTHENTICATION_SUCCEEDED_EVENT,
-  openAuthModal,
-} from '@/lib/auth/events';
+import { AUTHENTICATION_SUCCEEDED_EVENT, openAuthModal } from '@/lib/auth/events';
 
 type StockNotificationButtonProps = Readonly<{
   productId: string;

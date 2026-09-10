@@ -109,7 +109,9 @@ describe('SupplierCreditsView', () => {
   it('shows financial KPIs, status chart and compact mobile cards', () => {
     render(<SupplierCreditsView credits={[credit]} failed={false} />);
 
-    expect(screen.getByRole('img', { name: /ترکیب وضعیت اعتبارهای تأمین‌کننده/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: /ترکیب وضعیت اعتبارهای تأمین‌کننده/ }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'کارت‌های اعتبار تأمین‌کننده' })).toHaveClass(
       'md:hidden',
     );

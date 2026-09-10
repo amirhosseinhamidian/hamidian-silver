@@ -63,7 +63,9 @@ const SETTLEMENT_STATUS_LABELS: Readonly<Record<string, string>> = {
 
 function actorLabel(actor: AdminSupplierCreditActor | null): string {
   if (!actor) return 'ثبت نشده';
-  return [actor.firstName, actor.lastName].filter(Boolean).join(' ') || formatAdminPhone(actor.phone);
+  return (
+    [actor.firstName, actor.lastName].filter(Boolean).join(' ') || formatAdminPhone(actor.phone)
+  );
 }
 
 function StatusBadge({ status }: Readonly<{ status: AdminSupplierCreditStatus }>) {
@@ -121,9 +123,7 @@ function CreditApplications({ credit }: Readonly<{ credit: AdminSupplierCredit }
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-bold">
-                تسویه {toPersianDigits(application.settlementId)}
-              </p>
+              <p className="text-sm font-bold">تسویه {toPersianDigits(application.settlementId)}</p>
               <p className="mt-1 text-xs text-[var(--admin-color-muted)]">
                 {formatAdminDateTime(application.createdAt)} · {actorLabel(application.appliedBy)}
               </p>
@@ -234,10 +234,7 @@ export function SupplierCreditsView({ credits, failed }: Props) {
     () => ({
       created: credits.reduce((sum, credit) => sum + credit.amountToman, 0),
       applied: credits.reduce((sum, credit) => sum + credit.appliedAmountToman, 0),
-      remaining: credits.reduce(
-        (sum, credit) => sum + supplierCreditRemainingAmount(credit),
-        0,
-      ),
+      remaining: credits.reduce((sum, credit) => sum + supplierCreditRemainingAmount(credit), 0),
       open: credits.filter(
         (credit) => credit.status === 'AVAILABLE' || credit.status === 'PARTIALLY_APPLIED',
       ).length,
@@ -273,10 +270,7 @@ export function SupplierCreditsView({ credits, failed }: Props) {
     [credits, needle, statusFilter, supplierFilter],
   );
 
-  async function openDetails(
-    credit: AdminSupplierCredit,
-    mode: Exclude<DetailMode, null>,
-  ) {
+  async function openDetails(credit: AdminSupplierCredit, mode: Exclude<DetailMode, null>) {
     const requestId = detailRequest.current + 1;
     detailRequest.current = requestId;
     setSelected(credit);
@@ -323,7 +317,8 @@ export function SupplierCreditsView({ credits, failed }: Props) {
         <div>
           <p className="font-bold">{credit.orderItem.productName}</p>
           <p className="mt-1 text-xs text-[var(--admin-color-muted)]">
-            سفارش {toPersianDigits(credit.order.orderNumber)} · {toPersianDigits(credit.orderItem.sku)}
+            سفارش {toPersianDigits(credit.order.orderNumber)} ·{' '}
+            {toPersianDigits(credit.orderItem.sku)}
           </p>
         </div>
       ),
@@ -376,9 +371,7 @@ export function SupplierCreditsView({ credits, failed }: Props) {
   ];
 
   const activeFilterCount =
-    Number(Boolean(needle)) +
-    Number(statusFilter !== 'all') +
-    Number(supplierFilter !== 'all');
+    Number(Boolean(needle)) + Number(statusFilter !== 'all') + Number(supplierFilter !== 'all');
   const shownDetail = detail ?? selected;
   const detailFooter = selected ? (
     <ButtonLink href="/returns" variant="outline" size="sm">
@@ -405,7 +398,10 @@ export function SupplierCreditsView({ credits, failed }: Props) {
         می‌شود؛ اعمال آن روی دوره تسویه در مرحله {formatAdminInteger(30)} انجام خواهد شد.
       </Alert>
 
-      <section aria-label="شاخص‌های اعتبار تأمین‌کننده" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section
+        aria-label="شاخص‌های اعتبار تأمین‌کننده"
+        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+      >
         <Kpi
           label="مانده قابل استفاده"
           value={formatAdminToman(totals.remaining)}
@@ -440,7 +436,11 @@ export function SupplierCreditsView({ credits, failed }: Props) {
           title="ترکیب وضعیت اعتبارهای تأمین‌کننده"
           centerLabel="اعتبار"
           segments={[
-            { label: 'قابل استفاده', value: statusCounts.AVAILABLE, color: 'var(--admin-color-success)' },
+            {
+              label: 'قابل استفاده',
+              value: statusCounts.AVAILABLE,
+              color: 'var(--admin-color-success)',
+            },
             {
               label: 'بخشی مصرف‌شده',
               value: statusCounts.PARTIALLY_APPLIED,
@@ -535,7 +535,9 @@ export function SupplierCreditsView({ credits, failed }: Props) {
               ? `اعتبار سفارش ${toPersianDigits(selected.order.orderNumber)}`
               : 'جزئیات اعتبار تأمین‌کننده'
           }
-          description={selected ? `${selected.supplierName} · ${STATUS[selected.status].label}` : undefined}
+          description={
+            selected ? `${selected.supplierName} · ${STATUS[selected.status].label}` : undefined
+          }
           footer={detailFooter}
         >
           {detailContent}

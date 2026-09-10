@@ -3715,6 +3715,14 @@ export interface components {
             sortOrder: number;
             priority: number;
         };
+        PublicHomepageManufacturerCountryDto: {
+            image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            priority: number;
+            id: string;
+            name: string;
+            slug: string;
+            isoCode: string;
+        };
         PublicHomepageDto: {
             primaryHeroSlides: components["schemas"]["PublicHomepageHeroSlideDto"][];
             secondaryHero: components["schemas"]["PublicHomepageHeroSlideDto"] | null;
@@ -3722,6 +3730,8 @@ export interface components {
             featuredCategories: components["schemas"]["PublicHomepageFeaturedCategoryDto"][];
             popularProducts: components["schemas"]["PublicCatalogProductSummaryDto"][];
             featuredBrands: components["schemas"]["PublicCatalogBrandDto"][];
+            manufacturerCountries: components["schemas"]["PublicHomepageManufacturerCountryDto"][];
+            manufacturerCountriesEnabled: boolean;
         };
         /** @enum {string} */
         StorefrontContentPageKey: "ABOUT" | "CONTACT" | "SERVICES" | "TERMS" | "PRIVACY" | "SIZE_GUIDE" | "FAQ";
@@ -3818,8 +3828,10 @@ export interface components {
             secondaryHero: components["schemas"]["AdminHomepageHeroSlideDto"] | null;
             featuredCategories: components["schemas"]["AdminHomepageSelectionDto"][];
             popularProducts: components["schemas"]["AdminHomepageSelectionDto"][];
+            manufacturerCountries: components["schemas"]["AdminHomepageSelectionDto"][];
             /** Format: date-time */
             updatedAt: string | null;
+            manufacturerCountriesEnabled: boolean;
         };
         UpdateHomepageHeroSlideDto: {
             /** Format: uuid */
@@ -3835,6 +3847,8 @@ export interface components {
             secondaryHero?: components["schemas"]["UpdateHomepageHeroSlideDto"] | null;
             categoryIds: string[];
             popularProductIds: string[];
+            manufacturerCountriesEnabled: boolean;
+            manufacturerCountryIds: string[];
         };
         AdminSiteSettingsDto: {
             headerCategoryIds: string[];
@@ -4186,6 +4200,7 @@ export interface operations {
                 q?: string;
                 category?: string;
                 brand?: string;
+                country?: string;
                 sort?: "newest" | "price-asc" | "price-desc" | "name-asc";
             };
             header?: never;

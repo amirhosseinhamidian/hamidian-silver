@@ -60,11 +60,7 @@ export function StorefrontFooter({ content }: StorefrontFooterProps) {
         "
       >
         <div>
-          <Link
-            href="/"
-            aria-label="نقره حمیدیان، صفحه اصلی"
-            className="relative block h-20 w-44"
-          >
+          <Link href="/" aria-label="نقره حمیدیان، صفحه اصلی" className="relative block h-20 w-44">
             <Image
               src="/brand/hamidian-signature.png"
               alt="لوگوی نقره حمیدیان"

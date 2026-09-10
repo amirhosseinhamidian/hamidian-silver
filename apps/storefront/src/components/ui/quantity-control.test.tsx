@@ -23,9 +23,7 @@ describe('QuantityControl', () => {
     const onChange = vi.fn();
     const onRemove = vi.fn();
 
-    render(
-      <QuantityControl value={1} min={1} max={3} onChange={onChange} onRemove={onRemove} />,
-    );
+    render(<QuantityControl value={1} min={1} max={3} onChange={onChange} onRemove={onRemove} />);
 
     expect(screen.queryByRole('button', { name: 'کاهش تعداد' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'حذف از سبد خرید' }));

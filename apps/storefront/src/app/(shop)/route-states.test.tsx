@@ -14,10 +14,7 @@ describe('storefront route states', () => {
     expect(screen.getByRole('alert')).toHaveAccessibleName('این صفحه فعلاً در دسترس نیست');
     fireEvent.click(screen.getByRole('button', { name: 'تلاش دوباره' }));
     expect(reset).toHaveBeenCalledOnce();
-    expect(screen.getByRole('link', { name: 'بازگشت به صفحه اصلی' })).toHaveAttribute(
-      'href',
-      '/',
-    );
+    expect(screen.getByRole('link', { name: 'بازگشت به صفحه اصلی' })).toHaveAttribute('href', '/');
   });
 
   it('announces the shared page loading state', () => {

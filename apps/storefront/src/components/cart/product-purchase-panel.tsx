@@ -79,10 +79,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
     product.salePriceToman === null
       ? null
       : product.salePriceToman + (selectedPlating?.unitPriceToman ?? 0);
-  const discountPercent = getDiscountPercent(
-    product.compareAtPriceToman,
-    product.salePriceToman,
-  );
+  const discountPercent = getDiscountPercent(product.compareAtPriceToman, product.salePriceToman);
   const canAdd =
     selectedVariant?.isAvailable === true &&
     selectedVariant.availableQuantity > 0 &&
@@ -297,9 +294,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
                 <QuantityControl
                   value={selectedCartItem.quantity}
                   max={selectedCartItem.maxQuantity}
-                  onChange={(nextQuantity) =>
-                    setQuantity(selectedCartItem.key, nextQuantity)
-                  }
+                  onChange={(nextQuantity) => setQuantity(selectedCartItem.key, nextQuantity)}
                   onRemove={() => removeItem(selectedCartItem.key)}
                 />
               </div>
@@ -386,9 +381,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         <div className="mx-auto w-full min-w-0 max-w-xl">
           {discountPercent !== null ? (
             <div className="flex items-center justify-end gap-2 text-xs text-[var(--sf-color-muted)]">
-              <span className="line-through">
-                {formatTomanPrice(product.compareAtPriceToman)}
-              </span>
+              <span className="line-through">{formatTomanPrice(product.compareAtPriceToman)}</span>
               <DiscountBadge percent={discountPercent} />
             </div>
           ) : null}

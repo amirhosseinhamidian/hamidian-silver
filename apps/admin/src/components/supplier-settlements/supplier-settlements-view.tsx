@@ -78,7 +78,9 @@ const STATUS_OPTIONS = [
 
 function actorLabel(actor: AdminSupplierSettlementActor | null): string {
   if (!actor) return 'ثبت نشده';
-  return [actor.firstName, actor.lastName].filter(Boolean).join(' ') || formatAdminPhone(actor.phone);
+  return (
+    [actor.firstName, actor.lastName].filter(Boolean).join(' ') || formatAdminPhone(actor.phone)
+  );
 }
 
 function StatusBadge({ status }: Readonly<{ status: AdminSupplierSettlementStatus }>) {
@@ -121,7 +123,9 @@ function Kpi({
 
 function SettlementItems({ settlement }: Readonly<{ settlement: AdminSupplierSettlement }>) {
   if (!settlement.items.length) {
-    return <p className="text-sm text-[var(--admin-color-muted)]">جزئیات اقلام در حال دریافت است.</p>;
+    return (
+      <p className="text-sm text-[var(--admin-color-muted)]">جزئیات اقلام در حال دریافت است.</p>
+    );
   }
   return (
     <div className="grid gap-3">
@@ -174,7 +178,11 @@ function SettlementCredits({
   onRemove: (application: AdminSettlementCreditApplication) => void;
 }>) {
   if (!settlement.creditApplications.length) {
-    return <p className="text-sm text-[var(--admin-color-muted)]">اعتباری روی این دوره اعمال نشده است.</p>;
+    return (
+      <p className="text-sm text-[var(--admin-color-muted)]">
+        اعتباری روی این دوره اعمال نشده است.
+      </p>
+    );
   }
   return (
     <div className="grid gap-3">
@@ -265,9 +273,7 @@ function SettlementDetails({
               ['ثبت پرداخت توسط', actorLabel(settlement.paidBy)],
               [
                 'زمان لغو',
-                settlement.cancelledAt
-                  ? formatAdminDateTime(settlement.cancelledAt)
-                  : 'ثبت نشده',
+                settlement.cancelledAt ? formatAdminDateTime(settlement.cancelledAt) : 'ثبت نشده',
               ],
               ['لغو توسط', actorLabel(settlement.cancelledBy)],
               ['یادداشت', settlement.note ?? 'ثبت نشده'],
@@ -285,11 +291,7 @@ function SettlementDetails({
         title={`اعتبارهای اعمال‌شده · ${formatAdminInteger(settlement.creditApplications.length)} رکورد`}
         description="اعتبار فقط پیش از پرداخت نهایی قابل اعمال یا حذف است."
       >
-        <SettlementCredits
-          settlement={settlement}
-          canWrite={canWrite}
-          onRemove={onRemoveCredit}
-        />
+        <SettlementCredits settlement={settlement} canWrite={canWrite} onRemove={onRemoveCredit} />
       </Card>
     </div>
   );
@@ -353,7 +355,11 @@ export function SupplierSettlementsView({
   );
   const readySuppliers = useMemo(
     () =>
-      [...new Map(readyPayables.map((payable) => [payable.supplierId, payable.supplierName])).entries()]
+      [
+        ...new Map(
+          readyPayables.map((payable) => [payable.supplierId, payable.supplierName]),
+        ).entries(),
+      ]
         .map(([id, name]) => ({ value: id, label: name }))
         .sort((first, second) => first.label.localeCompare(second.label, 'fa')),
     [readyPayables],
@@ -365,9 +371,7 @@ export function SupplierSettlementsView({
         .sort((first, second) => first.label.localeCompare(second.label, 'fa')),
     [settlements],
   );
-  const actionPayables = readyPayables.filter(
-    (payable) => payable.supplierId === actionSupplierId,
-  );
+  const actionPayables = readyPayables.filter((payable) => payable.supplierId === actionSupplierId);
   const selectedPayableTotal = actionPayables
     .filter((payable) => selectedPayableIds.includes(payable.id))
     .reduce((sum, payable) => sum + payable.amountToman, 0);
@@ -413,8 +417,7 @@ export function SupplierSettlementsView({
           supplierCreditRemainingAmount(credit) > 0,
       )
     : [];
-  const selectedCredit =
-    availableCredits.find((credit) => credit.id === selectedCreditId) ?? null;
+  const selectedCredit = availableCredits.find((credit) => credit.id === selectedCreditId) ?? null;
   const maximumCredit =
     actionSettlement && selectedCredit
       ? Math.min(
@@ -423,10 +426,7 @@ export function SupplierSettlementsView({
         )
       : 0;
 
-  async function openDetails(
-    settlement: AdminSupplierSettlement,
-    mode: Exclude<DetailMode, null>,
-  ) {
+  async function openDetails(settlement: AdminSupplierSettlement, mode: Exclude<DetailMode, null>) {
     const requestId = detailRequest.current + 1;
     detailRequest.current = requestId;
     setSelected(settlement);
@@ -717,7 +717,9 @@ export function SupplierSettlementsView({
       id: 'net',
       header: 'خالص پرداخت',
       align: 'end',
-      cell: (settlement) => <strong>{formatAdminToman(supplierSettlementNetAmount(settlement))}</strong>,
+      cell: (settlement) => (
+        <strong>{formatAdminToman(supplierSettlementNetAmount(settlement))}</strong>
+      ),
     },
     {
       id: 'created',
@@ -748,9 +750,7 @@ export function SupplierSettlementsView({
         </Alert>
       ) : null}
       {success ? <Alert tone="success">{success}</Alert> : null}
-      {!canWrite ? (
-        <Alert tone="info">دسترسی شما به دوره‌های تسویه فقط‌خواندنی است.</Alert>
-      ) : null}
+      {!canWrite ? <Alert tone="info">دسترسی شما به دوره‌های تسویه فقط‌خواندنی است.</Alert> : null}
 
       <section aria-label="شاخص‌های دوره تسویه" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi

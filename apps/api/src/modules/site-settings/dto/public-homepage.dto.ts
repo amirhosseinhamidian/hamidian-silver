@@ -3,6 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   PublicCatalogBrandDto,
   PublicCatalogCategoryDto,
+  PublicCatalogCountryDto,
   PublicCatalogMediaDto,
   PublicCatalogProductSummaryDto,
 } from '../../catalog/dto/public-catalog-response.dto';
@@ -28,6 +29,13 @@ export class PublicHomepageFeaturedCategoryDto extends PublicCatalogCategoryDto 
   priority!: number;
 }
 
+export class PublicHomepageManufacturerCountryDto extends PublicCatalogCountryDto {
+  priority!: number;
+
+  @ApiProperty({ type: () => PublicCatalogMediaDto, nullable: true })
+  image!: PublicCatalogMediaDto | null;
+}
+
 export class PublicHomepageDto {
   @ApiProperty({ type: () => PublicHomepageHeroSlideDto, isArray: true })
   primaryHeroSlides!: PublicHomepageHeroSlideDto[];
@@ -46,4 +54,9 @@ export class PublicHomepageDto {
 
   @ApiProperty({ type: () => PublicCatalogBrandDto, isArray: true })
   featuredBrands!: PublicCatalogBrandDto[];
+
+  manufacturerCountriesEnabled!: boolean;
+
+  @ApiProperty({ type: () => PublicHomepageManufacturerCountryDto, isArray: true })
+  manufacturerCountries!: PublicHomepageManufacturerCountryDto[];
 }

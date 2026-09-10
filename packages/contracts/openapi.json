@@ -318,6 +318,16 @@
             }
           },
           {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 160,
+              "type": "string"
+            }
+          },
+          {
             "name": "sort",
             "required": false,
             "in": "query",
@@ -10558,6 +10568,43 @@
           "priority"
         ]
       },
+      "PublicHomepageManufacturerCountryDto": {
+        "type": "object",
+        "properties": {
+          "image": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "priority": {
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "isoCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "image",
+          "priority",
+          "id",
+          "name",
+          "slug",
+          "isoCode"
+        ]
+      },
       "PublicHomepageDto": {
         "type": "object",
         "properties": {
@@ -10599,6 +10646,15 @@
             "items": {
               "$ref": "#/components/schemas/PublicCatalogBrandDto"
             }
+          },
+          "manufacturerCountries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicHomepageManufacturerCountryDto"
+            }
+          },
+          "manufacturerCountriesEnabled": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -10607,7 +10663,9 @@
           "newProducts",
           "featuredCategories",
           "popularProducts",
-          "featuredBrands"
+          "featuredBrands",
+          "manufacturerCountries",
+          "manufacturerCountriesEnabled"
         ]
       },
       "StorefrontContentPageKey": {
@@ -11044,10 +11102,19 @@
               "$ref": "#/components/schemas/AdminHomepageSelectionDto"
             }
           },
+          "manufacturerCountries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminHomepageSelectionDto"
+            }
+          },
           "updatedAt": {
             "type": "string",
             "nullable": true,
             "format": "date-time"
+          },
+          "manufacturerCountriesEnabled": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -11055,7 +11122,9 @@
           "secondaryHero",
           "featuredCategories",
           "popularProducts",
-          "updatedAt"
+          "manufacturerCountries",
+          "updatedAt",
+          "manufacturerCountriesEnabled"
         ]
       },
       "UpdateHomepageHeroSlideDto": {
@@ -11131,12 +11200,25 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "manufacturerCountriesEnabled": {
+            "type": "boolean"
+          },
+          "manufacturerCountryIds": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         },
         "required": [
           "primaryHeroSlides",
           "categoryIds",
-          "popularProductIds"
+          "popularProductIds",
+          "manufacturerCountriesEnabled",
+          "manufacturerCountryIds"
         ]
       },
       "AdminSiteSettingsDto": {

@@ -16,8 +16,8 @@ export default async function OrdersPage() {
         <Badge tone="info">مرحله {formatAdminInteger(16)}</Badge>
         <h1 className="mt-3 text-2xl font-black sm:text-3xl">مدیریت سفارش‌ها</h1>
         <p className="mt-2 max-w-2xl text-sm leading-7 text-[var(--admin-color-muted)]">
-          سفارش‌ها را بررسی کنید و عملیات مجاز تغییر وضعیت، لغو و تأیید مرجوعی استثنایی را
-          با ثبت کامل سابقه انجام دهید.
+          سفارش‌ها را بررسی کنید و عملیات مجاز تغییر وضعیت، لغو و تأیید مرجوعی استثنایی را با ثبت
+          کامل سابقه انجام دهید.
         </p>
       </header>
 

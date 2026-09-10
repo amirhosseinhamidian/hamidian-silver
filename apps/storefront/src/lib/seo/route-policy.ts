@@ -2,12 +2,7 @@ export type StorefrontSeoRoutePolicy = Readonly<{
   canonicalPath: string;
   follow: boolean;
   index: boolean;
-  reason:
-    | 'public-page'
-    | 'catalog-page'
-    | 'catalog-variant'
-    | 'private-page'
-    | 'unknown-page';
+  reason: 'public-page' | 'catalog-page' | 'catalog-variant' | 'private-page' | 'unknown-page';
 }>;
 
 const PUBLIC_STATIC_ROUTES = new Set([

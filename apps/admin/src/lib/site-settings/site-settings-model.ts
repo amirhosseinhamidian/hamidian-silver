@@ -65,6 +65,8 @@ export type AdminHomepageSettings = Readonly<{
   secondaryHero: AdminHomepageSlide | null;
   categoryIds: readonly string[];
   popularProductIds: readonly string[];
+  manufacturerCountriesEnabled: boolean;
+  manufacturerCountryIds: readonly string[];
   updatedAt: string | null;
 }>;
 
@@ -196,7 +198,8 @@ export function parseAdminSiteSettings(value: unknown): AdminSiteSettings | null
     source?.seoHomeTitle === undefined ? null : nullableText(source?.seoHomeTitle);
   const seoHomeDescription =
     source?.seoHomeDescription === undefined ? null : nullableText(source?.seoHomeDescription);
-  const seoSiteName = source?.seoSiteName === undefined ? 'نقره حمیدیان' : text(source?.seoSiteName);
+  const seoSiteName =
+    source?.seoSiteName === undefined ? 'نقره حمیدیان' : text(source?.seoSiteName);
   const seoDefaultTitle =
     source?.seoDefaultTitle === undefined ? 'فروشگاه نقره حمیدیان' : text(source?.seoDefaultTitle);
   const seoTitleTemplate =
@@ -318,6 +321,9 @@ export function parseAdminHomepageSettings(value: unknown): AdminHomepageSetting
   const products = Array.isArray(source.popularProducts)
     ? source.popularProducts.map((item) => text(record(item)?.id))
     : null;
+  const manufacturerCountries = Array.isArray(source.manufacturerCountries)
+    ? source.manufacturerCountries.map((item) => text(record(item)?.id))
+    : null;
   const updatedAt = nullableText(source.updatedAt);
   if (
     slides.some((slide) => slide === null) ||
@@ -326,6 +332,9 @@ export function parseAdminHomepageSettings(value: unknown): AdminHomepageSetting
     categories.some((id) => !id) ||
     !products ||
     products.some((id) => !id) ||
+    typeof source.manufacturerCountriesEnabled !== 'boolean' ||
+    !manufacturerCountries ||
+    manufacturerCountries.some((id) => !id) ||
     updatedAt === undefined
   ) {
     return null;
@@ -335,6 +344,8 @@ export function parseAdminHomepageSettings(value: unknown): AdminHomepageSetting
     secondaryHero: secondary,
     categoryIds: categories as string[],
     popularProductIds: products as string[],
+    manufacturerCountriesEnabled: source.manufacturerCountriesEnabled,
+    manufacturerCountryIds: manufacturerCountries as string[],
     updatedAt,
   };
 }
@@ -365,4 +376,19 @@ export function parseProductReferences(value: unknown): readonly SiteSettingsRef
     return id && label ? { id, label } : null;
   });
   return parsed.some((item) => item === null) ? null : (parsed as SiteSettingsReference[]);
+}
+
+export function parseCountryReferences(value: unknown): readonly SiteSettingsReference[] | null {
+  if (!Array.isArray(value)) return null;
+  const items = value.map((entry) => {
+    const source = record(entry);
+    const id = text(source?.id);
+    const label = text(source?.name);
+    return id && label ? { id, label, active: source?.isActive !== false } : null;
+  });
+  if (items.some((item) => item === null)) return null;
+  return items.flatMap((item) => {
+    if (!item || !item.active) return [];
+    return [{ id: item.id, label: item.label }];
+  });
 }

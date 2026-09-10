@@ -18,11 +18,7 @@ describe('AdminProfileCompletionGate', () => {
   });
 
   it('does not interrupt administrators whose profile is complete', () => {
-    render(
-      <AdminProfileCompletionGate
-        profile={{ firstName: 'امیرحسین', lastName: 'حمیدیان' }}
-      />,
-    );
+    render(<AdminProfileCompletionGate profile={{ firstName: 'امیرحسین', lastName: 'حمیدیان' }} />);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
@@ -36,9 +32,7 @@ describe('AdminProfileCompletionGate', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    render(
-      <AdminProfileCompletionGate profile={{ firstName: null, lastName: null }} />,
-    );
+    render(<AdminProfileCompletionGate profile={{ firstName: null, lastName: null }} />);
 
     const dialog = screen.getByRole('dialog', { name: 'تکمیل اطلاعات مدیر' });
     expect(screen.queryByRole('button', { name: 'بستن' })).not.toBeInTheDocument();

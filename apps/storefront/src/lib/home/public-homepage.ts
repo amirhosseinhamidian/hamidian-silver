@@ -6,6 +6,8 @@ export type PublicHomepage = components['schemas']['PublicHomepageDto'];
 export type PublicHomepageHeroSlide = components['schemas']['PublicHomepageHeroSlideDto'];
 export type PublicHomepageFeaturedCategory =
   components['schemas']['PublicHomepageFeaturedCategoryDto'];
+export type PublicHomepageManufacturerCountry =
+  components['schemas']['PublicHomepageManufacturerCountryDto'];
 
 export async function getPublicHomepage(): Promise<PublicHomepage> {
   const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;

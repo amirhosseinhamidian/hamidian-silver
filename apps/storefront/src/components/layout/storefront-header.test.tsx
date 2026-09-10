@@ -5,10 +5,7 @@ import {
 } from '@/components/layout/storefront-header';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import {
-  AUTHENTICATION_ENDED_EVENT,
-  AUTHENTICATION_SUCCEEDED_EVENT,
-} from '@/lib/auth/events';
+import { AUTHENTICATION_ENDED_EVENT, AUTHENTICATION_SUCCEEDED_EVENT } from '@/lib/auth/events';
 
 const navigationCategories: StorefrontNavigationCategory[] = [
   { id: 'category-ring', label: 'انگشتر', slug: 'rings' },
@@ -157,9 +154,10 @@ describe('StorefrontHeader', () => {
       'href',
       '/wishlist',
     );
-    expect(
-      within(mobileNavigation).getByRole('link', { name: 'سوالات متداول' }),
-    ).toHaveAttribute('href', '/faq');
+    expect(within(mobileNavigation).getByRole('link', { name: 'سوالات متداول' })).toHaveAttribute(
+      'href',
+      '/faq',
+    );
     expect(screen.getByRole('button', { name: 'بستن منوی موبایل' })).toBeInTheDocument();
   });
 });

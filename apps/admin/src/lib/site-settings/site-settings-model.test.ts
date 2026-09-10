@@ -4,6 +4,7 @@ import {
   parseAdminHomepageSettings,
   parseAdminSiteSettings,
   parseCategoryReferences,
+  parseCountryReferences,
   parseProductReferences,
 } from '@/lib/site-settings/site-settings-model';
 
@@ -104,12 +105,16 @@ describe('site settings model', () => {
       secondaryHero: null,
       featuredCategories: [{ id: 'category-1', priority: 1 }],
       popularProducts: [{ id: 'product-1', priority: 1 }],
+      manufacturerCountriesEnabled: true,
+      manufacturerCountries: [{ id: 'country-1', priority: 1 }],
       updatedAt: null,
     });
 
     expect(result?.primaryHeroSlides[0]?.media.url).toContain('hero.webp');
     expect(result?.categoryIds).toEqual(['category-1']);
     expect(result?.popularProductIds).toEqual(['product-1']);
+    expect(result?.manufacturerCountriesEnabled).toBe(true);
+    expect(result?.manufacturerCountryIds).toEqual(['country-1']);
   });
 
   it('parses public catalog references used by ordered selectors', () => {
@@ -119,5 +124,14 @@ describe('site settings model', () => {
     expect(parseProductReferences({ items: [{ id: 'product-1', name: 'گردنبند آوین' }] })).toEqual([
       { id: 'product-1', label: 'گردنبند آوین' },
     ]);
+  });
+
+  it('keeps only active country references for homepage selection', () => {
+    expect(
+      parseCountryReferences([
+        { id: 'country-1', name: 'ایران', isActive: true },
+        { id: 'country-2', name: 'ایتالیا', isActive: false },
+      ]),
+    ).toEqual([{ id: 'country-1', label: 'ایران' }]);
   });
 });

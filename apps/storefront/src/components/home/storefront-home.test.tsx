@@ -58,6 +58,13 @@ const homepage: PublicHomepage = {
     image: null,
     originCountry: { id: 'country-1', name: 'ایران', slug: 'iran', isoCode: 'IR' },
   })),
+  manufacturerCountriesEnabled: true,
+  manufacturerCountries: [
+    { id: 'country-4', name: 'ایتالیا', slug: 'italy', isoCode: 'IT', image: null, priority: 1 },
+    { id: 'country-2', name: 'ترکیه', slug: 'turkey', isoCode: 'TR', image: null, priority: 2 },
+    { id: 'country-3', name: 'تایلند', slug: 'thailand', isoCode: 'TH', image: null, priority: 3 },
+    { id: 'country-1', name: 'ایران', slug: 'iran', isoCode: 'IR', image: null, priority: 4 },
+  ],
 };
 
 describe('StorefrontHome', () => {
@@ -69,6 +76,11 @@ describe('StorefrontHome', () => {
     expect(screen.getByRole('heading', { name: 'برند 4' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'برند 5' })).not.toBeInTheDocument();
     expect(screen.getByText('ضمانت کیفیت')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'کشورهای سازنده' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /ایتالیا/ })).toHaveAttribute(
+      'href',
+      '/products?country=italy',
+    );
 
     const newProducts = screen.getByRole('heading', { name: 'جدیدترین محصولات' });
     const firstCategory = screen.getByRole('heading', { name: 'انگشتر' });
@@ -82,5 +94,11 @@ describe('StorefrontHome', () => {
     expect(firstCategory.compareDocumentPosition(popular)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(popular.compareDocumentPosition(brands)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(brands.compareDocumentPosition(lastCategory)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('does not render manufacturer countries while the section is disabled', () => {
+    render(<StorefrontHome homepage={{ ...homepage, manufacturerCountriesEnabled: false }} />);
+
+    expect(screen.queryByRole('heading', { name: 'کشورهای سازنده' })).not.toBeInTheDocument();
   });
 });

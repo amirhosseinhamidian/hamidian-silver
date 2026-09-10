@@ -1,9 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-import {
-  PublicSiteAnnouncementDto,
-  PublicSiteSettingsMediaDto,
-} from './public-site-settings.dto';
+import { PublicSiteAnnouncementDto, PublicSiteSettingsMediaDto } from './public-site-settings.dto';
 
 export class AdminSiteSettingsDto {
   @ApiProperty({ type: String, isArray: true, format: 'uuid' })

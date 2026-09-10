@@ -24,6 +24,9 @@ export async function forwardSupplierSettlement(
     });
     return Response.json((await readJsonResponse(response)) ?? null, { status: response.status });
   } catch {
-    return Response.json({ message: 'Supplier settlement service is unavailable.' }, { status: 502 });
+    return Response.json(
+      { message: 'Supplier settlement service is unavailable.' },
+      { status: 502 },
+    );
   }
 }

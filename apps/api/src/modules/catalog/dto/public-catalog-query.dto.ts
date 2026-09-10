@@ -40,6 +40,12 @@ export class PublicCatalogQueryDto {
   @Length(1, 180)
   brand?: string;
 
+  @ApiPropertyOptional({ minLength: 1, maxLength: 160 })
+  @IsOptional()
+  @IsString()
+  @Length(1, 160)
+  country?: string;
+
   @ApiPropertyOptional({ enum: PublicCatalogSort, default: PublicCatalogSort.NEWEST })
   @IsOptional()
   @IsEnum(PublicCatalogSort)

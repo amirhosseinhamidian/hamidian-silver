@@ -49,7 +49,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     getPublicSiteSettings(),
   ]);
   const heroImageSrc = getCatalogDevHeroImageSrc();
-  const activeFilterCount = [filters.q, filters.category, filters.brand].filter(Boolean).length;
+  const activeFilterCount = [filters.q, filters.category, filters.brand, filters.country].filter(
+    Boolean,
+  ).length;
   const hasActiveFilters = Boolean(activeFilterCount > 0 || filters.sort !== 'newest');
 
   return (
@@ -105,6 +107,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 <input type="hidden" name="category" value={filters.category} />
               ) : null}
               {filters.brand ? <input type="hidden" name="brand" value={filters.brand} /> : null}
+              {filters.country ? (
+                <input type="hidden" name="country" value={filters.country} />
+              ) : null}
               <div className="min-w-0 flex-1">
                 <label htmlFor="catalog-sort" className="sr-only">
                   مرتب‌سازی

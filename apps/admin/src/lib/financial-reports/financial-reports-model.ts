@@ -85,9 +85,7 @@ export type FinanceSupplierRow = Readonly<{
 }>;
 
 export type MissingOrderCostCode =
-  | 'PAYMENT_GATEWAY_FEE_MISSING'
-  | 'SHIPPING_PROVIDER_COST_MISSING'
-  | 'PLATING_SERVICE_COST_MISSING';
+  'PAYMENT_GATEWAY_FEE_MISSING' | 'SHIPPING_PROVIDER_COST_MISSING' | 'PLATING_SERVICE_COST_MISSING';
 
 export type FinanceCostReconciliationRow = Readonly<{
   orderId: string;

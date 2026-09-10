@@ -76,21 +76,50 @@ export function OrderedSiteSelection({
       {selectedIds.length ? (
         <ol className="mt-3 space-y-2">
           {selectedIds.map((id, index) => (
-            <li key={id} className="flex items-center gap-2 rounded-lg bg-[var(--admin-color-surface-subtle)] p-2">
+            <li
+              key={id}
+              className="flex items-center gap-2 rounded-lg bg-[var(--admin-color-surface-subtle)] p-2"
+            >
               <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white text-xs font-black">
                 {formatAdminInteger(index + 1)}
               </span>
               <span className="min-w-0 flex-1 truncate text-sm font-semibold">
                 {byId.get(id)?.label ?? 'مورد حذف‌شده یا غیرفعال'}
               </span>
-              <Button aria-label={`انتقال ${byId.get(id)?.label ?? id} به بالا`} variant="ghost" size="sm" disabled={disabled || index === 0} onClick={() => move(index, -1)}>↑</Button>
-              <Button aria-label={`انتقال ${byId.get(id)?.label ?? id} به پایین`} variant="ghost" size="sm" disabled={disabled || index === selectedIds.length - 1} onClick={() => move(index, 1)}>↓</Button>
-              <Button aria-label={`حذف ${byId.get(id)?.label ?? id}`} variant="ghost" size="sm" disabled={disabled} onClick={() => onChange(selectedIds.filter((candidate) => candidate !== id))}>حذف</Button>
+              <Button
+                aria-label={`انتقال ${byId.get(id)?.label ?? id} به بالا`}
+                variant="ghost"
+                size="sm"
+                disabled={disabled || index === 0}
+                onClick={() => move(index, -1)}
+              >
+                ↑
+              </Button>
+              <Button
+                aria-label={`انتقال ${byId.get(id)?.label ?? id} به پایین`}
+                variant="ghost"
+                size="sm"
+                disabled={disabled || index === selectedIds.length - 1}
+                onClick={() => move(index, 1)}
+              >
+                ↓
+              </Button>
+              <Button
+                aria-label={`حذف ${byId.get(id)?.label ?? id}`}
+                variant="ghost"
+                size="sm"
+                disabled={disabled}
+                onClick={() => onChange(selectedIds.filter((candidate) => candidate !== id))}
+              >
+                حذف
+              </Button>
             </li>
           ))}
         </ol>
       ) : (
-        <p className="mt-3 rounded-lg bg-[var(--admin-color-surface-subtle)] p-3 text-xs text-[var(--admin-color-muted)]">هنوز موردی انتخاب نشده است.</p>
+        <p className="mt-3 rounded-lg bg-[var(--admin-color-surface-subtle)] p-3 text-xs text-[var(--admin-color-muted)]">
+          هنوز موردی انتخاب نشده است.
+        </p>
       )}
     </section>
   );

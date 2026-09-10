@@ -162,12 +162,7 @@ export function AccountProfilePanel({ profile, onProfileChange }: AccountProfile
         <p className="mt-2 text-sm leading-7 text-[var(--sf-color-muted)]">
           با خروج، برای مشاهده دوباره اطلاعات حساب باید وارد شوید.
         </p>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={requestLogout}
-          className="mt-4"
-        >
+        <Button type="button" variant="outline" onClick={requestLogout} className="mt-4">
           خروج از حساب کاربری
         </Button>
       </div>
@@ -201,11 +196,7 @@ export function AccountProfilePanel({ profile, onProfileChange }: AccountProfile
                   انصراف
                 </Button>
               </DialogPrimitive.Close>
-              <Button
-                type="button"
-                loading={logoutLoading}
-                onClick={() => void confirmLogout()}
-              >
+              <Button type="button" loading={logoutLoading} onClick={() => void confirmLogout()}>
                 تأیید خروج
               </Button>
             </div>

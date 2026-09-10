@@ -181,11 +181,7 @@ function OrderDetails({
         ) : null}
       </div>
 
-      <OrderOperations
-        order={order}
-        canUpdateStatus={canUpdateStatus}
-        canCancel={canCancel}
-      />
+      <OrderOperations order={order} canUpdateStatus={canUpdateStatus} canCancel={canCancel} />
 
       <Card title="خلاصه مالی" description="مبالغ ثبت‌شده در زمان سفارش">
         <DetailRows
@@ -360,11 +356,7 @@ function OrderDetailsSheet({
         description={`ثبت‌شده در ${formatAdminDateTime(order.createdAt)}`}
         height="full"
       >
-        <OrderDetails
-          order={order}
-          canUpdateStatus={canUpdateStatus}
-          canCancel={canCancel}
-        />
+        <OrderDetails order={order} canUpdateStatus={canUpdateStatus} canCancel={canCancel} />
       </BottomSheetContent>
     </BottomSheet>
   );
@@ -397,11 +389,7 @@ function OrderMobileCard({
       detailsTitle={`سفارش ${toPersianDigits(order.orderNumber)}`}
       detailsDescription={`مشتری: ${order.customer.name ?? formatAdminPhone(order.customer.phone)}`}
       details={
-        <OrderDetails
-          order={order}
-          canUpdateStatus={canUpdateStatus}
-          canCancel={canCancel}
-        />
+        <OrderDetails order={order} canUpdateStatus={canUpdateStatus} canCancel={canCancel} />
       }
     />
   );
@@ -507,11 +495,7 @@ export function OrderManagementView({
       header: 'عملیات',
       align: 'end',
       cell: (order) => (
-        <OrderDetailsSheet
-          order={order}
-          canUpdateStatus={canUpdateStatus}
-          canCancel={canCancel}
-        />
+        <OrderDetailsSheet order={order} canUpdateStatus={canUpdateStatus} canCancel={canCancel} />
       ),
     },
   ];

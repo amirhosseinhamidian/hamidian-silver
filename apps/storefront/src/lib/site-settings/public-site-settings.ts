@@ -91,9 +91,7 @@ function siteSettingsMedia(value: unknown): Readonly<{
   altText: string | null;
 }> | null {
   const media = record(value);
-  return media
-    ? { url: nullableText(media.url), altText: nullableText(media.altText) }
-    : null;
+  return media ? { url: nullableText(media.url), altText: nullableText(media.altText) } : null;
 }
 
 function stringList(value: unknown): string[] {
@@ -166,8 +164,7 @@ function parsePublicSettings(value: unknown): PublicSiteSettings | null {
       DEFAULT_PUBLIC_SITE_SETTINGS.seoDefaultDescription,
     seoDefaultOgMedia: siteSettingsMedia(source.seoDefaultOgMedia),
     seoOrganizationName:
-      nullableText(source.seoOrganizationName) ??
-      DEFAULT_PUBLIC_SITE_SETTINGS.seoOrganizationName,
+      nullableText(source.seoOrganizationName) ?? DEFAULT_PUBLIC_SITE_SETTINGS.seoOrganizationName,
     seoOrganizationLogoMedia: siteSettingsMedia(source.seoOrganizationLogoMedia),
     seoSocialProfileUrls: stringList(source.seoSocialProfileUrls),
     seoHomeTitle: nullableText(source.seoHomeTitle),

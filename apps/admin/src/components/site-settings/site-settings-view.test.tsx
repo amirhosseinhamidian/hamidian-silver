@@ -17,6 +17,12 @@ const data: SiteSettingsData = {
     { id: 'product-1', label: 'انگشتر مهتاب' },
     { id: 'product-2', label: 'گردنبند آوین' },
   ],
+  countries: [
+    { id: 'country-1', label: 'ایران' },
+    { id: 'country-2', label: 'ایتالیا' },
+    { id: 'country-3', label: 'ترکیه' },
+    { id: 'country-4', label: 'تایلند' },
+  ],
   settings: {
     headerCategoryIds: ['category-1'],
     announcement: {
@@ -62,6 +68,8 @@ const data: SiteSettingsData = {
     secondaryHero: null,
     categoryIds: ['category-1'],
     popularProductIds: ['product-1'],
+    manufacturerCountriesEnabled: false,
+    manufacturerCountryIds: [],
     updatedAt: null,
   },
 };
@@ -84,6 +92,9 @@ describe('SiteSettingsView', () => {
       'admin-select-trigger',
     );
     expect(screen.getByRole('combobox', { name: 'افزودن به محصولات محبوب' })).toBeEnabled();
+    expect(screen.getByRole('combobox', { name: 'افزودن به کشورهای منتخب صفحه اصلی' })).toHaveClass(
+      'admin-select-trigger',
+    );
 
     fireEvent.click(screen.getByRole('tab', { name: 'هدر و اعلان' }));
     expect(screen.getByLabelText(/^متن اعلان/)).toHaveValue('ارسال رایگان');
@@ -158,5 +169,15 @@ describe('SiteSettingsView', () => {
 
     expect(screen.getByText(/دسترسی شما فقط‌خواندنی است/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ذخیره تنظیمات صفحه اصلی' })).toBeDisabled();
+  });
+
+  it('prevents enabling manufacturer countries with fewer than four selections', () => {
+    render(<SiteSettingsView data={data} canWrite />);
+
+    fireEvent.click(screen.getByLabelText('نمایش سکشن کشورهای سازنده'));
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره تنظیمات صفحه اصلی' }));
+
+    expect(screen.getByText(/حداقل چهار کشور انتخاب کنید/)).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

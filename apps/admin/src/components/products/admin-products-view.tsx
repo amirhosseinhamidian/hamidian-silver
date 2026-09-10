@@ -55,12 +55,7 @@ function ProductIdentity({ product }: Readonly<{ product: AdminProduct }>) {
     <div className="flex min-w-0 items-center gap-3">
       <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-[var(--admin-radius-md)] bg-[var(--admin-color-primary-soft)] text-sm font-black text-[var(--admin-color-primary)]">
         {preview?.url ? (
-          <img
-            src={preview.url}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
+          <img src={preview.url} alt="" className="h-full w-full object-cover" loading="lazy" />
         ) : (
           product.name.slice(0, 1)
         )}
@@ -194,21 +189,21 @@ export function AdminProductsView({ data, filters, canWrite }: AdminProductsView
       header: 'عملیات',
       align: 'end' as const,
       cell: (product: AdminProduct) => (
-          <div className="flex items-center justify-end gap-2">
-            {canWrite ? (
-              <>
-                <ButtonLink href={`/products/${product.id}/edit`} size="sm" variant="outline">
-                  ویرایش
-                </ButtonLink>
-                <ProductStatusActions
-                  productId={product.id}
-                  productName={product.name}
-                  status={product.status}
-                />
-              </>
-            ) : (
-              <span className="text-xs text-[var(--admin-color-subtle)]">فقط مشاهده</span>
-            )}
+        <div className="flex items-center justify-end gap-2">
+          {canWrite ? (
+            <>
+              <ButtonLink href={`/products/${product.id}/edit`} size="sm" variant="outline">
+                ویرایش
+              </ButtonLink>
+              <ProductStatusActions
+                productId={product.id}
+                productName={product.name}
+                status={product.status}
+              />
+            </>
+          ) : (
+            <span className="text-xs text-[var(--admin-color-subtle)]">فقط مشاهده</span>
+          )}
         </div>
       ),
     },
@@ -353,21 +348,23 @@ export function AdminProductsView({ data, filters, canWrite }: AdminProductsView
               detailsTitle={product.name}
               detailsDescription={`شناسه محصول: ${toPersianDigits(product.slug)}`}
               details={<ProductDetails product={product} />}
-              detailsFooter={canWrite ? (
-                <div className="grid w-full gap-2">
-                  <ButtonLink href={`/products/${product.id}/edit`} variant="outline">
-                    ویرایش محصول
-                  </ButtonLink>
-                  {canWrite ? (
-                    <ProductStatusActions
-                      productId={product.id}
-                      productName={product.name}
-                      status={product.status}
-                      stacked
-                    />
-                  ) : null}
-                </div>
-              ) : undefined}
+              detailsFooter={
+                canWrite ? (
+                  <div className="grid w-full gap-2">
+                    <ButtonLink href={`/products/${product.id}/edit`} variant="outline">
+                      ویرایش محصول
+                    </ButtonLink>
+                    {canWrite ? (
+                      <ProductStatusActions
+                        productId={product.id}
+                        productName={product.name}
+                        status={product.status}
+                        stacked
+                      />
+                    ) : null}
+                  </div>
+                ) : undefined
+              }
             />
           )}
         />

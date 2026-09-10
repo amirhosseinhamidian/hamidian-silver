@@ -319,6 +319,7 @@ model SiteSettings {
   seoHomeTitle                String?  @db.VarChar(200)
   seoHomeDescription          String?  @db.VarChar(500)
   seoHomeOgMediaId            String?  @db.Uuid
+  manufacturerCountriesEnabled Boolean @default(false)
   updatedByUserId     String?  @db.Uuid
   createdAt           DateTime @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime @updatedAt @db.Timestamptz(3)
@@ -454,6 +455,7 @@ model Country {
   image     Media?    @relation("CountryImage", fields: [imageId], references: [id], onDelete: SetNull)
   products  Product[]
   originBrands Brand[] @relation("BrandOriginCountry")
+  homepageManufacturerFeature HomepageManufacturerCountry?
 
   @@index([imageId])
   @@index([isActive])
@@ -553,6 +555,16 @@ model HomepagePopularProduct {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("homepage_popular_products")
+}
+
+model HomepageManufacturerCountry {
+  countryId String   @id @db.Uuid
+  priority  Int      @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  country   Country  @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  @@map("homepage_manufacturer_countries")
 }
 
 model ProductVariant {

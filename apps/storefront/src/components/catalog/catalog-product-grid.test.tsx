@@ -78,10 +78,7 @@ describe('CatalogProductGrid', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     render(
-      <CatalogProductGrid
-        filters={filters}
-        initialProducts={productPage([firstProduct], 1, 2)}
-      />,
+      <CatalogProductGrid filters={filters} initialProducts={productPage([firstProduct], 1, 2)} />,
     );
 
     act(() => {
@@ -107,10 +104,7 @@ describe('CatalogProductGrid', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     render(
-      <CatalogProductGrid
-        filters={filters}
-        initialProducts={productPage([firstProduct], 1, 2)}
-      />,
+      <CatalogProductGrid filters={filters} initialProducts={productPage([firstProduct], 1, 2)} />,
     );
 
     act(() => {
@@ -120,9 +114,7 @@ describe('CatalogProductGrid', () => {
       );
     });
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'بارگذاری محصولات بیشتر انجام نشد.',
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('بارگذاری محصولات بیشتر انجام نشد.');
     fireEvent.click(screen.getByRole('button', { name: 'تلاش مجدد' }));
 
     expect(await screen.findByText('انگشتر دوم')).toBeInTheDocument();

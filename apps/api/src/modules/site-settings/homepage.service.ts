@@ -27,30 +27,66 @@ export class HomepageService {
   ) {}
 
   async getPublicHomepage(): Promise<PublicHomepageDto> {
-    const [heroSlides, categorySelections, popularSelections, newProducts, brands] =
-      await Promise.all([
-        this.prisma.homepageHeroSlide.findMany({
-          where: { isActive: true },
-          orderBy: [{ placement: 'asc' }, { sortOrder: 'asc' }, { id: 'asc' }],
-          include: { media: true },
-        }),
-        this.prisma.homepageFeaturedCategory.findMany({
-          where: {
-            category: { isActive: true, deletedAt: null },
+    const [
+      heroSlides,
+      categorySelections,
+      popularSelections,
+      manufacturerCountrySelections,
+      newProducts,
+      brands,
+      settings,
+    ] = await Promise.all([
+      this.prisma.homepageHeroSlide.findMany({
+        where: { isActive: true },
+        orderBy: [{ placement: 'asc' }, { sortOrder: 'asc' }, { id: 'asc' }],
+        include: { media: true },
+      }),
+      this.prisma.homepageFeaturedCategory.findMany({
+        where: {
+          category: { isActive: true, deletedAt: null },
+        },
+        orderBy: { priority: 'asc' },
+        select: { priority: true, categoryId: true },
+      }),
+      this.prisma.homepagePopularProduct.findMany({
+        where: {
+          product: { status: ProductStatus.ACTIVE, deletedAt: null },
+        },
+        orderBy: { priority: 'asc' },
+        select: { product: { select: { slug: true } } },
+      }),
+      this.prisma.homepageManufacturerCountry.findMany({
+        where: { country: { isActive: true, deletedAt: null } },
+        orderBy: { priority: 'asc' },
+        select: {
+          priority: true,
+          country: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              isoCode: true,
+              image: {
+                select: {
+                  storageKey: true,
+                  mimeType: true,
+                  altText: true,
+                  width: true,
+                  height: true,
+                  deletedAt: true,
+                },
+              },
+            },
           },
-          orderBy: { priority: 'asc' },
-          select: { priority: true, categoryId: true },
-        }),
-        this.prisma.homepagePopularProduct.findMany({
-          where: {
-            product: { status: ProductStatus.ACTIVE, deletedAt: null },
-          },
-          orderBy: { priority: 'asc' },
-          select: { product: { select: { slug: true } } },
-        }),
-        this.catalogService.listPublicProducts({ page: 1, pageSize: 4 }),
-        this.catalogService.listPublicBrands(),
-      ]);
+        },
+      }),
+      this.catalogService.listPublicProducts({ page: 1, pageSize: 4 }),
+      this.catalogService.listPublicBrands(),
+      this.prisma.siteSettings.findUnique({
+        where: { id: SITE_SETTINGS_ID },
+        select: { manufacturerCountriesEnabled: true },
+      }),
+    ]);
 
     const [categories, popularProducts] = await Promise.all([
       this.catalogService.listPublicCategories(),
@@ -68,6 +104,9 @@ export class HomepageService {
     const secondaryHeroRecord = heroSlides.find(
       ({ placement }) => placement === HomepageHeroPlacement.SECONDARY,
     );
+    const manufacturerCountriesEnabled = Boolean(
+      settings?.manufacturerCountriesEnabled && manufacturerCountrySelections.length >= 4,
+    );
 
     return {
       primaryHeroSlides,
@@ -79,20 +118,41 @@ export class HomepageService {
       }),
       popularProducts,
       featuredBrands: brands.slice(0, 4),
+      manufacturerCountriesEnabled,
+      manufacturerCountries: manufacturerCountriesEnabled
+        ? manufacturerCountrySelections.map(({ country, priority }) => ({
+            id: country.id,
+            name: country.name,
+            slug: country.slug,
+            isoCode: country.isoCode,
+            priority,
+            image:
+              country.image && !country.image.deletedAt
+                ? {
+                    url: this.publicMediaUrlService.resolve(country.image.storageKey),
+                    mimeType: country.image.mimeType,
+                    altText: country.image.altText,
+                    width: country.image.width,
+                    height: country.image.height,
+                  }
+                : null,
+          }))
+        : [],
     };
   }
 
   async getAdminHomepage(): Promise<AdminHomepageDto> {
-    const [slides, categories, products, settings] = await Promise.all([
+    const [slides, categories, products, manufacturerCountries, settings] = await Promise.all([
       this.prisma.homepageHeroSlide.findMany({
         orderBy: [{ placement: 'asc' }, { sortOrder: 'asc' }, { id: 'asc' }],
         include: { media: true },
       }),
       this.prisma.homepageFeaturedCategory.findMany({ orderBy: { priority: 'asc' } }),
       this.prisma.homepagePopularProduct.findMany({ orderBy: { priority: 'asc' } }),
+      this.prisma.homepageManufacturerCountry.findMany({ orderBy: { priority: 'asc' } }),
       this.prisma.siteSettings.findUnique({
         where: { id: SITE_SETTINGS_ID },
-        select: { updatedAt: true },
+        select: { manufacturerCountriesEnabled: true, updatedAt: true },
       }),
     ]);
 
@@ -132,12 +192,27 @@ export class HomepageService {
         id: productId,
         priority,
       })),
+      manufacturerCountriesEnabled: settings?.manufacturerCountriesEnabled ?? false,
+      manufacturerCountries: manufacturerCountries.map(({ countryId, priority }) => ({
+        id: countryId,
+        priority,
+      })),
       updatedAt: settings?.updatedAt.toISOString() ?? null,
     };
   }
 
   async updateHomepage(dto: UpdateHomepageDto, actorUserId: string): Promise<AdminHomepageDto> {
     this.validateUniqueSelections(dto);
+    if (dto.manufacturerCountryIds.length > 8) {
+      throw new BadRequestException(
+        'Homepage manufacturer countries cannot contain more than eight countries.',
+      );
+    }
+    if (dto.manufacturerCountriesEnabled && dto.manufacturerCountryIds.length < 4) {
+      throw new BadRequestException(
+        'An enabled manufacturer countries section requires between four and eight countries.',
+      );
+    }
     const slides = [
       ...dto.primaryHeroSlides.map((slide, index) => ({
         ...this.normalizeSlide(slide),
@@ -159,12 +234,14 @@ export class HomepageService {
       this.validateHeroMedia(slides.map(({ mediaId }) => mediaId)),
       this.validateCategories(dto.categoryIds),
       this.validateProducts(dto.popularProductIds),
+      this.validateCountries(dto.manufacturerCountryIds),
     ]);
 
     await this.prisma.$transaction(async (transaction) => {
       await transaction.homepageHeroSlide.deleteMany();
       await transaction.homepageFeaturedCategory.deleteMany();
       await transaction.homepagePopularProduct.deleteMany();
+      await transaction.homepageManufacturerCountry.deleteMany();
 
       if (slides.length > 0) {
         await transaction.homepageHeroSlide.createMany({ data: slides });
@@ -188,10 +265,26 @@ export class HomepageService {
         });
       }
 
+      if (dto.manufacturerCountryIds.length > 0) {
+        await transaction.homepageManufacturerCountry.createMany({
+          data: dto.manufacturerCountryIds.map((countryId, index) => ({
+            countryId,
+            priority: index + 1,
+          })),
+        });
+      }
+
       await transaction.siteSettings.upsert({
         where: { id: SITE_SETTINGS_ID },
-        create: { id: SITE_SETTINGS_ID, updatedByUserId: actorUserId },
-        update: { updatedByUserId: actorUserId },
+        create: {
+          id: SITE_SETTINGS_ID,
+          manufacturerCountriesEnabled: dto.manufacturerCountriesEnabled,
+          updatedByUserId: actorUserId,
+        },
+        update: {
+          manufacturerCountriesEnabled: dto.manufacturerCountriesEnabled,
+          updatedByUserId: actorUserId,
+        },
       });
     });
 
@@ -247,6 +340,10 @@ export class HomepageService {
     if (hasDuplicates(dto.popularProductIds)) {
       throw new BadRequestException('Homepage popular products must be unique.');
     }
+
+    if (hasDuplicates(dto.manufacturerCountryIds)) {
+      throw new BadRequestException('Homepage manufacturer countries must be unique.');
+    }
   }
 
   private async validateHeroMedia(mediaIds: string[]): Promise<void> {
@@ -286,6 +383,19 @@ export class HomepageService {
 
     if (products.length !== productIds.length) {
       throw new NotFoundException('One or more homepage products were not found.');
+    }
+  }
+
+  private async validateCountries(countryIds: string[]): Promise<void> {
+    if (countryIds.length === 0) return;
+
+    const countries = await this.prisma.country.findMany({
+      where: { id: { in: countryIds }, isActive: true, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (countries.length !== countryIds.length) {
+      throw new NotFoundException('One or more homepage manufacturer countries were not found.');
     }
   }
 

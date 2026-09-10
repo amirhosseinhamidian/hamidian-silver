@@ -283,11 +283,7 @@ export class SiteSettingsService {
     await Promise.all([
       this.validateCatalogHeroMedia(catalogHeroEnabled, catalogHeroMediaId, dto),
       this.validateHeaderCategories(headerCategoryIds),
-      this.validateSeoMediaIds([
-        seoDefaultOgMediaId,
-        seoOrganizationLogoMediaId,
-        seoHomeOgMediaId,
-      ]),
+      this.validateSeoMediaIds([seoDefaultOgMediaId, seoOrganizationLogoMediaId, seoHomeOgMediaId]),
     ]);
     this.validateAnnouncement(announcement);
     this.validateSeoTitleTemplate(seoTitleTemplate);
@@ -388,17 +384,15 @@ export class SiteSettingsService {
 
   private resolveAnnouncement(
     dto: UpdateSiteSettingsDto,
-    current:
-      | Readonly<{
-          announcementEnabled: boolean;
-          announcementMessage: string | null;
-          announcementCountdownMode: string;
-          announcementDurationSeconds: number | null;
-          announcementEndsAt: Date | null;
-          announcementCtaLabel: string | null;
-          announcementCtaHref: string | null;
-        }>
-      | null,
+    current: Readonly<{
+      announcementEnabled: boolean;
+      announcementMessage: string | null;
+      announcementCountdownMode: string;
+      announcementDurationSeconds: number | null;
+      announcementEndsAt: Date | null;
+      announcementCtaLabel: string | null;
+      announcementCtaHref: string | null;
+    }> | null,
   ): AnnouncementSettings {
     const update = dto.announcement;
     const candidateMode = update?.countdownMode ?? current?.announcementCountdownMode ?? 'NONE';
@@ -445,10 +439,14 @@ export class SiteSettingsService {
       throw new BadRequestException('Announcement end date is required for deadline countdown.');
     }
     if (Boolean(announcement.ctaLabel) !== Boolean(announcement.ctaHref)) {
-      throw new BadRequestException('Announcement action label and link must be provided together.');
+      throw new BadRequestException(
+        'Announcement action label and link must be provided together.',
+      );
     }
     if (announcement.ctaHref && !this.isAllowedActionHref(announcement.ctaHref)) {
-      throw new BadRequestException('Announcement action link must be an internal path or HTTP URL.');
+      throw new BadRequestException(
+        'Announcement action link must be an internal path or HTTP URL.',
+      );
     }
   }
 

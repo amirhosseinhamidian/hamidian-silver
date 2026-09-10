@@ -10,8 +10,7 @@ const persianNumber = new Intl.NumberFormat('fa-IR');
 export function CartHeaderLink() {
   const { itemCount } = useCart();
   const badge = itemCount > 99 ? '۹۹+' : persianNumber.format(itemCount);
-  const label =
-    itemCount > 0 ? `سبد خرید، ${persianNumber.format(itemCount)} کالا` : 'سبد خرید';
+  const label = itemCount > 0 ? `سبد خرید، ${persianNumber.format(itemCount)} کالا` : 'سبد خرید';
 
   return (
     <Link

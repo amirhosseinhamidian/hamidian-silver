@@ -66,7 +66,8 @@ function mutationErrorMessage(status: number): string {
   if (status === 403) return 'مجوز انجام این عملیات را ندارید.';
   if (status === 404) return 'سفارش پیدا نشد یا دیگر در دسترس نیست.';
   if (status === 409) return 'وضعیت سفارش تغییر کرده است؛ صفحه را تازه‌سازی و دوباره بررسی کنید.';
-  if (status === 400 || status === 422) return 'اطلاعات عملیات معتبر نیست یا شرایط آن فراهم نشده است.';
+  if (status === 400 || status === 422)
+    return 'اطلاعات عملیات معتبر نیست یا شرایط آن فراهم نشده است.';
   return 'عملیات سفارش انجام نشد. دوباره تلاش کنید.';
 }
 
@@ -195,7 +196,9 @@ export function OrderOperations({ order, canUpdateStatus, canCancel }: OrderOper
 
           {canCancel && order.status === 'PENDING_PAYMENT' ? (
             <div className="rounded-[var(--admin-radius-md)] border border-red-200 bg-red-50/50 p-3">
-              <p className="text-sm font-bold text-[var(--admin-color-danger)]">لغو مدیریتی سفارش</p>
+              <p className="text-sm font-bold text-[var(--admin-color-danger)]">
+                لغو مدیریتی سفارش
+              </p>
               <p className="mt-1 text-xs leading-6 text-[var(--admin-color-muted)]">
                 موجودی رزروشده آزاد می‌شود و دلیل لغو در تاریخچه ثبت خواهد شد.
               </p>
@@ -226,8 +229,8 @@ export function OrderOperations({ order, canUpdateStatus, canCancel }: OrderOper
                 مرجوعی فقط با تأیید استثنایی
               </p>
               <p className="mt-1 text-xs leading-6 text-[var(--admin-color-muted)]">
-                فقط پس از بررسی ارسال اشتباه یا مشکل بحرانی، امکان درخواست مرجوعی را برای مشتری
-                فعال کنید.
+                فقط پس از بررسی ارسال اشتباه یا مشکل بحرانی، امکان درخواست مرجوعی را برای مشتری فعال
+                کنید.
               </p>
               <Button
                 className="mt-3"
@@ -292,7 +295,9 @@ export function OrderOperations({ order, canUpdateStatus, canCancel }: OrderOper
               label={action === 'status' ? 'یادداشت تغییر وضعیت' : 'دلیل عملیات'}
               required={reasonRequired}
               error={error || undefined}
-              hint={action === 'status' ? 'اختیاری؛ در timeline سفارش نمایش داده می‌شود.' : undefined}
+              hint={
+                action === 'status' ? 'اختیاری؛ در timeline سفارش نمایش داده می‌شود.' : undefined
+              }
             >
               {(controlProps) => (
                 <Textarea

@@ -32,9 +32,7 @@ function announcementFingerprint(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
-export function getFixedCountdownStorageKey(
-  announcement: StorefrontAnnouncement,
-): string | null {
+export function getFixedCountdownStorageKey(announcement: StorefrontAnnouncement): string | null {
   if (announcement.countdown.mode !== 'fixed') return null;
 
   const identity = JSON.stringify({
@@ -65,8 +63,7 @@ export function resolveFixedCountdownDeadline(
   }
 
   return {
-    deadlineMs:
-      now + getInitialCountdownSeconds({ mode: 'fixed', durationSeconds }, now)! * 1000,
+    deadlineMs: now + getInitialCountdownSeconds({ mode: 'fixed', durationSeconds }, now)! * 1000,
     shouldPersist: true,
   };
 }

@@ -3,10 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import {
-  MEDIA_UPLOAD_LIMIT_BYTES,
-  resolveMediaStorageRoot,
-} from '../../config/media-storage';
+import { MEDIA_UPLOAD_LIMIT_BYTES, resolveMediaStorageRoot } from '../../config/media-storage';
 
 export type CatalogUploadFile = Readonly<{
   buffer: Buffer;
@@ -29,12 +26,7 @@ type DetectedImageType = Readonly<{
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 function detectImageType(buffer: Buffer): DetectedImageType | null {
-  if (
-    buffer.length >= 3 &&
-    buffer[0] === 0xff &&
-    buffer[1] === 0xd8 &&
-    buffer[2] === 0xff
-  ) {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
     return { mimeType: 'image/jpeg', extension: 'jpg' };
   }
 
@@ -113,11 +105,7 @@ export class LocalMediaStorageService {
     const targetPath = resolve(this.rootPath, storageKey);
     const relativePath = relative(this.rootPath, targetPath);
 
-    if (
-      !relativePath ||
-      relativePath.startsWith('..') ||
-      isAbsolute(relativePath)
-    ) {
+    if (!relativePath || relativePath.startsWith('..') || isAbsolute(relativePath)) {
       return;
     }
 

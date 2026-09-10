@@ -29,6 +29,7 @@ export function CatalogFilterForm({
   return (
     <form action="/products" method="get" className={className}>
       {filters.sort !== 'newest' ? <input type="hidden" name="sort" value={filters.sort} /> : null}
+      {filters.country ? <input type="hidden" name="country" value={filters.country} /> : null}
 
       <div className="border-b border-[var(--sf-color-border)] pb-7">
         <label

@@ -13,6 +13,7 @@ describe('parseCatalogSearchParams', () => {
         q: '  انگشتر نقره  ',
         category: 'rings',
         brand: 'hamidian',
+        country: 'iran',
         sort: 'price-desc',
       }),
     ).toEqual({
@@ -21,6 +22,7 @@ describe('parseCatalogSearchParams', () => {
       q: 'انگشتر نقره',
       category: 'rings',
       brand: 'hamidian',
+      country: 'iran',
       sort: 'price-desc',
     });
   });
@@ -37,6 +39,7 @@ describe('parseCatalogSearchParams', () => {
       q: undefined,
       category: undefined,
       brand: undefined,
+      country: undefined,
       sort: 'newest',
     });
   });
@@ -47,11 +50,12 @@ describe('buildCatalogHref', () => {
     const filters = parseCatalogSearchParams({
       q: 'انگشتر',
       category: 'rings',
+      country: 'iran',
       sort: 'price-asc',
     });
 
     expect(buildCatalogHref(filters, { page: 2 })).toBe(
-      '/products?q=%D8%A7%D9%86%DA%AF%D8%B4%D8%AA%D8%B1&category=rings&sort=price-asc&page=2',
+      '/products?q=%D8%A7%D9%86%DA%AF%D8%B4%D8%AA%D8%B1&category=rings&country=iran&sort=price-asc&page=2',
     );
   });
 
@@ -70,6 +74,7 @@ describe('buildCatalogHref', () => {
         q: undefined,
         category: undefined,
         brand: undefined,
+        country: undefined,
         sort: 'newest',
       }),
     ).toBe('/products');
