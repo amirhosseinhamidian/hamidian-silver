@@ -1,5 +1,6 @@
 'use client';
 
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -8,6 +9,7 @@ import { readResponseError, toPersianDigits } from '@/components/account/account
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { notifyAuthenticationEnded } from '@/lib/auth/events';
 
 type AccountProfilePanelProps = Readonly<{
   profile: CustomerProfile;
@@ -22,6 +24,7 @@ export function AccountProfilePanel({ profile, onProfileChange }: AccountProfile
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,7 +54,7 @@ export function AccountProfilePanel({ profile, onProfileChange }: AccountProfile
     }
   }
 
-  async function logout() {
+  async function confirmLogout() {
     if (logoutLoading) return;
     setLogoutLoading(true);
     setError(null);
@@ -62,6 +65,8 @@ export function AccountProfilePanel({ profile, onProfileChange }: AccountProfile
         setError(await readResponseError(response));
         return;
       }
+      setLogoutConfirmationOpen(false);
+      notifyAuthenticationEnded();
       router.push('/');
       router.refresh();
     } catch {
@@ -69,6 +74,11 @@ export function AccountProfilePanel({ profile, onProfileChange }: AccountProfile
     } finally {
       setLogoutLoading(false);
     }
+  }
+
+  function requestLogout() {
+    setError(null);
+    setLogoutConfirmationOpen(true);
   }
 
   return (
@@ -155,13 +165,53 @@ export function AccountProfilePanel({ profile, onProfileChange }: AccountProfile
         <Button
           type="button"
           variant="outline"
-          loading={logoutLoading}
-          onClick={() => void logout()}
+          onClick={requestLogout}
           className="mt-4"
         >
           خروج از حساب کاربری
         </Button>
       </div>
+
+      <DialogPrimitive.Root
+        open={logoutConfirmationOpen}
+        onOpenChange={(open) => !logoutLoading && setLogoutConfirmationOpen(open)}
+      >
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-[90] bg-black/45 backdrop-blur-[2px]" />
+          <DialogPrimitive.Content
+            dir="rtl"
+            className="fixed left-1/2 top-1/2 z-[100] w-[min(27rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-[var(--sf-radius-lg)] border border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)] p-6 shadow-2xl outline-none sm:p-8"
+          >
+            <DialogPrimitive.Title className="text-xl font-bold">
+              خروج از حساب کاربری
+            </DialogPrimitive.Title>
+            <DialogPrimitive.Description className="mt-3 text-sm leading-7 text-[var(--sf-color-muted)]">
+              آیا مطمئن هستید که می‌خواهید از حساب کاربری خود خارج شوید؟
+            </DialogPrimitive.Description>
+
+            {error ? (
+              <p role="alert" className="mt-4 text-sm text-red-700">
+                {error}
+              </p>
+            ) : null}
+
+            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <DialogPrimitive.Close asChild>
+                <Button type="button" variant="outline" disabled={logoutLoading}>
+                  انصراف
+                </Button>
+              </DialogPrimitive.Close>
+              <Button
+                type="button"
+                loading={logoutLoading}
+                onClick={() => void confirmLogout()}
+              >
+                تأیید خروج
+              </Button>
+            </div>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </section>
   );
 }

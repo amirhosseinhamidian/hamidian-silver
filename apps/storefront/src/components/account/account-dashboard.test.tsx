@@ -113,7 +113,11 @@ describe('AccountDashboard', () => {
     );
 
     fireEvent.click(screen.getByRole('tab', { name: 'اطلاعات حساب' }));
-    expect(screen.getByRole('button', { name: 'خروج از حساب کاربری' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'خروج از حساب کاربری' }));
+    const logoutDialog = screen.getByRole('dialog', { name: 'خروج از حساب کاربری' });
+    expect(within(logoutDialog).getByRole('button', { name: 'تأیید خروج' })).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    fireEvent.click(within(logoutDialog).getByRole('button', { name: 'انصراف' }));
     expect(screen.getByLabelText(/^نام\s*\*?$/)).toHaveAttribute('placeholder', 'مثلاً امیرحسین');
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
   });

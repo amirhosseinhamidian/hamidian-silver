@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AdminShell } from '@/components/layout/admin-shell';
@@ -77,13 +77,17 @@ describe('AdminShell', () => {
     );
   });
 
-  it('logs out through the BFF and redirects to login', async () => {
+  it('requires confirmation before logging out through the BFF', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetchMock);
     renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: 'بازکردن منوی مدیریت' }));
     fireEvent.click(await screen.findByRole('button', { name: 'خروج از حساب' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'خروج از حساب کاربری' });
+    expect(fetchMock).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'تأیید خروج' }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST' });

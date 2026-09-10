@@ -22,11 +22,7 @@ import {
   type ContentPageKey,
   type ContentPageSection,
 } from '@/lib/content-pages/content-pages-model';
-import {
-  formatAdminDateTime,
-  formatAdminInteger,
-  toPersianDigits,
-} from '@/lib/presentation/formatters';
+import { formatAdminDateTime, formatAdminInteger } from '@/lib/presentation/formatters';
 import type { SiteMedia } from '@/lib/site-settings/site-settings-model';
 import { cn } from '@/lib/ui/cn';
 

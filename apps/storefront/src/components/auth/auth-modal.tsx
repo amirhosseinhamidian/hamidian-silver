@@ -17,7 +17,11 @@ import { FiAlertCircle, FiCheck, FiEdit2, FiRefreshCw, FiUser, FiX } from 'react
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-control';
-import { AUTHENTICATION_SUCCEEDED_EVENT, OPEN_AUTH_MODAL_EVENT } from '@/lib/auth/events';
+import {
+  AUTHENTICATION_ENDED_EVENT,
+  AUTHENTICATION_SUCCEEDED_EVENT,
+  OPEN_AUTH_MODAL_EVENT,
+} from '@/lib/auth/events';
 import { cn } from '@/lib/ui/cn';
 
 const OTP_LENGTH = 5;
@@ -357,7 +361,11 @@ function SuccessState({ digits }: Readonly<{ digits: readonly string[] }>) {
   );
 }
 
-export function AccountAuthButton({ className }: Readonly<{ className?: string }>) {
+export function AccountAuthButton({
+  authenticated = false,
+  className,
+}: Readonly<{ authenticated?: boolean; className?: string }>) {
+  const [authenticationOverride, setAuthenticationOverride] = useState<boolean | null>(null);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<AuthStep>('phone');
   const [phone, setPhone] = useState('');
@@ -371,9 +379,11 @@ export function AccountAuthButton({ className }: Readonly<{ className?: string }
   const [remainingSeconds, setRemainingSeconds] = useState(OTP_LIFETIME_SECONDS);
   const [shakeKey, setShakeKey] = useState(0);
   const verificationInFlight = useRef(false);
+  const isAuthenticated = authenticationOverride ?? authenticated;
 
   useEffect(() => {
     function openFromExternalAction() {
+      setAuthenticationOverride(false);
       setStep('phone');
       setPhone('');
       setPhoneError('');
@@ -390,6 +400,18 @@ export function AccountAuthButton({ className }: Readonly<{ className?: string }
 
     window.addEventListener(OPEN_AUTH_MODAL_EVENT, openFromExternalAction);
     return () => window.removeEventListener(OPEN_AUTH_MODAL_EVENT, openFromExternalAction);
+  }, []);
+
+  useEffect(() => {
+    const markAuthenticated = () => setAuthenticationOverride(true);
+    const markSignedOut = () => setAuthenticationOverride(false);
+
+    window.addEventListener(AUTHENTICATION_SUCCEEDED_EVENT, markAuthenticated);
+    window.addEventListener(AUTHENTICATION_ENDED_EVENT, markSignedOut);
+    return () => {
+      window.removeEventListener(AUTHENTICATION_SUCCEEDED_EVENT, markAuthenticated);
+      window.removeEventListener(AUTHENTICATION_ENDED_EVENT, markSignedOut);
+    };
   }, []);
 
   useEffect(() => {
@@ -487,6 +509,7 @@ export function AccountAuthButton({ className }: Readonly<{ className?: string }
 
     try {
       await postJson('/api/auth/otp/verify', { phone, code });
+      setAuthenticationOverride(true);
       window.dispatchEvent(new Event(AUTHENTICATION_SUCCEEDED_EVENT));
       setStep('success');
     } catch (error) {
@@ -528,18 +551,31 @@ export function AccountAuthButton({ className }: Readonly<{ className?: string }
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
-      <DialogPrimitive.Trigger asChild>
-        <button
-          type="button"
-          aria-label="ورود یا ثبت‌نام"
+      {isAuthenticated ? (
+        <Link
+          href="/account"
+          aria-label="حساب کاربری"
           className={cn(
             'inline-flex size-9 items-center justify-center transition-opacity duration-150 hover:opacity-55',
             className,
           )}
         >
           <FiUser aria-hidden="true" size={21} />
-        </button>
-      </DialogPrimitive.Trigger>
+        </Link>
+      ) : (
+        <DialogPrimitive.Trigger asChild>
+          <button
+            type="button"
+            aria-label="ورود یا ثبت‌نام"
+            className={cn(
+              'inline-flex size-9 items-center justify-center transition-opacity duration-150 hover:opacity-55',
+              className,
+            )}
+          >
+            <FiUser aria-hidden="true" size={21} />
+          </button>
+        </DialogPrimitive.Trigger>
+      )}
 
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
@@ -705,20 +741,5 @@ export function AccountHeaderAction({
   authenticated,
   className,
 }: Readonly<{ authenticated: boolean; className?: string }>) {
-  if (!authenticated) {
-    return <AccountAuthButton className={className} />;
-  }
-
-  return (
-    <Link
-      href="/account"
-      aria-label="حساب کاربری"
-      className={cn(
-        'inline-flex size-9 items-center justify-center transition-opacity duration-150 hover:opacity-55',
-        className,
-      )}
-    >
-      <FiUser aria-hidden="true" size={21} />
-    </Link>
-  );
+  return <AccountAuthButton authenticated={authenticated} className={className} />;
 }

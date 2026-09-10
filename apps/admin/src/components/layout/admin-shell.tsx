@@ -9,7 +9,8 @@ import { AdminProfileCompletionGate } from '@/components/auth/admin-profile-comp
 import { AdminBrand } from '@/components/layout/admin-brand';
 import { AdminIcon } from '@/components/layout/admin-icon';
 import { AdminNavigationList } from '@/components/layout/admin-navigation-list';
-import { IconButton } from '@/components/ui/button';
+import { Button, IconButton } from '@/components/ui/button';
+import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -114,6 +115,7 @@ export function AdminShell({ children, account, navigation, profile }: AdminShel
   const router = useRouter();
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
+  const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
   const [logoutError, setLogoutError] = useState('');
   const currentItem = findAdminNavigationItem(pathname, navigation);
   const mobileQuickLinks = getMobileQuickLinks(navigation);
@@ -128,6 +130,7 @@ export function AdminShell({ children, account, navigation, profile }: AdminShel
       const response = await fetch('/api/auth/logout', { method: 'POST' });
       if (!response.ok) throw new Error('logout-failed');
 
+      setLogoutConfirmationOpen(false);
       setMobileNavigationOpen(false);
       router.replace('/login');
       router.refresh();
@@ -135,6 +138,12 @@ export function AdminShell({ children, account, navigation, profile }: AdminShel
       setLogoutError('خروج از حساب انجام نشد. دوباره تلاش کنید.');
       setLogoutPending(false);
     }
+  }
+
+  function requestLogout() {
+    setLogoutError('');
+    setMobileNavigationOpen(false);
+    setLogoutConfirmationOpen(true);
   }
 
   return (
@@ -230,10 +239,7 @@ export function AdminShell({ children, account, navigation, profile }: AdminShel
                   disabled={logoutPending}
                   tone="danger"
                   icon={<AdminIcon name="logout" className="size-4" />}
-                  onSelect={(event) => {
-                    event.preventDefault();
-                    void logout();
-                  }}
+                  onSelect={requestLogout}
                 >
                   {logoutPending ? 'در حال خروج…' : 'خروج از حساب'}
                 </DropdownMenuItem>
@@ -338,7 +344,7 @@ export function AdminShell({ children, account, navigation, profile }: AdminShel
               <button
                 type="button"
                 disabled={logoutPending}
-                onClick={() => void logout()}
+                onClick={requestLogout}
                 className="mt-4 flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-white/15 text-sm font-bold text-slate-200 outline-none transition-colors hover:bg-white/10 focus-visible:shadow-[var(--admin-focus-ring)] disabled:cursor-default disabled:opacity-50"
               >
                 <AdminIcon name="logout" className="size-4" />
@@ -348,6 +354,38 @@ export function AdminShell({ children, account, navigation, profile }: AdminShel
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
+
+      <Dialog
+        open={logoutConfirmationOpen}
+        onOpenChange={(open) => !logoutPending && setLogoutConfirmationOpen(open)}
+      >
+        <DialogContent
+          size="sm"
+          title="خروج از حساب کاربری"
+          description="پس از خروج، برای دسترسی دوباره به پنل مدیریت باید وارد شوید."
+          footer={
+            <>
+              <DialogClose asChild>
+                <Button variant="outline" disabled={logoutPending}>
+                  انصراف
+                </Button>
+              </DialogClose>
+              <Button variant="danger" loading={logoutPending} onClick={() => void logout()}>
+                تأیید خروج
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm leading-7 text-[var(--admin-color-muted)]">
+            آیا مطمئن هستید که می‌خواهید از حساب مدیریتی خود خارج شوید؟
+          </p>
+          {logoutError ? (
+            <p role="alert" className="mt-3 text-sm leading-6 text-red-700">
+              {logoutError}
+            </p>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

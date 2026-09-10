@@ -5,6 +5,10 @@ import {
 } from '@/components/layout/storefront-header';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import {
+  AUTHENTICATION_ENDED_EVENT,
+  AUTHENTICATION_SUCCEEDED_EVENT,
+} from '@/lib/auth/events';
 
 const navigationCategories: StorefrontNavigationCategory[] = [
   { id: 'category-ring', label: 'انگشتر', slug: 'rings' },
@@ -95,6 +99,18 @@ describe('StorefrontHeader', () => {
       expect(link).toHaveAttribute('href', '/account');
     }
     expect(screen.queryByRole('button', { name: 'ورود یا ثبت‌نام' })).not.toBeInTheDocument();
+  });
+
+  it('updates account actions when authentication changes without a page reload', () => {
+    render(<StorefrontHeader />);
+
+    expect(screen.getAllByRole('button', { name: 'ورود یا ثبت‌نام' })).toHaveLength(2);
+
+    fireEvent(window, new Event(AUTHENTICATION_SUCCEEDED_EVENT));
+    expect(screen.getAllByRole('link', { name: 'حساب کاربری' })).toHaveLength(2);
+
+    fireEvent(window, new Event(AUTHENTICATION_ENDED_EVENT));
+    expect(screen.getAllByRole('button', { name: 'ورود یا ثبت‌نام' })).toHaveLength(2);
   });
 
   it('opens a product search form that submits the query to the catalog', () => {

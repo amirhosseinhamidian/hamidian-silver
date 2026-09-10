@@ -154,6 +154,10 @@ describe('AccountAuthButton', () => {
       expect(within(dialog).getByRole('status')).toHaveTextContent('با موفقیت وارد شدید');
     });
     expect(within(dialog).getByRole('heading', { name: 'ورود موفق' })).toBeInTheDocument();
+    expect(screen.getByLabelText('حساب کاربری', { selector: 'a' })).toHaveAttribute(
+      'href',
+      '/account',
+    );
   });
 
   it('enables requesting a new code when the server expiry has passed', async () => {
