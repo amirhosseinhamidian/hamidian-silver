@@ -44,7 +44,7 @@ export async function loadSiteSettingsData(): Promise<SiteSettingsData> {
     load('/api/v1/site-settings', token, parseAdminSiteSettings),
     load('/api/v1/site-settings/homepage', token, parseAdminHomepageSettings),
     load('/api/v1/catalog/public/categories', token, parseCategoryReferences),
-    load('/api/v1/catalog/public/products?page=1&pageSize=100&sort=newest', token, parseProductReferences),
+    load('/api/v1/catalog/public/products?page=1&pageSize=48&sort=newest', token, parseProductReferences),
   ]);
 
   return {

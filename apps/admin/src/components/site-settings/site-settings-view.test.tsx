@@ -13,7 +13,10 @@ const data: SiteSettingsData = {
     { id: 'category-1', label: 'انگشتر' },
     { id: 'category-2', label: 'گردنبند' },
   ],
-  products: [{ id: 'product-1', label: 'انگشتر مهتاب' }],
+  products: [
+    { id: 'product-1', label: 'انگشتر مهتاب' },
+    { id: 'product-2', label: 'گردنبند آوین' },
+  ],
   settings: {
     headerCategoryIds: ['category-1'],
     announcement: {
@@ -77,6 +80,10 @@ describe('SiteSettingsView', () => {
       'true',
     );
     expect(screen.getByText('Hero اصلی صفحه خانه')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'افزودن به محصولات محبوب' })).toHaveClass(
+      'admin-select-trigger',
+    );
+    expect(screen.getByRole('combobox', { name: 'افزودن به محصولات محبوب' })).toBeEnabled();
 
     fireEvent.click(screen.getByRole('tab', { name: 'هدر و اعلان' }));
     expect(screen.getByLabelText(/^متن اعلان/)).toHaveValue('ارسال رایگان');
@@ -84,7 +91,7 @@ describe('SiteSettingsView', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'فوتر و تماس' }));
     expect(screen.getByLabelText('نام گالری')).toHaveValue('گالری نقره حمیدیان');
-    expect(screen.getByLabelText('شماره‌های تماس')).toHaveValue('02112345678');
+    expect(screen.getByLabelText('شماره تماس ۱')).toHaveValue('۰۲۱۱۲۳۴۵۶۷۸');
   });
 
   it('saves header and announcement changes through the protected BFF', async () => {
@@ -113,6 +120,37 @@ describe('SiteSettingsView', () => {
       announcement: { message: 'ارسال رایگان امروز' },
     });
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it('edits up to five contact phones and omits empty or duplicate values on save', async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ updatedAt: '2026-09-08T13:00:00.000Z' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    render(<SiteSettingsView data={data} canWrite />);
+    fireEvent.click(screen.getByRole('tab', { name: 'فوتر و تماس' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن شماره تماس' }));
+    fireEvent.change(screen.getByLabelText('شماره تماس ۲'), {
+      target: { value: '۰۹۱۲۳۴۵۶۷۸۹' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن شماره تماس' }));
+    fireEvent.change(screen.getByLabelText('شماره تماس ۳'), {
+      target: { value: '۰۹۱۲۳۴۵۶۷۸۹' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن شماره تماس' }));
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن شماره تماس' }));
+    expect(screen.getByRole('button', { name: 'افزودن شماره تماس' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره فوتر و تماس' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      contactPhoneNumbers: ['02112345678', '09123456789'],
+    });
   });
 
   it('keeps all settings read-only without settings.write', () => {

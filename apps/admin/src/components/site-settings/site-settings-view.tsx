@@ -101,6 +101,17 @@ function toDateTimeLocal(value: string | null): string {
   return local.toISOString().slice(0, 16);
 }
 
+function normalizeContactPhoneNumbers(values: readonly string[]): string[] {
+  const unique = new Set<string>();
+
+  for (const value of values) {
+    const normalized = toAsciiDigits(value).trim();
+    if (normalized) unique.add(normalized);
+  }
+
+  return [...unique].slice(0, 5);
+}
+
 function HeroSlideEditor({
   slide,
   index,
@@ -333,6 +344,28 @@ function FooterSection({ settings, canWrite, pending, onChange, onSave }: Readon
   onSave: () => void;
 }>) {
   const disabled = !canWrite || pending !== null;
+  const phoneInputs = settings.contactPhoneNumbers.length
+    ? [...settings.contactPhoneNumbers]
+    : [''];
+
+  function updatePhone(index: number, value: string) {
+    const next = [...phoneInputs];
+    next[index] = toAsciiDigits(value);
+    onChange({ ...settings, contactPhoneNumbers: next });
+  }
+
+  function addPhone() {
+    if (phoneInputs.length >= 5) return;
+    onChange({ ...settings, contactPhoneNumbers: [...phoneInputs, ''] });
+  }
+
+  function removePhone(index: number) {
+    onChange({
+      ...settings,
+      contactPhoneNumbers: phoneInputs.filter((_, candidateIndex) => candidateIndex !== index),
+    });
+  }
+
   return (
     <div className="space-y-5">
       <Card title="معرفی گالری" description="نام و متن کوتاه ستون معرفی فوتر">
@@ -350,9 +383,68 @@ function FooterSection({ settings, canWrite, pending, onChange, onSave }: Readon
           <FormField id="contact-address" label="نشانی" className="sm:col-span-2">
             {(props) => <Textarea {...props} value={settings.contactAddress ?? ''} onChange={(event) => onChange({ ...settings, contactAddress: event.currentTarget.value || null })} placeholder="استان، شهر، خیابان، پلاک و واحد" disabled={disabled} />}
           </FormField>
-          <FormField id="contact-phones" label="شماره‌های تماس" hint="هر شماره در یک خط؛ حداکثر پنج شماره">
-            {(props) => <Textarea {...props} dir="ltr" value={settings.contactPhoneNumbers.join('\n')} onChange={(event) => onChange({ ...settings, contactPhoneNumbers: event.currentTarget.value.split(/\r?\n/).map((value) => value.trim()).filter(Boolean).slice(0, 5) })} placeholder={'02112345678\n09121234567'} disabled={disabled} />}
-          </FormField>
+          <div className="space-y-3 sm:col-span-2">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--admin-color-muted)]">
+                  شماره‌های تماس
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-[var(--admin-color-subtle)]">
+                  حداکثر پنج شماره؛ موارد خالی یا تکراری ذخیره نمی‌شوند.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-[var(--admin-color-muted)]">
+                {formatAdminInteger(phoneInputs.length)} / {formatAdminInteger(5)}
+              </span>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {phoneInputs.map((phone, index) => (
+                <div key={index} className="flex items-end gap-2">
+                  <FormField
+                    id={`contact-phone-${index + 1}`}
+                    label={`شماره تماس ${formatAdminInteger(index + 1)}`}
+                    className="min-w-0 flex-1"
+                  >
+                    {(props) => (
+                      <Input
+                        {...props}
+                        dir="ltr"
+                        type="tel"
+                        inputMode="tel"
+                        maxLength={20}
+                        value={toPersianDigits(phone)}
+                        onChange={(event) => updatePhone(index, event.currentTarget.value)}
+                        placeholder="مثلاً ۰۲۱۱۲۳۴۵۶۷۸"
+                        disabled={disabled}
+                      />
+                    )}
+                  </FormField>
+                  {phoneInputs.length > 1 ? (
+                    <Button
+                      aria-label={`حذف شماره تماس ${formatAdminInteger(index + 1)}`}
+                      variant="ghost"
+                      size="sm"
+                      disabled={disabled}
+                      onClick={() => removePhone(index)}
+                      className="mb-0.5"
+                    >
+                      حذف
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={disabled || phoneInputs.length >= 5}
+              onClick={addPhone}
+            >
+              افزودن شماره تماس
+            </Button>
+          </div>
           <FormField id="contact-email" label="ایمیل">
             {(props) => <Input {...props} dir="ltr" type="email" value={settings.contactEmail ?? ''} onChange={(event) => onChange({ ...settings, contactEmail: event.currentTarget.value || null })} placeholder="hello@example.com" disabled={disabled} />}
           </FormField>
@@ -456,7 +548,7 @@ export function SiteSettingsView({ data, canWrite }: Readonly<{ data: SiteSettin
         galleryName: currentSettings.galleryName,
         footerAbout: currentSettings.footerAbout,
         contactAddress: currentSettings.contactAddress,
-        contactPhoneNumbers: currentSettings.contactPhoneNumbers,
+        contactPhoneNumbers: normalizeContactPhoneNumbers(currentSettings.contactPhoneNumbers),
         contactEmail: currentSettings.contactEmail,
         instagramUrl: currentSettings.instagramUrl,
         telegramUrl: currentSettings.telegramUrl,

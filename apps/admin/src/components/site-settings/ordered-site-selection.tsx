@@ -1,4 +1,9 @@
+'use client';
+
+import { useId, useState } from 'react';
+
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 import { formatAdminInteger } from '@/lib/presentation/formatters';
 import type { SiteSettingsReference } from '@/lib/site-settings/site-settings-model';
 
@@ -21,6 +26,8 @@ export function OrderedSiteSelection({
   disabled = false,
   onChange,
 }: OrderedSiteSelectionProps) {
+  const selectId = useId();
+  const [candidateId, setCandidateId] = useState('');
   const byId = new Map(options.map((option) => [option.id, option] as const));
   const available = options.filter((option) => !selectedIds.includes(option.id));
 
@@ -44,22 +51,27 @@ export function OrderedSiteSelection({
         </span>
       </div>
 
-      <label className="mt-4 block text-xs font-semibold text-[var(--admin-color-muted)]">
-        افزودن مورد
-        <select
-          aria-label={`افزودن به ${label}`}
-          defaultValue=""
-          disabled={disabled || selectedIds.length >= max || available.length === 0}
-          onChange={(event) => {
-            if (event.currentTarget.value) onChange([...selectedIds, event.currentTarget.value]);
-            event.currentTarget.value = '';
-          }}
-          className="admin-form-control mt-1.5 min-h-10 w-full rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] bg-white px-3 text-sm outline-none focus:border-[var(--admin-color-primary)] focus:shadow-[var(--admin-focus-ring)] disabled:opacity-60"
+      <div className="mt-4">
+        <label
+          htmlFor={selectId}
+          className="block text-xs font-semibold text-[var(--admin-color-muted)]"
         >
-          <option value="">انتخاب کنید</option>
-          {available.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-        </select>
-      </label>
+          افزودن مورد
+        </label>
+        <Select
+          id={selectId}
+          aria-label={`افزودن به ${label}`}
+          value={candidateId}
+          placeholder="انتخاب کنید"
+          disabled={disabled || selectedIds.length >= max || available.length === 0}
+          onValueChange={(value) => {
+            if (value) onChange([...selectedIds, value]);
+            setCandidateId('');
+          }}
+          options={available.map((option) => ({ value: option.id, label: option.label }))}
+          className="mt-1.5"
+        />
+      </div>
 
       {selectedIds.length ? (
         <ol className="mt-3 space-y-2">
