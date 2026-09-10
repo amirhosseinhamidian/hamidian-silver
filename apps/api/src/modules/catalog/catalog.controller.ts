@@ -36,12 +36,14 @@ import { CreateCountryDto } from './dto/create-country.dto';
 import { CreateProductDto, CreateProductVariantDto } from './dto/create-product.dto';
 import { CreateSizeDto } from './dto/create-size.dto';
 import { PublicCatalogQueryDto } from './dto/public-catalog-query.dto';
+import { PublicCatalogSuggestionsQueryDto } from './dto/public-catalog-suggestions-query.dto';
 import { ReorderProductMediaDto } from './dto/reorder-product-media.dto';
 import {
   PublicCatalogBrandPageDto,
   PublicCatalogCategoryPageDto,
   PublicCatalogProductDetailDto,
   PublicCatalogProductListDto,
+  PublicCatalogProductSuggestionsDto,
 } from './dto/public-catalog-response.dto';
 import { UploadMediaDto } from './dto/upload-media.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -85,6 +87,13 @@ export class CatalogController {
   @ApiOkResponse({ type: PublicCatalogProductListDto })
   listPublicProducts(@Query() query: PublicCatalogQueryDto) {
     return this.catalogService.listPublicProducts(query);
+  }
+
+  @Public()
+  @Get('public/search/suggestions')
+  @ApiOkResponse({ type: PublicCatalogProductSuggestionsDto })
+  listPublicProductSuggestions(@Query() query: PublicCatalogSuggestionsQueryDto) {
+    return this.catalogService.listPublicProductSuggestions(query.q, query.limit);
   }
 
   @Public()

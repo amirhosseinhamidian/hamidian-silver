@@ -360,6 +360,49 @@
         ]
       }
     },
+    "/api/v1/catalog/public/search/suggestions": {
+      "get": {
+        "operationId": "CatalogController_listPublicProductSuggestions_v1",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 8,
+              "default": 8,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minLength": 2,
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCatalogProductSuggestionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/api/v1/catalog/public/products/{slug}": {
       "get": {
         "operationId": "CatalogController_getPublicProduct_v1",
@@ -7268,6 +7311,59 @@
           "pageSize",
           "total",
           "totalPages"
+        ]
+      },
+      "PublicCatalogProductSuggestionDto": {
+        "type": "object",
+        "properties": {
+          "salePriceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "compareAtPriceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "primaryMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "salePriceToman",
+          "compareAtPriceToman",
+          "primaryMedia",
+          "id",
+          "name",
+          "slug"
+        ]
+      },
+      "PublicCatalogProductSuggestionsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogProductSuggestionDto"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "PublicCatalogSizeDto": {

@@ -2,6 +2,7 @@ import type { components } from '@hamidian/contracts';
 import { cache } from 'react';
 
 import { createServerApiClient } from '@/lib/api/server-client';
+import { normalizeCatalogSearchText } from '@/lib/catalog/search-normalization';
 
 export type PublicCatalogCategory = components['schemas']['PublicCatalogCategoryDto'];
 export type PublicCatalogBrand = components['schemas']['PublicCatalogBrandDto'];
@@ -11,6 +12,10 @@ export type PublicCatalogMedia = components['schemas']['PublicCatalogMediaDto'];
 export type PublicCatalogProductSummary = components['schemas']['PublicCatalogProductSummaryDto'];
 export type PublicCatalogProductDetail = components['schemas']['PublicCatalogProductDetailDto'];
 export type PublicCatalogProductList = components['schemas']['PublicCatalogProductListDto'];
+export type PublicCatalogProductSuggestion =
+  components['schemas']['PublicCatalogProductSuggestionDto'];
+export type PublicCatalogProductSuggestions =
+  components['schemas']['PublicCatalogProductSuggestionsDto'];
 
 export type CatalogSort = 'newest' | 'price-asc' | 'price-desc' | 'name-asc';
 
@@ -39,6 +44,12 @@ function normalizedText(value: string | string[] | undefined): string | undefine
   return normalized || undefined;
 }
 
+function normalizedSearchText(value: string | string[] | undefined): string | undefined {
+  const normalized = normalizeCatalogSearchText(firstValue(value) ?? '');
+
+  return normalized || undefined;
+}
+
 function positiveInteger(value: string | string[] | undefined): number | undefined {
   const parsed = Number(firstValue(value));
 
@@ -55,7 +66,7 @@ export function parseCatalogSearchParams(searchParams: CatalogSearchParams): Cat
   return {
     page: positiveInteger(searchParams.page) ?? 1,
     pageSize: DEFAULT_PAGE_SIZE,
-    q: normalizedText(searchParams.q),
+    q: normalizedSearchText(searchParams.q),
     category: normalizedText(searchParams.category),
     brand: normalizedText(searchParams.brand),
     country: normalizedText(searchParams.country),
@@ -166,6 +177,25 @@ export async function getPublicCatalogProducts(
   });
 
   assertSuccessfulResponse(result.response, result.data, 'storefront products');
+
+  return result.data;
+}
+
+export async function getPublicCatalogProductSuggestions(
+  query: string,
+  limit = 8,
+): Promise<PublicCatalogProductSuggestions> {
+  const client = createPublicCatalogClient();
+  const result = await client.GET('/api/v1/catalog/public/search/suggestions', {
+    params: {
+      query: {
+        q: normalizeCatalogSearchText(query),
+        limit,
+      },
+    },
+  });
+
+  assertSuccessfulResponse(result.response, result.data, 'product search suggestions');
 
   return result.data;
 }

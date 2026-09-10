@@ -203,3 +203,23 @@ export class PublicCatalogProductListDto {
   total!: number;
   totalPages!: number;
 }
+
+export class PublicCatalogProductSuggestionDto {
+  id!: string;
+  name!: string;
+  slug!: string;
+
+  @ApiProperty({ type: Number, nullable: true })
+  salePriceToman!: number | null;
+
+  @ApiProperty({ type: Number, nullable: true })
+  compareAtPriceToman!: number | null;
+
+  @ApiProperty({ type: () => PublicCatalogMediaDto, nullable: true })
+  primaryMedia!: PublicCatalogMediaDto | null;
+}
+
+export class PublicCatalogProductSuggestionsDto {
+  @ApiProperty({ type: () => PublicCatalogProductSuggestionDto, isArray: true })
+  items!: PublicCatalogProductSuggestionDto[];
+}

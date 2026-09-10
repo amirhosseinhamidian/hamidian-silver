@@ -10,7 +10,7 @@ describe('parseCatalogSearchParams', () => {
     expect(
       parseCatalogSearchParams({
         page: '3',
-        q: '  انگشتر نقره  ',
+        q: '  انگشتر‌ نقره كياني  ',
         category: 'rings',
         brand: 'hamidian',
         country: 'iran',
@@ -19,7 +19,7 @@ describe('parseCatalogSearchParams', () => {
     ).toEqual({
       page: 3,
       pageSize: 24,
-      q: 'انگشتر نقره',
+      q: 'انگشتر نقره کیانی',
       category: 'rings',
       brand: 'hamidian',
       country: 'iran',

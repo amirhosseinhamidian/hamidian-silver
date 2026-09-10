@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { calculatePlatingPriceToman } from '../../common/plating-price';
+import { Prisma } from '../../generated/prisma/client';
 import { ProductStatus, SeoRedirectEntityType, SizeMode } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
@@ -10,6 +11,17 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { PublicCatalogQueryDto, PublicCatalogSort } from './dto/public-catalog-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PublicMediaUrlService } from './public-media-url.service';
+import { normalizeCatalogSearch } from './catalog-search';
+
+type PublicProductSearchRow = {
+  id: string;
+  availableQuantity: bigint;
+  total: bigint;
+};
+
+type PublicProductSuggestionRow = {
+  id: string;
+};
 
 @Injectable()
 export class CatalogService {
@@ -737,7 +749,7 @@ export class CatalogService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 24;
     const sort = query.sort ?? PublicCatalogSort.NEWEST;
-    const search = query.q?.trim();
+    const search = normalizeCatalogSearch(query.q ?? '') || undefined;
     const category = query.category?.trim();
     const brand = query.brand?.trim();
     const country = query.country?.trim();
@@ -746,14 +758,6 @@ export class CatalogService {
     const where = {
       status: ProductStatus.ACTIVE,
       deletedAt: null,
-      ...(search
-        ? {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' as const } },
-              { shortDescription: { contains: search, mode: 'insensitive' as const } },
-            ],
-          }
-        : {}),
       ...(categoryIds
         ? {
             categories: {
@@ -816,59 +820,79 @@ export class CatalogService {
             ? [{ name: 'asc' as const }, { id: 'asc' as const }]
             : [{ createdAt: 'desc' as const }, { id: 'desc' as const }];
 
-    const orderedProducts = await this.prisma.product.findMany({
-      where,
-      orderBy,
-      select: {
-        id: true,
-        variants: {
-          where: {
-            isActive: true,
-            deletedAt: null,
-          },
-          select: {
-            inventories: {
-              select: {
-                onHand: true,
-                reserved: true,
-                warehouse: {
-                  select: {
-                    isActive: true,
-                    deletedAt: true,
+    const availabilityByProductId = new Map<string, number>();
+    let total: number;
+    let pageProductIds: string[];
+
+    if (search) {
+      const searchRows = await this.searchPublicProductIds({
+        search,
+        page,
+        pageSize,
+        sort,
+        categoryIds,
+        brand,
+        country,
+      });
+      pageProductIds = searchRows.map(({ id }) => id);
+      total = Number(searchRows[0]?.total ?? 0);
+      for (const row of searchRows) {
+        availabilityByProductId.set(row.id, Number(row.availableQuantity));
+      }
+    } else {
+      const orderedProducts = await this.prisma.product.findMany({
+        where,
+        orderBy,
+        select: {
+          id: true,
+          variants: {
+            where: {
+              isActive: true,
+              deletedAt: null,
+            },
+            select: {
+              inventories: {
+                select: {
+                  onHand: true,
+                  reserved: true,
+                  warehouse: {
+                    select: {
+                      isActive: true,
+                      deletedAt: true,
+                    },
                   },
                 },
               },
             },
           },
         },
-      },
-    });
-    const availabilityByProductId = new Map(
-      orderedProducts.map(
-        (product) =>
-          [
-            product.id,
-            product.variants.reduce(
-              (productTotal, variant) =>
-                productTotal +
-                variant.inventories.reduce((variantTotal, inventory) => {
-                  if (!inventory.warehouse.isActive || inventory.warehouse.deletedAt) {
-                    return variantTotal;
-                  }
+      });
+      for (const product of orderedProducts) {
+        availabilityByProductId.set(
+          product.id,
+          product.variants.reduce(
+            (productTotal, variant) =>
+              productTotal +
+              variant.inventories.reduce((variantTotal, inventory) => {
+                if (!inventory.warehouse.isActive || inventory.warehouse.deletedAt) {
+                  return variantTotal;
+                }
 
-                  return variantTotal + Math.max(0, inventory.onHand - inventory.reserved);
-                }, 0),
-              0,
-            ),
-          ] as const,
-      ),
-    );
-    const prioritizedProductIds = [
-      ...orderedProducts.filter((product) => (availabilityByProductId.get(product.id) ?? 0) > 0),
-      ...orderedProducts.filter((product) => (availabilityByProductId.get(product.id) ?? 0) === 0),
-    ].map((product) => product.id);
-    const total = prioritizedProductIds.length;
-    const pageProductIds = prioritizedProductIds.slice((page - 1) * pageSize, page * pageSize);
+                return variantTotal + Math.max(0, inventory.onHand - inventory.reserved);
+              }, 0),
+            0,
+          ),
+        );
+      }
+      const prioritizedProductIds = [
+        ...orderedProducts.filter((product) => (availabilityByProductId.get(product.id) ?? 0) > 0),
+        ...orderedProducts.filter(
+          (product) => (availabilityByProductId.get(product.id) ?? 0) === 0,
+        ),
+      ].map((product) => product.id);
+      total = prioritizedProductIds.length;
+      pageProductIds = prioritizedProductIds.slice((page - 1) * pageSize, page * pageSize);
+    }
     const products =
       pageProductIds.length === 0
         ? []
@@ -1055,6 +1079,91 @@ export class CatalogService {
       pageSize,
       total,
       totalPages: Math.ceil(total / pageSize),
+    };
+  }
+
+  async listPublicProductSuggestions(query: string, limit = 8) {
+    const search = normalizeCatalogSearch(query);
+    if (search.length < 2) return { items: [] };
+
+    const rows = await this.prisma.$queryRaw<PublicProductSuggestionRow[]>(Prisma.sql`
+      WITH ${this.publicSearchMatchesSql(search)},
+      ranked_search AS (
+        SELECT "productId", MAX(score) AS score
+        FROM search_matches
+        GROUP BY "productId"
+      )
+      SELECT product.id
+      FROM ranked_search
+      JOIN "products" AS product ON product.id = ranked_search."productId"
+      WHERE product."status" = 'ACTIVE'
+        AND product."deletedAt" IS NULL
+      ORDER BY ranked_search.score DESC, product."createdAt" DESC, product.id ASC
+      LIMIT ${Math.min(Math.max(limit, 1), 8)}
+    `);
+    const productIds = rows.map(({ id }) => id);
+    if (productIds.length === 0) return { items: [] };
+
+    const products = await this.prisma.product.findMany({
+      where: {
+        id: { in: productIds },
+        status: ProductStatus.ACTIVE,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        salePriceToman: true,
+        compareAtPriceToman: true,
+        media: {
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            isPrimary: true,
+            altText: true,
+            media: {
+              select: {
+                storageKey: true,
+                mimeType: true,
+                altText: true,
+                width: true,
+                height: true,
+                deletedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    const productById = new Map(products.map((product) => [product.id, product] as const));
+
+    return {
+      items: productIds.flatMap((productId) => {
+        const product = productById.get(productId);
+        if (!product) return [];
+        const primaryMedia =
+          product.media.find((item) => item.isPrimary && !item.media.deletedAt) ??
+          product.media.find((item) => !item.media.deletedAt);
+
+        return [
+          {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            salePriceToman: product.salePriceToman,
+            compareAtPriceToman: product.compareAtPriceToman,
+            primaryMedia: primaryMedia
+              ? {
+                  url: this.publicMediaUrl.resolve(primaryMedia.media.storageKey),
+                  mimeType: primaryMedia.media.mimeType,
+                  altText: primaryMedia.altText ?? primaryMedia.media.altText,
+                  width: primaryMedia.media.width,
+                  height: primaryMedia.media.height,
+                }
+              : null,
+          },
+        ];
+      }),
     };
   }
 
@@ -1395,6 +1504,197 @@ export class CatalogService {
       media,
       attributes: product.attributes,
     };
+  }
+
+  private async searchPublicProductIds(input: {
+    search: string;
+    page: number;
+    pageSize: number;
+    sort: PublicCatalogSort;
+    categoryIds: string[] | undefined;
+    brand: string | undefined;
+    country: string | undefined;
+  }): Promise<PublicProductSearchRow[]> {
+    const categoryFilter =
+      input.categoryIds === undefined
+        ? Prisma.empty
+        : input.categoryIds.length === 0
+          ? Prisma.sql`AND FALSE`
+          : Prisma.sql`
+              AND EXISTS (
+                SELECT 1
+                FROM "product_categories" AS filter_category
+                WHERE filter_category."productId" = product.id
+                  AND filter_category."categoryId" IN (${Prisma.join(input.categoryIds)})
+              )
+            `;
+    const brandFilter = input.brand
+      ? Prisma.sql`
+          AND EXISTS (
+            SELECT 1
+            FROM "brands" AS filter_brand
+            WHERE filter_brand.id = product."brandId"
+              AND filter_brand.slug = ${input.brand}
+              AND filter_brand."isActive" = true
+              AND filter_brand."deletedAt" IS NULL
+          )
+        `
+      : Prisma.empty;
+    const countryFilter = input.country
+      ? Prisma.sql`
+          AND EXISTS (
+            SELECT 1
+            FROM "countries" AS filter_country
+            WHERE filter_country.id = product."countryId"
+              AND filter_country.slug = ${input.country}
+              AND filter_country."isActive" = true
+              AND filter_country."deletedAt" IS NULL
+          )
+        `
+      : Prisma.empty;
+    const secondaryOrder =
+      input.sort === PublicCatalogSort.PRICE_ASC
+        ? Prisma.sql`"salePriceToman" ASC NULLS LAST, "createdAt" DESC, id ASC`
+        : input.sort === PublicCatalogSort.PRICE_DESC
+          ? Prisma.sql`"salePriceToman" DESC NULLS LAST, "createdAt" DESC, id ASC`
+          : input.sort === PublicCatalogSort.NAME_ASC
+            ? Prisma.sql`name ASC, id ASC`
+            : Prisma.sql`"createdAt" DESC, id DESC`;
+
+    return this.prisma.$queryRaw<PublicProductSearchRow[]>(Prisma.sql`
+      WITH ${this.publicSearchMatchesSql(input.search)},
+      ranked_search AS (
+        SELECT "productId", MAX(score) AS score
+        FROM search_matches
+        GROUP BY "productId"
+      ),
+      filtered_search AS (
+        SELECT
+          product.id,
+          product.name,
+          product."salePriceToman",
+          product."createdAt",
+          ranked_search.score,
+          COALESCE((
+            SELECT SUM(GREATEST(inventory."onHand" - inventory."reserved", 0))
+            FROM "product_variants" AS variant
+            JOIN "inventory" AS inventory ON inventory."variantId" = variant.id
+            JOIN "warehouses" AS warehouse ON warehouse.id = inventory."warehouseId"
+            WHERE variant."productId" = product.id
+              AND variant."isActive" = true
+              AND variant."deletedAt" IS NULL
+              AND warehouse."isActive" = true
+              AND warehouse."deletedAt" IS NULL
+          ), 0)::bigint AS "availableQuantity"
+        FROM ranked_search
+        JOIN "products" AS product ON product.id = ranked_search."productId"
+        WHERE product."status" = 'ACTIVE'
+          AND product."deletedAt" IS NULL
+          ${categoryFilter}
+          ${brandFilter}
+          ${countryFilter}
+      )
+      SELECT id, "availableQuantity", COUNT(*) OVER () AS total
+      FROM filtered_search
+      ORDER BY ("availableQuantity" > 0) DESC, score DESC, ${secondaryOrder}
+      LIMIT ${input.pageSize}
+      OFFSET ${(input.page - 1) * input.pageSize}
+    `);
+  }
+
+  private publicSearchMatchesSql(search: string): Prisma.Sql {
+    return Prisma.sql`
+      search_query AS (
+        SELECT normalize_fa_search(${search}) AS value
+      ),
+      search_matches AS (
+        SELECT
+          product.id AS "productId",
+          similarity(normalize_fa_search(product.name), search_query.value)
+            + CASE
+                WHEN normalize_fa_search(product.name) = search_query.value THEN 2
+                WHEN normalize_fa_search(product.name) LIKE search_query.value || '%' THEN 1
+                WHEN normalize_fa_search(product.name) LIKE '%' || search_query.value || '%' THEN 0.4
+                ELSE 0
+              END AS score
+        FROM "products" AS product
+        CROSS JOIN search_query
+        WHERE product."status" = 'ACTIVE'
+          AND product."deletedAt" IS NULL
+          AND (
+            normalize_fa_search(product.name) % search_query.value
+            OR normalize_fa_search(product.name) LIKE '%' || search_query.value || '%'
+          )
+
+        UNION ALL
+
+        SELECT
+          product.id AS "productId",
+          similarity(normalize_fa_search(product."shortDescription"), search_query.value) * 0.25
+            AS score
+        FROM "products" AS product
+        CROSS JOIN search_query
+        WHERE product."status" = 'ACTIVE'
+          AND product."deletedAt" IS NULL
+          AND (
+            normalize_fa_search(product."shortDescription") % search_query.value
+            OR normalize_fa_search(product."shortDescription") LIKE '%' || search_query.value || '%'
+          )
+
+        UNION ALL
+
+        SELECT
+          product.id AS "productId",
+          similarity(normalize_fa_search(brand.name), search_query.value) * 0.65 AS score
+        FROM "products" AS product
+        JOIN "brands" AS brand ON brand.id = product."brandId"
+        CROSS JOIN search_query
+        WHERE product."status" = 'ACTIVE'
+          AND product."deletedAt" IS NULL
+          AND brand."isActive" = true
+          AND brand."deletedAt" IS NULL
+          AND (
+            normalize_fa_search(brand.name) % search_query.value
+            OR normalize_fa_search(brand.name) LIKE '%' || search_query.value || '%'
+          )
+
+        UNION ALL
+
+        SELECT
+          product.id AS "productId",
+          similarity(normalize_fa_search(category.name), search_query.value) * 0.55 AS score
+        FROM "products" AS product
+        JOIN "product_categories" AS product_category
+          ON product_category."productId" = product.id
+        JOIN "categories" AS category ON category.id = product_category."categoryId"
+        CROSS JOIN search_query
+        WHERE product."status" = 'ACTIVE'
+          AND product."deletedAt" IS NULL
+          AND category."isActive" = true
+          AND category."deletedAt" IS NULL
+          AND (
+            normalize_fa_search(category.name) % search_query.value
+            OR normalize_fa_search(category.name) LIKE '%' || search_query.value || '%'
+          )
+
+        UNION ALL
+
+        SELECT
+          product.id AS "productId",
+          similarity(normalize_fa_search(variant.sku), search_query.value) * 0.4 AS score
+        FROM "products" AS product
+        JOIN "product_variants" AS variant ON variant."productId" = product.id
+        CROSS JOIN search_query
+        WHERE product."status" = 'ACTIVE'
+          AND product."deletedAt" IS NULL
+          AND variant."isActive" = true
+          AND variant."deletedAt" IS NULL
+          AND (
+            normalize_fa_search(variant.sku) % search_query.value
+            OR normalize_fa_search(variant.sku) LIKE '%' || search_query.value || '%'
+          )
+      )
+    `;
   }
 
   private async resolvePublicCategoryIds(slug: string): Promise<string[]> {

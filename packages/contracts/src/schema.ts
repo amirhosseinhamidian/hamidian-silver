@@ -148,6 +148,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/public/search/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_listPublicProductSuggestions_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/public/products/{slug}": {
         parameters: {
             query?: never;
@@ -2889,6 +2905,17 @@ export interface components {
             total: number;
             totalPages: number;
         };
+        PublicCatalogProductSuggestionDto: {
+            salePriceToman: number | null;
+            compareAtPriceToman: number | null;
+            primaryMedia: components["schemas"]["PublicCatalogMediaDto"] | null;
+            id: string;
+            name: string;
+            slug: string;
+        };
+        PublicCatalogProductSuggestionsDto: {
+            items: components["schemas"]["PublicCatalogProductSuggestionDto"][];
+        };
         PublicCatalogSizeDto: {
             id: string;
             code: string;
@@ -4228,6 +4255,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicCatalogProductListDto"];
+                };
+            };
+        };
+    };
+    CatalogController_listPublicProductSuggestions_v1: {
+        parameters: {
+            query: {
+                limit?: number;
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCatalogProductSuggestionsDto"];
                 };
             };
         };

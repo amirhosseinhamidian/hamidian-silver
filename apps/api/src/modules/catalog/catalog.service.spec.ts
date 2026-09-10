@@ -35,6 +35,7 @@ describe('CatalogService', () => {
       count: jest.fn(),
       update: jest.fn(),
     },
+    $queryRaw: jest.fn(),
     $transaction: jest.fn(),
   };
 
@@ -746,6 +747,99 @@ describe('CatalogService', () => {
       expect.objectContaining({
         seoCanonicalPath: true,
         seoNoIndex: true,
+      }),
+    );
+  });
+
+  it('uses the ranked database search without loading every product into memory', async () => {
+    const productId = '10000000-0000-4000-8000-000000000021';
+    prisma.$queryRaw.mockResolvedValue([{ id: productId, availableQuantity: 2n, total: 1n }]);
+    prisma.product.findMany.mockResolvedValue([
+      {
+        id: productId,
+        name: 'انگشتر یاقوت',
+        slug: 'ruby-ring',
+        shortDescription: null,
+        salePriceToman: 1_200_000,
+        compareAtPriceToman: null,
+        sizeMode: SizeMode.NONE,
+        brand: null,
+        categories: [],
+        media: [],
+      },
+    ]);
+
+    await expect(
+      service.listPublicProducts({ q: '  انگشتر‌ ياقوت  ', page: 1, pageSize: 8 }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({ id: productId, availableQuantity: 2, isAvailable: true }),
+        ],
+        total: 1,
+        totalPages: 1,
+      }),
+    );
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.product.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: { in: [productId] } } }),
+    );
+  });
+
+  it('returns at most eight lightweight ordered product suggestions', async () => {
+    const firstId = '10000000-0000-4000-8000-000000000031';
+    const secondId = '10000000-0000-4000-8000-000000000032';
+    prisma.$queryRaw.mockResolvedValue([{ id: firstId }, { id: secondId }]);
+    prisma.product.findMany.mockResolvedValue([
+      {
+        id: secondId,
+        name: 'انگشتر دوم',
+        slug: 'second-ring',
+        salePriceToman: 900_000,
+        compareAtPriceToman: null,
+        media: [],
+      },
+      {
+        id: firstId,
+        name: 'انگشتر اول',
+        slug: 'first-ring',
+        salePriceToman: 800_000,
+        compareAtPriceToman: 1_000_000,
+        media: [
+          {
+            isPrimary: true,
+            altText: 'انگشتر اول',
+            media: {
+              storageKey: 'products/first.webp',
+              mimeType: 'image/webp',
+              altText: null,
+              width: 600,
+              height: 600,
+              deletedAt: null,
+            },
+          },
+        ],
+      },
+    ]);
+
+    await expect(service.listPublicProductSuggestions('انگشتر', 20)).resolves.toEqual({
+      items: [
+        expect.objectContaining({
+          id: firstId,
+          primaryMedia: expect.objectContaining({
+            url: 'https://media.hamidian.shop/products/first.webp',
+          }),
+        }),
+        expect.objectContaining({ id: secondId, primaryMedia: null }),
+      ],
+    });
+
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: { in: [firstId, secondId] } }),
+        select: expect.not.objectContaining({ variants: expect.anything() }),
       }),
     );
   });
