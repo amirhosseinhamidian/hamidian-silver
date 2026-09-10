@@ -162,6 +162,12 @@ export class PublicCatalogProductSummaryDto {
   isAvailable!: boolean;
 }
 
+export class PublicCatalogProductAttributeDto {
+  key!: string;
+  value!: string;
+  sortOrder!: number;
+}
+
 export class PublicCatalogProductDetailDto extends PublicCatalogProductSummaryDto {
   @ApiProperty({ type: String, nullable: true })
   description!: string | null;
@@ -183,6 +189,9 @@ export class PublicCatalogProductDetailDto extends PublicCatalogProductSummaryDt
 
   @ApiProperty({ type: () => PublicCatalogMediaDto, isArray: true })
   media!: PublicCatalogMediaDto[];
+
+  @ApiProperty({ type: () => PublicCatalogProductAttributeDto, isArray: true })
+  attributes!: PublicCatalogProductAttributeDto[];
 }
 
 export class PublicCatalogProductListDto {

@@ -104,7 +104,9 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     product.country ? ['کشور سازنده', product.country.name] : null,
     ['سایزبندی', getSizeModeLabel(product.sizeMode)],
     weightLabel ? ['وزن تقریبی', weightLabel] : null,
-  ].filter((feature): feature is [string, string] => feature !== null);
+  ]
+    .filter((feature): feature is [string, string] => feature !== null)
+    .concat(product.attributes.map(({ key, value }) => [key, value] as [string, string]));
 
   return (
     <>
@@ -224,8 +226,8 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                   ویژگی‌های محصول
                 </h2>
                 <dl className="mt-5 divide-y divide-[var(--sf-color-border)] text-sm">
-                  {features.map(([label, value]) => (
-                    <div key={label} className="grid grid-cols-[8rem_1fr] gap-4 py-3">
+                  {features.map(([label, value], index) => (
+                    <div key={`${label}-${index}`} className="grid grid-cols-[8rem_1fr] gap-4 py-3">
                       <dt className="text-[var(--sf-color-muted)]">{label}</dt>
                       <dd>{value}</dd>
                     </div>

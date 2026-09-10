@@ -7358,6 +7358,25 @@
           "isAvailable"
         ]
       },
+      "PublicCatalogProductAttributeDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "sortOrder"
+        ]
+      },
       "PublicCatalogProductDetailDto": {
         "type": "object",
         "properties": {
@@ -7454,6 +7473,12 @@
               "$ref": "#/components/schemas/PublicCatalogMediaDto"
             }
           },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogProductAttributeDto"
+            }
+          },
           "id": {
             "type": "string"
           },
@@ -7482,6 +7507,7 @@
           "country",
           "variants",
           "media",
+          "attributes",
           "id",
           "name",
           "slug",
@@ -7903,6 +7929,30 @@
           "mediaId"
         ]
       },
+      "ProductAttributeInputDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "sortOrder"
+        ]
+      },
       "CreateProductDto": {
         "type": "object",
         "properties": {
@@ -7994,6 +8044,13 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CreateProductMediaDto"
+            }
+          },
+          "attributes": {
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductAttributeInputDto"
             }
           }
         },
@@ -8104,6 +8161,13 @@
             "items": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          "attributes": {
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductAttributeInputDto"
             }
           }
         }

@@ -55,6 +55,7 @@ const data: ProductManagementData = {
             },
           ],
           media: [],
+          attributes: [],
           mediaCount: 0,
         },
       ],

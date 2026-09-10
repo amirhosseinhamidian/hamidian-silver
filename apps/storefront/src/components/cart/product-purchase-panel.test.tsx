@@ -38,6 +38,7 @@ const product: PublicCatalogProductDetail = {
   isAvailable: true,
   country: null,
   media: [],
+  attributes: [],
   variants: [
     {
       id: '10000000-0000-4000-8000-000000000011',

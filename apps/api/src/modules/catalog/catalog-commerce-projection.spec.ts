@@ -36,6 +36,10 @@ describe('CatalogService commerce projection', () => {
       brand: null,
       country: null,
       categories: [],
+      attributes: [
+        { key: 'جنس نگین', value: 'زیرکونیا', sortOrder: 1 },
+        { key: 'نوع آبکاری', value: 'رودیوم', sortOrder: 2 },
+      ],
       variants: [
         {
           id: '10000000-0000-4000-8000-000000000002',
@@ -79,6 +83,10 @@ describe('CatalogService commerce projection', () => {
     const product = await service.getPublicProduct('silver-ring');
 
     expect(product.compareAtPriceToman).toBe(1_000_000);
+    expect(product.attributes).toEqual([
+      { key: 'جنس نگین', value: 'زیرکونیا', sortOrder: 1 },
+      { key: 'نوع آبکاری', value: 'رودیوم', sortOrder: 2 },
+    ]);
     expect(product.variants).toEqual([
       expect.objectContaining({
         id: '10000000-0000-4000-8000-000000000002',
@@ -98,6 +106,10 @@ describe('CatalogService commerce projection', () => {
       expect.objectContaining({
         select: expect.objectContaining({
           compareAtPriceToman: true,
+          attributes: {
+            orderBy: { sortOrder: 'asc' },
+            select: { key: true, value: true, sortOrder: true },
+          },
           variants: expect.objectContaining({
             select: expect.objectContaining({
               platingEligible: true,

@@ -101,6 +101,13 @@ export type AdminProductMedia = Readonly<{
   height: number | null;
 }>;
 
+export type AdminProductAttribute = Readonly<{
+  id: string;
+  key: string;
+  value: string;
+  sortOrder: number;
+}>;
+
 export type AdminProduct = Readonly<{
   id: string;
   name: string;
@@ -124,6 +131,7 @@ export type AdminProduct = Readonly<{
   categories: readonly CatalogLookup[];
   variants: readonly AdminProductVariant[];
   media: readonly AdminProductMedia[];
+  attributes: readonly AdminProductAttribute[];
   mediaCount: number;
 }>;
 
@@ -209,6 +217,17 @@ function parseProductMedia(value: unknown): AdminProductMedia | null {
   };
 }
 
+function parseProductAttribute(value: unknown): AdminProductAttribute | null {
+  const item = record(value);
+  const id = text(item?.id);
+  const key = text(item?.key);
+  const attributeValue = text(item?.value);
+  const sortOrder = number(item?.sortOrder);
+  if (!id || !key || !attributeValue || sortOrder === null) return null;
+
+  return { id, key, value: attributeValue, sortOrder };
+}
+
 function parseReferenceImage(value: unknown): AdminCategoryImage | null {
   const item = record(value);
   const id = text(item?.id);
@@ -253,6 +272,12 @@ export function parseAdminProduct(value: unknown): AdminProduct | null {
     .filter((mediaItem): mediaItem is AdminProductMedia => mediaItem !== null)
     .sort((left, right) => left.sortOrder - right.sortOrder);
   if (media.length !== rawMedia.length) return null;
+  const rawAttributes = Array.isArray(item?.attributes) ? item.attributes : [];
+  const attributes = rawAttributes
+    .map(parseProductAttribute)
+    .filter((attribute): attribute is AdminProductAttribute => attribute !== null)
+    .sort((left, right) => left.sortOrder - right.sortOrder);
+  if (attributes.length !== rawAttributes.length) return null;
 
   return {
     id,
@@ -277,6 +302,7 @@ export function parseAdminProduct(value: unknown): AdminProduct | null {
     categories,
     variants,
     media,
+    attributes,
     mediaCount: media.length,
   };
 }

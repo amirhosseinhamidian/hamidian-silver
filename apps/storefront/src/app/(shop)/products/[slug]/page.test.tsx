@@ -59,6 +59,7 @@ const product: PublicCatalogProductDetail = {
   country: null,
   media: [],
   variants: [],
+  attributes: [],
 };
 
 describe('ProductDetailPage', () => {
@@ -104,5 +105,53 @@ describe('ProductDetailPage', () => {
       ProductDetailPage({ params: Promise.resolve({ slug: 'old-ring' }) }),
     ).rejects.toThrow('NEXT_REDIRECT:/products/new-ring');
     expect(permanentRedirect).toHaveBeenCalledWith('/products/new-ring');
+  });
+
+  it('renders ordered custom attributes after the fixed product features', async () => {
+    getPublicCatalogProduct.mockResolvedValue({
+      ...product,
+      brand: {
+        id: 'brand-1',
+        name: 'حمیدیان',
+        slug: 'hamidian',
+        description: null,
+        image: null,
+        originCountry: null,
+      },
+      country: { id: 'country-1', name: 'ایران', slug: 'iran', isoCode: 'IR' },
+      variants: [
+        {
+          id: 'variant-1',
+          name: null,
+          weightGrams: 4.25,
+          size: null,
+          platingOptions: [],
+          availableQuantity: 3,
+          isAvailable: true,
+        },
+      ],
+      attributes: [
+        { key: 'جنس نگین', value: 'زیرکونیا', sortOrder: 1 },
+        { key: 'نوع آبکاری', value: 'رودیوم', sortOrder: 2 },
+      ],
+    });
+
+    render(
+      await ProductDetailPage({
+        params: Promise.resolve({ slug: product.slug }),
+      }),
+    );
+
+    const labels = screen.getAllByRole('term').map((term) => term.textContent);
+    expect(labels).toEqual([
+      'برند',
+      'کشور سازنده',
+      'سایزبندی',
+      'وزن تقریبی',
+      'جنس نگین',
+      'نوع آبکاری',
+    ]);
+    expect(screen.getByText('زیرکونیا')).toBeInTheDocument();
+    expect(screen.getByText('رودیوم')).toBeInTheDocument();
   });
 });

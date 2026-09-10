@@ -25,6 +25,16 @@ type ProductFormProps = Readonly<{
   mode: 'create' | 'edit';
 }>;
 
+type EditableProductAttribute = Readonly<{
+  id: string;
+  key: string;
+  value: string;
+}>;
+
+function createAttributeId(): string {
+  return globalThis.crypto?.randomUUID?.() ?? `attribute-${Date.now()}-${Math.random()}`;
+}
+
 function optionalText(formData: FormData, name: string): string | undefined {
   const value = String(formData.get(name) ?? '').trim();
   return value || undefined;
@@ -59,6 +69,13 @@ export function ProductForm({ data, mode }: ProductFormProps) {
   const product = data.product;
   const [sizeMode, setSizeMode] = useState<ProductSizeMode>(product?.sizeMode ?? 'NONE');
   const [seo, setSeo] = useState(() => createSeoEditorValue(product));
+  const [attributes, setAttributes] = useState<EditableProductAttribute[]>(() =>
+    (product?.attributes ?? []).map((attribute) => ({
+      id: attribute.id,
+      key: attribute.key,
+      value: attribute.value,
+    })),
+  );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,6 +108,31 @@ export function ProductForm({ data, mode }: ProductFormProps) {
       return;
     }
 
+    const normalizedAttributes = attributes.map((attribute, index) => ({
+      key: attribute.key.trim().replace(/\s+/g, ' '),
+      value: attribute.value.trim(),
+      sortOrder: index + 1,
+    }));
+    if (normalizedAttributes.some((attribute) => !attribute.key || !attribute.value)) {
+      setError('کلید و مقدار همه ویژگی‌های محصول الزامی هستند.');
+      return;
+    }
+    if (
+      normalizedAttributes.some(
+        (attribute) => attribute.key.length > 100 || attribute.value.length > 500,
+      )
+    ) {
+      setError('کلید ویژگی حداکثر ۱۰۰ و مقدار آن حداکثر ۵۰۰ نویسه می‌تواند باشد.');
+      return;
+    }
+    const attributeKeys = normalizedAttributes.map((attribute) =>
+      attribute.key.toLocaleLowerCase('fa-IR'),
+    );
+    if (new Set(attributeKeys).size !== attributeKeys.length) {
+      setError('کلید ویژگی‌های محصول نباید تکراری باشد.');
+      return;
+    }
+
     const brandId = String(formData.get('brandId') ?? 'none');
     const countryId = String(formData.get('countryId') ?? 'none');
     const payload: Record<string, unknown> = {
@@ -103,6 +145,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
       salePriceToman: salePriceToman ?? null,
       compareAtPriceToman: compareAtPriceToman ?? null,
       categoryIds: formData.getAll('categoryIds').map(String),
+      attributes: normalizedAttributes,
       ...seoEditorPayload(seo),
     };
 
@@ -320,6 +363,150 @@ export function ProductForm({ data, mode }: ProductFormProps) {
         ) : (
           <p className="text-sm text-[var(--admin-color-muted)]">
             هنوز دسته‌بندی فعالی ثبت نشده است.
+          </p>
+        )}
+      </Card>
+
+      <Card
+        title="ویژگی‌های محصول"
+        description="این ویژگی‌ها بعد از برند، کشور سازنده، سایزبندی و وزن نمایش داده می‌شوند"
+        action={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pending || attributes.length >= 30}
+            onClick={() =>
+              setAttributes((current) => [
+                ...current,
+                { id: createAttributeId(), key: '', value: '' },
+              ])
+            }
+          >
+            افزودن ویژگی
+          </Button>
+        }
+      >
+        {attributes.length > 0 ? (
+          <div className="space-y-3">
+            {attributes.map((attribute, index) => (
+              <div
+                key={attribute.id}
+                className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] p-3"
+              >
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-[var(--admin-color-muted)]">
+                    ترتیب نمایش: {toPersianDigits(index + 1)}
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={pending || index === 0}
+                      aria-label={`انتقال ویژگی ${toPersianDigits(index + 1)} به بالا`}
+                      onClick={() =>
+                        setAttributes((current) => {
+                          const next = [...current];
+                          const [moved] = next.splice(index, 1);
+                          if (!moved) return current;
+                          next.splice(index - 1, 0, moved);
+                          return next;
+                        })
+                      }
+                    >
+                      بالا
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={pending || index === attributes.length - 1}
+                      aria-label={`انتقال ویژگی ${toPersianDigits(index + 1)} به پایین`}
+                      onClick={() =>
+                        setAttributes((current) => {
+                          const next = [...current];
+                          const [moved] = next.splice(index, 1);
+                          if (!moved) return current;
+                          next.splice(index + 1, 0, moved);
+                          return next;
+                        })
+                      }
+                    >
+                      پایین
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={pending}
+                      aria-label={`حذف ویژگی ${toPersianDigits(index + 1)}`}
+                      onClick={() =>
+                        setAttributes((current) =>
+                          current.filter((item) => item.id !== attribute.id),
+                        )
+                      }
+                    >
+                      حذف
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <FormField
+                    id={`product-attribute-key-${attribute.id}`}
+                    label={`کلید ویژگی ${toPersianDigits(index + 1)}`}
+                    required
+                  >
+                    {(props) => (
+                      <Input
+                        {...props}
+                        value={attribute.key}
+                        maxLength={100}
+                        placeholder="مثلاً جنس نگین"
+                        disabled={pending}
+                        onChange={(event) =>
+                          setAttributes((current) =>
+                            current.map((item) =>
+                              item.id === attribute.id
+                                ? { ...item, key: event.target.value }
+                                : item,
+                            ),
+                          )
+                        }
+                      />
+                    )}
+                  </FormField>
+                  <FormField
+                    id={`product-attribute-value-${attribute.id}`}
+                    label={`مقدار ویژگی ${toPersianDigits(index + 1)}`}
+                    required
+                  >
+                    {(props) => (
+                      <Input
+                        {...props}
+                        value={attribute.value}
+                        maxLength={500}
+                        placeholder="مثلاً زیرکونیا"
+                        disabled={pending}
+                        onChange={(event) =>
+                          setAttributes((current) =>
+                            current.map((item) =>
+                              item.id === attribute.id
+                                ? { ...item, value: event.target.value }
+                                : item,
+                            ),
+                          )
+                        }
+                      />
+                    )}
+                  </FormField>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--admin-color-muted)]">
+            هنوز ویژگی سفارشی برای این محصول ثبت نشده است.
           </p>
         )}
       </Card>

@@ -1,10 +1,12 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   ArrayUnique,
   IsArray,
   IsBoolean,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -57,6 +59,20 @@ export class CreateProductMediaDto {
   @IsString()
   @Length(1, 255)
   altText?: string;
+}
+
+export class ProductAttributeInputDto {
+  @IsString()
+  @Length(1, 100)
+  key!: string;
+
+  @IsString()
+  @Length(1, 500)
+  value!: string;
+
+  @IsInt()
+  @Min(1)
+  sortOrder!: number;
 }
 
 export class CreateProductDto {
@@ -143,4 +159,11 @@ export class CreateProductDto {
   @ValidateNested({ each: true })
   @Type(() => CreateProductMediaDto)
   media?: CreateProductMediaDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(30)
+  @ValidateNested({ each: true })
+  @Type(() => ProductAttributeInputDto)
+  attributes?: ProductAttributeInputDto[];
 }

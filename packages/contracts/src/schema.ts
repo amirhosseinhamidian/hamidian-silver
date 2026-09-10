@@ -2909,6 +2909,11 @@ export interface components {
             availableQuantity: number;
             isAvailable: boolean;
         };
+        PublicCatalogProductAttributeDto: {
+            key: string;
+            value: string;
+            sortOrder: number;
+        };
         PublicCatalogProductDetailDto: {
             shortDescription: string | null;
             seoCanonicalPath?: string | null;
@@ -2927,6 +2932,7 @@ export interface components {
             country: components["schemas"]["PublicCatalogCountryDto"] | null;
             variants: components["schemas"]["PublicCatalogVariantDto"][];
             media: components["schemas"]["PublicCatalogMediaDto"][];
+            attributes: components["schemas"]["PublicCatalogProductAttributeDto"][];
             id: string;
             name: string;
             slug: string;
@@ -3050,6 +3056,11 @@ export interface components {
             isPrimary?: boolean;
             altText?: string;
         };
+        ProductAttributeInputDto: {
+            key: string;
+            value: string;
+            sortOrder: number;
+        };
         CreateProductDto: {
             name: string;
             slug: string;
@@ -3074,6 +3085,7 @@ export interface components {
             categoryIds?: string[];
             variants: components["schemas"]["CreateProductVariantDto"][];
             media?: components["schemas"]["CreateProductMediaDto"][];
+            attributes?: components["schemas"]["ProductAttributeInputDto"][];
         };
         UpdateProductVariantDto: {
             sku?: string;
@@ -3101,6 +3113,7 @@ export interface components {
             salePriceToman?: number | null;
             compareAtPriceToman?: number | null;
             categoryIds?: string[];
+            attributes?: components["schemas"]["ProductAttributeInputDto"][];
         };
         UpdateProductStatusDto: {
             /** @enum {string} */

@@ -62,6 +62,7 @@ const product = {
       height: 1200,
     },
   ],
+  attributes: [],
   variants: [],
 } satisfies PublicCatalogProductDetail;
 

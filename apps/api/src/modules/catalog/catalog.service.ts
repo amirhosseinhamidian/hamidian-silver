@@ -64,6 +64,7 @@ export class CatalogService {
 
   async createProduct(dto: CreateProductDto) {
     this.validateProductShape(dto);
+    const attributes = this.normalizeProductAttributes(dto.attributes);
 
     return this.prisma.$transaction(async (transaction) => {
       if (dto.brandId) {
@@ -228,6 +229,15 @@ export class CatalogService {
         });
       }
 
+      if (attributes.length > 0) {
+        await transaction.productAttribute.createMany({
+          data: attributes.map((attribute) => ({
+            productId: product.id,
+            ...attribute,
+          })),
+        });
+      }
+
       return transaction.product.findUniqueOrThrow({
         where: {
           id: product.id,
@@ -255,6 +265,11 @@ export class CatalogService {
             },
             include: {
               media: true,
+            },
+          },
+          attributes: {
+            orderBy: {
+              sortOrder: 'asc',
             },
           },
           seoOgMedia: true,
@@ -351,6 +366,11 @@ export class CatalogService {
               media: true,
             },
           },
+          attributes: {
+            orderBy: {
+              sortOrder: 'asc',
+            },
+          },
           seoOgMedia: true,
         },
       }),
@@ -380,6 +400,9 @@ export class CatalogService {
           orderBy: { sortOrder: 'asc' },
           include: { media: true },
         },
+        attributes: {
+          orderBy: { sortOrder: 'asc' },
+        },
         seoOgMedia: true,
       },
     });
@@ -389,6 +412,8 @@ export class CatalogService {
   }
 
   async updateProduct(productId: string, dto: UpdateProductDto) {
+    const attributes =
+      dto.attributes === undefined ? undefined : this.normalizeProductAttributes(dto.attributes);
     const updated = await this.prisma.$transaction(async (transaction) => {
       const current = await transaction.product.findFirst({
         where: { id: productId, deletedAt: null },
@@ -482,6 +507,15 @@ export class CatalogService {
         }
       }
 
+      if (attributes !== undefined) {
+        await transaction.productAttribute.deleteMany({ where: { productId } });
+        if (attributes.length > 0) {
+          await transaction.productAttribute.createMany({
+            data: attributes.map((attribute) => ({ productId, ...attribute })),
+          });
+        }
+      }
+
       return transaction.product.findUniqueOrThrow({
         where: { id: productId },
         include: {
@@ -490,6 +524,7 @@ export class CatalogService {
           categories: { include: { category: true } },
           variants: { where: { deletedAt: null }, include: { size: true } },
           media: { orderBy: { sortOrder: 'asc' }, include: { media: true } },
+          attributes: { orderBy: { sortOrder: 'asc' } },
           seoOgMedia: true,
         },
       });
@@ -1191,6 +1226,16 @@ export class CatalogService {
             },
           },
         },
+        attributes: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
+          select: {
+            key: true,
+            value: true,
+            sortOrder: true,
+          },
+        },
       },
     });
 
@@ -1348,6 +1393,7 @@ export class CatalogService {
           : null,
       variants,
       media,
+      attributes: product.attributes,
     };
   }
 
@@ -1485,6 +1531,36 @@ export class CatalogService {
     if (primaryMediaCount > 1) {
       throw new BadRequestException('A product can have only one primary media item.');
     }
+  }
+
+  private normalizeProductAttributes(
+    attributes: readonly { key: string; value: string; sortOrder: number }[] | undefined,
+  ): { key: string; value: string; sortOrder: number }[] {
+    const normalized = (attributes ?? []).map((attribute) => ({
+      key: attribute.key.trim().replace(/\s+/g, ' '),
+      value: attribute.value.trim(),
+      sortOrder: attribute.sortOrder,
+    }));
+
+    if (normalized.some(({ key, value }) => !key || !value)) {
+      throw new BadRequestException('Product attribute keys and values cannot be blank.');
+    }
+
+    if (normalized.some(({ key, value }) => key.length > 100 || value.length > 500)) {
+      throw new BadRequestException('Product attribute key or value exceeds its length limit.');
+    }
+
+    const normalizedKeys = normalized.map(({ key }) => key.toLocaleLowerCase('fa-IR'));
+    if (new Set(normalizedKeys).size !== normalizedKeys.length) {
+      throw new BadRequestException('Product attribute keys must be unique.');
+    }
+
+    const sortOrders = normalized.map(({ sortOrder }) => sortOrder);
+    if (new Set(sortOrders).size !== sortOrders.length) {
+      throw new BadRequestException('Product attribute display orders must be unique.');
+    }
+
+    return normalized.sort((left, right) => left.sortOrder - right.sortOrder);
   }
 
   private withAdminMediaUrls<

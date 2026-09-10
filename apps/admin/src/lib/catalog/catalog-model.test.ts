@@ -54,6 +54,10 @@ const product = {
       },
     },
   ],
+  attributes: [
+    { id: 'attribute-2', key: 'نوع آبکاری', value: 'رودیوم', sortOrder: 2 },
+    { id: 'attribute-1', key: 'جنس نگین', value: 'زیرکونیا', sortOrder: 1 },
+  ],
 };
 
 describe('catalog model', () => {
@@ -65,6 +69,10 @@ describe('catalog model', () => {
       media: [{ id: 'media-1', isPrimary: true, altText: 'نمای روبه‌رو' }],
       categories: [{ id: 'category-1', name: 'انگشتر' }],
       variants: [{ sku: 'RING-52', weightGrams: 4.25, size: { label: '۵۲' } }],
+      attributes: [
+        { key: 'جنس نگین', value: 'زیرکونیا', sortOrder: 1 },
+        { key: 'نوع آبکاری', value: 'رودیوم', sortOrder: 2 },
+      ],
     });
   });
 

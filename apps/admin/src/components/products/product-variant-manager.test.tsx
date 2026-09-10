@@ -41,6 +41,7 @@ const product: AdminProduct = {
     },
   ],
   media: [],
+  attributes: [],
   mediaCount: 0,
 };
 

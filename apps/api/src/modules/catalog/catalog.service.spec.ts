@@ -163,6 +163,9 @@ describe('CatalogService', () => {
       productMedia: {
         createMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      productAttribute: {
+        createMany: jest.fn().mockResolvedValue({ count: 2 }),
+      },
     };
 
     prisma.$transaction.mockImplementation(
@@ -189,6 +192,10 @@ describe('CatalogService', () => {
           mediaId,
           isPrimary: true,
         },
+      ],
+      attributes: [
+        { key: ' نوع   آبکاری ', value: ' رودیوم ', sortOrder: 2 },
+        { key: 'جنس نگین', value: 'زیرکونیا', sortOrder: 1 },
       ],
     };
 
@@ -229,6 +236,12 @@ describe('CatalogService', () => {
           mediaId,
           isPrimary: true,
         }),
+      ],
+    });
+    expect(transaction.productAttribute.createMany).toHaveBeenCalledWith({
+      data: [
+        { productId, key: 'جنس نگین', value: 'زیرکونیا', sortOrder: 1 },
+        { productId, key: 'نوع آبکاری', value: 'رودیوم', sortOrder: 2 },
       ],
     });
   });
@@ -293,6 +306,10 @@ describe('CatalogService', () => {
         deleteMany: jest.fn(),
         createMany: jest.fn(),
       },
+      productAttribute: {
+        deleteMany: jest.fn(),
+        createMany: jest.fn(),
+      },
     };
     prisma.$transaction.mockImplementation(
       async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
@@ -303,6 +320,7 @@ describe('CatalogService', () => {
         name: 'Updated ring',
         salePriceToman: 4_200_000,
         categoryIds: [categoryId],
+        attributes: [{ key: 'جنس نگین', value: 'زیرکونیا', sortOrder: 1 }],
       }),
     ).resolves.toEqual({ id: productId, name: 'Updated ring', media: [] });
 
@@ -316,6 +334,37 @@ describe('CatalogService', () => {
     expect(transaction.productCategory.createMany).toHaveBeenCalledWith({
       data: [{ productId, categoryId }],
     });
+    expect(transaction.productAttribute.deleteMany).toHaveBeenCalledWith({ where: { productId } });
+    expect(transaction.productAttribute.createMany).toHaveBeenCalledWith({
+      data: [{ productId, key: 'جنس نگین', value: 'زیرکونیا', sortOrder: 1 }],
+    });
+  });
+
+  it('rejects blank or duplicate product attribute keys before opening a transaction', async () => {
+    await expect(
+      service.createProduct({
+        name: 'Silver Ring',
+        slug: 'silver-ring',
+        sizeMode: SizeMode.NONE,
+        variants: [{ sku: 'RING-1' }],
+        attributes: [
+          { key: 'جنس نگین', value: 'زیرکونیا', sortOrder: 1 },
+          { key: ' جنس   نگین ', value: 'کریستال', sortOrder: 2 },
+        ],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    await expect(
+      service.createProduct({
+        name: 'Silver Ring',
+        slug: 'silver-ring',
+        sizeMode: SizeMode.NONE,
+        variants: [{ sku: 'RING-2' }],
+        attributes: [{ key: '   ', value: 'زیرکونیا', sortOrder: 1 }],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('records a permanent redirect when the product slug changes', async () => {
