@@ -27,6 +27,7 @@ describe('admin mobile data patterns', () => {
         </BottomSheetTrigger>
         <BottomSheetContent
           title="جزئیات سفارش"
+          description="اطلاعات و عملیات سفارش انتخاب‌شده"
           footer={
             <BottomSheetClose asChild>
               <Button>بستن</Button>
@@ -39,7 +40,9 @@ describe('admin mobile data patterns', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'نمایش جزئیات' }));
-    expect(screen.getByRole('dialog', { name: 'جزئیات سفارش' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'جزئیات سفارش' })).toHaveAccessibleDescription(
+      'اطلاعات و عملیات سفارش انتخاب‌شده',
+    );
     expect(screen.getByText('اطلاعات کامل سفارش')).toBeInTheDocument();
 
     const closeButtons = screen.getAllByRole('button', { name: 'بستن' });
@@ -65,6 +68,10 @@ describe('admin mobile data patterns', () => {
     const desktopContainer = screen.getByRole('table', { name: 'جدول سفارش‌ها' }).parentElement
       ?.parentElement?.parentElement;
     expect(desktopContainer).toHaveClass('hidden', 'md:block');
+    expect(
+      screen.getByRole('region', { name: 'جدول سفارش‌ها؛ جدول قابل پیمایش افقی' }),
+    ).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('list')).toContainElement(screen.getByText('کارت سفارش اول'));
     expect(screen.getByText('کارت سفارش اول')).toBeInTheDocument();
   });
 
@@ -85,6 +92,8 @@ describe('admin mobile data patterns', () => {
 
     expect(screen.getByText('مشتری نمونه')).toBeInTheDocument();
     expect(screen.getByText('۲ میلیون تومان')).toBeInTheDocument();
+    expect(screen.getByText('مشتری نمونه')).toHaveClass('break-words');
+    expect(screen.getByText('۲ میلیون تومان')).toHaveClass('break-words');
 
     fireEvent.click(screen.getByRole('button', { name: 'مشاهده جزئیات و عملیات' }));
     expect(screen.getByRole('dialog', { name: 'سفارش ۱۰۰۱' })).toHaveTextContent(

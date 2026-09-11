@@ -1,7 +1,7 @@
 'use client';
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { useId, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 
 import { cn } from '@/lib/ui/cn';
 
@@ -49,12 +49,17 @@ export function BottomSheetContent({
   hideClose = false,
   className,
   children,
+  'aria-describedby': ariaDescribedBy,
   ...props
 }: BottomSheetContentProps) {
+  const generatedDescriptionId = useId();
+  const descriptionId = description ? generatedDescriptionId : ariaDescribedBy;
+
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="admin-bottom-sheet-overlay fixed inset-0 z-[120] bg-slate-950/45 backdrop-blur-[2px]" />
       <DialogPrimitive.Content
+        aria-describedby={descriptionId}
         className={cn(
           'admin-bottom-sheet-content fixed inset-x-0 bottom-0 z-[121] mx-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-b-0 border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] shadow-[var(--admin-shadow-lg)] outline-none',
           heightClassNames[height],
@@ -72,7 +77,10 @@ export function BottomSheetContent({
             {title}
           </DialogPrimitive.Title>
           {description ? (
-            <DialogPrimitive.Description className="mt-1 text-xs leading-5 text-[var(--admin-color-muted)]">
+            <DialogPrimitive.Description
+              id={descriptionId}
+              className="mt-1 text-xs leading-5 text-[var(--admin-color-muted)]"
+            >
               {description}
             </DialogPrimitive.Description>
           ) : null}

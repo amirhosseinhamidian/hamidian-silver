@@ -57,11 +57,11 @@ export function ResponsiveDataView<Row>({
         ) : rows.length === 0 ? (
           <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
         ) : (
-          <div className="grid gap-2">
+          <ul className="grid gap-2">
             {rows.map((row) => (
-              <div key={getRowKey(row)}>{renderMobileCard(row)}</div>
+              <li key={getRowKey(row)}>{renderMobileCard(row)}</li>
             ))}
-          </div>
+          </ul>
         )}
         {footer && !loading && !error && rows.length > 0 ? (
           <div className="mt-3 overflow-hidden rounded-[var(--admin-radius-lg)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)]">

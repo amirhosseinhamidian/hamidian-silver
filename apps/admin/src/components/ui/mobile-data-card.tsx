@@ -52,7 +52,9 @@ export function MobileDataCard({
               {eyebrow}
             </div>
           ) : null}
-          <h3 className={cn('truncate text-sm font-bold', Boolean(eyebrow) && 'mt-1')}>{title}</h3>
+          <h3 className={cn('break-words text-sm font-bold', Boolean(eyebrow) && 'mt-1')}>
+            {title}
+          </h3>
         </div>
         {status ? <div className="shrink-0">{status}</div> : null}
       </header>
@@ -61,7 +63,7 @@ export function MobileDataCard({
         {items.slice(0, 4).map((item, index) => (
           <div key={index} className="min-w-0">
             <dt className="text-[0.6875rem] text-[var(--admin-color-subtle)]">{item.label}</dt>
-            <dd className="mt-0.5 truncate text-xs font-semibold text-[var(--admin-color-ink)]">
+            <dd className="mt-0.5 break-words text-xs font-semibold text-[var(--admin-color-ink)]">
               {item.value}
             </dd>
           </div>

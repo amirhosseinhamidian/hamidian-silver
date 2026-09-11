@@ -66,7 +66,12 @@ export function DataTable<Row>({
 }: DataTableProps<Row>) {
   return (
     <div className="overflow-hidden rounded-[var(--admin-radius-lg)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] shadow-[var(--admin-shadow-sm)]">
-      <div className="overflow-x-auto">
+      <div
+        role="region"
+        aria-label={`${caption}؛ جدول قابل پیمایش افقی`}
+        tabIndex={0}
+        className="overflow-x-auto outline-none"
+      >
         <table className="w-full min-w-[48rem] border-collapse text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead

@@ -55,6 +55,11 @@ describe('AdminShell', () => {
   it('renders desktop, mobile and breadcrumb navigation with the active section', () => {
     renderShell();
 
+    expect(screen.getByRole('link', { name: 'پرش به محتوای اصلی' })).toHaveAttribute(
+      'href',
+      '#admin-main-content',
+    );
+    expect(document.getElementById('admin-main-content')).toHaveAttribute('tabindex', '-1');
     expect(screen.getByTestId('desktop-admin-sidebar')).toHaveClass('hidden', 'lg:flex');
     expect(screen.getByTestId('desktop-admin-sidebar')).toHaveClass('right-0');
     expect(screen.getByTestId('desktop-admin-sidebar').parentElement).toHaveClass('lg:pr-72');

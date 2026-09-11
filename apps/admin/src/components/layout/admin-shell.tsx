@@ -148,6 +148,9 @@ export function AdminShell({ children, account, navigation, profile }: AdminShel
 
   return (
     <div data-app-shell="admin" className="min-h-dvh bg-[var(--admin-color-canvas)] lg:pr-72">
+      <a href="#admin-main-content" className="admin-skip-link">
+        پرش به محتوای اصلی
+      </a>
       <AdminProfileCompletionGate profile={profile} />
       <aside
         data-testid="desktop-admin-sidebar"
@@ -253,7 +256,11 @@ export function AdminShell({ children, account, navigation, profile }: AdminShel
           </div>
         </header>
 
-        <div className="min-w-0 flex-1 pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <div
+          id="admin-main-content"
+          tabIndex={-1}
+          className="min-w-0 flex-1 scroll-mt-20 pb-[calc(5.25rem+env(safe-area-inset-bottom))] outline-none lg:pb-0"
+        >
           {children}
         </div>
       </div>
