@@ -6,7 +6,6 @@ import {
   trackProductView,
   trackPurchase,
   trackSearch,
-  type CommerceItemInput,
   type PurchaseInput,
 } from '@/lib/analytics/commerce-events';
 import type { PublicCatalogProductDetail } from '@/lib/catalog/public-catalog';

@@ -41,7 +41,7 @@ type ContentPageRecord = Readonly<{
   sections: ReadonlyArray<Readonly<{ title: string; body: string | null }>>;
 }>;
 
-const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPageDto> = {
+export const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPageDto> = {
   [StorefrontContentPageKey.ABOUT]: {
     key: StorefrontContentPageKey.ABOUT,
     eyebrow: 'درباره ما',

@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DomainException } from '../../common/errors/domain-exception';
 
 import { ErrorCode } from '../../common/errors/error-codes';
@@ -259,6 +260,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly publicMediaUrl?: PublicMediaUrlService,
+    @Optional() private readonly config?: ConfigService,
   ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
@@ -352,10 +354,12 @@ export class OrdersService {
         (total, item) => total + item.unitPlatingPriceToman * item.quantity,
         0,
       );
-      const grandTotalToman = merchandiseTotalToman + platingTotalToman;
+      const shippingTotalToman = this.resolveInitialShippingCostToman();
+      const grandTotalToman = merchandiseTotalToman + platingTotalToman + shippingTotalToman;
 
       this.assertSafeTomanAmount(merchandiseTotalToman);
       this.assertSafeTomanAmount(platingTotalToman);
+      this.assertSafeTomanAmount(shippingTotalToman);
       this.assertSafeTomanAmount(grandTotalToman);
 
       const orderId = randomUUID();
@@ -371,6 +375,7 @@ export class OrdersService {
           status: OrderStatus.PENDING_PAYMENT,
           merchandiseTotalToman,
           platingTotalToman,
+          shippingTotalToman,
           grandTotalToman,
           reservationExpiresAt,
           shippingAddress: {
@@ -424,6 +429,15 @@ export class OrdersService {
     });
 
     return this.toCustomerOrder(order);
+  }
+
+  private resolveInitialShippingCostToman(): number {
+    const shippingProvider =
+      this.config?.get<string>('SHIPPING_PROVIDER', 'disabled') ?? 'disabled';
+
+    if (shippingProvider !== 'disabled') return 0;
+
+    return this.config?.get<number>('MANUAL_SHIPPING_COST_TOMAN', 0) ?? 0;
   }
 
   async listMyOrders(userId: string, query: ListOrdersQueryDto) {

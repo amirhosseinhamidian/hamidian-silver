@@ -79,6 +79,7 @@ export const envValidationSchema = Joi.object({
     .default('https://bpm.shaparak.ir/pgwchannel/startpay.mellat'),
   MELLAT_REQUEST_TIMEOUT_MS: Joi.number().integer().min(1000).max(60000).default(10000),
   SHIPPING_PROVIDER: Joi.string().valid('disabled', 'postex').default('disabled'),
+  MANUAL_SHIPPING_COST_TOMAN: Joi.number().integer().min(0).max(2_147_483_647).default(0),
   POSTEX_API_BASE_URL: Joi.string()
     .uri({ scheme: ['https'] })
     .default('https://api.postex.ir/api/v1'),

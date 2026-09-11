@@ -37,6 +37,7 @@
     "db:validate": "prisma validate",
     "db:format": "prisma format",
     "db:seed": "prisma db seed",
+    "db:seed:operations": "SEED_OPERATIONAL_DATA=true prisma db seed",
     "db:studio": "prisma studio",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

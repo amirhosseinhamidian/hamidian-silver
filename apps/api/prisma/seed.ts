@@ -1,7 +1,12 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
-import { PlatingType, ProductStatus, SizeMode } from '../src/generated/prisma/enums';
+import {
+  PlatingType,
+  ProductStatus,
+  SizeMode,
+  StorefrontContentPageKey,
+} from '../src/generated/prisma/enums';
 import {
   PERMISSION_DEFINITIONS,
   ROLE_CODES,
@@ -9,6 +14,9 @@ import {
   SYSTEM_ROLE_PERMISSION_CODES,
   type RoleCode,
 } from '../src/modules/authorization/rbac.constants';
+import { PAYMENT_GATEWAY_DEFINITIONS } from '../src/modules/payments/payment-gateway.constants';
+import { DEFAULT_CONTENT } from '../src/modules/site-settings/content-pages.service';
+import { parseOperationalSeedConfig, type OperationalSeedConfig } from './operational-seed.config';
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -333,6 +341,159 @@ async function syncSystemRolePermissions(): Promise<void> {
   });
 }
 
+async function seedOperationalData(config: OperationalSeedConfig): Promise<void> {
+  const primaryRole = await prisma.role.findUnique({
+    where: { code: ROLE_CODES.MANAGER },
+    select: { id: true },
+  });
+
+  if (!primaryRole) {
+    throw new Error('Manager role was not found after seeding.');
+  }
+
+  await prisma.$transaction(async (transaction) => {
+    const admin = await transaction.user.upsert({
+      where: { phone: config.admin.phone },
+      update: {
+        ...(config.admin.firstName ? { firstName: config.admin.firstName } : {}),
+        ...(config.admin.lastName ? { lastName: config.admin.lastName } : {}),
+        isActive: true,
+        deletedAt: null,
+      },
+      create: {
+        phone: config.admin.phone,
+        firstName: config.admin.firstName,
+        lastName: config.admin.lastName,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+
+    await transaction.userRole.upsert({
+      where: {
+        userId_roleId: {
+          userId: admin.id,
+          roleId: primaryRole.id,
+        },
+      },
+      update: {},
+      create: {
+        userId: admin.id,
+        roleId: primaryRole.id,
+      },
+    });
+
+    await transaction.warehouse.updateMany({
+      where: {
+        code: { not: config.warehouse.code },
+        isDefault: true,
+      },
+      data: { isDefault: false },
+    });
+    await transaction.warehouse.upsert({
+      where: { code: config.warehouse.code },
+      update: {
+        name: config.warehouse.name,
+        isDefault: true,
+        isActive: true,
+        deletedAt: null,
+      },
+      create: {
+        code: config.warehouse.code,
+        name: config.warehouse.name,
+        isDefault: true,
+      },
+    });
+
+    for (const definition of PAYMENT_GATEWAY_DEFINITIONS) {
+      const isEnabled = definition.code === config.paymentGateway;
+
+      await transaction.paymentGatewaySetting.upsert({
+        where: { provider: definition.code },
+        update: {
+          isEnabled,
+          updatedByUserId: admin.id,
+        },
+        create: {
+          provider: definition.code,
+          isEnabled,
+          updatedByUserId: admin.id,
+        },
+      });
+    }
+
+    await transaction.siteSettings.upsert({
+      where: { id: 'site' },
+      update: {
+        footerAbout: config.site.footerAbout,
+        contactAddress: config.site.contactAddress,
+        contactPhoneNumbers: config.site.contactPhoneNumbers,
+        contactEmail: config.site.contactEmail,
+        instagramUrl: config.site.instagramUrl,
+        telegramUrl: config.site.telegramUrl,
+        baleUrl: config.site.baleUrl,
+        seoSiteName: config.site.siteName,
+        seoDefaultTitle: config.site.siteName,
+        seoTitleTemplate: `%s | ${config.site.siteName}`,
+        seoOrganizationName: config.site.siteName,
+        updatedByUserId: admin.id,
+      },
+      create: {
+        id: 'site',
+        footerAbout: config.site.footerAbout,
+        contactAddress: config.site.contactAddress,
+        contactPhoneNumbers: config.site.contactPhoneNumbers,
+        contactEmail: config.site.contactEmail,
+        instagramUrl: config.site.instagramUrl,
+        telegramUrl: config.site.telegramUrl,
+        baleUrl: config.site.baleUrl,
+        seoSiteName: config.site.siteName,
+        seoDefaultTitle: config.site.siteName,
+        seoTitleTemplate: `%s | ${config.site.siteName}`,
+        seoOrganizationName: config.site.siteName,
+        updatedByUserId: admin.id,
+      },
+    });
+
+    for (const key of Object.values(StorefrontContentPageKey)) {
+      const content = DEFAULT_CONTENT[key];
+
+      await transaction.storefrontContentPage.upsert({
+        where: { key },
+        update: {},
+        create: {
+          key,
+          title: content.title,
+          eyebrow: content.eyebrow,
+          subtitle: content.subtitle,
+          body: content.body,
+          seoTitle: content.seoTitle,
+          seoDescription: content.seoDescription,
+          seoCanonicalPath: content.seoCanonicalPath,
+          seoNoIndex: content.seoNoIndex,
+          updatedByUserId: admin.id,
+          sections: {
+            create: content.sections.map((section, index) => ({
+              title: section.title,
+              body: section.body,
+              sortOrder: index + 1,
+            })),
+          },
+        },
+      });
+    }
+  });
+
+  console.log(
+    [
+      'Operational data is ready for the primary admin.',
+      `Gateway: ${config.paymentGateway ?? 'disabled'}.`,
+      `Manual shipping: ${config.manualShippingCostToman.toLocaleString('en-US')} toman.`,
+      `Warehouse: ${config.warehouse.code}.`,
+    ].join(' '),
+  );
+}
+
 async function seedDemoCatalog(): Promise<void> {
   const country = await prisma.country.upsert({
     where: { isoCode: 'IR' },
@@ -620,6 +781,12 @@ async function main(): Promise<void> {
   console.log(
     `Seeded ${PERMISSION_DEFINITIONS.length} permissions and ${SYSTEM_ROLE_DEFINITIONS.length} system roles.`,
   );
+
+  if (process.env.SEED_OPERATIONAL_DATA === 'true') {
+    await seedOperationalData(parseOperationalSeedConfig(process.env));
+  } else {
+    console.log('Skipped operational seed. Set SEED_OPERATIONAL_DATA=true to enable it.');
+  }
 
   if (process.env.SEED_DEMO_CATALOG === 'true') {
     await seedDemoCatalog();

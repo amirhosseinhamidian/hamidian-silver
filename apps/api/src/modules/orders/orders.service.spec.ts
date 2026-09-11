@@ -1,3 +1,4 @@
+import type { ConfigService } from '@nestjs/config';
 import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, PlatingType, ProductStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
@@ -25,6 +26,16 @@ describe('OrdersService', () => {
   });
 
   it('creates an order with price snapshots and reserves inventory', async () => {
+    const config = {
+      get: jest.fn((key: string, fallback: unknown) =>
+        key === 'MANUAL_SHIPPING_COST_TOMAN' ? 85_000 : fallback,
+      ),
+    };
+    service = new OrdersService(
+      prisma as unknown as PrismaService,
+      undefined,
+      config as unknown as ConfigService,
+    );
     const transaction = {
       warehouse: {
         findFirst: jest.fn().mockResolvedValue({ id: warehouseId }),
@@ -122,7 +133,8 @@ describe('OrdersService', () => {
         status: OrderStatus.PENDING_PAYMENT,
         merchandiseTotalToman: 2_700_000,
         platingTotalToman: 425_000,
-        grandTotalToman: 3_125_000,
+        shippingTotalToman: 85_000,
+        grandTotalToman: 3_210_000,
         items: {
           create: [
             expect.objectContaining({
