@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 
+import { SearchResultsAnalytics } from '@/components/analytics/conversion-trackers';
 import { CatalogFilterForm } from '@/components/catalog/catalog-filter-form';
 import { CatalogHero } from '@/components/catalog/catalog-hero';
 import { CatalogFilterSheet } from '@/components/catalog/catalog-filter-sheet';
@@ -56,6 +57,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   return (
     <main id="main-content" className="pb-[var(--sf-section-space)]">
+      <SearchResultsAnalytics searchTerm={filters.q} resultCount={products.total} />
       <CatalogHero settings={siteSettings} devFallbackSrc={heroImageSrc} />
 
       <section className="sf-container pt-8">

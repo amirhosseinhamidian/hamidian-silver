@@ -7,6 +7,7 @@ import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { trackWishlistChange } from '@/lib/analytics/commerce-events';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
 import { useWishlist } from '@/lib/wishlist/wishlist-store';
@@ -72,6 +73,16 @@ export default function WishlistPage() {
                     event.preventDefault();
                     event.stopPropagation();
                     toggleItem(item);
+                    trackWishlistChange(
+                      {
+                        itemId: item.slug,
+                        itemName: item.name,
+                        brand: item.brandName,
+                        priceToman: item.salePriceToman,
+                        quantity: 1,
+                      },
+                      false,
+                    );
                   }}
                   className="
                     sf-catalog-card__wishlist sf-catalog-card__remove absolute left-3 top-3

@@ -1,13 +1,14 @@
 'use client';
 
 import type { components } from '@hamidian/contracts';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
 import { Select } from '@/components/ui/select';
+import { trackBeginCheckout } from '@/lib/analytics/commerce-events';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { useCart } from '@/lib/cart/cart-store';
 import { buildCreateOrderBody } from '@/lib/checkout/checkout-payload';
@@ -113,6 +114,7 @@ export function CheckoutFlow() {
   const [pendingOrderTotalToman, setPendingOrderTotalToman] = useState<number | null>(null);
   const [priceChange, setPriceChange] = useState<CheckoutPriceChange | null>(null);
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
+  const checkoutTracked = useRef(false);
 
   const selectedAddress = useMemo(
     () => addresses.find(({ id }) => id === selectedAddressId) ?? null,
@@ -133,6 +135,24 @@ export function CheckoutFlow() {
       ? options
       : [{ value: addressFields.city, label: addressFields.city }, ...options];
   }, [addressFields.city, addressFields.province]);
+
+  useEffect(() => {
+    if (checkoutTracked.current || items.length === 0) {
+      return;
+    }
+
+    checkoutTracked.current = true;
+    trackBeginCheckout(
+      subtotalToman,
+      items.map((item) => ({
+        itemId: item.productSlug,
+        itemName: item.productName,
+        variant: [item.variantLabel, item.platingType].filter(Boolean).join(' / '),
+        priceToman: item.unitSalePriceToman + item.unitPlatingPriceToman,
+        quantity: item.quantity,
+      })),
+    );
+  }, [items, subtotalToman]);
 
   useEffect(() => {
     let active = true;

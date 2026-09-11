@@ -8,6 +8,7 @@ import { FiSearch, FiX } from 'react-icons/fi';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-control';
+import { trackSearch } from '@/lib/analytics/commerce-events';
 import type { PublicCatalogProductSuggestion } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { normalizeCatalogSearchText } from '@/lib/catalog/search-normalization';
@@ -233,6 +234,7 @@ export function StorefrontSearch() {
                                 role="option"
                                 aria-selected={activeIndex === index}
                                 href={`/products/${suggestion.slug}`}
+                                onClick={() => trackSearch(normalizedQuery, suggestions.length)}
                                 className="
                                   grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-3 px-3 py-2.5
                                   transition-colors hover:bg-[var(--sf-color-surface)]

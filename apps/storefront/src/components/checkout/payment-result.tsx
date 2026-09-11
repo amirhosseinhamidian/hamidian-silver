@@ -8,8 +8,10 @@ import {
 } from '@/components/account/account-order-presentation';
 import type { CustomerOrderDetail } from '@/components/account/account-types';
 import { toPersianDigits } from '@/components/account/account-types';
+import { PurchaseAnalytics } from '@/components/analytics/conversion-trackers';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { ButtonLink } from '@/components/ui/button';
+import type { CommerceItemInput } from '@/lib/analytics/commerce-events';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 
 export type PaymentResultStatus = 'success' | 'pending' | 'failed';
@@ -55,6 +57,20 @@ function resultActionLabel(status: PaymentResultStatus): string {
   if (status === 'success') return 'مشاهده جزئیات سفارش';
   if (status === 'pending') return 'بررسی وضعیت سفارش';
   return 'بررسی و تلاش مجدد';
+}
+
+function purchaseItem(item: CustomerOrderDetail['items'][number]): CommerceItemInput {
+  const variant = [item.variantNameSnapshot, item.sizeLabelSnapshot, item.platingType]
+    .filter(Boolean)
+    .join(' / ');
+
+  return {
+    itemId: item.productSlug || item.skuSnapshot || item.variantId,
+    itemName: item.productNameSnapshot,
+    variant: variant || null,
+    priceToman: item.unitSalePriceToman + item.unitPlatingPriceToman,
+    quantity: item.quantity,
+  };
 }
 
 function OrderItems({ order }: Readonly<{ order: CustomerOrderDetail }>) {
@@ -212,6 +228,19 @@ export function PaymentResult({ status, orderId, order = null }: PaymentResultPr
 
   return (
     <main id="main-content" className="pb-[var(--sf-section-space)]">
+      {status === 'success' && order ? (
+        <PurchaseAnalytics
+          orderId={order.id}
+          transactionId={order.orderNumber}
+          valueToman={Math.max(
+            0,
+            order.grandTotalToman - order.shippingTotalToman - order.taxTotalToman,
+          )}
+          shippingToman={order.shippingTotalToman}
+          taxToman={order.taxTotalToman}
+          items={order.items.map(purchaseItem)}
+        />
+      ) : null}
       <header className="border-b border-[var(--sf-color-border)] bg-[var(--sf-color-surface)]">
         <div className="sf-container py-12 text-center sm:py-18">
           <span

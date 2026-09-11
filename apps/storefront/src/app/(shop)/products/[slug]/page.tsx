@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 
+import { ProductViewAnalytics } from '@/components/analytics/conversion-trackers';
 import { ProductPurchasePanel } from '@/components/cart/product-purchase-panel';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
@@ -110,6 +111,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
   return (
     <>
+      <ProductViewAnalytics product={product} />
       <JsonLd data={buildProductStructuredData(product, settings)} />
       <main
         id="main-content"

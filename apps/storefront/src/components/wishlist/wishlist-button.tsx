@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { FiHeart, FiShare2 } from 'react-icons/fi';
 
 import { Button } from '@/components/ui/button';
+import { trackWishlistChange } from '@/lib/analytics/commerce-events';
 import type { WishlistItem } from '@/lib/wishlist/wishlist-state';
 import { useWishlist } from '@/lib/wishlist/wishlist-store';
 
@@ -52,6 +53,20 @@ export function WishlistButton({ item }: WishlistButtonProps) {
   const [shareLabel, setShareLabel] = useState('اشتراک‌گذاری محصول');
   const wishlistLabel = active ? 'حذف از علاقه‌مندی‌ها' : 'افزودن به علاقه‌مندی‌ها';
 
+  function handleWishlistToggle() {
+    toggleItem(item);
+    trackWishlistChange(
+      {
+        itemId: item.slug,
+        itemName: item.name,
+        brand: item.brandName,
+        priceToman: item.salePriceToman,
+        quantity: 1,
+      },
+      !active,
+    );
+  }
+
   async function handleShare() {
     const url = window.location.href;
 
@@ -82,7 +97,7 @@ export function WishlistButton({ item }: WishlistButtonProps) {
 
   return (
     <div role="group" className="flex items-center gap-2" aria-label="اقدامات محصول">
-      <IconAction label={wishlistLabel} pressed={active} onClick={() => toggleItem(item)}>
+      <IconAction label={wishlistLabel} pressed={active} onClick={handleWishlistToggle}>
         <FiHeart aria-hidden="true" size={20} fill={active ? 'currentColor' : 'none'} />
       </IconAction>
       <IconAction label={shareLabel} onClick={handleShare}>

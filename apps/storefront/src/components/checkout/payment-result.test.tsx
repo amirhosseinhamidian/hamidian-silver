@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CustomerOrderDetail } from '@/components/account/account-types';
 import { PaymentResult } from '@/components/checkout/payment-result';
@@ -62,6 +62,11 @@ const order: CustomerOrderDetail = {
 };
 
 describe('PaymentResult', () => {
+  afterEach(() => {
+    window.localStorage.clear();
+    delete window.gtag;
+  });
+
   it('renders a complete verified purchase summary', () => {
     render(<PaymentResult status="success" order={order} />);
 
@@ -104,6 +109,27 @@ describe('PaymentResult', () => {
     expect(screen.getByRole('link', { name: 'بررسی و تلاش مجدد' })).toHaveAttribute(
       'href',
       '/account/orders/order-2',
+    );
+  });
+
+  it('emits purchase only for a verified successful order', async () => {
+    const gtag = vi.fn();
+    window.gtag = gtag;
+    const pending = render(
+      <PaymentResult status="pending" order={{ ...order, status: 'PENDING_PAYMENT' }} />,
+    );
+
+    expect(gtag).not.toHaveBeenCalled();
+    pending.unmount();
+
+    render(<PaymentResult status="success" order={order} />);
+
+    await waitFor(() =>
+      expect(gtag).toHaveBeenCalledWith(
+        'event',
+        'purchase',
+        expect.objectContaining({ transaction_id: 'HS-1001', currency: 'IRR' }),
+      ),
     );
   });
 });

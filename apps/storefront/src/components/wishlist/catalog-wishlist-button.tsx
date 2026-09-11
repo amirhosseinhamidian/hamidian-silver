@@ -2,6 +2,7 @@
 
 import { FiHeart } from 'react-icons/fi';
 
+import { trackWishlistChange } from '@/lib/analytics/commerce-events';
 import type { WishlistItem } from '@/lib/wishlist/wishlist-state';
 import { useWishlist } from '@/lib/wishlist/wishlist-store';
 
@@ -14,13 +15,27 @@ export function CatalogWishlistButton({ item }: CatalogWishlistButtonProps) {
   const active = hasItem(item.productId);
   const label = active ? 'حذف از علاقه‌مندی‌ها' : 'افزودن به علاقه‌مندی‌ها';
 
+  function handleToggle() {
+    toggleItem(item);
+    trackWishlistChange(
+      {
+        itemId: item.slug,
+        itemName: item.name,
+        brand: item.brandName,
+        priceToman: item.salePriceToman,
+        quantity: 1,
+      },
+      !active,
+    );
+  }
+
   return (
     <button
       type="button"
       aria-label={label}
       aria-pressed={active}
       title={label}
-      onClick={() => toggleItem(item)}
+      onClick={handleToggle}
       className="
         sf-catalog-card__wishlist absolute right-3 top-3 z-20 inline-flex
         size-11 items-center justify-center rounded-full border

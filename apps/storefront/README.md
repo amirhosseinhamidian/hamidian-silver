@@ -7,6 +7,15 @@ process (for example through `apps/storefront/.env.local`). `MEDIA_PUBLIC_BASE_U
 API's public media base URL because Next.js only optimizes images from explicitly configured hosts
 and paths.
 
+## Analytics
+
+Set `NEXT_PUBLIC_GA_MEASUREMENT_ID` to a valid GA4 measurement ID (for example `G-ABC123`) when
+building the production storefront. Leaving it empty disables analytics and avoids loading the
+Google tag. The storefront sends App Router page views plus `search`, `view_item`,
+`add_to_wishlist`, `remove_from_wishlist`, `add_to_cart`, `begin_checkout`, and verified `purchase`
+events. Prices are converted from toman to `IRR`; customer identity, phone, and address data are not
+included in commerce events.
+
 ## Getting Started
 
 First, run the development server:

@@ -8,6 +8,7 @@ import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { StockNotificationButton } from '@/components/catalog/stock-notification-button';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { QuantityControl } from '@/components/ui/quantity-control';
+import { trackAddToCart } from '@/lib/analytics/commerce-events';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
 import type { PublicCatalogProductDetail } from '@/lib/catalog/public-catalog';
@@ -150,6 +151,17 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       platingLeadTimeDays: selectedPlating?.leadTimeDays ?? 0,
       quantity: 1,
       maxQuantity,
+    });
+    trackAddToCart({
+      itemId: product.slug,
+      itemName: product.name,
+      brand: product.brand?.name,
+      category: product.categories[0]?.name,
+      variant: [getCartVariantLabel(selectedVariant), platingType && platingLabels[platingType]]
+        .filter(Boolean)
+        .join(' / '),
+      priceToman: product.salePriceToman + (selectedPlating?.unitPriceToman ?? 0),
+      quantity: 1,
     });
   }
 
