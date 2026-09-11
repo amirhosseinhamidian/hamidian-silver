@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 
 import { AdminProfileCompletionGate } from '@/components/auth/admin-profile-completion-gate';
+import { AdminSessionMonitor } from '@/components/auth/admin-session-monitor';
 import { AdminBrand } from '@/components/layout/admin-brand';
 import { AdminIcon } from '@/components/layout/admin-icon';
 import { AdminNavigationList } from '@/components/layout/admin-navigation-list';
@@ -151,6 +152,7 @@ export function AdminShell({ children, account, navigation, profile }: AdminShel
       <a href="#admin-main-content" className="admin-skip-link">
         پرش به محتوای اصلی
       </a>
+      <AdminSessionMonitor />
       <AdminProfileCompletionGate profile={profile} />
       <aside
         data-testid="desktop-admin-sidebar"

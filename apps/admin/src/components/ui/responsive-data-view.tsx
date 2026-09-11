@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { DataTable, type DataTableProps } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
+import { RetryButton } from '@/components/ui/retry-button';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type ResponsiveDataViewProps<Row> = DataTableProps<Row> &
@@ -50,7 +51,7 @@ export function ResponsiveDataView<Row>({
           <Alert
             tone="danger"
             title={error.title ?? 'دریافت اطلاعات ناموفق بود'}
-            action={error.action}
+            action={error.action ?? <RetryButton />}
           >
             {error.description}
           </Alert>

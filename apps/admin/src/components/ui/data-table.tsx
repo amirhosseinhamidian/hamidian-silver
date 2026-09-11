@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { EmptyState } from '@/components/ui/empty-state';
+import { RetryButton } from '@/components/ui/retry-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/ui/cn';
 
@@ -156,7 +157,7 @@ export function DataTable<Row>({
           <Alert
             tone="danger"
             title={error.title ?? 'دریافت اطلاعات ناموفق بود'}
-            action={error.action}
+            action={error.action ?? <RetryButton />}
           >
             {error.description}
           </Alert>
