@@ -1,5 +1,8 @@
 # Operational data bootstrap
 
+After bootstrap, use the Persian [Admin operations runbook](./admin-operations-runbook.fa.md) for
+order, manual shipping, exceptional return, refund, settlement, and incident workflows.
+
 `ADMIN-039A` prepares the minimum production data without adding demo products or committing
 credentials. The operation is explicit, transactional, and safe to run again.
 
