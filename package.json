@@ -20,6 +20,8 @@
     "storefront:lint": "pnpm --filter @hamidian/storefront lint",
     "storefront:typecheck": "pnpm --filter @hamidian/storefront typecheck",
     "storefront:test": "pnpm --filter @hamidian/storefront test",
+    "storefront:test:e2e": "pnpm --filter @hamidian/storefront test:e2e",
+    "storefront:test:e2e:ui": "pnpm --filter @hamidian/storefront test:e2e:ui",
     "storefront:build": "pnpm --filter @hamidian/storefront build",
     "seo:audit": "tsx apps/storefront/scripts/seo-production-audit.ts",
     "admin:lint": "pnpm --filter @hamidian/admin lint",

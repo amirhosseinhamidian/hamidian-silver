@@ -29,12 +29,15 @@ function mediaRemotePattern(value: string) {
 
 const mediaPublicBaseUrl =
   process.env.MEDIA_PUBLIC_BASE_URL?.trim() || DEFAULT_MEDIA_PUBLIC_BASE_URL;
+const e2eMode = process.env.STOREFRONT_E2E === 'true';
 
 const nextConfig: NextConfig = {
+  ...(e2eMode ? { distDir: '.next-e2e' } : {}),
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86_400,
     remotePatterns: [mediaRemotePattern(mediaPublicBaseUrl)],
+    dangerouslyAllowLocalIP: process.env.STOREFRONT_E2E_ALLOW_LOCAL_MEDIA === 'true',
   },
 };
 

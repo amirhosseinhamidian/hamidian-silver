@@ -615,6 +615,7 @@ export function AccountAuthButton({
                 alt="لوگوی نقره حمیدیان"
                 fill
                 sizes="14rem"
+                loading="eager"
                 className="object-contain"
               />
             </div>

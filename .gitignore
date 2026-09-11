@@ -37,6 +37,8 @@ Thumbs.db
 
 # Test artifacts
 .nyc_output/
+apps/storefront/playwright-report/
+apps/storefront/test-results/
 
 # Misc
 *.local
