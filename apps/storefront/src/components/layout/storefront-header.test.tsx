@@ -125,7 +125,7 @@ describe('StorefrontHeader', () => {
     fireEvent.click(screen.getByRole('button', { name: 'جستجو در محصولات' }));
 
     const searchForm = screen.getByRole('search');
-    const searchInput = within(searchForm).getByRole('searchbox', { name: 'نام محصول' });
+    const searchInput = within(searchForm).getByRole('combobox', { name: 'نام محصول' });
 
     expect(searchForm).toHaveAttribute('action', '/products');
     expect(searchForm).toHaveAttribute('method', 'get');

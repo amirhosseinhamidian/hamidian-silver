@@ -185,6 +185,7 @@ export function StorefrontSearch() {
                   maxLength={100}
                   placeholder="مثلاً انگشتر نقره"
                   autoComplete="off"
+                  role="combobox"
                   aria-autocomplete="list"
                   aria-controls={showSuggestions ? listboxId : undefined}
                   aria-expanded={showSuggestions}

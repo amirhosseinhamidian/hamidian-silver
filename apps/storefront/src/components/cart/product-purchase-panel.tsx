@@ -334,33 +334,30 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         </p>
       ) : null}
 
-      {showStockNotification ? (
-        <StockNotificationButton
-          key={notificationVariant?.id ?? product.id}
-          productId={product.id}
-          variantId={notificationVariant?.id}
-          className="mt-6 hidden lg:block"
-        />
-      ) : selectedCartItem ? (
-        <ButtonLink
-          href="/cart"
-          variant="solid"
-          size="lg"
-          className="mt-6 hidden w-full lg:inline-flex"
-        >
-          مشاهده سبد خرید
-        </ButtonLink>
-      ) : (
-        <Button
-          type="button"
-          size="lg"
-          className="mt-6 hidden w-full lg:inline-flex"
-          disabled={desktopAddButtonDisabled}
-          onClick={handleAddToCart}
-        >
-          افزودن به سبد خرید
-        </Button>
-      )}
+      <div className="mt-6 hidden lg:block">
+        {showStockNotification ? (
+          <StockNotificationButton
+            key={notificationVariant?.id ?? product.id}
+            productId={product.id}
+            variantId={notificationVariant?.id}
+            className="w-full"
+          />
+        ) : selectedCartItem ? (
+          <ButtonLink href="/cart" variant="solid" size="lg" className="w-full">
+            مشاهده سبد خرید
+          </ButtonLink>
+        ) : (
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            disabled={desktopAddButtonDisabled}
+            onClick={handleAddToCart}
+          >
+            افزودن به سبد خرید
+          </Button>
+        )}
+      </div>
 
       {product.salePriceToman === null ? (
         <p className="mt-3 text-xs leading-6 text-[var(--sf-color-muted)]">

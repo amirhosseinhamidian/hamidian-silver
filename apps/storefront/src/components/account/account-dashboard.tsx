@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+import type { KeyboardEvent } from 'react';
 
 import { AccountAddressesPanel } from '@/components/account/account-addresses-panel';
 import { AccountOrdersPanel } from '@/components/account/account-orders-panel';
@@ -45,6 +47,11 @@ async function readJson<Value>(response: Response): Promise<Value> {
 export function AccountDashboard() {
   const [activeTab, setActiveTab] = useState<AccountTab>('orders');
   const [state, setState] = useState<AccountState>({ status: 'loading' });
+  const tabRefs = useRef<Record<AccountTab, HTMLButtonElement | null>>({
+    orders: null,
+    addresses: null,
+    profile: null,
+  });
 
   useEffect(() => {
     let active = true;
@@ -93,6 +100,24 @@ export function AccountDashboard() {
     setState((current) => (current.status === 'ready' ? { ...current, addresses } : current));
   }
 
+  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) {
+    let nextIndex: number | null = null;
+
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = TABS.length - 1;
+    if (event.key === 'ArrowLeft') nextIndex = (currentIndex + 1) % TABS.length;
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
+    if (event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % TABS.length;
+    if (event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
+
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    const nextTab = TABS[nextIndex];
+    setActiveTab(nextTab.id);
+    tabRefs.current[nextTab.id]?.focus();
+  }
+
   if (state.status === 'loading') {
     return (
       <div aria-label="در حال دریافت حساب" className="grid gap-6 pt-8 md:grid-cols-[15rem_1fr]">
@@ -129,15 +154,20 @@ export function AccountDashboard() {
         aria-label="بخش‌های حساب کاربری"
         className="flex overflow-x-auto border-b border-[var(--sf-color-border)] md:block md:border-b-0 md:border-l"
       >
-        {TABS.map((tab) => (
+        {TABS.map((tab, index) => (
           <button
             key={tab.id}
             id={`account-tab-${tab.id}`}
+            ref={(element) => {
+              tabRefs.current[tab.id] = element;
+            }}
             type="button"
             role="tab"
             aria-selected={activeTab === tab.id}
             aria-controls={`account-panel-${tab.id}`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
             onClick={() => setActiveTab(tab.id)}
+            onKeyDown={(event) => handleTabKeyDown(event, index)}
             className={cn(
               'inline-flex min-w-max items-center gap-2 border-b-2 px-5 py-4 text-base font-bold transition-colors sm:text-lg md:flex md:w-full md:border-b-0 md:border-l-2 md:text-right',
               activeTab === tab.id

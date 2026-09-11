@@ -88,6 +88,7 @@ export function StorefrontHeader({
               alt="لوگوی نقره حمیدیان"
               fill
               sizes="224px"
+              loading="eager"
               className="scale-110 object-contain"
             />
           </Link>
@@ -140,6 +141,7 @@ export function StorefrontHeader({
               alt=""
               fill
               sizes="7rem"
+              loading="eager"
               className="scale-110 object-contain"
             />
           </Link>

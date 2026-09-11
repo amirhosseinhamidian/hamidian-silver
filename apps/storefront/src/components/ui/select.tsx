@@ -64,6 +64,8 @@ export function Select({
         aria-invalid={invalid || ariaInvalid || undefined}
         className={cn(
           `
+          sf-select-trigger
+
           group
 
           inline-flex

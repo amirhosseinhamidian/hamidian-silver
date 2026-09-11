@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { expectNoHorizontalOverflow } from './support/accessibility';
+
 const mockApiOrigin = 'http://127.0.0.1:4311';
 
 test.beforeEach(async ({ request }) => {
@@ -11,6 +13,7 @@ test('OTP → product → cart → checkout → gateway → paid order', async (
   await test.step('sign in with OTP', async () => {
     await page.goto('/products/silver-ring');
     await expect(page.getByRole('heading', { name: 'انگشتر نقره حمیدیان' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
 
     await page.getByRole('button', { name: 'ورود یا ثبت‌نام' }).first().click();
     const authDialog = page.getByRole('dialog', { name: 'ورود یا ثبت‌نام' });
@@ -29,6 +32,7 @@ test('OTP → product → cart → checkout → gateway → paid order', async (
 
     await expect(page).toHaveURL(/\/cart$/);
     await expect(page.getByRole('heading', { name: 'سبد خرید' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
     await expect(page.getByText('انگشتر نقره حمیدیان').first()).toBeVisible();
     await page.getByRole('link', { name: 'ثبت سفارش' }).first().click();
   });
@@ -36,6 +40,7 @@ test('OTP → product → cart → checkout → gateway → paid order', async (
   await test.step('create the order and leave for the gateway', async () => {
     await expect(page).toHaveURL(/\/checkout$/);
     await expect(page.getByText('آدرس پیش‌فرض')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
     await page.getByRole('button', { name: 'ثبت سفارش و پرداخت' }).click();
 
     await expect(page).toHaveURL(
@@ -50,11 +55,13 @@ test('OTP → product → cart → checkout → gateway → paid order', async (
     await expect(page).toHaveURL(/\/payment\/result\?status=success&orderId=/);
     await expect(page.getByText('پرداخت موفق')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'خرید شما با موفقیت تکمیل شد' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
     await expect(page.getByText('HS-E۲E-۱۰۰۱', { exact: true }).first()).toBeVisible();
 
     await page.getByRole('link', { name: 'مشاهده جزئیات سفارش' }).click();
     await expect(page).toHaveURL(/\/account\/orders\/30000000-0000-4000-8000-000000000001$/);
     await expect(page.getByRole('heading', { name: 'جزئیات سفارش' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
     await expect(page.getByText('پرداخت‌شده').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'روند سفارش' })).toBeVisible();
   });

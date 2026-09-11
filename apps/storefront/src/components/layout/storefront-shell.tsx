@@ -3,6 +3,7 @@ import {
   type StorefrontFooterContent,
 } from '@/components/layout/storefront-footer';
 import { StorefrontHeader } from '@/components/layout/storefront-header';
+import { SkipToContentLink } from '@/components/layout/skip-to-content-link';
 import type { StorefrontAnnouncement } from '@/components/layout/storefront-announcement';
 import type { StorefrontNavigationCategory } from '@/components/layout/storefront-header';
 import type { ReactNode } from 'react';
@@ -30,9 +31,7 @@ export function StorefrontShell({
         text-[var(--sf-color-ink)]
       "
     >
-      <a href="#main-content" className="sf-skip-link">
-        رفتن به محتوای اصلی
-      </a>
+      <SkipToContentLink />
       <StorefrontHeader
         authenticated={authenticated}
         announcement={announcement}

@@ -78,6 +78,7 @@ describe('AccountDashboard', () => {
     expect(tabs).toHaveLength(3);
     expect(tabs[0]).toHaveAccessibleName('سفارش‌ها ۱');
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
+    expect(tabs[0]).toHaveAttribute('tabindex', '0');
     expect(tabs[2]).toHaveAccessibleName('اطلاعات حساب');
     for (const tab of tabs) {
       expect(tab).toHaveClass('text-base', 'font-bold', 'sm:text-lg');
@@ -95,6 +96,19 @@ describe('AccountDashboard', () => {
       'href',
       '/account/orders/order-1',
     );
+
+    tabs[0].focus();
+    fireEvent.keyDown(tabs[0], { key: 'ArrowLeft' });
+    expect(tabs[1]).toHaveFocus();
+    expect(tabs[1]).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.keyDown(tabs[1], { key: 'End' });
+    expect(tabs[2]).toHaveFocus();
+    expect(tabs[2]).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.keyDown(tabs[2], { key: 'Home' });
+    expect(tabs[0]).toHaveFocus();
+    expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
 
     fireEvent.click(screen.getByRole('tab', { name: 'آدرس‌ها' }));
     fireEvent.click(screen.getByRole('button', { name: 'افزودن آدرس جدید' }));

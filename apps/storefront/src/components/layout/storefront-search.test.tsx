@@ -12,7 +12,7 @@ afterEach(() => {
 function openSearch() {
   render(<StorefrontSearch />);
   fireEvent.click(screen.getByRole('button', { name: 'جستجو در محصولات' }));
-  return screen.getByRole('searchbox', { name: 'نام محصول' });
+  return screen.getByRole('combobox', { name: 'نام محصول' });
 }
 
 describe('StorefrontSearch', () => {

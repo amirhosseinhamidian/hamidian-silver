@@ -61,6 +61,8 @@ describe('Select', () => {
       />,
     );
 
-    expect(screen.getByRole('combobox', { name: 'مرتب‌سازی' })).toHaveTextContent('جدیدترین‌ها');
+    const trigger = screen.getByRole('combobox', { name: 'مرتب‌سازی' });
+    expect(trigger).toHaveTextContent('جدیدترین‌ها');
+    expect(trigger).toHaveClass('sf-select-trigger');
   });
 });

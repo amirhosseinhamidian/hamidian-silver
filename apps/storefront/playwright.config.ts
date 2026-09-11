@@ -45,8 +45,25 @@ export default defineConfig({
   ],
   projects: [
     {
-      name: 'Google Chrome',
-      use: { ...devices['Desktop Chrome'], channel: browserChannel },
+      name: 'Desktop Chrome',
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: browserChannel,
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
+      name: 'Tablet Chrome',
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: browserChannel,
+        viewport: { width: 768, height: 1024 },
+        hasTouch: true,
+      },
+    },
+    {
+      name: 'Mobile Chrome',
+      use: { ...devices['Pixel 7'], channel: browserChannel },
     },
   ],
 });

@@ -1,5 +1,5 @@
 import { StorefrontShell } from '@/components/layout/storefront-shell';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 
@@ -18,5 +18,9 @@ describe('storefront test environment', () => {
       'href',
       '#main-content',
     );
+
+    fireEvent.click(screen.getByRole('link', { name: 'رفتن به محتوای اصلی' }));
+    expect(screen.getByRole('main')).toHaveFocus();
+    expect(screen.getByRole('main')).toHaveAttribute('tabindex', '-1');
   });
 });
