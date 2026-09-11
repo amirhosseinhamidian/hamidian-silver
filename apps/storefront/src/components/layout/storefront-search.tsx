@@ -243,6 +243,7 @@ export function StorefrontSearch() {
                                   <CatalogMedia
                                     media={suggestion.primaryMedia}
                                     alt={suggestion.name}
+                                    sizes="56px"
                                   />
                                 </span>
                                 <span className="min-w-0">

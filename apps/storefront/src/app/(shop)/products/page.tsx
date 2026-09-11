@@ -162,6 +162,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   filters={filters}
                   initialProducts={products}
                   initialFallbackSources={getCatalogDevProductImageSources(products.items)}
+                  imageSizes="(min-width: 1536px) 20vw, (min-width: 1280px) 27vw, (min-width: 1024px) 40vw, 50vw"
                   className="xl:grid-cols-3 2xl:grid-cols-4"
                 />
                 {products.page < products.totalPages ? (

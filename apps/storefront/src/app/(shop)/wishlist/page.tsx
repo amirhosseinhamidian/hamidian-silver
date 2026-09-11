@@ -59,6 +59,7 @@ export default function WishlistPage() {
                         : null
                     }
                     alt={item.name}
+                    sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, 50vw"
                   />
                 </Link>
 

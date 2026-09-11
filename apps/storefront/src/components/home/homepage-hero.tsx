@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
+import { StorefrontImage } from '@/components/media/storefront-image';
 import type { PublicHomepageHeroSlide } from '@/lib/home/public-homepage';
 
 type HomepageHeroProps = Readonly<{
   slides: PublicHomepageHeroSlide[];
   label: string;
   compact?: boolean;
+  preload?: boolean;
 }>;
 
 function HeroAction({ href, label }: Readonly<{ href: string; label: string }>) {
@@ -27,7 +29,12 @@ function HeroAction({ href, label }: Readonly<{ href: string; label: string }>) 
   );
 }
 
-export function HomepageHero({ slides, label, compact = false }: HomepageHeroProps) {
+export function HomepageHero({
+  slides,
+  label,
+  compact = false,
+  preload = false,
+}: HomepageHeroProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const hasSlider = slides.length > 1;
@@ -83,19 +90,21 @@ export function HomepageHero({ slides, label, compact = false }: HomepageHeroPro
       onBlurCapture={() => setPaused(false)}
       className={`relative isolate overflow-hidden bg-black text-white ${compact ? 'min-h-[70svh]' : 'min-h-[calc(100svh-5rem)]'}`}
     >
-      {slides.map((slide, index) => (
-        // eslint-disable-next-line @next/next/no-img-element -- homepage media is managed runtime content.
-        <img
-          key={`${slide.media.url}-${index}`}
-          src={slide.media.url ?? undefined}
-          alt={slide.media.altText ?? slide.title ?? ''}
-          width={slide.media.width ?? undefined}
-          height={slide.media.height ?? undefined}
-          loading={index === 0 ? 'eager' : 'lazy'}
-          aria-hidden={index !== activeIndex}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${index === activeIndex ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
-        />
-      ))}
+      {slides.map((slide, index) =>
+        slide.media.url ? (
+          <StorefrontImage
+            key={`${slide.media.url}-${index}`}
+            src={slide.media.url}
+            alt={slide.media.altText ?? slide.title ?? ''}
+            fill
+            sizes="100vw"
+            preload={preload && index === 0}
+            loading={preload && index === 0 ? undefined : 'lazy'}
+            aria-hidden={index !== activeIndex}
+            className={`object-cover transition-opacity duration-700 ${index === activeIndex ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+          />
+        ) : null,
+      )}
       <div className="absolute inset-0 -z-0 bg-gradient-to-t from-black/60 via-black/5 to-black/10" />
 
       {showCopy ? (

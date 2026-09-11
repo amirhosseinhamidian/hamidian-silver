@@ -142,7 +142,11 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               >
                 {product.brand.image?.url ? (
                   <span className="size-10 overflow-hidden rounded-full bg-[var(--sf-color-surface)]">
-                    <CatalogMedia media={product.brand.image} alt={`لوگوی ${product.brand.name}`} />
+                    <CatalogMedia
+                      media={product.brand.image}
+                      alt={`لوگوی ${product.brand.name}`}
+                      sizes="40px"
+                    />
                   </span>
                 ) : null}
                 <span className="flex flex-col gap-0.5">

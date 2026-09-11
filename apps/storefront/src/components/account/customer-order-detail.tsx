@@ -230,6 +230,7 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
                       media={item.primaryMedia}
                       fallbackSrc={item.fallbackSrc}
                       alt={toPersianDigits(item.productNameSnapshot)}
+                      sizes="(min-width: 640px) 112px, 96px"
                     />
                   </Link>
                   <div className="min-w-0 flex-1">

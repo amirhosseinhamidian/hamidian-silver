@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { StorefrontImage } from '@/components/media/storefront-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import {
   PUBLIC_CONTENT_PAGE_ROUTES,
@@ -48,13 +49,13 @@ function GuideHero({ page }: Readonly<{ page: PublicContentPage }>) {
   return (
     <header className="relative isolate min-h-[70svh] overflow-hidden bg-[#e9e6df] sm:min-h-[78svh]">
       {page.heroMedia?.url ? (
-        // eslint-disable-next-line @next/next/no-img-element -- runtime content managed by site settings.
-        <img
+        <StorefrontImage
           src={page.heroMedia.url}
           alt={page.heroMedia.altText ?? page.title}
-          width={page.heroMedia.width ?? undefined}
-          height={page.heroMedia.height ?? undefined}
-          className="absolute inset-0 -z-20 h-full w-full object-cover"
+          fill
+          sizes="100vw"
+          preload
+          className="-z-20 object-cover"
         />
       ) : (
         <div aria-hidden="true" className="absolute inset-0 -z-20 overflow-hidden">

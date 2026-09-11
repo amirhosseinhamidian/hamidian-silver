@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState, type ReactNode } from 'react';
 import { FiArrowLeft, FiMinus, FiPlus, FiSearch } from 'react-icons/fi';
 
+import { StorefrontImage } from '@/components/media/storefront-image';
 import type { PublicContentPage } from '@/lib/content/public-content-page';
 
 type StorefrontFaqProps = Readonly<{
@@ -61,13 +62,13 @@ export function StorefrontFaq({ page, breadcrumbs }: StorefrontFaqProps) {
     <main id="main-content">
       <header className="relative isolate overflow-hidden border-b border-[var(--sf-color-border)] bg-[#151515] text-white">
         {page.heroMedia?.url ? (
-          // eslint-disable-next-line @next/next/no-img-element -- runtime content managed by site settings.
-          <img
+          <StorefrontImage
             src={page.heroMedia.url}
             alt={page.heroMedia.altText ?? page.title}
-            width={page.heroMedia.width ?? undefined}
-            height={page.heroMedia.height ?? undefined}
-            className="absolute inset-0 -z-20 h-full w-full object-cover"
+            fill
+            sizes="100vw"
+            preload
+            className="-z-20 object-cover"
           />
         ) : (
           <div

@@ -87,6 +87,7 @@ export default function CartPage() {
                         : null
                     }
                     alt={item.productName}
+                    sizes="(min-width: 640px) 128px, 72px"
                   />
                 </Link>
 

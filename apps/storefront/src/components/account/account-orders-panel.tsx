@@ -70,6 +70,7 @@ export function AccountOrdersPanel({ orders }: Readonly<{ orders: CustomerOrder[
                         media={item.primaryMedia}
                         fallbackSrc={item.fallbackSrc}
                         alt={toPersianDigits(item.productNameSnapshot)}
+                        sizes="(min-width: 640px) 96px, 80px"
                       />
                     </Link>
                     <div className="min-w-0 flex-1 py-1">

@@ -83,6 +83,7 @@ function OrderItems({ order }: Readonly<{ order: CustomerOrderDetail }>) {
                 media={item.primaryMedia}
                 fallbackSrc={item.fallbackSrc}
                 alt={toPersianDigits(item.productNameSnapshot)}
+                sizes="(min-width: 640px) 96px, 80px"
               />
             </Link>
             <div className="min-w-0 flex-1">

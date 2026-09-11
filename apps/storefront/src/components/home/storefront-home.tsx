@@ -37,6 +37,7 @@ function CategoryPair({ categories }: Readonly<{ categories: PublicHomepageFeatu
                 <CatalogMedia
                   media={category.image}
                   alt={category.name}
+                  sizes="(min-width: 768px) 50vw, 100vw"
                   imageClassName="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                 />
               </div>
@@ -75,7 +76,7 @@ export function StorefrontHome({ homepage }: StorefrontHomeProps) {
 
   return (
     <main id="main-content">
-      <HomepageHero slides={homepage.primaryHeroSlides} label="اسلایدهای اصلی فروشگاه" />
+      <HomepageHero slides={homepage.primaryHeroSlides} label="اسلایدهای اصلی فروشگاه" preload />
 
       <section
         aria-labelledby="new-products-title"
@@ -119,6 +120,7 @@ export function StorefrontHome({ homepage }: StorefrontHomeProps) {
                     <CatalogMedia
                       media={brand.image}
                       alt={brand.name}
+                      sizes="160px"
                       imageClassName="object-contain grayscale transition duration-500 ease-out group-hover:scale-105 group-hover:grayscale-0"
                     />
                   </div>
@@ -149,6 +151,7 @@ export function StorefrontHome({ homepage }: StorefrontHomeProps) {
                     <CatalogMedia
                       media={country.image}
                       alt={country.name}
+                      sizes="(min-width: 1024px) 12.5vw, (min-width: 640px) 25vw, 50vw"
                       imageClassName="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                     />
                   </div>

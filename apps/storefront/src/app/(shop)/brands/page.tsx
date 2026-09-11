@@ -45,6 +45,7 @@ export default async function BrandsPage() {
                   <CatalogMedia
                     media={brand.heroImage ?? null}
                     alt={brand.name}
+                    sizes="(min-width: 768px) 33vw, 50vw"
                     imageClassName="object-cover"
                   />
                 </div>

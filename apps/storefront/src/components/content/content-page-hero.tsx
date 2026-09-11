@@ -1,3 +1,4 @@
+import { StorefrontImage } from '@/components/media/storefront-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import {
   PUBLIC_CONTENT_PAGE_ROUTES,
@@ -12,13 +13,13 @@ export function ContentPageHero({ page }: ContentPageHeroProps) {
   return (
     <header className="relative isolate flex min-h-[62svh] items-end overflow-hidden bg-[#151515] text-white sm:min-h-[72svh]">
       {page.heroMedia?.url ? (
-        // eslint-disable-next-line @next/next/no-img-element -- this image is managed runtime content.
-        <img
+        <StorefrontImage
           src={page.heroMedia.url}
           alt={page.heroMedia.altText ?? page.title}
-          width={page.heroMedia.width ?? undefined}
-          height={page.heroMedia.height ?? undefined}
-          className="absolute inset-0 -z-20 h-full w-full object-cover"
+          fill
+          sizes="100vw"
+          preload
+          className="-z-20 object-cover"
         />
       ) : (
         <div

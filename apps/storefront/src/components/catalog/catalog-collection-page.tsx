@@ -70,7 +70,13 @@ function CollectionHero({
   return (
     <header className="relative isolate min-h-[18rem] overflow-hidden bg-[var(--sf-color-surface)] sm:min-h-[24rem] lg:min-h-[calc(100svh-9.25rem)]">
       <div className="absolute inset-0 -z-20">
-        <CatalogMedia media={image} alt={title} eager imageClassName="object-cover" />
+        <CatalogMedia
+          media={image}
+          alt={title}
+          preload
+          sizes="100vw"
+          imageClassName="object-cover"
+        />
       </div>
       <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/65 via-black/15 to-black/5" />
       <div className="sf-container flex min-h-[inherit] items-end py-10 text-white sm:py-14">
@@ -127,6 +133,7 @@ export function CatalogCollectionPage({
               filters={filters}
               initialProducts={products}
               initialFallbackSources={getCatalogDevProductImageSources(products.items)}
+              imageSizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
               className="py-10 md:grid-cols-3 lg:grid-cols-4"
             />
             {products.page < products.totalPages ? (

@@ -1,5 +1,7 @@
 import type { components } from '@hamidian/contracts';
 
+import { StorefrontImage } from '@/components/media/storefront-image';
+
 type CatalogHeroProps = {
   settings: Pick<
     components['schemas']['PublicSiteSettingsDto'],
@@ -40,14 +42,13 @@ export function CatalogHero({ settings, devFallbackSrc }: CatalogHeroProps) {
         sm:min-h-[24rem] lg:min-h-[30rem]
       "
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <StorefrontImage
         src={image}
         alt={configuredImage ? (settings.catalogHeroMedia?.altText ?? '') : ''}
-        className="
-          absolute inset-0 -z-20
-          h-full w-full object-cover
-        "
+        fill
+        sizes="100vw"
+        preload
+        className="-z-20 object-cover"
       />
 
       <div

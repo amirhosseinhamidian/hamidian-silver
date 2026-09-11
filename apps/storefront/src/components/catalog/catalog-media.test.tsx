@@ -14,13 +14,18 @@ describe('CatalogMedia', () => {
           height: 1000,
         }}
         alt="محصول"
+        sizes="(min-width: 1024px) 25vw, 50vw"
+        fetchPriority="high"
       />,
     );
 
-    expect(screen.getByRole('img', { name: 'انگشتر نقره' })).toHaveAttribute(
-      'src',
-      'https://media.hamidian.shop/products/ring.jpg',
-    );
+    const image = screen.getByRole('img', { name: 'انگشتر نقره' });
+
+    expect(image).toHaveAttribute('src', 'https://media.hamidian.shop/products/ring.jpg');
+    expect(image).toHaveAttribute('width', '800');
+    expect(image).toHaveAttribute('height', '1000');
+    expect(image).toHaveAttribute('sizes', '(min-width: 1024px) 25vw, 50vw');
+    expect(image).toHaveAttribute('fetchpriority', 'high');
   });
 
   it('falls back to accessible text when no public image URL is available', () => {

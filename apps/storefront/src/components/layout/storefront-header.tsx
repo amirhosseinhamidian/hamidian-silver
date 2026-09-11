@@ -87,9 +87,8 @@ export function StorefrontHeader({
               src="/brand/hamidian-signature.png"
               alt="لوگوی نقره حمیدیان"
               fill
-              priority
-              sizes="(min-width: 640px)"
-              className="object-contain scale-110"
+              sizes="224px"
+              className="scale-110 object-contain"
             />
           </Link>
 

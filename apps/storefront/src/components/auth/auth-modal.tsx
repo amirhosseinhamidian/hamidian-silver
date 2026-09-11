@@ -614,7 +614,6 @@ export function AccountAuthButton({
                 src="/brand/hamidian-signature.png"
                 alt="لوگوی نقره حمیدیان"
                 fill
-                priority
                 sizes="14rem"
                 className="object-contain"
               />

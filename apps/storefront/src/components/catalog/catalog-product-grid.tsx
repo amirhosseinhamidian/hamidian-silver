@@ -15,6 +15,7 @@ type CatalogProductGridProps = Readonly<{
   filters: CatalogFilters;
   initialProducts: PublicCatalogProductList;
   initialFallbackSources?: Readonly<Record<string, string>>;
+  imageSizes?: string;
   className?: string;
 }>;
 
@@ -56,6 +57,7 @@ export function CatalogProductGrid({
   filters,
   initialProducts,
   initialFallbackSources = {},
+  imageSizes,
   className,
 }: CatalogProductGridProps) {
   const [products, setProducts] = useState<PublicCatalogProductSummary[]>(initialProducts.items);
@@ -130,6 +132,7 @@ export function CatalogProductGrid({
             key={product.id}
             product={product}
             fallbackSrc={initialFallbackSources[product.id]}
+            imageSizes={imageSizes}
           />
         ))}
       </ul>
