@@ -33,7 +33,11 @@ type AuditTarget = Readonly<{
 
 const HUMAN_AUDIT_EVENT = Symbol('human-audit-event');
 const SENSITIVE_FIELD_PATTERN =
-  /(password|passcode|token|secret|credential|authorization|cookie|otp|cvv|card|gateway|merchant)/i;
+  /(password|passcode|token|secret|credential|authorization|cookie|otp|cvv|card|gateway|merchant|api[-_]?key|session|authority|transaction|external.*reference)/i;
+const SENSITIVE_ASSIGNMENT_PATTERN =
+  /\b(password|passcode|token|secret|credential|authorization|cookie|otp|cvv|api[-_]?key|session)\b\s*[:=]\s*([^\s,;]+)/gi;
+const BEARER_PATTERN = /\bbearer\s+[a-z0-9._~+/=-]+/gi;
+const JWT_PATTERN = /\beyJ[a-z0-9_-]{8,}\.[a-z0-9_-]{8,}(?:\.[a-z0-9_-]{8,})?\b/gi;
 
 const RESOURCE_NAMES: Readonly<Record<string, string>> = {
   'admin-roles': 'نقش کاربری',
@@ -87,18 +91,29 @@ function fallbackTitle(
   return outcome === 'FAILURE' ? `تلاش ناموفق برای ${operation}` : `${operation} انجام شد.`;
 }
 
+export function sanitizeAuditText(value: string, maxLength: number): string {
+  return value
+    .replace(BEARER_PATTERN, 'Bearer [REDACTED]')
+    .replace(JWT_PATTERN, '[REDACTED_JWT]')
+    .replace(SENSITIVE_ASSIGNMENT_PATTERN, '$1=[REDACTED]')
+    .slice(0, maxLength);
+}
+
 function sanitizeValue(value: AuditChangeValue): AuditChangeValue {
   if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === 'string').slice(0, 100);
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .slice(0, 100)
+      .map((item) => sanitizeAuditText(item, 500));
   }
-  return typeof value === 'string' ? value.slice(0, 500) : value;
+  return typeof value === 'string' ? sanitizeAuditText(value, 500) : value;
 }
 
 export function sanitizeHumanAuditEvent(event: HumanAuditEvent): HumanAuditEvent {
   return {
-    title: event.title.trim().slice(0, 500),
+    title: sanitizeAuditText(event.title.trim(), 500),
     operationType: event.operationType,
-    entityName: event.entityName?.trim().slice(0, 200) || null,
+    entityName: event.entityName ? sanitizeAuditText(event.entityName.trim(), 200) || null : null,
     changes: event.changes
       .filter(
         (change) =>

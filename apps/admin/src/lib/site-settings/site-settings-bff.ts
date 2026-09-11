@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
 import { requestAdminCatalog, readJsonResponse } from '@/lib/catalog/catalog-api';
+import { validateMediaUploadRequest } from '@/lib/security/media-upload';
 
 async function token(): Promise<string | null> {
   return (await cookies()).get(SESSION_COOKIE_NAME)?.value ?? null;
@@ -36,9 +37,11 @@ export async function forwardSiteMediaUpload(request: Request): Promise<Response
   const accessToken = await token();
   if (!accessToken) return Response.json({ message: 'Authentication required.' }, { status: 401 });
   try {
+    const upload = await validateMediaUploadRequest(request);
+    if (!upload.ok) return upload.response;
     const response = await requestAdminCatalog('/api/v1/site-settings/media', accessToken, {
       method: 'POST',
-      body: await request.formData(),
+      body: upload.formData,
     });
     return upstreamResponse(response);
   } catch {

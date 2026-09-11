@@ -2,6 +2,7 @@ import {
   attachHumanAuditEvent,
   resolveHumanAuditEvent,
   sanitizeHumanAuditEvent,
+  sanitizeAuditText,
 } from './audit-event';
 
 describe('human audit event projection', () => {
@@ -56,5 +57,35 @@ describe('human audit event projection', () => {
       entityName: 'کاتالوگ',
       changes: [],
     });
+  });
+
+  it('redacts bearer tokens, JWTs and secret assignments from every retained text value', () => {
+    const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiJ9.signature123';
+    const event = sanitizeHumanAuditEvent({
+      title: `ویرایش محصول token=plain-secret ${jwt}`,
+      operationType: 'UPDATE',
+      entityName: 'Bearer opaque-admin-token',
+      changes: [
+        {
+          field: 'description',
+          label: 'توضیحات',
+          before: 'بدون مقدار',
+          after: ['متن امن', 'api_key=do-not-store'],
+        },
+      ],
+    });
+
+    expect(JSON.stringify(event)).not.toContain('plain-secret');
+    expect(JSON.stringify(event)).not.toContain('opaque-admin-token');
+    expect(JSON.stringify(event)).not.toContain(jwt);
+    expect(JSON.stringify(event)).not.toContain('do-not-store');
+    expect(event.title).toContain('token=[REDACTED]');
+    expect(event.entityName).toBe('Bearer [REDACTED]');
+    expect(event.changes[0]?.after).toEqual(['متن امن', 'api_key=[REDACTED]']);
+  });
+
+  it('bounds sanitized audit headers after redaction', () => {
+    expect(sanitizeAuditText('authorization=super-secret', 500)).toBe('authorization=[REDACTED]');
+    expect(sanitizeAuditText('safe-user-agent', 4)).toBe('safe');
   });
 });

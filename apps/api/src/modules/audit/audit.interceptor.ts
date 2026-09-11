@@ -10,7 +10,7 @@ import type { Request, Response } from 'express';
 import type { Observable } from 'rxjs';
 import { catchError, concatMap, from, map, mergeMap, throwError } from 'rxjs';
 import type { RequestWithAuth } from '../authorization/authorization.types';
-import { resolveHumanAuditEvent } from './audit-event';
+import { resolveHumanAuditEvent, sanitizeAuditText } from './audit-event';
 import { AuditService, type RecordAuditLogInput } from './audit.service';
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -20,7 +20,7 @@ type AuditedRequest = Request & RequestWithAuth;
 
 function boundedHeader(value: string | string[] | undefined, maxLength: number): string | null {
   const resolved = Array.isArray(value) ? value[0] : value;
-  return resolved?.trim().slice(0, maxLength) || null;
+  return resolved ? sanitizeAuditText(resolved.trim(), maxLength) || null : null;
 }
 
 export function describeAuditTarget(path: string, method: string) {

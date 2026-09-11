@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 
 import { requestAdminCatalog, readJsonResponse } from '@/lib/catalog/catalog-api';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
+import { validateMediaUploadRequest } from '@/lib/security/media-upload';
 
 function responseFromUpstream(response: Response, payload: unknown): Response {
   if (response.status === 204) return new Response(null, { status: 204 });
@@ -36,10 +37,11 @@ export async function forwardCatalogUpload(request: Request, apiPath: string): P
   if (!token) return Response.json({ message: 'Authentication required.' }, { status: 401 });
 
   try {
-    const formData = await request.formData();
+    const upload = await validateMediaUploadRequest(request);
+    if (!upload.ok) return upload.response;
     const response = await requestAdminCatalog(apiPath, token, {
       method: 'POST',
-      body: formData,
+      body: upload.formData,
     });
     return responseFromUpstream(response, await readJsonResponse(response));
   } catch {

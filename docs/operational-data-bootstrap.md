@@ -2,6 +2,8 @@
 
 After bootstrap, use the Persian [Admin operations runbook](./admin-operations-runbook.fa.md) for
 order, manual shipping, exceptional return, refund, settlement, and incident workflows.
+Use the [Admin security audit](./admin-security-audit.fa.md) as the release gate for session,
+upload, audit-log, and sensitive financial controls.
 
 `ADMIN-039A` prepares the minimum production data without adding demo products or committing
 credentials. The operation is explicit, transactional, and safe to run again.
