@@ -153,6 +153,23 @@
             }
           },
           {
+            "name": "operationType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CREATE",
+                "UPDATE",
+                "DELETE",
+                "PRICE_CHANGE",
+                "STATUS_CHANGE",
+                "STOCK_ADJUSTMENT",
+                "PERMISSION_CHANGE"
+              ]
+            }
+          },
+          {
             "name": "resource",
             "required": false,
             "in": "query",
@@ -6766,6 +6783,63 @@
           "phone"
         ]
       },
+      "AuditLogChangeDto": {
+        "type": "object",
+        "properties": {
+          "before": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "after": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "field": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "before",
+          "after",
+          "field",
+          "label"
+        ]
+      },
       "AuditLogEntryDto": {
         "type": "object",
         "properties": {
@@ -6775,6 +6849,28 @@
           },
           "actor": {
             "$ref": "#/components/schemas/AuditLogActorDto"
+          },
+          "operationType": {
+            "enum": [
+              "CREATE",
+              "UPDATE",
+              "DELETE",
+              "PRICE_CHANGE",
+              "STATUS_CHANGE",
+              "STOCK_ADJUSTMENT",
+              "PERMISSION_CHANGE"
+            ],
+            "type": "string"
+          },
+          "entityName": {
+            "type": "string",
+            "nullable": true
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditLogChangeDto"
+            }
           },
           "resourceId": {
             "type": "string",
@@ -6809,6 +6905,9 @@
             "type": "string",
             "format": "date-time"
           },
+          "title": {
+            "type": "string"
+          },
           "action": {
             "type": "string"
           },
@@ -6831,6 +6930,9 @@
         "required": [
           "id",
           "actor",
+          "operationType",
+          "entityName",
+          "changes",
           "resourceId",
           "outcome",
           "ipAddress",
@@ -6838,6 +6940,7 @@
           "requestId",
           "metadata",
           "createdAt",
+          "title",
           "action",
           "resource",
           "method",
@@ -6891,6 +6994,21 @@
               "type": "string"
             }
           },
+          "operationTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "CREATE",
+                "UPDATE",
+                "DELETE",
+                "PRICE_CHANGE",
+                "STATUS_CHANGE",
+                "STOCK_ADJUSTMENT",
+                "PERMISSION_CHANGE"
+              ]
+            }
+          },
           "generatedAt": {
             "type": "string",
             "format": "date-time"
@@ -6900,6 +7018,7 @@
           "items",
           "summary",
           "resources",
+          "operationTypes",
           "generatedAt"
         ]
       },

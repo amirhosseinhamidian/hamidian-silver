@@ -4,6 +4,7 @@ import { ErrorCode } from '../../common/errors/error-codes';
 import { isNonNegativeInt32, isSignedInt32 } from '../../common/int32';
 import { InventoryMovementType } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { attachHumanAuditEvent } from '../audit/audit-event';
 import { AdjustStockDto } from './dto/adjust-stock.dto';
 import { BulkSetStockDto } from './dto/bulk-set-stock.dto';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
@@ -197,6 +198,7 @@ export class InventoryService {
         },
         select: {
           id: true,
+          sku: true,
         },
       });
 
@@ -297,7 +299,21 @@ export class InventoryService {
         },
       });
 
-      return this.toStockView(inventory);
+      const stock = this.toStockView(inventory);
+      const direction = dto.onHandDelta > 0 ? 'افزایش' : 'کاهش';
+      return attachHumanAuditEvent(stock, {
+        title: `موجودی SKU ${variant.sku} به تعداد ${Math.abs(dto.onHandDelta)} ${direction} یافت.`,
+        operationType: 'STOCK_ADJUSTMENT',
+        entityName: variant.sku,
+        changes: [
+          {
+            field: 'onHand',
+            label: 'موجودی فیزیکی',
+            before: current?.onHand ?? 0,
+            after: inventory.onHand,
+          },
+        ],
+      });
     });
   }
 

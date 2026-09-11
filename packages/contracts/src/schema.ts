@@ -2784,10 +2784,20 @@ export interface components {
             name: string | null;
             phone: string;
         };
+        AuditLogChangeDto: {
+            before: (string | number | boolean | string[]) | null;
+            after: (string | number | boolean | string[]) | null;
+            field: string;
+            label: string;
+        };
         AuditLogEntryDto: {
             /** Format: uuid */
             id: string;
             actor: components["schemas"]["AuditLogActorDto"];
+            /** @enum {string} */
+            operationType: "CREATE" | "UPDATE" | "DELETE" | "PRICE_CHANGE" | "STATUS_CHANGE" | "STOCK_ADJUSTMENT" | "PERMISSION_CHANGE";
+            entityName: string | null;
+            changes: components["schemas"]["AuditLogChangeDto"][];
             /** Format: uuid */
             resourceId: string | null;
             /** @enum {string} */
@@ -2800,6 +2810,7 @@ export interface components {
             } | null;
             /** Format: date-time */
             createdAt: string;
+            title: string;
             action: string;
             resource: string;
             method: string;
@@ -2818,6 +2829,7 @@ export interface components {
             items: components["schemas"]["AuditLogEntryDto"][];
             summary: components["schemas"]["AuditLogSummaryDto"];
             resources: string[];
+            operationTypes: ("CREATE" | "UPDATE" | "DELETE" | "PRICE_CHANGE" | "STATUS_CHANGE" | "STOCK_ADJUSTMENT" | "PERMISSION_CHANGE")[];
             /** Format: date-time */
             generatedAt: string;
         };
@@ -4172,6 +4184,7 @@ export interface operations {
             query?: {
                 search?: string;
                 outcome?: "SUCCESS" | "FAILURE";
+                operationType?: "CREATE" | "UPDATE" | "DELETE" | "PRICE_CHANGE" | "STATUS_CHANGE" | "STOCK_ADJUSTMENT" | "PERMISSION_CHANGE";
                 resource?: string;
                 actorUserId?: string;
                 from?: string;

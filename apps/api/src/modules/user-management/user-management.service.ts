@@ -16,6 +16,7 @@ import {
   type PermissionCode,
   type RoleCode,
 } from '../authorization/rbac.constants';
+import { attachHumanAuditEvent } from '../audit/audit-event';
 import { ListAdminUsersQueryDto } from './dto/list-admin-users-query.dto';
 import { UpdateAdminRolePermissionsDto } from './dto/update-admin-role-permissions.dto';
 import { UpdateAdminUserRolesDto } from './dto/update-admin-user-roles.dto';
@@ -142,10 +143,11 @@ export class UserManagementService {
       throw new BadRequestException('Only the operational admin role is editable.');
     }
     this.ensurePermissionDependencies(dto.permissionCodes);
-    await this.prisma.$transaction(
+    const previousRole = await this.prisma.$transaction(
       async (transaction) => {
         const role = await transaction.role.findFirst({
           where: { code: roleCode, isActive: true, deletedAt: null },
+          include: { permissions: { include: { permission: true } } },
         });
         if (!role) throw new NotFoundException('Role was not found.');
         const permissions = await transaction.permission.findMany({
@@ -163,10 +165,48 @@ export class UserManagementService {
           where: { revokedAt: null, user: { roles: { some: { roleId: role.id } } } },
           data: { revokedAt: new Date() },
         });
+        return {
+          name: role.name,
+          permissionCodes: role.permissions
+            .map(({ permission }) => permission.code)
+            .filter(isPermissionCode)
+            .sort(),
+        };
       },
       { isolationLevel: 'Serializable' },
     );
-    return this.listRoles();
+    const snapshot = await this.listRoles();
+    const nextPermissionCodes = [...dto.permissionCodes].sort();
+    const removed = previousRole.permissionCodes.filter(
+      (permission) => !nextPermissionCodes.includes(permission),
+    );
+    const added = nextPermissionCodes.filter(
+      (permission) => !previousRole.permissionCodes.includes(permission),
+    );
+    const title =
+      removed.length === 0 && added.length === 0
+        ? `دسترسی‌های نقش ${previousRole.name} بدون تغییر باقی ماند.`
+        : removed.length === 1 && added.length === 0
+          ? `دسترسی ${removed[0]} از نقش ${previousRole.name} حذف شد.`
+          : added.length === 1 && removed.length === 0
+            ? `دسترسی ${added[0]} به نقش ${previousRole.name} اضافه شد.`
+            : `دسترسی‌های نقش ${previousRole.name} به‌روزرسانی شد.`;
+    return attachHumanAuditEvent(snapshot, {
+      title,
+      operationType: 'PERMISSION_CHANGE',
+      entityName: previousRole.name,
+      changes:
+        removed.length === 0 && added.length === 0
+          ? []
+          : [
+              {
+                field: 'permissionCodes',
+                label: 'دسترسی‌ها',
+                before: previousRole.permissionCodes,
+                after: nextPermissionCodes,
+              },
+            ],
+    });
   }
 
   async updateStatus(userId: string, actorUserId: string, dto: UpdateAdminUserStatusDto) {

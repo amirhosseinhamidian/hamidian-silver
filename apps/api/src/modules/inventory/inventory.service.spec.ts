@@ -1,5 +1,6 @@
 import { ErrorCode } from '../../common/errors/error-codes';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
+import { resolveHumanAuditEvent } from '../audit/audit-event';
 import { InventoryService } from './inventory.service';
 
 describe('InventoryService', () => {
@@ -69,7 +70,7 @@ describe('InventoryService', () => {
         findFirst: jest.fn().mockResolvedValue({ id: warehouseId }),
       },
       productVariant: {
-        findFirst: jest.fn().mockResolvedValue({ id: variantId }),
+        findFirst: jest.fn().mockResolvedValue({ id: variantId, sku: 'RING-52' }),
       },
       inventory: {
         findUnique: jest.fn().mockResolvedValue(null),
@@ -91,22 +92,33 @@ describe('InventoryService', () => {
       async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
     );
 
-    await expect(
-      service.adjustStock(
-        {
-          warehouseId,
-          variantId,
-          onHandDelta: 10,
-          reason: 'Initial stock',
-        },
-        actorUserId,
-      ),
-    ).resolves.toEqual(
+    const result = await service.adjustStock(
+      {
+        warehouseId,
+        variantId,
+        onHandDelta: 10,
+        reason: 'Initial stock',
+      },
+      actorUserId,
+    );
+    expect(result).toEqual(
       expect.objectContaining({
         onHand: 10,
         reserved: 0,
         available: 10,
         isLowStock: false,
+      }),
+    );
+    expect(
+      resolveHumanAuditEvent(
+        result,
+        { action: 'POST /inventory/stock/adjust', resource: 'inventory', method: 'POST' },
+        'SUCCESS',
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        title: 'موجودی SKU RING-52 به تعداد 10 افزایش یافت.',
+        operationType: 'STOCK_ADJUSTMENT',
       }),
     );
 

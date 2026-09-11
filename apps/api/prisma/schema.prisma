@@ -74,6 +74,9 @@ model AuditLog {
   id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   actorUserId String       @db.Uuid
   action      String       @db.VarChar(180)
+  title       String?      @db.VarChar(500)
+  operationType String?    @db.VarChar(80)
+  entityName  String?      @db.VarChar(200)
   resource    String       @db.VarChar(80)
   resourceId  String?      @db.Uuid
   method      String       @db.VarChar(10)
@@ -85,6 +88,7 @@ model AuditLog {
   requestId   String?      @db.VarChar(120)
   durationMs  Int
   metadata    Json?
+  changes     Json?
   createdAt   DateTime     @default(now()) @db.Timestamptz(3)
   actor       User         @relation("AuditLogActor", fields: [actorUserId], references: [id], onDelete: Restrict)
 
@@ -93,6 +97,7 @@ model AuditLog {
   @@index([outcome, createdAt])
   @@index([resource, resourceId, createdAt])
   @@index([action, createdAt])
+  @@index([operationType, createdAt])
   @@map("audit_logs")
 }
 

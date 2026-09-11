@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { attachHumanAuditEvent } from '../audit/audit-event';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { SetProductSupplierDto } from './dto/set-product-supplier.dto';
 import { SetSalePriceDto } from './dto/set-sale-price.dto';
@@ -309,7 +310,7 @@ export class PricingService {
         product.salePriceToman === dto.salePriceToman &&
         product.compareAtPriceToman === compareAtPriceToman
       ) {
-        return transaction.product.findUniqueOrThrow({
+        const unchanged = await transaction.product.findUniqueOrThrow({
           where: {
             id: productId,
           },
@@ -320,6 +321,12 @@ export class PricingService {
             salePriceToman: true,
             compareAtPriceToman: true,
           },
+        });
+        return attachHumanAuditEvent(unchanged, {
+          title: `قیمت فروش ${unchanged.name} بدون تغییر باقی ماند.`,
+          operationType: 'PRICE_CHANGE',
+          entityName: unchanged.name,
+          changes: [],
         });
       }
 
@@ -335,7 +342,7 @@ export class PricingService {
         },
       });
 
-      return transaction.product.update({
+      const updated = await transaction.product.update({
         where: {
           id: productId,
         },
@@ -350,6 +357,33 @@ export class PricingService {
           salePriceToman: true,
           compareAtPriceToman: true,
         },
+      });
+      const previousPriceLabel =
+        product.salePriceToman === null ? 'بدون قیمت' : `${product.salePriceToman} تومان`;
+      const nextPriceLabel =
+        updated.salePriceToman === null ? 'بدون قیمت' : `${updated.salePriceToman} تومان`;
+      return attachHumanAuditEvent(updated, {
+        title: `قیمت فروش ${updated.name} از ${previousPriceLabel} به ${nextPriceLabel} تغییر کرد.`,
+        operationType: 'PRICE_CHANGE',
+        entityName: updated.name,
+        changes: [
+          {
+            field: 'salePriceToman',
+            label: 'قیمت فروش',
+            before: product.salePriceToman,
+            after: updated.salePriceToman,
+          },
+          ...(product.compareAtPriceToman === updated.compareAtPriceToman
+            ? []
+            : [
+                {
+                  field: 'compareAtPriceToman',
+                  label: 'قیمت قبل از تخفیف',
+                  before: product.compareAtPriceToman,
+                  after: updated.compareAtPriceToman,
+                },
+              ]),
+        ],
       });
     });
   }

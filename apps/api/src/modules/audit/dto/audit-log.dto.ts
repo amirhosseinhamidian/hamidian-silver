@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { AUDIT_OPERATION_TYPES, type AuditOperationType } from '../audit-event';
 import { AUDIT_OUTCOMES, type AuditOutcomeValue } from './list-audit-logs-query.dto';
 
 export class AuditLogActorDto {
@@ -11,12 +12,50 @@ export class AuditLogActorDto {
   name!: string | null;
 }
 
+export class AuditLogChangeDto {
+  field!: string;
+  label!: string;
+
+  @ApiProperty({
+    nullable: true,
+    oneOf: [
+      { type: 'string' },
+      { type: 'number' },
+      { type: 'boolean' },
+      { type: 'array', items: { type: 'string' } },
+    ],
+  })
+  before!: string | number | boolean | string[] | null;
+
+  @ApiProperty({
+    nullable: true,
+    oneOf: [
+      { type: 'string' },
+      { type: 'number' },
+      { type: 'boolean' },
+      { type: 'array', items: { type: 'string' } },
+    ],
+  })
+  after!: string | number | boolean | string[] | null;
+}
+
 export class AuditLogEntryDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
 
   @ApiProperty({ type: () => AuditLogActorDto })
   actor!: AuditLogActorDto;
+
+  title!: string;
+
+  @ApiProperty({ enum: AUDIT_OPERATION_TYPES })
+  operationType!: AuditOperationType;
+
+  @ApiProperty({ nullable: true })
+  entityName!: string | null;
+
+  @ApiProperty({ type: () => AuditLogChangeDto, isArray: true })
+  changes!: AuditLogChangeDto[];
 
   action!: string;
   resource!: string;
@@ -66,6 +105,9 @@ export class AuditLogSnapshotDto {
 
   @ApiProperty({ type: String, isArray: true })
   resources!: string[];
+
+  @ApiProperty({ enum: AUDIT_OPERATION_TYPES, isArray: true })
+  operationTypes!: AuditOperationType[];
 
   @ApiProperty({ format: 'date-time' })
   generatedAt!: string;

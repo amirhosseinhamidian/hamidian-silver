@@ -10,6 +10,7 @@ import type { Request, Response } from 'express';
 import type { Observable } from 'rxjs';
 import { catchError, concatMap, from, map, mergeMap, throwError } from 'rxjs';
 import type { RequestWithAuth } from '../authorization/authorization.types';
+import { resolveHumanAuditEvent } from './audit-event';
 import { AuditService, type RecordAuditLogInput } from './audit.service';
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -72,6 +73,7 @@ export class AuditTrailInterceptor implements NestInterceptor {
         from(
           this.safeRecord({
             ...base,
+            ...resolveHumanAuditEvent(value, { ...target, method }, 'SUCCESS'),
             statusCode: response.statusCode,
             outcome: 'SUCCESS',
             durationMs: Date.now() - startedAt,
@@ -83,6 +85,7 @@ export class AuditTrailInterceptor implements NestInterceptor {
         return from(
           this.safeRecord({
             ...base,
+            ...resolveHumanAuditEvent(null, { ...target, method }, 'FAILURE'),
             statusCode,
             outcome: 'FAILURE',
             durationMs: Date.now() - startedAt,

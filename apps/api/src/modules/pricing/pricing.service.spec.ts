@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
+import { resolveHumanAuditEvent } from '../audit/audit-event';
 import { PricingService } from './pricing.service';
 
 describe('PricingService', () => {
@@ -178,7 +179,7 @@ describe('PricingService', () => {
       async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
     );
 
-    await service.setSalePrice(
+    const result = await service.setSalePrice(
       productId,
       {
         salePriceToman: 1_350_000,
@@ -206,6 +207,18 @@ describe('PricingService', () => {
           salePriceToman: 1_350_000,
           compareAtPriceToman: 1_500_000,
         },
+      }),
+    );
+    expect(
+      resolveHumanAuditEvent(
+        result,
+        { action: 'PATCH /pricing/products/:id/sale-price', resource: 'pricing', method: 'PATCH' },
+        'SUCCESS',
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        title: 'قیمت فروش Silver Ring از 1200000 تومان به 1350000 تومان تغییر کرد.',
+        operationType: 'PRICE_CHANGE',
       }),
     );
   });

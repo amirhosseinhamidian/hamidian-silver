@@ -1,8 +1,27 @@
 export type AuditOutcome = 'SUCCESS' | 'FAILURE';
+export type AuditOperationType =
+  | 'CREATE'
+  | 'UPDATE'
+  | 'DELETE'
+  | 'PRICE_CHANGE'
+  | 'STATUS_CHANGE'
+  | 'STOCK_ADJUSTMENT'
+  | 'PERMISSION_CHANGE';
+export type AuditChangeValue = string | number | boolean | null | readonly string[];
+export type AuditChange = Readonly<{
+  field: string;
+  label: string;
+  before: AuditChangeValue;
+  after: AuditChangeValue;
+}>;
 
 export type AuditLogItem = Readonly<{
   id: string;
   actor: Readonly<{ id: string; phone: string; name: string | null }>;
+  title: string;
+  operationType: AuditOperationType;
+  entityName: string | null;
+  changes: readonly AuditChange[];
   action: string;
   resource: string;
   resourceId: string | null;
@@ -28,11 +47,21 @@ export type AuditLogSnapshot = Readonly<{
     last24Hours: number;
   }>;
   resources: readonly string[];
+  operationTypes: readonly AuditOperationType[];
   generatedAt: string;
 }>;
 
 type UnknownRecord = Record<string, unknown>;
 const OUTCOMES = new Set<AuditOutcome>(['SUCCESS', 'FAILURE']);
+const OPERATION_TYPES = new Set<AuditOperationType>([
+  'CREATE',
+  'UPDATE',
+  'DELETE',
+  'PRICE_CHANGE',
+  'STATUS_CHANGE',
+  'STOCK_ADJUSTMENT',
+  'PERMISSION_CHANGE',
+]);
 
 function record(value: unknown): UnknownRecord | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -57,6 +86,31 @@ function count(value: unknown): number | null {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;
 }
 
+function changeValue(value: unknown): AuditChangeValue | undefined {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
+  }
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+    ? value
+    : undefined;
+}
+
+function parseChange(value: unknown): AuditChange | null {
+  const source = record(value);
+  const field = text(source?.field);
+  const label = text(source?.label);
+  const before = changeValue(source?.before);
+  const after = changeValue(source?.after);
+  return source && field && label && before !== undefined && after !== undefined
+    ? { field, label, before, after }
+    : null;
+}
+
 function parseItem(value: unknown): AuditLogItem | null {
   const source = record(value);
   const actor = record(source?.actor);
@@ -64,6 +118,10 @@ function parseItem(value: unknown): AuditLogItem | null {
   const actorId = text(actor?.id);
   const actorPhone = text(actor?.phone);
   const actorName = nullableText(actor?.name);
+  const title = text(source?.title);
+  const operationType = text(source?.operationType);
+  const entityName = nullableText(source?.entityName);
+  const changes = Array.isArray(source?.changes) ? source.changes.map(parseChange) : null;
   const action = text(source?.action);
   const resource = text(source?.resource);
   const resourceId = nullableText(source?.resourceId);
@@ -88,6 +146,12 @@ function parseItem(value: unknown): AuditLogItem | null {
     !actorId ||
     !actorPhone ||
     actorName === undefined ||
+    !title ||
+    !operationType ||
+    !OPERATION_TYPES.has(operationType as AuditOperationType) ||
+    entityName === undefined ||
+    !changes ||
+    changes.some((change) => !change) ||
     !action ||
     !resource ||
     resourceId === undefined ||
@@ -108,6 +172,10 @@ function parseItem(value: unknown): AuditLogItem | null {
   return {
     id,
     actor: { id: actorId, phone: actorPhone, name: actorName },
+    title,
+    operationType: operationType as AuditOperationType,
+    entityName,
+    changes: changes as AuditChange[],
     action,
     resource,
     resourceId,
@@ -129,6 +197,9 @@ export function parseAuditLogSnapshot(value: unknown): AuditLogSnapshot | null {
   const summary = record(source?.summary);
   const items = Array.isArray(source?.items) ? source.items.map(parseItem) : null;
   const resources = Array.isArray(source?.resources) ? source.resources.map(text) : null;
+  const operationTypes = Array.isArray(source?.operationTypes)
+    ? source.operationTypes.map(text)
+    : null;
   const generatedAt = date(source?.generatedAt);
   const counts = summary
     ? ['total', 'succeeded', 'failed', 'actors', 'last24Hours'].map((key) => count(summary[key]))
@@ -139,6 +210,11 @@ export function parseAuditLogSnapshot(value: unknown): AuditLogSnapshot | null {
     items.some((item) => !item) ||
     !resources ||
     resources.some((resource) => !resource) ||
+    !operationTypes ||
+    operationTypes.some(
+      (operationType) =>
+        !operationType || !OPERATION_TYPES.has(operationType as AuditOperationType),
+    ) ||
     !generatedAt ||
     !counts ||
     counts.some((value) => value === null)
@@ -155,6 +231,7 @@ export function parseAuditLogSnapshot(value: unknown): AuditLogSnapshot | null {
       last24Hours: counts[4]!,
     },
     resources: resources as string[],
+    operationTypes: operationTypes as AuditOperationType[],
     generatedAt,
   };
 }

@@ -10,6 +10,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { AUDIT_OPERATION_TYPES, type AuditOperationType } from '../audit-event';
 
 export const AUDIT_OUTCOMES = ['SUCCESS', 'FAILURE'] as const;
 export type AuditOutcomeValue = (typeof AUDIT_OUTCOMES)[number];
@@ -23,6 +24,10 @@ export class ListAuditLogsQueryDto {
   @IsOptional()
   @IsIn(AUDIT_OUTCOMES)
   outcome?: AuditOutcomeValue;
+
+  @IsOptional()
+  @IsIn(AUDIT_OPERATION_TYPES)
+  operationType?: AuditOperationType;
 
   @IsOptional()
   @IsString()

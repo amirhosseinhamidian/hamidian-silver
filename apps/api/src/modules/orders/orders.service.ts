@@ -15,6 +15,7 @@ import {
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { normalizeIranianMobile } from '../auth/phone-normalizer';
+import { attachHumanAuditEvent } from '../audit/audit-event';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderAddressDto, CreateOrderDto, CreateOrderItemDto } from './dto/create-order.dto';
@@ -526,7 +527,12 @@ export class OrdersService {
       }
 
       if (order.status === dto.status) {
-        return order;
+        return attachHumanAuditEvent(order, {
+          title: `وضعیت سفارش شماره ${order.orderNumber} بدون تغییر باقی ماند.`,
+          operationType: 'STATUS_CHANGE',
+          entityName: order.orderNumber,
+          changes: [],
+        });
       }
 
       const allowedNextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
@@ -623,7 +629,24 @@ export class OrdersService {
         },
       });
 
-      return updated;
+      const statusNames: Partial<Record<OrderStatus, string>> = {
+        [OrderStatus.PROCESSING]: 'آماده‌سازی',
+        [OrderStatus.SHIPPED]: 'ارسال‌شده',
+        [OrderStatus.DELIVERED]: 'تحویل‌شده',
+      };
+      return attachHumanAuditEvent(updated, {
+        title: `سفارش شماره ${updated.orderNumber} به مرحله ${statusNames[updated.status] ?? updated.status} منتقل شد.`,
+        operationType: 'STATUS_CHANGE',
+        entityName: updated.orderNumber,
+        changes: [
+          {
+            field: 'status',
+            label: 'وضعیت سفارش',
+            before: order.status,
+            after: updated.status,
+          },
+        ],
+      });
     });
   }
 

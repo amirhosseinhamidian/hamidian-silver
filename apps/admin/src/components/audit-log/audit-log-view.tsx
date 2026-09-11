@@ -13,7 +13,13 @@ import { FilterBar, SearchField } from '@/components/ui/filter-bar';
 import { MobileDataCard } from '@/components/ui/mobile-data-card';
 import { ResponsiveDataView } from '@/components/ui/responsive-data-view';
 import { Select } from '@/components/ui/select';
-import type { AuditLogItem, AuditLogSnapshot, AuditOutcome } from '@/lib/audit-log/audit-log-model';
+import type {
+  AuditChangeValue,
+  AuditLogItem,
+  AuditLogSnapshot,
+  AuditOperationType,
+  AuditOutcome,
+} from '@/lib/audit-log/audit-log-model';
 import {
   formatAdminDateTime,
   formatAdminInteger,
@@ -24,11 +30,31 @@ import {
 
 type Props = Readonly<{ snapshot: AuditLogSnapshot | null; failed: boolean }>;
 type OutcomeFilter = 'all' | AuditOutcome;
+type OperationFilter = 'all' | AuditOperationType;
 type DetailMode = 'desktop' | 'mobile' | null;
 
 const OUTCOME: Record<AuditOutcome, Readonly<{ label: string; tone: BadgeTone }>> = {
   SUCCESS: { label: 'موفق', tone: 'success' },
   FAILURE: { label: 'ناموفق', tone: 'danger' },
+};
+
+const OPERATION_LABELS: Readonly<Record<AuditOperationType, string>> = {
+  CREATE: 'ایجاد',
+  UPDATE: 'ویرایش',
+  DELETE: 'حذف',
+  PRICE_CHANGE: 'تغییر قیمت',
+  STATUS_CHANGE: 'تغییر وضعیت',
+  STOCK_ADJUSTMENT: 'اصلاح موجودی',
+  PERMISSION_CHANGE: 'تغییر دسترسی',
+};
+
+const ORDER_STATUS_LABELS: Readonly<Record<string, string>> = {
+  PENDING_PAYMENT: 'در انتظار پرداخت',
+  PAID: 'پرداخت‌شده',
+  PROCESSING: 'آماده‌سازی',
+  SHIPPED: 'ارسال‌شده',
+  DELIVERED: 'تحویل‌شده',
+  CANCELLED: 'لغوشده',
 };
 
 const RESOURCE_LABELS: Readonly<Record<string, string>> = {
@@ -41,6 +67,8 @@ const RESOURCE_LABELS: Readonly<Record<string, string>> = {
   users: 'کاربران',
   roles: 'نقش‌ها',
   notifications: 'اعلان‌ها',
+  catalog: 'کاتالوگ',
+  'admin-roles': 'نقش‌ها و دسترسی‌ها',
 };
 
 function resourceLabel(resource: string): string {
@@ -76,6 +104,14 @@ function roleCodes(item: AuditLogItem): string {
     : 'ثبت نشده';
 }
 
+function changeValue(field: string, value: AuditChangeValue): string {
+  if (value === null) return 'ثبت نشده';
+  if (typeof value === 'object') return value.length ? value.join('، ') : 'بدون مورد';
+  if (typeof value === 'boolean') return value ? 'بله' : 'خیر';
+  if (typeof value === 'number') return formatAdminInteger(value);
+  return field === 'status' ? (ORDER_STATUS_LABELS[value] ?? value) : value;
+}
+
 function DetailRows({ rows }: Readonly<{ rows: readonly (readonly [string, string])[] }>) {
   return (
     <dl className="divide-y divide-[var(--admin-color-border)]">
@@ -99,17 +135,46 @@ function AuditDetails({ item }: Readonly<{ item: AuditLogItem }>) {
           برای حفظ محرمانگی، متن خطا و محتوای درخواست در Audit Log ذخیره نشده‌اند.
         </Alert>
       ) : null}
-      <Card title="عملیات">
+      <Card title="شرح عملیات">
         <DetailRows
           rows={[
+            ['عنوان', item.title],
             ['نتیجه', OUTCOME[item.outcome].label],
-            ['عملیات نرمال‌شده', item.action],
+            ['نوع عملیات', OPERATION_LABELS[item.operationType]],
+            ['موجودیت', item.entityName ?? resourceLabel(item.resource)],
+            ['بخش مرتبط', resourceLabel(item.resource)],
+            ['زمان ثبت', formatAdminDateTime(item.createdAt)],
+          ]}
+        />
+      </Card>
+      {item.changes.length ? (
+        <Card title="تغییرات مهم">
+          <div className="space-y-3">
+            {item.changes.map((change) => (
+              <div
+                key={change.field}
+                className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] p-3"
+              >
+                <p className="text-sm font-bold">{change.label}</p>
+                <DetailRows
+                  rows={[
+                    ['قبل', changeValue(change.field, change.before)],
+                    ['بعد', changeValue(change.field, change.after)],
+                  ]}
+                />
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
+      <Card title="اطلاعات فنی">
+        <DetailRows
+          rows={[
+            ['Action فنی', item.action],
             ['مسیر درخواست', item.path],
-            ['منبع', resourceLabel(item.resource)],
-            ['شناسه منبع', item.resourceId ?? 'ندارد'],
+            ['شناسه موجودیت', item.resourceId ?? 'ندارد'],
             ['کد وضعیت', formatAdminInteger(item.statusCode)],
             ['زمان پاسخ', `${formatAdminInteger(item.durationMs)} میلی‌ثانیه`],
-            ['زمان ثبت', formatAdminDateTime(item.createdAt)],
           ]}
         />
       </Card>
@@ -132,6 +197,7 @@ function AuditDetails({ item }: Readonly<{ item: AuditLogItem }>) {
 export function AuditLogView({ snapshot, failed }: Props) {
   const [search, setSearch] = useState('');
   const [outcome, setOutcome] = useState<OutcomeFilter>('all');
+  const [operation, setOperation] = useState<OperationFilter>('all');
   const [resource, setResource] = useState('all');
   const [selected, setSelected] = useState<AuditLogItem | null>(null);
   const [detailMode, setDetailMode] = useState<DetailMode>(null);
@@ -141,9 +207,12 @@ export function AuditLogView({ snapshot, failed }: Props) {
     () =>
       (snapshot?.items ?? []).filter((item) => {
         if (outcome !== 'all' && item.outcome !== outcome) return false;
+        if (operation !== 'all' && item.operationType !== operation) return false;
         if (resource !== 'all' && item.resource !== resource) return false;
         if (!needle) return true;
         return [
+          item.title,
+          item.entityName ?? '',
           item.action,
           item.path,
           item.resourceId ?? '',
@@ -152,7 +221,7 @@ export function AuditLogView({ snapshot, failed }: Props) {
           item.actor.name ?? '',
         ].some((value) => toAsciiDigits(value).toLocaleLowerCase('fa').includes(needle));
       }),
-    [needle, outcome, resource, snapshot],
+    [needle, operation, outcome, resource, snapshot],
   );
 
   function openDetails(item: AuditLogItem, mode: Exclude<DetailMode, null>) {
@@ -178,11 +247,12 @@ export function AuditLogView({ snapshot, failed }: Props) {
       header: 'عملیات',
       cell: (item) => (
         <div>
-          <p className="max-w-72 font-bold break-words" dir="ltr">
-            {item.action}
-          </p>
+          <p className="max-w-80 font-bold break-words">{toPersianDigits(item.title)}</p>
           <p className="mt-1 text-xs text-[var(--admin-color-muted)]">
-            {resourceLabel(item.resource)}
+            {OPERATION_LABELS[item.operationType]} · {resourceLabel(item.resource)}
+          </p>
+          <p className="mt-1 max-w-72 text-[0.68rem] text-[var(--admin-color-subtle)]" dir="ltr">
+            {item.action}
           </p>
         </div>
       ),
@@ -226,12 +296,16 @@ export function AuditLogView({ snapshot, failed }: Props) {
   ];
 
   const activeFilters =
-    Number(Boolean(needle)) + Number(outcome !== 'all') + Number(resource !== 'all');
+    Number(Boolean(needle)) +
+    Number(outcome !== 'all') +
+    Number(operation !== 'all') +
+    Number(resource !== 'all');
 
   return (
     <div className="space-y-6">
       <Alert tone="info">
-        این گزارش فقط‌خواندنی و append-only است؛ payload درخواست، پاسخ و متن خطا ذخیره نمی‌شود.
+        این گزارش فقط‌خواندنی و append-only است؛ فقط تغییرات منتخب و غیرحساس ثبت می‌شوند و رمز،
+        توکن، اطلاعات درگاه، payload کامل و متن خطا نگهداری نمی‌شود.
       </Alert>
       <section aria-label="شاخص‌های گزارش فعالیت" className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Kpi label="کل رویدادها" value={snapshot.summary.total} tone="neutral" />
@@ -274,6 +348,7 @@ export function AuditLogView({ snapshot, failed }: Props) {
               onClick={() => {
                 setSearch('');
                 setOutcome('all');
+                setOperation('all');
                 setResource('all');
               }}
             >
@@ -299,6 +374,18 @@ export function AuditLogView({ snapshot, failed }: Props) {
           ]}
         />
         <Select
+          aria-label="فیلتر نوع عملیات"
+          value={operation}
+          onValueChange={(value) => setOperation(value as OperationFilter)}
+          options={[
+            { value: 'all', label: 'همه عملیات‌ها' },
+            ...snapshot.operationTypes.map((value) => ({
+              value,
+              label: OPERATION_LABELS[value],
+            })),
+          ]}
+        />
+        <Select
           aria-label="فیلتر منبع عملیات"
           value={resource}
           onValueChange={setResource}
@@ -320,8 +407,8 @@ export function AuditLogView({ snapshot, failed }: Props) {
           <MobileDataCard
             detailsOpen={detailMode === 'mobile' && selected?.id === item.id}
             onDetailsOpenChange={(open) => (open ? openDetails(item, 'mobile') : closeDetails())}
-            title={resourceLabel(item.resource)}
-            eyebrow={<span dir="ltr">{item.action}</span>}
+            title={toPersianDigits(item.title)}
+            eyebrow={resourceLabel(item.resource)}
             status={<OutcomeBadge outcome={item.outcome} />}
             items={[
               { label: 'عامل', value: actorLabel(item) },
@@ -329,8 +416,8 @@ export function AuditLogView({ snapshot, failed }: Props) {
               { label: 'کد وضعیت', value: formatAdminInteger(item.statusCode) },
               { label: 'مدت', value: `${formatAdminInteger(item.durationMs)}ms` },
             ]}
-            detailsTitle={resourceLabel(item.resource)}
-            detailsDescription={item.action}
+            detailsTitle={toPersianDigits(item.title)}
+            detailsDescription={`${OPERATION_LABELS[item.operationType]} · ${resourceLabel(item.resource)}`}
             details={<AuditDetails item={item} />}
           />
         )}
@@ -339,8 +426,8 @@ export function AuditLogView({ snapshot, failed }: Props) {
         {selected ? (
           <DialogContent
             size="lg"
-            title={resourceLabel(selected.resource)}
-            description={selected.action}
+            title={toPersianDigits(selected.title)}
+            description={`${OPERATION_LABELS[selected.operationType]} · ${resourceLabel(selected.resource)}`}
           >
             <AuditDetails item={selected} />
           </DialogContent>
