@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
+    "test:critical": "vitest run src/lib/auth/critical-operations-bff.test.ts",
     "test:watch": "vitest"
   },
   "dependencies": {

@@ -16,6 +16,7 @@
     "start:prod": "node dist/main",
     "lint": "oxlint src/ test/",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
+    "test:critical": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand src/modules/orders src/modules/payments src/modules/inventory src/modules/finance",
     "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch",
     "test:cov": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage",
     "test:debug": "node --experimental-vm-modules --inspect-brk -r tsconfig-paths/register -r ts-node/register ./node_modules/jest/bin/jest.js --runInBand",
