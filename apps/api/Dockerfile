@@ -33,9 +33,9 @@ RUN DATABASE_URL=postgresql://build:build@localhost:5432/build pnpm db:generate 
     && pnpm api:build \
     && pnpm --filter api deploy --legacy --prod /deploy/api
 
-# Explicit staging-only one-shot seed: same generated client, no production
-# entrypoint change. Never include demo data in the runtime API image.
-FROM builder AS staging-seed
+# Explicit one-shot seed. Compose fixes SEED_DEMO_CATALOG per environment;
+# this build stage is never the runtime API entrypoint.
+FROM builder AS operational-seed
 USER node
 CMD ["./node_modules/.bin/prisma", "db", "seed"]
 

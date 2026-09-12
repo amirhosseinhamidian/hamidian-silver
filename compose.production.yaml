@@ -64,6 +64,31 @@ services:
     restart: 'no'
     logging: *log-limits
 
+  # Run explicitly once with the two private --env-file arguments in VPS-011.
+  # Never launched by a normal `up`; demo catalog cannot be enabled here.
+  seed:
+    profiles: ['seed']
+    image: hamidian-silver-seed:${DEPLOY_SHA:-manual}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: operational-seed
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set an internal production DATABASE_URL}
+      SEED_OPERATIONAL_DATA: 'true'
+      SEED_DEMO_CATALOG: 'false'
+      OPERATIONAL_ADMIN_PHONE: ${OPERATIONAL_ADMIN_PHONE:-}
+      OPERATIONAL_CONTACT_ADDRESS: ${OPERATIONAL_CONTACT_ADDRESS:-}
+      OPERATIONAL_CONTACT_PHONES: ${OPERATIONAL_CONTACT_PHONES:-}
+      OPERATIONAL_PAYMENT_GATEWAY: disabled
+      SHIPPING_PROVIDER: disabled
+      MANUAL_SHIPPING_COST_TOMAN: ${MANUAL_SHIPPING_COST_TOMAN:-0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+    logging: *log-limits
+
   api:
     image: hamidian-silver-api:${DEPLOY_SHA:-manual}
     build:
