@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily verified local backup for hamidian.shop
+
+[Timer]
+OnCalendar=*-*-* 03:20:00
+RandomizedDelaySec=15m
+Persistent=true
+Unit=hamidian-silver-backup.service
+
+[Install]
+WantedBy=timers.target

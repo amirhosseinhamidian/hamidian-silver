@@ -1,0 +1,13 @@
+[Unit]
+Description=Verified PostgreSQL and media backup for hamidian.shop
+Requires=docker.service
+After=docker.service
+RequiresMountsFor=/var/backups/hamidian-silver /var/lib/hamidian-silver/media
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/hamidian-silver/backup-production.sh /opt/hamidian-silver/current
+TimeoutStartSec=3h
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
