@@ -1,0 +1,11 @@
+[Unit]
+Description=Run hamidian.shop production checks every two minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=2min
+AccuracySec=15s
+Unit=hamidian-silver-monitor.service
+
+[Install]
+WantedBy=timers.target
