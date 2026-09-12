@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """VPS-008: host-side, read-only checks; alerts contain only service names and counts."""
 
+from __future__ import annotations
+
 import datetime as dt
 import fcntl
 import json

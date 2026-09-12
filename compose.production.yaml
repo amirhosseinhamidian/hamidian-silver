@@ -51,6 +51,7 @@ services:
   # Explicit one-shot job: never part of the API entrypoint or a normal `up`.
   migrate:
     profiles: ['migrate']
+    image: hamidian-silver-migrate:${DEPLOY_SHA:-manual}
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -64,6 +65,7 @@ services:
     logging: *log-limits
 
   api:
+    image: hamidian-silver-api:${DEPLOY_SHA:-manual}
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -116,6 +118,7 @@ services:
     logging: *log-limits
 
   storefront:
+    image: hamidian-silver-storefront:${DEPLOY_SHA:-manual}
     build:
       context: .
       dockerfile: apps/storefront/Dockerfile
@@ -144,6 +147,7 @@ services:
     logging: *log-limits
 
   admin:
+    image: hamidian-silver-admin:${DEPLOY_SHA:-manual}
     build:
       context: .
       dockerfile: apps/admin/Dockerfile

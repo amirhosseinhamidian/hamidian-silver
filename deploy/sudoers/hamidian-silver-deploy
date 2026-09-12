@@ -1,0 +1,2 @@
+# Only the dedicated SSH account can invoke these root-owned, SHA-validating entrypoints.
+hamidian-deploy ALL=(root) NOPASSWD: /usr/local/libexec/hamidian-silver/receive-production-release.py *, /usr/local/libexec/hamidian-silver/deploy-production.sh *

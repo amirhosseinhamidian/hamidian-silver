@@ -1,0 +1,107 @@
+name: CI and production release
+
+on:
+  push:
+    branches: [frontend-v2, main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hamidian-ci-${{ github.ref }}
+  # Never cancel an active production deployment when another commit lands on main.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_DB: hamidian_ci
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci_test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd 'pg_isready -U ci -d hamidian_ci'
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci:ci_test_only@127.0.0.1:5432/hamidian_ci?schema=public
+      OTP_PEPPER: ci-only-pepper-not-used-outside-github-actions-12345
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.9.0'
+      - name: Install exact pnpm and dependencies
+        run: |
+          npm install --global pnpm@11.9.0
+          pnpm install --frozen-lockfile
+      - name: Apply all migrations to an isolated disposable PostgreSQL
+        run: |
+          pnpm exec prisma validate
+          pnpm exec prisma migrate deploy
+          pnpm exec prisma migrate status
+      - name: Format, lint, typecheck, unit tests and builds
+        run: pnpm verify
+      - name: Run deployment host-tool unit checks
+        run: python3 -m unittest discover -s deploy -p 'test_*.py'
+      - name: Install browser for mocked purchase E2E
+        run: pnpm --filter @hamidian/storefront exec playwright install --with-deps chromium
+      - name: Run storefront purchase E2E against mocked API
+        env:
+          PLAYWRIGHT_BROWSER_CHANNEL: chromium
+        run: pnpm storefront:test:e2e
+
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.PRODUCTION_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    environment: production
+    concurrency:
+      group: hamidian-production
+      cancel-in-progress: false
+    env:
+      DEPLOY_HOST: ${{ vars.PRODUCTION_SSH_HOST }}
+      DEPLOY_USER: ${{ vars.PRODUCTION_SSH_USER }}
+      DEPLOY_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare verified SSH connection
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.-]+$ && "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          [[ -n "$DEPLOY_KEY" && -n "$DEPLOY_KNOWN_HOSTS" ]]
+          install -d -m 0700 "$RUNNER_TEMP/hamidian-ssh"
+          printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/hamidian-ssh/key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/hamidian-ssh/known_hosts"
+          chmod 0600 "$RUNNER_TEMP/hamidian-ssh/key" "$RUNNER_TEMP/hamidian-ssh/known_hosts"
+      - name: Send exact main commit and deploy under VPS lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          ssh_args=(-i "$RUNNER_TEMP/hamidian-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$RUNNER_TEMP/hamidian-ssh/known_hosts" -o ConnectTimeout=15)
+          git archive --format=tar "$GITHUB_SHA" | ssh "${ssh_args[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "sudo -n /usr/local/libexec/hamidian-silver/receive-production-release.py $GITHUB_SHA"
+          ssh "${ssh_args[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "sudo -n /usr/local/libexec/hamidian-silver/deploy-production.sh $GITHUB_SHA"
+      - name: Remove temporary runner SSH key
+        if: always()
+        run: |
+          if [ -d "$RUNNER_TEMP/hamidian-ssh" ]; then
+            rm -f -- "$RUNNER_TEMP/hamidian-ssh/key" "$RUNNER_TEMP/hamidian-ssh/known_hosts"
+          fi
