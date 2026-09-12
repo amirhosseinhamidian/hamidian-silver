@@ -18,6 +18,9 @@ apps/storefront/public/dev-catalog
 # Never package local configuration, credentials, or uploaded media.
 **/.env
 **/.env.*
+# Guard against accidental local copies outside the /etc private env directory.
+**/production.env
+**/production.env.*
 **/*.pem
 **/*.key
 **/*.p12
