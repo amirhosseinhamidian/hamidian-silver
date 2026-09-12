@@ -53,7 +53,7 @@ describe('storefront analytics events', () => {
     trackBeginCheckout(800_000, [item]);
 
     expect(gtag).toHaveBeenNthCalledWith(1, 'event', 'search', {
-      search_term: 'انگشتر نقره',
+      search_term: 'catalog',
       results_count: 6,
     });
     expect(gtag).toHaveBeenNthCalledWith(
@@ -128,5 +128,15 @@ describe('storefront analytics events', () => {
 
   it('is a safe no-op while analytics is disabled', () => {
     expect(trackSearch('انگشتر', 0)).toBe(false);
+  });
+
+  it('does not send a sensitive free-text search query', () => {
+    const gtag = vi.fn();
+    window.gtag = gtag;
+    trackSearch('09123456789 user@example.com', 1);
+    expect(gtag).toHaveBeenCalledWith('event', 'search', {
+      search_term: 'catalog',
+      results_count: 1,
+    });
   });
 });

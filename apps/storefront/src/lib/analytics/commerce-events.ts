@@ -87,8 +87,11 @@ export function trackPurchase(purchase: PurchaseInput): boolean {
 }
 
 export function trackSearch(searchTerm: string, resultCount: number): boolean {
+  // Free-text search can contain a phone number, email or other private data.
+  // Record the funnel event and result count, never the visitor's raw query.
+  if (!searchTerm.trim()) return false;
   return trackAnalyticsEvent('search', {
-    search_term: searchTerm,
+    search_term: 'catalog',
     results_count: resultCount,
   });
 }

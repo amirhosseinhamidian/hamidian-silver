@@ -1,23 +1,17 @@
 'use client';
 
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 
 import { trackAnalyticsEvent } from '@/lib/analytics/analytics';
+import { publicPageView } from '@/lib/analytics/public-page-view';
 
 export function AnalyticsPageView() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const query = searchParams.toString();
-  const pagePath = query ? `${pathname}?${query}` : pathname;
-
   useEffect(() => {
-    trackAnalyticsEvent('page_view', {
-      page_location: window.location.href,
-      page_path: pagePath,
-      page_title: document.title,
-    });
-  }, [pagePath]);
+    const parameters = publicPageView(pathname, window.location.origin);
+    if (parameters) trackAnalyticsEvent('page_view', parameters);
+  }, [pathname]);
 
   return null;
 }

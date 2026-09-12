@@ -9,6 +9,14 @@ export function googleAnalyticsBootstrap(measurementId: string): string {
 window.dataLayer = window.dataLayer || [];
 window.gtag = function gtag(){window.dataLayer.push(arguments);};
 window.gtag('js', new Date());
-window.gtag('config', '${measurementId}', { send_page_view: false });
+// Default parameters for automatic events must not contain URL query strings.
+// Enhanced measurement (especially site search and history changes) must also
+// be disabled in the GA4 data stream before enabling the measurement ID.
+window.gtag('config', '${measurementId}', {
+  send_page_view: false,
+  page_location: window.location.origin + '/',
+  page_title: 'Hamidian Silver',
+  page_referrer: ''
+});
 `;
 }

@@ -16,5 +16,9 @@ describe('Google Analytics configuration', () => {
   it('disables automatic page views so App Router navigation can track them once', () => {
     expect(googleAnalyticsBootstrap('G-ABC123')).toContain("window.gtag('config', 'G-ABC123'");
     expect(googleAnalyticsBootstrap('G-ABC123')).toContain('send_page_view: false');
+    expect(googleAnalyticsBootstrap('G-ABC123')).toContain(
+      "page_location: window.location.origin + '/'",
+    );
+    expect(googleAnalyticsBootstrap('G-ABC123')).toContain("page_title: 'Hamidian Silver'");
   });
 });
