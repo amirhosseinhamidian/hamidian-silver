@@ -33,6 +33,12 @@ RUN DATABASE_URL=postgresql://build:build@localhost:5432/build pnpm db:generate 
     && pnpm api:build \
     && pnpm --filter api deploy --legacy --prod /deploy/api
 
+# Explicit staging-only one-shot seed: same generated client, no production
+# entrypoint change. Never include demo data in the runtime API image.
+FROM builder AS staging-seed
+USER node
+CMD ["./node_modules/.bin/prisma", "db", "seed"]
+
 FROM node:24-bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates openssl \
     && rm -rf /var/lib/apt/lists/*

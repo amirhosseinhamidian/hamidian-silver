@@ -1,0 +1,197 @@
+name: hamidian-silver-staging
+
+# Staging is NOT an extension of production: separate project, ports, volumes,
+# media, secrets, image tags, and public origins. Never mount production data.
+x-logging: &logging
+  driver: local
+  options:
+    max-size: 10m
+    max-file: '3'
+
+x-health: &health
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 40s
+
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hamidian_staging
+      POSTGRES_USER: hamidian_staging
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Use only the private staging env file}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    volumes:
+      - staging_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    stop_grace_period: 60s
+    logging: *logging
+
+  redis:
+    image: redis:8.10.0-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes', '--appendfsync', 'everysec']
+    volumes:
+      - staging_redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    logging: *logging
+
+  migrate:
+    profiles: ['migrate']
+    image: hamidian-staging-migrate:local
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: migrate
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Only staging postgres is allowed}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+    logging: *logging
+
+  seed:
+    profiles: ['seed']
+    image: hamidian-staging-seed:local
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: staging-seed
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Only staging postgres is allowed}
+      SEED_OPERATIONAL_DATA: 'true'
+      SEED_DEMO_CATALOG: 'true'
+      OPERATIONAL_ADMIN_PHONE: ${OPERATIONAL_ADMIN_PHONE:-}
+      OPERATIONAL_CONTACT_ADDRESS: ${OPERATIONAL_CONTACT_ADDRESS:-}
+      OPERATIONAL_CONTACT_PHONES: ${OPERATIONAL_CONTACT_PHONES:-}
+      OPERATIONAL_PAYMENT_GATEWAY: disabled
+      SHIPPING_PROVIDER: disabled
+      MANUAL_SHIPPING_COST_TOMAN: ${MANUAL_SHIPPING_COST_TOMAN:-0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+    logging: *logging
+
+  api:
+    image: hamidian-staging-api:local
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:3200:3000'
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Only staging postgres is allowed}
+      OTP_PEPPER: ${OTP_PEPPER:?A staging-only pepper is required}
+      MEDIA_STORAGE_ROOT: /var/lib/hamidian-silver/staging-media
+      MEDIA_PUBLIC_BASE_URL: https://media.staging.hamidian.shop/media
+      CORS_ORIGINS: https://staging.hamidian.shop,https://admin.staging.hamidian.shop
+      SMS_PROVIDER: ${SMS_PROVIDER:-disabled}
+      KAVENEGAR_API_KEY: ${KAVENEGAR_API_KEY:-}
+      KAVENEGAR_OTP_TEMPLATE: ${KAVENEGAR_OTP_TEMPLATE:-}
+      KAVENEGAR_SENDER: ${KAVENEGAR_SENDER:-}
+      PAYMENT_PROVIDER: disabled
+      PAYMENT_CALLBACK_URL: https://staging.hamidian.shop/api/payment/callback
+      ZARINPAL_MERCHANT_ID: ${ZARINPAL_MERCHANT_ID:-}
+      ZARINPAL_SANDBOX: 'true'
+      SHIPPING_PROVIDER: disabled
+      MANUAL_SHIPPING_COST_TOMAN: ${MANUAL_SHIPPING_COST_TOMAN:-0}
+    volumes:
+      - type: bind
+        source: /var/lib/hamidian-silver/staging-media
+        target: /var/lib/hamidian-silver/staging-media
+        bind:
+          create_host_path: false
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/v1/health/ready',{signal:AbortSignal.timeout(3500)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      <<: *health
+    logging: *logging
+
+  storefront:
+    image: hamidian-staging-storefront:local
+    build:
+      context: .
+      dockerfile: apps/storefront/Dockerfile
+      args:
+        MEDIA_PUBLIC_BASE_URL: https://media.staging.hamidian.shop/media
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: ''
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:3201:3000'
+    environment:
+      HAMIDIAN_API_ORIGIN: http://api:3000
+      MEDIA_PUBLIC_BASE_URL: https://media.staging.hamidian.shop/media
+      STOREFRONT_PUBLIC_ORIGIN: https://staging.hamidian.shop
+      GOOGLE_SITE_VERIFICATION: ''
+      NEXT_PUBLIC_GA_MEASUREMENT_ID: ''
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(3500)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      <<: *health
+    logging: *logging
+
+  admin:
+    image: hamidian-staging-admin:local
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        NEXT_PUBLIC_STOREFRONT_URL: https://staging.hamidian.shop
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:3202:3000'
+    environment:
+      HAMIDIAN_API_ORIGIN: http://api:3000
+      NEXT_PUBLIC_STOREFRONT_URL: https://staging.hamidian.shop
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(3500)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      <<: *health
+    logging: *logging
+
+volumes:
+  staging_postgres_data:
+  staging_redis_data:
