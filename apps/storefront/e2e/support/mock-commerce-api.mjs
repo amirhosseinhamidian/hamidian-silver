@@ -17,6 +17,7 @@ const PAID_AT = '2026-09-11T08:02:00.000Z';
 
 let paymentConfirmed = false;
 let orderCreated = false;
+let apiUnavailable = false;
 
 const media = {
   url: `${MOCK_API_ORIGIN}/media/silver-ring.png`,
@@ -192,7 +193,17 @@ async function handler(request, response) {
   if (request.method === 'POST' && url.pathname === '/__e2e/reset') {
     paymentConfirmed = false;
     orderCreated = false;
+    apiUnavailable = false;
     return json(response, 200, { reset: true });
+  }
+
+  if (request.method === 'POST' && url.pathname === '/__e2e/api-unavailable') {
+    apiUnavailable = Boolean((await body(request)).enabled);
+    return json(response, 200, { apiUnavailable });
+  }
+
+  if (apiUnavailable && url.pathname.startsWith('/api/v1/')) {
+    return json(response, 503, { message: 'Mock API is unavailable.' });
   }
 
   if (request.method === 'GET' && url.pathname === '/media/silver-ring.png') {

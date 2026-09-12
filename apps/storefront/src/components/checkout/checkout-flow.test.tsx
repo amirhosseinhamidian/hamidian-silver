@@ -120,4 +120,117 @@ describe('CheckoutFlow price integrity', () => {
     ).toHaveLength(1);
     expect(clearCart).toHaveBeenCalledOnce();
   });
+
+  it('distinguishes an unavailable API from an expired session without discarding the cart', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ message: 'unavailable' }, 503)),
+    );
+    const unavailable = render(<CheckoutFlow />);
+
+    expect(await screen.findByText('اتصال به سرویس برقرار نشد')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'بازگشت به سبد خرید' })).toHaveAttribute(
+      'href',
+      '/cart',
+    );
+    expect(clearCart).not.toHaveBeenCalled();
+    unavailable.unmount();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ message: 'Unauthorized' }, 401)),
+    );
+    render(<CheckoutFlow />);
+
+    expect(await screen.findByText('نشست شما منقضی شده است')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ورود یا ثبت‌نام' })).toBeInTheDocument();
+    expect(clearCart).not.toHaveBeenCalled();
+  });
+
+  it('requires a cart review when a stored variant was deleted or its stock changed', async () => {
+    for (const response of [
+      jsonResponse({ error: { code: 'NOT_FOUND', message: 'Variant not found.' } }, 404),
+      jsonResponse({ error: { code: 'INVENTORY_NOT_AVAILABLE', message: 'No stock.' } }, 409),
+    ]) {
+      const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/auth/me') return jsonResponse({ phone: '09120000000' });
+        if (url === '/api/profile/addresses')
+          return jsonResponse([
+            {
+              id: '33333333-3333-4333-8333-333333333333',
+              title: 'خانه',
+              recipientName: 'خریدار',
+              phone: '09120000000',
+              province: 'تهران',
+              city: 'تهران',
+              addressLine: 'خیابان اصلی',
+              postalCode: '1234567890',
+              isDefault: true,
+            },
+          ]);
+        if (url === '/api/checkout/order') return response;
+        throw new Error(`Unexpected request: ${url}`);
+      });
+      vi.stubGlobal('fetch', fetchMock);
+      const rendered = render(<CheckoutFlow />);
+
+      await screen.findByText('آدرس پیش‌فرض');
+      fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت' }));
+
+      expect(await screen.findByText(/محصول، موجودی یا آدرس ذخیره‌شده/)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'بازبینی و اصلاح سبد خرید' })).toHaveAttribute(
+        'href',
+        '/cart',
+      );
+      expect(screen.queryByRole('button', { name: 'ثبت سفارش و پرداخت' })).not.toBeInTheDocument();
+      expect(
+        fetchMock.mock.calls.some(([input]) => String(input) === '/api/checkout/payment'),
+      ).toBe(false);
+      expect(clearCart).not.toHaveBeenCalled();
+      rendered.unmount();
+    }
+  });
+
+  it('blocks another payment attempt when initiation returns an uncertain result', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/auth/me') return jsonResponse({ phone: '09120000000' });
+      if (url === '/api/profile/addresses')
+        return jsonResponse([
+          {
+            id: '33333333-3333-4333-8333-333333333333',
+            title: 'خانه',
+            recipientName: 'خریدار',
+            phone: '09120000000',
+            province: 'تهران',
+            city: 'تهران',
+            addressLine: 'خیابان اصلی',
+            postalCode: '1234567890',
+            isDefault: true,
+          },
+        ]);
+      if (url === '/api/checkout/order')
+        return jsonResponse({
+          id: '22222222-2222-4222-8222-222222222222',
+          orderNumber: 'HS-1001',
+          grandTotalToman: 800_000,
+        });
+      if (url === '/api/checkout/payment') return jsonResponse({ message: 'Gateway timeout' }, 503);
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<CheckoutFlow />);
+
+    await screen.findByText('آدرس پیش‌فرض');
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت' }));
+
+    expect(await screen.findByText(/وضعیت آغاز پرداخت مشخص نیست/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'بررسی وضعیت سفارش' })).toHaveAttribute(
+      'href',
+      '/account/orders/22222222-2222-4222-8222-222222222222',
+    );
+    expect(screen.queryByRole('button', { name: 'تلاش مجدد برای پرداخت' })).not.toBeInTheDocument();
+    expect(clearCart).not.toHaveBeenCalled();
+  });
 });

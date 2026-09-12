@@ -32,6 +32,7 @@ const mediaPublicBaseUrl =
 const e2eMode = process.env.STOREFRONT_E2E === 'true';
 
 const nextConfig: NextConfig = {
+  experimental: { globalNotFound: true },
   ...(e2eMode ? { distDir: '.next-e2e' } : {}),
   images: {
     formats: ['image/avif', 'image/webp'],

@@ -9,6 +9,7 @@ import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
 import { Select } from '@/components/ui/select';
 import { trackBeginCheckout } from '@/lib/analytics/commerce-events';
+import { AUTHENTICATION_SUCCEEDED_EVENT, openAuthModal } from '@/lib/auth/events';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { useCart } from '@/lib/cart/cart-store';
 import { buildCreateOrderBody } from '@/lib/checkout/checkout-payload';
@@ -18,7 +19,11 @@ type CurrentUser = components['schemas']['CurrentUserResponseDto'];
 type CustomerOrderDetail = components['schemas']['CustomerOrderDetailDto'];
 type PaymentInitiationResponse = components['schemas']['PaymentInitiationResponseDto'];
 type AuthState =
-  { status: 'checking' } | { status: 'anonymous' } | { status: 'authenticated'; user: CurrentUser };
+  | { status: 'checking' }
+  | { status: 'anonymous'; expired: boolean }
+  | { status: 'unavailable' }
+  | { status: 'forbidden' }
+  | { status: 'authenticated'; user: CurrentUser };
 type CheckoutPriceChange = Readonly<{ cartSubtotalToman: number; orderTotalToman: number }>;
 type UserAddress = Readonly<{
   id: string;
@@ -84,19 +89,32 @@ function isUserAddress(value: unknown): value is UserAddress {
   );
 }
 
-async function readErrorMessage(response: Response): Promise<string> {
+async function readError(response: Response): Promise<{ message: string; code: string | null }> {
+  if (response.status === 401) {
+    return { message: 'نشست شما منقضی شده است. دوباره وارد شوید.', code: 'UNAUTHORIZED' };
+  }
+  if (response.status === 403) {
+    return { message: 'اجازه انجام این عملیات را ندارید.', code: 'FORBIDDEN' };
+  }
+  if (response.status >= 500) {
+    return { message: 'ارتباط با سرویس برقرار نشد. کمی بعد دوباره تلاش کنید.', code: null };
+  }
   try {
     const payload = (await response.json()) as {
       message?: string | string[];
-      error?: { message?: string | string[] };
+      error?: { code?: string; message?: string | string[] };
     };
     const message = payload.error?.message ?? payload.message;
-    if (Array.isArray(message)) return message.join('، ');
-    if (typeof message === 'string' && message) return message;
+    if (Array.isArray(message)) {
+      return { message: message.join('، '), code: payload.error?.code ?? null };
+    }
+    if (typeof message === 'string' && message) {
+      return { message, code: payload.error?.code ?? null };
+    }
   } catch {
     // Use the generic message below.
   }
-  return 'امکان انجام درخواست وجود ندارد. دوباره تلاش کنید.';
+  return { message: 'امکان انجام درخواست وجود ندارد. دوباره تلاش کنید.', code: null };
 }
 
 export function CheckoutFlow() {
@@ -114,6 +132,9 @@ export function CheckoutFlow() {
   const [pendingOrderTotalToman, setPendingOrderTotalToman] = useState<number | null>(null);
   const [priceChange, setPriceChange] = useState<CheckoutPriceChange | null>(null);
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
+  const [staleCart, setStaleCart] = useState(false);
+  const [uncertainCheckout, setUncertainCheckout] = useState<'order' | 'payment' | null>(null);
+  const paymentIdempotencyKey = useRef<string | null>(null);
   const checkoutTracked = useRef(false);
 
   const selectedAddress = useMemo(
@@ -159,15 +180,23 @@ export function CheckoutFlow() {
     void fetch('/api/auth/me', { cache: 'no-store' })
       .then(async (response) => {
         if (!active) return;
-        if (!response.ok) return setAuth({ status: 'anonymous' });
+        if (response.status === 401) return setAuth({ status: 'anonymous', expired: true });
+        if (response.status === 403) return setAuth({ status: 'forbidden' });
+        if (!response.ok) return setAuth({ status: 'unavailable' });
         const user = (await response.json()) as CurrentUser;
         setAuth({ status: 'authenticated', user });
         setAddressFields(emptyAddress(user.phone));
       })
-      .catch(() => active && setAuth({ status: 'anonymous' }));
+      .catch(() => active && setAuth({ status: 'unavailable' }));
     return () => {
       active = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const resumeCheckout = () => window.location.reload();
+    window.addEventListener(AUTHENTICATION_SUCCEEDED_EVENT, resumeCheckout);
+    return () => window.removeEventListener(AUTHENTICATION_SUCCEEDED_EVENT, resumeCheckout);
   }, []);
 
   useEffect(() => {
@@ -176,7 +205,8 @@ export function CheckoutFlow() {
     void fetch('/api/profile/addresses', { cache: 'no-store' })
       .then(async (response) => {
         if (!active) return;
-        if (!response.ok) return setAddressError(await readErrorMessage(response));
+        if (response.status === 401) return setAuth({ status: 'anonymous', expired: true });
+        if (!response.ok) return setAddressError((await readError(response)).message);
         const payload: unknown = await response.json();
         const nextAddresses = Array.isArray(payload) ? payload.filter(isUserAddress) : [];
         setAddresses(nextAddresses);
@@ -219,7 +249,8 @@ export function CheckoutFlow() {
       }),
     });
     if (!response.ok) {
-      setCheckoutError(await readErrorMessage(response));
+      if (response.status === 401) setAuth({ status: 'anonymous', expired: true });
+      setCheckoutError((await readError(response)).message);
       return null;
     }
     const payload: unknown = await response.json();
@@ -234,10 +265,18 @@ export function CheckoutFlow() {
 
   async function submitCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (auth.status !== 'authenticated' || items.length === 0 || checkoutLoading) return;
+    if (
+      auth.status !== 'authenticated' ||
+      items.length === 0 ||
+      checkoutLoading ||
+      uncertainCheckout ||
+      staleCart
+    )
+      return;
     setCheckoutLoading(true);
     setCheckoutError(null);
 
+    let phase: 'order' | 'payment' = 'order';
     try {
       let orderId = pendingOrderId;
       let orderNumber = completedOrderNumber;
@@ -270,7 +309,23 @@ export function CheckoutFlow() {
           body: JSON.stringify(orderBody),
         });
         if (!orderResponse.ok) {
-          setCheckoutError(await readErrorMessage(orderResponse));
+          if (orderResponse.status === 401) setAuth({ status: 'anonymous', expired: true });
+          const orderError = await readError(orderResponse);
+          if (
+            orderResponse.status === 404 ||
+            (orderResponse.status === 409 &&
+              ['INVENTORY_NOT_AVAILABLE', 'INVENTORY_STATE_CHANGED'].includes(
+                orderError.code ?? '',
+              ))
+          ) {
+            setStaleCart(true);
+            setCheckoutError(
+              'محصول، موجودی یا آدرس ذخیره‌شده دیگر در دسترس نیست. سبد و آدرس را بررسی و اصلاح کنید.',
+            );
+            return;
+          }
+          if (orderResponse.status >= 500) setUncertainCheckout('order');
+          setCheckoutError(orderError.message);
           return;
         }
         const order = (await orderResponse.json()) as CustomerOrderDetail;
@@ -293,14 +348,21 @@ export function CheckoutFlow() {
       }
 
       setPriceChange(null);
+      phase = 'payment';
+      paymentIdempotencyKey.current ??= crypto.randomUUID();
       const paymentResponse = await fetch('/api/checkout/payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, idempotencyKey: crypto.randomUUID() }),
+        body: JSON.stringify({ orderId, idempotencyKey: paymentIdempotencyKey.current }),
       });
       if (!paymentResponse.ok) {
+        if (paymentResponse.status === 401) setAuth({ status: 'anonymous', expired: true });
+        if (paymentResponse.status >= 500 || paymentResponse.status === 409)
+          setUncertainCheckout('payment');
         setCheckoutError(
-          `${await readErrorMessage(paymentResponse)} سفارش ${toPersianDigits(orderNumber ?? '')} ثبت شده و می‌توانید پرداخت را دوباره تلاش کنید.`,
+          paymentResponse.status >= 500 || paymentResponse.status === 409
+            ? 'وضعیت آغاز پرداخت مشخص نیست. پیش از هر اقدام دوباره، سفارش را در حساب کاربری بررسی کنید.'
+            : `${(await readError(paymentResponse)).message} سفارش ${toPersianDigits(orderNumber ?? '')} ثبت شده است.`,
         );
         return;
       }
@@ -312,16 +374,32 @@ export function CheckoutFlow() {
         setCompletedOrderNumber(orderNumber);
         return;
       }
-      if (!payment.paymentUrl) {
-        setCheckoutError('درگاه پرداخت آدرس انتقال معتبر برنگرداند.');
+      let gatewayUrl: URL;
+      try {
+        gatewayUrl = new URL(payment.paymentUrl ?? '');
+        const localHttpGateway =
+          process.env.NODE_ENV !== 'production' &&
+          gatewayUrl.protocol === 'http:' &&
+          ['localhost', '127.0.0.1'].includes(gatewayUrl.hostname);
+        if (gatewayUrl.protocol !== 'https:' && !localHttpGateway) {
+          throw new Error('Invalid gateway protocol');
+        }
+      } catch {
+        setUncertainCheckout('payment');
+        setCheckoutError('آدرس درگاه معتبر نیست. پیش از تلاش دوباره وضعیت سفارش را بررسی کنید.');
         return;
       }
+      window.location.assign(gatewayUrl.toString());
       clearCart();
       setPendingOrderId(null);
       setPendingOrderTotalToman(null);
-      window.location.assign(payment.paymentUrl);
     } catch {
-      setCheckoutError('ارتباط با سرویس سفارش یا پرداخت برقرار نشد. دوباره تلاش کنید.');
+      setUncertainCheckout(phase);
+      setCheckoutError(
+        phase === 'payment'
+          ? 'وضعیت آغاز پرداخت مشخص نیست. پرداخت را تکرار نکنید؛ ابتدا سفارش را در حساب کاربری بررسی کنید.'
+          : 'پاسخ ثبت سفارش دریافت نشد. پیش از تلاش دوباره، سفارش‌های خود را در حساب کاربری بررسی کنید.',
+      );
     } finally {
       setCheckoutLoading(false);
     }
@@ -356,9 +434,26 @@ export function CheckoutFlow() {
     return (
       <div className="py-10">
         <EmptyState
-          title="برای ادامه خرید وارد شوید"
-          description="از بخش حساب کاربری وارد شوید و سپس به صفحه پرداخت برگردید."
-          action={<ButtonLink href="/">بازگشت به فروشگاه</ButtonLink>}
+          title={auth.expired ? 'نشست شما منقضی شده است' : 'برای ادامه خرید وارد شوید'}
+          description="از بخش حساب کاربری دوباره وارد شوید و سپس به صفحه پرداخت برگردید."
+          action={<Button onClick={openAuthModal}>ورود یا ثبت‌نام</Button>}
+        />
+      </div>
+    );
+  }
+  if (auth.status === 'unavailable' || auth.status === 'forbidden') {
+    return (
+      <div className="py-10">
+        <EmptyState
+          title={
+            auth.status === 'forbidden' ? 'دسترسی به پرداخت مجاز نیست' : 'اتصال به سرویس برقرار نشد'
+          }
+          description={
+            auth.status === 'forbidden'
+              ? 'برای بررسی دسترسی حساب خود با پشتیبانی تماس بگیرید.'
+              : 'سبد شما حفظ شده است. بعد از برقراری ارتباط صفحه را دوباره باز کنید.'
+          }
+          action={<ButtonLink href="/cart">بازگشت به سبد خرید</ButtonLink>}
         />
       </div>
     );
@@ -610,17 +705,32 @@ export function CheckoutFlow() {
               {formatTomanPrice(priceChange?.orderTotalToman ?? payableAmount)}
             </strong>
           </div>
-          <Button
-            type="submit"
-            loading={checkoutLoading}
-            className="shrink-0 px-5 lg:mt-6 lg:w-full"
-          >
-            {priceChange
-              ? 'تأیید مبلغ جدید و پرداخت'
-              : pendingOrderId
-                ? 'تلاش مجدد برای پرداخت'
-                : 'ثبت سفارش و پرداخت'}
-          </Button>
+          {uncertainCheckout || staleCart ? (
+            <ButtonLink
+              href={
+                staleCart
+                  ? '/cart'
+                  : pendingOrderId
+                    ? `/account/orders/${pendingOrderId}`
+                    : '/account/orders'
+              }
+              className="shrink-0 px-5 lg:mt-6 lg:w-full"
+            >
+              {staleCart ? 'بازبینی و اصلاح سبد خرید' : 'بررسی وضعیت سفارش'}
+            </ButtonLink>
+          ) : (
+            <Button
+              type="submit"
+              loading={checkoutLoading}
+              className="shrink-0 px-5 lg:mt-6 lg:w-full"
+            >
+              {priceChange
+                ? 'تأیید مبلغ جدید و پرداخت'
+                : pendingOrderId
+                  ? 'تلاش مجدد برای پرداخت'
+                  : 'ثبت سفارش و پرداخت'}
+            </Button>
+          )}
         </div>
         {checkoutError ? (
           <p role="alert" className="mt-3 text-xs leading-5 text-red-600 lg:mt-5 lg:leading-6">

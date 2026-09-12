@@ -9,6 +9,8 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     '.next/**',
+    // Playwright runs Next.js with a separate distDir; generated files are not source.
+    '.next-e2e/**',
     'out/**',
     'build/**',
     'next-env.d.ts',

@@ -5,15 +5,19 @@ import { Button, ButtonLink } from '@/components/ui/button';
 type ShopErrorProps = Readonly<{
   error: Error & { digest?: string };
   reset: () => void;
+  fullPage?: boolean;
 }>;
 
-export default function ShopError({ reset }: ShopErrorProps) {
+export default function ShopError({ reset, fullPage = false }: ShopErrorProps) {
   return (
-    <main id="main-content" className="sf-container py-[var(--sf-section-space)]">
+    <main
+      id="main-content"
+      className={`sf-container py-[var(--sf-section-space)] ${fullPage ? 'grid min-h-dvh place-items-center' : ''}`}
+    >
       <section
         role="alert"
         aria-labelledby="storefront-error-title"
-        className="mx-auto max-w-3xl border border-[var(--sf-color-border)] px-6 py-16 text-center sm:px-12 sm:py-24"
+        className="mx-auto w-full max-w-3xl border border-[var(--sf-color-border)] px-6 py-16 text-center sm:px-12 sm:py-24"
       >
         <p className="text-xs tracking-[0.18em] text-[var(--sf-color-muted)]">اختلال موقت</p>
         <h1 id="storefront-error-title" className="mt-4 text-3xl font-medium sm:text-4xl">
