@@ -1,0 +1,169 @@
+name: hamidian-silver-production
+
+# Run explicitly with: docker compose --env-file /etc/hamidian-silver/production.env -f compose.production.yaml ...
+# Only API/Next are bound to the host loopback for a host-installed Nginx (VPS-003).
+x-log-limits: &log-limits
+  driver: local
+  options:
+    max-size: 10m
+    max-file: '3'
+
+x-http-health: &http-health
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 40s
+
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hamidian_silver}
+      POSTGRES_USER: ${POSTGRES_USER:-hamidian}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the private production env file}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    stop_grace_period: 60s
+    logging: *log-limits
+
+  redis:
+    image: redis:8.10.0-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes', '--appendfsync', 'everysec']
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    logging: *log-limits
+
+  # Explicit one-shot job: never part of the API entrypoint or a normal `up`.
+  migrate:
+    profiles: ['migrate']
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: migrate
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set an internal postgresql://...@postgres:5432/... URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+    logging: *log-limits
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:3100:3000'
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set an internal postgresql://...@postgres:5432/... URL}
+      OTP_PEPPER: ${OTP_PEPPER:?Set OTP_PEPPER in the private production env file}
+      MEDIA_STORAGE_ROOT: /var/lib/hamidian-silver/media
+      MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-https://media.hamidian.shop/media}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://hamidian.shop,https://admin.hamidian.shop}
+      SMS_PROVIDER: ${SMS_PROVIDER:-disabled}
+      KAVENEGAR_API_KEY: ${KAVENEGAR_API_KEY:-}
+      KAVENEGAR_OTP_TEMPLATE: ${KAVENEGAR_OTP_TEMPLATE:-}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-disabled}
+      PAYMENT_CALLBACK_URL: ${PAYMENT_CALLBACK_URL:-https://hamidian.shop/api/payment/callback}
+      ZARINPAL_MERCHANT_ID: ${ZARINPAL_MERCHANT_ID:-}
+      ZARINPAL_SANDBOX: ${ZARINPAL_SANDBOX:-true}
+      ZIBAL_MERCHANT_ID: ${ZIBAL_MERCHANT_ID:-}
+      MELLAT_TERMINAL_ID: ${MELLAT_TERMINAL_ID:-}
+      MELLAT_USERNAME: ${MELLAT_USERNAME:-}
+      MELLAT_PASSWORD: ${MELLAT_PASSWORD:-}
+      SHIPPING_PROVIDER: disabled
+      MANUAL_SHIPPING_COST_TOMAN: ${MANUAL_SHIPPING_COST_TOMAN:-0}
+    volumes:
+      - type: bind
+        source: /var/lib/hamidian-silver/media
+        target: /var/lib/hamidian-silver/media
+        bind:
+          create_host_path: false
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/v1/health/ready',{signal:AbortSignal.timeout(3500)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      <<: *http-health
+    stop_grace_period: 30s
+    logging: *log-limits
+
+  storefront:
+    build:
+      context: .
+      dockerfile: apps/storefront/Dockerfile
+      args:
+        MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-https://media.hamidian.shop/media}
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:3101:3000'
+    environment:
+      HAMIDIAN_API_ORIGIN: http://api:3000
+      MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-https://media.hamidian.shop/media}
+      STOREFRONT_PUBLIC_ORIGIN: https://hamidian.shop
+      GOOGLE_SITE_VERIFICATION: ${GOOGLE_SITE_VERIFICATION:-}
+      NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(3500)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      <<: *http-health
+    logging: *log-limits
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        NEXT_PUBLIC_STOREFRONT_URL: https://hamidian.shop
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:3102:3000'
+    environment:
+      HAMIDIAN_API_ORIGIN: http://api:3000
+      NEXT_PUBLIC_STOREFRONT_URL: https://hamidian.shop
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(3500)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      <<: *http-health
+    logging: *log-limits
+
+volumes:
+  postgres_data:
+  redis_data:
