@@ -606,20 +606,25 @@ async function seedDemoCatalog(): Promise<void> {
     sizeIdByCode.set(size.code, size.id);
   }
 
-  const warehouse = await prisma.warehouse.upsert({
-    where: { code: 'DEMO-STORE' },
-    update: {
-      name: 'انبار تست فروشگاه',
-      isDefault: true,
-      isActive: true,
-      deletedAt: null,
-    },
-    create: {
-      code: 'DEMO-STORE',
-      name: 'انبار تست فروشگاه',
-      isDefault: true,
-    },
-  });
+  // Checkout reserves inventory from the active default warehouse.
+  const warehouse =
+    (await prisma.warehouse.findFirst({
+      where: { isDefault: true, isActive: true, deletedAt: null },
+    })) ??
+    (await prisma.warehouse.upsert({
+      where: { code: 'DEMO-STORE' },
+      update: {
+        name: 'انبار تست فروشگاه',
+        isDefault: true,
+        isActive: true,
+        deletedAt: null,
+      },
+      create: {
+        code: 'DEMO-STORE',
+        name: 'انبار تست فروشگاه',
+        isDefault: true,
+      },
+    }));
 
   const goldRate = await prisma.platingRate.upsert({
     where: { type: PlatingType.GOLD },
