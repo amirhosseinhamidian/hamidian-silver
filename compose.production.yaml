@@ -98,6 +98,8 @@ services:
       SHIPPING_PROVIDER: disabled
       MANUAL_SHIPPING_COST_TOMAN: ${MANUAL_SHIPPING_COST_TOMAN:-0}
     volumes:
+      # VPS-006: keep the sole writable media tree outside the release directory.
+      # Run deploy/check-production-media.sh on the host before starting API.
       - type: bind
         source: /var/lib/hamidian-silver/media
         target: /var/lib/hamidian-silver/media

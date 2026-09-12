@@ -17,9 +17,10 @@ function collectFiles(directory: string, suffix: string): string[] {
 describe('admin BFF authorization coverage', () => {
   it('keeps protected route handlers as thin delegates without direct upstream fetches', () => {
     const violations: string[] = [];
-    const protectedRoutes = collectFiles(API_ROUTES_ROOT, 'route.ts').filter(
-      (file) => !relative(API_ROUTES_ROOT, file).startsWith(`auth${sep}`),
-    );
+    const protectedRoutes = collectFiles(API_ROUTES_ROOT, 'route.ts').filter((file) => {
+      const route = relative(API_ROUTES_ROOT, file);
+      return !route.startsWith(`auth${sep}`) && route !== join('health', 'route.ts');
+    });
 
     for (const file of protectedRoutes) {
       const source = readFileSync(file, 'utf8');
@@ -29,6 +30,18 @@ describe('admin BFF authorization coverage', () => {
     }
 
     expect(violations, `Unsafe admin route handlers:\n${violations.join('\n')}`).toEqual([]);
+  });
+
+  it('keeps the public healthcheck local and limited to GET', () => {
+    const source = readFileSync(join(API_ROUTES_ROOT, 'health', 'route.ts'), 'utf8');
+
+    expect(source).toContain('export function GET()');
+    expect(source).toContain("new Response('ok'");
+    expect(source).not.toContain("from '@/lib/");
+    expect(source).not.toMatch(/\bfetch\s*\(|\bcookies\s*\(|SESSION_COOKIE_NAME/);
+    expect(source).not.toMatch(
+      /\bexport\s+(?:(?:async\s+)?function|const)\s+(?:POST|PUT|PATCH|DELETE)\b/,
+    );
   });
 
   it('requires a session cookie in every protected BFF before forwarding upstream', () => {

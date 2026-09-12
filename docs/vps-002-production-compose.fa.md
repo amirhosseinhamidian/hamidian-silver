@@ -12,7 +12,8 @@ PostgreSQL، Redis، API، Storefront و Admin را روی یک VPS اجرا م�
   آدرس‌ها وصل می‌شود؛ هرگز این bindها را به `0.0.0.0` تغییر ندهید.
 - API فقط بعد از healthy شدن دیتابیس و Redis شروع می‌شود؛ صفحه‌های Next نیز
   پس از ready شدن API شروع می‌شوند. healthcheck API به
-  `/api/v1/health/ready` متصل است (و دیتابیس را می‌سنجد). `/api/health` در دو
+  `/api/v1/health/ready` متصل است (از VPS-006 به بعد در production دیتابیس و
+  مسیر رسانهٔ دائمی را می‌سنجد). `/api/health` در دو
   اپ Next فقط زنده‌بودن همان سرور Next را می‌سنجد؛ جای پایش جریان خرید نیست.
 - restart سرویس‌های دائمی `unless-stopped` است، خروجی job migration هرگز restart
   نمی‌شود، و logهای کانتینر اندازهٔ محدود دارند.

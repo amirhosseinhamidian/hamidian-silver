@@ -3,6 +3,7 @@ dist/
 coverage/
 .pnpm-store/
 **/.next/**
+**/.next-e2e/**
 **/next-env.d.ts
 pnpm-lock.yaml
 apps/api/src/generated/prisma/
