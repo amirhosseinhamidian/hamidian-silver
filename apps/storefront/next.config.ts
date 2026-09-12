@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { resolve } from 'node:path';
 
 const DEFAULT_MEDIA_PUBLIC_BASE_URL = 'http://localhost:3000/media';
 
@@ -34,6 +35,8 @@ const e2eMode = process.env.STOREFRONT_E2E === 'true';
 const nextConfig: NextConfig = {
   experimental: { globalNotFound: true },
   ...(e2eMode ? { distDir: '.next-e2e' } : {}),
+  output: 'standalone',
+  outputFileTracingRoot: resolve(process.cwd(), '../..'),
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86_400,

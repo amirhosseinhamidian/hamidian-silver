@@ -1,0 +1,25 @@
+# Docker builds always use the monorepo root as their context.
+.git
+**/.git
+**/node_modules
+**/.next
+**/.next-e2e
+**/dist
+**/build
+**/coverage
+**/playwright-report
+**/test-results
+**/.data
+**/.pnpm-store
+**/*.tsbuildinfo
+apps/api/src/generated/prisma
+apps/storefront/public/dev-catalog
+
+# Never package local configuration, credentials, or uploaded media.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.patch
