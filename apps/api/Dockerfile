@@ -36,8 +36,11 @@ RUN DATABASE_URL=postgresql://build:build@localhost:5432/build pnpm db:generate 
 # Explicit one-shot seed. Compose fixes SEED_DEMO_CATALOG per environment;
 # this build stage is never the runtime API entrypoint.
 FROM builder AS operational-seed
+# Prisma spawns the configured `tsx` command; only the seed image needs its bin path.
+ENV PATH="/workspace/node_modules/.bin:${PATH}"
+RUN test -x /workspace/node_modules/.bin/tsx
 USER node
-CMD ["pnpm", "exec", "prisma", "db", "seed"]
+CMD ["./node_modules/.bin/prisma", "db", "seed"]
 
 FROM node:24-bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates openssl \
