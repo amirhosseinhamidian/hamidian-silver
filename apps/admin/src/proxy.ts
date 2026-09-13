@@ -14,16 +14,23 @@ const SAFE_HTTP_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 export function isTrustedMutationRequest(request: NextRequest): boolean {
   if (SAFE_HTTP_METHODS.has(request.method.toUpperCase())) return true;
 
+  const fetchSite = request.headers.get('sec-fetch-site');
   const origin = request.headers.get('origin');
   if (origin) {
     try {
-      return new URL(origin).origin === request.nextUrl.origin;
+      if (new URL(origin).origin === request.nextUrl.origin) return true;
     } catch {
       return false;
     }
+
+    // A TLS-terminating reverse proxy can leave Next.js with an internal HTTP
+    // request URL even though the browser made a same-origin HTTPS request.
+    // Sec-Fetch-Site is browser-controlled and still distinguishes that case
+    // from cross-site form or fetch requests.
+    return fetchSite === 'same-origin';
   }
 
-  return request.headers.get('sec-fetch-site') === 'same-origin';
+  return fetchSite === 'same-origin';
 }
 
 export function isPublicAdminRoute(pathname: string): boolean {

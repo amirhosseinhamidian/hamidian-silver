@@ -54,6 +54,22 @@ describe('admin proxy', () => {
     expect(proxy(request).headers.get('x-middleware-next')).toBe('1');
   });
 
+  it('allows same-origin browser mutations behind a TLS-terminating reverse proxy', () => {
+    const request = new NextRequest('http://admin:3000/api/auth/otp/request', {
+      method: 'POST',
+      headers: {
+        host: 'admin.staging.hamidian.shop',
+        origin: 'https://admin.staging.hamidian.shop',
+        'sec-fetch-site': 'same-origin',
+        'x-forwarded-host': 'admin.staging.hamidian.shop',
+        'x-forwarded-proto': 'https',
+      },
+    });
+
+    expect(isTrustedMutationRequest(request)).toBe(true);
+    expect(proxy(request).headers.get('x-middleware-next')).toBe('1');
+  });
+
   it('rejects cross-origin administrative mutations before a BFF can use the session cookie', async () => {
     const response = proxy(
       new NextRequest('https://admin.example/api/refunds/refund-1/confirm', {
