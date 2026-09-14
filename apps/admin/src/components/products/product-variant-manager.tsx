@@ -470,7 +470,7 @@ function SizeSheet({ size }: Readonly<{ size?: CatalogSize }>) {
   );
 }
 
-function SizeMobileCard({ size }: Readonly<{ size: CatalogSize }>) {
+function SizeMobileCard({ size, canWrite }: Readonly<{ size: CatalogSize; canWrite: boolean }>) {
   const formId = useId();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -482,20 +482,27 @@ function SizeMobileCard({ size }: Readonly<{ size: CatalogSize }>) {
       items={[{ label: 'ترتیب نمایش', value: formatAdminInteger(size.sortOrder) }]}
       detailsTitle={`سایز ${size.label}`}
       detailsDescription="جزئیات کامل و امکان ویرایش سریع"
+      detailsLabel={canWrite ? 'مشاهده جزئیات و عملیات' : 'مشاهده جزئیات'}
       detailsOpen={open}
       onDetailsOpenChange={setOpen}
       details={
-        <SizeForm
-          formId={formId}
-          size={size}
-          onSaved={() => setOpen(false)}
-          onPendingChange={setPending}
-        />
+        canWrite ? (
+          <SizeForm
+            formId={formId}
+            size={size}
+            onSaved={() => setOpen(false)}
+            onPendingChange={setPending}
+          />
+        ) : (
+          <Alert tone="neutral">برای ویرایش سایز به مجوز مدیریت کاتالوگ نیاز دارید.</Alert>
+        )
       }
       detailsFooter={
-        <Button type="submit" form={formId} loading={pending}>
-          ذخیره تغییرات
-        </Button>
+        canWrite ? (
+          <Button type="submit" form={formId} loading={pending}>
+            ذخیره تغییرات
+          </Button>
+        ) : undefined
       }
     />
   );
@@ -526,16 +533,8 @@ export function ProductVariantManager({ product, sizes }: ProductVariantManagerP
       ),
     },
   ];
-  const sizeColumns: readonly DataTableColumn<CatalogSize>[] = [
-    { id: 'label', header: 'عنوان', cell: (size) => size.label },
-    { id: 'code', header: 'کد', cell: (size) => toPersianDigits(size.code) },
-    { id: 'order', header: 'ترتیب', cell: (size) => formatAdminInteger(size.sortOrder) },
-    { id: 'status', header: 'وضعیت', cell: (size) => statusBadge(size.active) },
-    { id: 'actions', header: 'عملیات', cell: (size) => <SizeSheet size={size} /> },
-  ];
-
   return (
-    <div className="mt-6 space-y-6">
+    <div className="space-y-6">
       <Card
         title="تنوع‌ها و SKU"
         description={`${formatAdminInteger(product.variants.length)} تنوع برای این محصول ثبت شده است.`}
@@ -567,24 +566,47 @@ export function ProductVariantManager({ product, sizes }: ProductVariantManagerP
           compact
         />
       </Card>
-
-      <Card
-        title="سایزهای کاتالوگ"
-        description="تعریف و مرتب‌سازی سایزهای مشترک محصولات"
-        action={<SizeSheet />}
-      >
-        <ResponsiveDataView
-          mobileLabel="کارت‌های سایز کاتالوگ"
-          renderMobileCard={(size) => <SizeMobileCard size={size} />}
-          caption="جدول سایزهای کاتالوگ"
-          columns={sizeColumns}
-          rows={sizes}
-          getRowKey={(size) => size.id}
-          emptyTitle="سایزی ثبت نشده است"
-          emptyDescription="اولین سایز کاتالوگ را اضافه کنید."
-          compact
-        />
-      </Card>
     </div>
+  );
+}
+
+export function CatalogSizeManager({
+  sizes,
+  canWrite = true,
+}: Readonly<{ sizes: readonly CatalogSize[]; canWrite?: boolean }>) {
+  const sizeColumns: readonly DataTableColumn<CatalogSize>[] = [
+    { id: 'label', header: 'عنوان', cell: (size) => size.label },
+    { id: 'code', header: 'کد', cell: (size) => toPersianDigits(size.code) },
+    { id: 'order', header: 'ترتیب', cell: (size) => formatAdminInteger(size.sortOrder) },
+    { id: 'status', header: 'وضعیت', cell: (size) => statusBadge(size.active) },
+    ...(canWrite
+      ? ([
+          {
+            id: 'actions',
+            header: 'عملیات',
+            cell: (size: CatalogSize) => <SizeSheet size={size} />,
+          },
+        ] as const)
+      : []),
+  ];
+
+  return (
+    <Card
+      title="سایزهای کاتالوگ"
+      description="سایزهای مشترک محصولات سایزبندی‌شده را تعریف، مرتب یا غیرفعال کنید."
+      action={canWrite ? <SizeSheet /> : undefined}
+    >
+      <ResponsiveDataView
+        mobileLabel="کارت‌های سایز کاتالوگ"
+        renderMobileCard={(size) => <SizeMobileCard size={size} canWrite={canWrite} />}
+        caption="جدول سایزهای کاتالوگ"
+        columns={sizeColumns}
+        rows={sizes}
+        getRowKey={(size) => size.id}
+        emptyTitle="سایزی ثبت نشده است"
+        emptyDescription="اولین سایز کاتالوگ را اضافه کنید."
+        compact
+      />
+    </Card>
   );
 }

@@ -13,6 +13,7 @@ import type { DataTableColumn } from '@/components/ui/data-table';
 import { FilterBar, SearchField } from '@/components/ui/filter-bar';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { MoneyInput } from '@/components/ui/money-input';
 import { MobileDataCard } from '@/components/ui/mobile-data-card';
 import { ResponsiveDataView } from '@/components/ui/responsive-data-view';
 import { Select } from '@/components/ui/select';
@@ -158,13 +159,11 @@ function RateForm({ formId, type, rate, onSaved, onPendingChange }: RateFormProp
       )}
       <FormField id={`${formId}-price`} label="نرخ هر گرم" hint="مبلغ به تومان" required>
         {(props) => (
-          <Input
+          <MoneyInput
             {...props}
             name="pricePerGramToman"
             defaultValue={toPersianDigits(rate?.pricePerGramToman ?? 0)}
             placeholder="مثلاً ۵۰٬۰۰۰"
-            inputMode="numeric"
-            onInput={localizeNumberInput}
             required
           />
         )}

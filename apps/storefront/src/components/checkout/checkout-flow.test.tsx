@@ -21,6 +21,13 @@ const cartItem: CartItem = {
   maxQuantity: 4,
 };
 
+const freeShipping = {
+  mode: 'FREE',
+  baseCostToman: 0,
+  thresholdToman: null,
+  discountedCostToman: null,
+} as const;
+
 const { clearCart } = vi.hoisted(() => ({
   clearCart: vi.fn(),
 }));
@@ -79,6 +86,7 @@ describe('CheckoutFlow price integrity', () => {
         return jsonResponse({
           id: '22222222-2222-4222-8222-222222222222',
           orderNumber: 'HS-TEST',
+          shippingTotalToman: 50_000,
           grandTotalToman: 850_000,
         });
       }
@@ -94,7 +102,7 @@ describe('CheckoutFlow price integrity', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<CheckoutFlow />);
+    render(<CheckoutFlow shippingPricing={freeShipping} />);
 
     await screen.findByText('اطلاعات ارسال');
     await screen.findByText('آدرس پیش‌فرض');
@@ -102,7 +110,11 @@ describe('CheckoutFlow price integrity', () => {
 
     const priceAlert = await screen.findByRole('alert');
     expect(priceAlert).toHaveTextContent('مبلغ جدید را بررسی و تأیید کنید.');
-    expect(screen.getByText(formatTomanPrice(800_000))).toHaveClass('line-through');
+    expect(
+      screen
+        .getAllByText(formatTomanPrice(800_000))
+        .some((element) => element.classList.contains('line-through')),
+    ).toBe(true);
     expect(screen.getByText(formatTomanPrice(850_000))).toBeInTheDocument();
     expect(
       fetchMock.mock.calls.filter(([input]) => String(input) === '/api/checkout/payment'),
@@ -126,7 +138,7 @@ describe('CheckoutFlow price integrity', () => {
       'fetch',
       vi.fn(async () => jsonResponse({ message: 'unavailable' }, 503)),
     );
-    const unavailable = render(<CheckoutFlow />);
+    const unavailable = render(<CheckoutFlow shippingPricing={freeShipping} />);
 
     expect(await screen.findByText('اتصال به سرویس برقرار نشد')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'بازگشت به سبد خرید' })).toHaveAttribute(
@@ -140,7 +152,7 @@ describe('CheckoutFlow price integrity', () => {
       'fetch',
       vi.fn(async () => jsonResponse({ message: 'Unauthorized' }, 401)),
     );
-    render(<CheckoutFlow />);
+    render(<CheckoutFlow shippingPricing={freeShipping} />);
 
     expect(await screen.findByText('نشست شما منقضی شده است')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ورود یا ثبت‌نام' })).toBeInTheDocument();
@@ -173,7 +185,7 @@ describe('CheckoutFlow price integrity', () => {
         throw new Error(`Unexpected request: ${url}`);
       });
       vi.stubGlobal('fetch', fetchMock);
-      const rendered = render(<CheckoutFlow />);
+      const rendered = render(<CheckoutFlow shippingPricing={freeShipping} />);
 
       await screen.findByText('آدرس پیش‌فرض');
       fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت' }));
@@ -214,13 +226,14 @@ describe('CheckoutFlow price integrity', () => {
         return jsonResponse({
           id: '22222222-2222-4222-8222-222222222222',
           orderNumber: 'HS-1001',
+          shippingTotalToman: 0,
           grandTotalToman: 800_000,
         });
       if (url === '/api/checkout/payment') return jsonResponse({ message: 'Gateway timeout' }, 503);
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<CheckoutFlow />);
+    render(<CheckoutFlow shippingPricing={freeShipping} />);
 
     await screen.findByText('آدرس پیش‌فرض');
     fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت' }));

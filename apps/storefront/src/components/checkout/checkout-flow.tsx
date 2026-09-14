@@ -14,6 +14,10 @@ import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { useCart } from '@/lib/cart/cart-store';
 import { buildCreateOrderBody } from '@/lib/checkout/checkout-payload';
 import { cityOptionsFor, PROVINCE_OPTIONS } from '@/lib/checkout/iran-locations';
+import {
+  calculatePublicShippingCost,
+  type PublicShippingPricing,
+} from '@/lib/shipping/public-shipping-pricing';
 
 type CurrentUser = components['schemas']['CurrentUserResponseDto'];
 type CustomerOrderDetail = components['schemas']['CustomerOrderDetailDto'];
@@ -24,7 +28,7 @@ type AuthState =
   | { status: 'unavailable' }
   | { status: 'forbidden' }
   | { status: 'authenticated'; user: CurrentUser };
-type CheckoutPriceChange = Readonly<{ cartSubtotalToman: number; orderTotalToman: number }>;
+type CheckoutPriceChange = Readonly<{ previousTotalToman: number; orderTotalToman: number }>;
 type UserAddress = Readonly<{
   id: string;
   title: string;
@@ -117,7 +121,9 @@ async function readError(response: Response): Promise<{ message: string; code: s
   return { message: 'امکان انجام درخواست وجود ندارد. دوباره تلاش کنید.', code: null };
 }
 
-export function CheckoutFlow() {
+export function CheckoutFlow({
+  shippingPricing = null,
+}: Readonly<{ shippingPricing?: PublicShippingPricing | null }>) {
   const { items, itemCount, subtotalToman, clearCart } = useCart();
   const [auth, setAuth] = useState<AuthState>({ status: 'checking' });
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
@@ -130,6 +136,7 @@ export function CheckoutFlow() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [pendingOrderTotalToman, setPendingOrderTotalToman] = useState<number | null>(null);
+  const [pendingOrderShippingToman, setPendingOrderShippingToman] = useState<number | null>(null);
   const [priceChange, setPriceChange] = useState<CheckoutPriceChange | null>(null);
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
   const [staleCart, setStaleCart] = useState(false);
@@ -156,6 +163,10 @@ export function CheckoutFlow() {
       ? options
       : [{ value: addressFields.city, label: addressFields.city }, ...options];
   }, [addressFields.city, addressFields.province]);
+  const estimatedShippingToman = shippingPricing
+    ? calculatePublicShippingCost(shippingPricing, subtotalToman)
+    : null;
+  const estimatedTotalToman = subtotalToman + (estimatedShippingToman ?? 0);
 
   useEffect(() => {
     if (checkoutTracked.current || items.length === 0) {
@@ -329,7 +340,12 @@ export function CheckoutFlow() {
           return;
         }
         const order = (await orderResponse.json()) as CustomerOrderDetail;
-        if (!Number.isSafeInteger(order.grandTotalToman) || order.grandTotalToman < 0) {
+        if (
+          !Number.isSafeInteger(order.grandTotalToman) ||
+          order.grandTotalToman < 0 ||
+          !Number.isSafeInteger(order.shippingTotalToman) ||
+          order.shippingTotalToman < 0
+        ) {
           setCheckoutError('مبلغ نهایی معتبری از سرویس سفارش دریافت نشد. دوباره تلاش کنید.');
           return;
         }
@@ -337,10 +353,15 @@ export function CheckoutFlow() {
         orderNumber = order.orderNumber;
         setPendingOrderId(order.id);
         setPendingOrderTotalToman(order.grandTotalToman);
+        setPendingOrderShippingToman(order.shippingTotalToman);
         setCompletedOrderNumber(order.orderNumber);
-        if (order.grandTotalToman !== subtotalToman) {
+        if (
+          !shippingPricing ||
+          order.shippingTotalToman !== estimatedShippingToman ||
+          order.grandTotalToman !== estimatedTotalToman
+        ) {
           setPriceChange({
-            cartSubtotalToman: subtotalToman,
+            previousTotalToman: estimatedTotalToman,
             orderTotalToman: order.grandTotalToman,
           });
           return;
@@ -371,6 +392,7 @@ export function CheckoutFlow() {
         clearCart();
         setPendingOrderId(null);
         setPendingOrderTotalToman(null);
+        setPendingOrderShippingToman(null);
         setCompletedOrderNumber(orderNumber);
         return;
       }
@@ -393,6 +415,7 @@ export function CheckoutFlow() {
       clearCart();
       setPendingOrderId(null);
       setPendingOrderTotalToman(null);
+      setPendingOrderShippingToman(null);
     } catch {
       setUncertainCheckout(phase);
       setCheckoutError(
@@ -466,7 +489,8 @@ export function CheckoutFlow() {
     })),
     { value: NEW_ADDRESS_VALUE, label: 'افزودن آدرس جدید' },
   ];
-  const payableAmount = pendingOrderTotalToman ?? subtotalToman;
+  const payableAmount = pendingOrderTotalToman ?? estimatedTotalToman;
+  const displayedShippingToman = pendingOrderShippingToman ?? estimatedShippingToman;
 
   return (
     <form
@@ -676,16 +700,30 @@ export function CheckoutFlow() {
 
       <aside className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-12px_36px_rgb(17_17_17/0.1)] lg:sticky lg:inset-auto lg:top-20 lg:z-auto lg:h-fit lg:border lg:p-5 lg:shadow-none">
         <h2 className="hidden text-lg font-medium lg:block">خلاصه پرداخت</h2>
-        <div className="mt-5 hidden items-center justify-between gap-4 text-sm lg:flex">
-          <span className="text-[var(--sf-color-muted)]">تعداد کالا</span>
-          <span>{new Intl.NumberFormat('fa-IR').format(itemCount)}</span>
+        <div className="mt-4 grid gap-2 border-b border-[var(--sf-color-border)] pb-3 text-xs lg:mt-5 lg:text-sm">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-[var(--sf-color-muted)]">
+              جمع سبد ({new Intl.NumberFormat('fa-IR').format(itemCount)} کالا)
+            </span>
+            <span>{formatTomanPrice(subtotalToman)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-[var(--sf-color-muted)]">هزینه ارسال</span>
+            <span>
+              {displayedShippingToman === null
+                ? 'هنگام ثبت سفارش'
+                : displayedShippingToman === 0
+                  ? 'رایگان'
+                  : formatTomanPrice(displayedShippingToman)}
+            </span>
+          </div>
         </div>
         {priceChange ? (
           <div className="mb-3 lg:mb-0">
             <div className="hidden items-center justify-between gap-4 text-sm text-[var(--sf-color-muted)] lg:mt-3 lg:flex">
               <span>مبلغ قبلی سبد</span>
               <span className="line-through">
-                {formatTomanPrice(priceChange.cartSubtotalToman)}
+                {formatTomanPrice(priceChange.previousTotalToman)}
               </span>
             </div>
             <p

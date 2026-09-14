@@ -7,7 +7,7 @@ import { requestAdminCatalog, readJsonResponse } from '@/lib/catalog/catalog-api
 export async function forwardShippingMutation(
   request: Request,
   apiPath: string,
-  method: 'POST' | 'PATCH',
+  method: 'POST' | 'PATCH' | 'PUT',
 ): Promise<Response> {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token) return Response.json({ message: 'Authentication required.' }, { status: 401 });

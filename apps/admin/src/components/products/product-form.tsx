@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { type FormEvent, type InputEvent, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import {
@@ -15,6 +15,7 @@ import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { MoneyInput } from '@/components/ui/money-input';
 import { Select } from '@/components/ui/select';
 import type { ProductFormData } from '@/lib/catalog/catalog-data';
 import type { ProductSizeMode, ProductStatus } from '@/lib/catalog/catalog-model';
@@ -31,8 +32,26 @@ type EditableProductAttribute = Readonly<{
   value: string;
 }>;
 
+type EditableProductVariant = Readonly<{
+  id: string;
+  sku: string;
+  name: string;
+  sizeId: string;
+  weightGrams: string;
+}>;
+
 function createAttributeId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `attribute-${Date.now()}-${Math.random()}`;
+}
+
+function createVariant(): EditableProductVariant {
+  return {
+    id: globalThis.crypto?.randomUUID?.() ?? `variant-${Date.now()}-${Math.random()}`,
+    sku: '',
+    name: '',
+    sizeId: 'none',
+    weightGrams: '',
+  };
 }
 
 function optionalText(formData: FormData, name: string): string | undefined {
@@ -41,7 +60,11 @@ function optionalText(formData: FormData, name: string): string | undefined {
 }
 
 function optionalNumber(formData: FormData, name: string): number | undefined {
-  const value = toAsciiDigits(String(formData.get(name) ?? ''))
+  return optionalNumberValue(String(formData.get(name) ?? ''));
+}
+
+function optionalNumberValue(input: string): number | undefined {
+  const value = toAsciiDigits(input)
     .replace(/[٬,\s]/g, '')
     .replace('٫', '.');
   if (!value) return undefined;
@@ -49,8 +72,9 @@ function optionalNumber(formData: FormData, name: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
-function localizeNumberInput(event: InputEvent<HTMLInputElement>) {
-  event.currentTarget.value = toPersianDigits(toAsciiDigits(event.currentTarget.value));
+function isValidOptionalWeight(input: string): boolean {
+  const normalized = toAsciiDigits(input.trim()).replace('٫', '.');
+  return !normalized || /^\d+(?:\.\d{1,3})?$/.test(normalized);
 }
 
 function apiError(payload: unknown): string {
@@ -76,6 +100,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
       value: attribute.value,
     })),
   );
+  const [variants, setVariants] = useState<EditableProductVariant[]>(() => [createVariant()]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -150,33 +175,54 @@ export function ProductForm({ data, mode }: ProductFormProps) {
     };
 
     if (mode === 'create') {
-      const sku = String(formData.get('sku') ?? '').trim();
-      const weightGrams = optionalNumber(formData, 'weightGrams');
-      const sizeId = String(formData.get('sizeId') ?? 'none');
-      if (!sku) {
-        setError('برای ساخت محصول حداقل یک SKU الزامی است.');
+      const normalizedVariants = variants.map((variant) => ({
+        sku: variant.sku.trim(),
+        name: variant.name.trim(),
+        sizeId: variant.sizeId,
+        weightGrams: optionalNumberValue(variant.weightGrams),
+      }));
+      if (normalizedVariants.some((variant) => !variant.sku)) {
+        setError('SKU همه تنوع‌ها الزامی است.');
         return;
       }
-      if (Number.isNaN(weightGrams)) {
-        setError('وزن محصول باید فقط شامل عدد باشد.');
+      if (
+        variants.some((variant) => !isValidOptionalWeight(variant.weightGrams)) ||
+        normalizedVariants.some((variant) => Number.isNaN(variant.weightGrams))
+      ) {
+        setError('وزن تنوع‌ها باید فقط شامل عدد و حداکثر سه رقم اعشار باشد.');
         return;
       }
-      if (sizeMode === 'SIZED' && sizeId === 'none') {
-        setError('برای محصول سایزبندی‌شده، سایز تنوع اولیه را انتخاب کنید.');
+      const normalizedSkus = normalizedVariants.map((variant) => variant.sku.toLowerCase());
+      if (new Set(normalizedSkus).size !== normalizedSkus.length) {
+        setError('SKU تنوع‌ها نباید تکراری باشد.');
+        return;
+      }
+      if (sizeMode === 'SIZED' && normalizedVariants.some((variant) => variant.sizeId === 'none')) {
+        setError('برای هر تنوع محصول سایزبندی‌شده، انتخاب سایز الزامی است.');
+        return;
+      }
+      if (sizeMode === 'SIZED') {
+        const sizeIds = normalizedVariants.map((variant) => variant.sizeId);
+        if (new Set(sizeIds).size !== sizeIds.length) {
+          setError('هر سایز فقط می‌تواند به یک تنوع این محصول اختصاص داده شود.');
+          return;
+        }
+      }
+
+      if (normalizedVariants.length === 0) {
+        setError('برای ساخت محصول حداقل یک تنوع الزامی است.');
         return;
       }
 
       payload.status = String(formData.get('status') ?? 'DRAFT') as ProductStatus;
       payload.sizeMode = sizeMode;
-      payload.variants = [
-        {
-          sku,
-          name: optionalText(formData, 'variantName'),
-          weightGrams,
-          ...(sizeMode === 'SIZED' ? { sizeId } : {}),
-          isActive: true,
-        },
-      ];
+      payload.variants = normalizedVariants.map((variant) => ({
+        sku: variant.sku,
+        ...(variant.name ? { name: variant.name } : {}),
+        ...(variant.weightGrams !== undefined ? { weightGrams: variant.weightGrams } : {}),
+        ...(sizeMode === 'SIZED' ? { sizeId: variant.sizeId } : {}),
+        isActive: true,
+      }));
       delete payload.brandId;
       delete payload.countryId;
       delete payload.salePriceToman;
@@ -201,7 +247,14 @@ export function ProductForm({ data, mode }: ProductFormProps) {
       });
       const responsePayload = (await response.json().catch(() => null)) as unknown;
       if (!response.ok) throw new Error(apiError(responsePayload));
-      router.push('/products');
+      const createdProductId =
+        mode === 'create' &&
+        typeof responsePayload === 'object' &&
+        responsePayload !== null &&
+        typeof (responsePayload as { id?: unknown }).id === 'string'
+          ? (responsePayload as { id: string }).id
+          : null;
+      router.push(createdProductId ? `/variants/${createdProductId}` : '/products');
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : apiError(null));
@@ -280,7 +333,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="product-sale-price" label="قیمت فروش">
               {(props) => (
-                <Input
+                <MoneyInput
                   {...props}
                   name="salePriceToman"
                   defaultValue={
@@ -289,14 +342,12 @@ export function ProductForm({ data, mode }: ProductFormProps) {
                       : toPersianDigits(product.salePriceToman)
                   }
                   placeholder="مثلاً ۴٬۵۰۰٬۰۰۰"
-                  inputMode="numeric"
-                  onInput={localizeNumberInput}
                 />
               )}
             </FormField>
             <FormField id="product-compare-price" label="قیمت قبل از تخفیف">
               {(props) => (
-                <Input
+                <MoneyInput
                   {...props}
                   name="compareAtPriceToman"
                   defaultValue={
@@ -306,8 +357,6 @@ export function ProductForm({ data, mode }: ProductFormProps) {
                       : toPersianDigits(product.compareAtPriceToman)
                   }
                   placeholder="مثلاً ۵٬۲۰۰٬۰۰۰"
-                  inputMode="numeric"
-                  onInput={localizeNumberInput}
                 />
               )}
             </FormField>
@@ -523,10 +572,20 @@ export function ProductForm({ data, mode }: ProductFormProps) {
 
       {mode === 'create' ? (
         <Card
-          title="تنوع اولیه"
-          description="مدیریت کامل تنوع‌ها و سایزها در مرحله تخصصی خود تکمیل می‌شود"
+          title="تنوع‌ها و سایزبندی محصول"
+          description="هر ردیف یک کالای قابل فروش با SKU مستقل است؛ همه تنوع‌های فعلی محصول را همین‌جا اضافه کنید."
+          action={
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={() => setVariants((current) => [...current, createVariant()])}
+            >
+              افزودن تنوع
+            </Button>
+          }
         >
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <FormField id="product-status" label="وضعیت اولیه" required>
               {(props) => (
                 <Select
@@ -541,7 +600,12 @@ export function ProductForm({ data, mode }: ProductFormProps) {
                 />
               )}
             </FormField>
-            <FormField id="product-size-mode" label="حالت سایز" required>
+            <FormField
+              id="product-size-mode"
+              label="نوع سایزبندی محصول"
+              hint="این انتخاب برای تمام تنوع‌های این محصول اعمال می‌شود."
+              required
+            >
               {(props) => (
                 <Select
                   {...props}
@@ -557,48 +621,145 @@ export function ProductForm({ data, mode }: ProductFormProps) {
                 />
               )}
             </FormField>
-            {sizeMode === 'SIZED' ? (
-              <FormField id="product-initial-size" label="سایز تنوع اولیه" required>
-                {(props) => (
-                  <Select
-                    {...props}
-                    name="sizeId"
-                    defaultValue="none"
-                    required
-                    options={[
-                      { value: 'none', label: 'انتخاب سایز' },
-                      ...data.sizes
-                        .filter((size) => size.active)
-                        .map((size) => ({ value: size.id, label: size.label })),
-                    ]}
-                  />
-                )}
-              </FormField>
-            ) : null}
-            <FormField id="product-sku" label="SKU اولیه" required>
-              {(props) => <Input {...props} name="sku" placeholder="RING-۰۰۱" dir="ltr" required />}
-            </FormField>
-            <FormField id="product-variant-name" label="نام تنوع">
-              {(props) => <Input {...props} name="variantName" placeholder="مثلاً سایز ۵۲" />}
-            </FormField>
-            <FormField id="product-weight" label="وزن به گرم">
-              {(props) => (
-                <Input
-                  {...props}
-                  name="weightGrams"
-                  placeholder="مثلاً ۴٫۲۵"
-                  inputMode="decimal"
-                  onInput={localizeNumberInput}
-                />
-              )}
-            </FormField>
+          </div>
+
+          <Alert tone="info" className="mt-4">
+            «نام تنوع» عنوان قابل‌فهم برای مدیر و مشتری است؛ مثل «سایز ۵۲» یا «مدل طلایی». SKU شناسه
+            یکتای انبار و سفارش است و برای هر ردیف باید متفاوت باشد.
+          </Alert>
+
+          {sizeMode === 'SIZED' && !data.sizes.some((size) => size.active) ? (
+            <Alert tone="warning" className="mt-4">
+              هنوز سایز فعالی تعریف نشده است. ابتدا از بخش «تنوع و سایزبندی» یک سایز بسازید.
+            </Alert>
+          ) : null}
+
+          <div className="mt-4 space-y-4">
+            {variants.map((variant, index) => {
+              const number = toPersianDigits(index + 1);
+              const updateVariant = (updates: Partial<EditableProductVariant>) =>
+                setVariants((current) =>
+                  current.map((item) => (item.id === variant.id ? { ...item, ...updates } : item)),
+                );
+              return (
+                <section
+                  key={variant.id}
+                  aria-label={`تنوع ${number}`}
+                  className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface-subtle)] p-4"
+                >
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-bold">تنوع {number}</h3>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={pending || variants.length === 1}
+                      onClick={() =>
+                        setVariants((current) => current.filter((item) => item.id !== variant.id))
+                      }
+                    >
+                      حذف تنوع
+                    </Button>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <FormField
+                      id={`product-variant-${variant.id}-sku`}
+                      label={`SKU تنوع ${number}`}
+                      required
+                    >
+                      {(props) => (
+                        <Input
+                          {...props}
+                          value={variant.sku}
+                          placeholder="مثلاً RING-052"
+                          dir="ltr"
+                          maxLength={100}
+                          disabled={pending}
+                          required
+                          onChange={(event) => updateVariant({ sku: event.target.value })}
+                        />
+                      )}
+                    </FormField>
+                    <FormField
+                      id={`product-variant-${variant.id}-name`}
+                      label={`نام تنوع ${number}`}
+                      hint="اختیاری"
+                    >
+                      {(props) => (
+                        <Input
+                          {...props}
+                          value={variant.name}
+                          placeholder={sizeMode === 'SIZED' ? 'مثلاً سایز ۵۲' : 'مثلاً مدل طلایی'}
+                          maxLength={150}
+                          disabled={pending}
+                          onChange={(event) => updateVariant({ name: event.target.value })}
+                        />
+                      )}
+                    </FormField>
+                    {sizeMode === 'SIZED' ? (
+                      <FormField
+                        id={`product-variant-${variant.id}-size`}
+                        label={`سایز تنوع ${number}`}
+                        required
+                      >
+                        {(props) => (
+                          <Select
+                            {...props}
+                            value={variant.sizeId}
+                            disabled={pending}
+                            required
+                            onValueChange={(value) => updateVariant({ sizeId: value })}
+                            options={[
+                              { value: 'none', label: 'انتخاب سایز' },
+                              ...data.sizes
+                                .filter((size) => size.active)
+                                .map((size) => ({ value: size.id, label: size.label })),
+                            ]}
+                          />
+                        )}
+                      </FormField>
+                    ) : null}
+                    <FormField
+                      id={`product-variant-${variant.id}-weight`}
+                      label={`وزن تنوع ${number} به گرم`}
+                      hint="اختیاری؛ حداکثر سه رقم اعشار"
+                    >
+                      {(props) => (
+                        <Input
+                          {...props}
+                          value={variant.weightGrams}
+                          placeholder="مثلاً ۴٫۲۵"
+                          inputMode="decimal"
+                          disabled={pending}
+                          onChange={(event) =>
+                            updateVariant({
+                              weightGrams: toPersianDigits(toAsciiDigits(event.target.value)),
+                            })
+                          }
+                        />
+                      )}
+                    </FormField>
+                  </div>
+                </section>
+              );
+            })}
           </div>
         </Card>
       ) : (
-        <Alert tone="info" title="تنوع‌ها از بخش عملیاتی بالای صفحه مدیریت می‌شوند">
-          این محصول {toPersianDigits(product?.variants.length ?? 0)} تنوع دارد. برای تغییر SKU،
-          سایز، وزن یا وضعیت از بخش «تنوع‌ها و SKU» استفاده کنید.
-        </Alert>
+        <Card
+          title="تنوع‌ها و سایزبندی"
+          description={`این محصول ${toPersianDigits(product?.variants.length ?? 0)} تنوع دارد؛ SKU، سایز، وزن و وضعیت هر تنوع در بخش مستقل مدیریت می‌شود.`}
+          action={
+            product ? (
+              <ButtonLink href={`/variants/${product.id}`} size="sm">
+                مدیریت تنوع‌ها
+              </ButtonLink>
+            ) : null
+          }
+        >
+          <p className="text-sm leading-7 text-[var(--admin-color-muted)]">
+            تغییرات این فرم فقط اطلاعات اصلی محصول را ذخیره می‌کند و روی تنوع‌ها اثر نمی‌گذارد.
+          </p>
+        </Card>
       )}
 
       <div className="sticky bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-20 flex gap-2 rounded-[var(--admin-radius-lg)] border border-[var(--admin-color-border)] bg-white/95 p-3 shadow-[var(--admin-shadow-md)] backdrop-blur md:static md:justify-end md:border-0 md:bg-transparent md:p-0 md:shadow-none">

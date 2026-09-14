@@ -1,5 +1,7 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Put } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
+import { Public } from '../auth/public.decorator';
 import type { AuthenticatedPrincipal } from '../authorization/authorization.types';
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
@@ -7,11 +9,44 @@ import { CreateManualShipmentDto } from './dto/create-manual-shipment.dto';
 import { SelectShippingRateDto } from './dto/select-shipping-rate.dto';
 import { ResetShipmentProviderCreationDto } from './dto/reset-shipment-provider-creation.dto';
 import { UpdateShipmentStatusDto } from './dto/update-shipment-status.dto';
+import {
+  AdminShippingPricingSettingsDto,
+  ShippingPricingSettingsDto,
+} from './dto/shipping-pricing-settings.dto';
+import { UpdateShippingPricingSettingsDto } from './dto/update-shipping-pricing-settings.dto';
+import { ShippingPricingService } from './shipping-pricing.service';
 import { ShippingService } from './shipping.service';
 
 @Controller('shipping')
 export class ShippingController {
-  constructor(private readonly shippingService: ShippingService) {}
+  constructor(
+    private readonly shippingService: ShippingService,
+    private readonly shippingPricingService: ShippingPricingService,
+  ) {}
+
+  @Public()
+  @Get('pricing/public')
+  @ApiOkResponse({ type: ShippingPricingSettingsDto })
+  getPublicPricing(): Promise<ShippingPricingSettingsDto> {
+    return this.shippingPricingService.getPublicSettings();
+  }
+
+  @Get('pricing')
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_READ)
+  @ApiOkResponse({ type: AdminShippingPricingSettingsDto })
+  getAdminPricing(): Promise<AdminShippingPricingSettingsDto> {
+    return this.shippingPricingService.getAdminSettings();
+  }
+
+  @Put('pricing')
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_WRITE)
+  @ApiOkResponse({ type: AdminShippingPricingSettingsDto })
+  updatePricing(
+    @Body() dto: UpdateShippingPricingSettingsDto,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ): Promise<AdminShippingPricingSettingsDto> {
+    return this.shippingPricingService.updateSettings(dto, principal.userId);
+  }
 
   @Post('me/orders/:orderId/quote')
   quoteOrder(

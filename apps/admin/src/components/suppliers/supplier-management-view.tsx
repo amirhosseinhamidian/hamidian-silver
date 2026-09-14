@@ -13,6 +13,7 @@ import type { DataTableColumn } from '@/components/ui/data-table';
 import { FilterBar, SearchField } from '@/components/ui/filter-bar';
 import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { MoneyInput } from '@/components/ui/money-input';
 import { MobileDataCard } from '@/components/ui/mobile-data-card';
 import { ResponsiveDataView } from '@/components/ui/responsive-data-view';
 import { Select } from '@/components/ui/select';
@@ -359,12 +360,11 @@ function ProductSupplierForm({
       </FormField>
       <FormField id={`${formId}-price`} label="قیمت خرید" hint="مبلغ به تومان" required>
         {(props) => (
-          <Input
+          <MoneyInput
             {...props}
             value={price}
-            onChange={(event) => setPrice(normalizeNumericInput(event.target.value))}
+            onChange={(event) => setPrice(event.target.value)}
             placeholder="مثلاً ۸۵۰٬۰۰۰"
-            inputMode="numeric"
             required
           />
         )}

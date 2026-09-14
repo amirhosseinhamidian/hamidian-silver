@@ -18,6 +18,7 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { normalizeIranianMobile } from '../auth/phone-normalizer';
 import { attachHumanAuditEvent } from '../audit/audit-event';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
+import { ShippingPricingService } from '../shipping/shipping-pricing.service';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderAddressDto, CreateOrderDto, CreateOrderItemDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
@@ -261,6 +262,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly publicMediaUrl?: PublicMediaUrlService,
     @Optional() private readonly config?: ConfigService,
+    @Optional() private readonly shippingPricing?: ShippingPricingService,
   ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
@@ -354,7 +356,11 @@ export class OrdersService {
         (total, item) => total + item.unitPlatingPriceToman * item.quantity,
         0,
       );
-      const shippingTotalToman = this.resolveInitialShippingCostToman();
+      const cartSubtotalToman = merchandiseTotalToman + platingTotalToman;
+      const shippingTotalToman = await this.resolveInitialShippingCostToman(
+        cartSubtotalToman,
+        transaction,
+      );
       const grandTotalToman = merchandiseTotalToman + platingTotalToman + shippingTotalToman;
 
       this.assertSafeTomanAmount(merchandiseTotalToman);
@@ -431,11 +437,18 @@ export class OrdersService {
     return this.toCustomerOrder(order);
   }
 
-  private resolveInitialShippingCostToman(): number {
+  private async resolveInitialShippingCostToman(
+    cartSubtotalToman: number,
+    transaction: Prisma.TransactionClient,
+  ): Promise<number> {
     const shippingProvider =
       this.config?.get<string>('SHIPPING_PROVIDER', 'disabled') ?? 'disabled';
 
     if (shippingProvider !== 'disabled') return 0;
+
+    if (this.shippingPricing) {
+      return this.shippingPricing.calculateCostToman(cartSubtotalToman, transaction);
+    }
 
     return this.config?.get<number>('MANUAL_SHIPPING_COST_TOMAN', 0) ?? 0;
   }

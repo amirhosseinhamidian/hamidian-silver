@@ -245,6 +245,15 @@ async function handler(request, response) {
     });
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/v1/shipping/pricing/public') {
+    return json(response, 200, {
+      mode: 'FREE',
+      baseCostToman: 0,
+      thresholdToman: null,
+      discountedCostToman: null,
+    });
+  }
+
   if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/products/silver-ring') {
     return json(response, 200, product);
   }

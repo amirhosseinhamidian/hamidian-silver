@@ -192,6 +192,9 @@ export function AdminProductsView({ data, filters, canWrite }: AdminProductsView
         <div className="flex items-center justify-end gap-2">
           {canWrite ? (
             <>
+              <ButtonLink href={`/variants/${product.id}`} size="sm" variant="ghost">
+                تنوع‌ها
+              </ButtonLink>
               <ButtonLink href={`/products/${product.id}/edit`} size="sm" variant="outline">
                 ویرایش
               </ButtonLink>
@@ -351,6 +354,7 @@ export function AdminProductsView({ data, filters, canWrite }: AdminProductsView
               detailsFooter={
                 canWrite ? (
                   <div className="grid w-full gap-2">
+                    <ButtonLink href={`/variants/${product.id}`}>مدیریت تنوع‌ها</ButtonLink>
                     <ButtonLink href={`/products/${product.id}/edit`} variant="outline">
                       ویرایش محصول
                     </ButtonLink>

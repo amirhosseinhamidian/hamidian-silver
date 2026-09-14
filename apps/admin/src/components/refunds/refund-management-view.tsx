@@ -13,6 +13,7 @@ import { DonutChart } from '@/components/ui/donut-chart';
 import { FilterBar, SearchField } from '@/components/ui/filter-bar';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { MoneyInput } from '@/components/ui/money-input';
 import { MobileDataCard } from '@/components/ui/mobile-data-card';
 import { ResponsiveDataView } from '@/components/ui/responsive-data-view';
 import { Select } from '@/components/ui/select';
@@ -21,6 +22,7 @@ import {
   formatAdminInteger,
   formatAdminPhone,
   formatAdminToman,
+  parseAdminMoneyInput,
   toAsciiDigits,
   toPersianDigits,
 } from '@/lib/presentation/formatters';
@@ -186,10 +188,6 @@ function KpiCard({
   );
 }
 
-function normalizeMoneyInput(value: string) {
-  return toPersianDigits(toAsciiDigits(value).replace(/\D/g, ''));
-}
-
 function errorMessage(status: number) {
   if (status === 401) return 'نشست مدیریتی منقضی شده است. دوباره وارد شوید.';
   if (status === 403) return 'مجوز انجام عملیات مالی را ندارید.';
@@ -315,8 +313,8 @@ export function RefundManagementView({ refunds, orders, failed, canWrite }: Prop
     let endpoint: string;
     let body: Record<string, string | number>;
     if (action.kind === 'create') {
-      const normalizedAmount = Number(toAsciiDigits(amount));
-      if (!selectedOrder || !Number.isSafeInteger(normalizedAmount) || normalizedAmount < 1) {
+      const normalizedAmount = parseAdminMoneyInput(amount);
+      if (!selectedOrder || normalizedAmount === null || normalizedAmount < 1) {
         setError('سفارش و مبلغ معتبر بازپرداخت را وارد کنید.');
         return;
       }
@@ -698,13 +696,12 @@ export function RefundManagementView({ refunds, orders, failed, canWrite }: Prop
                   ) : null}
                   <FormField id="refund-amount" label="مبلغ بازپرداخت (تومان)" required>
                     {(controlProps) => (
-                      <Input
+                      <MoneyInput
                         {...controlProps}
-                        inputMode="numeric"
                         value={amount}
                         placeholder="مثلاً ۱٬۵۰۰٬۰۰۰"
                         disabled={pending || !selectedOrder}
-                        onChange={(event) => setAmount(normalizeMoneyInput(event.target.value))}
+                        onChange={(event) => setAmount(event.target.value)}
                       />
                     )}
                   </FormField>

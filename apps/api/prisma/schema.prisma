@@ -59,6 +59,7 @@ model User {
   auditLogs                           AuditLog[]                        @relation("AuditLogActor")
   stockNotificationSubscriptions      StockNotificationSubscription[]
   storefrontContentPageChanges        StorefrontContentPage[]           @relation("StorefrontContentPageUpdater")
+  shippingPricingSettingsChanges      ShippingPricingSettings[]         @relation("ShippingPricingSettingsUpdater")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -348,6 +349,21 @@ model SiteSettings {
   @@index([seoHomeOgMediaId])
   @@index([updatedByUserId])
   @@map("site_settings")
+}
+
+model ShippingPricingSettings {
+  id                  String   @id @default("shipping") @db.VarChar(32)
+  mode                String   @db.VarChar(16)
+  baseCostToman       Int
+  thresholdToman      Int?
+  discountedCostToman Int?
+  updatedByUserId     String?  @db.Uuid
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @db.Timestamptz(3)
+  updatedBy           User?    @relation("ShippingPricingSettingsUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([updatedByUserId])
+  @@map("shipping_pricing_settings")
 }
 
 model StorefrontContentPage {

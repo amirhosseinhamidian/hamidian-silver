@@ -32,8 +32,8 @@ describe('ProductForm', () => {
     fireEvent.change(screen.getByLabelText(/نام محصول/), { target: { value: 'انگشتر نقره' } });
     fireEvent.change(screen.getByLabelText(/اسلاگ محصول/), { target: { value: 'silver-ring' } });
     fireEvent.change(screen.getByLabelText(/قیمت فروش/), { target: { value: '۴٬۵۰۰٬۰۰۰' } });
-    fireEvent.change(screen.getByLabelText(/SKU اولیه/), { target: { value: 'RING-۰۰۱' } });
-    fireEvent.change(screen.getByLabelText(/وزن به گرم/), { target: { value: '۴٫۲۵' } });
+    fireEvent.change(screen.getByLabelText(/SKU تنوع ۱/), { target: { value: 'RING-۰۰۱' } });
+    fireEvent.change(screen.getByLabelText(/وزن تنوع ۱/), { target: { value: '۴٫۲۵' } });
     fireEvent.click(screen.getByLabelText('انگشتر'));
     fireEvent.click(screen.getByRole('button', { name: 'ساخت محصول' }));
 
@@ -46,7 +46,36 @@ describe('ProductForm', () => {
       sizeMode: 'NONE',
       variants: [{ sku: 'RING-۰۰۱', weightGrams: 4.25 }],
     });
-    expect(router.push).toHaveBeenCalledWith('/products');
+    expect(router.push).toHaveBeenCalledWith('/variants/product-1');
+  });
+
+  it('creates all product variants in one request', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: 'product-1' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ProductForm data={data} mode="create" />);
+
+    fireEvent.change(screen.getByLabelText(/نام محصول/), { target: { value: 'گردنبند نقره' } });
+    fireEvent.change(screen.getByLabelText(/اسلاگ محصول/), {
+      target: { value: 'silver-necklace' },
+    });
+    fireEvent.change(screen.getByLabelText(/SKU تنوع ۱/), { target: { value: 'NECKLACE-A' } });
+    fireEvent.change(screen.getByLabelText(/نام تنوع ۱/), { target: { value: 'مدل نقره‌ای' } });
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن تنوع' }));
+    fireEvent.change(screen.getByLabelText(/SKU تنوع ۲/), { target: { value: 'NECKLACE-B' } });
+    fireEvent.change(screen.getByLabelText(/نام تنوع ۲/), { target: { value: 'مدل طلایی' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ساخت محصول' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body)).variants).toEqual([
+      { sku: 'NECKLACE-A', name: 'مدل نقره‌ای', isActive: true },
+      { sku: 'NECKLACE-B', name: 'مدل طلایی', isActive: true },
+    ]);
   });
 
   it('adds, reorders and submits custom product attributes with explicit display order', async () => {
@@ -61,7 +90,7 @@ describe('ProductForm', () => {
 
     fireEvent.change(screen.getByLabelText(/نام محصول/), { target: { value: 'انگشتر نقره' } });
     fireEvent.change(screen.getByLabelText(/اسلاگ محصول/), { target: { value: 'silver-ring' } });
-    fireEvent.change(screen.getByLabelText(/SKU اولیه/), { target: { value: 'RING-001' } });
+    fireEvent.change(screen.getByLabelText(/SKU تنوع ۱/), { target: { value: 'RING-001' } });
     fireEvent.click(screen.getByRole('button', { name: 'افزودن ویژگی' }));
     fireEvent.click(screen.getByRole('button', { name: 'افزودن ویژگی' }));
     fireEvent.change(screen.getByLabelText(/کلید ویژگی ۱/), {
@@ -94,7 +123,7 @@ describe('ProductForm', () => {
 
     fireEvent.change(screen.getByLabelText(/نام محصول/), { target: { value: 'انگشتر نقره' } });
     fireEvent.change(screen.getByLabelText(/اسلاگ محصول/), { target: { value: 'silver-ring' } });
-    fireEvent.change(screen.getByLabelText(/SKU اولیه/), { target: { value: 'RING-001' } });
+    fireEvent.change(screen.getByLabelText(/SKU تنوع ۱/), { target: { value: 'RING-001' } });
     fireEvent.click(screen.getByRole('button', { name: 'افزودن ویژگی' }));
     fireEvent.click(screen.getByRole('button', { name: 'افزودن ویژگی' }));
     for (const input of screen.getAllByLabelText(/کلید ویژگی/)) {

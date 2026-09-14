@@ -13,6 +13,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { FilterBar, SearchField } from '@/components/ui/filter-bar';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { MoneyInput } from '@/components/ui/money-input';
 import { MobileDataCard } from '@/components/ui/mobile-data-card';
 import { ResponsiveDataView } from '@/components/ui/responsive-data-view';
 import { Select } from '@/components/ui/select';
@@ -729,12 +730,11 @@ export function PlatingOperationsView({ orders, failed, canOperate, canComplete 
                   hint="عدد صحیح و بدون جداکننده نیز قابل ورود است."
                 >
                   {(props) => (
-                    <Input
+                    <MoneyInput
                       {...props}
-                      inputMode="numeric"
                       value={actualCost}
-                      placeholder="مثلاً ۱۴۰۰۰۰"
-                      onChange={(event) => setActualCost(toPersianDigits(event.target.value))}
+                      placeholder="مثلاً ۱۴۰٬۰۰۰"
+                      onChange={(event) => setActualCost(event.target.value)}
                       disabled={pending}
                     />
                   )}

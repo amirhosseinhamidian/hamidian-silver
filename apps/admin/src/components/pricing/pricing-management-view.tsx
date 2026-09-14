@@ -11,8 +11,9 @@ import { Card } from '@/components/ui/card';
 import type { DataTableColumn } from '@/components/ui/data-table';
 import { DonutChart } from '@/components/ui/donut-chart';
 import { FilterBar, SearchField } from '@/components/ui/filter-bar';
-import { Input, Textarea } from '@/components/ui/form-control';
+import { Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { MoneyInput } from '@/components/ui/money-input';
 import { MobileDataCard } from '@/components/ui/mobile-data-card';
 import { ResponsiveDataView } from '@/components/ui/responsive-data-view';
 import { Select } from '@/components/ui/select';
@@ -20,6 +21,7 @@ import {
   formatAdminDateTime,
   formatAdminInteger,
   formatAdminToman,
+  parseAdminMoneyInput,
   toAsciiDigits,
   toPersianDigits,
 } from '@/lib/presentation/formatters';
@@ -38,15 +40,8 @@ type PricingManagementViewProps = Readonly<{
   canWrite: boolean;
 }>;
 
-function normalizeMoneyInput(value: string): string {
-  return toPersianDigits(toAsciiDigits(value).replace(/[^\d]/g, ''));
-}
-
 function parseMoney(value: string): number | null {
-  const normalized = toAsciiDigits(value).replace(/[^\d]/g, '');
-  if (!normalized) return null;
-  const parsed = Number(normalized);
-  return Number.isSafeInteger(parsed) ? parsed : null;
+  return parseAdminMoneyInput(value);
 }
 
 function apiError(payload: unknown): string {
@@ -171,12 +166,11 @@ function ProductPriceForm({
       </div>
       <FormField id={`${formId}-sale`} label="قیمت فروش" hint="مبلغ نهایی به تومان" required>
         {(props) => (
-          <Input
+          <MoneyInput
             {...props}
             value={salePrice}
-            onChange={(event) => setSalePrice(normalizeMoneyInput(event.target.value))}
+            onChange={(event) => setSalePrice(event.target.value)}
             placeholder="مثلاً ۱٬۳۵۰٬۰۰۰"
-            inputMode="numeric"
             required
           />
         )}
@@ -187,12 +181,11 @@ function ProductPriceForm({
         hint="اختیاری؛ باید از قیمت فروش بیشتر باشد"
       >
         {(props) => (
-          <Input
+          <MoneyInput
             {...props}
             value={compareAtPrice}
-            onChange={(event) => setCompareAtPrice(normalizeMoneyInput(event.target.value))}
+            onChange={(event) => setCompareAtPrice(event.target.value)}
             placeholder="مثلاً ۱٬۵۰۰٬۰۰۰"
-            inputMode="numeric"
           />
         )}
       </FormField>

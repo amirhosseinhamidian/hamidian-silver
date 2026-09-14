@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ProductVariantManager } from '@/components/products/product-variant-manager';
+import {
+  CatalogSizeManager,
+  ProductVariantManager,
+} from '@/components/products/product-variant-manager';
 import type { AdminProduct, CatalogSize } from '@/lib/catalog/catalog-model';
 
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
@@ -84,7 +87,7 @@ describe('ProductVariantManager', () => {
   it('creates catalog sizes with normalized Persian numeric input', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse());
     vi.stubGlobal('fetch', fetchMock);
-    render(<ProductVariantManager product={product} sizes={sizes} />);
+    render(<CatalogSizeManager sizes={sizes} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'افزودن سایز' }));
     const dialog = await screen.findByRole('dialog', { name: 'افزودن سایز جدید' });

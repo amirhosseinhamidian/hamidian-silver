@@ -38,6 +38,11 @@ export type ProductFormData = Readonly<{
   sizes: readonly CatalogSize[];
 }>;
 
+export type VariantManagementData = Readonly<{
+  products: CatalogResource<ProductListResult>;
+  sizes: CatalogResource<readonly CatalogSize[]>;
+}>;
+
 export type CategoryManagementData = CatalogResource<readonly AdminCategory[]>;
 
 export type ReferenceManagementData = Readonly<{
@@ -87,6 +92,28 @@ export async function loadProductManagement(
   ]);
 
   return { products, brands, categories };
+}
+
+export async function loadVariantManagement(
+  filters: CatalogFilters,
+): Promise<VariantManagementData> {
+  const token = await accessToken();
+  const query = new URLSearchParams({
+    page: String(filters.page),
+    limit: String(filters.limit),
+  });
+  if (filters.q) query.set('q', filters.q);
+  if (filters.status) query.set('status', filters.status);
+
+  const [products, sizes] = await Promise.all([
+    load(
+      requestAdminCatalog(`/api/v1/catalog/products?${query.toString()}`, token),
+      parseProductList,
+    ),
+    load(requestAdminCatalog('/api/v1/catalog/sizes', token), parseCatalogSizes),
+  ]);
+
+  return { products, sizes };
 }
 
 export async function loadProductForm(productId?: string): Promise<ProductFormData | null> {

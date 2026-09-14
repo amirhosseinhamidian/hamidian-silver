@@ -2372,6 +2372,38 @@ export interface paths {
         patch: operations["ProfileController_setDefaultAddress_v1"];
         trace?: never;
     };
+    "/api/v1/shipping/pricing/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ShippingController_getPublicPricing_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/shipping/pricing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ShippingController_getAdminPricing_v1"];
+        put: operations["ShippingController_updatePricing_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/shipping/me/orders/{orderId}/quote": {
         parameters: {
             query?: never;
@@ -3705,6 +3737,33 @@ export interface components {
             id: string;
             /** Format: date-time */
             deletedAt: string;
+        };
+        ShippingPricingSettingsDto: {
+            /** @enum {string} */
+            mode: "FREE" | "FIXED";
+            baseCostToman: number;
+            thresholdToman: number | null;
+            discountedCostToman: number | null;
+        };
+        AdminShippingPricingSettingsDto: {
+            /** @enum {string} */
+            mode: "FREE" | "FIXED";
+            baseCostToman: number;
+            thresholdToman: number | null;
+            discountedCostToman: number | null;
+            /** @enum {string} */
+            source: "DATABASE" | "ENVIRONMENT";
+            /** Format: uuid */
+            updatedByUserId: string | null;
+            /** Format: date-time */
+            updatedAt: string | null;
+        };
+        UpdateShippingPricingSettingsDto: {
+            /** @enum {string} */
+            mode: "FREE" | "FIXED";
+            baseCostToman: number;
+            thresholdToman?: number | null;
+            discountedCostToman?: number | null;
         };
         SelectShippingRateDto: {
             serviceCode: string;
@@ -7943,6 +8002,67 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerAddressDto"];
+                };
+            };
+        };
+    };
+    ShippingController_getPublicPricing_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShippingPricingSettingsDto"];
+                };
+            };
+        };
+    };
+    ShippingController_getAdminPricing_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminShippingPricingSettingsDto"];
+                };
+            };
+        };
+    };
+    ShippingController_updatePricing_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateShippingPricingSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminShippingPricingSettingsDto"];
                 };
             };
         };

@@ -5,11 +5,12 @@ import { DisabledShippingProvider } from './adapters/disabled-shipping.provider'
 import { PostexShippingProvider } from './adapters/postex-shipping.provider';
 import { SHIPPING_PROVIDER, type ShippingProvider } from './shipping-provider.port';
 import { ShippingController } from './shipping.controller';
+import { ShippingPricingModule } from './shipping-pricing.module';
 import { ShippingTrackingScheduler } from './shipping-tracking.scheduler';
 import { ShippingService } from './shipping.service';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, ShippingPricingModule],
   controllers: [ShippingController],
   providers: [
     ShippingService,

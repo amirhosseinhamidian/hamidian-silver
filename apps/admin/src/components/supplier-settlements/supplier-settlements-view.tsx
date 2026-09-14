@@ -15,6 +15,7 @@ import { DonutChart } from '@/components/ui/donut-chart';
 import { FilterBar, SearchField } from '@/components/ui/filter-bar';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { MoneyInput } from '@/components/ui/money-input';
 import { MobileDataCard } from '@/components/ui/mobile-data-card';
 import { ResponsiveDataView } from '@/components/ui/responsive-data-view';
 import { Select } from '@/components/ui/select';
@@ -23,6 +24,7 @@ import {
   formatAdminInteger,
   formatAdminPhone,
   formatAdminToman,
+  parseAdminMoneyInput,
   toAsciiDigits,
   toPersianDigits,
 } from '@/lib/presentation/formatters';
@@ -297,10 +299,6 @@ function SettlementDetails({
   );
 }
 
-function normalizeMoneyInput(value: string): string {
-  return toPersianDigits(toAsciiDigits(value).replace(/\D/g, ''));
-}
-
 function requestError(status: number): string {
   if (status === 401) return 'نشست مدیریتی منقضی شده است. دوباره وارد شوید.';
   if (status === 403) return 'مجوز انجام عملیات مالی را ندارید.';
@@ -553,8 +551,8 @@ export function SupplierSettlementsView({
       };
       successMessage = 'دوره تسویه با موفقیت ساخته شد.';
     } else if (action.kind === 'apply-credit') {
-      const numericAmount = Number(toAsciiDigits(amount));
-      if (!selectedCredit || !Number.isSafeInteger(numericAmount) || numericAmount < 1) {
+      const numericAmount = parseAdminMoneyInput(amount);
+      if (!selectedCredit || numericAmount === null || numericAmount < 1) {
         setError('اعتبار و مبلغ معتبر را انتخاب کنید.');
         return;
       }
@@ -1060,15 +1058,14 @@ export function SupplierSettlementsView({
                 hint={`حداکثر قابل اعمال: ${formatAdminToman(maximumCredit)}`}
               >
                 {(controlProps) => (
-                  <Input
+                  <MoneyInput
                     {...controlProps}
                     dir="ltr"
-                    inputMode="numeric"
                     value={amount}
                     disabled={pending || !selectedCredit}
-                    placeholder="مثلاً ۵۰۰۰۰۰"
+                    placeholder="مثلاً ۵۰۰٬۰۰۰"
                     onChange={(event) => {
-                      setAmount(normalizeMoneyInput(event.target.value));
+                      setAmount(event.target.value);
                       setError('');
                     }}
                   />
