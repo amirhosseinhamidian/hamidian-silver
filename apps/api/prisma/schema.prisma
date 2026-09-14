@@ -272,16 +272,21 @@ model Media {
   updatedAt               DateTime       @updatedAt @db.Timestamptz(3)
   deletedAt               DateTime?      @db.Timestamptz(3)
   categoryImages          Category[]     @relation("CategoryImage")
+  categoryHeroMobileImages Category[]    @relation("CategoryHeroMobileImage")
   brandImages             Brand[]        @relation("BrandImage")
   brandHeroImages         Brand[]        @relation("BrandHeroImage")
+  brandHeroMobileImages   Brand[]        @relation("BrandHeroMobileImage")
   countryImages           Country[]      @relation("CountryImage")
   productMedia            ProductMedia[]
   siteSettingsCatalogHero SiteSettings[] @relation("SiteSettingsCatalogHero")
+  siteSettingsCatalogHeroMobile SiteSettings[] @relation("SiteSettingsCatalogHeroMobile")
   siteSettingsSeoDefaultOg        SiteSettings[] @relation("SiteSettingsSeoDefaultOg")
   siteSettingsSeoOrganizationLogo SiteSettings[] @relation("SiteSettingsSeoOrganizationLogo")
   siteSettingsSeoHomeOg           SiteSettings[] @relation("SiteSettingsSeoHomeOg")
-  homepageHeroSlides      HomepageHeroSlide[]
+  homepageHeroSlides      HomepageHeroSlide[] @relation("HomepageHeroMedia")
+  homepageHeroMobileSlides HomepageHeroSlide[] @relation("HomepageHeroMobileMedia")
   storefrontContentHeroes StorefrontContentPage[] @relation("StorefrontContentPageHero")
+  storefrontContentMobileHeroes StorefrontContentPage[] @relation("StorefrontContentPageMobileHero")
   storefrontContentSeoOg          StorefrontContentPage[] @relation("StorefrontContentPageSeoOg")
   categorySeoOgImages     Category[] @relation("CategorySeoOgImage")
   brandSeoOgImages        Brand[]    @relation("BrandSeoOgImage")
@@ -305,6 +310,7 @@ model SiteSettings {
   catalogHeroTitle    String?  @db.VarChar(200)
   catalogHeroSubtitle String?  @db.VarChar(500)
   catalogHeroMediaId  String?  @db.Uuid
+  catalogHeroMobileMediaId String? @db.Uuid
   galleryName         String?  @db.VarChar(150)
   footerAbout         String?  @db.VarChar(1000)
   contactAddress      String?  @db.VarChar(1000)
@@ -329,12 +335,14 @@ model SiteSettings {
   createdAt           DateTime @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime @updatedAt @db.Timestamptz(3)
   catalogHeroMedia    Media?   @relation("SiteSettingsCatalogHero", fields: [catalogHeroMediaId], references: [id], onDelete: SetNull)
+  catalogHeroMobileMedia Media? @relation("SiteSettingsCatalogHeroMobile", fields: [catalogHeroMobileMediaId], references: [id], onDelete: SetNull)
   seoDefaultOgMedia   Media?   @relation("SiteSettingsSeoDefaultOg", fields: [seoDefaultOgMediaId], references: [id], onDelete: SetNull)
   seoOrganizationLogoMedia Media? @relation("SiteSettingsSeoOrganizationLogo", fields: [seoOrganizationLogoMediaId], references: [id], onDelete: SetNull)
   seoHomeOgMedia      Media?   @relation("SiteSettingsSeoHomeOg", fields: [seoHomeOgMediaId], references: [id], onDelete: SetNull)
   updatedBy           User?    @relation("SiteSettingsUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
 
   @@index([catalogHeroMediaId])
+  @@index([catalogHeroMobileMediaId])
   @@index([seoDefaultOgMediaId])
   @@index([seoOrganizationLogoMediaId])
   @@index([seoHomeOgMediaId])
@@ -349,6 +357,7 @@ model StorefrontContentPage {
   subtitle        String?                  @db.VarChar(500)
   body            String?
   heroMediaId     String?                  @db.Uuid
+  heroMobileMediaId String?                @db.Uuid
   seoTitle        String?                  @db.VarChar(200)
   seoDescription  String?                  @db.VarChar(500)
   seoCanonicalPath String?                  @db.VarChar(1000)
@@ -358,11 +367,13 @@ model StorefrontContentPage {
   createdAt       DateTime                 @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime                 @updatedAt @db.Timestamptz(3)
   heroMedia       Media?                   @relation("StorefrontContentPageHero", fields: [heroMediaId], references: [id], onDelete: SetNull)
+  heroMobileMedia Media?                   @relation("StorefrontContentPageMobileHero", fields: [heroMobileMediaId], references: [id], onDelete: SetNull)
   seoOgMedia       Media?                   @relation("StorefrontContentPageSeoOg", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   updatedBy       User?                    @relation("StorefrontContentPageUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
   sections        StorefrontContentSection[]
 
   @@index([heroMediaId])
+  @@index([heroMobileMediaId])
   @@index([seoOgMediaId])
   @@index([updatedByUserId])
   @@map("storefront_content_pages")
@@ -394,6 +405,7 @@ model Category {
   seoOgMediaId     String?           @db.Uuid
   parentId    String?           @db.Uuid
   imageId     String?           @db.Uuid
+  heroMobileImageId String?     @db.Uuid
   sortOrder   Int               @default(0)
   isActive    Boolean           @default(true)
   createdAt   DateTime          @default(now()) @db.Timestamptz(3)
@@ -402,12 +414,14 @@ model Category {
   parent      Category?         @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
   children    Category[]        @relation("CategoryTree")
   image       Media?            @relation("CategoryImage", fields: [imageId], references: [id], onDelete: SetNull)
+  heroMobileImage Media?        @relation("CategoryHeroMobileImage", fields: [heroMobileImageId], references: [id], onDelete: SetNull)
   seoOgMedia       Media?            @relation("CategorySeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   products    ProductCategory[]
   homepageFeature HomepageFeaturedCategory?
 
   @@index([parentId])
   @@index([imageId])
+  @@index([heroMobileImageId])
   @@index([seoOgMediaId])
   @@index([isActive, sortOrder])
   @@index([deletedAt])
@@ -426,6 +440,7 @@ model Brand {
   seoOgMediaId     String?   @db.Uuid
   imageId     String?   @db.Uuid
   heroImageId String?   @db.Uuid
+  heroMobileImageId String? @db.Uuid
   originCountryId String? @db.Uuid
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now()) @db.Timestamptz(3)
@@ -433,12 +448,14 @@ model Brand {
   deletedAt   DateTime? @db.Timestamptz(3)
   image       Media?    @relation("BrandImage", fields: [imageId], references: [id], onDelete: SetNull)
   heroImage   Media?    @relation("BrandHeroImage", fields: [heroImageId], references: [id], onDelete: SetNull)
+  heroMobileImage Media? @relation("BrandHeroMobileImage", fields: [heroMobileImageId], references: [id], onDelete: SetNull)
   seoOgMedia       Media?    @relation("BrandSeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   originCountry Country? @relation("BrandOriginCountry", fields: [originCountryId], references: [id], onDelete: SetNull)
   products    Product[]
 
   @@index([imageId])
   @@index([heroImageId])
+  @@index([heroMobileImageId])
   @@index([seoOgMediaId])
   @@index([originCountryId])
   @@index([isActive])
@@ -543,6 +560,7 @@ model HomepageHeroSlide {
   id          String                @id @default(uuid()) @db.Uuid
   placement   HomepageHeroPlacement
   mediaId     String                @db.Uuid
+  mobileMediaId String?             @db.Uuid
   title       String?               @db.VarChar(200)
   subtitle    String?               @db.VarChar(500)
   actionLabel String?               @db.VarChar(100)
@@ -551,10 +569,12 @@ model HomepageHeroSlide {
   isActive    Boolean               @default(true)
   createdAt   DateTime              @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime              @updatedAt @db.Timestamptz(3)
-  media       Media                 @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  media       Media                 @relation("HomepageHeroMedia", fields: [mediaId], references: [id], onDelete: Restrict)
+  mobileMedia Media?                @relation("HomepageHeroMobileMedia", fields: [mobileMediaId], references: [id], onDelete: SetNull)
 
   @@index([placement, isActive, sortOrder])
   @@index([mediaId])
+  @@index([mobileMediaId])
   @@map("homepage_hero_slides")
 }
 

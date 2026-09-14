@@ -619,6 +619,74 @@
         ]
       }
     },
+    "/api/v1/catalog/categories/{categoryId}/hero-mobile-image": {
+      "post": {
+        "operationId": "CatalogController_uploadCategoryMobileHero_v1",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "altText": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogController_removeCategoryMobileHero_v1",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/api/v1/catalog/categories/{categoryId}": {
       "patch": {
         "operationId": "CatalogController_updateCategory_v1",
@@ -910,6 +978,74 @@
       },
       "delete": {
         "operationId": "CatalogController_removeBrandHero_v1",
+        "parameters": [
+          {
+            "name": "brandId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/brands/{brandId}/hero-mobile-image": {
+      "post": {
+        "operationId": "CatalogController_uploadBrandMobileHero_v1",
+        "parameters": [
+          {
+            "name": "brandId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "altText": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogController_removeBrandMobileHero_v1",
         "parameters": [
           {
             "name": "brandId",
@@ -2828,7 +2964,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -7074,6 +7217,15 @@
               }
             ]
           },
+          "heroMobileImage": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
           "seoTitle": {
             "type": "string",
             "nullable": true
@@ -7169,6 +7321,15 @@
               }
             ]
           },
+          "heroMobileImage": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
           "originCountry": {
             "nullable": true,
             "type": "object",
@@ -7238,6 +7399,15 @@
             ]
           },
           "heroImage": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "heroMobileImage": {
             "nullable": true,
             "type": "object",
             "allOf": [
@@ -10657,6 +10827,15 @@
               }
             ]
           },
+          "catalogHeroMobileMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicSiteSettingsMediaDto"
+              }
+            ]
+          },
           "galleryName": {
             "type": "string",
             "nullable": true
@@ -10759,6 +10938,7 @@
           "catalogHeroTitle",
           "catalogHeroSubtitle",
           "catalogHeroMedia",
+          "catalogHeroMobileMedia",
           "galleryName",
           "footerAbout",
           "contactAddress",
@@ -10790,6 +10970,15 @@
           },
           "media": {
             "$ref": "#/components/schemas/PublicCatalogMediaDto"
+          },
+          "mobileMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
           }
         },
         "required": [
@@ -10797,7 +10986,8 @@
           "subtitle",
           "actionLabel",
           "actionHref",
-          "media"
+          "media",
+          "mobileMedia"
         ]
       },
       "PublicHomepageFeaturedCategoryDto": {
@@ -11037,6 +11227,15 @@
               }
             ]
           },
+          "heroMobileMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicContentPageMediaDto"
+              }
+            ]
+          },
           "sections": {
             "type": "array",
             "items": {
@@ -11075,6 +11274,7 @@
           "subtitle",
           "body",
           "heroMedia",
+          "heroMobileMedia",
           "sections",
           "seoTitle",
           "seoDescription"
@@ -11108,6 +11308,20 @@
             "format": "uuid"
           },
           "heroMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicContentPageMediaDto"
+              }
+            ]
+          },
+          "heroMobileMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "heroMobileMedia": {
             "nullable": true,
             "type": "object",
             "allOf": [
@@ -11172,6 +11386,8 @@
           "body",
           "heroMediaId",
           "heroMedia",
+          "heroMobileMediaId",
+          "heroMobileMedia",
           "sections",
           "seoTitle",
           "seoDescription",
@@ -11222,6 +11438,11 @@
             "maxLength": 20000
           },
           "heroMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "heroMobileMediaId": {
             "type": "string",
             "nullable": true,
             "format": "uuid"
@@ -11295,6 +11516,20 @@
           "media": {
             "$ref": "#/components/schemas/AdminHomepageHeroMediaDto"
           },
+          "mobileMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "mobileMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AdminHomepageHeroMediaDto"
+              }
+            ]
+          },
           "title": {
             "type": "string",
             "nullable": true
@@ -11326,6 +11561,8 @@
         },
         "required": [
           "media",
+          "mobileMediaId",
+          "mobileMedia",
           "title",
           "subtitle",
           "actionLabel",
@@ -11413,6 +11650,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "mobileMediaId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "title": {
             "type": "string",
             "nullable": true,
@@ -11442,7 +11683,8 @@
           }
         },
         "required": [
-          "mediaId"
+          "mediaId",
+          "mobileMediaId"
         ]
       },
       "UpdateHomepageDto": {
@@ -11530,6 +11772,20 @@
             "format": "uuid"
           },
           "catalogHeroMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicSiteSettingsMediaDto"
+              }
+            ]
+          },
+          "catalogHeroMobileMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "catalogHeroMobileMedia": {
             "nullable": true,
             "type": "object",
             "allOf": [
@@ -11666,6 +11922,8 @@
           "catalogHeroSubtitle",
           "catalogHeroMediaId",
           "catalogHeroMedia",
+          "catalogHeroMobileMediaId",
+          "catalogHeroMobileMedia",
           "galleryName",
           "footerAbout",
           "contactAddress",
@@ -11748,6 +12006,11 @@
             "maxLength": 500
           },
           "catalogHeroMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "catalogHeroMobileMediaId": {
             "type": "string",
             "nullable": true,
             "format": "uuid"

@@ -27,6 +27,7 @@ export type AdminCategory = Readonly<{
   parent: CatalogLookup | null;
   parentId: string | null;
   image: AdminCategoryImage | null;
+  heroMobileImage: AdminCategoryImage | null;
   seoTitle: string | null;
   seoDescription: string | null;
   seoCanonicalPath: string | null;
@@ -47,6 +48,7 @@ export type AdminBrand = Readonly<{
   updatedAt: string;
   image: AdminCategoryImage | null;
   heroImage: AdminCategoryImage | null;
+  heroMobileImage: AdminCategoryImage | null;
   seoTitle: string | null;
   seoDescription: string | null;
   seoCanonicalPath: string | null;
@@ -372,6 +374,7 @@ function parseCategory(value: unknown): AdminCategory | null {
     parent: lookup(item?.parent),
     parentId: text(item?.parentId),
     image,
+    heroMobileImage: parseReferenceImage(item?.heroMobileImage),
     seoTitle: text(item?.seoTitle),
     seoDescription: text(item?.seoDescription),
     seoCanonicalPath: text(item?.seoCanonicalPath),
@@ -409,6 +412,7 @@ function parseAdminBrand(value: unknown): AdminBrand | null {
     updatedAt,
     image: parseReferenceImage(item?.image),
     heroImage: parseReferenceImage(item?.heroImage),
+    heroMobileImage: parseReferenceImage(item?.heroMobileImage),
     seoTitle: text(item?.seoTitle),
     seoDescription: text(item?.seoDescription),
     seoCanonicalPath: text(item?.seoCanonicalPath),

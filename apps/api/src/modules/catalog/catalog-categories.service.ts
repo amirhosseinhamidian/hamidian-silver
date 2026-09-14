@@ -14,6 +14,7 @@ import { PublicMediaUrlService } from './public-media-url.service';
 const categoryInclude = {
   parent: { select: { id: true, name: true } },
   image: true,
+  heroMobileImage: true,
   seoOgMedia: true,
   _count: {
     select: {
@@ -249,6 +250,14 @@ export class CatalogCategoriesService {
         width: number | null;
         height: number | null;
       } | null;
+      heroMobileImage: {
+        id: string;
+        storageKey: string;
+        mimeType: string;
+        altText: string | null;
+        width: number | null;
+        height: number | null;
+      } | null;
       seoOgMedia: {
         id: string;
         storageKey: string;
@@ -259,7 +268,7 @@ export class CatalogCategoriesService {
       } | null;
     },
   >(category: T) {
-    const { _count, image, seoOgMedia, ...categoryFields } = category;
+    const { _count, image, heroMobileImage, seoOgMedia, ...categoryFields } = category;
     return {
       ...categoryFields,
       childCount: _count.children,
@@ -272,6 +281,16 @@ export class CatalogCategoriesService {
             altText: image.altText,
             width: image.width,
             height: image.height,
+          }
+        : null,
+      heroMobileImage: heroMobileImage
+        ? {
+            id: heroMobileImage.id,
+            url: this.publicMediaUrl.resolve(heroMobileImage.storageKey),
+            mimeType: heroMobileImage.mimeType,
+            altText: heroMobileImage.altText,
+            width: heroMobileImage.width,
+            height: heroMobileImage.height,
           }
         : null,
       seoOgMedia: seoOgMedia

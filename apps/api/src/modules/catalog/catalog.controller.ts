@@ -186,6 +186,38 @@ export class CatalogController {
     return this.catalogMediaService.removeCategoryImage(categoryId);
   }
 
+  @Post('categories/:categoryId/hero-mobile-image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MEDIA_UPLOAD_LIMIT_BYTES, files: 1 } }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        altText: { type: 'string', minLength: 1, maxLength: 255 },
+      },
+    },
+  })
+  uploadCategoryMobileHero(
+    @Param('categoryId', new ParseUUIDPipe({ version: '4' })) categoryId: string,
+    @UploadedFile() file: CatalogUploadFile | undefined,
+    @Body() dto: UploadMediaDto,
+  ) {
+    return this.catalogMediaService.uploadForCategoryMobileHero(categoryId, file, dto);
+  }
+
+  @Delete('categories/:categoryId/hero-mobile-image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  removeCategoryMobileHero(
+    @Param('categoryId', new ParseUUIDPipe({ version: '4' })) categoryId: string,
+  ) {
+    return this.catalogMediaService.removeCategoryMobileHero(categoryId);
+  }
+
   @Get('categories')
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
   listCategories() {
@@ -292,6 +324,36 @@ export class CatalogController {
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
   removeBrandHero(@Param('brandId', new ParseUUIDPipe({ version: '4' })) brandId: string) {
     return this.catalogMediaService.removeBrandHero(brandId);
+  }
+
+  @Post('brands/:brandId/hero-mobile-image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MEDIA_UPLOAD_LIMIT_BYTES, files: 1 } }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        altText: { type: 'string', minLength: 1, maxLength: 255 },
+      },
+    },
+  })
+  uploadBrandMobileHero(
+    @Param('brandId', new ParseUUIDPipe({ version: '4' })) brandId: string,
+    @UploadedFile() file: CatalogUploadFile | undefined,
+    @Body() dto: UploadMediaDto,
+  ) {
+    return this.catalogMediaService.uploadForBrandMobileHero(brandId, file, dto);
+  }
+
+  @Delete('brands/:brandId/hero-mobile-image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  removeBrandMobileHero(@Param('brandId', new ParseUUIDPipe({ version: '4' })) brandId: string) {
+    return this.catalogMediaService.removeBrandMobileHero(brandId);
   }
 
   @Post('countries')

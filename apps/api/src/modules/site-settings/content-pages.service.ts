@@ -29,6 +29,7 @@ type ContentPageRecord = Readonly<{
   subtitle: string | null;
   body: string | null;
   heroMediaId: string | null;
+  heroMobileMediaId: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
   seoCanonicalPath: string | null;
@@ -37,6 +38,7 @@ type ContentPageRecord = Readonly<{
   updatedByUserId: string | null;
   updatedAt: Date;
   heroMedia: ContentMedia | null;
+  heroMobileMedia: ContentMedia | null;
   seoOgMedia: ContentMedia | null;
   sections: ReadonlyArray<Readonly<{ title: string; body: string | null }>>;
 }>;
@@ -49,6 +51,7 @@ export const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPage
     subtitle: 'زیبایی ماندگار، انتخاب آگاهانه و تجربه‌ای که با اعتماد ساخته می‌شود.',
     body: 'نقره حمیدیان با تمرکز بر انتخاب دقیق، اصالت محصول و همراهی صادقانه شکل گرفته است. هر قطعه برای ما بخشی از یک روایت شخصی است؛ روایتی که باید سال‌ها درخشان بماند.',
     heroMedia: null,
+    heroMobileMedia: null,
     sections: [
       {
         title: 'انتخاب دقیق',
@@ -73,6 +76,7 @@ export const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPage
     subtitle: 'برای مشاوره انتخاب، پیگیری سفارش و دریافت راهنمایی همراه شما هستیم.',
     body: 'از راه‌های ارتباطی این صفحه با گالری در تماس باشید. همکاران ما در اولین فرصت پاسخ‌گوی شما خواهند بود.',
     heroMedia: null,
+    heroMobileMedia: null,
     sections: [],
     seoTitle: 'تماس با نقره حمیدیان',
     seoDescription: 'راه‌های ارتباط با گالری نقره حمیدیان و دریافت مشاوره.',
@@ -87,6 +91,7 @@ export const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPage
     subtitle: 'خدماتی دقیق و شخصی برای تجربه‌ای آرام از انتخاب تا نگهداری نقره.',
     body: 'خدمات گالری با هدف حفظ کیفیت محصول و اطمینان شما در تمام مراحل خرید ارائه می‌شود.',
     heroMedia: null,
+    heroMobileMedia: null,
     sections: [
       {
         title: 'مشاوره انتخاب',
@@ -108,6 +113,7 @@ export const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPage
     subtitle: 'چارچوب استفاده از فروشگاه و ثبت سفارش در نقره حمیدیان.',
     body: 'ثبت سفارش در فروشگاه به معنای مطالعه و پذیرش شرایط خرید، شیوه ارسال و ضوابط اعلام‌شده در زمان سفارش است.\n\nاطلاعات نهایی هر محصول، مبلغ قابل پرداخت و شرایط تحویل پیش از پرداخت به کاربر نمایش داده می‌شود.',
     heroMedia: null,
+    heroMobileMedia: null,
     sections: [],
     seoTitle: 'شرایط و قوانین نقره حمیدیان',
     seoDescription: 'شرایط استفاده، ثبت سفارش و خرید از فروشگاه نقره حمیدیان.',
@@ -122,6 +128,7 @@ export const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPage
     subtitle: 'شفافیت در نگهداری و استفاده از اطلاعات شما برای ما یک اصل است.',
     body: 'اطلاعات کاربران تنها برای ارائه خدمات فروشگاه، پردازش سفارش و ارتباط ضروری استفاده می‌شود. دسترسی به این اطلاعات محدود و متناسب با نیاز عملیاتی است.\n\nنقره حمیدیان اطلاعات شخصی کاربران را خارج از الزامات قانونی و ارائه خدمات در اختیار اشخاص غیرمرتبط قرار نمی‌دهد.',
     heroMedia: null,
+    heroMobileMedia: null,
     sections: [],
     seoTitle: 'حریم خصوصی نقره حمیدیان',
     seoDescription: 'سیاست حفظ حریم خصوصی و نحوه استفاده از اطلاعات کاربران نقره حمیدیان.',
@@ -136,6 +143,7 @@ export const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPage
     subtitle: 'اندازه‌گیری دقیق در خانه، برای انتخابی مطمئن و راحت.',
     body: 'برای رسیدن به نتیجه دقیق، اندازه‌گیری را دو بار و ترجیحاً در پایان روز انجام دهید. اگر عدد شما میان دو سایز قرار گرفت، سایز بزرگ‌تر را انتخاب کنید.',
     heroMedia: null,
+    heroMobileMedia: null,
     sections: [
       {
         title: 'زمان مناسب اندازه‌گیری',
@@ -164,6 +172,7 @@ export const DEFAULT_CONTENT: Record<StorefrontContentPageKey, PublicContentPage
     subtitle: 'پاسخ‌های روشن برای انتخاب، سفارش و مراقبت از زیورآلات نقره.',
     body: 'پاسخ پرسش‌های رایج پیش از خرید و پس از ثبت سفارش را اینجا ببینید. اگر پاسخ موردنظر شما در این صفحه نبود، کارشناسان گالری همراه شما هستند.',
     heroMedia: null,
+    heroMobileMedia: null,
     sections: [
       {
         title: 'چطور سایز مناسب محصول را انتخاب کنم؟',
@@ -234,6 +243,7 @@ export class ContentPagesService {
     const pages = await this.prisma.storefrontContentPage.findMany({
       include: {
         heroMedia: true,
+        heroMobileMedia: true,
         seoOgMedia: true,
         sections: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] },
       },
@@ -248,6 +258,7 @@ export class ContentPagesService {
       return {
         ...fallback,
         heroMediaId: null,
+        heroMobileMediaId: null,
         seoOgMediaId: null,
         updatedByUserId: null,
         updatedAt: null,
@@ -264,6 +275,7 @@ export class ContentPagesService {
       where: { key },
       select: {
         heroMediaId: true,
+        heroMobileMediaId: true,
         seoCanonicalPath: true,
         seoNoIndex: true,
         seoOgMediaId: true,
@@ -271,10 +283,14 @@ export class ContentPagesService {
     });
     const heroMediaId =
       dto.heroMediaId === undefined ? (current?.heroMediaId ?? null) : dto.heroMediaId;
+    const heroMobileMediaId =
+      dto.heroMobileMediaId === undefined
+        ? (current?.heroMobileMediaId ?? null)
+        : dto.heroMobileMediaId;
     const seoOgMediaId =
       dto.seoOgMediaId === undefined ? (current?.seoOgMediaId ?? null) : dto.seoOgMediaId;
 
-    await this.validateHeroMedia(key, heroMediaId);
+    await this.validateHeroMedia(key, heroMediaId, heroMobileMediaId);
     await this.validateSeoMedia(seoOgMediaId);
 
     const normalized = {
@@ -283,6 +299,7 @@ export class ContentPagesService {
       subtitle: nullableText(dto.subtitle),
       body: nullableText(dto.body),
       heroMediaId,
+      heroMobileMediaId,
       seoTitle: nullableText(dto.seoTitle),
       seoDescription: nullableText(dto.seoDescription),
       seoCanonicalPath:
@@ -322,6 +339,7 @@ export class ContentPagesService {
       where: { key },
       include: {
         heroMedia: true,
+        heroMobileMedia: true,
         seoOgMedia: true,
         sections: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] },
       },
@@ -330,18 +348,30 @@ export class ContentPagesService {
 
   private async validateHeroMedia(
     key: StorefrontContentPageKey,
-    heroMediaId: string | null,
+    desktopMediaId: string | null,
+    mobileMediaId: string | null,
   ): Promise<void> {
-    if (IMAGE_REQUIRED_KEYS.has(key) && !heroMediaId) {
-      throw new BadRequestException('A hero image is required for this storefront page.');
+    if (Boolean(desktopMediaId) !== Boolean(mobileMediaId)) {
+      throw new BadRequestException(
+        'Desktop and mobile hero images must be provided or removed together.',
+      );
     }
-    if (!heroMediaId) return;
+    if (IMAGE_REQUIRED_KEYS.has(key) && (!desktopMediaId || !mobileMediaId)) {
+      throw new BadRequestException(
+        'Desktop and mobile hero images are required for this storefront page.',
+      );
+    }
+    const mediaIds = [...new Set([desktopMediaId, mobileMediaId].filter(Boolean))] as string[];
+    if (mediaIds.length === 0) return;
 
-    const media = await this.prisma.media.findFirst({
-      where: { id: heroMediaId, deletedAt: null },
-      select: { mimeType: true },
+    const mediaCount = await this.prisma.media.count({
+      where: {
+        id: { in: mediaIds },
+        deletedAt: null,
+        mimeType: { startsWith: 'image/' },
+      },
     });
-    if (!media?.mimeType.startsWith('image/')) {
+    if (mediaCount !== mediaIds.length) {
       throw new BadRequestException('Content page hero media must reference an active image.');
     }
   }
@@ -365,6 +395,7 @@ export class ContentPagesService {
       subtitle: page.subtitle,
       body: page.body,
       heroMedia: this.projectMedia(page.heroMedia),
+      heroMobileMedia: this.projectMedia(page.heroMobileMedia),
       sections: page.sections.map(({ title, body }) => ({ title, body })),
       seoTitle: page.seoTitle,
       seoDescription: page.seoDescription,
@@ -378,6 +409,7 @@ export class ContentPagesService {
     return {
       ...this.projectPublic(page),
       heroMediaId: page.heroMediaId,
+      heroMobileMediaId: page.heroMobileMediaId,
       seoOgMediaId: page.seoOgMediaId,
       updatedByUserId: page.updatedByUserId,
       updatedAt: page.updatedAt.toISOString(),

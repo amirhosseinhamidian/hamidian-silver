@@ -39,6 +39,8 @@ const data: SiteSettingsData = {
     catalogHeroSubtitle: null,
     catalogHeroMediaId: null,
     catalogHeroMedia: null,
+    catalogHeroMobileMediaId: null,
+    catalogHeroMobileMedia: null,
     galleryName: 'گالری نقره حمیدیان',
     footerAbout: null,
     contactAddress: 'تهران',

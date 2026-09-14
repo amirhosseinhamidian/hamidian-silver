@@ -228,6 +228,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/categories/{categoryId}/hero-mobile-image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_uploadCategoryMobileHero_v1"];
+        delete: operations["CatalogController_removeCategoryMobileHero_v1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/categories/{categoryId}": {
         parameters: {
             query?: never;
@@ -303,6 +319,22 @@ export interface paths {
         put?: never;
         post: operations["CatalogController_uploadBrandHero_v1"];
         delete: operations["CatalogController_removeBrandHero_v1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/brands/{brandId}/hero-mobile-image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_uploadBrandMobileHero_v1"];
+        delete: operations["CatalogController_removeBrandMobileHero_v1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2845,6 +2877,7 @@ export interface components {
             description: string | null;
             parentId: string | null;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             seoTitle?: string | null;
             seoDescription?: string | null;
             seoCanonicalPath?: string | null;
@@ -2865,6 +2898,7 @@ export interface components {
             description: string | null;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
             heroImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             originCountry: components["schemas"]["PublicCatalogCountryDto"] | null;
             seoTitle?: string | null;
             seoDescription?: string | null;
@@ -2879,6 +2913,7 @@ export interface components {
             description: string | null;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
             heroImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             originCountry: components["schemas"]["PublicCatalogCountryDto"] | null;
             id: string;
             name: string;
@@ -3727,6 +3762,7 @@ export interface components {
             catalogHeroTitle: string | null;
             catalogHeroSubtitle: string | null;
             catalogHeroMedia: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
+            catalogHeroMobileMedia: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
             galleryName: string | null;
             footerAbout: string | null;
             contactAddress: string | null;
@@ -3756,6 +3792,7 @@ export interface components {
             actionLabel: string | null;
             actionHref: string | null;
             media: components["schemas"]["PublicCatalogMediaDto"];
+            mobileMedia: components["schemas"]["PublicCatalogMediaDto"] | null;
         };
         PublicHomepageFeaturedCategoryDto: {
             description: string | null;
@@ -3805,6 +3842,7 @@ export interface components {
             subtitle: string | null;
             body: string | null;
             heroMedia: components["schemas"]["PublicContentPageMediaDto"] | null;
+            heroMobileMedia: components["schemas"]["PublicContentPageMediaDto"] | null;
             sections: components["schemas"]["PublicContentPageSectionDto"][];
             seoTitle: string | null;
             seoDescription: string | null;
@@ -3820,6 +3858,9 @@ export interface components {
             /** Format: uuid */
             heroMediaId: string | null;
             heroMedia: components["schemas"]["PublicContentPageMediaDto"] | null;
+            /** Format: uuid */
+            heroMobileMediaId: string | null;
+            heroMobileMedia: components["schemas"]["PublicContentPageMediaDto"] | null;
             sections: components["schemas"]["PublicContentPageSectionDto"][];
             seoTitle: string | null;
             seoDescription: string | null;
@@ -3845,6 +3886,8 @@ export interface components {
             body?: string | null;
             /** Format: uuid */
             heroMediaId?: string | null;
+            /** Format: uuid */
+            heroMobileMediaId?: string | null;
             seoTitle?: string | null;
             seoDescription?: string | null;
             seoCanonicalPath?: string | null;
@@ -3862,6 +3905,9 @@ export interface components {
         };
         AdminHomepageHeroSlideDto: {
             media: components["schemas"]["AdminHomepageHeroMediaDto"];
+            /** Format: uuid */
+            mobileMediaId: string | null;
+            mobileMedia: components["schemas"]["AdminHomepageHeroMediaDto"] | null;
             title: string | null;
             subtitle: string | null;
             actionLabel: string | null;
@@ -3888,6 +3934,8 @@ export interface components {
         UpdateHomepageHeroSlideDto: {
             /** Format: uuid */
             mediaId: string;
+            /** Format: uuid */
+            mobileMediaId: string;
             title?: string | null;
             subtitle?: string | null;
             actionLabel?: string | null;
@@ -3911,6 +3959,9 @@ export interface components {
             /** Format: uuid */
             catalogHeroMediaId: string | null;
             catalogHeroMedia: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
+            /** Format: uuid */
+            catalogHeroMobileMediaId: string | null;
+            catalogHeroMobileMedia: components["schemas"]["PublicSiteSettingsMediaDto"] | null;
             galleryName: string | null;
             footerAbout: string | null;
             contactAddress: string | null;
@@ -3963,6 +4014,8 @@ export interface components {
             catalogHeroSubtitle?: string | null;
             /** Format: uuid */
             catalogHeroMediaId?: string | null;
+            /** Format: uuid */
+            catalogHeroMobileMediaId?: string | null;
             galleryName?: string | null;
             footerAbout?: string | null;
             contactAddress?: string | null;
@@ -4436,6 +4489,52 @@ export interface operations {
             };
         };
     };
+    CatalogController_uploadCategoryMobileHero_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    altText?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_removeCategoryMobileHero_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     CatalogController_archiveCategory_v1: {
         parameters: {
             query?: never;
@@ -4640,6 +4739,52 @@ export interface operations {
         };
     };
     CatalogController_removeBrandHero_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brandId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_uploadBrandMobileHero_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brandId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    altText?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_removeBrandMobileHero_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -5863,7 +6008,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": Record<string, never>;
+                };
             };
         };
     };

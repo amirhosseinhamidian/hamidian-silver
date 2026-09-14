@@ -1,11 +1,15 @@
 import type { components } from '@hamidian/contracts';
 
-import { StorefrontImage } from '@/components/media/storefront-image';
+import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 
 type CatalogHeroProps = {
   settings: Pick<
     components['schemas']['PublicSiteSettingsDto'],
-    'catalogHeroEnabled' | 'catalogHeroTitle' | 'catalogHeroSubtitle' | 'catalogHeroMedia'
+    | 'catalogHeroEnabled'
+    | 'catalogHeroTitle'
+    | 'catalogHeroSubtitle'
+    | 'catalogHeroMedia'
+    | 'catalogHeroMobileMedia'
   >;
   devFallbackSrc?: string | null;
 };
@@ -13,14 +17,19 @@ type CatalogHeroProps = {
 const DEFAULT_TITLE = 'محصولات نقره حمیدیان';
 
 export function CatalogHero({ settings, devFallbackSrc }: CatalogHeroProps) {
-  const configuredImage = settings.catalogHeroEnabled ? settings.catalogHeroMedia?.url : null;
-  const image = configuredImage ?? devFallbackSrc ?? null;
+  const configuredDesktopImage = settings.catalogHeroEnabled
+    ? settings.catalogHeroMedia?.url
+    : null;
+  const configuredMobileImage = settings.catalogHeroEnabled
+    ? settings.catalogHeroMobileMedia?.url
+    : null;
+  const desktopImage = configuredDesktopImage ?? devFallbackSrc ?? null;
   const title = settings.catalogHeroEnabled
     ? (settings.catalogHeroTitle ?? DEFAULT_TITLE)
     : DEFAULT_TITLE;
   const subtitle = settings.catalogHeroEnabled ? settings.catalogHeroSubtitle : null;
 
-  if (!image) {
+  if (!desktopImage) {
     return (
       <header className="sf-container pt-[var(--sf-section-space)]">
         <p className="text-sm text-[var(--sf-color-muted)]">کاتالوگ فروشگاه</p>
@@ -37,16 +46,15 @@ export function CatalogHero({ settings, devFallbackSrc }: CatalogHeroProps) {
   return (
     <section
       className="
-        relative isolate min-h-[18rem] overflow-hidden
+        relative isolate aspect-[1086/1448] overflow-hidden
         bg-[var(--sf-color-surface)]
-        sm:min-h-[24rem] lg:min-h-[30rem]
+        lg:aspect-[1942/809]
       "
     >
-      <StorefrontImage
-        src={image}
-        alt={configuredImage ? (settings.catalogHeroMedia?.altText ?? '') : ''}
-        fill
-        sizes="100vw"
+      <ResponsiveHeroImage
+        desktopSrc={desktopImage}
+        mobileSrc={configuredMobileImage ?? desktopImage}
+        alt={configuredDesktopImage ? (settings.catalogHeroMedia?.altText ?? '') : ''}
         preload
         className="-z-20 object-cover"
       />
@@ -63,7 +71,7 @@ export function CatalogHero({ settings, devFallbackSrc }: CatalogHeroProps) {
 
       <div
         className="
-          sf-container flex min-h-[inherit]
+          sf-container flex h-full
           items-end py-10 text-white
           sm:py-14
         "

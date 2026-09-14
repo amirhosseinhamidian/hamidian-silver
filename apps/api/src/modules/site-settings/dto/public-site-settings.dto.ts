@@ -73,6 +73,9 @@ export class PublicSiteSettingsDto {
   })
   catalogHeroMedia!: PublicSiteSettingsMediaDto | null;
 
+  @ApiProperty({ nullable: true, type: () => PublicSiteSettingsMediaDto })
+  catalogHeroMobileMedia!: PublicSiteSettingsMediaDto | null;
+
   @ApiProperty({ nullable: true })
   galleryName!: string | null;
 

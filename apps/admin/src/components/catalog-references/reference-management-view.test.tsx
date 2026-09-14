@@ -21,6 +21,7 @@ const brand: AdminBrand = {
   productCount: 3,
   image: null,
   heroImage: null,
+  heroMobileImage: null,
   seoTitle: null,
   seoDescription: null,
   seoCanonicalPath: null,
@@ -90,7 +91,7 @@ describe('ReferenceManagementView', () => {
     expect(router.refresh).toHaveBeenCalled();
   });
 
-  it('uploads a brand logo and hero through separate media endpoints', async () => {
+  it('uploads a brand logo and both hero variants through separate media endpoints', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -110,6 +111,12 @@ describe('ReferenceManagementView', () => {
           status: 201,
           headers: { 'Content-Type': 'application/json' },
         }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ heroMobileImage: { id: 'hero-mobile-1' } }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }),
       );
     vi.stubGlobal('fetch', fetchMock);
     render(view());
@@ -125,14 +132,20 @@ describe('ReferenceManagementView', () => {
     fireEvent.change(within(dialog).getByLabelText('لوگوی برند'), {
       target: { files: [new File(['logo'], 'logo.webp', { type: 'image/webp' })] },
     });
-    fireEvent.change(within(dialog).getByLabelText('تصویر Hero صفحه برند'), {
+    fireEvent.change(within(dialog).getByLabelText('تصویر Hero دسکتاپ صفحه برند'), {
       target: { files: [new File(['hero'], 'hero.webp', { type: 'image/webp' })] },
+    });
+    fireEvent.change(within(dialog).getByLabelText('تصویر Hero موبایل و تبلت صفحه برند'), {
+      target: {
+        files: [new File(['hero-mobile'], 'hero-mobile.webp', { type: 'image/webp' })],
+      },
     });
     fireEvent.click(within(dialog).getByRole('button', { name: 'ذخیره برند' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
     expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/catalog/brands/brand-2/image');
     expect(fetchMock.mock.calls[2]?.[0]).toBe('/api/catalog/brands/brand-2/hero-image');
+    expect(fetchMock.mock.calls[3]?.[0]).toBe('/api/catalog/brands/brand-2/hero-mobile-image');
   });
 
   it('hides mutation controls for read-only users', () => {

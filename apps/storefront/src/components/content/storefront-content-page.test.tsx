@@ -17,6 +17,12 @@ const aboutPage: PublicContentPage = {
     width: 1920,
     height: 1080,
   },
+  heroMobileMedia: {
+    url: 'https://media.hamidian.test/about-mobile.webp',
+    altText: 'زیورآلات نقره حمیدیان',
+    width: 1086,
+    height: 1448,
+  },
   sections: [{ title: 'انتخاب دقیق', body: 'کیفیت در جزئیات شکل می‌گیرد.' }],
   seoTitle: null,
   seoDescription: null,
@@ -37,6 +43,7 @@ const settings: PublicSiteSettings = {
   catalogHeroTitle: null,
   catalogHeroSubtitle: null,
   catalogHeroMedia: null,
+  catalogHeroMobileMedia: null,
   galleryName: 'نقره حمیدیان',
   footerAbout: null,
   contactAddress: 'تهران، پلاک 12',
@@ -53,7 +60,7 @@ describe('StorefrontContentPage', () => {
 
     expect(screen.getByRole('img', { name: 'زیورآلات نقره حمیدیان' })).toHaveAttribute(
       'src',
-      'https://media.hamidian.test/about.webp',
+      'https://media.hamidian.test/about-mobile.webp',
     );
     expect(screen.getByRole('heading', { name: 'روایت نقره حمیدیان' })).toBeInTheDocument();
     expect(screen.getByText('بیش از ۲۰ سال همراه شما هستیم.')).toBeInTheDocument();

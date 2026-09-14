@@ -39,7 +39,7 @@ export class HomepageService {
       this.prisma.homepageHeroSlide.findMany({
         where: { isActive: true },
         orderBy: [{ placement: 'asc' }, { sortOrder: 'asc' }, { id: 'asc' }],
-        include: { media: true },
+        include: { media: true, mobileMedia: true },
       }),
       this.prisma.homepageFeaturedCategory.findMany({
         where: {
@@ -145,7 +145,7 @@ export class HomepageService {
     const [slides, categories, products, manufacturerCountries, settings] = await Promise.all([
       this.prisma.homepageHeroSlide.findMany({
         orderBy: [{ placement: 'asc' }, { sortOrder: 'asc' }, { id: 'asc' }],
-        include: { media: true },
+        include: { media: true, mobileMedia: true },
       }),
       this.prisma.homepageFeaturedCategory.findMany({ orderBy: { priority: 'asc' } }),
       this.prisma.homepagePopularProduct.findMany({ orderBy: { priority: 'asc' } }),
@@ -167,6 +167,17 @@ export class HomepageService {
         mimeType: slide.media.mimeType,
         altText: slide.media.altText,
       },
+      mobileMediaId: slide.mobileMediaId,
+      mobileMedia: slide.mobileMedia
+        ? {
+            id: slide.mobileMedia.id,
+            url: slide.mobileMedia.deletedAt
+              ? null
+              : this.publicMediaUrlService.resolve(slide.mobileMedia.storageKey),
+            mimeType: slide.mobileMedia.mimeType,
+            altText: slide.mobileMedia.altText,
+          }
+        : null,
       title: slide.title,
       subtitle: slide.subtitle,
       actionLabel: slide.actionLabel,
@@ -231,7 +242,9 @@ export class HomepageService {
     ];
 
     await Promise.all([
-      this.validateHeroMedia(slides.map(({ mediaId }) => mediaId)),
+      this.validateHeroMedia(
+        slides.flatMap(({ mediaId, mobileMediaId }) => [mediaId, mobileMediaId]),
+      ),
       this.validateCategories(dto.categoryIds),
       this.validateProducts(dto.popularProductIds),
       this.validateCountries(dto.manufacturerCountryIds),
@@ -305,6 +318,7 @@ export class HomepageService {
 
     return {
       mediaId: slide.mediaId,
+      mobileMediaId: slide.mobileMediaId,
       title: nullableText(slide.title),
       subtitle: nullableText(slide.subtitle),
       actionLabel,
@@ -423,6 +437,14 @@ export class HomepageService {
       height: number | null;
       deletedAt: Date | null;
     };
+    mobileMedia: {
+      storageKey: string;
+      mimeType: string;
+      altText: string | null;
+      width: number | null;
+      height: number | null;
+      deletedAt: Date | null;
+    } | null;
   }): PublicHomepageHeroSlideDto | null {
     if (slide.media.deletedAt || !slide.media.mimeType.startsWith('image/')) return null;
 
@@ -438,6 +460,18 @@ export class HomepageService {
         width: slide.media.width,
         height: slide.media.height,
       },
+      mobileMedia:
+        slide.mobileMedia &&
+        !slide.mobileMedia.deletedAt &&
+        slide.mobileMedia.mimeType.startsWith('image/')
+          ? {
+              url: this.publicMediaUrlService.resolve(slide.mobileMedia.storageKey),
+              mimeType: slide.mobileMedia.mimeType,
+              altText: slide.mobileMedia.altText,
+              width: slide.mobileMedia.width,
+              height: slide.mobileMedia.height,
+            }
+          : null,
     };
   }
 }

@@ -82,6 +82,7 @@ describe('buildStorefrontSitemap', () => {
         subtitle: null,
         body: null,
         heroMedia: null,
+        heroMobileMedia: null,
         sections: [],
         seoTitle: null,
         seoDescription: null,

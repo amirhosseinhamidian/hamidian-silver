@@ -39,6 +39,8 @@ type Draft = Readonly<{
   body: string;
   heroMediaId: string | null;
   heroMedia: SiteMedia | null;
+  heroMobileMediaId: string | null;
+  heroMobileMedia: SiteMedia | null;
   seoTitle: string;
   seoDescription: string;
   seoCanonicalPath: string;
@@ -78,6 +80,15 @@ function toDraft(page: AdminContentPage): Draft {
           altText: page.heroMedia?.altText ?? null,
         }
       : null,
+    heroMobileMediaId: page.heroMobileMediaId,
+    heroMobileMedia: page.heroMobileMediaId
+      ? {
+          id: page.heroMobileMediaId,
+          url: page.heroMobileMedia?.url ?? null,
+          mimeType: 'image/*',
+          altText: page.heroMobileMedia?.altText ?? null,
+        }
+      : null,
     seoTitle: page.seoTitle ?? '',
     seoDescription: page.seoDescription ?? '',
     seoCanonicalPath: page.seoCanonicalPath ?? '',
@@ -114,7 +125,12 @@ function validateDraft(key: ContentPageKey, draft: Draft): string | null {
   if (draft.seoDescription.trim().length > 500) return 'توضیح SEO حداکثر ۵۰۰ نویسه است.';
   if (!isValidSeoCanonicalPath(draft.seoCanonicalPath.trim()))
     return 'مسیر canonical باید یک مسیر داخلی بدون query یا fragment باشد.';
-  if (IMAGE_REQUIRED.has(key) && !draft.heroMediaId) return 'تصویر Hero برای این صفحه الزامی است.';
+  if (IMAGE_REQUIRED.has(key) && (!draft.heroMediaId || !draft.heroMobileMediaId)) {
+    return 'هر دو تصویر Hero دسکتاپ و موبایل/تبلت برای این صفحه الزامی هستند.';
+  }
+  if (Boolean(draft.heroMediaId) !== Boolean(draft.heroMobileMediaId)) {
+    return 'برای Hero باید هر دو تصویر دسکتاپ و موبایل/تبلت ثبت یا هر دو حذف شوند.';
+  }
   if (draft.sections.length > 12) return 'هر صفحه حداکثر ۱۲ بخش محتوایی دارد.';
   if (draft.sections.some((section) => !section.title.trim()))
     return 'عنوان همه بخش‌ها الزامی است.';
@@ -267,7 +283,7 @@ export function ContentPagesView({ pages: initialPages, failed, canWrite }: Prop
   const totals = useMemo(
     () => ({
       pages: pages.length,
-      images: pages.filter((page) => page.heroMediaId).length,
+      images: pages.filter((page) => page.heroMediaId && page.heroMobileMediaId).length,
       seo: pages.filter((page) => page.seoTitle && page.seoDescription).length,
       sections: pages.reduce((sum, page) => sum + page.sections.length, 0),
     }),
@@ -308,6 +324,7 @@ export function ContentPagesView({ pages: initialPages, failed, canWrite }: Prop
           subtitle: draft.subtitle.trim() || null,
           body: draft.body.trim() || null,
           heroMediaId: draft.heroMediaId,
+          heroMobileMediaId: draft.heroMobileMediaId,
           seoTitle: draft.seoTitle.trim() || null,
           seoDescription: draft.seoDescription.trim() || null,
           seoCanonicalPath: draft.seoCanonicalPath.trim() || null,
@@ -483,24 +500,47 @@ export function ContentPagesView({ pages: initialPages, failed, canWrite }: Prop
           </Card>
 
           <Card
-            title="تصویر Hero"
+            title="تصاویر Hero"
             description={
-              IMAGE_REQUIRED.has(selectedKey) ? 'برای این صفحه الزامی است.' : 'اختیاری است.'
+              IMAGE_REQUIRED.has(selectedKey)
+                ? 'هر دو نسخه برای این صفحه الزامی هستند.'
+                : 'ثبت Hero اختیاری است؛ در صورت استفاده، هر دو نسخه را وارد کنید.'
             }
           >
-            <SiteMediaField
-              label={`Hero صفحه ${pageMeta.label}`}
-              media={draft.heroMedia}
-              altText={draft.title}
-              disabled={!canWrite || pending}
-              uploadUrl="/api/content-pages/media"
-              onUploaded={(media) => updateDraft({ heroMediaId: media.id, heroMedia: media })}
-              onClear={
-                IMAGE_REQUIRED.has(selectedKey)
-                  ? undefined
-                  : () => updateDraft({ heroMediaId: null, heroMedia: null })
-              }
-            />
+            <div className="grid gap-5 md:grid-cols-2">
+              <SiteMediaField
+                label={`Hero دسکتاپ صفحه ${pageMeta.label}`}
+                media={draft.heroMedia}
+                altText={draft.title}
+                disabled={!canWrite || pending}
+                uploadUrl="/api/content-pages/media"
+                aspect="page-desktop"
+                hint="۱۹۴۲×۸۰۹ با نسبت ۲٫۴:۱"
+                onUploaded={(media) => updateDraft({ heroMediaId: media.id, heroMedia: media })}
+                onClear={
+                  IMAGE_REQUIRED.has(selectedKey)
+                    ? undefined
+                    : () => updateDraft({ heroMediaId: null, heroMedia: null })
+                }
+              />
+              <SiteMediaField
+                label={`Hero موبایل و تبلت صفحه ${pageMeta.label}`}
+                media={draft.heroMobileMedia}
+                altText={draft.title}
+                disabled={!canWrite || pending}
+                uploadUrl="/api/content-pages/media"
+                aspect="mobile"
+                hint="۱۰۸۶×۱۴۴۸ با نسبت ۳:۴"
+                onUploaded={(media) =>
+                  updateDraft({ heroMobileMediaId: media.id, heroMobileMedia: media })
+                }
+                onClear={
+                  IMAGE_REQUIRED.has(selectedKey)
+                    ? undefined
+                    : () => updateDraft({ heroMobileMediaId: null, heroMobileMedia: null })
+                }
+              />
+            </div>
           </Card>
 
           <SectionEditor

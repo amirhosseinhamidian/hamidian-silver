@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState, type ReactNode } from 'react';
 import { FiArrowLeft, FiMinus, FiPlus, FiSearch } from 'react-icons/fi';
 
-import { StorefrontImage } from '@/components/media/storefront-image';
+import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import type { PublicContentPage } from '@/lib/content/public-content-page';
 
 type StorefrontFaqProps = Readonly<{
@@ -60,13 +60,12 @@ export function StorefrontFaq({ page, breadcrumbs }: StorefrontFaqProps) {
 
   return (
     <main id="main-content">
-      <header className="relative isolate overflow-hidden border-b border-[var(--sf-color-border)] bg-[#151515] text-white">
+      <header className="relative isolate aspect-[1086/1448] overflow-hidden border-b border-[var(--sf-color-border)] bg-[#151515] text-white lg:aspect-[1942/809]">
         {page.heroMedia?.url ? (
-          <StorefrontImage
-            src={page.heroMedia.url}
+          <ResponsiveHeroImage
+            desktopSrc={page.heroMedia.url}
+            mobileSrc={page.heroMobileMedia?.url}
             alt={page.heroMedia.altText ?? page.title}
-            fill
-            sizes="100vw"
             preload
             className="-z-20 object-cover"
           />
@@ -77,7 +76,7 @@ export function StorefrontFaq({ page, breadcrumbs }: StorefrontFaqProps) {
           />
         )}
         <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/75 via-black/20 to-black/25" />
-        <div className="sf-container flex min-h-[58svh] items-end pb-12 pt-28 sm:min-h-[66svh] sm:pb-20">
+        <div className="sf-container flex h-full items-end pb-12 pt-28 lg:pb-20">
           <div className="max-w-3xl">
             {breadcrumbs}
             {page.eyebrow ? (

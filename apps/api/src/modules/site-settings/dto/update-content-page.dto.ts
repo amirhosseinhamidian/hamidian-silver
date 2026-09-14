@@ -50,6 +50,10 @@ export class UpdateContentPageDto {
   heroMediaId?: string | null;
 
   @IsOptional()
+  @IsUUID('4')
+  heroMobileMediaId?: string | null;
+
+  @IsOptional()
   @IsString()
   @MaxLength(200)
   seoTitle?: string | null;

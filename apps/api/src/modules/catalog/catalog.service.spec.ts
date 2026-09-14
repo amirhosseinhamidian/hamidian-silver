@@ -442,6 +442,14 @@ describe('CatalogService', () => {
           height: 1200,
           deletedAt: null,
         },
+        heroMobileImage: {
+          storageKey: 'categories/rings-mobile.jpg',
+          mimeType: 'image/jpeg',
+          altText: 'Silver rings',
+          width: 1086,
+          height: 1448,
+          deletedAt: null,
+        },
       },
     ]);
 
@@ -464,6 +472,13 @@ describe('CatalogService', () => {
           altText: 'Silver rings',
           width: 1200,
           height: 1200,
+        },
+        heroMobileImage: {
+          url: 'https://media.hamidian.shop/categories/rings-mobile.jpg',
+          mimeType: 'image/jpeg',
+          altText: 'Silver rings',
+          width: 1086,
+          height: 1448,
         },
       },
     ]);
@@ -502,6 +517,14 @@ describe('CatalogService', () => {
           height: 900,
           deletedAt: null,
         },
+        heroMobileImage: {
+          storageKey: 'brands/hamidian-hero-mobile.webp',
+          mimeType: 'image/webp',
+          altText: 'کالکشن حمیدیان',
+          width: 1086,
+          height: 1448,
+          deletedAt: null,
+        },
       },
     ]);
 
@@ -520,6 +543,13 @@ describe('CatalogService', () => {
           altText: 'کالکشن حمیدیان',
           width: 1920,
           height: 900,
+        },
+        heroMobileImage: {
+          url: 'https://media.hamidian.shop/brands/hamidian-hero-mobile.webp',
+          mimeType: 'image/webp',
+          altText: 'کالکشن حمیدیان',
+          width: 1086,
+          height: 1448,
         },
       }),
     ]);

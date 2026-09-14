@@ -50,6 +50,30 @@ describe('StorefrontFooter', () => {
     expect(screen.getByRole('link', { name: 'سوالات متداول' })).toHaveAttribute('href', '/faq');
   });
 
+  it('links the Enamad trust seal to its official verification page', () => {
+    render(<StorefrontFooter />);
+
+    const trustSealLink = screen.getByRole('link', {
+      name: 'مشاهده اعتبار نماد اعتماد الکترونیکی گالری حمیدیان',
+    });
+    expect(trustSealLink).toHaveAttribute(
+      'href',
+      'https://trustseal.enamad.ir/?id=7736426&Code=fWmqiTtv828G7AiAoC2i3jWBYpzTqDqk',
+    );
+    expect(trustSealLink).toHaveAttribute('target', '_blank');
+    expect(trustSealLink).toHaveAttribute('rel', 'noopener');
+    expect(trustSealLink).toHaveAttribute('referrerpolicy', 'origin');
+
+    const trustSealImage = screen.getByRole('img', {
+      name: 'نماد اعتماد الکترونیکی گالری حمیدیان',
+    });
+    expect(trustSealImage).toHaveAttribute(
+      'src',
+      'https://trustseal.enamad.ir/logo.aspx?id=7736426&Code=fWmqiTtv828G7AiAoC2i3jWBYpzTqDqk',
+    );
+    expect(trustSealImage).toHaveAttribute('referrerpolicy', 'origin');
+  });
+
   it('hides optional gallery details when settings are unavailable', () => {
     render(<StorefrontFooter />);
 

@@ -15,6 +15,8 @@ function page(key: string) {
     body: null,
     heroMediaId: null,
     heroMedia: null,
+    heroMobileMediaId: null,
+    heroMobileMedia: null,
     sections: [],
     seoTitle: null,
     seoDescription: null,

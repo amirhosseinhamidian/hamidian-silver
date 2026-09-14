@@ -18,6 +18,7 @@ const settings: PublicSiteSettings = {
   catalogHeroTitle: null,
   catalogHeroSubtitle: null,
   catalogHeroMedia: null,
+  catalogHeroMobileMedia: null,
   galleryName: null,
   footerAbout: null,
   contactAddress: null,

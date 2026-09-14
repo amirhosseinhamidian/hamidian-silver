@@ -24,6 +24,12 @@ export class AdminContentPageDto {
   @ApiProperty({ nullable: true, type: () => PublicContentPageMediaDto })
   heroMedia!: PublicContentPageMediaDto | null;
 
+  @ApiProperty({ nullable: true, format: 'uuid' })
+  heroMobileMediaId!: string | null;
+
+  @ApiProperty({ nullable: true, type: () => PublicContentPageMediaDto })
+  heroMobileMedia!: PublicContentPageMediaDto | null;
+
   @ApiProperty({ type: () => PublicContentPageSectionDto, isArray: true })
   sections!: PublicContentPageSectionDto[];
 

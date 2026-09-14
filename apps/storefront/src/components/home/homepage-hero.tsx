@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
-import { StorefrontImage } from '@/components/media/storefront-image';
+import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import type { PublicHomepageHeroSlide } from '@/lib/home/public-homepage';
 
 type HomepageHeroProps = Readonly<{
@@ -92,15 +92,13 @@ export function HomepageHero({
     >
       {slides.map((slide, index) =>
         slide.media.url ? (
-          <StorefrontImage
-            key={`${slide.media.url}-${index}`}
-            src={slide.media.url}
+          <ResponsiveHeroImage
+            key={`${slide.media.url}-${slide.mobileMedia?.url ?? ''}-${index}`}
+            desktopSrc={slide.media.url}
+            mobileSrc={slide.mobileMedia?.url}
             alt={slide.media.altText ?? slide.title ?? ''}
-            fill
-            sizes="100vw"
             preload={preload && index === 0}
-            loading={preload && index === 0 ? undefined : 'lazy'}
-            aria-hidden={index !== activeIndex}
+            ariaHidden={index !== activeIndex}
             className={`object-cover transition-opacity duration-700 ${index === activeIndex ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
           />
         ) : null,

@@ -17,6 +17,7 @@ export type PublicSiteSettings = Readonly<{
   catalogHeroTitle: string | null;
   catalogHeroSubtitle: string | null;
   catalogHeroMedia: Readonly<{ url: string | null; altText: string | null }> | null;
+  catalogHeroMobileMedia: Readonly<{ url: string | null; altText: string | null }> | null;
   galleryName: string | null;
   footerAbout: string | null;
   contactAddress: string | null;
@@ -53,6 +54,7 @@ const DEFAULT_PUBLIC_SITE_SETTINGS: PublicSiteSettings = {
   catalogHeroTitle: null,
   catalogHeroSubtitle: null,
   catalogHeroMedia: null,
+  catalogHeroMobileMedia: null,
   galleryName: null,
   footerAbout: null,
   contactAddress: null,
@@ -124,6 +126,9 @@ function parsePublicSettings(value: unknown): PublicSiteSettings | null {
   const rawMedia = source.catalogHeroMedia;
   const media = rawMedia === null ? null : record(rawMedia);
   if (rawMedia !== null && !media) return null;
+  const rawMobileMedia = source.catalogHeroMobileMedia;
+  const mobileMedia = rawMobileMedia === null ? null : record(rawMobileMedia);
+  if (rawMobileMedia !== null && !mobileMedia) return null;
 
   return {
     headerCategories,
@@ -145,6 +150,9 @@ function parsePublicSettings(value: unknown): PublicSiteSettings | null {
     catalogHeroSubtitle: nullableText(source.catalogHeroSubtitle),
     catalogHeroMedia: media
       ? { url: nullableText(media.url), altText: nullableText(media.altText) }
+      : null,
+    catalogHeroMobileMedia: mobileMedia
+      ? { url: nullableText(mobileMedia.url), altText: nullableText(mobileMedia.altText) }
       : null,
     galleryName: nullableText(source.galleryName),
     footerAbout: nullableText(source.footerAbout),

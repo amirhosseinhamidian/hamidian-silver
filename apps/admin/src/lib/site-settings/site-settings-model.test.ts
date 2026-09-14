@@ -28,6 +28,8 @@ describe('site settings model', () => {
       catalogHeroSubtitle: null,
       catalogHeroMediaId: null,
       catalogHeroMedia: null,
+      catalogHeroMobileMediaId: null,
+      catalogHeroMobileMedia: null,
       galleryName: 'گالری حمیدیان',
       footerAbout: 'زیورآلات نقره',
       contactAddress: 'تهران',
@@ -71,6 +73,8 @@ describe('site settings model', () => {
         catalogHeroSubtitle: null,
         catalogHeroMediaId: null,
         catalogHeroMedia: null,
+        catalogHeroMobileMediaId: null,
+        catalogHeroMobileMedia: null,
         galleryName: null,
         footerAbout: null,
         contactAddress: null,
@@ -93,6 +97,13 @@ describe('site settings model', () => {
         mimeType: 'image/webp',
         altText: 'کالکشن نقره',
       },
+      mobileMediaId: 'media-mobile-1',
+      mobileMedia: {
+        id: 'media-mobile-1',
+        url: 'https://media.example.com/hero-mobile.webp',
+        mimeType: 'image/webp',
+        altText: 'کالکشن نقره',
+      },
       title: 'کالکشن تازه',
       subtitle: null,
       actionLabel: null,
@@ -111,6 +122,7 @@ describe('site settings model', () => {
     });
 
     expect(result?.primaryHeroSlides[0]?.media.url).toContain('hero.webp');
+    expect(result?.primaryHeroSlides[0]?.mobileMedia?.url).toContain('hero-mobile.webp');
     expect(result?.categoryIds).toEqual(['category-1']);
     expect(result?.popularProductIds).toEqual(['product-1']);
     expect(result?.manufacturerCountriesEnabled).toBe(true);

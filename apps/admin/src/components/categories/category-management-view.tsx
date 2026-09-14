@@ -141,8 +141,11 @@ function CategoryForm({
 }: CategoryFormProps) {
   const router = useRouter();
   const fileInputId = useId();
+  const mobileFileInputId = useId();
   const [file, setFile] = useState<File | null>(null);
+  const [mobileFile, setMobileFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
+  const [removeMobileImage, setRemoveMobileImage] = useState(false);
   const [seo, setSeo] = useState(() => createSeoEditorValue(category));
   const [error, setError] = useState<string | null>(null);
   const [archiveConfirmation, setArchiveConfirmation] = useState(false);
@@ -187,7 +190,20 @@ function CategoryForm({
     if (!isValidSeoCanonicalPath(seo.canonicalPath.trim()))
       return setError('مسیر canonical باید یک مسیر داخلی بدون query یا fragment باشد.');
     if (file && (!ACCEPTED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
-      return setError('تصویر Hero باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
+      return setError('تصویر Hero دسکتاپ باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
+    }
+    if (
+      mobileFile &&
+      (!ACCEPTED_IMAGE_TYPES.has(mobileFile.type) || mobileFile.size > MAX_IMAGE_BYTES)
+    ) {
+      return setError(
+        'تصویر Hero موبایل و تبلت باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.',
+      );
+    }
+    const hasDesktopHero = Boolean(file || (category?.image && !removeImage));
+    const hasMobileHero = Boolean(mobileFile || (category?.heroMobileImage && !removeMobileImage));
+    if (hasDesktopHero !== hasMobileHero) {
+      return setError('برای Hero باید هر دو تصویر دسکتاپ و موبایل/تبلت ثبت شوند.');
     }
 
     setError(null);
@@ -228,6 +244,20 @@ function CategoryForm({
         if (!imageResponse.ok) throw new Error(responseError(imagePayload));
       } else if (category?.image && removeImage) {
         await requestJson(`/api/catalog/categories/${category.id}/image`, 'DELETE');
+      }
+
+      if (mobileFile) {
+        const mobileImageData = new FormData();
+        mobileImageData.set('file', mobileFile);
+        mobileImageData.set('altText', `${name} - موبایل`);
+        const mobileImageResponse = await fetch(
+          `/api/catalog/categories/${savedCategoryId}/hero-mobile-image`,
+          { method: 'POST', body: mobileImageData },
+        );
+        const mobileImagePayload = (await mobileImageResponse.json().catch(() => null)) as unknown;
+        if (!mobileImageResponse.ok) throw new Error(responseError(mobileImagePayload));
+      } else if (category?.heroMobileImage && removeMobileImage) {
+        await requestJson(`/api/catalog/categories/${category.id}/hero-mobile-image`, 'DELETE');
       }
 
       onSaved();
@@ -362,15 +392,15 @@ function CategoryForm({
             />
           ) : (
             <span className="grid size-16 place-items-center rounded-[var(--admin-radius-md)] bg-[var(--admin-color-surface-subtle)] text-xs text-[var(--admin-color-muted)]">
-              بدون تصویر Hero
+              بدون تصویر Hero دسکتاپ
             </span>
           )}
           <div className="min-w-0 flex-1">
             <label htmlFor={fileInputId} className="text-sm font-bold">
-              تصویر Hero دسته‌بندی
+              تصویر Hero دسکتاپ دسته‌بندی
             </label>
             <p className="mt-1 truncate text-xs text-[var(--admin-color-muted)]">
-              {file ? file.name : 'JPEG، PNG، WebP یا AVIF تا ۱۰ مگابایت'}
+              {file ? file.name : 'ابعاد پیشنهادی ۱۹۴۲×۸۰۹ (نسبت ۲٫۴:۱)؛ تا ۱۰ مگابایت'}
             </p>
           </div>
         </div>
@@ -379,7 +409,7 @@ function CategoryForm({
             htmlFor={fileInputId}
             className="inline-flex min-h-9 cursor-pointer items-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] px-3 text-xs font-semibold hover:bg-[var(--admin-color-surface-subtle)]"
           >
-            انتخاب تصویر Hero
+            انتخاب تصویر دسکتاپ
           </label>
           <input
             id={fileInputId}
@@ -393,7 +423,58 @@ function CategoryForm({
           />
           {category?.image && !file ? (
             <Button size="sm" variant="ghost" onClick={() => setRemoveImage((current) => !current)}>
-              {removeImage ? 'لغو حذف تصویر Hero' : 'حذف تصویر Hero فعلی'}
+              {removeImage ? 'لغو حذف تصویر دسکتاپ' : 'حذف تصویر دسکتاپ فعلی'}
+            </Button>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] p-3">
+        <div className="flex items-center gap-3">
+          {category?.heroMobileImage && !removeMobileImage && !mobileFile ? (
+            <img
+              src={category.heroMobileImage.url}
+              alt={category.heroMobileImage.altText ?? `${category.name} - موبایل`}
+              className="size-16 rounded-[var(--admin-radius-md)] object-cover"
+            />
+          ) : (
+            <span className="grid size-16 place-items-center rounded-[var(--admin-radius-md)] bg-[var(--admin-color-surface-subtle)] text-center text-xs text-[var(--admin-color-muted)]">
+              بدون تصویر موبایل
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <label htmlFor={mobileFileInputId} className="text-sm font-bold">
+              تصویر Hero موبایل و تبلت
+            </label>
+            <p className="mt-1 truncate text-xs text-[var(--admin-color-muted)]">
+              {mobileFile ? mobileFile.name : 'ابعاد پیشنهادی ۱۰۸۶×۱۴۴۸ (نسبت ۳:۴)؛ تا ۱۰ مگابایت'}
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <label
+            htmlFor={mobileFileInputId}
+            className="inline-flex min-h-9 cursor-pointer items-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] px-3 text-xs font-semibold hover:bg-[var(--admin-color-surface-subtle)]"
+          >
+            انتخاب تصویر موبایل
+          </label>
+          <input
+            id={mobileFileInputId}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/avif"
+            className="sr-only"
+            onChange={(event) => {
+              setMobileFile(event.target.files?.[0] ?? null);
+              setRemoveMobileImage(false);
+            }}
+          />
+          {category?.heroMobileImage && !mobileFile ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setRemoveMobileImage((current) => !current)}
+            >
+              {removeMobileImage ? 'لغو حذف تصویر موبایل' : 'حذف تصویر موبایل فعلی'}
             </Button>
           ) : null}
         </div>
@@ -504,7 +585,8 @@ function ReadonlyCategoryDetails({ category }: Readonly<{ category: AdminCategor
         ['زیرمجموعه', formatAdminInteger(category.childCount)],
         ['محصول', formatAdminInteger(category.productCount)],
         ['توضیحات', category.description ?? 'ثبت نشده'],
-        ['تصویر Hero', category.image ? 'ثبت شده' : 'ثبت نشده'],
+        ['Hero دسکتاپ', category.image ? 'ثبت شده' : 'ثبت نشده'],
+        ['Hero موبایل/تبلت', category.heroMobileImage ? 'ثبت شده' : 'ثبت نشده'],
         ['آخرین ویرایش', formatAdminDateTime(category.updatedAt)],
       ].map(([label, value]) => (
         <div key={label} className="flex justify-between gap-4 py-3 text-sm">

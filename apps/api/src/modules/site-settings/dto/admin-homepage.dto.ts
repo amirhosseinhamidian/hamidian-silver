@@ -19,6 +19,12 @@ export class AdminHomepageHeroSlideDto {
   @ApiProperty({ type: () => AdminHomepageHeroMediaDto })
   media!: AdminHomepageHeroMediaDto;
 
+  @ApiProperty({ type: String, nullable: true, format: 'uuid' })
+  mobileMediaId!: string | null;
+
+  @ApiProperty({ type: () => AdminHomepageHeroMediaDto, nullable: true })
+  mobileMedia!: AdminHomepageHeroMediaDto | null;
+
   @ApiProperty({ type: String, nullable: true })
   title!: string | null;
 

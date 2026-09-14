@@ -586,6 +586,16 @@ export class CatalogService {
             deletedAt: true,
           },
         },
+        heroMobileImage: {
+          select: {
+            storageKey: true,
+            mimeType: true,
+            altText: true,
+            width: true,
+            height: true,
+            deletedAt: true,
+          },
+        },
         seoOgMedia: {
           select: {
             storageKey: true,
@@ -618,6 +628,16 @@ export class CatalogService {
               altText: category.image.altText,
               width: category.image.width,
               height: category.image.height,
+            }
+          : null,
+      heroMobileImage:
+        category.heroMobileImage && !category.heroMobileImage.deletedAt
+          ? {
+              url: this.publicMediaUrl.resolve(category.heroMobileImage.storageKey),
+              mimeType: category.heroMobileImage.mimeType,
+              altText: category.heroMobileImage.altText,
+              width: category.heroMobileImage.width,
+              height: category.heroMobileImage.height,
             }
           : null,
       seoOgMedia:
@@ -681,6 +701,16 @@ export class CatalogService {
             deletedAt: true,
           },
         },
+        heroMobileImage: {
+          select: {
+            storageKey: true,
+            mimeType: true,
+            altText: true,
+            width: true,
+            height: true,
+            deletedAt: true,
+          },
+        },
         seoOgMedia: {
           select: {
             storageKey: true,
@@ -730,6 +760,16 @@ export class CatalogService {
               altText: brand.heroImage.altText,
               width: brand.heroImage.width,
               height: brand.heroImage.height,
+            }
+          : null,
+      heroMobileImage:
+        brand.heroMobileImage && !brand.heroMobileImage.deletedAt
+          ? {
+              url: this.publicMediaUrl.resolve(brand.heroMobileImage.storageKey),
+              mimeType: brand.heroMobileImage.mimeType,
+              altText: brand.heroMobileImage.altText,
+              width: brand.heroMobileImage.width,
+              height: brand.heroMobileImage.height,
             }
           : null,
       seoOgMedia:

@@ -139,10 +139,13 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
   const router = useRouter();
   const fileInputId = useId();
   const heroFileInputId = useId();
+  const mobileHeroFileInputId = useId();
   const [file, setFile] = useState<File | null>(null);
   const [heroFile, setHeroFile] = useState<File | null>(null);
+  const [mobileHeroFile, setMobileHeroFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
   const [removeHeroImage, setRemoveHeroImage] = useState(false);
+  const [removeMobileHeroImage, setRemoveMobileHeroImage] = useState(false);
   const [archiveConfirmation, setArchiveConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const copy = COPY[kind];
@@ -172,7 +175,24 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
       );
     }
     if (heroFile && (!ACCEPTED_IMAGE_TYPES.has(heroFile.type) || heroFile.size > MAX_IMAGE_BYTES)) {
-      return setError('تصویر Hero باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
+      return setError('تصویر Hero دسکتاپ باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
+    }
+    if (
+      mobileHeroFile &&
+      (!ACCEPTED_IMAGE_TYPES.has(mobileHeroFile.type) || mobileHeroFile.size > MAX_IMAGE_BYTES)
+    ) {
+      return setError(
+        'تصویر Hero موبایل و تبلت باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.',
+      );
+    }
+    if (kind === 'brand') {
+      const hasDesktopHero = Boolean(heroFile || (brandReference?.heroImage && !removeHeroImage));
+      const hasMobileHero = Boolean(
+        mobileHeroFile || (brandReference?.heroMobileImage && !removeMobileHeroImage),
+      );
+      if (hasDesktopHero !== hasMobileHero) {
+        return setError('برای Hero برند باید هر دو تصویر دسکتاپ و موبایل/تبلت ثبت شوند.');
+      }
     }
 
     setError(null);
@@ -225,6 +245,20 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
         if (!response.ok) throw new Error(responseError(heroPayload));
       } else if (brandReference?.heroImage && removeHeroImage) {
         await requestJson(`/api/catalog/brands/${savedId}/hero-image`, 'DELETE');
+      }
+
+      if (kind === 'brand' && mobileHeroFile) {
+        const mobileHeroData = new FormData();
+        mobileHeroData.set('file', mobileHeroFile);
+        mobileHeroData.set('altText', `تصویر Hero موبایل ${name}`);
+        const response = await fetch(`/api/catalog/brands/${savedId}/hero-mobile-image`, {
+          method: 'POST',
+          body: mobileHeroData,
+        });
+        const mobileHeroPayload = (await response.json().catch(() => null)) as unknown;
+        if (!response.ok) throw new Error(responseError(mobileHeroPayload));
+      } else if (brandReference?.heroMobileImage && removeMobileHeroImage) {
+        await requestJson(`/api/catalog/brands/${savedId}/hero-mobile-image`, 'DELETE');
       }
 
       onSaved();
@@ -409,17 +443,17 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
               />
             ) : (
               <span className="grid aspect-[16/7] w-full place-items-center text-xs text-[var(--admin-color-muted)]">
-                بدون تصویر Hero
+                بدون تصویر Hero دسکتاپ
               </span>
             )}
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <label htmlFor={heroFileInputId} className="text-sm font-bold">
-                تصویر Hero صفحه برند
+                تصویر Hero دسکتاپ صفحه برند
               </label>
               <p className="mt-1 truncate text-xs text-[var(--admin-color-muted)]">
-                {heroFile ? heroFile.name : 'تصویر افقی JPEG، PNG، WebP یا AVIF تا ۱۰ مگابایت'}
+                {heroFile ? heroFile.name : 'ابعاد پیشنهادی ۱۹۴۲×۸۰۹ (نسبت ۲٫۴:۱)؛ تا ۱۰ مگابایت'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -427,7 +461,7 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
                 htmlFor={heroFileInputId}
                 className="inline-flex min-h-9 cursor-pointer items-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] px-3 text-xs font-semibold hover:bg-[var(--admin-color-surface-subtle)]"
               >
-                انتخاب تصویر Hero
+                انتخاب تصویر دسکتاپ
               </label>
               <input
                 id={heroFileInputId}
@@ -446,7 +480,68 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
                   variant="ghost"
                   onClick={() => setRemoveHeroImage((current) => !current)}
                 >
-                  {removeHeroImage ? 'لغو حذف Hero' : 'حذف Hero فعلی'}
+                  {removeHeroImage ? 'لغو حذف Hero دسکتاپ' : 'حذف Hero دسکتاپ فعلی'}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {kind === 'brand' ? (
+        <section className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] p-3">
+          <div className="overflow-hidden rounded-[var(--admin-radius-md)] bg-[var(--admin-color-surface-subtle)]">
+            {brandReference?.heroMobileImage && !removeMobileHeroImage && !mobileHeroFile ? (
+              <img
+                src={brandReference.heroMobileImage.url}
+                alt={
+                  brandReference.heroMobileImage.altText ??
+                  `تصویر Hero موبایل ${brandReference.name}`
+                }
+                className="aspect-[3/4] max-h-72 w-full object-cover"
+              />
+            ) : (
+              <span className="grid aspect-[3/4] max-h-72 w-full place-items-center text-xs text-[var(--admin-color-muted)]">
+                بدون تصویر Hero موبایل
+              </span>
+            )}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <label htmlFor={mobileHeroFileInputId} className="text-sm font-bold">
+                تصویر Hero موبایل و تبلت صفحه برند
+              </label>
+              <p className="mt-1 truncate text-xs text-[var(--admin-color-muted)]">
+                {mobileHeroFile
+                  ? mobileHeroFile.name
+                  : 'ابعاد پیشنهادی ۱۰۸۶×۱۴۴۸ (نسبت ۳:۴)؛ تا ۱۰ مگابایت'}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <label
+                htmlFor={mobileHeroFileInputId}
+                className="inline-flex min-h-9 cursor-pointer items-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] px-3 text-xs font-semibold hover:bg-[var(--admin-color-surface-subtle)]"
+              >
+                انتخاب تصویر موبایل
+              </label>
+              <input
+                id={mobileHeroFileInputId}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                className="sr-only"
+                onChange={(event) => {
+                  setMobileHeroFile(event.target.files?.[0] ?? null);
+                  setRemoveMobileHeroImage(false);
+                }}
+              />
+              {brandReference?.heroMobileImage && !mobileHeroFile ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setRemoveMobileHeroImage((current) => !current)}
+                >
+                  {removeMobileHeroImage ? 'لغو حذف Hero موبایل' : 'حذف Hero موبایل فعلی'}
                 </Button>
               ) : null}
             </div>
@@ -567,7 +662,10 @@ function ReadonlyDetails({
     ['توضیحات', reference.description ?? 'ثبت نشده'],
     [kind === 'brand' ? 'لوگو' : 'تصویر', reference.image ? 'ثبت شده' : 'ثبت نشده'],
     ...(kind === 'brand'
-      ? [['تصویر Hero', (reference as AdminBrand).heroImage ? 'ثبت شده' : 'ثبت نشده']]
+      ? [
+          ['Hero دسکتاپ', (reference as AdminBrand).heroImage ? 'ثبت شده' : 'ثبت نشده'],
+          ['Hero موبایل/تبلت', (reference as AdminBrand).heroMobileImage ? 'ثبت شده' : 'ثبت نشده'],
+        ]
       : []),
     ['آخرین ویرایش', formatAdminDateTime(reference.updatedAt)],
   ];
@@ -602,7 +700,7 @@ function ReferenceMobileCard({
           label: kind === 'brand' ? 'رسانه‌ها' : 'تصویر',
           value:
             kind === 'brand'
-              ? `${reference.image ? 'لوگو' : 'بدون لوگو'} / ${(reference as AdminBrand).heroImage ? 'Hero' : 'بدون Hero'}`
+              ? `${reference.image ? 'لوگو' : 'بدون لوگو'} / ${(reference as AdminBrand).heroImage ? 'Hero دسکتاپ' : 'بدون دسکتاپ'} / ${(reference as AdminBrand).heroMobileImage ? 'Hero موبایل' : 'بدون موبایل'}`
               : reference.image
                 ? 'دارد'
                 : 'ندارد',
@@ -702,7 +800,7 @@ function ReferencePanel({
       align: 'center',
       cell: (item) =>
         kind === 'brand'
-          ? `${item.image ? 'لوگو' : '—'} / ${(item as AdminBrand).heroImage ? 'Hero' : '—'}`
+          ? `${item.image ? 'لوگو' : '—'} / ${(item as AdminBrand).heroImage ? 'دسکتاپ' : '—'} / ${(item as AdminBrand).heroMobileImage ? 'موبایل' : '—'}`
           : item.image
             ? 'ثبت شده'
             : 'ندارد',

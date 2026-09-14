@@ -11,6 +11,7 @@ const sizeGuidePage: PublicContentPage = {
   subtitle: 'اندازه‌گیری دقیق برای یک انتخاب مطمئن',
   body: 'اندازه‌گیری را 2 بار انجام دهید.',
   heroMedia: null,
+  heroMobileMedia: null,
   sections: [{ title: 'نکته اختصاصی', body: 'در پایان روز اندازه بگیرید.' }],
   seoTitle: null,
   seoDescription: null,

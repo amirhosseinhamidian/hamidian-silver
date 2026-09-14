@@ -34,6 +34,11 @@ const informationLinks = [
   { label: 'سوالات متداول', href: '/faq' },
 ] as const;
 
+const ENAMAD_URL =
+  'https://trustseal.enamad.ir/?id=7736426&Code=fWmqiTtv828G7AiAoC2i3jWBYpzTqDqk';
+const ENAMAD_LOGO_URL =
+  'https://trustseal.enamad.ir/logo.aspx?id=7736426&Code=fWmqiTtv828G7AiAoC2i3jWBYpzTqDqk';
+
 function normalizeValues(values?: readonly string[] | null): string[] {
   return values?.map((value) => value.trim()).filter(Boolean) ?? [];
 }
@@ -199,6 +204,34 @@ export function StorefrontFooter({ content }: StorefrontFooterProps) {
               </div>
             </section>
           ) : null}
+
+          <section
+            aria-labelledby="storefront-enamad-title"
+            className={hasContactDetails || hasSocialLinks ? 'mt-8' : undefined}
+          >
+            <h2 id="storefront-enamad-title" className="text-sm font-medium">
+              نماد اعتماد
+            </h2>
+
+            <a
+              href={ENAMAD_URL}
+              target="_blank"
+              rel="noopener"
+              referrerPolicy="origin"
+              aria-label="مشاهده اعتبار نماد اعتماد الکترونیکی گالری حمیدیان"
+              className="mt-4 inline-flex rounded-xl border border-[var(--sf-color-border)] bg-white p-2 transition-opacity hover:opacity-70"
+            >
+              {/* The trust seal must be loaded directly so Enamad receives the page origin. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={ENAMAD_LOGO_URL}
+                alt="نماد اعتماد الکترونیکی گالری حمیدیان"
+                referrerPolicy="origin"
+                loading="lazy"
+                className="h-24 w-auto object-contain"
+              />
+            </a>
+          </section>
         </div>
       </div>
 

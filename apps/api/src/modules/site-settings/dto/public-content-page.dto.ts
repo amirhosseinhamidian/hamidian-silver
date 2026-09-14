@@ -43,6 +43,9 @@ export class PublicContentPageDto {
   @ApiProperty({ nullable: true, type: () => PublicContentPageMediaDto })
   heroMedia!: PublicContentPageMediaDto | null;
 
+  @ApiProperty({ nullable: true, type: () => PublicContentPageMediaDto })
+  heroMobileMedia!: PublicContentPageMediaDto | null;
+
   @ApiProperty({ type: () => PublicContentPageSectionDto, isArray: true })
   sections!: PublicContentPageSectionDto[];
 

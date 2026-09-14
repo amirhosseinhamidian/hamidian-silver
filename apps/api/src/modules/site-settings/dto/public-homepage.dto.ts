@@ -23,6 +23,9 @@ export class PublicHomepageHeroSlideDto {
 
   @ApiProperty({ type: () => PublicCatalogMediaDto })
   media!: PublicCatalogMediaDto;
+
+  @ApiProperty({ type: () => PublicCatalogMediaDto, nullable: true })
+  mobileMedia!: PublicCatalogMediaDto | null;
 }
 
 export class PublicHomepageFeaturedCategoryDto extends PublicCatalogCategoryDto {

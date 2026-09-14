@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
-import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { CatalogProductGrid } from '@/components/catalog/catalog-product-grid';
+import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -21,6 +21,7 @@ type CatalogCollectionPageProps = Readonly<{
   title: string;
   description: string | null;
   image: PublicCatalogMedia | null;
+  mobileImage: PublicCatalogMedia | null;
   filters: CatalogFilters;
   products: PublicCatalogProductList;
 }>;
@@ -40,8 +41,12 @@ function CollectionHero({
   title,
   description,
   image,
+  mobileImage,
   total,
-}: Pick<CatalogCollectionPageProps, 'path' | 'eyebrow' | 'title' | 'description' | 'image'> &
+}: Pick<
+  CatalogCollectionPageProps,
+  'path' | 'eyebrow' | 'title' | 'description' | 'image' | 'mobileImage'
+> &
   Readonly<{ total: number }>) {
   const parent = path.startsWith('/brands/')
     ? { label: 'برندها', href: '/brands' }
@@ -59,7 +64,7 @@ function CollectionHero({
     </div>
   );
 
-  if (!image) {
+  if (!image?.url) {
     return (
       <header className="sf-container pt-[var(--sf-section-space)]">
         <div className="text-[var(--sf-color-ink)]">{copy}</div>
@@ -68,20 +73,16 @@ function CollectionHero({
   }
 
   return (
-    <header className="relative isolate min-h-[18rem] overflow-hidden bg-[var(--sf-color-surface)] sm:min-h-[24rem] lg:min-h-[calc(100svh-9.25rem)]">
-      <div className="absolute inset-0 -z-20">
-        <CatalogMedia
-          media={image}
-          alt={title}
-          preload
-          sizes="100vw"
-          imageClassName="object-cover"
-        />
-      </div>
+    <header className="relative isolate aspect-[1086/1448] overflow-hidden bg-[var(--sf-color-surface)] lg:aspect-[1942/809]">
+      <ResponsiveHeroImage
+        desktopSrc={image.url}
+        mobileSrc={mobileImage?.url}
+        alt={image.altText?.trim() || title}
+        preload
+        className="-z-20 object-cover"
+      />
       <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/65 via-black/15 to-black/5" />
-      <div className="sf-container flex min-h-[inherit] items-end py-10 text-white sm:py-14">
-        {copy}
-      </div>
+      <div className="sf-container flex h-full items-end py-10 text-white sm:py-14">{copy}</div>
     </header>
   );
 }
@@ -92,6 +93,7 @@ export function CatalogCollectionPage({
   title,
   description,
   image,
+  mobileImage,
   filters,
   products,
 }: CatalogCollectionPageProps) {
@@ -103,6 +105,7 @@ export function CatalogCollectionPage({
         title={title}
         description={description}
         image={image}
+        mobileImage={mobileImage}
         total={products.total}
       />
 

@@ -37,6 +37,13 @@ describe('CatalogCollectionPage', () => {
           width: 1920,
           height: 900,
         }}
+        mobileImage={{
+          url: 'https://media.hamidian.test/brands/cartier-hero-mobile.webp',
+          mimeType: 'image/webp',
+          altText: 'کالکشن کارتیر',
+          width: 1086,
+          height: 1448,
+        }}
         filters={filters}
         products={products}
       />,
@@ -45,9 +52,10 @@ describe('CatalogCollectionPage', () => {
     const heroImage = screen.getByRole('img', { name: 'کالکشن کارتیر' });
     expect(heroImage).toHaveAttribute(
       'src',
-      'https://media.hamidian.test/brands/cartier-hero.webp',
+      'https://media.hamidian.test/brands/cartier-hero-mobile.webp',
     );
-    expect(heroImage.parentElement?.parentElement).toHaveClass('min-h-[18rem]');
+    expect(heroImage.parentElement?.parentElement).toHaveClass('aspect-[1086/1448]');
+    expect(heroImage.parentElement?.parentElement).toHaveClass('lg:aspect-[1942/809]');
     expect(screen.getByRole('heading', { name: 'کارتیر' })).toBeInTheDocument();
     expect(screen.getByText('۰ محصول')).toBeInTheDocument();
   });

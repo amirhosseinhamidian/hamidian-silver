@@ -191,6 +191,86 @@ export class CatalogMediaService {
     return { removed: true };
   }
 
+  async uploadForCategoryMobileHero(
+    categoryId: string,
+    file: CatalogUploadFile | undefined,
+    dto: UploadMediaDto,
+  ) {
+    if (!file) throw new BadRequestException('Image file is required.');
+    const category = await this.prisma.category.findFirst({
+      where: { id: categoryId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!category) throw new NotFoundException('Category was not found.');
+
+    const stored = await this.localMediaStorage.storeImage(file);
+    try {
+      const result = await this.prisma.$transaction(async (transaction) => {
+        const current = await transaction.category.findFirst({
+          where: { id: categoryId, deletedAt: null },
+          select: { id: true, heroMobileImageId: true },
+        });
+        if (!current) throw new NotFoundException('Category was not found.');
+
+        const media = await transaction.media.create({
+          data: {
+            storageKey: stored.storageKey,
+            originalName: normalizeOptionalText(file.originalname, 255),
+            mimeType: stored.mimeType,
+            sizeBytes: stored.sizeBytes,
+            altText: normalizeOptionalText(dto.altText, 255),
+          },
+        });
+        await transaction.category.update({
+          where: { id: categoryId },
+          data: { heroMobileImageId: media.id },
+        });
+        const orphanedStorageKey = current.heroMobileImageId
+          ? await this.markMediaDeletedWhenOrphaned(transaction, current.heroMobileImageId)
+          : null;
+        return { media, orphanedStorageKey };
+      });
+
+      if (result.orphanedStorageKey) {
+        await this.localMediaStorage.delete(result.orphanedStorageKey).catch(() => undefined);
+      }
+      return {
+        categoryId,
+        heroMobileImage: {
+          id: result.media.id,
+          url: this.publicMediaUrl.resolve(result.media.storageKey),
+          mimeType: result.media.mimeType,
+          altText: result.media.altText,
+        },
+      };
+    } catch (error) {
+      await this.localMediaStorage.delete(stored.storageKey).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async removeCategoryMobileHero(categoryId: string) {
+    const orphanedStorageKey = await this.prisma.$transaction(async (transaction) => {
+      const category = await transaction.category.findFirst({
+        where: { id: categoryId, deletedAt: null },
+        select: { id: true, heroMobileImageId: true },
+      });
+      if (!category) throw new NotFoundException('Category was not found.');
+      if (!category.heroMobileImageId) return null;
+
+      await transaction.category.update({
+        where: { id: categoryId },
+        data: { heroMobileImageId: null },
+      });
+      return this.markMediaDeletedWhenOrphaned(transaction, category.heroMobileImageId);
+    });
+
+    if (orphanedStorageKey) {
+      await this.localMediaStorage.delete(orphanedStorageKey).catch(() => undefined);
+    }
+    return { removed: true };
+  }
+
   async uploadForBrand(brandId: string, file: CatalogUploadFile | undefined, dto: UploadMediaDto) {
     if (!file) throw new BadRequestException('Image file is required.');
     const brand = await this.prisma.brand.findFirst({
@@ -331,6 +411,86 @@ export class CatalogMediaService {
       await transaction.brand.update({ where: { id: brandId }, data: { heroImageId: null } });
       return this.markMediaDeletedWhenOrphaned(transaction, brand.heroImageId);
     });
+    if (orphanedStorageKey) {
+      await this.localMediaStorage.delete(orphanedStorageKey).catch(() => undefined);
+    }
+    return { removed: true };
+  }
+
+  async uploadForBrandMobileHero(
+    brandId: string,
+    file: CatalogUploadFile | undefined,
+    dto: UploadMediaDto,
+  ) {
+    if (!file) throw new BadRequestException('Image file is required.');
+    const brand = await this.prisma.brand.findFirst({
+      where: { id: brandId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!brand) throw new NotFoundException('Brand was not found.');
+
+    const stored = await this.localMediaStorage.storeImage(file);
+    try {
+      const result = await this.prisma.$transaction(async (transaction) => {
+        const current = await transaction.brand.findFirst({
+          where: { id: brandId, deletedAt: null },
+          select: { id: true, heroMobileImageId: true },
+        });
+        if (!current) throw new NotFoundException('Brand was not found.');
+
+        const media = await transaction.media.create({
+          data: {
+            storageKey: stored.storageKey,
+            originalName: normalizeOptionalText(file.originalname, 255),
+            mimeType: stored.mimeType,
+            sizeBytes: stored.sizeBytes,
+            altText: normalizeOptionalText(dto.altText, 255),
+          },
+        });
+        await transaction.brand.update({
+          where: { id: brandId },
+          data: { heroMobileImageId: media.id },
+        });
+        const orphanedStorageKey = current.heroMobileImageId
+          ? await this.markMediaDeletedWhenOrphaned(transaction, current.heroMobileImageId)
+          : null;
+        return { media, orphanedStorageKey };
+      });
+
+      if (result.orphanedStorageKey) {
+        await this.localMediaStorage.delete(result.orphanedStorageKey).catch(() => undefined);
+      }
+      return {
+        brandId,
+        heroMobileImage: {
+          id: result.media.id,
+          url: this.publicMediaUrl.resolve(result.media.storageKey),
+          mimeType: result.media.mimeType,
+          altText: result.media.altText,
+        },
+      };
+    } catch (error) {
+      await this.localMediaStorage.delete(stored.storageKey).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async removeBrandMobileHero(brandId: string) {
+    const orphanedStorageKey = await this.prisma.$transaction(async (transaction) => {
+      const brand = await transaction.brand.findFirst({
+        where: { id: brandId, deletedAt: null },
+        select: { id: true, heroMobileImageId: true },
+      });
+      if (!brand) throw new NotFoundException('Brand was not found.');
+      if (!brand.heroMobileImageId) return null;
+
+      await transaction.brand.update({
+        where: { id: brandId },
+        data: { heroMobileImageId: null },
+      });
+      return this.markMediaDeletedWhenOrphaned(transaction, brand.heroMobileImageId);
+    });
+
     if (orphanedStorageKey) {
       await this.localMediaStorage.delete(orphanedStorageKey).catch(() => undefined);
     }
@@ -505,12 +665,17 @@ export class CatalogMediaService {
             select: {
               productMedia: true,
               categoryImages: true,
+              categoryHeroMobileImages: true,
               brandImages: true,
               brandHeroImages: true,
+              brandHeroMobileImages: true,
               countryImages: true,
               siteSettingsCatalogHero: true,
+              siteSettingsCatalogHeroMobile: true,
               homepageHeroSlides: true,
+              homepageHeroMobileSlides: true,
               storefrontContentHeroes: true,
+              storefrontContentMobileHeroes: true,
             },
           },
         },
@@ -573,12 +738,17 @@ export class CatalogMediaService {
           select: {
             productMedia: true,
             categoryImages: true,
+            categoryHeroMobileImages: true,
             brandImages: true,
             brandHeroImages: true,
+            brandHeroMobileImages: true,
             countryImages: true,
             siteSettingsCatalogHero: true,
+            siteSettingsCatalogHeroMobile: true,
             homepageHeroSlides: true,
+            homepageHeroMobileSlides: true,
             storefrontContentHeroes: true,
+            storefrontContentMobileHeroes: true,
           },
         },
       },

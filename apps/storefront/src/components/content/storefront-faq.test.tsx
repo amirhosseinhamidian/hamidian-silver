@@ -11,6 +11,7 @@ const faqPage: PublicContentPage = {
   subtitle: 'پاسخ‌های روشن برای انتخاب و سفارش',
   body: 'پاسخ پرسش‌های رایج در 2 بخش',
   heroMedia: null,
+  heroMobileMedia: null,
   sections: [
     {
       title: 'چطور سایز مناسب را انتخاب کنم؟',

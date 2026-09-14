@@ -6,6 +6,7 @@ import { SiteSettingsService } from './site-settings.service';
 
 const actorUserId = '30000000-0000-4000-8000-000000000001';
 const mediaId = '40000000-0000-4000-8000-000000000001';
+const mobileMediaId = '40000000-0000-4000-8000-000000000002';
 const contentSettings = {
   galleryName: 'گالری نقره حمیدیان',
   footerAbout: 'مجموعه‌ای منتخب از زیورآلات نقره',
@@ -44,10 +45,16 @@ function settingsRecord(overrides: Record<string, unknown> = {}) {
     catalogHeroTitle: 'کالکشن جدید',
     catalogHeroSubtitle: 'انتخاب‌های تازه نقره',
     catalogHeroMediaId: mediaId,
+    catalogHeroMobileMediaId: mobileMediaId,
     updatedByUserId: actorUserId,
     updatedAt: new Date('2026-09-04T12:00:00.000Z'),
     catalogHeroMedia: {
       storageKey: 'catalog/2026/09/hero.webp',
+      altText: 'کالکشن نقره',
+      deletedAt: null,
+    },
+    catalogHeroMobileMedia: {
+      storageKey: 'catalog/2026/09/hero-mobile.webp',
       altText: 'کالکشن نقره',
       deletedAt: null,
     },
@@ -78,6 +85,7 @@ describe('SiteSettingsService', () => {
     },
     media: {
       findFirst: jest.fn(),
+      count: jest.fn(),
     },
     category: {
       count: jest.fn(),
@@ -116,6 +124,7 @@ describe('SiteSettingsService', () => {
       catalogHeroTitle: null,
       catalogHeroSubtitle: null,
       catalogHeroMedia: null,
+      catalogHeroMobileMedia: null,
       galleryName: null,
       footerAbout: null,
       contactAddress: null,
@@ -149,6 +158,10 @@ describe('SiteSettingsService', () => {
         url: 'https://media.hamidian.test/catalog/2026/09/hero.webp',
         altText: 'کالکشن نقره',
       },
+      catalogHeroMobileMedia: {
+        url: 'https://media.hamidian.test/catalog/2026/09/hero-mobile.webp',
+        altText: 'کالکشن نقره',
+      },
       ...contentSettings,
       ...publicSeoSettings,
     });
@@ -162,12 +175,18 @@ describe('SiteSettingsService', () => {
           altText: 'کالکشن نقره',
           deletedAt: new Date('2026-09-04T12:30:00.000Z'),
         },
+        catalogHeroMobileMedia: {
+          storageKey: 'catalog/2026/09/hero-mobile.webp',
+          altText: 'کالکشن نقره',
+          deletedAt: new Date('2026-09-04T12:30:00.000Z'),
+        },
       }),
     );
 
     const result = await service.getPublicSettings();
 
     expect(result.catalogHeroMedia).toBeNull();
+    expect(result.catalogHeroMobileMedia).toBeNull();
     expect(publicMediaUrlService.resolve).not.toHaveBeenCalled();
   });
 
@@ -177,6 +196,7 @@ describe('SiteSettingsService', () => {
       catalogHeroTitle: null,
       catalogHeroSubtitle: null,
       catalogHeroMediaId: null,
+      catalogHeroMobileMediaId: null,
     });
 
     await expect(
@@ -188,13 +208,14 @@ describe('SiteSettingsService', () => {
 
   it('rejects a missing or non-image hero media record', async () => {
     prisma.siteSettings.findUnique.mockResolvedValue(null);
-    prisma.media.findFirst.mockResolvedValue(null);
+    prisma.media.count.mockResolvedValue(0);
 
     await expect(
       service.updateSettings(
         {
           catalogHeroEnabled: true,
           catalogHeroMediaId: mediaId,
+          catalogHeroMobileMediaId: mobileMediaId,
         },
         actorUserId,
       ),
@@ -209,6 +230,7 @@ describe('SiteSettingsService', () => {
       catalogHeroTitle: 'عنوان قبلی',
       catalogHeroSubtitle: 'متن قبلی',
       catalogHeroMediaId: null,
+      catalogHeroMobileMediaId: null,
     });
     prisma.siteSettings.upsert.mockResolvedValue(
       settingsRecord({
@@ -216,6 +238,7 @@ describe('SiteSettingsService', () => {
         catalogHeroTitle: null,
         catalogHeroSubtitle: null,
         catalogHeroMediaId: null,
+        catalogHeroMobileMediaId: null,
         galleryName: null,
         footerAbout: null,
         contactAddress: null,
@@ -225,6 +248,7 @@ describe('SiteSettingsService', () => {
         telegramUrl: null,
         baleUrl: null,
         catalogHeroMedia: null,
+        catalogHeroMobileMedia: null,
       }),
     );
 
@@ -248,7 +272,7 @@ describe('SiteSettingsService', () => {
 
   it('normalizes text and records the user who updated settings', async () => {
     prisma.siteSettings.findUnique.mockResolvedValue(null);
-    prisma.media.findFirst.mockResolvedValue({ mimeType: 'image/webp' });
+    prisma.media.count.mockResolvedValue(2);
     prisma.siteSettings.upsert.mockResolvedValue(
       settingsRecord({
         catalogHeroTitle: 'کالکشن جدید',
@@ -262,6 +286,7 @@ describe('SiteSettingsService', () => {
         catalogHeroTitle: '  کالکشن جدید  ',
         catalogHeroSubtitle: '   ',
         catalogHeroMediaId: mediaId,
+        catalogHeroMobileMediaId: mobileMediaId,
       },
       actorUserId,
     );
@@ -282,6 +307,7 @@ describe('SiteSettingsService', () => {
         catalogHeroTitle: 'کالکشن جدید',
         catalogHeroSubtitle: null,
         catalogHeroMediaId: mediaId,
+        catalogHeroMobileMediaId: mobileMediaId,
         galleryName: null,
         footerAbout: null,
         contactAddress: null,
@@ -316,6 +342,7 @@ describe('SiteSettingsService', () => {
         catalogHeroTitle: 'کالکشن جدید',
         catalogHeroSubtitle: null,
         catalogHeroMediaId: mediaId,
+        catalogHeroMobileMediaId: mobileMediaId,
         galleryName: null,
         footerAbout: null,
         contactAddress: null,
@@ -339,6 +366,7 @@ describe('SiteSettingsService', () => {
       },
       include: {
         catalogHeroMedia: true,
+        catalogHeroMobileMedia: true,
         seoDefaultOgMedia: true,
         seoOrganizationLogoMedia: true,
         seoHomeOgMedia: true,

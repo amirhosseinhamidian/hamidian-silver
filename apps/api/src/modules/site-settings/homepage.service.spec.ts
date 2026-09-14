@@ -14,6 +14,12 @@ const media = {
   height: 1080,
   deletedAt: null,
 };
+const mobileMedia = {
+  ...media,
+  storageKey: 'homepage/hero-mobile.webp',
+  width: 1086,
+  height: 1448,
+};
 
 describe('HomepageService', () => {
   const prisma = {
@@ -58,6 +64,7 @@ describe('HomepageService', () => {
         actionLabel: 'مشاهده',
         actionHref: '/products',
         media,
+        mobileMedia,
       },
       {
         id: 'hero-2',
@@ -67,6 +74,7 @@ describe('HomepageService', () => {
         actionLabel: null,
         actionHref: null,
         media,
+        mobileMedia,
       },
     ]);
     prisma.homepageFeaturedCategory.findMany.mockResolvedValue([
@@ -148,6 +156,9 @@ describe('HomepageService', () => {
     expect(result.primaryHeroSlides[0]?.media.url).toBe(
       'https://media.hamidian.test/homepage/hero.webp',
     );
+    expect(result.primaryHeroSlides[0]?.mobileMedia?.url).toBe(
+      'https://media.hamidian.test/homepage/hero-mobile.webp',
+    );
     expect(result.secondaryHero).not.toBeNull();
     expect(result.newProducts).toEqual([{ id: 'new-1' }]);
     expect(result.featuredCategories).toEqual([{ id: 'category-1', name: 'انگشتر', priority: 1 }]);
@@ -171,6 +182,7 @@ describe('HomepageService', () => {
           primaryHeroSlides: [
             {
               mediaId: '10000000-0000-4000-8000-000000000001',
+              mobileMediaId: '10000000-0000-4000-8000-000000000002',
               actionLabel: 'مشاهده',
               actionHref: 'javascript:alert(1)',
             },
@@ -193,6 +205,7 @@ describe('HomepageService', () => {
         id: 'hero-1',
         placement: HomepageHeroPlacement.PRIMARY,
         mediaId: 'media-1',
+        mobileMediaId: 'media-mobile-1',
         title: 'کالکشن تازه',
         subtitle: null,
         actionLabel: null,
@@ -200,6 +213,7 @@ describe('HomepageService', () => {
         sortOrder: 1,
         isActive: true,
         media: { id: 'media-1', ...media },
+        mobileMedia: { id: 'media-mobile-1', ...mobileMedia },
       },
     ]);
     prisma.homepageFeaturedCategory.findMany.mockResolvedValue([]);
@@ -215,10 +229,19 @@ describe('HomepageService', () => {
       mimeType: 'image/webp',
       altText: 'تصویر هیرو',
     });
+    expect(result.primaryHeroSlides[0]?.mobileMedia).toEqual({
+      id: 'media-mobile-1',
+      url: 'https://media.hamidian.test/homepage/hero-mobile.webp',
+      mimeType: 'image/webp',
+      altText: 'تصویر هیرو',
+    });
   });
 
   it('replaces homepage configuration transactionally in the requested order', async () => {
-    prisma.media.findMany.mockResolvedValue([{ id: '10000000-0000-4000-8000-000000000001' }]);
+    prisma.media.findMany.mockResolvedValue([
+      { id: '10000000-0000-4000-8000-000000000001' },
+      { id: '10000000-0000-4000-8000-000000000002' },
+    ]);
     prisma.category.findMany.mockResolvedValue([
       { id: '30000000-0000-4000-8000-000000000001' },
       { id: '30000000-0000-4000-8000-000000000002' },
@@ -254,6 +277,7 @@ describe('HomepageService', () => {
         primaryHeroSlides: [
           {
             mediaId: '10000000-0000-4000-8000-000000000001',
+            mobileMediaId: '10000000-0000-4000-8000-000000000002',
             title: '  عنوان  ',
             actionLabel: 'خرید',
             actionHref: '/products',

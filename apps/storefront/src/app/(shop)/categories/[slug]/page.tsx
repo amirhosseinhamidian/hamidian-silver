@@ -82,6 +82,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       title={category.name}
       description={category.description}
       image={category.image}
+      mobileImage={category.heroMobileImage ?? null}
       filters={filters}
       products={products}
     />

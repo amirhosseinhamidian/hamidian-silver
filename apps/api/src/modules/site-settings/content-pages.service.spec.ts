@@ -7,6 +7,7 @@ import { ContentPagesService } from './content-pages.service';
 
 const actorUserId = '10000000-0000-4000-8000-000000000001';
 const mediaId = '20000000-0000-4000-8000-000000000001';
+const mobileMediaId = '20000000-0000-4000-8000-000000000002';
 
 describe('ContentPagesService', () => {
   const prisma = {
@@ -14,7 +15,7 @@ describe('ContentPagesService', () => {
       findUnique: jest.fn(),
       findMany: jest.fn(),
     },
-    media: { findFirst: jest.fn() },
+    media: { findFirst: jest.fn(), count: jest.fn() },
     $transaction: jest.fn(),
   };
   const publicMediaUrlService = {
@@ -89,7 +90,7 @@ describe('ContentPagesService', () => {
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
 
-    prisma.media.findFirst.mockResolvedValue({ mimeType: 'application/pdf' });
+    prisma.media.count.mockResolvedValue(0);
     await expect(
       service.updatePage(
         StorefrontContentPageKey.SERVICES,
@@ -107,6 +108,7 @@ describe('ContentPagesService', () => {
       subtitle: null,
       body: 'متن صفحه',
       heroMediaId: mediaId,
+      heroMobileMediaId: mobileMediaId,
       seoTitle: null,
       seoDescription: null,
       updatedByUserId: actorUserId,
@@ -118,9 +120,17 @@ describe('ContentPagesService', () => {
         height: 1080,
         deletedAt: null,
       },
+      heroMobileMedia: {
+        storageKey: 'content/about-mobile.webp',
+        altText: 'زیورآلات نقره',
+        width: 1086,
+        height: 1448,
+        deletedAt: null,
+      },
+      seoOgMedia: null,
       sections: [{ title: 'اصالت', body: 'تعهد به کیفیت' }],
     });
-    prisma.media.findFirst.mockResolvedValue({ mimeType: 'image/webp' });
+    prisma.media.count.mockResolvedValue(2);
     const transaction = {
       storefrontContentPage: { upsert: jest.fn() },
       storefrontContentSection: { deleteMany: jest.fn(), createMany: jest.fn() },
@@ -136,6 +146,7 @@ describe('ContentPagesService', () => {
         eyebrow: ' درباره ما ',
         body: 'متن صفحه',
         heroMediaId: mediaId,
+        heroMobileMediaId: mobileMediaId,
         sections: [{ title: '  اصالت  ', body: 'تعهد به کیفیت' }],
       },
       actorUserId,
@@ -156,6 +167,12 @@ describe('ContentPagesService', () => {
       altText: 'زیورآلات نقره',
       width: 1920,
       height: 1080,
+    });
+    expect(result.heroMobileMedia).toEqual({
+      url: 'https://media.hamidian.test/content/about-mobile.webp',
+      altText: 'زیورآلات نقره',
+      width: 1086,
+      height: 1448,
     });
   });
 });

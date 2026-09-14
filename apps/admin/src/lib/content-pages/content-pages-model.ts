@@ -27,6 +27,8 @@ export type AdminContentPage = Readonly<{
   body: string | null;
   heroMediaId: string | null;
   heroMedia: ContentPageMedia | null;
+  heroMobileMediaId: string | null;
+  heroMobileMedia: ContentPageMedia | null;
   sections: readonly ContentPageSection[];
   seoTitle: string | null;
   seoDescription: string | null;
@@ -105,6 +107,7 @@ function page(value: unknown): AdminContentPage | null {
     nullableText(source?.subtitle),
     nullableText(source?.body),
     nullableText(source?.heroMediaId),
+    nullableText(source?.heroMobileMediaId),
     nullableText(source?.seoTitle),
     nullableText(source?.seoDescription),
     nullableText(source?.seoCanonicalPath),
@@ -113,6 +116,7 @@ function page(value: unknown): AdminContentPage | null {
     nullableText(source?.updatedAt),
   ];
   const heroMedia = media(source?.heroMedia);
+  const heroMobileMedia = media(source?.heroMobileMedia);
   const seoOgMedia = media(source?.seoOgMedia);
   const seoNoIndex = nullableBoolean(source?.seoNoIndex);
   const sections = Array.isArray(source?.sections) ? source.sections.map(section) : null;
@@ -122,6 +126,7 @@ function page(value: unknown): AdminContentPage | null {
     !title ||
     fields.some((field) => field === undefined) ||
     heroMedia === undefined ||
+    heroMobileMedia === undefined ||
     seoOgMedia === undefined ||
     seoNoIndex === undefined ||
     !sections ||
@@ -137,15 +142,17 @@ function page(value: unknown): AdminContentPage | null {
     body: fields[2]!,
     heroMediaId: fields[3]!,
     heroMedia,
+    heroMobileMediaId: fields[4]!,
+    heroMobileMedia,
     sections: sections as ContentPageSection[],
-    seoTitle: fields[4]!,
-    seoDescription: fields[5]!,
-    seoCanonicalPath: fields[6]!,
+    seoTitle: fields[5]!,
+    seoDescription: fields[6]!,
+    seoCanonicalPath: fields[7]!,
     seoNoIndex,
-    seoOgMediaId: fields[7]!,
+    seoOgMediaId: fields[8]!,
     seoOgMedia,
-    updatedByUserId: fields[8]!,
-    updatedAt: fields[9]!,
+    updatedByUserId: fields[9]!,
+    updatedAt: fields[10]!,
   };
 }
 

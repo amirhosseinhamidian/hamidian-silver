@@ -21,6 +21,7 @@ const referenceInclude = {
 const brandReferenceInclude = {
   ...referenceInclude,
   heroImage: true,
+  heroMobileImage: true,
   seoOgMedia: true,
 } as const;
 
@@ -328,6 +329,14 @@ export class CatalogReferencesService {
         width: number | null;
         height: number | null;
       } | null;
+      heroMobileImage: {
+        id: string;
+        storageKey: string;
+        mimeType: string;
+        altText: string | null;
+        width: number | null;
+        height: number | null;
+      } | null;
     },
   >(brand: T) {
     return {
@@ -340,6 +349,16 @@ export class CatalogReferencesService {
             altText: brand.heroImage.altText,
             width: brand.heroImage.width,
             height: brand.heroImage.height,
+          }
+        : null,
+      heroMobileImage: brand.heroMobileImage
+        ? {
+            id: brand.heroMobileImage.id,
+            url: this.publicMediaUrl.resolve(brand.heroMobileImage.storageKey),
+            mimeType: brand.heroMobileImage.mimeType,
+            altText: brand.heroMobileImage.altText,
+            width: brand.heroMobileImage.width,
+            height: brand.heroMobileImage.height,
           }
         : null,
     };

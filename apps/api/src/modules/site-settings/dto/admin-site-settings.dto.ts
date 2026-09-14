@@ -24,6 +24,12 @@ export class AdminSiteSettingsDto {
   @ApiProperty({ nullable: true, type: () => PublicSiteSettingsMediaDto })
   catalogHeroMedia!: PublicSiteSettingsMediaDto | null;
 
+  @ApiProperty({ nullable: true, format: 'uuid' })
+  catalogHeroMobileMediaId!: string | null;
+
+  @ApiProperty({ nullable: true, type: () => PublicSiteSettingsMediaDto })
+  catalogHeroMobileMedia!: PublicSiteSettingsMediaDto | null;
+
   @ApiProperty({ nullable: true })
   galleryName!: string | null;
 

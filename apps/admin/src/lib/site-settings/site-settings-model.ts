@@ -23,6 +23,8 @@ export type AdminSiteSettings = Readonly<{
   catalogHeroSubtitle: string | null;
   catalogHeroMediaId: string | null;
   catalogHeroMedia: Omit<SiteMedia, 'id' | 'mimeType'> | null;
+  catalogHeroMobileMediaId: string | null;
+  catalogHeroMobileMedia: Omit<SiteMedia, 'id' | 'mimeType'> | null;
   galleryName: string | null;
   footerAbout: string | null;
   contactAddress: string | null;
@@ -52,6 +54,8 @@ export type AdminHomepageSlide = Readonly<{
   id: string;
   mediaId: string;
   media: SiteMedia;
+  mobileMediaId: string | null;
+  mobileMedia: SiteMedia | null;
   title: string | null;
   subtitle: string | null;
   actionLabel: string | null;
@@ -175,6 +179,11 @@ export function parseAdminSiteSettings(value: unknown): AdminSiteSettings | null
   const mediaSource = rawMedia === null ? null : record(rawMedia);
   const mediaUrl = mediaSource ? nullableText(mediaSource.url) : null;
   const mediaAltText = mediaSource ? nullableText(mediaSource.altText) : null;
+  const mobileMediaId = nullableText(source?.catalogHeroMobileMediaId);
+  const rawMobileMedia = source?.catalogHeroMobileMedia;
+  const mobileMediaSource = rawMobileMedia === null ? null : record(rawMobileMedia);
+  const mobileMediaUrl = mobileMediaSource ? nullableText(mobileMediaSource.url) : null;
+  const mobileMediaAltText = mobileMediaSource ? nullableText(mobileMediaSource.altText) : null;
   const seoDefaultOgMediaId =
     source?.seoDefaultOgMediaId === undefined ? null : nullableText(source?.seoDefaultOgMediaId);
   const seoOrganizationLogoMediaId =
@@ -220,8 +229,11 @@ export function parseAdminSiteSettings(value: unknown): AdminSiteSettings | null
     !phones ||
     fields.some((field) => field === undefined) ||
     mediaId === undefined ||
+    mobileMediaId === undefined ||
     typeof source.catalogHeroEnabled !== 'boolean' ||
     (rawMedia !== null && (!mediaSource || mediaUrl === undefined || mediaAltText === undefined)) ||
+    (rawMobileMedia !== null &&
+      (!mobileMediaSource || mobileMediaUrl === undefined || mobileMediaAltText === undefined)) ||
     seoDefaultOgMediaId === undefined ||
     seoOrganizationLogoMediaId === undefined ||
     seoHomeOgMediaId === undefined ||
@@ -248,6 +260,10 @@ export function parseAdminSiteSettings(value: unknown): AdminSiteSettings | null
     catalogHeroSubtitle: fields[1]!,
     catalogHeroMediaId: mediaId,
     catalogHeroMedia: mediaSource ? { url: mediaUrl!, altText: mediaAltText! } : null,
+    catalogHeroMobileMediaId: mobileMediaId,
+    catalogHeroMobileMedia: mobileMediaSource
+      ? { url: mobileMediaUrl!, altText: mobileMediaAltText! }
+      : null,
     galleryName: fields[2]!,
     footerAbout: fields[3]!,
     contactAddress: fields[4]!,
@@ -279,6 +295,8 @@ function parseSlide(value: unknown): AdminHomepageSlide | null {
   const id = text(source?.id);
   const mediaId = text(source?.mediaId);
   const media = parseMedia(source?.media);
+  const mobileMediaId = nullableText(source?.mobileMediaId);
+  const mobileMedia = source?.mobileMedia === null ? null : parseMedia(source?.mobileMedia);
   const sortOrder = finiteNumber(source?.sortOrder);
   const fields = [
     nullableText(source?.title),
@@ -291,6 +309,8 @@ function parseSlide(value: unknown): AdminHomepageSlide | null {
     !id ||
     !mediaId ||
     !media ||
+    mobileMediaId === undefined ||
+    Boolean(mobileMediaId) !== Boolean(mobileMedia) ||
     sortOrder === null ||
     typeof source.isActive !== 'boolean' ||
     fields.some((field) => field === undefined)
@@ -301,6 +321,8 @@ function parseSlide(value: unknown): AdminHomepageSlide | null {
     id,
     mediaId,
     media,
+    mobileMediaId,
+    mobileMedia,
     title: fields[0]!,
     subtitle: fields[1]!,
     actionLabel: fields[2]!,

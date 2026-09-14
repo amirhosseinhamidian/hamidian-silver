@@ -25,6 +25,8 @@ export function SiteMediaField({
   altText,
   disabled = false,
   uploadUrl = '/api/site-settings/media',
+  aspect = 'wide',
+  hint,
   onUploaded,
   onClear,
 }: Readonly<{
@@ -33,6 +35,8 @@ export function SiteMediaField({
   altText: string;
   disabled?: boolean;
   uploadUrl?: string;
+  aspect?: 'wide' | 'page-desktop' | 'mobile';
+  hint?: string;
   onUploaded: (media: SiteMedia) => void;
   onClear?: () => void;
 }>) {
@@ -73,7 +77,15 @@ export function SiteMediaField({
 
   return (
     <div className="space-y-3">
-      <div className="relative aspect-[16/7] overflow-hidden rounded-[var(--admin-radius-md)] border border-dashed border-[var(--admin-color-border-strong)] bg-[var(--admin-color-surface-subtle)]">
+      <div
+        className={`relative overflow-hidden rounded-[var(--admin-radius-md)] border border-dashed border-[var(--admin-color-border-strong)] bg-[var(--admin-color-surface-subtle)] ${
+          aspect === 'mobile'
+            ? 'mx-auto aspect-[3/4] max-h-80'
+            : aspect === 'page-desktop'
+              ? 'aspect-[1942/809]'
+              : 'aspect-[16/7]'
+        }`}
+      >
         {media?.url ? (
           <Image
             src={media.url}
@@ -89,6 +101,7 @@ export function SiteMediaField({
           </div>
         )}
       </div>
+      {hint ? <p className="text-xs text-[var(--admin-color-muted)]">{hint}</p> : null}
       {error ? <Alert tone="danger">{error}</Alert> : null}
       <div className="flex flex-wrap gap-2">
         <label className="inline-flex min-h-9 cursor-pointer items-center justify-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] bg-white px-3 text-xs font-semibold hover:border-[var(--admin-color-border-strong)]">

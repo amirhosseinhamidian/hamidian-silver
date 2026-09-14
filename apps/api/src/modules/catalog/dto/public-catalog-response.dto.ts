@@ -35,6 +35,9 @@ export class PublicCatalogCategoryDto {
 }
 
 export class PublicCatalogCategoryPageDto extends PublicCatalogCategoryDto {
+  @ApiPropertyOptional({ type: () => PublicCatalogMediaDto, nullable: true })
+  heroMobileImage?: PublicCatalogMediaDto | null;
+
   @ApiPropertyOptional({ type: String, nullable: true })
   seoTitle?: string | null;
 
@@ -71,6 +74,9 @@ export class PublicCatalogBrandDto {
 
   @ApiPropertyOptional({ type: () => PublicCatalogMediaDto, nullable: true })
   heroImage?: PublicCatalogMediaDto | null;
+
+  @ApiPropertyOptional({ type: () => PublicCatalogMediaDto, nullable: true })
+  heroMobileImage?: PublicCatalogMediaDto | null;
 
   @ApiProperty({ type: () => PublicCatalogCountryDto, nullable: true })
   originCountry!: PublicCatalogCountryDto | null;

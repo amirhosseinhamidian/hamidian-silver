@@ -29,9 +29,14 @@ import type {
 import { cn } from '@/lib/ui/cn';
 
 type Section = 'homepage' | 'header' | 'footer' | 'seo';
-type EditableSlide = Omit<AdminHomepageSlide, 'mediaId' | 'media'> & {
+type EditableSlide = Omit<
+  AdminHomepageSlide,
+  'mediaId' | 'media' | 'mobileMediaId' | 'mobileMedia'
+> & {
   mediaId: string | null;
   media: SiteMedia | null;
+  mobileMediaId: string | null;
+  mobileMedia: SiteMedia | null;
 };
 type EditableHomepage = Omit<AdminHomepageSettings, 'primaryHeroSlides' | 'secondaryHero'> & {
   primaryHeroSlides: readonly EditableSlide[];
@@ -78,6 +83,8 @@ function blankSlide(kind: 'primary' | 'secondary'): EditableSlide {
     id: `draft-${kind}-${Date.now()}`,
     mediaId: null,
     media: null,
+    mobileMediaId: null,
+    mobileMedia: null,
     title: null,
     subtitle: null,
     actionLabel: null,
@@ -94,6 +101,17 @@ function catalogMedia(settings: AdminSiteSettings): SiteMedia | null {
         url: settings.catalogHeroMedia.url,
         mimeType: 'image/*',
         altText: settings.catalogHeroMedia.altText,
+      }
+    : null;
+}
+
+function catalogMobileMedia(settings: AdminSiteSettings): SiteMedia | null {
+  return settings.catalogHeroMobileMediaId && settings.catalogHeroMobileMedia
+    ? {
+        id: settings.catalogHeroMobileMediaId,
+        url: settings.catalogHeroMobileMedia.url,
+        mimeType: 'image/*',
+        altText: settings.catalogHeroMobileMedia.altText,
       }
     : null;
 }
@@ -178,14 +196,30 @@ function HeroSlideEditor({
         </div>
       }
     >
-      <div className="grid gap-5 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.2fr)]">
-        <SiteMediaField
-          label={title}
-          media={slide.media}
-          altText={slide.title ?? title}
-          disabled={disabled}
-          onUploaded={(media) => onChange({ ...slide, media, mediaId: media.id })}
-        />
+      <div className="grid gap-5 lg:grid-cols-[minmax(18rem,0.9fr)_minmax(0,1.1fr)]">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+          <SiteMediaField
+            label={`${title} دسکتاپ`}
+            media={slide.media}
+            altText={slide.title ?? title}
+            disabled={disabled}
+            hint="نسخه دسکتاپ؛ ابعاد نمایشی فعلی Hero هوم حفظ می‌شود."
+            onUploaded={(media) => onChange({ ...slide, media, mediaId: media.id })}
+            onClear={() => onChange({ ...slide, media: null, mediaId: null })}
+          />
+          <SiteMediaField
+            label={`${title} موبایل و تبلت`}
+            media={slide.mobileMedia}
+            altText={slide.title ?? title}
+            disabled={disabled}
+            aspect="mobile"
+            hint="نسخه موبایل و تبلت؛ ابعاد نمایشی فعلی Hero هوم حفظ می‌شود."
+            onUploaded={(mobileMedia) =>
+              onChange({ ...slide, mobileMedia, mobileMediaId: mobileMedia.id })
+            }
+            onClear={() => onChange({ ...slide, mobileMedia: null, mobileMediaId: null })}
+          />
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField id={`${slide.id}-title`} label="عنوان" hint="اختیاری">
             {(props) => (
@@ -423,28 +457,55 @@ function HomepageSection({
       </div>
 
       <Card title="Hero صفحه فهرست محصولات" description="بنر اختیاری مستقل در ابتدای صفحه محصولات">
-        <div className="grid gap-5 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.2fr)]">
-          <SiteMediaField
-            label="Hero محصولات"
-            media={catalogMedia(settings)}
-            altText={settings.catalogHeroTitle ?? 'محصولات نقره حمیدیان'}
-            disabled={!canWrite || pending !== null}
-            onUploaded={(media) =>
-              setSettings({
-                ...settings,
-                catalogHeroMediaId: media.id,
-                catalogHeroMedia: { url: media.url, altText: media.altText },
-              })
-            }
-            onClear={() =>
-              setSettings({
-                ...settings,
-                catalogHeroEnabled: false,
-                catalogHeroMediaId: null,
-                catalogHeroMedia: null,
-              })
-            }
-          />
+        <div className="grid gap-5 lg:grid-cols-[minmax(18rem,0.9fr)_minmax(0,1.1fr)]">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            <SiteMediaField
+              label="Hero محصولات دسکتاپ"
+              media={catalogMedia(settings)}
+              altText={settings.catalogHeroTitle ?? 'محصولات نقره حمیدیان'}
+              disabled={!canWrite || pending !== null}
+              aspect="page-desktop"
+              hint="۱۹۴۲×۸۰۹ با نسبت ۲٫۴:۱"
+              onUploaded={(media) =>
+                setSettings({
+                  ...settings,
+                  catalogHeroMediaId: media.id,
+                  catalogHeroMedia: { url: media.url, altText: media.altText },
+                })
+              }
+              onClear={() =>
+                setSettings({
+                  ...settings,
+                  catalogHeroEnabled: false,
+                  catalogHeroMediaId: null,
+                  catalogHeroMedia: null,
+                })
+              }
+            />
+            <SiteMediaField
+              label="Hero محصولات موبایل و تبلت"
+              media={catalogMobileMedia(settings)}
+              altText={settings.catalogHeroTitle ?? 'محصولات نقره حمیدیان'}
+              disabled={!canWrite || pending !== null}
+              aspect="mobile"
+              hint="۱۰۸۶×۱۴۴۸ با نسبت ۳:۴"
+              onUploaded={(media) =>
+                setSettings({
+                  ...settings,
+                  catalogHeroMobileMediaId: media.id,
+                  catalogHeroMobileMedia: { url: media.url, altText: media.altText },
+                })
+              }
+              onClear={() =>
+                setSettings({
+                  ...settings,
+                  catalogHeroEnabled: false,
+                  catalogHeroMobileMediaId: null,
+                  catalogHeroMobileMedia: null,
+                })
+              }
+            />
+          </div>
           <div className="space-y-4">
             <Checkbox
               id="catalog-hero-enabled"
@@ -1118,8 +1179,11 @@ export function SiteSettingsView({
       setError('اطلاعات تنظیمات عمومی برای ذخیره در دسترس نیست.');
       return;
     }
-    if (currentSettings.catalogHeroEnabled && !currentSettings.catalogHeroMediaId) {
-      setError('برای فعال‌کردن Hero محصولات ابتدا تصویر انتخاب کنید.');
+    if (
+      currentSettings.catalogHeroEnabled &&
+      (!currentSettings.catalogHeroMediaId || !currentSettings.catalogHeroMobileMediaId)
+    ) {
+      setError('برای فعال‌کردن Hero محصولات هر دو تصویر دسکتاپ و موبایل/تبلت را انتخاب کنید.');
       return;
     }
     const titleTokens = currentSettings.seoTitleTemplate.match(/%s/g)?.length ?? 0;
@@ -1144,6 +1208,7 @@ export function SiteSettingsView({
         catalogHeroTitle: currentSettings.catalogHeroTitle,
         catalogHeroSubtitle: currentSettings.catalogHeroSubtitle,
         catalogHeroMediaId: currentSettings.catalogHeroMediaId,
+        catalogHeroMobileMediaId: currentSettings.catalogHeroMobileMediaId,
         galleryName: currentSettings.galleryName,
         footerAbout: currentSettings.footerAbout,
         contactAddress: currentSettings.contactAddress,
@@ -1183,8 +1248,8 @@ export function SiteSettingsView({
       ...currentHomepage.primaryHeroSlides,
       ...(currentHomepage.secondaryHero ? [currentHomepage.secondaryHero] : []),
     ];
-    if (slides.some((slide) => !slide.mediaId)) {
-      setError('برای تمام Heroهای اضافه‌شده باید تصویر انتخاب شود.');
+    if (slides.some((slide) => !slide.mediaId || !slide.mobileMediaId)) {
+      setError('برای تمام Heroهای اضافه‌شده باید هر دو تصویر دسکتاپ و موبایل/تبلت انتخاب شوند.');
       return;
     }
     if (
@@ -1207,6 +1272,7 @@ export function SiteSettingsView({
     setSuccess(null);
     const project = (slide: EditableSlide) => ({
       mediaId: slide.mediaId!,
+      mobileMediaId: slide.mobileMediaId!,
       title: slide.title?.trim() || null,
       subtitle: slide.subtitle?.trim() || null,
       actionLabel: slide.actionLabel?.trim() || null,

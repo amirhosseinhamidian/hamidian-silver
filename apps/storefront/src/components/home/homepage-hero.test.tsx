@@ -17,6 +17,13 @@ function slide(title: string, href = '/products'): PublicHomepageHeroSlide {
       width: 1920,
       height: 1080,
     },
+    mobileMedia: {
+      url: `https://media.test/${title}-mobile.webp`,
+      mimeType: 'image/webp',
+      altText: title,
+      width: 1086,
+      height: 1448,
+    },
   };
 }
 

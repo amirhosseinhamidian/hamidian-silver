@@ -10,6 +10,10 @@ const configuredSettings = {
     url: 'https://media.hamidian.test/catalog/hero.webp',
     altText: 'کالکشن نقره',
   },
+  catalogHeroMobileMedia: {
+    url: 'https://media.hamidian.test/catalog/hero-mobile.webp',
+    altText: 'کالکشن نقره',
+  },
 };
 
 describe('CatalogHero', () => {
@@ -19,7 +23,11 @@ describe('CatalogHero', () => {
     expect(screen.getByRole('heading', { name: 'کالکشن جدید' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'کالکشن نقره' })).toHaveAttribute(
       'src',
-      'https://media.hamidian.test/catalog/hero.webp',
+      'https://media.hamidian.test/catalog/hero-mobile.webp',
+    );
+    expect(document.querySelector('source[media="(min-width: 1024px)"]')).toHaveAttribute(
+      'srcset',
+      expect.stringContaining('hero.webp'),
     );
     expect(screen.getByText('انتخاب‌های تازه نقره')).toBeInTheDocument();
   });

@@ -17,6 +17,9 @@ export class UpdateHomepageHeroSlideDto {
   @IsUUID('4')
   mediaId!: string;
 
+  @IsUUID('4')
+  mobileMediaId!: string;
+
   @IsOptional()
   @IsString()
   @Length(1, 200)

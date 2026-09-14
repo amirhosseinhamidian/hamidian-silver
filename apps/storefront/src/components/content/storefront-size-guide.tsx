@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { StorefrontImage } from '@/components/media/storefront-image';
+import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import {
   PUBLIC_CONTENT_PAGE_ROUTES,
@@ -47,13 +47,12 @@ const necklaceLengths = [
 
 function GuideHero({ page }: Readonly<{ page: PublicContentPage }>) {
   return (
-    <header className="relative isolate min-h-[70svh] overflow-hidden bg-[#e9e6df] sm:min-h-[78svh]">
+    <header className="relative isolate aspect-[1086/1448] overflow-hidden bg-[#e9e6df] lg:aspect-[1942/809]">
       {page.heroMedia?.url ? (
-        <StorefrontImage
-          src={page.heroMedia.url}
+        <ResponsiveHeroImage
+          desktopSrc={page.heroMedia.url}
+          mobileSrc={page.heroMobileMedia?.url}
           alt={page.heroMedia.altText ?? page.title}
-          fill
-          sizes="100vw"
           preload
           className="-z-20 object-cover"
         />
@@ -69,7 +68,7 @@ function GuideHero({ page }: Readonly<{ page: PublicContentPage }>) {
         <div className="absolute inset-0 -z-10 bg-gradient-to-l from-black/55 via-black/15 to-black/5" />
       ) : null}
       <div
-        className={`sf-container flex min-h-[70svh] items-end pb-12 pt-28 sm:min-h-[78svh] sm:pb-20 ${page.heroMedia?.url ? 'text-white' : ''}`}
+        className={`sf-container flex h-full items-end pb-12 pt-28 lg:pb-20 ${page.heroMedia?.url ? 'text-white' : ''}`}
       >
         <div className="max-w-3xl">
           <StorefrontBreadcrumbs

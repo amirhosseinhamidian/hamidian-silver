@@ -36,6 +36,7 @@ type SiteSettingsRecord = Readonly<{
   catalogHeroTitle: string | null;
   catalogHeroSubtitle: string | null;
   catalogHeroMediaId: string | null;
+  catalogHeroMobileMediaId: string | null;
   galleryName: string | null;
   footerAbout: string | null;
   contactAddress: string | null;
@@ -58,6 +59,7 @@ type SiteSettingsRecord = Readonly<{
   updatedByUserId: string | null;
   updatedAt: Date;
   catalogHeroMedia: SiteSettingsMedia | null;
+  catalogHeroMobileMedia: SiteSettingsMedia | null;
   seoDefaultOgMedia: SiteSettingsMedia | null;
   seoOrganizationLogoMedia: SiteSettingsMedia | null;
   seoHomeOgMedia: SiteSettingsMedia | null;
@@ -116,6 +118,7 @@ export class SiteSettingsService {
       catalogHeroTitle: settings.catalogHeroTitle,
       catalogHeroSubtitle: settings.catalogHeroSubtitle,
       catalogHeroMedia: this.projectPublicMedia(settings.catalogHeroMedia),
+      catalogHeroMobileMedia: this.projectPublicMedia(settings.catalogHeroMobileMedia),
       galleryName: settings.galleryName,
       footerAbout: settings.footerAbout,
       contactAddress: settings.contactAddress,
@@ -150,6 +153,7 @@ export class SiteSettingsService {
         catalogHeroTitle: defaults.catalogHeroTitle,
         catalogHeroSubtitle: defaults.catalogHeroSubtitle,
         catalogHeroMedia: defaults.catalogHeroMedia,
+        catalogHeroMobileMedia: defaults.catalogHeroMobileMedia,
         galleryName: defaults.galleryName,
         footerAbout: defaults.footerAbout,
         contactAddress: defaults.contactAddress,
@@ -173,6 +177,7 @@ export class SiteSettingsService {
         seoHomeOgMediaId: null,
         seoHomeOgMedia: defaults.seoHomeOgMedia,
         catalogHeroMediaId: null,
+        catalogHeroMobileMediaId: null,
         updatedByUserId: null,
         updatedAt: null,
       };
@@ -200,6 +205,7 @@ export class SiteSettingsService {
         catalogHeroTitle: true,
         catalogHeroSubtitle: true,
         catalogHeroMediaId: true,
+        catalogHeroMobileMediaId: true,
         galleryName: true,
         footerAbout: true,
         contactAddress: true,
@@ -240,6 +246,10 @@ export class SiteSettingsService {
       dto.catalogHeroMediaId !== undefined
         ? dto.catalogHeroMediaId
         : (current?.catalogHeroMediaId ?? null);
+    const catalogHeroMobileMediaId =
+      dto.catalogHeroMobileMediaId !== undefined
+        ? dto.catalogHeroMobileMediaId
+        : (current?.catalogHeroMobileMediaId ?? null);
     const galleryName = resolveNullableText(dto.galleryName, current?.galleryName);
     const footerAbout = resolveNullableText(dto.footerAbout, current?.footerAbout);
     const contactAddress = resolveNullableText(dto.contactAddress, current?.contactAddress);
@@ -281,7 +291,12 @@ export class SiteSettingsService {
         : dto.seoHomeOgMediaId;
 
     await Promise.all([
-      this.validateCatalogHeroMedia(catalogHeroEnabled, catalogHeroMediaId, dto),
+      this.validateCatalogHeroMedia(
+        catalogHeroEnabled,
+        catalogHeroMediaId,
+        catalogHeroMobileMediaId,
+        dto,
+      ),
       this.validateHeaderCategories(headerCategoryIds),
       this.validateSeoMediaIds([seoDefaultOgMediaId, seoOrganizationLogoMediaId, seoHomeOgMediaId]),
     ]);
@@ -304,6 +319,7 @@ export class SiteSettingsService {
         catalogHeroTitle,
         catalogHeroSubtitle,
         catalogHeroMediaId,
+        catalogHeroMobileMediaId,
         galleryName,
         footerAbout,
         contactAddress,
@@ -338,6 +354,7 @@ export class SiteSettingsService {
         catalogHeroTitle,
         catalogHeroSubtitle,
         catalogHeroMediaId,
+        catalogHeroMobileMediaId,
         galleryName,
         footerAbout,
         contactAddress,
@@ -361,6 +378,7 @@ export class SiteSettingsService {
       },
       include: {
         catalogHeroMedia: true,
+        catalogHeroMobileMedia: true,
         seoDefaultOgMedia: true,
         seoOrganizationLogoMedia: true,
         seoHomeOgMedia: true,
@@ -375,6 +393,7 @@ export class SiteSettingsService {
       where: { id: SITE_SETTINGS_ID },
       include: {
         catalogHeroMedia: true,
+        catalogHeroMobileMedia: true,
         seoDefaultOgMedia: true,
         seoOrganizationLogoMedia: true,
         seoHomeOgMedia: true,
@@ -538,28 +557,36 @@ export class SiteSettingsService {
 
   private async validateCatalogHeroMedia(
     enabled: boolean,
-    mediaId: string | null,
+    desktopMediaId: string | null,
+    mobileMediaId: string | null,
     dto: UpdateSiteSettingsDto,
   ): Promise<void> {
-    if (enabled && !mediaId) {
-      throw new BadRequestException('Catalog hero image is required when the hero is enabled.');
+    if (enabled && (!desktopMediaId || !mobileMediaId)) {
+      throw new BadRequestException(
+        'Catalog desktop and mobile hero images are required when the hero is enabled.',
+      );
     }
 
-    if (!mediaId || (dto.catalogHeroMediaId === undefined && !enabled)) {
-      return;
-    }
+    const idsToValidate = (
+      enabled
+        ? [desktopMediaId, mobileMediaId]
+        : [
+            dto.catalogHeroMediaId === undefined ? null : desktopMediaId,
+            dto.catalogHeroMobileMediaId === undefined ? null : mobileMediaId,
+          ]
+    ).filter((id): id is string => Boolean(id));
+    if (idsToValidate.length === 0) return;
+    const uniqueIds = [...new Set(idsToValidate)];
 
-    const media = await this.prisma.media.findFirst({
+    const mediaCount = await this.prisma.media.count({
       where: {
-        id: mediaId,
+        id: { in: uniqueIds },
         deletedAt: null,
-      },
-      select: {
-        mimeType: true,
+        mimeType: { startsWith: 'image/' },
       },
     });
 
-    if (!media || !media.mimeType.startsWith('image/')) {
+    if (mediaCount !== uniqueIds.length) {
       throw new BadRequestException('Catalog hero media must reference an active image.');
     }
   }
@@ -580,6 +607,7 @@ export class SiteSettingsService {
       catalogHeroTitle: null,
       catalogHeroSubtitle: null,
       catalogHeroMedia: null,
+      catalogHeroMobileMedia: null,
       galleryName: null,
       footerAbout: null,
       contactAddress: null,
@@ -611,6 +639,8 @@ export class SiteSettingsService {
       catalogHeroSubtitle: settings.catalogHeroSubtitle,
       catalogHeroMediaId: settings.catalogHeroMediaId,
       catalogHeroMedia: this.projectPublicMedia(settings.catalogHeroMedia),
+      catalogHeroMobileMediaId: settings.catalogHeroMobileMediaId,
+      catalogHeroMobileMedia: this.projectPublicMedia(settings.catalogHeroMobileMedia),
       galleryName: settings.galleryName,
       footerAbout: settings.footerAbout,
       contactAddress: settings.contactAddress,

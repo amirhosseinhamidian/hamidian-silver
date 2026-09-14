@@ -82,6 +82,7 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
       title={brand.name}
       description={brand.description}
       image={brand.heroImage ?? null}
+      mobileImage={brand.heroMobileImage ?? null}
       filters={filters}
       products={products}
     />

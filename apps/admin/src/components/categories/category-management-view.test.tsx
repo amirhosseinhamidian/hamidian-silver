@@ -25,6 +25,7 @@ const categories: readonly AdminCategory[] = [
     parent: null,
     parentId: null,
     image: null,
+    heroMobileImage: null,
     seoTitle: null,
     seoDescription: null,
     seoCanonicalPath: null,
@@ -67,7 +68,8 @@ describe('CategoryManagementView', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ id: 'category-2' }))
-      .mockResolvedValueOnce(jsonResponse({ image: { id: 'media-1' } }));
+      .mockResolvedValueOnce(jsonResponse({ image: { id: 'media-1' } }))
+      .mockResolvedValueOnce(jsonResponse({ heroMobileImage: { id: 'media-mobile-1' } }));
     vi.stubGlobal('fetch', fetchMock);
     render(<CategoryManagementView categories={categories} failed={false} canWrite />);
 
@@ -80,15 +82,23 @@ describe('CategoryManagementView', () => {
       target: { value: 'necklaces' },
     });
     const image = new File(['image'], 'necklace.webp', { type: 'image/webp' });
-    fireEvent.change(within(dialog).getByLabelText('تصویر Hero دسته‌بندی'), {
+    fireEvent.change(within(dialog).getByLabelText('تصویر Hero دسکتاپ دسته‌بندی'), {
       target: { files: [image] },
+    });
+    const mobileImage = new File(['mobile-image'], 'necklace-mobile.webp', {
+      type: 'image/webp',
+    });
+    fireEvent.change(within(dialog).getByLabelText('تصویر Hero موبایل و تبلت'), {
+      target: { files: [mobileImage] },
     });
     fireEvent.click(within(dialog).getByRole('button', { name: 'ذخیره دسته‌بندی' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(fetchMock.mock.calls[0][0]).toBe('/api/catalog/categories');
     expect(fetchMock.mock.calls[1][0]).toBe('/api/catalog/categories/category-2/image');
+    expect(fetchMock.mock.calls[2][0]).toBe('/api/catalog/categories/category-2/hero-mobile-image');
     expect((fetchMock.mock.calls[1][1] as RequestInit).body).toBeInstanceOf(FormData);
+    expect((fetchMock.mock.calls[2][1] as RequestInit).body).toBeInstanceOf(FormData);
   });
 
   it('keeps mutation controls hidden for read-only catalog users', () => {

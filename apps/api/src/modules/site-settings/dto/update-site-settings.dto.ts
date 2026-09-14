@@ -97,6 +97,11 @@ export class UpdateSiteSettingsDto {
   @IsUUID('4')
   catalogHeroMediaId?: string | null;
 
+  @ApiPropertyOptional({ nullable: true, format: 'uuid' })
+  @IsOptional()
+  @IsUUID('4')
+  catalogHeroMobileMediaId?: string | null;
+
   @IsOptional()
   @IsString()
   @MaxLength(150)

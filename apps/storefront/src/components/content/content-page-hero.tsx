@@ -1,4 +1,4 @@
-import { StorefrontImage } from '@/components/media/storefront-image';
+import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import {
   PUBLIC_CONTENT_PAGE_ROUTES,
@@ -11,13 +11,12 @@ type ContentPageHeroProps = Readonly<{
 
 export function ContentPageHero({ page }: ContentPageHeroProps) {
   return (
-    <header className="relative isolate flex min-h-[62svh] items-end overflow-hidden bg-[#151515] text-white sm:min-h-[72svh]">
+    <header className="relative isolate flex aspect-[1086/1448] items-end overflow-hidden bg-[#151515] text-white lg:aspect-[1942/809]">
       {page.heroMedia?.url ? (
-        <StorefrontImage
-          src={page.heroMedia.url}
+        <ResponsiveHeroImage
+          desktopSrc={page.heroMedia.url}
+          mobileSrc={page.heroMobileMedia?.url}
           alt={page.heroMedia.altText ?? page.title}
-          fill
-          sizes="100vw"
           preload
           className="-z-20 object-cover"
         />

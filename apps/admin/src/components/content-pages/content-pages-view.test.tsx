@@ -17,6 +17,12 @@ function page(key: AdminContentPage['key']): AdminContentPage {
     heroMedia: ['ABOUT', 'CONTACT', 'SERVICES'].includes(key)
       ? { url: '/hero.jpg', altText: 'Hero', width: 1200, height: 500 }
       : null,
+    heroMobileMediaId: ['ABOUT', 'CONTACT', 'SERVICES'].includes(key)
+      ? '10000000-0000-4000-8000-000000000002'
+      : null,
+    heroMobileMedia: ['ABOUT', 'CONTACT', 'SERVICES'].includes(key)
+      ? { url: '/hero-mobile.jpg', altText: 'Hero', width: 1086, height: 1448 }
+      : null,
     sections: [],
     seoTitle: null,
     seoDescription: null,
