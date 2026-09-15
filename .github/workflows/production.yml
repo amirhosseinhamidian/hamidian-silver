@@ -29,10 +29,10 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd 'pg_isready -U ci -d hamidian_ci'
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
+          --health-cmd=pg_isready
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     env:
       DATABASE_URL: postgresql://ci:ci_test_only@127.0.0.1:5432/hamidian_ci?schema=public
       OTP_PEPPER: ci-only-pepper-not-used-outside-github-actions-12345
