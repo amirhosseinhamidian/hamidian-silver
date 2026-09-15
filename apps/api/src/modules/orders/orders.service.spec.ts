@@ -1,6 +1,11 @@
 import type { ConfigService } from '@nestjs/config';
 import { ErrorCode } from '../../common/errors/error-codes';
-import { OrderStatus, PlatingType, ProductStatus } from '../../generated/prisma/enums';
+import {
+  OrderStatus,
+  PaymentStatus,
+  PlatingType,
+  ProductStatus,
+} from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { OrdersService } from './orders.service';
 
@@ -348,6 +353,10 @@ describe('OrdersService', () => {
       where: {
         id: orderId,
         status: OrderStatus.PENDING_PAYMENT,
+        OR: [
+          { payment: { is: null } },
+          { payment: { is: { status: { not: PaymentStatus.AWAITING_REVIEW } } } },
+        ],
       },
       data: {
         status: OrderStatus.CANCELLED,
@@ -401,6 +410,10 @@ describe('OrdersService', () => {
         id: orderId,
         status: OrderStatus.PENDING_PAYMENT,
         userId,
+        OR: [
+          { payment: { is: null } },
+          { payment: { is: { status: { not: PaymentStatus.AWAITING_REVIEW } } } },
+        ],
       },
       data: {
         status: OrderStatus.CANCELLED,

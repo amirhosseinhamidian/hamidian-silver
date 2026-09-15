@@ -7,6 +7,12 @@ vi.mock('next/image', async () => {
   const React = await import('react');
 
   return {
+    getImageProps: (props: Record<string, unknown>) => ({
+      props: {
+        ...props,
+        srcSet: `${String(props.src)} 1x`,
+      },
+    }),
     default: (props: Record<string, unknown>) => {
       const imageProps = { ...props };
 

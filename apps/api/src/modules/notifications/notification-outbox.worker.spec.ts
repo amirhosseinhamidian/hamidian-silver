@@ -83,7 +83,7 @@ describe('NotificationOutboxWorker', () => {
 
     expect(smsSender.sendMessage).toHaveBeenCalledWith({
       phone: '+989120000000',
-      text: 'پرداخت سفارش HS-TEST با موفقیت ثبت شد.',
+      text: 'پرداخت سفارش HS-TEST تأیید شد و سفارش وارد مرحله آماده‌سازی می‌شود.',
     });
     const claimedAt = prisma.notificationOutboxEvent.updateMany.mock.calls[0]?.[0].data.claimedAt;
     expect(claimedAt).toBeInstanceOf(Date);

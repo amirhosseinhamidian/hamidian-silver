@@ -47,6 +47,16 @@ export type CustomerOrderItem = Readonly<{
   createdAt: string;
 }>;
 
+export type CustomerPaymentMethod = 'CARD_TO_CARD' | 'PAYMENT_GATEWAY';
+
+export type CustomerOrderPayment = Readonly<{
+  status: string;
+  method: CustomerPaymentMethod | null;
+  receiptAvailable: boolean;
+  receiptOriginalName: string | null;
+  receiptUploadedAt: string | null;
+}>;
+
 export type CustomerOrder = Readonly<{
   id: string;
   orderNumber: string;
@@ -65,6 +75,7 @@ export type CustomerOrder = Readonly<{
   deliveredAt: string | null;
   createdAt: string;
   updatedAt: string;
+  payment: CustomerOrderPayment | null;
   items: CustomerOrderItem[];
 }>;
 

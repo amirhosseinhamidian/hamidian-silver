@@ -8,6 +8,7 @@ import { PublicContentPageDto, PublicContentPageMediaDto } from './dto/public-co
 import { UpdateContentPageDto } from './dto/update-content-page.dto';
 
 const CONTENT_PAGE_KEYS = Object.values(StorefrontContentPageKey);
+const MAX_STANDARD_PAGE_SECTIONS = 12;
 const IMAGE_REQUIRED_KEYS = new Set<StorefrontContentPageKey>([
   StorefrontContentPageKey.ABOUT,
   StorefrontContentPageKey.CONTACT,
@@ -271,6 +272,10 @@ export class ContentPagesService {
     dto: UpdateContentPageDto,
     actorUserId: string,
   ): Promise<AdminContentPageDto> {
+    if (key !== StorefrontContentPageKey.FAQ && dto.sections.length > MAX_STANDARD_PAGE_SECTIONS) {
+      throw new BadRequestException('Content pages can contain at most 12 sections.');
+    }
+
     const current = await this.prisma.storefrontContentPage.findUnique({
       where: { key },
       select: {

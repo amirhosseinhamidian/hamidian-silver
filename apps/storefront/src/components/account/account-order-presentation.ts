@@ -1,4 +1,8 @@
-import type { CustomerOrderItem } from '@/components/account/account-types';
+import type {
+  CustomerOrder,
+  CustomerOrderItem,
+  CustomerPaymentMethod,
+} from '@/components/account/account-types';
 import { toPersianDigits } from '@/components/account/account-types';
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
@@ -18,6 +22,18 @@ const PLATING_LABELS: Record<string, string> = {
 
 export function orderStatusLabel(status: string): string {
   return ORDER_STATUS_LABELS[status] ?? status;
+}
+
+export function customerOrderStatusLabel(order: Pick<CustomerOrder, 'payment' | 'status'>): string {
+  return order.payment?.status === 'AWAITING_REVIEW'
+    ? 'در انتظار بررسی رسید'
+    : orderStatusLabel(order.status);
+}
+
+export function paymentMethodLabel(method: CustomerPaymentMethod | null | undefined): string {
+  if (method === 'CARD_TO_CARD') return 'کارت‌به‌کارت';
+  if (method === 'PAYMENT_GATEWAY') return 'درگاه بانکی';
+  return 'هنوز انتخاب نشده';
 }
 
 export function platingLabel(platingType: string | null): string | null {

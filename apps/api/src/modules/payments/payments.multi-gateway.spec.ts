@@ -1,5 +1,5 @@
 import type { ConfigService } from '@nestjs/config';
-import { PaymentAttemptStatus } from '../../generated/prisma/enums';
+import { PaymentAttemptStatus, PaymentStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { PAYMENT_GATEWAY_CODES } from './payment-gateway.constants';
 import type { PaymentGateway } from './payment-gateway.port';
@@ -58,6 +58,7 @@ describe('PaymentsService multi-gateway routing', () => {
           id: paymentId,
           orderId,
           amountToman: 1_000_000,
+          status: PaymentStatus.PENDING,
         }),
       },
       paymentAttempt: {

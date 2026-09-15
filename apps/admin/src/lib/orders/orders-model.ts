@@ -2,10 +2,22 @@ export type AdminOrderStatus =
   'PENDING_PAYMENT' | 'PAID' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'EXPIRED';
 
 export type AdminPaymentStatus =
-  'PENDING' | 'PAID' | 'PARTIALLY_REFUNDED' | 'CANCELLED' | 'RECONCILIATION_REQUIRED' | 'REFUNDED';
+  | 'PENDING'
+  | 'AWAITING_REVIEW'
+  | 'PAID'
+  | 'PARTIALLY_REFUNDED'
+  | 'CANCELLED'
+  | 'RECONCILIATION_REQUIRED'
+  | 'REFUNDED';
 
 export type AdminPaymentAttemptStatus =
-  'CREATED' | 'REDIRECTED' | 'AWAITING_REVIEW' | 'VERIFIED' | 'FAILED' | 'RECONCILIATION_REQUIRED' | 'RECONCILED';
+  | 'CREATED'
+  | 'REDIRECTED'
+  | 'AWAITING_REVIEW'
+  | 'VERIFIED'
+  | 'FAILED'
+  | 'RECONCILIATION_REQUIRED'
+  | 'RECONCILED';
 
 export type AdminShipmentStatus =
   'PENDING' | 'READY' | 'HANDED_OVER' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED' | 'CANCELLED';
@@ -150,6 +162,7 @@ const ORDER_STATUSES = new Set<AdminOrderStatus>([
 ]);
 const PAYMENT_STATUSES = new Set<AdminPaymentStatus>([
   'PENDING',
+  'AWAITING_REVIEW',
   'PAID',
   'PARTIALLY_REFUNDED',
   'CANCELLED',
@@ -552,9 +565,7 @@ export function orderItemCount(order: AdminOrder): number {
 
 export function orderRequiresAttention(order: AdminOrder): boolean {
   return (
-    order.payment?.attempts.some(
-      (attempt) => attempt.status === 'AWAITING_REVIEW',
-    ) === true ||
+    order.payment?.attempts.some((attempt) => attempt.status === 'AWAITING_REVIEW') === true ||
     order.payment?.status === 'RECONCILIATION_REQUIRED' ||
     order.shipment?.status === 'FAILED' ||
     (order.status === 'PAID' && order.payment?.status !== 'PAID')

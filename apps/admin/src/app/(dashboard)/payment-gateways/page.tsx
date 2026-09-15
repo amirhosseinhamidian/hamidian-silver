@@ -1,4 +1,5 @@
 import { PaymentGatewaySettingsView } from '@/components/payment-gateways/payment-gateway-settings-view';
+import { CardToCardSettingsView } from '@/components/payment-gateways/card-to-card-settings-view';
 import { Badge } from '@/components/ui/badge';
 import { requireAdminSession } from '@/lib/auth/session';
 import { loadPaymentGatewaySettings } from '@/lib/payment-gateways/payment-gateway-data';
@@ -17,18 +18,23 @@ export default async function PaymentGatewaysPage() {
     <main className="admin-container py-6 sm:py-8 lg:py-10">
       <header className="border-b border-[var(--admin-color-border)] pb-6">
         <Badge tone="info">مرحله {formatAdminInteger(18)}</Badge>
-        <h1 className="mt-3 text-2xl font-black sm:text-3xl">تنظیم درگاه‌های پرداخت</h1>
+        <h1 className="mt-3 text-2xl font-black sm:text-3xl">مدیریت شیوه‌های پرداخت</h1>
         <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--admin-color-muted)]">
-          وضعیت زرین‌پال، زیبال و درگاه مستقیم بانک ملت را بررسی و درگاه‌های آماده را برای پرداخت
-          مشتری فعال یا غیرفعال کنید.
+          کارت‌های مقصد و درگاه‌های بانکی قابل نمایش در checkout را از یک بخش مدیریت کنید.
         </p>
       </header>
 
-      <PaymentGatewaySettingsView
-        initialSettings={data.settings}
-        failed={data.failed}
-        canWrite={user.permissions.includes('settings.write')}
-      />
+      <div className="space-y-10 pt-8">
+        <CardToCardSettingsView
+          initialAccounts={data.cardToCardAccounts ?? []}
+          canWrite={user.permissions.includes('settings.write')}
+        />
+        <PaymentGatewaySettingsView
+          initialSettings={data.settings}
+          failed={data.failed}
+          canWrite={user.permissions.includes('settings.write')}
+        />
+      </div>
     </main>
   );
 }

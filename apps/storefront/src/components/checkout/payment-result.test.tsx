@@ -23,6 +23,13 @@ const order: CustomerOrderDetail = {
   deliveredAt: null,
   createdAt: '2026-09-07T12:00:00.000Z',
   updatedAt: '2026-09-07T12:02:00.000Z',
+  payment: {
+    status: 'PAID',
+    method: 'PAYMENT_GATEWAY',
+    receiptAvailable: false,
+    receiptOriginalName: null,
+    receiptUploadedAt: null,
+  },
   shippingAddress: {
     recipientName: 'امیرحسین حمیدیان',
     phone: '09121234567',

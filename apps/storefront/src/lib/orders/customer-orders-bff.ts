@@ -1,7 +1,7 @@
 import type { components } from '@hamidian/contracts';
 import { cookies } from 'next/headers';
 
-import { createServerApiClient } from '@/lib/api/server-client';
+import { createServerApiClient, normalizeApiOrigin } from '@/lib/api/server-client';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
 import { getCatalogDevProductImageSrc } from '@/lib/catalog/dev-media.server';
 
@@ -93,4 +93,39 @@ export async function cancelCustomerOrder(orderId: string): Promise<Response> {
   }
 
   return Response.json(enrichOrder(data as ContractOrderDetail));
+}
+
+export async function getCustomerPaymentReceipt(orderId: string): Promise<Response> {
+  const accessToken = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  if (!accessToken) return authenticationRequired();
+
+  const configuredOrigin = process.env.HAMIDIAN_API_ORIGIN;
+  if (!configuredOrigin) {
+    throw new Error('HAMIDIAN_API_ORIGIN is required for order requests.');
+  }
+
+  try {
+    const response = await fetch(
+      `${normalizeApiOrigin(configuredOrigin)}/api/v1/payments/orders/${encodeURIComponent(orderId)}/card-to-card/receipt`,
+      {
+        cache: 'no-store',
+        headers: {
+          Accept: 'image/*',
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+
+    return new Response(await response.arrayBuffer(), {
+      status: response.status,
+      headers: {
+        'Content-Type': response.headers.get('content-type') ?? 'application/octet-stream',
+        'Content-Disposition': response.headers.get('content-disposition') ?? 'inline',
+        'Cache-Control': 'private, no-store, max-age=0',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    });
+  } catch {
+    return Response.json({ message: 'Receipt service is unavailable.' }, { status: 502 });
+  }
 }

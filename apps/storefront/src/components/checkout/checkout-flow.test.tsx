@@ -28,8 +28,13 @@ const freeShipping = {
   discountedCostToman: null,
 } as const;
 
-const { clearCart } = vi.hoisted(() => ({
+const { clearCart, routerPush } = vi.hoisted(() => ({
   clearCart: vi.fn(),
+  routerPush: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: routerPush }),
 }));
 
 vi.mock('@/lib/cart/cart-store', () => ({
@@ -52,6 +57,7 @@ function jsonResponse(payload: unknown, status = 200): Response {
 describe('CheckoutFlow price integrity', () => {
   beforeEach(() => {
     clearCart.mockReset();
+    routerPush.mockReset();
   });
 
   afterEach(() => {

@@ -27,7 +27,7 @@ const MAX_RECEIPT_SIZE = 10 * 1024 * 1024;
 const ALLOWED_RECEIPT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 function groupedCardNumber(cardNumber: string): string {
-  return cardNumber.replace(/(\d{4})(?=\d)/g, '$1  ');
+  return cardNumber.replace(/(\d{4})(?=\d)/g, '$1 ');
 }
 
 export function CardToCardPaymentModal({
@@ -44,18 +44,8 @@ export function CardToCardPaymentModal({
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const idempotencyKey = useRef<string>();
+  const idempotencyKey = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setStep(1);
-    setCopied(false);
-    setFile(null);
-    setUploading(false);
-    setError(null);
-    idempotencyKey.current = crypto.randomUUID();
-  }, [open, orderId]);
 
   useEffect(() => {
     if (!open) return;
@@ -72,6 +62,14 @@ export function CardToCardPaymentModal({
       file.size / 1024 / 1024,
     )} مگابایت`;
   }, [file]);
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+
+  useEffect(
+    () => () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    },
+    [previewUrl],
+  );
 
   if (
     !open ||
@@ -118,8 +116,9 @@ export function CardToCardPaymentModal({
 
     try {
       const body = new FormData();
+      idempotencyKey.current ??= crypto.randomUUID();
       body.set('orderId', orderId);
-      body.set('idempotencyKey', idempotencyKey.current ?? crypto.randomUUID());
+      body.set('idempotencyKey', idempotencyKey.current);
       body.set('file', file);
 
       const response = await fetch('/api/checkout/card-to-card', {
@@ -208,7 +207,7 @@ export function CardToCardPaymentModal({
                   type="button"
                   dir="ltr"
                   onClick={copyCardNumber}
-                  className="my-7 text-center font-mono text-xl tracking-[0.12em] sm:text-2xl"
+                  className="my-7 whitespace-nowrap text-center font-mono text-[clamp(1.5rem,7vw,1.875rem)] tracking-normal sm:text-4xl sm:tracking-[0.08em]"
                   title="کپی شماره کارت"
                 >
                   {groupedCardNumber(settings.cardNumber)}
@@ -231,7 +230,7 @@ export function CardToCardPaymentModal({
 
             <div className="mt-5 flex items-center justify-between gap-4 border-y border-[var(--sf-color-border)] py-4 text-sm">
               <span className="text-[var(--sf-color-muted)]">مبلغ واریز</span>
-              <strong>{formatTomanPrice(amountToman)}</strong>
+              <strong className="text-lg sm:text-xl">{formatTomanPrice(amountToman)}</strong>
             </div>
 
             <p className="mt-4 text-xs leading-6 text-[var(--sf-color-muted)]">
@@ -247,17 +246,30 @@ export function CardToCardPaymentModal({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="mt-7 flex min-h-48 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--sf-color-border-strong)] bg-[var(--sf-color-surface)] p-6 text-center"
+              className="mt-7 flex min-h-48 w-full flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-[var(--sf-color-border-strong)] bg-[var(--sf-color-surface)] p-4 text-center"
             >
-              <FiUploadCloud aria-hidden="true" size={32} />
-              <strong className="mt-4 text-sm">
-                {file ? file.name : 'انتخاب تصویر رسید'}
-              </strong>
-              <span className="mt-2 text-xs leading-6 text-[var(--sf-color-muted)]">
-                {file
-                  ? fileSize
-                  : 'فرمت JPEG، PNG یا WebP با حداکثر حجم ۱۰ مگابایت'}
-              </span>
+              {previewUrl ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- This preview uses a local object URL selected by the customer. */}
+                  <img
+                    src={previewUrl}
+                    alt="پیش‌نمایش رسید انتخاب‌شده"
+                    className="max-h-72 w-full object-contain"
+                  />
+                  <strong className="mt-3 break-all text-sm">{file?.name}</strong>
+                  <span className="mt-1 text-xs text-[var(--sf-color-muted)]">
+                    {fileSize} · برای تغییر تصویر لمس کنید
+                  </span>
+                </>
+              ) : (
+                <>
+                  <FiUploadCloud aria-hidden="true" size={32} />
+                  <strong className="mt-4 text-sm">انتخاب تصویر رسید</strong>
+                  <span className="mt-2 text-xs leading-6 text-[var(--sf-color-muted)]">
+                    فرمت JPEG، PNG یا WebP با حداکثر حجم ۱۰ مگابایت
+                  </span>
+                </>
+              )}
             </button>
             <input
               ref={fileInputRef}

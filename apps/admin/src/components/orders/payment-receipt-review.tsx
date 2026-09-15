@@ -13,10 +13,7 @@ type PaymentReceiptReviewProps = Readonly<{
   canConfirm: boolean;
 }>;
 
-export function PaymentReceiptReview({
-  attempt,
-  canConfirm,
-}: PaymentReceiptReviewProps) {
+export function PaymentReceiptReview({ attempt, canConfirm }: PaymentReceiptReviewProps) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -26,10 +23,7 @@ export function PaymentReceiptReview({
   const awaitingReview = attempt.status === 'AWAITING_REVIEW' && !confirmed;
 
   async function confirmReceipt() {
-    if (
-      confirming ||
-      !window.confirm('از تطبیق مبلغ و صحت رسید اطمینان دارید؟')
-    ) {
+    if (confirming || !window.confirm('از تطبیق مبلغ و صحت رسید اطمینان دارید؟')) {
       return;
     }
 
@@ -103,9 +97,7 @@ export function PaymentReceiptReview({
             loading={confirming}
             onClick={confirmReceipt}
           >
-            {confirmed || attempt.status === 'VERIFIED'
-              ? 'رسید تأیید شده'
-              : 'تأیید رسید و پرداخت'}
+            {confirmed || attempt.status === 'VERIFIED' ? 'رسید تأیید شده' : 'تأیید رسید و پرداخت'}
           </Button>
         </div>
       </div>

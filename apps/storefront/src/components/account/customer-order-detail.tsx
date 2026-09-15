@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import {
+  customerOrderStatusLabel,
   formatOrderDate,
   orderItemDetails,
   orderStatusLabel,
+  paymentMethodLabel,
 } from '@/components/account/account-order-presentation';
 import type { CustomerOrderDetail } from '@/components/account/account-types';
 import { readResponseError, toPersianDigits } from '@/components/account/account-types';
@@ -202,7 +204,7 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
           </p>
         </div>
         <span className="border border-[var(--sf-color-border-strong)] px-4 py-2 text-sm font-medium">
-          {orderStatusLabel(order.status)}
+          {customerOrderStatusLabel(order)}
         </span>
       </header>
 
@@ -261,11 +263,53 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
 
           <OrderTimeline order={order} />
 
+          {order.payment ? (
+            <section
+              aria-labelledby="order-payment-information-heading"
+              className="border border-[var(--sf-color-border)] p-5 sm:p-6"
+            >
+              <h2 id="order-payment-information-heading" className="text-xl font-medium">
+                اطلاعات پرداخت
+              </h2>
+              <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs text-[var(--sf-color-subtle)]">شیوه پرداخت</dt>
+                  <dd className="mt-1 font-medium">{paymentMethodLabel(order.payment.method)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-[var(--sf-color-subtle)]">وضعیت پرداخت</dt>
+                  <dd className="mt-1 font-medium">
+                    {order.payment.status === 'AWAITING_REVIEW'
+                      ? 'در انتظار بررسی رسید'
+                      : order.payment.status === 'PAID'
+                        ? 'تأییدشده'
+                        : 'در انتظار پرداخت'}
+                  </dd>
+                </div>
+              </dl>
+              {order.payment.method === 'CARD_TO_CARD' && order.payment.receiptAvailable ? (
+                <figure className="mt-6">
+                  <div className="overflow-hidden border border-[var(--sf-color-border)] bg-[var(--sf-color-surface)]">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- The authenticated receipt URL is dynamic and not suitable for image optimization. */}
+                    <img
+                      src={`/api/orders/${encodeURIComponent(order.id)}/receipt`}
+                      alt="تصویر رسید کارت‌به‌کارت"
+                      className="mx-auto max-h-[32rem] w-full object-contain"
+                    />
+                  </div>
+                  <figcaption className="mt-2 text-xs text-[var(--sf-color-subtle)]">
+                    {order.payment.receiptOriginalName ?? 'رسید ثبت‌شده پرداخت'}
+                  </figcaption>
+                </figure>
+              ) : null}
+            </section>
+          ) : null}
+
           {canShowCustomerReturns(order) ? <CustomerOrderReturns order={order} /> : null}
         </div>
 
         <aside className="space-y-6 lg:sticky lg:top-24">
-          {order.status === 'PENDING_PAYMENT' ? (
+          {order.status === 'PENDING_PAYMENT' && order.payment?.status !== 'AWAITING_REVIEW' ? (
             <section
               aria-labelledby="order-payment-heading"
               className="border border-[var(--sf-color-ink)] p-5"

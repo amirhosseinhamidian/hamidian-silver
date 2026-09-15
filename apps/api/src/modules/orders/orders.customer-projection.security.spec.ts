@@ -39,6 +39,7 @@ describe('OrdersService customer projection security', () => {
     expect(itemSelect).not.toHaveProperty('unitSupplierPriceToman');
     expect(itemSelect).not.toHaveProperty('supplierIdSnapshot');
     expect(itemSelect).not.toHaveProperty('supplierNameSnapshot');
+    expect(query.select.payment.select.attempts.select).not.toHaveProperty('receiptData');
   });
 
   it('scopes customer order detail and hides staff audit metadata', async () => {

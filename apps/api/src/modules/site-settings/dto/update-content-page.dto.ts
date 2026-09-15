@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
 import {
-  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsOptional,
@@ -78,7 +77,6 @@ export class UpdateContentPageDto {
   seoOgMediaId?: string | null;
 
   @IsArray()
-  @ArrayMaxSize(12)
   @ValidateNested({ each: true })
   @Type(() => UpdateContentPageSectionDto)
   sections!: UpdateContentPageSectionDto[];

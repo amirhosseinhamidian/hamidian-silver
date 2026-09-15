@@ -11,6 +11,9 @@ describe('PaymentsService customer projection security', () => {
     payment: {
       findFirst: jest.fn(),
     },
+    paymentAttempt: {
+      findFirst: jest.fn(),
+    },
   };
   const config = {
     get: jest.fn().mockReturnValue('https://api.example.com/api/v1/payments/callback'),
@@ -49,5 +52,29 @@ describe('PaymentsService customer projection security', () => {
     expect(query.select.attempts.select).not.toHaveProperty('authority');
     expect(query.select.refunds.select).not.toHaveProperty('externalReference');
     expect(query.select.attempts.select.providerReference).toBe(true);
+  });
+
+  it('scopes receipt access to an order owned by the authenticated customer', async () => {
+    prisma.paymentAttempt.findFirst.mockResolvedValue({
+      receiptData: Uint8Array.from([1, 2, 3]),
+      receiptMimeType: 'image/png',
+      receiptOriginalName: 'receipt.png',
+    });
+
+    await service.getCustomerCardToCardReceipt(userId, orderId);
+
+    const query = prisma.paymentAttempt.findFirst.mock.calls[0]?.[0];
+    expect(query.where).toEqual({
+      provider: 'card_to_card',
+      receiptData: { not: null },
+      payment: {
+        order: { id: orderId, userId },
+      },
+    });
+    expect(query.select).toEqual({
+      receiptData: true,
+      receiptMimeType: true,
+      receiptOriginalName: true,
+    });
   });
 });

@@ -33,6 +33,7 @@ model User {
   paymentReconciliationsResolved      PaymentReconciliation[]          @relation("PaymentReconciliationResolver")
   paymentInitiationRecoveriesResolved PaymentAttempt[]                 @relation("PaymentInitiationRecoveryResolver")
   paymentReceiptsVerified             PaymentAttempt[]                 @relation("PaymentReceiptVerifier")
+  cardToCardAccountsUpdated           CardToCardAccount[]              @relation("CardToCardAccountUpdater")
   supplierPayablesSettled             SupplierPayable[]                @relation("SupplierPayableSettler")
   supplierSettlementsCreated          SupplierSettlement[]             @relation("SupplierSettlementCreator")
   supplierSettlementsPaid             SupplierSettlement[]             @relation("SupplierSettlementPayer")
@@ -1166,6 +1167,7 @@ enum SupplierSettlementStatus {
 
 enum PaymentStatus {
   PENDING
+  AWAITING_REVIEW
   PAID
   PARTIALLY_REFUNDED
   CANCELLED
@@ -1258,6 +1260,7 @@ model PaymentAttempt {
   receiptOriginalName                String?                @db.VarChar(255)
   receiptSizeBytes                   Int?
   receiptUploadedAt                  DateTime?              @db.Timestamptz(3)
+  receiptVerifiedAt                  DateTime?              @db.Timestamptz(3)
   receiptVerifiedByUserId            String?                @db.Uuid
   initiationRecoveryResolution       String?                @db.VarChar(32)
   initiationRecoveryNote             String?                @db.VarChar(400)
@@ -1639,6 +1642,22 @@ model PaymentGatewaySetting {
   @@index([isEnabled])
   @@index([updatedByUserId])
   @@map("payment_gateway_settings")
+}
+
+model CardToCardAccount {
+  id              String   @id @default(uuid()) @db.Uuid
+  cardNumber      String   @unique @db.VarChar(16)
+  holderName      String   @db.VarChar(150)
+  bankName        String   @db.VarChar(100)
+  isActive        Boolean  @default(false)
+  updatedByUserId String?  @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  updatedBy       User?    @relation("CardToCardAccountUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([isActive])
+  @@index([updatedByUserId])
+  @@map("card_to_card_accounts")
 }
 
 enum ShipmentStatus {

@@ -1,5 +1,26 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { OrderStatus, PlatingType } from '../../../generated/prisma/enums';
+import { OrderStatus, PaymentStatus, PlatingType } from '../../../generated/prisma/enums';
+
+export enum CustomerPaymentMethod {
+  CARD_TO_CARD = 'CARD_TO_CARD',
+  PAYMENT_GATEWAY = 'PAYMENT_GATEWAY',
+}
+
+export class CustomerOrderPaymentDto {
+  @ApiProperty({ enum: PaymentStatus })
+  status!: PaymentStatus;
+
+  @ApiProperty({ enum: CustomerPaymentMethod, nullable: true })
+  method!: CustomerPaymentMethod | null;
+
+  receiptAvailable!: boolean;
+
+  @ApiProperty({ type: String, nullable: true })
+  receiptOriginalName!: string | null;
+
+  @ApiProperty({ type: Date, nullable: true })
+  receiptUploadedAt!: Date | null;
+}
 
 export class CustomerOrderMediaDto {
   @ApiProperty({ type: String, nullable: true, format: 'uri' })
@@ -73,6 +94,9 @@ export class CustomerOrderSummaryDto {
   taxTotalToman!: number;
   grandTotalToman!: number;
   returnAuthorized!: boolean;
+
+  @ApiProperty({ type: () => CustomerOrderPaymentDto, nullable: true })
+  payment!: CustomerOrderPaymentDto | null;
 
   @ApiProperty({ type: String, nullable: true })
   trackingCode!: string | null;

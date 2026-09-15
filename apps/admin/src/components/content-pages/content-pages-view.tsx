@@ -131,7 +131,9 @@ function validateDraft(key: ContentPageKey, draft: Draft): string | null {
   if (Boolean(draft.heroMediaId) !== Boolean(draft.heroMobileMediaId)) {
     return 'برای Hero باید هر دو تصویر دسکتاپ و موبایل/تبلت ثبت یا هر دو حذف شوند.';
   }
-  if (draft.sections.length > 12) return 'هر صفحه حداکثر ۱۲ بخش محتوایی دارد.';
+  if (key !== 'FAQ' && draft.sections.length > 12) {
+    return 'این صفحه حداکثر ۱۲ بخش محتوایی دارد.';
+  }
   if (draft.sections.some((section) => !section.title.trim()))
     return 'عنوان همه بخش‌ها الزامی است.';
   if (draft.sections.some((section) => section.title.trim().length > 200)) {
@@ -159,10 +161,12 @@ function Kpi({
 function SectionEditor({
   sections,
   disabled,
+  unlimited,
   onChange,
 }: Readonly<{
   sections: readonly ContentPageSection[];
   disabled: boolean;
+  unlimited: boolean;
   onChange: (sections: readonly ContentPageSection[]) => void;
 }>) {
   function update(index: number, next: Partial<ContentPageSection>) {
@@ -184,12 +188,16 @@ function SectionEditor({
   return (
     <Card
       title="بخش‌های محتوا"
-      description="ترتیب این بخش‌ها در Storefront حفظ می‌شود."
+      description={
+        unlimited
+          ? 'ترتیب این پرسش‌ها در Storefront حفظ می‌شود و محدودیتی برای تعداد آن‌ها وجود ندارد.'
+          : 'ترتیب این بخش‌ها در Storefront حفظ می‌شود.'
+      }
       action={
         <Button
           size="sm"
           variant="outline"
-          disabled={disabled || sections.length >= 12}
+          disabled={disabled || (!unlimited && sections.length >= 12)}
           onClick={() => onChange([...sections, { title: '', body: null }])}
         >
           افزودن بخش
@@ -546,6 +554,7 @@ export function ContentPagesView({ pages: initialPages, failed, canWrite }: Prop
           <SectionEditor
             sections={draft.sections}
             disabled={!canWrite || pending}
+            unlimited={selectedKey === 'FAQ'}
             onChange={(sections) => updateDraft({ sections })}
           />
 

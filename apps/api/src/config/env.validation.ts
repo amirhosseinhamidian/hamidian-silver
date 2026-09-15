@@ -77,22 +77,6 @@ export const envValidationSchema = Joi.object({
   MELLAT_START_PAY_URL: Joi.string()
     .uri({ scheme: ['https'] })
     .default('https://bpm.shaparak.ir/pgwchannel/startpay.mellat'),
-  CARD_TO_CARD_ENABLED: Joi.boolean().truthy('true').falsy('false').default(false),
-  CARD_TO_CARD_NUMBER: Joi.when('CARD_TO_CARD_ENABLED', {
-    is: true,
-    then: Joi.string().pattern(/^\d{16}$/).required(),
-    otherwise: Joi.string().allow('').optional(),
-  }),
-  CARD_TO_CARD_HOLDER_NAME: Joi.when('CARD_TO_CARD_ENABLED', {
-    is: true,
-    then: Joi.string().trim().min(2).max(150).required(),
-    otherwise: Joi.string().allow('').optional(),
-  }),
-  CARD_TO_CARD_BANK_NAME: Joi.when('CARD_TO_CARD_ENABLED', {
-    is: true,
-    then: Joi.string().trim().min(2).max(100).required(),
-    otherwise: Joi.string().allow('').optional(),
-  }),
   MELLAT_REQUEST_TIMEOUT_MS: Joi.number().integer().min(1000).max(60000).default(10000),
   SHIPPING_PROVIDER: Joi.string().valid('disabled', 'postex').default('disabled'),
   MANUAL_SHIPPING_COST_TOMAN: Joi.number().integer().min(0).max(2_147_483_647).default(0),

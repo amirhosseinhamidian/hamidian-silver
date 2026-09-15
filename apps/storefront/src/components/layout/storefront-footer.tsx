@@ -34,13 +34,16 @@ const informationLinks = [
   { label: 'سوالات متداول', href: '/faq' },
 ] as const;
 
-const ENAMAD_URL =
-  'https://trustseal.enamad.ir/?id=7736426&Code=fWmqiTtv828G7AiAoC2i3jWBYpzTqDqk';
+const ENAMAD_URL = 'https://trustseal.enamad.ir/?id=7736426&Code=fWmqiTtv828G7AiAoC2i3jWBYpzTqDqk';
 const ENAMAD_LOGO_URL =
   'https://trustseal.enamad.ir/logo.aspx?id=7736426&Code=fWmqiTtv828G7AiAoC2i3jWBYpzTqDqk';
 
 function normalizeValues(values?: readonly string[] | null): string[] {
   return values?.map((value) => value.trim()).filter(Boolean) ?? [];
+}
+
+function toPersianDigits(value: string): string {
+  return value.replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)] ?? digit);
 }
 
 export function StorefrontFooter({ content }: StorefrontFooterProps) {
@@ -116,11 +119,11 @@ export function StorefrontFooter({ content }: StorefrontFooterProps) {
                 ارتباط با گالری
               </h2>
 
-              <div className="mt-4 space-y-3 text-sm text-[var(--sf-color-muted)]">
+              <div dir="rtl" className="mt-4 space-y-3 text-sm text-[var(--sf-color-muted)]">
                 {address ? (
                   <p className="flex items-start gap-2 leading-7">
                     <FiMapPin aria-hidden="true" className="mt-1 shrink-0" size={16} />
-                    <span>{address}</span>
+                    <span>{toPersianDigits(address)}</span>
                   </p>
                 ) : null}
 
@@ -128,22 +131,22 @@ export function StorefrontFooter({ content }: StorefrontFooterProps) {
                   <a
                     key={phoneNumber}
                     href={`tel:${phoneNumber}`}
-                    dir="ltr"
+                    dir="rtl"
                     className="flex w-fit items-center gap-2 transition-opacity hover:opacity-55"
                   >
-                    <FiPhone aria-hidden="true" size={16} />
-                    <span>{phoneNumber}</span>
+                    <FiPhone aria-hidden="true" className="shrink-0" size={16} />
+                    <span dir="ltr">{toPersianDigits(phoneNumber)}</span>
                   </a>
                 ))}
 
                 {email ? (
                   <a
                     href={`mailto:${email}`}
-                    dir="ltr"
+                    dir="rtl"
                     className="flex w-fit items-center gap-2 transition-opacity hover:opacity-55"
                   >
-                    <FiMail aria-hidden="true" size={16} />
-                    <span>{email}</span>
+                    <FiMail aria-hidden="true" className="shrink-0" size={16} />
+                    <span dir="ltr">{toPersianDigits(email)}</span>
                   </a>
                 ) : null}
               </div>
@@ -219,16 +222,18 @@ export function StorefrontFooter({ content }: StorefrontFooterProps) {
               rel="noopener"
               referrerPolicy="origin"
               aria-label="مشاهده اعتبار نماد اعتماد الکترونیکی گالری حمیدیان"
-              className="mt-4 inline-flex rounded-xl border border-[var(--sf-color-border)] bg-white p-2 transition-opacity hover:opacity-70"
+              className="mt-4 inline-flex size-20 items-center justify-center overflow-hidden rounded-xl border border-[var(--sf-color-border)] bg-white p-1.5 transition-opacity hover:opacity-70"
             >
               {/* The trust seal must be loaded directly so Enamad receives the page origin. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={ENAMAD_LOGO_URL}
                 alt="نماد اعتماد الکترونیکی گالری حمیدیان"
+                width={64}
+                height={64}
                 referrerPolicy="origin"
                 loading="lazy"
-                className="h-24 w-auto object-contain"
+                className="size-16 object-contain"
               />
             </a>
           </section>

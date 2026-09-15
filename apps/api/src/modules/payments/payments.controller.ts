@@ -12,7 +12,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiCreatedResponse } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { Public } from '../auth/public.decorator';
@@ -24,14 +24,20 @@ import { PaymentCallbackQueryDto } from './dto/payment-callback-query.dto';
 import { PaymentInitiationResponseDto } from './dto/payment-initiation-response.dto';
 import { SubmitCardToCardReceiptDto } from './dto/submit-card-to-card-receipt.dto';
 import { PaymentsService, type PaymentReceiptUpload } from './payments.service';
+import { CardToCardAccountsService } from './card-to-card-accounts.service';
+import { PublicCardToCardSettingsDto } from './dto/card-to-card-account.dto';
 
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(
+    private readonly paymentsService: PaymentsService,
+    private readonly cardToCardAccounts: CardToCardAccountsService,
+  ) {}
 
   @Get('card-to-card/settings')
+  @ApiOkResponse({ type: PublicCardToCardSettingsDto })
   getCardToCardSettings() {
-    return this.paymentsService.getCardToCardSettings();
+    return this.cardToCardAccounts.getPublicSettings();
   }
 
   @Post('orders/:orderId/card-to-card/receipt')
@@ -72,6 +78,25 @@ export class PaymentsController {
     @Res({ passthrough: true }) response: Response,
   ) {
     const receipt = await this.paymentsService.getCardToCardReceipt(attemptId);
+    response.set({
+      'Cache-Control': 'private, no-store, max-age=0',
+      'Content-Type': receipt.mimeType,
+      'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(receipt.originalName)}`,
+      'X-Content-Type-Options': 'nosniff',
+    });
+    return new StreamableFile(receipt.data);
+  }
+
+  @Get('orders/:orderId/card-to-card/receipt')
+  async getMyCardToCardReceipt(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const receipt = await this.paymentsService.getCustomerCardToCardReceipt(
+      principal.userId,
+      orderId,
+    );
     response.set({
       'Cache-Control': 'private, no-store, max-age=0',
       'Content-Type': receipt.mimeType,

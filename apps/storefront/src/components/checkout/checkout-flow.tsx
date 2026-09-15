@@ -1,6 +1,7 @@
 'use client';
 
 import type { components } from '@hamidian/contracts';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 import {
@@ -130,6 +131,7 @@ async function readError(response: Response): Promise<{ message: string; code: s
 export function CheckoutFlow({
   shippingPricing = null,
 }: Readonly<{ shippingPricing?: PublicShippingPricing | null }>) {
+  const router = useRouter();
   const { items, itemCount, subtotalToman, clearCart } = useCart();
   const [auth, setAuth] = useState<AuthState>({ status: 'checking' });
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
@@ -876,9 +878,9 @@ export function CheckoutFlow({
                   ? pendingOrderId
                     ? 'ادامه پرداخت کارت‌به‌کارت'
                     : 'ثبت سفارش و پرداخت کارت‌به‌کارت'
-                : pendingOrderId
-                  ? 'تلاش مجدد برای پرداخت'
-                  : 'ثبت سفارش و پرداخت'}
+                  : pendingOrderId
+                    ? 'تلاش مجدد برای پرداخت'
+                    : 'ثبت سفارش و پرداخت'}
             </Button>
           )}
         </div>
@@ -894,9 +896,10 @@ export function CheckoutFlow({
         </div>
       </aside>
 
-      {cardToCardOrder && cardToCardSettings ? (
+      {cardToCardOrder && cardToCardSettings && cardToCardModalOpen ? (
         <CardToCardPaymentModal
-          open={cardToCardModalOpen}
+          key={cardToCardOrder.id}
+          open
           orderId={cardToCardOrder.id}
           orderNumber={cardToCardOrder.number}
           amountToman={cardToCardOrder.amountToman}
@@ -904,7 +907,7 @@ export function CheckoutFlow({
           onClose={() => setCardToCardModalOpen(false)}
           onSubmitted={() => {
             clearCart();
-            window.location.assign(
+            router.push(
               `/payment/result?orderId=${encodeURIComponent(cardToCardOrder.id)}&receipt=1`,
             );
           }}

@@ -3,9 +3,10 @@
 import Link from 'next/link';
 
 import {
+  customerOrderStatusLabel,
   formatOrderDate,
   orderItemDetails,
-  orderStatusLabel,
+  paymentMethodLabel,
 } from '@/components/account/account-order-presentation';
 import type { CustomerOrder } from '@/components/account/account-types';
 import { toPersianDigits } from '@/components/account/account-types';
@@ -35,7 +36,7 @@ export function AccountOrdersPanel({ orders }: Readonly<{ orders: CustomerOrder[
         <ul className="space-y-5 pt-6">
           {orders.map((order) => (
             <li key={order.id} className="border border-[var(--sf-color-border)]">
-              <header className="grid gap-3 border-b border-[var(--sf-color-border)] bg-[var(--sf-color-surface)] p-4 text-sm sm:grid-cols-4 sm:items-center">
+              <header className="grid gap-3 border-b border-[var(--sf-color-border)] bg-[var(--sf-color-surface)] p-4 text-sm sm:grid-cols-2 sm:items-center lg:grid-cols-5">
                 <div>
                   <span className="block text-xs text-[var(--sf-color-subtle)]">شماره سفارش</span>
                   <span className="mt-1 block font-medium" dir="ltr">
@@ -48,7 +49,13 @@ export function AccountOrdersPanel({ orders }: Readonly<{ orders: CustomerOrder[
                 </div>
                 <div>
                   <span className="block text-xs text-[var(--sf-color-subtle)]">وضعیت</span>
-                  <span className="mt-1 block font-medium">{orderStatusLabel(order.status)}</span>
+                  <span className="mt-1 block font-medium">{customerOrderStatusLabel(order)}</span>
+                </div>
+                <div>
+                  <span className="block text-xs text-[var(--sf-color-subtle)]">شیوه پرداخت</span>
+                  <span className="mt-1 block font-medium">
+                    {paymentMethodLabel(order.payment?.method)}
+                  </span>
                 </div>
                 <div className="sm:text-left">
                   <span className="block text-xs text-[var(--sf-color-subtle)]">مبلغ کل</span>

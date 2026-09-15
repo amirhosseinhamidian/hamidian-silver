@@ -8,9 +8,14 @@ import {
   parsePaymentGatewaySettings,
   type AdminPaymentGatewaySetting,
 } from '@/lib/payment-gateways/payment-gateway-model';
+import {
+  parseCardToCardAccounts,
+  type AdminCardToCardAccount,
+} from '@/lib/payment-gateways/card-to-card-account-model';
 
 export type PaymentGatewaySettingsData = Readonly<{
   settings: readonly AdminPaymentGatewaySetting[] | null;
+  cardToCardAccounts: readonly AdminCardToCardAccount[] | null;
   failed: boolean;
 }>;
 
@@ -19,11 +24,21 @@ export async function loadPaymentGatewaySettings(): Promise<PaymentGatewaySettin
   if (!token) throw new Error('Authenticated admin session is required.');
 
   try {
-    const response = await requestAdminCatalog('/api/v1/payments/settings/gateways', token);
-    if (!response.ok) return { settings: null, failed: true };
-    const settings = parsePaymentGatewaySettings(await readJsonResponse(response));
-    return { settings, failed: settings === null };
+    const [gatewayResponse, cardResponse] = await Promise.all([
+      requestAdminCatalog('/api/v1/payments/settings/gateways', token),
+      requestAdminCatalog('/api/v1/payments/settings/card-to-card/accounts', token),
+    ]);
+    if (!gatewayResponse.ok || !cardResponse.ok) {
+      return { settings: null, cardToCardAccounts: null, failed: true };
+    }
+    const settings = parsePaymentGatewaySettings(await readJsonResponse(gatewayResponse));
+    const cardToCardAccounts = parseCardToCardAccounts(await readJsonResponse(cardResponse));
+    return {
+      settings,
+      cardToCardAccounts,
+      failed: settings === null || cardToCardAccounts === null,
+    };
   } catch {
-    return { settings: null, failed: true };
+    return { settings: null, cardToCardAccounts: null, failed: true };
   }
 }

@@ -98,6 +98,20 @@ const CUSTOMER_ORDER_LIST_SELECT = {
       trackingCode: true,
     },
   },
+  payment: {
+    select: {
+      status: true,
+      attempts: {
+        take: 1,
+        orderBy: { createdAt: 'desc' as const },
+        select: {
+          provider: true,
+          receiptOriginalName: true,
+          receiptUploadedAt: true,
+        },
+      },
+    },
+  },
   items: {
     select: CUSTOMER_ORDER_ITEM_SELECT,
   },
@@ -495,13 +509,29 @@ export class OrdersService {
   }
 
   private toCustomerOrder(order: CustomerOrderListRecord | CustomerOrderDetailRecord) {
-    const { shipment, items: selectedItems, returnAuthorizedAt, ...summary } = order;
+    const { shipment, payment, items: selectedItems, returnAuthorizedAt, ...summary } = order;
     const items = Array.isArray(selectedItems) ? selectedItems : [];
+    const latestAttempt = payment?.attempts[0];
 
     return {
       ...summary,
       returnAuthorized: returnAuthorizedAt !== null,
       trackingCode: shipment?.trackingCode ?? null,
+      payment: payment
+        ? {
+            status: payment.status,
+            method: latestAttempt
+              ? latestAttempt.provider === 'card_to_card'
+                ? 'CARD_TO_CARD'
+                : 'PAYMENT_GATEWAY'
+              : null,
+            receiptAvailable:
+              latestAttempt?.provider === 'card_to_card' &&
+              latestAttempt.receiptUploadedAt !== null,
+            receiptOriginalName: latestAttempt?.receiptOriginalName ?? null,
+            receiptUploadedAt: latestAttempt?.receiptUploadedAt ?? null,
+          }
+        : null,
       items: items.map(({ variant, returnAllocatedQuantity, ...item }) => {
         const product = variant?.product;
         const primaryMedia = product?.media[0];
@@ -703,6 +733,9 @@ export class OrdersService {
         },
         include: {
           items: true,
+          payment: {
+            select: { status: true },
+          },
         },
       });
 
@@ -721,12 +754,23 @@ export class OrdersService {
         );
       }
 
+      if (order.payment?.status === PaymentStatus.AWAITING_REVIEW) {
+        throw new DomainException(
+          ErrorCode.ORDER_CANNOT_CANCEL,
+          'Order cannot be cancelled while its payment receipt is under review.',
+        );
+      }
+
       const cancelledAt = new Date();
       const claimed = await transaction.order.updateMany({
         where: {
           id: order.id,
           status: OrderStatus.PENDING_PAYMENT,
           ...(ownerUserId ? { userId: ownerUserId } : {}),
+          OR: [
+            { payment: { is: null } },
+            { payment: { is: { status: { not: PaymentStatus.AWAITING_REVIEW } } } },
+          ],
         },
         data: {
           status: OrderStatus.CANCELLED,

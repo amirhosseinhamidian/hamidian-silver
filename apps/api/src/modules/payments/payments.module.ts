@@ -21,6 +21,7 @@ import { PaymentTransactionsService } from './payment-transactions.service';
 import { PaymentsController } from './payments.controller';
 import { ZibalPaymentCallbackController } from './zibal-payment-callback.controller';
 import { PaymentsService } from './payments.service';
+import { CardToCardAccountsService } from './card-to-card-accounts.service';
 
 @Module({
   imports: [DatabaseModule],
@@ -47,6 +48,7 @@ import { PaymentsService } from './payments.service';
     PaymentOperationalObservabilityScheduler,
     PaymentReconciliationService,
     PaymentTransactionsService,
+    CardToCardAccountsService,
     {
       provide: PAYMENT_GATEWAY_REGISTRY,
       useExisting: PaymentGatewayRegistry,

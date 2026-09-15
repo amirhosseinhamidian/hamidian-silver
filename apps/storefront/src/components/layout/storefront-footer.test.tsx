@@ -27,7 +27,7 @@ describe('StorefrontFooter', () => {
       screen.getByText('گالری حمیدیان ارائه‌دهنده مجموعه‌ای منتخب از زیورآلات نقره است.'),
     ).toBeInTheDocument();
     expect(screen.getByText('تهران، بازار بزرگ')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '02112345678' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '۰۲۱۱۲۳۴۵۶۷۸' })).toHaveAttribute(
       'href',
       'tel:02112345678',
     );

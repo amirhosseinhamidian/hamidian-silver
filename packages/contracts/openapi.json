@@ -5130,6 +5130,147 @@
         ]
       }
     },
+    "/api/v1/payments/card-to-card/settings": {
+      "get": {
+        "operationId": "PaymentsController_getCardToCardSettings_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCardToCardSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/orders/{orderId}/card-to-card/receipt": {
+      "post": {
+        "operationId": "PaymentsController_submitCardToCardReceipt_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idempotencyKey",
+                  "file"
+                ],
+                "properties": {
+                  "idempotencyKey": {
+                    "type": "string"
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Payments"
+        ]
+      },
+      "get": {
+        "operationId": "PaymentsController_getMyCardToCardReceipt_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/attempts/{attemptId}/receipt": {
+      "get": {
+        "operationId": "PaymentsController_getCardToCardReceipt_v1",
+        "parameters": [
+          {
+            "name": "attemptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/attempts/{attemptId}/receipt/confirm": {
+      "post": {
+        "operationId": "PaymentsController_confirmCardToCardReceipt_v1",
+        "parameters": [
+          {
+            "name": "attemptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
     "/api/v1/payments/orders/{orderId}/initiate": {
       "post": {
         "operationId": "PaymentsController_initiateOrderPayment_v1",
@@ -5318,6 +5459,120 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PaymentGatewaySettings"
+        ]
+      }
+    },
+    "/api/v1/payments/settings/card-to-card/accounts": {
+      "get": {
+        "operationId": "PaymentGatewaySettingsController_listCardToCardAccounts_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CardToCardAccountResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PaymentGatewaySettings"
+        ]
+      },
+      "post": {
+        "operationId": "PaymentGatewaySettingsController_createCardToCardAccount_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCardToCardAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardToCardAccountResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PaymentGatewaySettings"
+        ]
+      }
+    },
+    "/api/v1/payments/settings/card-to-card/accounts/{accountId}": {
+      "patch": {
+        "operationId": "PaymentGatewaySettingsController_updateCardToCardAccount_v1",
+        "parameters": [
+          {
+            "name": "accountId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCardToCardAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardToCardAccountResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PaymentGatewaySettings"
+        ]
+      },
+      "delete": {
+        "operationId": "PaymentGatewaySettingsController_deleteCardToCardAccount_v1",
+        "parameters": [
+          {
+            "name": "accountId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -5616,6 +5871,7 @@
               "type": "string",
               "enum": [
                 "FAILED",
+                "AWAITING_REVIEW",
                 "RECONCILIATION_REQUIRED",
                 "CREATED",
                 "REDIRECTED",
@@ -9595,6 +9851,50 @@
           "items"
         ]
       },
+      "CustomerOrderPaymentDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "PENDING",
+              "AWAITING_REVIEW",
+              "PAID",
+              "PARTIALLY_REFUNDED",
+              "CANCELLED",
+              "RECONCILIATION_REQUIRED",
+              "REFUNDED"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "nullable": true,
+            "enum": [
+              "CARD_TO_CARD",
+              "PAYMENT_GATEWAY"
+            ],
+            "type": "string"
+          },
+          "receiptOriginalName": {
+            "type": "string",
+            "nullable": true
+          },
+          "receiptUploadedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "receiptAvailable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "method",
+          "receiptOriginalName",
+          "receiptUploadedAt",
+          "receiptAvailable"
+        ]
+      },
       "CustomerOrderMediaDto": {
         "type": "object",
         "properties": {
@@ -9813,6 +10113,15 @@
             ],
             "type": "string"
           },
+          "payment": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CustomerOrderPaymentDto"
+              }
+            ]
+          },
           "trackingCode": {
             "type": "string",
             "nullable": true
@@ -9889,6 +10198,7 @@
         },
         "required": [
           "status",
+          "payment",
           "trackingCode",
           "paidAt",
           "cancelledAt",
@@ -9924,6 +10234,15 @@
               "EXPIRED"
             ],
             "type": "string"
+          },
+          "payment": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CustomerOrderPaymentDto"
+              }
+            ]
           },
           "trackingCode": {
             "type": "string",
@@ -9992,6 +10311,7 @@
         },
         "required": [
           "status",
+          "payment",
           "trackingCode",
           "paidAt",
           "cancelledAt",
@@ -10300,6 +10620,32 @@
           "note"
         ]
       },
+      "PublicCardToCardSettingsDto": {
+        "type": "object",
+        "properties": {
+          "cardNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "holderName": {
+            "type": "string",
+            "nullable": true
+          },
+          "bankName": {
+            "type": "string",
+            "nullable": true
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cardNumber",
+          "holderName",
+          "bankName",
+          "enabled"
+        ]
+      },
       "InitiatePaymentDto": {
         "type": "object",
         "properties": {
@@ -10333,6 +10679,7 @@
             "enum": [
               "CREATED",
               "REDIRECTED",
+              "AWAITING_REVIEW",
               "VERIFIED",
               "FAILED",
               "RECONCILIATION_REQUIRED",
@@ -10372,6 +10719,92 @@
         "required": [
           "isEnabled"
         ]
+      },
+      "CardToCardAccountResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "cardNumber": {
+            "type": "string"
+          },
+          "holderName": {
+            "type": "string"
+          },
+          "bankName": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "cardNumber",
+          "holderName",
+          "bankName",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateCardToCardAccountDto": {
+        "type": "object",
+        "properties": {
+          "cardNumber": {
+            "type": "string",
+            "pattern": "^\\d{16}$"
+          },
+          "holderName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150
+          },
+          "bankName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cardNumber",
+          "holderName",
+          "bankName"
+        ]
+      },
+      "UpdateCardToCardAccountDto": {
+        "type": "object",
+        "properties": {
+          "cardNumber": {
+            "type": "string",
+            "pattern": "^\\d{16}$"
+          },
+          "holderName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150
+          },
+          "bankName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
       },
       "MellatPaymentCallbackDto": {
         "type": "object",

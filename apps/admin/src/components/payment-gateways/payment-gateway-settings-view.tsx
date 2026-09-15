@@ -224,7 +224,15 @@ export function PaymentGatewaySettingsView({
   }
 
   return (
-    <div className="space-y-6 pt-6">
+    <section aria-labelledby="gateway-settings-heading" className="space-y-6">
+      <div>
+        <h2 id="gateway-settings-heading" className="text-xl font-black">
+          درگاه بانکی
+        </h2>
+        <p className="mt-2 text-sm leading-7 text-[var(--admin-color-muted)]">
+          درگاه‌های بانکی پیکربندی‌شده روی سرور را برای پرداخت اینترنتی مدیریت کنید.
+        </p>
+      </div>
       <Alert tone="info" title="credentialها فقط روی سرور نگهداری می‌شوند">
         این صفحه فقط وضعیت پیکربندی را نمایش می‌دهد و هیچ Merchant ID، نام کاربری یا رمز عبوری را از
         API دریافت نمی‌کند. تغییر credential نیازمند به‌روزرسانی env و restart سرویس API است.
@@ -264,6 +272,6 @@ export function PaymentGatewaySettingsView({
           />
         ))}
       </section>
-    </div>
+    </section>
   );
 }

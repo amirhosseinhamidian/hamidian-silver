@@ -449,32 +449,12 @@ export class PaymentsService {
     }
   }
 
-  getCardToCardSettings() {
-    const enabled = this.config.get<boolean>('CARD_TO_CARD_ENABLED', false);
-    const cardNumber = this.config.get<string>('CARD_TO_CARD_NUMBER')?.trim() ?? '';
-    const holderName = this.config.get<string>('CARD_TO_CARD_HOLDER_NAME')?.trim() ?? '';
-    const bankName = this.config.get<string>('CARD_TO_CARD_BANK_NAME')?.trim() ?? '';
-    const configured =
-      enabled && /^\d{16}$/.test(cardNumber) && holderName.length >= 2 && bankName.length >= 2;
-
-    return {
-      enabled: configured,
-      cardNumber: configured ? cardNumber : null,
-      holderName: configured ? holderName : null,
-      bankName: configured ? bankName : null,
-    };
-  }
-
   async submitCardToCardReceipt(
     userId: string,
     orderId: string,
     idempotencyKey: string,
     file?: PaymentReceiptUpload,
   ) {
-    if (!this.getCardToCardSettings().enabled) {
-      throw new ConflictException('Card-to-card payment is not available.');
-    }
-
     const receipt = this.validatePaymentReceipt(file);
 
     return this.prisma.$transaction(async (transaction) => {
@@ -510,9 +490,6 @@ export class PaymentsService {
         },
       });
 
-      if (payment.status !== PaymentStatus.PENDING) {
-        throw new ConflictException('Payment is not pending.');
-      }
       if (payment.amountToman !== order.grandTotalToman) {
         throw new ConflictException('Order and payment amounts do not match.');
       }
@@ -537,6 +514,18 @@ export class PaymentsService {
           receiptUploadedAt: existingForOrder.receiptUploadedAt,
           alreadySubmitted: true,
         };
+      }
+
+      const activeAccount = await transaction.cardToCardAccount.findFirst({
+        where: { isActive: true },
+        select: { id: true },
+      });
+      if (!activeAccount) {
+        throw new ConflictException('Card-to-card payment is not available.');
+      }
+
+      if (payment.status !== PaymentStatus.PENDING) {
+        throw new ConflictException('Payment is not awaiting a new receipt.');
       }
 
       const existingKey = await transaction.paymentAttempt.findUnique({
@@ -592,6 +581,20 @@ export class PaymentsService {
         },
       });
 
+      const paymentAwaitingReview = await transaction.payment.updateMany({
+        where: {
+          id: payment.id,
+          status: PaymentStatus.PENDING,
+        },
+        data: {
+          status: PaymentStatus.AWAITING_REVIEW,
+        },
+      });
+
+      if (paymentAwaitingReview.count !== 1) {
+        throw new ConflictException('Payment state changed during receipt submission.');
+      }
+
       await transaction.order.update({
         where: { id: order.id },
         data: {
@@ -638,6 +641,34 @@ export class PaymentsService {
       !attempt.receiptMimeType ||
       !attempt.receiptOriginalName
     ) {
+      throw new NotFoundException('Payment receipt was not found.');
+    }
+
+    return {
+      data: Buffer.from(attempt.receiptData),
+      mimeType: attempt.receiptMimeType,
+      originalName: attempt.receiptOriginalName,
+    };
+  }
+
+  async getCustomerCardToCardReceipt(userId: string, orderId: string) {
+    const attempt = await this.prisma.paymentAttempt.findFirst({
+      where: {
+        provider: CARD_TO_CARD_PROVIDER,
+        receiptData: { not: null },
+        payment: {
+          order: { id: orderId, userId },
+        },
+      },
+      orderBy: { receiptUploadedAt: 'desc' },
+      select: {
+        receiptData: true,
+        receiptMimeType: true,
+        receiptOriginalName: true,
+      },
+    });
+
+    if (!attempt?.receiptData || !attempt.receiptMimeType || !attempt.receiptOriginalName) {
       throw new NotFoundException('Payment receipt was not found.');
     }
 
@@ -823,6 +854,10 @@ export class PaymentsService {
         );
       }
 
+      if (payment.status !== PaymentStatus.PENDING) {
+        throw new DomainException(ErrorCode.PAYMENT_FAILED, 'Payment is not awaiting initiation.');
+      }
+
       const existing = await transaction.paymentAttempt.findUnique({
         where: {
           idempotencyKey,
@@ -956,7 +991,11 @@ export class PaymentsService {
         );
       }
 
-      if (attempt.payment.status !== PaymentStatus.PENDING) {
+      const expectedPaymentStatus = isManualReceipt
+        ? PaymentStatus.AWAITING_REVIEW
+        : PaymentStatus.PENDING;
+
+      if (attempt.payment.status !== expectedPaymentStatus) {
         if (isManualReceipt) {
           throw new ConflictException(`Payment reached ${attempt.payment.status}.`);
         }
@@ -1030,6 +1069,7 @@ export class PaymentsService {
           verifiedAt: paidAt,
           failureCode: null,
           failureMessage: null,
+          receiptVerifiedAt: isManualReceipt ? paidAt : undefined,
           receiptVerifiedByUserId: isManualReceipt ? actorUserId : undefined,
         },
       });
@@ -1041,7 +1081,7 @@ export class PaymentsService {
       const paymentFinalized = await transaction.payment.updateMany({
         where: {
           id: attempt.paymentId,
-          status: attempt.payment.status,
+          status: expectedPaymentStatus,
         },
         data: {
           status: PaymentStatus.PAID,

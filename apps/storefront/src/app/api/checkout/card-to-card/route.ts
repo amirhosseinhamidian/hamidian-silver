@@ -1,7 +1,4 @@
-import {
-  getCardToCardSettings,
-  submitCardToCardReceipt,
-} from '@/lib/checkout/bff';
+import { getCardToCardSettings, submitCardToCardReceipt } from '@/lib/checkout/bff';
 
 export const GET = getCardToCardSettings;
 

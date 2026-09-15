@@ -2068,6 +2068,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payments/card-to-card/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PaymentsController_getCardToCardSettings_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/orders/{orderId}/card-to-card/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PaymentsController_getMyCardToCardReceipt_v1"];
+        put?: never;
+        post: operations["PaymentsController_submitCardToCardReceipt_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/attempts/{attemptId}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PaymentsController_getCardToCardReceipt_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/attempts/{attemptId}/receipt/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PaymentsController_confirmCardToCardReceipt_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/payments/orders/{orderId}/initiate": {
         parameters: {
             query?: never;
@@ -2162,6 +2226,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["PaymentGatewaySettingsController_updateGatewaySetting_v1"];
+        trace?: never;
+    };
+    "/api/v1/payments/settings/card-to-card/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PaymentGatewaySettingsController_listCardToCardAccounts_v1"];
+        put?: never;
+        post: operations["PaymentGatewaySettingsController_createCardToCardAccount_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/settings/card-to-card/accounts/{accountId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["PaymentGatewaySettingsController_deleteCardToCardAccount_v1"];
+        options?: never;
+        head?: never;
+        patch: operations["PaymentGatewaySettingsController_updateCardToCardAccount_v1"];
         trace?: never;
     };
     "/api/v1/payments/callback/{attemptId}/zibal": {
@@ -3465,6 +3561,16 @@ export interface components {
             shippingAddress?: components["schemas"]["CreateOrderAddressDto"];
             items: components["schemas"]["CreateOrderItemDto"][];
         };
+        CustomerOrderPaymentDto: {
+            /** @enum {string} */
+            status: "PENDING" | "AWAITING_REVIEW" | "PAID" | "PARTIALLY_REFUNDED" | "CANCELLED" | "RECONCILIATION_REQUIRED" | "REFUNDED";
+            /** @enum {string|null} */
+            method: "CARD_TO_CARD" | "PAYMENT_GATEWAY" | null;
+            receiptOriginalName: string | null;
+            /** Format: date-time */
+            receiptUploadedAt: string | null;
+            receiptAvailable: boolean;
+        };
         CustomerOrderMediaDto: {
             /** Format: uri */
             url: string | null;
@@ -3515,6 +3621,7 @@ export interface components {
         CustomerOrderDetailDto: {
             /** @enum {string} */
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
+            payment: components["schemas"]["CustomerOrderPaymentDto"] | null;
             trackingCode: string | null;
             /** Format: date-time */
             paidAt: string | null;
@@ -3544,6 +3651,7 @@ export interface components {
         CustomerOrderSummaryDto: {
             /** @enum {string} */
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
+            payment: components["schemas"]["CustomerOrderPaymentDto"] | null;
             trackingCode: string | null;
             /** Format: date-time */
             paidAt: string | null;
@@ -3644,6 +3752,12 @@ export interface components {
         AddOperationalIncidentNoteDto: {
             note: string;
         };
+        PublicCardToCardSettingsDto: {
+            cardNumber: string | null;
+            holderName: string | null;
+            bankName: string | null;
+            enabled: boolean;
+        };
         InitiatePaymentDto: {
             /** @enum {string} */
             provider?: "zarinpal" | "zibal" | "mellat";
@@ -3653,7 +3767,7 @@ export interface components {
             /** Format: uuid */
             attemptId: string;
             /** @enum {string} */
-            status: "CREATED" | "REDIRECTED" | "VERIFIED" | "FAILED" | "RECONCILIATION_REQUIRED" | "RECONCILED";
+            status: "CREATED" | "REDIRECTED" | "AWAITING_REVIEW" | "VERIFIED" | "FAILED" | "RECONCILIATION_REQUIRED" | "RECONCILED";
             authority?: string;
             /** Format: uri */
             paymentUrl?: string;
@@ -3663,6 +3777,29 @@ export interface components {
         };
         UpdatePaymentGatewaySettingDto: {
             isEnabled: boolean;
+        };
+        CardToCardAccountResponseDto: {
+            id: string;
+            cardNumber: string;
+            holderName: string;
+            bankName: string;
+            isActive: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateCardToCardAccountDto: {
+            cardNumber: string;
+            holderName: string;
+            bankName: string;
+            isActive?: boolean;
+        };
+        UpdateCardToCardAccountDto: {
+            cardNumber?: string;
+            holderName?: string;
+            bankName?: string;
+            isActive?: boolean;
         };
         MellatPaymentCallbackDto: {
             RefId: string;
@@ -7532,6 +7669,111 @@ export interface operations {
             };
         };
     };
+    PaymentsController_getCardToCardSettings_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCardToCardSettingsDto"];
+                };
+            };
+        };
+    };
+    PaymentsController_getMyCardToCardReceipt_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PaymentsController_submitCardToCardReceipt_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    idempotencyKey: string;
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PaymentsController_getCardToCardReceipt_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attemptId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PaymentsController_confirmCardToCardReceipt_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attemptId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
     PaymentsController_initiateOrderPayment_v1: {
         parameters: {
             query?: never;
@@ -7656,6 +7898,92 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    PaymentGatewaySettingsController_listCardToCardAccounts_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardToCardAccountResponseDto"][];
+                };
+            };
+        };
+    };
+    PaymentGatewaySettingsController_createCardToCardAccount_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCardToCardAccountDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardToCardAccountResponseDto"];
+                };
+            };
+        };
+    };
+    PaymentGatewaySettingsController_deleteCardToCardAccount_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PaymentGatewaySettingsController_updateCardToCardAccount_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCardToCardAccountDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardToCardAccountResponseDto"];
+                };
             };
         };
     };
@@ -7837,7 +8165,7 @@ export interface operations {
             query?: {
                 q?: string;
                 provider?: "zarinpal" | "mellat" | "zibal";
-                status?: "FAILED" | "RECONCILIATION_REQUIRED" | "CREATED" | "REDIRECTED" | "VERIFIED" | "RECONCILED";
+                status?: "FAILED" | "AWAITING_REVIEW" | "RECONCILIATION_REQUIRED" | "CREATED" | "REDIRECTED" | "VERIFIED" | "RECONCILED";
                 page?: number;
                 pageSize?: number;
             };

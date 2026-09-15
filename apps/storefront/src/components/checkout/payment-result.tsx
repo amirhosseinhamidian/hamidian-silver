@@ -40,8 +40,7 @@ const RESULT_CONTENT: Record<
   'receipt-pending': {
     eyebrow: 'رسید با موفقیت ثبت شد',
     title: 'رسید پرداخت شما دریافت شد',
-    description:
-      'پس از بررسی و تأیید رسید پرداخت، مراحل آماده‌سازی و ارسال محصول انجام خواهد شد.',
+    description: 'پس از بررسی و تأیید رسید پرداخت، مراحل آماده‌سازی و ارسال محصول انجام خواهد شد.',
     icon: FiCheck,
   },
   pending: {
@@ -160,8 +159,7 @@ function NextSteps({ status }: Readonly<{ status: PaymentResultStatus }>) {
           },
           {
             title: 'ارسال و رهگیری',
-            description:
-              'پس از ارسال، کد رهگیری در جزئیات سفارش حساب کاربری نمایش داده می‌شود.',
+            description: 'پس از ارسال، کد رهگیری در جزئیات سفارش حساب کاربری نمایش داده می‌شود.',
           },
         ];
 
@@ -286,6 +284,13 @@ export function PaymentResult({ status, orderId, order = null }: PaymentResultPr
           <p className="mx-auto mt-5 max-w-2xl text-sm leading-8 text-[var(--sf-color-muted)] sm:text-base">
             {content.description}
           </p>
+          {status === 'receipt-pending' ? (
+            <p className="mx-auto mt-3 max-w-xl text-xs leading-6 text-[var(--sf-color-subtle)]">
+              رسیدها هر روز از ساعت ۸ صبح تا ۱۱ شب بررسی می‌شوند؛ در این بازه معمولاً نتیجه کمتر از
+              یک ساعت اعلام می‌شود و رسیدهای ثبت‌شده در ساعات شب، در نخستین فرصت روز بعد بررسی
+              خواهند شد.
+            </p>
+          ) : null}
         </div>
       </header>
 

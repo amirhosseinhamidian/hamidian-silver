@@ -25,14 +25,20 @@ describe('administrative API permission coverage', () => {
         if (!HTTP_DECORATOR.test(line)) return;
 
         const nearbyDecorators = lines.slice(Math.max(0, index - 2), index + 3).join('\n');
-        const endpointDeclaration = lines.slice(index, index + 14).join('\n');
+        const nextEndpointOffset = lines
+          .slice(index + 1)
+          .findIndex((candidate) => HTTP_DECORATOR.test(candidate));
+        const endpointEnd =
+          nextEndpointOffset === -1 ? lines.length : index + 1 + nextEndpointOffset;
+        const endpointDeclaration = lines.slice(index, endpointEnd).join('\n');
         const isCustomerScoped = endpointDeclaration.includes('@CurrentPrincipal()');
-        const isAuthenticatedGatewayDiscovery = line.includes("@Get('gateways')");
+        const isAuthenticatedPaymentDiscovery =
+          line.includes("@Get('gateways')") || line.includes("@Get('card-to-card/settings')");
         if (
           !nearbyDecorators.includes('@Public()') &&
           !nearbyDecorators.includes('@RequirePermissions(') &&
           !isCustomerScoped &&
-          !isAuthenticatedGatewayDiscovery
+          !isAuthenticatedPaymentDiscovery
         ) {
           uncovered.push(`${relative(process.cwd(), file)}:${index + 1} ${line.trim()}`);
         }

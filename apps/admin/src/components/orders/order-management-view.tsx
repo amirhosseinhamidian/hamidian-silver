@@ -53,6 +53,7 @@ const orderStatusPresentation: Record<AdminOrderStatus, { label: string; tone: B
 
 const paymentStatusPresentation: Record<AdminPaymentStatus, { label: string; tone: BadgeTone }> = {
   PENDING: { label: 'در انتظار پرداخت', tone: 'warning' },
+  AWAITING_REVIEW: { label: 'در انتظار بررسی رسید', tone: 'warning' },
   PAID: { label: 'تسویه‌شده', tone: 'success' },
   PARTIALLY_REFUNDED: { label: 'بازپرداخت جزئی', tone: 'warning' },
   CANCELLED: { label: 'لغوشده', tone: 'neutral' },
@@ -94,12 +95,12 @@ function OrderStatusBadge({ status }: Readonly<{ status: AdminOrderStatus }>) {
 function PaymentStatusBadge({ order }: Readonly<{ order: AdminOrder }>) {
   if (!order.payment) return <Badge tone="neutral">بدون رکورد پرداخت</Badge>;
 
-  if (
-    order.payment.attempts.some(
-      (attempt) => attempt.status === 'AWAITING_REVIEW',
-    )
-  ) {
-    return <Badge tone="warning" dot>رسید در انتظار تأیید</Badge>;
+  if (order.payment.attempts.some((attempt) => attempt.status === 'AWAITING_REVIEW')) {
+    return (
+      <Badge tone="warning" dot>
+        رسید در انتظار تأیید
+      </Badge>
+    );
   }
 
   const presentation = paymentStatusPresentation[order.payment.status];
@@ -274,10 +275,7 @@ function OrderDetails({
                         </p>
                       ) : null}
                       {attempt.receiptUploadedAt ? (
-                        <PaymentReceiptReview
-                          attempt={attempt}
-                          canConfirm={canUpdateStatus}
-                        />
+                        <PaymentReceiptReview attempt={attempt} canConfirm={canUpdateStatus} />
                       ) : null}
                     </li>
                   ))}

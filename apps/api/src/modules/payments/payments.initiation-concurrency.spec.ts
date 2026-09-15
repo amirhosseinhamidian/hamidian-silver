@@ -1,6 +1,6 @@
 import type { ConfigService } from '@nestjs/config';
 import { ErrorCode } from '../../common/errors/error-codes';
-import { OrderStatus, PaymentAttemptStatus } from '../../generated/prisma/enums';
+import { OrderStatus, PaymentAttemptStatus, PaymentStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { PaymentInitiationUnknownError } from './payment-initiation-unknown.error';
 import type { PaymentGateway } from './payment-gateway.port';
@@ -29,6 +29,7 @@ describe('PaymentsService initiation concurrency', () => {
           id: paymentId,
           orderId,
           amountToman: 1_000_000,
+          status: PaymentStatus.PENDING,
         }),
       },
       paymentAttempt: {
