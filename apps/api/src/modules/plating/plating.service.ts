@@ -17,6 +17,46 @@ export class PlatingService {
     });
   }
 
+  listCatalogConfiguration() {
+    return this.prisma.productVariant.findMany({
+      where: {
+        deletedAt: null,
+        product: { deletedAt: null },
+      },
+      orderBy: [{ product: { name: 'asc' } }, { sku: 'asc' }],
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        weightGrams: true,
+        isActive: true,
+        platingEligible: true,
+        product: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            status: true,
+          },
+        },
+        size: {
+          select: {
+            id: true,
+            label: true,
+          },
+        },
+        platingOptions: {
+          include: {
+            platingRate: true,
+          },
+          orderBy: {
+            platingRate: { type: 'asc' },
+          },
+        },
+      },
+    });
+  }
+
   async setRate(type: PlatingType, dto: SetPlatingRateDto, actorUserId: string) {
     return this.prisma.$transaction(async (transaction) => {
       const current = await transaction.platingRate.findUnique({

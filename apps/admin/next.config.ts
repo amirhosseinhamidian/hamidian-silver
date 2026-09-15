@@ -1,7 +1,10 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
+import { resolve } from 'node:path';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: { globalNotFound: true },
+  output: 'standalone',
+  outputFileTracingRoot: resolve(process.cwd(), '../..'),
 };
 
 export default nextConfig;

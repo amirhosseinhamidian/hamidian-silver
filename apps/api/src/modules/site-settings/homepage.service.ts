@@ -1,0 +1,477 @@
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+
+import { HomepageHeroPlacement, ProductStatus } from '../../generated/prisma/enums';
+import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { CatalogService } from '../catalog/catalog.service';
+import { PublicMediaUrlService } from '../catalog/public-media-url.service';
+import { AdminHomepageDto } from './dto/admin-homepage.dto';
+import { PublicHomepageDto, PublicHomepageHeroSlideDto } from './dto/public-homepage.dto';
+import { UpdateHomepageDto, UpdateHomepageHeroSlideDto } from './dto/update-homepage.dto';
+
+const SITE_SETTINGS_ID = 'site';
+
+function nullableText(value: string | null | undefined): string | null {
+  return value?.trim() || null;
+}
+
+function hasDuplicates(values: string[]): boolean {
+  return new Set(values).size !== values.length;
+}
+
+@Injectable()
+export class HomepageService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly catalogService: CatalogService,
+    private readonly publicMediaUrlService: PublicMediaUrlService,
+  ) {}
+
+  async getPublicHomepage(): Promise<PublicHomepageDto> {
+    const [
+      heroSlides,
+      categorySelections,
+      popularSelections,
+      manufacturerCountrySelections,
+      newProducts,
+      brands,
+      settings,
+    ] = await Promise.all([
+      this.prisma.homepageHeroSlide.findMany({
+        where: { isActive: true },
+        orderBy: [{ placement: 'asc' }, { sortOrder: 'asc' }, { id: 'asc' }],
+        include: { media: true, mobileMedia: true },
+      }),
+      this.prisma.homepageFeaturedCategory.findMany({
+        where: {
+          category: { isActive: true, deletedAt: null },
+        },
+        orderBy: { priority: 'asc' },
+        select: { priority: true, categoryId: true },
+      }),
+      this.prisma.homepagePopularProduct.findMany({
+        where: {
+          product: { status: ProductStatus.ACTIVE, deletedAt: null },
+        },
+        orderBy: { priority: 'asc' },
+        select: { product: { select: { slug: true } } },
+      }),
+      this.prisma.homepageManufacturerCountry.findMany({
+        where: { country: { isActive: true, deletedAt: null } },
+        orderBy: { priority: 'asc' },
+        select: {
+          priority: true,
+          country: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              isoCode: true,
+              image: {
+                select: {
+                  storageKey: true,
+                  mimeType: true,
+                  altText: true,
+                  width: true,
+                  height: true,
+                  deletedAt: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.catalogService.listPublicProducts({ page: 1, pageSize: 4 }),
+      this.catalogService.listPublicBrands(),
+      this.prisma.siteSettings.findUnique({
+        where: { id: SITE_SETTINGS_ID },
+        select: { manufacturerCountriesEnabled: true },
+      }),
+    ]);
+
+    const [categories, popularProducts] = await Promise.all([
+      this.catalogService.listPublicCategories(),
+      Promise.all(
+        popularSelections.map(({ product }) => this.getPublicProductSummary(product.slug)),
+      ),
+    ]);
+    const categoryById = new Map(categories.map((category) => [category.id, category] as const));
+    const primaryHeroSlides = heroSlides
+      .filter(({ placement }) => placement === HomepageHeroPlacement.PRIMARY)
+      .flatMap((slide) => {
+        const projected = this.projectPublicHeroSlide(slide);
+        return projected ? [projected] : [];
+      });
+    const secondaryHeroRecord = heroSlides.find(
+      ({ placement }) => placement === HomepageHeroPlacement.SECONDARY,
+    );
+    const manufacturerCountriesEnabled = Boolean(
+      settings?.manufacturerCountriesEnabled && manufacturerCountrySelections.length >= 4,
+    );
+
+    return {
+      primaryHeroSlides,
+      secondaryHero: secondaryHeroRecord ? this.projectPublicHeroSlide(secondaryHeroRecord) : null,
+      newProducts: newProducts.items,
+      featuredCategories: categorySelections.flatMap(({ categoryId, priority }) => {
+        const category = categoryById.get(categoryId);
+        return category ? [{ ...category, priority }] : [];
+      }),
+      popularProducts,
+      featuredBrands: brands.slice(0, 4),
+      manufacturerCountriesEnabled,
+      manufacturerCountries: manufacturerCountriesEnabled
+        ? manufacturerCountrySelections.map(({ country, priority }) => ({
+            id: country.id,
+            name: country.name,
+            slug: country.slug,
+            isoCode: country.isoCode,
+            priority,
+            image:
+              country.image && !country.image.deletedAt
+                ? {
+                    url: this.publicMediaUrlService.resolve(country.image.storageKey),
+                    mimeType: country.image.mimeType,
+                    altText: country.image.altText,
+                    width: country.image.width,
+                    height: country.image.height,
+                  }
+                : null,
+          }))
+        : [],
+    };
+  }
+
+  async getAdminHomepage(): Promise<AdminHomepageDto> {
+    const [slides, categories, products, manufacturerCountries, settings] = await Promise.all([
+      this.prisma.homepageHeroSlide.findMany({
+        orderBy: [{ placement: 'asc' }, { sortOrder: 'asc' }, { id: 'asc' }],
+        include: { media: true, mobileMedia: true },
+      }),
+      this.prisma.homepageFeaturedCategory.findMany({ orderBy: { priority: 'asc' } }),
+      this.prisma.homepagePopularProduct.findMany({ orderBy: { priority: 'asc' } }),
+      this.prisma.homepageManufacturerCountry.findMany({ orderBy: { priority: 'asc' } }),
+      this.prisma.siteSettings.findUnique({
+        where: { id: SITE_SETTINGS_ID },
+        select: { manufacturerCountriesEnabled: true, updatedAt: true },
+      }),
+    ]);
+
+    const projectSlide = (slide: (typeof slides)[number]) => ({
+      id: slide.id,
+      mediaId: slide.mediaId,
+      media: {
+        id: slide.media.id,
+        url: slide.media.deletedAt
+          ? null
+          : this.publicMediaUrlService.resolve(slide.media.storageKey),
+        mimeType: slide.media.mimeType,
+        altText: slide.media.altText,
+      },
+      mobileMediaId: slide.mobileMediaId,
+      mobileMedia: slide.mobileMedia
+        ? {
+            id: slide.mobileMedia.id,
+            url: slide.mobileMedia.deletedAt
+              ? null
+              : this.publicMediaUrlService.resolve(slide.mobileMedia.storageKey),
+            mimeType: slide.mobileMedia.mimeType,
+            altText: slide.mobileMedia.altText,
+          }
+        : null,
+      title: slide.title,
+      subtitle: slide.subtitle,
+      actionLabel: slide.actionLabel,
+      actionHref: slide.actionHref,
+      sortOrder: slide.sortOrder,
+      isActive: slide.isActive,
+    });
+
+    return {
+      primaryHeroSlides: slides
+        .filter(({ placement }) => placement === HomepageHeroPlacement.PRIMARY)
+        .map(projectSlide),
+      secondaryHero: slides.find(({ placement }) => placement === HomepageHeroPlacement.SECONDARY)
+        ? projectSlide(
+            slides.find(({ placement }) => placement === HomepageHeroPlacement.SECONDARY)!,
+          )
+        : null,
+      featuredCategories: categories.map(({ categoryId, priority }) => ({
+        id: categoryId,
+        priority,
+      })),
+      popularProducts: products.map(({ productId, priority }) => ({
+        id: productId,
+        priority,
+      })),
+      manufacturerCountriesEnabled: settings?.manufacturerCountriesEnabled ?? false,
+      manufacturerCountries: manufacturerCountries.map(({ countryId, priority }) => ({
+        id: countryId,
+        priority,
+      })),
+      updatedAt: settings?.updatedAt.toISOString() ?? null,
+    };
+  }
+
+  async updateHomepage(dto: UpdateHomepageDto, actorUserId: string): Promise<AdminHomepageDto> {
+    this.validateUniqueSelections(dto);
+    if (dto.manufacturerCountryIds.length > 8) {
+      throw new BadRequestException(
+        'Homepage manufacturer countries cannot contain more than eight countries.',
+      );
+    }
+    if (dto.manufacturerCountriesEnabled && dto.manufacturerCountryIds.length < 4) {
+      throw new BadRequestException(
+        'An enabled manufacturer countries section requires between four and eight countries.',
+      );
+    }
+    const slides = [
+      ...dto.primaryHeroSlides.map((slide, index) => ({
+        ...this.normalizeSlide(slide),
+        placement: HomepageHeroPlacement.PRIMARY,
+        sortOrder: index + 1,
+      })),
+      ...(dto.secondaryHero
+        ? [
+            {
+              ...this.normalizeSlide(dto.secondaryHero),
+              placement: HomepageHeroPlacement.SECONDARY,
+              sortOrder: 1,
+            },
+          ]
+        : []),
+    ];
+
+    await Promise.all([
+      this.validateHeroMedia(
+        slides.flatMap(({ mediaId, mobileMediaId }) => [mediaId, mobileMediaId]),
+      ),
+      this.validateCategories(dto.categoryIds),
+      this.validateProducts(dto.popularProductIds),
+      this.validateCountries(dto.manufacturerCountryIds),
+    ]);
+
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.homepageHeroSlide.deleteMany();
+      await transaction.homepageFeaturedCategory.deleteMany();
+      await transaction.homepagePopularProduct.deleteMany();
+      await transaction.homepageManufacturerCountry.deleteMany();
+
+      if (slides.length > 0) {
+        await transaction.homepageHeroSlide.createMany({ data: slides });
+      }
+
+      if (dto.categoryIds.length > 0) {
+        await transaction.homepageFeaturedCategory.createMany({
+          data: dto.categoryIds.map((categoryId, index) => ({
+            categoryId,
+            priority: index + 1,
+          })),
+        });
+      }
+
+      if (dto.popularProductIds.length > 0) {
+        await transaction.homepagePopularProduct.createMany({
+          data: dto.popularProductIds.map((productId, index) => ({
+            productId,
+            priority: index + 1,
+          })),
+        });
+      }
+
+      if (dto.manufacturerCountryIds.length > 0) {
+        await transaction.homepageManufacturerCountry.createMany({
+          data: dto.manufacturerCountryIds.map((countryId, index) => ({
+            countryId,
+            priority: index + 1,
+          })),
+        });
+      }
+
+      await transaction.siteSettings.upsert({
+        where: { id: SITE_SETTINGS_ID },
+        create: {
+          id: SITE_SETTINGS_ID,
+          manufacturerCountriesEnabled: dto.manufacturerCountriesEnabled,
+          updatedByUserId: actorUserId,
+        },
+        update: {
+          manufacturerCountriesEnabled: dto.manufacturerCountriesEnabled,
+          updatedByUserId: actorUserId,
+        },
+      });
+    });
+
+    return this.getAdminHomepage();
+  }
+
+  private normalizeSlide(slide: UpdateHomepageHeroSlideDto) {
+    const actionLabel = nullableText(slide.actionLabel);
+    const actionHref = nullableText(slide.actionHref);
+
+    if (Boolean(actionLabel) !== Boolean(actionHref)) {
+      throw new BadRequestException('Hero action label and link must be provided together.');
+    }
+
+    if (actionHref && !this.isAllowedActionHref(actionHref)) {
+      throw new BadRequestException('Hero action link must be an internal path or an HTTP URL.');
+    }
+
+    return {
+      mediaId: slide.mediaId,
+      mobileMediaId: slide.mobileMediaId,
+      title: nullableText(slide.title),
+      subtitle: nullableText(slide.subtitle),
+      actionLabel,
+      actionHref,
+      isActive: slide.isActive ?? true,
+    };
+  }
+
+  private async getPublicProductSummary(slug: string) {
+    const product = await this.catalogService.getPublicProduct(slug);
+
+    return {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      shortDescription: product.shortDescription,
+      salePriceToman: product.salePriceToman,
+      compareAtPriceToman: product.compareAtPriceToman,
+      sizeMode: product.sizeMode,
+      brand: product.brand,
+      categories: product.categories,
+      primaryMedia: product.primaryMedia,
+      availableQuantity: product.availableQuantity,
+      isAvailable: product.isAvailable,
+    };
+  }
+
+  private validateUniqueSelections(dto: UpdateHomepageDto): void {
+    if (hasDuplicates(dto.categoryIds)) {
+      throw new BadRequestException('Homepage categories must be unique.');
+    }
+
+    if (hasDuplicates(dto.popularProductIds)) {
+      throw new BadRequestException('Homepage popular products must be unique.');
+    }
+
+    if (hasDuplicates(dto.manufacturerCountryIds)) {
+      throw new BadRequestException('Homepage manufacturer countries must be unique.');
+    }
+  }
+
+  private async validateHeroMedia(mediaIds: string[]): Promise<void> {
+    const uniqueMediaIds = [...new Set(mediaIds)];
+    if (uniqueMediaIds.length === 0) return;
+
+    const media = await this.prisma.media.findMany({
+      where: { id: { in: uniqueMediaIds }, deletedAt: null, mimeType: { startsWith: 'image/' } },
+      select: { id: true },
+    });
+
+    if (media.length !== uniqueMediaIds.length) {
+      throw new NotFoundException('One or more homepage hero images were not found.');
+    }
+  }
+
+  private async validateCategories(categoryIds: string[]): Promise<void> {
+    if (categoryIds.length === 0) return;
+
+    const categories = await this.prisma.category.findMany({
+      where: { id: { in: categoryIds }, isActive: true, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (categories.length !== categoryIds.length) {
+      throw new NotFoundException('One or more homepage categories were not found.');
+    }
+  }
+
+  private async validateProducts(productIds: string[]): Promise<void> {
+    if (productIds.length === 0) return;
+
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds }, status: ProductStatus.ACTIVE, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (products.length !== productIds.length) {
+      throw new NotFoundException('One or more homepage products were not found.');
+    }
+  }
+
+  private async validateCountries(countryIds: string[]): Promise<void> {
+    if (countryIds.length === 0) return;
+
+    const countries = await this.prisma.country.findMany({
+      where: { id: { in: countryIds }, isActive: true, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (countries.length !== countryIds.length) {
+      throw new NotFoundException('One or more homepage manufacturer countries were not found.');
+    }
+  }
+
+  private isAllowedActionHref(href: string): boolean {
+    if (href.startsWith('/') && !href.startsWith('//')) return true;
+
+    try {
+      const url = new URL(href);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+
+  private projectPublicHeroSlide(slide: {
+    title: string | null;
+    subtitle: string | null;
+    actionLabel: string | null;
+    actionHref: string | null;
+    media: {
+      storageKey: string;
+      mimeType: string;
+      altText: string | null;
+      width: number | null;
+      height: number | null;
+      deletedAt: Date | null;
+    };
+    mobileMedia: {
+      storageKey: string;
+      mimeType: string;
+      altText: string | null;
+      width: number | null;
+      height: number | null;
+      deletedAt: Date | null;
+    } | null;
+  }): PublicHomepageHeroSlideDto | null {
+    if (slide.media.deletedAt || !slide.media.mimeType.startsWith('image/')) return null;
+
+    return {
+      title: slide.title,
+      subtitle: slide.subtitle,
+      actionLabel: slide.actionLabel,
+      actionHref: slide.actionHref,
+      media: {
+        url: this.publicMediaUrlService.resolve(slide.media.storageKey),
+        mimeType: slide.media.mimeType,
+        altText: slide.media.altText,
+        width: slide.media.width,
+        height: slide.media.height,
+      },
+      mobileMedia:
+        slide.mobileMedia &&
+        !slide.mobileMedia.deletedAt &&
+        slide.mobileMedia.mimeType.startsWith('image/')
+          ? {
+              url: this.publicMediaUrlService.resolve(slide.mobileMedia.storageKey),
+              mimeType: slide.mobileMedia.mimeType,
+              altText: slide.mobileMedia.altText,
+              width: slide.mobileMedia.width,
+              height: slide.mobileMedia.height,
+            }
+          : null,
+    };
+  }
+}

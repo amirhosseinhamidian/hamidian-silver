@@ -1,0 +1,458 @@
+import {
+  hasAllAdminPermissions,
+  type AdminCurrentUser,
+  type AdminPermission,
+} from '@/lib/auth/access-control';
+
+export type AdminNavigationIcon =
+  | 'dashboard'
+  | 'orders'
+  | 'products'
+  | 'inventory'
+  | 'plating'
+  | 'fulfillment'
+  | 'alerts'
+  | 'finance'
+  | 'suppliers'
+  | 'content'
+  | 'users'
+  | 'settings'
+  | 'audit';
+
+export type AdminNavigationItem = Readonly<{
+  id: string;
+  label: string;
+  shortLabel: string;
+  href: string;
+  icon: AdminNavigationIcon;
+  description: string;
+  roadmapStage: number;
+}>;
+
+export type AdminNavigationGroup = Readonly<{
+  id: string;
+  label: string;
+  items: readonly AdminNavigationItem[];
+}>;
+
+type AdminNavigationDefinition = AdminNavigationItem &
+  Readonly<{
+    permissions: readonly AdminPermission[];
+  }>;
+
+type AdminNavigationGroupDefinition = Readonly<{
+  id: string;
+  label: string;
+  items: readonly AdminNavigationDefinition[];
+}>;
+
+const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
+  {
+    id: 'overview',
+    label: 'نمای کلی',
+    items: [
+      {
+        id: 'dashboard',
+        label: 'داشبورد عملیات',
+        shortLabel: 'داشبورد',
+        href: '/',
+        icon: 'dashboard',
+        description: 'شاخص‌ها، هشدارها و صف‌های مهم',
+        roadmapStage: 4,
+        permissions: [],
+      },
+      {
+        id: 'alerts',
+        label: 'هشدارهای عملیاتی',
+        shortLabel: 'هشدارها',
+        href: '/alerts',
+        icon: 'alerts',
+        description: 'موارد حساس، escalation و پیگیری',
+        roadmapStage: 25,
+        permissions: ['orders.read'],
+      },
+      {
+        id: 'incidents',
+        label: 'مدیریت رخدادها',
+        shortLabel: 'رخدادها',
+        href: '/incidents',
+        icon: 'alerts',
+        description: 'تخصیص، یادداشت و timeline رخدادها',
+        roadmapStage: 26,
+        permissions: ['orders.read'],
+      },
+    ],
+  },
+  {
+    id: 'commerce',
+    label: 'فروش و کالا',
+    items: [
+      {
+        id: 'orders',
+        label: 'سفارش‌ها',
+        shortLabel: 'سفارش‌ها',
+        href: '/orders',
+        icon: 'orders',
+        description: 'بررسی و عملیات سفارش',
+        roadmapStage: 15,
+        permissions: ['orders.read'],
+      },
+      {
+        id: 'products',
+        label: 'محصولات',
+        shortLabel: 'محصولات',
+        href: '/products',
+        icon: 'products',
+        description: 'اطلاعات پایه و تصاویر محصولات',
+        roadmapStage: 5,
+        permissions: ['catalog.read'],
+      },
+      {
+        id: 'variants',
+        label: 'تنوع و سایزبندی',
+        shortLabel: 'تنوع‌ها',
+        href: '/variants',
+        icon: 'products',
+        description: 'مدیریت SKU، سایز، وزن و وضعیت تنوع‌ها',
+        roadmapStage: 6,
+        permissions: ['catalog.read'],
+      },
+      {
+        id: 'categories',
+        label: 'دسته‌بندی‌ها',
+        shortLabel: 'دسته‌ها',
+        href: '/categories',
+        icon: 'products',
+        description: 'ساختار، ترتیب و تصاویر دسته‌بندی‌ها',
+        roadmapStage: 8,
+        permissions: ['catalog.read'],
+      },
+      {
+        id: 'brands',
+        label: 'برندها و کشورها',
+        shortLabel: 'برندها',
+        href: '/brands',
+        icon: 'products',
+        description: 'برند، کشور سازنده، تصویر و وضعیت',
+        roadmapStage: 9,
+        permissions: ['catalog.read'],
+      },
+      {
+        id: 'plating-settings',
+        label: 'تنظیمات آبکاری',
+        shortLabel: 'آبکاری محصول',
+        href: '/plating-settings',
+        icon: 'plating',
+        description: 'نرخ، زمان و گزینه‌های آبکاری محصول',
+        roadmapStage: 10,
+        permissions: ['pricing.read'],
+      },
+      {
+        id: 'pricing',
+        label: 'مدیریت قیمت‌گذاری',
+        shortLabel: 'قیمت‌گذاری',
+        href: '/pricing',
+        icon: 'finance',
+        description: 'قیمت فروش، تخفیف و تاریخچه تغییرات',
+        roadmapStage: 14,
+        permissions: ['pricing.read'],
+      },
+      {
+        id: 'inventory',
+        label: 'انبار و موجودی',
+        shortLabel: 'انبار',
+        href: '/inventory',
+        icon: 'inventory',
+        description: 'موجودی، رزرو و اصلاحات',
+        roadmapStage: 11,
+        permissions: ['inventory.read'],
+      },
+      {
+        id: 'inventory-alerts',
+        label: 'هشدار موجودی',
+        shortLabel: 'هشدار موجودی',
+        href: '/inventory-alerts',
+        icon: 'alerts',
+        description: 'کمبود، ناموجودی و تقاضای اطلاع‌رسانی',
+        roadmapStage: 12,
+        permissions: ['inventory.read'],
+      },
+    ],
+  },
+  {
+    id: 'operations',
+    label: 'عملیات اجرایی',
+    items: [
+      {
+        id: 'shipping',
+        label: 'مدیریت ارسال',
+        shortLabel: 'ارسال',
+        href: '/shipping',
+        icon: 'fulfillment',
+        description: 'ساخت مرسوله، رهگیری و timeline',
+        roadmapStage: 17,
+        permissions: ['orders.read'],
+      },
+      {
+        id: 'plating',
+        label: 'صف آبکاری',
+        shortLabel: 'آبکاری',
+        href: '/plating',
+        icon: 'plating',
+        description: 'شروع، تکمیل و کنترل SLA',
+        roadmapStage: 23,
+        permissions: ['orders.read'],
+      },
+      {
+        id: 'fulfillment',
+        label: 'آماده‌سازی و ارسال',
+        shortLabel: 'ارسال',
+        href: '/fulfillment',
+        icon: 'fulfillment',
+        description: 'صف بسته‌بندی، ارسال و موارد مسدود',
+        roadmapStage: 24,
+        permissions: ['orders.read'],
+      },
+      {
+        id: 'returns',
+        label: 'مدیریت مرجوعی',
+        shortLabel: 'مرجوعی',
+        href: '/returns',
+        icon: 'orders',
+        description: 'درخواست، دریافت و تعیین تکلیف اقلام',
+        roadmapStage: 27,
+        permissions: ['orders.read'],
+      },
+    ],
+  },
+  {
+    id: 'finance',
+    label: 'مالی و تأمین',
+    items: [
+      {
+        id: 'payment-gateways',
+        label: 'شیوه‌های پرداخت',
+        shortLabel: 'پرداخت',
+        href: '/payment-gateways',
+        icon: 'settings',
+        description: 'فعال‌سازی زرین‌پال، زیبال و بانک ملت',
+        roadmapStage: 18,
+        permissions: ['settings.read'],
+      },
+      {
+        id: 'transactions',
+        label: 'مدیریت تراکنش‌ها',
+        shortLabel: 'تراکنش‌ها',
+        href: '/transactions',
+        icon: 'finance',
+        description: 'تلاش‌های پرداخت، خطاها و verification',
+        roadmapStage: 19,
+        permissions: ['finance.read'],
+      },
+      {
+        id: 'reconciliations',
+        label: 'مغایرت‌های پرداخت',
+        shortLabel: 'مغایرت',
+        href: '/reconciliations',
+        icon: 'finance',
+        description: 'بررسی، تطبیق و رفع مغایرت‌های درگاه',
+        roadmapStage: 20,
+        permissions: ['finance.read'],
+      },
+      {
+        id: 'refunds',
+        label: 'مدیریت بازپرداخت',
+        shortLabel: 'بازپرداخت',
+        href: '/refunds',
+        icon: 'finance',
+        description: 'درخواست، تأیید و کنترل بازپرداخت‌ها',
+        roadmapStage: 21,
+        permissions: ['finance.read'],
+      },
+      {
+        id: 'payments',
+        label: 'بازیابی پرداخت',
+        shortLabel: 'بازیابی',
+        href: '/payments',
+        icon: 'finance',
+        description: 'بررسی و تعیین تکلیف شروع پرداخت نامشخص',
+        roadmapStage: 22,
+        permissions: ['finance.read'],
+      },
+      {
+        id: 'supplier-credits',
+        label: 'اعتبار تأمین‌کنندگان',
+        shortLabel: 'اعتبار تأمین',
+        href: '/supplier-credits',
+        icon: 'suppliers',
+        description: 'اعتبارهای ناشی از مرجوعی تأمین‌کننده',
+        roadmapStage: 28,
+        permissions: ['finance.read'],
+      },
+      {
+        id: 'supplier-payables',
+        label: 'بدهی تأمین‌کنندگان',
+        shortLabel: 'بدهی تأمین',
+        href: '/supplier-payables',
+        icon: 'suppliers',
+        description: 'بدهی‌ها، دوره‌ها و وضعیت تسویه',
+        roadmapStage: 29,
+        permissions: ['finance.read'],
+      },
+      {
+        id: 'supplier-settlements',
+        label: 'دوره‌های تسویه تأمین',
+        shortLabel: 'تسویه تأمین',
+        href: '/supplier-settlements',
+        icon: 'suppliers',
+        description: 'ایجاد batch، اعمال اعتبار و ثبت پرداخت',
+        roadmapStage: 30,
+        permissions: ['finance.read'],
+      },
+      {
+        id: 'finance',
+        label: 'گزارش‌های مالی',
+        shortLabel: 'مالی',
+        href: '/finance',
+        icon: 'finance',
+        description: 'گزارش درآمد، هزینه و سود',
+        roadmapStage: 31,
+        permissions: ['finance.read'],
+      },
+      {
+        id: 'suppliers',
+        label: 'تأمین‌کنندگان',
+        shortLabel: 'تأمین',
+        href: '/suppliers',
+        icon: 'suppliers',
+        description: 'بدهی، اعتبار و تسویه',
+        roadmapStage: 13,
+        permissions: ['pricing.read'],
+      },
+    ],
+  },
+  {
+    id: 'management',
+    label: 'مدیریت سامانه',
+    items: [
+      {
+        id: 'content',
+        label: 'محتوا و سایت',
+        shortLabel: 'محتوا',
+        href: '/content',
+        icon: 'content',
+        description: 'درباره ما، خدمات، تماس و قوانین',
+        roadmapStage: 33,
+        permissions: ['cms.read'],
+      },
+      {
+        id: 'users',
+        label: 'کاربران و دسترسی',
+        shortLabel: 'کاربران',
+        href: '/users',
+        icon: 'users',
+        description: 'حساب‌ها، وضعیت و نشست‌های فعال',
+        roadmapStage: 34,
+        permissions: ['users.read'],
+      },
+      {
+        id: 'roles',
+        label: 'نقش‌ها و دسترسی‌ها',
+        shortLabel: 'نقش‌ها',
+        href: '/roles',
+        icon: 'users',
+        description: 'ماتریس نقش‌ها و permissionهای سامانه',
+        roadmapStage: 35,
+        permissions: ['users.read'],
+      },
+      {
+        id: 'notification-outbox',
+        label: 'صف ارسال اعلان‌ها',
+        shortLabel: 'Outbox',
+        href: '/notification-outbox',
+        icon: 'alerts',
+        description: 'خطاهای ارسال، retry و recovery',
+        roadmapStage: 36,
+        permissions: ['orders.read'],
+      },
+      {
+        id: 'shipping-settings',
+        label: 'تنظیمات ارسال',
+        shortLabel: 'تنظیمات ارسال',
+        href: '/shipping-settings',
+        icon: 'settings',
+        description: 'هزینه و اطلاعات شرکت حمل',
+        roadmapStage: 38,
+        permissions: ['settings.read'],
+      },
+      {
+        id: 'settings',
+        label: 'تنظیمات سامانه',
+        shortLabel: 'تنظیمات',
+        href: '/settings',
+        icon: 'settings',
+        description: 'تنظیمات حساس کسب‌وکار',
+        roadmapStage: 32,
+        permissions: ['settings.read'],
+      },
+      {
+        id: 'audit',
+        label: 'گزارش فعالیت',
+        shortLabel: 'Audit',
+        href: '/audit',
+        icon: 'audit',
+        description: 'ردیابی عملیات حساس',
+        roadmapStage: 37,
+        permissions: ['audit.read'],
+      },
+    ],
+  },
+];
+
+function toNavigationItem(item: AdminNavigationDefinition): AdminNavigationItem {
+  return {
+    id: item.id,
+    label: item.label,
+    shortLabel: item.shortLabel,
+    href: item.href,
+    icon: item.icon,
+    description: item.description,
+    roadmapStage: item.roadmapStage,
+  };
+}
+
+export function getAdminNavigation(user: AdminCurrentUser): readonly AdminNavigationGroup[] {
+  return NAVIGATION_DEFINITIONS.map((group) => ({
+    id: group.id,
+    label: group.label,
+    items: group.items
+      .filter((item) => hasAllAdminPermissions(user, item.permissions))
+      .map(toNavigationItem),
+  })).filter((group) => group.items.length > 0);
+}
+
+export function getAdminSection(section: string): AdminNavigationDefinition | undefined {
+  return NAVIGATION_DEFINITIONS.flatMap((group) => group.items).find(
+    (item) => item.href === `/${section}`,
+  );
+}
+
+export function findAdminNavigationItem(
+  pathname: string,
+  navigation: readonly AdminNavigationGroup[],
+): AdminNavigationItem | undefined {
+  const items = navigation.flatMap((group) => group.items);
+
+  return items
+    .filter(
+      (item) =>
+        (item.href === '/' && pathname === '/') ||
+        pathname === item.href ||
+        pathname.startsWith(`${item.href}/`),
+    )
+    .sort((first, second) => second.href.length - first.href.length)[0];
+}
+
+export function isAdminNavigationItemActive(pathname: string, href: string): boolean {
+  return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+}

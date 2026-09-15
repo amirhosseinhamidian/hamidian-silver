@@ -11,6 +11,7 @@ import {
   OrderCostEntryType,
   OrderStatus,
   PaymentStatus,
+  PlatingFulfillmentStatus,
   ShipmentProviderCreationState,
   ShipmentStatus,
 } from '../../generated/prisma/enums';
@@ -20,6 +21,7 @@ import { NotificationOutboxService } from '../notifications/notification-outbox.
 import { buildFulfillmentReadiness } from '../orders/fulfillment-readiness';
 import { PROVIDER_CREATION_STALE_MS } from '../orders/fulfillment-sla.constants';
 import { SelectShippingRateDto } from './dto/select-shipping-rate.dto';
+import { CreateManualShipmentDto } from './dto/create-manual-shipment.dto';
 import { ResetShipmentProviderCreationDto } from './dto/reset-shipment-provider-creation.dto';
 import { UpdateShipmentStatusDto } from './dto/update-shipment-status.dto';
 import {
@@ -31,6 +33,11 @@ import {
   type ShippingQuoteOption,
 } from './shipping-provider.port';
 import { TRACKING_SYNC_LEASE_MS } from './shipping-tracking.constants';
+import { ShippingCarriersService } from './shipping-carriers.service';
+import { ShippingPricingService } from './shipping-pricing.service';
+
+const MANUAL_SHIPPING_PROVIDER = 'manual';
+const MANUAL_SHIPPING_SERVICE_CODE = 'manual-standard';
 
 type OrderForShipping = {
   id: string;
@@ -85,6 +92,10 @@ export class ShippingService {
     @Optional()
     @Inject(OrderCostsService)
     private readonly orderCosts: OrderCostsService | undefined = undefined,
+    @Optional()
+    private readonly shippingPricing?: ShippingPricingService,
+    @Optional()
+    private readonly shippingCarriers?: ShippingCarriersService,
   ) {}
 
   async quoteOrder(userId: string, orderId: string) {
@@ -181,6 +192,9 @@ export class ShippingService {
 
       this.assertTomanAmount(grandTotalToman);
 
+      const carrier = this.shippingPricing
+        ? await this.shippingPricing.getCarrierSnapshot(transaction)
+        : {};
       const shipment = await transaction.shipment.upsert({
         where: {
           orderId,
@@ -192,6 +206,7 @@ export class ShippingService {
           shippingCostToman: selected.costToman,
           totalWeightGrams,
           estimatedDeliveryDays: selected.estimatedDeliveryDays,
+          ...carrier,
         },
         create: {
           orderId,
@@ -201,6 +216,7 @@ export class ShippingService {
           shippingCostToman: selected.costToman,
           totalWeightGrams,
           estimatedDeliveryDays: selected.estimatedDeliveryDays,
+          ...carrier,
         },
       });
 
@@ -499,6 +515,102 @@ export class ShippingService {
 
       throw error;
     }
+  }
+
+  async createManualShipment(orderId: string, dto: CreateManualShipmentDto, actorUserId: string) {
+    return this.prisma.$transaction(async (transaction) => {
+      await lockOrderRowForUpdate(transaction, orderId);
+      const order = await transaction.order.findUnique({
+        where: { id: orderId },
+        include: {
+          payment: { select: { status: true } },
+          shipment: true,
+          shippingAddress: true,
+          platingFulfillment: { select: { status: true } },
+          items: { select: { quantity: true, unitWeightGrams: true } },
+        },
+      });
+      if (!order) throw new DomainException(ErrorCode.NOT_FOUND, 'Order was not found.');
+      if (order.shipment) {
+        return transaction.shipment.findUniqueOrThrow({
+          where: { id: order.shipment.id },
+          include: {
+            order: { select: { id: true, orderNumber: true, status: true, shippingAddress: true } },
+            statusHistory: { orderBy: { createdAt: 'asc' } },
+          },
+        });
+      }
+      if (
+        (order.status !== OrderStatus.PAID && order.status !== OrderStatus.PROCESSING) ||
+        order.payment?.status !== PaymentStatus.PAID
+      ) {
+        throw new DomainException(
+          ErrorCode.SHIPMENT_NOT_READY,
+          'Manual shipment can only be created for a settled order.',
+        );
+      }
+      if (
+        order.platingTotalToman > 0 &&
+        order.platingFulfillment?.status !== PlatingFulfillmentStatus.COMPLETED
+      ) {
+        throw new DomainException(
+          ErrorCode.SHIPMENT_NOT_READY,
+          'Plating must be completed before creating the shipment.',
+        );
+      }
+      this.requireShippingAddress(order.shippingAddress);
+      const totalWeightGrams = this.calculateTotalWeightGrams(order.items);
+      const createdAt = new Date();
+      const selectedCarrier =
+        dto.carrierId && this.shippingCarriers
+          ? await this.shippingCarriers.snapshotActive(dto.carrierId, transaction)
+          : null;
+      const carrier = selectedCarrier?.snapshot ?? {
+        carrierNameSnapshot: null,
+        carrierTrackingUrlSnapshot: null,
+        carrierLogoMediaIdSnapshot: null,
+        carrierPresentationSnapshottedAt: new Date(),
+      };
+      const serviceName = selectedCarrier?.serviceName ?? dto.serviceName?.trim();
+      if (!serviceName) {
+        throw new DomainException(
+          ErrorCode.VALIDATION_ERROR,
+          'A shipping carrier or manual service name is required.',
+        );
+      }
+      const shipment = await transaction.shipment.create({
+        data: {
+          orderId,
+          provider: MANUAL_SHIPPING_PROVIDER,
+          providerServiceCode: MANUAL_SHIPPING_SERVICE_CODE,
+          providerServiceName: serviceName,
+          status: ShipmentStatus.READY,
+          providerCreationState: ShipmentProviderCreationState.CREATED,
+          providerShipmentId: `manual:${order.id}`,
+          shippingCostToman: order.shippingTotalToman,
+          totalWeightGrams,
+          estimatedDeliveryDays: dto.estimatedDeliveryDays,
+          creationAttemptedAt: createdAt,
+          ...carrier,
+        },
+      });
+      await transaction.shipmentStatusHistory.create({
+        data: {
+          shipmentId: shipment.id,
+          actorUserId,
+          fromStatus: null,
+          toStatus: ShipmentStatus.READY,
+          reason: dto.reason.trim(),
+        },
+      });
+      return transaction.shipment.findUniqueOrThrow({
+        where: { id: shipment.id },
+        include: {
+          order: { select: { id: true, orderNumber: true, status: true, shippingAddress: true } },
+          statusHistory: { orderBy: { createdAt: 'asc' } },
+        },
+      });
+    });
   }
 
   async syncTracking(orderId: string) {
@@ -809,6 +921,11 @@ export class ShippingService {
           orderBy: {
             createdAt: 'asc',
           },
+          include: {
+            actor: {
+              select: { id: true, phone: true, firstName: true, lastName: true },
+            },
+          },
         },
       },
     });
@@ -864,6 +981,16 @@ export class ShippingService {
         dto.status === ShipmentStatus.IN_TRANSIT ||
         dto.status === ShipmentStatus.DELIVERED
       ) {
+        if (
+          shipment.provider === MANUAL_SHIPPING_PROVIDER &&
+          !shipment.trackingCode &&
+          !dto.trackingCode?.trim()
+        ) {
+          throw new DomainException(
+            ErrorCode.SHIPMENT_NOT_READY,
+            'Tracking code is required before handing over a manual shipment.',
+          );
+        }
         const readiness = buildFulfillmentReadiness({
           id: shipment.order.id,
           orderNumber: shipment.order.orderNumber,

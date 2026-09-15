@@ -1,5 +1,11 @@
+import type { ConfigService } from '@nestjs/config';
 import { ErrorCode } from '../../common/errors/error-codes';
-import { OrderStatus, PlatingType, ProductStatus } from '../../generated/prisma/enums';
+import {
+  OrderStatus,
+  PaymentStatus,
+  PlatingType,
+  ProductStatus,
+} from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { OrdersService } from './orders.service';
 
@@ -25,6 +31,16 @@ describe('OrdersService', () => {
   });
 
   it('creates an order with price snapshots and reserves inventory', async () => {
+    const config = {
+      get: jest.fn((key: string, fallback: unknown) =>
+        key === 'MANUAL_SHIPPING_COST_TOMAN' ? 85_000 : fallback,
+      ),
+    };
+    service = new OrdersService(
+      prisma as unknown as PrismaService,
+      undefined,
+      config as unknown as ConfigService,
+    );
     const transaction = {
       warehouse: {
         findFirst: jest.fn().mockResolvedValue({ id: warehouseId }),
@@ -122,7 +138,8 @@ describe('OrdersService', () => {
         status: OrderStatus.PENDING_PAYMENT,
         merchandiseTotalToman: 2_700_000,
         platingTotalToman: 425_000,
-        grandTotalToman: 3_125_000,
+        shippingTotalToman: 85_000,
+        grandTotalToman: 3_210_000,
         items: {
           create: [
             expect.objectContaining({
@@ -336,12 +353,137 @@ describe('OrdersService', () => {
       where: {
         id: orderId,
         status: OrderStatus.PENDING_PAYMENT,
+        OR: [
+          { payment: { is: null } },
+          { payment: { is: { status: { not: PaymentStatus.AWAITING_REVIEW } } } },
+        ],
       },
       data: {
         status: OrderStatus.CANCELLED,
         cancelledAt: expect.any(Date),
       },
     });
+  });
+
+  it('lets a customer cancel only their own pending order', async () => {
+    const orderId = '60000000-0000-4000-8000-000000000001';
+    const cancelledOrder = { id: orderId, status: OrderStatus.CANCELLED };
+    const transaction = {
+      order: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: orderId,
+          userId,
+          warehouseId,
+          status: OrderStatus.PENDING_PAYMENT,
+          items: [{ variantId, quantity: 1 }],
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(cancelledOrder),
+      },
+      inventory: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: inventoryId,
+          onHand: 10,
+          reserved: 1,
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      inventoryMovement: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+      orderStatusHistory: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+    };
+
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+    const getMyOrder = jest.spyOn(service, 'getMyOrder').mockResolvedValue(cancelledOrder as never);
+
+    await expect(
+      service.cancelMyOrder(userId, orderId, { reason: 'Cancelled by customer' }),
+    ).resolves.toEqual(cancelledOrder);
+
+    expect(transaction.order.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: orderId,
+        status: OrderStatus.PENDING_PAYMENT,
+        userId,
+        OR: [
+          { payment: { is: null } },
+          { payment: { is: { status: { not: PaymentStatus.AWAITING_REVIEW } } } },
+        ],
+      },
+      data: {
+        status: OrderStatus.CANCELLED,
+        cancelledAt: expect.any(Date),
+      },
+    });
+    expect(getMyOrder).toHaveBeenCalledWith(userId, orderId);
+  });
+
+  it("does not reveal or cancel another customer's order", async () => {
+    const orderId = '60000000-0000-4000-8000-000000000001';
+    const transaction = {
+      order: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: orderId,
+          userId: '10000000-0000-4000-8000-000000000002',
+          warehouseId,
+          status: OrderStatus.PENDING_PAYMENT,
+          items: [{ variantId, quantity: 1 }],
+        }),
+        updateMany: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
+      },
+      inventory: {
+        findUnique: jest.fn(),
+        updateMany: jest.fn(),
+      },
+      inventoryMovement: {
+        create: jest.fn(),
+      },
+      orderStatusHistory: {
+        create: jest.fn(),
+      },
+    };
+
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(
+      service.cancelMyOrder(userId, orderId, { reason: 'Cancelled by customer' }),
+    ).rejects.toMatchObject({
+      name: 'DomainException',
+      code: ErrorCode.ORDER_NOT_FOUND,
+    });
+
+    expect(transaction.order.updateMany).not.toHaveBeenCalled();
+    expect(transaction.inventory.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('loads operational order details for authorized staff lists', async () => {
+    prisma.order.findMany.mockResolvedValue([]);
+
+    await service.listOrders({ limit: 25, status: OrderStatus.PAID });
+
+    expect(prisma.order.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: OrderStatus.PAID },
+        take: 25,
+        include: expect.objectContaining({
+          user: expect.any(Object),
+          returnAuthorizedBy: expect.any(Object),
+          items: true,
+          shippingAddress: true,
+          payment: expect.any(Object),
+          shipment: expect.any(Object),
+          statusHistory: expect.any(Object),
+        }),
+      }),
+    );
   });
 
   it('does not release inventory when payment finalization wins the order-state claim', async () => {

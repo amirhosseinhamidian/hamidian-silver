@@ -1,0 +1,10 @@
+[Unit]
+Description=Local health, errors, backup and disk checks for hamidian.shop
+After=network-online.target docker.service nginx.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/hamidian-silver/monitor-production.py
+TimeoutStartSec=180s
+NoNewPrivileges=yes

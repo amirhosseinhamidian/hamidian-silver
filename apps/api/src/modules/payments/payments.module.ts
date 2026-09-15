@@ -6,7 +6,6 @@ import { ZibalPaymentGateway } from './adapters/zibal-payment.gateway';
 import { PAYMENT_GATEWAY } from './payment-gateway.port';
 import { PaymentGatewaySettingsController } from './payment-gateway-settings.controller';
 import { PAYMENT_GATEWAY_REGISTRY, PaymentGatewayRegistry } from './payment-gateway.registry';
-import './payment-gateway.dto-metadata';
 import { MellatPaymentCallbackController } from './mellat-payment-callback.controller';
 import { MellatPaymentRedirectController } from './mellat-payment-redirect.controller';
 import { PaymentInitiationRecoveryController } from './payment-initiation-recovery.controller';
@@ -17,9 +16,12 @@ import { PaymentOperationalObservabilityScheduler } from './payment-operational-
 import { PaymentOperationalObservabilityService } from './payment-operational-observability.service';
 import { PaymentReconciliationController } from './payment-reconciliation.controller';
 import { PaymentReconciliationService } from './payment-reconciliation.service';
+import { PaymentTransactionsController } from './payment-transactions.controller';
+import { PaymentTransactionsService } from './payment-transactions.service';
 import { PaymentsController } from './payments.controller';
 import { ZibalPaymentCallbackController } from './zibal-payment-callback.controller';
 import { PaymentsService } from './payments.service';
+import { CardToCardAccountsService } from './card-to-card-accounts.service';
 
 @Module({
   imports: [DatabaseModule],
@@ -32,6 +34,7 @@ import { PaymentsService } from './payments.service';
     PaymentInitiationRecoveryController,
     PaymentOperationalObservabilityController,
     PaymentReconciliationController,
+    PaymentTransactionsController,
   ],
   providers: [
     PaymentsService,
@@ -44,6 +47,8 @@ import { PaymentsService } from './payments.service';
     PaymentOperationalObservabilityService,
     PaymentOperationalObservabilityScheduler,
     PaymentReconciliationService,
+    PaymentTransactionsService,
+    CardToCardAccountsService,
     {
       provide: PAYMENT_GATEWAY_REGISTRY,
       useExisting: PaymentGatewayRegistry,

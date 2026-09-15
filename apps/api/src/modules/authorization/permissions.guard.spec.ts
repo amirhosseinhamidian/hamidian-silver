@@ -3,7 +3,13 @@ import { Reflector } from '@nestjs/core';
 import type { AuthenticatedPrincipal, RequestWithAuth } from './authorization.types';
 import { PERMISSIONS_KEY } from './permissions.decorator';
 import { PermissionsGuard } from './permissions.guard';
-import { PERMISSION_CODES, ROLE_CODES } from './rbac.constants';
+import {
+  PERMISSION_CODES,
+  ROLE_CODES,
+  SYSTEM_ROLE_PERMISSION_CODES,
+  type PermissionCode,
+  type RoleCode,
+} from './rbac.constants';
 
 describe('PermissionsGuard', () => {
   const handler = (): void => {};
@@ -22,12 +28,13 @@ describe('PermissionsGuard', () => {
 
   function createPrincipal(
     permissionCodes: AuthenticatedPrincipal['permissionCodes'],
+    roleCode: RoleCode = ROLE_CODES.ADMIN,
   ): AuthenticatedPrincipal {
     return {
       sessionId: '20000000-0000-4000-8000-000000000001',
       userId: '00000000-0000-0000-0000-000000000001',
       phone: '+989123456789',
-      roleCodes: [ROLE_CODES.ADMIN],
+      roleCodes: [roleCode],
       permissionCodes,
     };
   }
@@ -98,5 +105,28 @@ describe('PermissionsGuard', () => {
       handler,
       TestController,
     ]);
+  });
+
+  describe.each(Object.values(ROLE_CODES))('%s role policy', (roleCode) => {
+    const grantedPermissions = SYSTEM_ROLE_PERMISSION_CODES[roleCode];
+
+    it.each(Object.values(PERMISSION_CODES))(
+      'enforces %s according to the canonical role matrix',
+      (permissionCode: PermissionCode) => {
+        const reflector = {
+          getAllAndMerge: jest.fn().mockReturnValue([permissionCode]),
+        } as unknown as Reflector;
+        const guard = new PermissionsGuard(reflector);
+        const request: RequestWithAuth = {
+          auth: createPrincipal([...grantedPermissions], roleCode),
+        };
+
+        if (grantedPermissions.includes(permissionCode)) {
+          expect(guard.canActivate(createContext(request))).toBe(true);
+        } else {
+          expect(() => guard.canActivate(createContext(request))).toThrow(ForbiddenException);
+        }
+      },
+    );
   });
 });

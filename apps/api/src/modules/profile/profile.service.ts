@@ -21,6 +21,7 @@ export class ProfileService {
         lastName: true,
         phoneVerifiedAt: true,
         createdAt: true,
+        updatedAt: true,
       },
     });
 

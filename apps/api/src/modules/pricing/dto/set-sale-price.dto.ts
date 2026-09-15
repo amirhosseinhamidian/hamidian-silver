@@ -8,6 +8,12 @@ export class SetSalePriceDto {
   salePriceToman!: number;
 
   @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(TOMAN_INT_MAX)
+  compareAtPriceToman?: number | null;
+
+  @IsOptional()
   @IsString()
   @Length(1, 500)
   reason?: string;

@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "operational_alert_outbox_recoveries_resolvedByUserId_createdAt_" RENAME TO "operational_alert_outbox_recoveries_resolvedByUserId_create_idx";

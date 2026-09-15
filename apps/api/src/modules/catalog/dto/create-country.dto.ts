@@ -14,6 +14,10 @@ export class CreateCountryDto {
   isoCode!: string;
 
   @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
   @IsUUID('4')
   imageId?: string;
 

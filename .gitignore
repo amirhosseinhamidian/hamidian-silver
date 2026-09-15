@@ -11,6 +11,10 @@ coverage/
 .env
 .env.*
 !.env.example
+# Private VPS env and hand-edited copies (the committed sample is *.example).
+production.env
+production.env.*
+!production.env.example
 
 # Logs
 *.log
@@ -37,6 +41,8 @@ Thumbs.db
 
 # Test artifacts
 .nyc_output/
+apps/storefront/playwright-report/
+apps/storefront/test-results/
 
 # Misc
 *.local
@@ -46,3 +52,9 @@ Thumbs.db
 
 # Generated Prisma Client
 apps/api/src/generated/prisma/
+
+# Local API media uploads
+apps/api/.data/
+
+# Local storefront catalog fixture images
+apps/storefront/public/dev-catalog/

@@ -74,6 +74,29 @@ describe('PlatingService', () => {
     });
   });
 
+  it('lists product variants with their complete plating configuration', async () => {
+    prisma.productVariant.findMany = jest.fn().mockResolvedValue([
+      {
+        id: variantId,
+        sku: 'RING-52',
+        weightGrams: '4.250',
+        platingEligible: true,
+        platingOptions: [],
+      },
+    ]);
+
+    await expect(service.listCatalogConfiguration()).resolves.toHaveLength(1);
+    expect(prisma.productVariant.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ deletedAt: null, product: { deletedAt: null } }),
+        select: expect.objectContaining({
+          platingEligible: true,
+          platingOptions: expect.anything(),
+        }),
+      }),
+    );
+  });
+
   it('does not create duplicate history for a no-op rate update', async () => {
     const transaction = {
       platingRate: {

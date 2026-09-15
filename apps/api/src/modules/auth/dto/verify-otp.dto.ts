@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsString, Length, Matches } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
@@ -34,7 +35,14 @@ export class VerifyOtpDto {
   phone!: string;
 
   @Transform(({ value }) => normalizeOtpDigits(value))
+  @ApiProperty({
+    description: 'Five-digit one-time verification code',
+    example: '12345',
+    minLength: 5,
+    maxLength: 5,
+    pattern: '^\\d{5}$',
+  })
   @IsString()
-  @Matches(/^\d{6}$/)
+  @Matches(/^\d{5}$/)
   code!: string;
 }

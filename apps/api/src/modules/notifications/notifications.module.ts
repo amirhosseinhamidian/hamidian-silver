@@ -7,17 +7,20 @@ import { NotificationOutboxService } from './notification-outbox.service';
 import { NotificationOutboxWorker } from './notification-outbox.worker';
 import { OperationalAlertOutboxService } from './operational-alert-outbox.service';
 import { OperationalAlertOutboxWorker } from './operational-alert-outbox.worker';
+import { StockNotificationsController } from './stock-notifications.controller';
+import { StockNotificationsService } from './stock-notifications.service';
 
 @Global()
 @Module({
   imports: [DatabaseModule, AuthModule],
-  controllers: [NotificationOutboxRecoveryController],
+  controllers: [NotificationOutboxRecoveryController, StockNotificationsController],
   providers: [
     NotificationOutboxRecoveryService,
     NotificationOutboxService,
     NotificationOutboxWorker,
     OperationalAlertOutboxService,
     OperationalAlertOutboxWorker,
+    StockNotificationsService,
   ],
   exports: [NotificationOutboxService, OperationalAlertOutboxService],
 })

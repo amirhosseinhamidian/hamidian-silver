@@ -64,6 +64,7 @@ describe('PaymentsService', () => {
           id: paymentId,
           orderId,
           amountToman: 3_125_000,
+          status: PaymentStatus.PENDING,
         }),
       },
       paymentAttempt: {
@@ -122,6 +123,7 @@ describe('PaymentsService', () => {
           id: paymentId,
           orderId,
           amountToman: 1_000_000,
+          status: PaymentStatus.PENDING,
         }),
       },
       paymentAttempt: {

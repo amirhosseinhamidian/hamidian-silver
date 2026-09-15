@@ -59,11 +59,11 @@ describe('AuthController', () => {
     await expect(
       controller.verifyCode({
         phone: '09123456789',
-        code: '123456',
+        code: '12345',
       }),
     ).resolves.toEqual(result);
 
-    expect(authService.verifyOtp).toHaveBeenCalledWith('09123456789', '123456');
+    expect(authService.verifyOtp).toHaveBeenCalledWith('09123456789', '12345');
   });
 
   it('returns the current authenticated principal', () => {

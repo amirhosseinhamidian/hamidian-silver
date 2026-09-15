@@ -1,0 +1,462 @@
+import { BadRequestException } from '@nestjs/common';
+
+import type { PrismaService } from '../../infrastructure/database/prisma.service';
+import type { PublicMediaUrlService } from '../catalog/public-media-url.service';
+import { SiteSettingsService } from './site-settings.service';
+
+const actorUserId = '30000000-0000-4000-8000-000000000001';
+const mediaId = '40000000-0000-4000-8000-000000000001';
+const mobileMediaId = '40000000-0000-4000-8000-000000000002';
+const contentSettings = {
+  galleryName: 'گالری نقره حمیدیان',
+  footerAbout: 'مجموعه‌ای منتخب از زیورآلات نقره',
+  contactAddress: 'تهران',
+  contactPhoneNumbers: ['02112345678'],
+  contactEmail: 'hello@hamidian.test',
+  instagramUrl: 'https://instagram.com/hamidian',
+  telegramUrl: null,
+  baleUrl: null,
+};
+const publicSeoSettings = {
+  seoSiteName: 'نقره حمیدیان',
+  seoDefaultTitle: 'نقره حمیدیان',
+  seoTitleTemplate: '%s | نقره حمیدیان',
+  seoDefaultDescription: 'فروشگاه آنلاین و گالری نقره حمیدیان',
+  seoDefaultOgMedia: null,
+  seoOrganizationName: 'نقره حمیدیان',
+  seoOrganizationLogoMedia: null,
+  seoSocialProfileUrls: [],
+  seoHomeTitle: null,
+  seoHomeDescription: null,
+  seoHomeOgMedia: null,
+};
+
+function settingsRecord(overrides: Record<string, unknown> = {}) {
+  return {
+    headerCategoryIds: [],
+    announcementEnabled: false,
+    announcementMessage: null,
+    announcementCountdownMode: 'NONE',
+    announcementDurationSeconds: null,
+    announcementEndsAt: null,
+    announcementCtaLabel: null,
+    announcementCtaHref: null,
+    catalogHeroEnabled: true,
+    catalogHeroTitle: 'کالکشن جدید',
+    catalogHeroSubtitle: 'انتخاب‌های تازه نقره',
+    catalogHeroMediaId: mediaId,
+    catalogHeroMobileMediaId: mobileMediaId,
+    updatedByUserId: actorUserId,
+    updatedAt: new Date('2026-09-04T12:00:00.000Z'),
+    catalogHeroMedia: {
+      storageKey: 'catalog/2026/09/hero.webp',
+      altText: 'کالکشن نقره',
+      deletedAt: null,
+    },
+    catalogHeroMobileMedia: {
+      storageKey: 'catalog/2026/09/hero-mobile.webp',
+      altText: 'کالکشن نقره',
+      deletedAt: null,
+    },
+    seoSiteName: 'نقره حمیدیان',
+    seoDefaultTitle: 'نقره حمیدیان',
+    seoTitleTemplate: '%s | نقره حمیدیان',
+    seoDefaultDescription: 'فروشگاه آنلاین و گالری نقره حمیدیان',
+    seoDefaultOgMediaId: null,
+    seoDefaultOgMedia: null,
+    seoOrganizationName: 'نقره حمیدیان',
+    seoOrganizationLogoMediaId: null,
+    seoOrganizationLogoMedia: null,
+    seoSocialProfileUrls: [],
+    seoHomeTitle: null,
+    seoHomeDescription: null,
+    seoHomeOgMediaId: null,
+    seoHomeOgMedia: null,
+    ...contentSettings,
+    ...overrides,
+  };
+}
+
+describe('SiteSettingsService', () => {
+  const prisma = {
+    siteSettings: {
+      findUnique: jest.fn(),
+      upsert: jest.fn(),
+    },
+    media: {
+      findFirst: jest.fn(),
+      count: jest.fn(),
+    },
+    category: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
+  };
+  const publicMediaUrlService = {
+    resolve: jest.fn((storageKey: string) => `https://media.hamidian.test/${storageKey}`),
+  };
+
+  let service: SiteSettingsService;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new SiteSettingsService(
+      prisma as unknown as PrismaService,
+      publicMediaUrlService as unknown as PublicMediaUrlService,
+    );
+  });
+
+  it('returns safe public defaults when settings have not been created yet', async () => {
+    prisma.siteSettings.findUnique.mockResolvedValue(null);
+
+    await expect(service.getPublicSettings()).resolves.toEqual({
+      headerCategories: [],
+      announcement: {
+        enabled: false,
+        message: null,
+        countdownMode: 'NONE',
+        durationSeconds: null,
+        endsAt: null,
+        ctaLabel: null,
+        ctaHref: null,
+      },
+      catalogHeroEnabled: false,
+      catalogHeroTitle: null,
+      catalogHeroSubtitle: null,
+      catalogHeroMedia: null,
+      catalogHeroMobileMedia: null,
+      galleryName: null,
+      footerAbout: null,
+      contactAddress: null,
+      contactPhoneNumbers: [],
+      contactEmail: null,
+      instagramUrl: null,
+      telegramUrl: null,
+      baleUrl: null,
+      ...publicSeoSettings,
+    });
+  });
+
+  it('projects only public media fields and resolves its public URL', async () => {
+    prisma.siteSettings.findUnique.mockResolvedValue(settingsRecord());
+
+    await expect(service.getPublicSettings()).resolves.toEqual({
+      headerCategories: [],
+      announcement: {
+        enabled: false,
+        message: null,
+        countdownMode: 'NONE',
+        durationSeconds: null,
+        endsAt: null,
+        ctaLabel: null,
+        ctaHref: null,
+      },
+      catalogHeroEnabled: true,
+      catalogHeroTitle: 'کالکشن جدید',
+      catalogHeroSubtitle: 'انتخاب‌های تازه نقره',
+      catalogHeroMedia: {
+        url: 'https://media.hamidian.test/catalog/2026/09/hero.webp',
+        altText: 'کالکشن نقره',
+      },
+      catalogHeroMobileMedia: {
+        url: 'https://media.hamidian.test/catalog/2026/09/hero-mobile.webp',
+        altText: 'کالکشن نقره',
+      },
+      ...contentSettings,
+      ...publicSeoSettings,
+    });
+  });
+
+  it('does not expose a soft-deleted hero image publicly', async () => {
+    prisma.siteSettings.findUnique.mockResolvedValue(
+      settingsRecord({
+        catalogHeroMedia: {
+          storageKey: 'catalog/2026/09/hero.webp',
+          altText: 'کالکشن نقره',
+          deletedAt: new Date('2026-09-04T12:30:00.000Z'),
+        },
+        catalogHeroMobileMedia: {
+          storageKey: 'catalog/2026/09/hero-mobile.webp',
+          altText: 'کالکشن نقره',
+          deletedAt: new Date('2026-09-04T12:30:00.000Z'),
+        },
+      }),
+    );
+
+    const result = await service.getPublicSettings();
+
+    expect(result.catalogHeroMedia).toBeNull();
+    expect(result.catalogHeroMobileMedia).toBeNull();
+    expect(publicMediaUrlService.resolve).not.toHaveBeenCalled();
+  });
+
+  it('requires an active image before enabling the catalog hero', async () => {
+    prisma.siteSettings.findUnique.mockResolvedValue({
+      catalogHeroEnabled: false,
+      catalogHeroTitle: null,
+      catalogHeroSubtitle: null,
+      catalogHeroMediaId: null,
+      catalogHeroMobileMediaId: null,
+    });
+
+    await expect(
+      service.updateSettings({ catalogHeroEnabled: true }, actorUserId),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.siteSettings.upsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects a missing or non-image hero media record', async () => {
+    prisma.siteSettings.findUnique.mockResolvedValue(null);
+    prisma.media.count.mockResolvedValue(0);
+
+    await expect(
+      service.updateSettings(
+        {
+          catalogHeroEnabled: true,
+          catalogHeroMediaId: mediaId,
+          catalogHeroMobileMediaId: mobileMediaId,
+        },
+        actorUserId,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.siteSettings.upsert).not.toHaveBeenCalled();
+  });
+
+  it('allows nullable hero copy to be cleared explicitly', async () => {
+    prisma.siteSettings.findUnique.mockResolvedValue({
+      catalogHeroEnabled: false,
+      catalogHeroTitle: 'عنوان قبلی',
+      catalogHeroSubtitle: 'متن قبلی',
+      catalogHeroMediaId: null,
+      catalogHeroMobileMediaId: null,
+    });
+    prisma.siteSettings.upsert.mockResolvedValue(
+      settingsRecord({
+        catalogHeroEnabled: false,
+        catalogHeroTitle: null,
+        catalogHeroSubtitle: null,
+        catalogHeroMediaId: null,
+        catalogHeroMobileMediaId: null,
+        galleryName: null,
+        footerAbout: null,
+        contactAddress: null,
+        contactPhoneNumbers: [],
+        contactEmail: null,
+        instagramUrl: null,
+        telegramUrl: null,
+        baleUrl: null,
+        catalogHeroMedia: null,
+        catalogHeroMobileMedia: null,
+      }),
+    );
+
+    await service.updateSettings(
+      {
+        catalogHeroTitle: null,
+        catalogHeroSubtitle: null,
+      },
+      actorUserId,
+    );
+
+    expect(prisma.siteSettings.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({
+          catalogHeroTitle: null,
+          catalogHeroSubtitle: null,
+        }),
+      }),
+    );
+  });
+
+  it('normalizes text and records the user who updated settings', async () => {
+    prisma.siteSettings.findUnique.mockResolvedValue(null);
+    prisma.media.count.mockResolvedValue(2);
+    prisma.siteSettings.upsert.mockResolvedValue(
+      settingsRecord({
+        catalogHeroTitle: 'کالکشن جدید',
+        catalogHeroSubtitle: null,
+      }),
+    );
+
+    await service.updateSettings(
+      {
+        catalogHeroEnabled: true,
+        catalogHeroTitle: '  کالکشن جدید  ',
+        catalogHeroSubtitle: '   ',
+        catalogHeroMediaId: mediaId,
+        catalogHeroMobileMediaId: mobileMediaId,
+      },
+      actorUserId,
+    );
+
+    expect(prisma.siteSettings.upsert).toHaveBeenCalledWith({
+      where: { id: 'site' },
+      create: {
+        id: 'site',
+        headerCategoryIds: [],
+        announcementEnabled: false,
+        announcementMessage: null,
+        announcementCountdownMode: 'NONE',
+        announcementDurationSeconds: null,
+        announcementEndsAt: null,
+        announcementCtaLabel: null,
+        announcementCtaHref: null,
+        catalogHeroEnabled: true,
+        catalogHeroTitle: 'کالکشن جدید',
+        catalogHeroSubtitle: null,
+        catalogHeroMediaId: mediaId,
+        catalogHeroMobileMediaId: mobileMediaId,
+        galleryName: null,
+        footerAbout: null,
+        contactAddress: null,
+        contactPhoneNumbers: [],
+        contactEmail: null,
+        instagramUrl: null,
+        telegramUrl: null,
+        baleUrl: null,
+        seoSiteName: 'نقره حمیدیان',
+        seoDefaultTitle: 'نقره حمیدیان',
+        seoTitleTemplate: '%s | نقره حمیدیان',
+        seoDefaultDescription: 'فروشگاه آنلاین و گالری نقره حمیدیان',
+        seoDefaultOgMediaId: null,
+        seoOrganizationName: 'نقره حمیدیان',
+        seoOrganizationLogoMediaId: null,
+        seoSocialProfileUrls: [],
+        seoHomeTitle: null,
+        seoHomeDescription: null,
+        seoHomeOgMediaId: null,
+        updatedByUserId: actorUserId,
+      },
+      update: {
+        headerCategoryIds: [],
+        announcementEnabled: false,
+        announcementMessage: null,
+        announcementCountdownMode: 'NONE',
+        announcementDurationSeconds: null,
+        announcementEndsAt: null,
+        announcementCtaLabel: null,
+        announcementCtaHref: null,
+        catalogHeroEnabled: true,
+        catalogHeroTitle: 'کالکشن جدید',
+        catalogHeroSubtitle: null,
+        catalogHeroMediaId: mediaId,
+        catalogHeroMobileMediaId: mobileMediaId,
+        galleryName: null,
+        footerAbout: null,
+        contactAddress: null,
+        contactPhoneNumbers: [],
+        contactEmail: null,
+        instagramUrl: null,
+        telegramUrl: null,
+        baleUrl: null,
+        seoSiteName: 'نقره حمیدیان',
+        seoDefaultTitle: 'نقره حمیدیان',
+        seoTitleTemplate: '%s | نقره حمیدیان',
+        seoDefaultDescription: 'فروشگاه آنلاین و گالری نقره حمیدیان',
+        seoDefaultOgMediaId: null,
+        seoOrganizationName: 'نقره حمیدیان',
+        seoOrganizationLogoMediaId: null,
+        seoSocialProfileUrls: [],
+        seoHomeTitle: null,
+        seoHomeDescription: null,
+        seoHomeOgMediaId: null,
+        updatedByUserId: actorUserId,
+      },
+      include: {
+        catalogHeroMedia: true,
+        catalogHeroMobileMedia: true,
+        seoDefaultOgMedia: true,
+        seoOrganizationLogoMedia: true,
+        seoHomeOgMedia: true,
+      },
+    });
+  });
+
+  it('normalizes public contact and social settings', async () => {
+    prisma.siteSettings.findUnique.mockResolvedValue(null);
+    prisma.siteSettings.upsert.mockResolvedValue(settingsRecord());
+
+    await service.updateSettings(
+      {
+        galleryName: '  گالری نقره حمیدیان  ',
+        contactPhoneNumbers: [' 02112345678 ', '09121234567'],
+        instagramUrl: ' https://instagram.com/hamidian ',
+      },
+      actorUserId,
+    );
+
+    expect(prisma.siteSettings.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({
+          galleryName: 'گالری نقره حمیدیان',
+          contactPhoneNumbers: ['02112345678', '09121234567'],
+          instagramUrl: 'https://instagram.com/hamidian',
+        }),
+      }),
+    );
+  });
+
+  it('preserves configured header category order and projects announcement settings', async () => {
+    prisma.category.findMany.mockResolvedValue([
+      { id: 'category-2', name: 'گردنبند', slug: 'necklaces' },
+      { id: 'category-1', name: 'انگشتر', slug: 'rings' },
+    ]);
+    prisma.siteSettings.findUnique.mockResolvedValue(
+      settingsRecord({
+        headerCategoryIds: ['category-1', 'category-2'],
+        announcementEnabled: true,
+        announcementMessage: 'ارسال رایگان سفارش‌ها',
+        announcementCountdownMode: 'DEADLINE',
+        announcementEndsAt: new Date('2026-09-10T12:00:00.000Z'),
+        announcementCtaLabel: 'مشاهده محصولات',
+        announcementCtaHref: '/products',
+      }),
+    );
+
+    const result = await service.getPublicSettings();
+
+    expect(result.headerCategories.map(({ id }) => id)).toEqual(['category-1', 'category-2']);
+    expect(result.announcement).toEqual({
+      enabled: true,
+      message: 'ارسال رایگان سفارش‌ها',
+      countdownMode: 'DEADLINE',
+      durationSeconds: null,
+      endsAt: '2026-09-10T12:00:00.000Z',
+      ctaLabel: 'مشاهده محصولات',
+      ctaHref: '/products',
+    });
+  });
+
+  it('validates header categories and announcement coherence before writing', async () => {
+    prisma.siteSettings.findUnique.mockResolvedValue(null);
+    prisma.category.count.mockResolvedValue(1);
+
+    await expect(
+      service.updateSettings(
+        {
+          headerCategoryIds: [
+            '10000000-0000-4000-8000-000000000001',
+            '10000000-0000-4000-8000-000000000002',
+          ],
+        },
+        actorUserId,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    prisma.category.count.mockResolvedValue(0);
+    await expect(
+      service.updateSettings(
+        {
+          announcement: {
+            enabled: true,
+            message: 'فروش ویژه',
+            countdownMode: 'FIXED',
+          },
+        },
+        actorUserId,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});

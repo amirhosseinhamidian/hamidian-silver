@@ -28,6 +28,7 @@ describe('PaymentsService gateway boundary validation', () => {
           id: paymentId,
           orderId,
           amountToman: 1_000_000,
+          status: PaymentStatus.PENDING,
         }),
       },
       paymentAttempt: {

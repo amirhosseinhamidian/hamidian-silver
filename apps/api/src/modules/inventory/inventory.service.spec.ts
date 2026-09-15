@@ -1,5 +1,6 @@
 import { ErrorCode } from '../../common/errors/error-codes';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
+import { resolveHumanAuditEvent } from '../audit/audit-event';
 import { InventoryService } from './inventory.service';
 
 describe('InventoryService', () => {
@@ -10,9 +11,13 @@ describe('InventoryService', () => {
   const prisma = {
     warehouse: {
       create: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
     },
     inventory: {
+      findMany: jest.fn(),
+    },
+    productVariant: {
       findMany: jest.fn(),
     },
     $transaction: jest.fn(),
@@ -65,7 +70,7 @@ describe('InventoryService', () => {
         findFirst: jest.fn().mockResolvedValue({ id: warehouseId }),
       },
       productVariant: {
-        findFirst: jest.fn().mockResolvedValue({ id: variantId }),
+        findFirst: jest.fn().mockResolvedValue({ id: variantId, sku: 'RING-52' }),
       },
       inventory: {
         findUnique: jest.fn().mockResolvedValue(null),
@@ -87,22 +92,33 @@ describe('InventoryService', () => {
       async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
     );
 
-    await expect(
-      service.adjustStock(
-        {
-          warehouseId,
-          variantId,
-          onHandDelta: 10,
-          reason: 'Initial stock',
-        },
-        actorUserId,
-      ),
-    ).resolves.toEqual(
+    const result = await service.adjustStock(
+      {
+        warehouseId,
+        variantId,
+        onHandDelta: 10,
+        reason: 'Initial stock',
+      },
+      actorUserId,
+    );
+    expect(result).toEqual(
       expect.objectContaining({
         onHand: 10,
         reserved: 0,
         available: 10,
         isLowStock: false,
+      }),
+    );
+    expect(
+      resolveHumanAuditEvent(
+        result,
+        { action: 'POST /inventory/stock/adjust', resource: 'inventory', method: 'POST' },
+        'SUCCESS',
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        title: 'موجودی SKU RING-52 به تعداد 10 افزایش یافت.',
+        operationType: 'STOCK_ADJUSTMENT',
       }),
     );
 
@@ -339,6 +355,63 @@ describe('InventoryService', () => {
     await expect(service.listStock({ warehouseId })).resolves.toEqual([
       expect.objectContaining({
         available: 3,
+        isLowStock: true,
+      }),
+    ]);
+  });
+
+  it('switches the default warehouse atomically', async () => {
+    const transaction = {
+      warehouse: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: warehouseId, isDefault: false, isActive: true }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        update: jest.fn().mockResolvedValue({ id: warehouseId, isDefault: true, isActive: true }),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await service.updateWarehouse(warehouseId, { isDefault: true });
+
+    expect(transaction.warehouse.updateMany).toHaveBeenCalledWith({
+      where: { id: { not: warehouseId }, isDefault: true, deletedAt: null },
+      data: { isDefault: false },
+    });
+    expect(transaction.warehouse.update).toHaveBeenCalledWith({
+      where: { id: warehouseId },
+      data: { isDefault: true },
+    });
+  });
+
+  it('lists every product variant even when no inventory row exists', async () => {
+    prisma.warehouse.findFirst.mockResolvedValue({
+      id: warehouseId,
+      code: 'MAIN',
+      name: 'Main Warehouse',
+      isDefault: true,
+      isActive: true,
+    });
+    prisma.productVariant.findMany.mockResolvedValue([
+      {
+        id: variantId,
+        sku: 'RING-52',
+        name: null,
+        isActive: true,
+        size: { label: '52' },
+        product: { id: 'product-1', name: 'Ring', slug: 'ring', status: 'ACTIVE' },
+        inventories: [],
+      },
+    ]);
+
+    await expect(service.listStockCatalog({ warehouseId })).resolves.toEqual([
+      expect.objectContaining({
+        inventoryId: null,
+        onHand: 0,
+        reserved: 0,
+        available: 0,
         isLowStock: true,
       }),
     ]);

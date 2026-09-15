@@ -415,6 +415,8 @@ export class PlatingFulfillmentService {
       id: true,
       orderId: true,
       status: true,
+      actualCostToman: true,
+      externalReference: true,
       startNote: true,
       completionNote: true,
       cancellationReason: true,
@@ -479,6 +481,8 @@ export class PlatingFulfillmentService {
       id: string;
       orderId: string;
       status: PlatingFulfillmentStatus;
+      actualCostToman: number | null;
+      externalReference: string | null;
       startNote: string | null;
       completionNote: string | null;
       cancellationReason: string | null;
@@ -497,6 +501,7 @@ export class PlatingFulfillmentService {
       orderNumber: order.orderNumber,
       orderStatus: order.status,
       paidAt: order.paidAt,
+      platingTotalToman: order.platingTotalToman,
       items: order.items,
       fulfillmentStatus: order.platingFulfillment?.status ?? PlatingFulfillmentStatus.PENDING,
       fulfillment: order.platingFulfillment,

@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString, Length } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, Length, Matches } from 'class-validator';
 
 export class CreateSupplierDto {
   @IsString()
@@ -17,6 +17,7 @@ export class CreateSupplierDto {
   @IsOptional()
   @IsString()
   @Length(5, 20)
+  @Matches(/^\+?\d{5,20}$/)
   phone?: string;
 
   @IsOptional()

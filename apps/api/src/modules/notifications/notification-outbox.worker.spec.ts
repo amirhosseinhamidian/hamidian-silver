@@ -2,6 +2,7 @@ import type { ConfigService } from '@nestjs/config';
 import {
   NotificationOutboxEventType,
   NotificationOutboxStatus,
+  StockNotificationStatus,
 } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { SmsDeliveryUnknownError } from '../auth/sms-delivery-unknown.error';
@@ -47,6 +48,14 @@ describe('NotificationOutboxWorker', () => {
           },
         }),
       },
+      stockNotificationSubscription: {
+        findFirst: jest.fn().mockResolvedValue({
+          user: { phone: '+989120000000' },
+          product: { name: 'انگشتر نقره' },
+          variant: { name: null, size: { label: '۵۴' } },
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
     };
     const smsSender: SmsSender = {
       sendOtp: jest.fn(),
@@ -74,7 +83,7 @@ describe('NotificationOutboxWorker', () => {
 
     expect(smsSender.sendMessage).toHaveBeenCalledWith({
       phone: '+989120000000',
-      text: 'پرداخت سفارش HS-TEST با موفقیت ثبت شد.',
+      text: 'پرداخت سفارش HS-TEST تأیید شد و سفارش وارد مرحله آماده‌سازی می‌شود.',
     });
     const claimedAt = prisma.notificationOutboxEvent.updateMany.mock.calls[0]?.[0].data.claimedAt;
     expect(claimedAt).toBeInstanceOf(Date);
@@ -126,6 +135,32 @@ describe('NotificationOutboxWorker', () => {
         }),
       }),
     );
+  });
+
+  it('sends a stock notification and marks its subscription notified', async () => {
+    const subscriptionId = '30000000-0000-4000-8000-000000000001';
+    const { worker, prisma, smsSender } = createWorker({
+      type: NotificationOutboxEventType.STOCK_AVAILABLE,
+      aggregateType: 'STOCK_SUBSCRIPTION',
+      aggregateId: subscriptionId,
+    });
+
+    await worker.dispatchPending();
+
+    expect(smsSender.sendMessage).toHaveBeenCalledWith({
+      phone: '+989120000000',
+      text: 'انگشتر نقره (۵۴) دوباره موجود شد. نقره حمیدیان',
+    });
+    expect(prisma.stockNotificationSubscription.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: subscriptionId,
+        status: StockNotificationStatus.QUEUED,
+      },
+      data: {
+        status: StockNotificationStatus.NOTIFIED,
+        notifiedAt: expect.any(Date),
+      },
+    });
   });
 
   it('quarantines an ambiguous send instead of automatically retrying it', async () => {

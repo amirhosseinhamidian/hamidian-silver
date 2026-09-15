@@ -1,0 +1,185 @@
+import { StorefrontAnnouncementBar } from '@/components/layout/storefront-announcement';
+import {
+  getInitialCountdownSeconds,
+  type StorefrontAnnouncement,
+} from '@/components/layout/storefront-announcement-config';
+import { AccountHeaderAction } from '@/components/auth/auth-modal';
+import { CartHeaderLink } from '@/components/cart/cart-header-link';
+import { StorefrontMobileMenu } from '@/components/layout/storefront-mobile-menu';
+import { StorefrontSearch } from '@/components/layout/storefront-search';
+import Image from 'next/image';
+import Link from 'next/link';
+import type { ReactNode } from 'react';
+import { FiHeart, FiMapPin } from 'react-icons/fi';
+
+export type StorefrontNavigationCategory = Readonly<{
+  id: string;
+  label: string;
+  slug: string;
+}>;
+
+type StorefrontHeaderProps = Readonly<{
+  announcement?: StorefrontAnnouncement | null;
+  navigationCategories?: readonly StorefrontNavigationCategory[];
+  authenticated?: boolean;
+}>;
+
+function IconLink({
+  href,
+  label,
+  children,
+}: Readonly<{
+  href: string;
+  label: string;
+  children: ReactNode;
+}>) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className="
+        inline-flex size-9 items-center justify-center
+        transition-opacity duration-150 hover:opacity-55
+      "
+    >
+      {children}
+    </Link>
+  );
+}
+
+export function StorefrontHeader({
+  announcement,
+  navigationCategories = [],
+  authenticated = false,
+}: StorefrontHeaderProps) {
+  const initialRemainingSeconds = announcement
+    ? getInitialCountdownSeconds(announcement.countdown)
+    : null;
+
+  return (
+    <>
+      <StorefrontAnnouncementBar
+        announcement={announcement}
+        initialRemainingSeconds={initialRemainingSeconds}
+      />
+
+      <div className="hidden border-b border-[var(--sf-color-border)] lg:block">
+        <div className="sf-container grid min-h-24 grid-cols-[1fr_auto_1fr] items-center gap-3">
+          <nav
+            aria-label="لینک‌های اطلاعاتی"
+            className="
+              hidden items-center gap-7 text-sm
+              text-[var(--sf-color-muted)] xl:flex
+            "
+          >
+            <Link href="/services">خدمات ما</Link>
+            <Link href="/faq">سوالات متداول</Link>
+            <Link href="/contact">تماس با ما</Link>
+            <Link href="/about">درباره گالری حمیدیان</Link>
+          </nav>
+
+          <Link
+            href="/"
+            aria-label="نقره حمیدیان، صفحه اصلی"
+            className="relative col-start-2 h-16 w-40 sm:h-20 sm:w-56"
+          >
+            <Image
+              src="/brand/hamidian-signature.png"
+              alt="لوگوی نقره حمیدیان"
+              fill
+              sizes="224px"
+              loading="eager"
+              className="scale-110 object-contain"
+            />
+          </Link>
+
+          <div className="flex items-center justify-end gap-1">
+            <IconLink href="/wishlist" label="علاقه‌مندی‌ها">
+              <FiHeart aria-hidden="true" size={21} />
+            </IconLink>
+            <AccountHeaderAction authenticated={authenticated} />
+            <span className="hidden sm:inline-flex">
+              <IconLink href="/contact" label="نشانی گالری">
+                <FiMapPin aria-hidden="true" size={21} />
+              </IconLink>
+            </span>
+            <CartHeaderLink />
+          </div>
+        </div>
+      </div>
+
+      <header
+        className="
+          sticky top-0 z-40 border-b border-[var(--sf-color-border)]
+          bg-[var(--sf-color-canvas)]
+        "
+      >
+        <div
+          dir="ltr"
+          className="
+            sf-container grid min-h-16 grid-cols-[1fr_auto_1fr] items-center gap-2
+            lg:min-h-0
+          "
+        >
+          <div
+            data-testid="storefront-header-search-slot"
+            className="flex items-center justify-start gap-1 lg:col-start-3 lg:row-start-1 lg:justify-self-end"
+          >
+            <div className="lg:hidden">
+              <StorefrontMobileMenu navigationCategories={navigationCategories} />
+            </div>
+            <StorefrontSearch />
+          </div>
+
+          <Link
+            href="/"
+            aria-label="نقره حمیدیان، صفحه اصلی موبایل"
+            className="relative h-11 w-28 lg:hidden"
+          >
+            <Image
+              src="/brand/hamidian-signature.png"
+              alt=""
+              fill
+              sizes="7rem"
+              loading="eager"
+              className="scale-110 object-contain"
+            />
+          </Link>
+
+          <nav
+            dir="rtl"
+            aria-label="پیمایش اصلی"
+            className="hidden min-w-0 overflow-x-auto lg:col-start-2 lg:row-start-1 lg:block lg:justify-self-center"
+          >
+            <ul className="flex min-w-max items-center justify-center gap-9 py-4 text-sm">
+              <li>
+                <Link href="/">خانه</Link>
+              </li>
+
+              {navigationCategories.map((category) => (
+                <li key={category.id}>
+                  <Link href={`/categories/${category.slug}`}>{category.label}</Link>
+                </li>
+              ))}
+
+              <li>
+                <Link href="/brands">برندها</Link>
+              </li>
+              <li>
+                <Link href="/products?sort=newest">جدیدترین‌ها</Link>
+              </li>
+            </ul>
+          </nav>
+
+          <div className="flex items-center justify-end gap-1 lg:hidden">
+            <AccountHeaderAction authenticated={authenticated} />
+            <IconLink href="/contact" label="نشانی گالری">
+              <FiMapPin aria-hidden="true" size={21} />
+            </IconLink>
+            <CartHeaderLink />
+          </div>
+        </div>
+      </header>
+    </>
+  );
+}

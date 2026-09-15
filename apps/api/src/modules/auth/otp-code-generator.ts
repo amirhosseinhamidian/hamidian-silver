@@ -4,6 +4,6 @@ import { randomInt } from 'node:crypto';
 @Injectable()
 export class OtpCodeGenerator {
   generate(): string {
-    return randomInt(0, 1_000_000).toString().padStart(6, '0');
+    return randomInt(0, 100_000).toString().padStart(5, '0');
   }
 }

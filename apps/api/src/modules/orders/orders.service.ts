@@ -1,9 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DomainException } from '../../common/errors/domain-exception';
 
 import { ErrorCode } from '../../common/errors/error-codes';
 import { randomUUID } from 'node:crypto';
-import { isNonNegativeTomanInt, TOMAN_INT_MAX } from '../../common/toman';
+import { calculatePlatingPriceToman } from '../../common/plating-price';
+import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
   OrderStatus,
@@ -14,12 +16,41 @@ import {
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { normalizeIranianMobile } from '../auth/phone-normalizer';
+import { attachHumanAuditEvent } from '../audit/audit-event';
+import { PublicMediaUrlService } from '../catalog/public-media-url.service';
+import { ShippingPricingService } from '../shipping/shipping-pricing.service';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderAddressDto, CreateOrderDto, CreateOrderItemDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 const RESERVATION_TTL_MINUTES = 15;
+
+type ShippingCarrierPresentation = Readonly<{
+  name: string | null;
+  trackingUrl: string | null;
+  logoUrl: string | null;
+}>;
+
+function publicShippingMethodName(
+  shipment: Readonly<{
+    provider: string;
+    providerServiceName: string | null;
+    carrierNameSnapshot: string | null;
+    carrierPresentationSnapshottedAt: Date | null;
+  }> | null,
+  fallback: ShippingCarrierPresentation | null,
+): string | null {
+  if (!shipment) return null;
+  if (shipment.carrierPresentationSnapshottedAt) {
+    return shipment.carrierNameSnapshot ?? shipment.providerServiceName ?? shipment.provider;
+  }
+  if (fallback?.name) return fallback.name;
+  if (shipment.providerServiceName) return shipment.providerServiceName;
+  if (shipment.provider.toLowerCase() === 'postex') return 'پستکس';
+  if (shipment.provider.toLowerCase() === 'manual') return 'ارسال فروشگاه';
+  return shipment.provider;
+}
 
 const CUSTOMER_ORDER_ITEM_SELECT = {
   id: true,
@@ -37,7 +68,38 @@ const CUSTOMER_ORDER_ITEM_SELECT = {
   platingLeadTimeDays: true,
   unitWeightGrams: true,
   lineTotalToman: true,
+  returnAllocatedQuantity: true,
   createdAt: true,
+  variant: {
+    select: {
+      product: {
+        select: {
+          slug: true,
+          media: {
+            where: {
+              media: {
+                deletedAt: null,
+              },
+            },
+            orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+            take: 1,
+            select: {
+              altText: true,
+              media: {
+                select: {
+                  storageKey: true,
+                  mimeType: true,
+                  altText: true,
+                  width: true,
+                  height: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
 } satisfies Prisma.OrderItemSelect;
 
 const CUSTOMER_ORDER_LIST_SELECT = {
@@ -54,8 +116,35 @@ const CUSTOMER_ORDER_LIST_SELECT = {
   paidAt: true,
   cancelledAt: true,
   deliveredAt: true,
+  returnAuthorizedAt: true,
   createdAt: true,
   updatedAt: true,
+  shipment: {
+    select: {
+      provider: true,
+      providerServiceCode: true,
+      providerServiceName: true,
+      carrierNameSnapshot: true,
+      carrierTrackingUrlSnapshot: true,
+      carrierLogoSnapshot: { select: { storageKey: true } },
+      carrierPresentationSnapshottedAt: true,
+      trackingCode: true,
+    },
+  },
+  payment: {
+    select: {
+      status: true,
+      attempts: {
+        take: 1,
+        orderBy: { createdAt: 'desc' as const },
+        select: {
+          provider: true,
+          receiptOriginalName: true,
+          receiptUploadedAt: true,
+        },
+      },
+    },
+  },
   items: {
     select: CUSTOMER_ORDER_ITEM_SELECT,
   },
@@ -85,6 +174,119 @@ const CUSTOMER_ORDER_DETAIL_SELECT = {
   },
 } satisfies Prisma.OrderSelect;
 
+const ADMIN_ORDER_LIST_INCLUDE = {
+  user: {
+    select: {
+      id: true,
+      phone: true,
+      firstName: true,
+      lastName: true,
+    },
+  },
+  returnAuthorizedBy: {
+    select: {
+      id: true,
+      phone: true,
+      firstName: true,
+      lastName: true,
+    },
+  },
+  items: true,
+  shippingAddress: true,
+  payment: {
+    select: {
+      id: true,
+      status: true,
+      amountToman: true,
+      refundedAmountToman: true,
+      paidAt: true,
+      createdAt: true,
+      updatedAt: true,
+      attempts: {
+        take: 3,
+        orderBy: {
+          createdAt: 'desc' as const,
+        },
+        select: {
+          id: true,
+          provider: true,
+          status: true,
+          amountToman: true,
+          providerReference: true,
+          failureCode: true,
+          failureMessage: true,
+          verifiedAt: true,
+          receiptMimeType: true,
+          receiptOriginalName: true,
+          receiptSizeBytes: true,
+          receiptUploadedAt: true,
+          createdAt: true,
+        },
+      },
+    },
+  },
+  shipment: {
+    select: {
+      id: true,
+      provider: true,
+      providerServiceCode: true,
+      providerServiceName: true,
+      status: true,
+      providerCreationState: true,
+      shippingCostToman: true,
+      totalWeightGrams: true,
+      estimatedDeliveryDays: true,
+      providerShipmentId: true,
+      trackingCode: true,
+      shippedAt: true,
+      deliveredAt: true,
+      createdAt: true,
+      updatedAt: true,
+      statusHistory: {
+        orderBy: { createdAt: 'asc' as const },
+        select: {
+          id: true,
+          fromStatus: true,
+          toStatus: true,
+          reason: true,
+          createdAt: true,
+          actor: {
+            select: { id: true, phone: true, firstName: true, lastName: true },
+          },
+        },
+      },
+    },
+  },
+  statusHistory: {
+    orderBy: {
+      createdAt: 'asc' as const,
+    },
+    select: {
+      id: true,
+      fromStatus: true,
+      toStatus: true,
+      reason: true,
+      createdAt: true,
+      actor: {
+        select: {
+          id: true,
+          phone: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.OrderInclude;
+
+type CustomerOrderListRecord = Prisma.OrderGetPayload<{
+  select: typeof CUSTOMER_ORDER_LIST_SELECT;
+}>;
+
+type CustomerOrderDetailRecord = Prisma.OrderGetPayload<{
+  select: typeof CUSTOMER_ORDER_DETAIL_SELECT;
+}>;
+
 type PreparedOrderItem = {
   variantId: string;
   quantity: number;
@@ -107,12 +309,17 @@ type PreparedOrderItem = {
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly publicMediaUrl?: PublicMediaUrlService,
+    @Optional() private readonly config?: ConfigService,
+    @Optional() private readonly shippingPricing?: ShippingPricingService,
+  ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
     this.assertUniqueItemSelections(dto.items);
 
-    return this.prisma.$transaction(async (transaction) => {
+    const order = await this.prisma.$transaction(async (transaction) => {
       const shippingAddress = await this.resolveShippingAddress(transaction, userId, dto);
 
       const warehouse = await transaction.warehouse.findFirst({
@@ -200,10 +407,16 @@ export class OrdersService {
         (total, item) => total + item.unitPlatingPriceToman * item.quantity,
         0,
       );
-      const grandTotalToman = merchandiseTotalToman + platingTotalToman;
+      const cartSubtotalToman = merchandiseTotalToman + platingTotalToman;
+      const shippingTotalToman = await this.resolveInitialShippingCostToman(
+        cartSubtotalToman,
+        transaction,
+      );
+      const grandTotalToman = merchandiseTotalToman + platingTotalToman + shippingTotalToman;
 
       this.assertSafeTomanAmount(merchandiseTotalToman);
       this.assertSafeTomanAmount(platingTotalToman);
+      this.assertSafeTomanAmount(shippingTotalToman);
       this.assertSafeTomanAmount(grandTotalToman);
 
       const orderId = randomUUID();
@@ -219,6 +432,7 @@ export class OrdersService {
           status: OrderStatus.PENDING_PAYMENT,
           merchandiseTotalToman,
           platingTotalToman,
+          shippingTotalToman,
           grandTotalToman,
           reservationExpiresAt,
           shippingAddress: {
@@ -270,10 +484,28 @@ export class OrdersService {
         select: CUSTOMER_ORDER_DETAIL_SELECT,
       });
     });
+
+    return this.toCustomerOrder(order, null);
   }
 
-  listMyOrders(userId: string, query: ListOrdersQueryDto) {
-    return this.prisma.order.findMany({
+  private async resolveInitialShippingCostToman(
+    cartSubtotalToman: number,
+    transaction: Prisma.TransactionClient,
+  ): Promise<number> {
+    const shippingProvider =
+      this.config?.get<string>('SHIPPING_PROVIDER', 'disabled') ?? 'disabled';
+
+    if (shippingProvider !== 'disabled') return 0;
+
+    if (this.shippingPricing) {
+      return this.shippingPricing.calculateCostToman(cartSubtotalToman, transaction);
+    }
+
+    return this.config?.get<number>('MANUAL_SHIPPING_COST_TOMAN', 0) ?? 0;
+  }
+
+  async listMyOrders(userId: string, query: ListOrdersQueryDto) {
+    const orders = await this.prisma.order.findMany({
       where: {
         userId,
         status: query.status,
@@ -284,6 +516,14 @@ export class OrdersService {
       },
       select: CUSTOMER_ORDER_LIST_SELECT,
     });
+
+    const carrier = await this.shippingPricing?.getPublicCarrierPresentation();
+    return orders.map((order) => this.toCustomerOrder(order, carrier ?? null));
+  }
+
+  async countMyOrders(userId: string) {
+    const count = await this.prisma.order.count({ where: { userId } });
+    return { count };
   }
 
   async getMyOrder(userId: string, orderId: string) {
@@ -299,7 +539,66 @@ export class OrdersService {
       throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
     }
 
-    return order;
+    const carrier = await this.shippingPricing?.getPublicCarrierPresentation();
+    return this.toCustomerOrder(order, carrier ?? null);
+  }
+
+  private toCustomerOrder(
+    order: CustomerOrderListRecord | CustomerOrderDetailRecord,
+    carrier: ShippingCarrierPresentation | null,
+  ) {
+    const { shipment, payment, items: selectedItems, returnAuthorizedAt, ...summary } = order;
+    const items = Array.isArray(selectedItems) ? selectedItems : [];
+    const latestAttempt = payment?.attempts[0];
+
+    return {
+      ...summary,
+      returnAuthorized: returnAuthorizedAt !== null,
+      trackingCode: shipment?.trackingCode ?? null,
+      shippingMethodName: publicShippingMethodName(shipment ?? null, carrier),
+      shippingTrackingUrl: shipment?.carrierPresentationSnapshottedAt
+        ? shipment.carrierTrackingUrlSnapshot
+        : (carrier?.trackingUrl ?? null),
+      shippingCarrierLogoUrl: shipment?.carrierPresentationSnapshottedAt
+        ? shipment.carrierLogoSnapshot
+          ? (this.publicMediaUrl?.resolve(shipment.carrierLogoSnapshot.storageKey) ?? null)
+          : null
+        : (carrier?.logoUrl ?? null),
+      payment: payment
+        ? {
+            status: payment.status,
+            method: latestAttempt
+              ? latestAttempt.provider === 'card_to_card'
+                ? 'CARD_TO_CARD'
+                : 'PAYMENT_GATEWAY'
+              : null,
+            receiptAvailable:
+              latestAttempt?.provider === 'card_to_card' &&
+              latestAttempt.receiptUploadedAt !== null,
+            receiptOriginalName: latestAttempt?.receiptOriginalName ?? null,
+            receiptUploadedAt: latestAttempt?.receiptUploadedAt ?? null,
+          }
+        : null,
+      items: items.map(({ variant, returnAllocatedQuantity, ...item }) => {
+        const product = variant?.product;
+        const primaryMedia = product?.media[0];
+
+        return {
+          ...item,
+          returnableQuantity: Math.max(0, item.quantity - returnAllocatedQuantity),
+          productSlug: product?.slug ?? '',
+          primaryMedia: primaryMedia
+            ? {
+                url: this.publicMediaUrl?.resolve(primaryMedia.media.storageKey) ?? null,
+                mimeType: primaryMedia.media.mimeType,
+                altText: primaryMedia.altText ?? primaryMedia.media.altText,
+                width: primaryMedia.media.width,
+                height: primaryMedia.media.height,
+              }
+            : null,
+        };
+      }),
+    };
   }
 
   listOrders(query: ListOrdersQueryDto) {
@@ -311,17 +610,7 @@ export class OrdersService {
       orderBy: {
         createdAt: 'desc',
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            phone: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        items: true,
-      },
+      include: ADMIN_ORDER_LIST_INCLUDE,
     });
   }
 
@@ -346,7 +635,12 @@ export class OrdersService {
       }
 
       if (order.status === dto.status) {
-        return order;
+        return attachHumanAuditEvent(order, {
+          title: `وضعیت سفارش شماره ${order.orderNumber} بدون تغییر باقی ماند.`,
+          operationType: 'STATUS_CHANGE',
+          entityName: order.orderNumber,
+          changes: [],
+        });
       }
 
       const allowedNextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
@@ -443,11 +737,42 @@ export class OrdersService {
         },
       });
 
-      return updated;
+      const statusNames: Partial<Record<OrderStatus, string>> = {
+        [OrderStatus.PROCESSING]: 'آماده‌سازی',
+        [OrderStatus.SHIPPED]: 'ارسال‌شده',
+        [OrderStatus.DELIVERED]: 'تحویل‌شده',
+      };
+      return attachHumanAuditEvent(updated, {
+        title: `سفارش شماره ${updated.orderNumber} به مرحله ${statusNames[updated.status] ?? updated.status} منتقل شد.`,
+        operationType: 'STATUS_CHANGE',
+        entityName: updated.orderNumber,
+        changes: [
+          {
+            field: 'status',
+            label: 'وضعیت سفارش',
+            before: order.status,
+            after: updated.status,
+          },
+        ],
+      });
     });
   }
 
   async cancelOrder(orderId: string, dto: CancelOrderDto, actorUserId: string) {
+    return this.cancelOrderReservation(orderId, dto, actorUserId);
+  }
+
+  async cancelMyOrder(userId: string, orderId: string, dto: CancelOrderDto) {
+    await this.cancelOrderReservation(orderId, dto, userId, userId);
+    return this.getMyOrder(userId, orderId);
+  }
+
+  private async cancelOrderReservation(
+    orderId: string,
+    dto: CancelOrderDto,
+    actorUserId: string,
+    ownerUserId?: string,
+  ) {
     return this.prisma.$transaction(async (transaction) => {
       const order = await transaction.order.findUnique({
         where: {
@@ -455,10 +780,17 @@ export class OrdersService {
         },
         include: {
           items: true,
+          payment: {
+            select: { status: true },
+          },
         },
       });
 
       if (!order) {
+        throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
+      }
+
+      if (ownerUserId && order.userId !== ownerUserId) {
         throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
       }
 
@@ -469,11 +801,23 @@ export class OrdersService {
         );
       }
 
+      if (order.payment?.status === PaymentStatus.AWAITING_REVIEW) {
+        throw new DomainException(
+          ErrorCode.ORDER_CANNOT_CANCEL,
+          'Order cannot be cancelled while its payment receipt is under review.',
+        );
+      }
+
       const cancelledAt = new Date();
       const claimed = await transaction.order.updateMany({
         where: {
           id: order.id,
           status: OrderStatus.PENDING_PAYMENT,
+          ...(ownerUserId ? { userId: ownerUserId } : {}),
+          OR: [
+            { payment: { is: null } },
+            { payment: { is: { status: { not: PaymentStatus.AWAITING_REVIEW } } } },
+          ],
         },
         data: {
           status: OrderStatus.CANCELLED,
@@ -674,7 +1018,7 @@ export class OrdersService {
       platingWeightGrams = variant.weightGrams.toString();
       platingRateToman = option.platingRate.pricePerGramToman;
       platingLeadTimeDays = option.platingRate.leadTimeDays;
-      unitPlatingPriceToman = this.calculatePlatingPrice(platingWeightGrams, platingRateToman);
+      unitPlatingPriceToman = calculatePlatingPriceToman(platingWeightGrams, platingRateToman);
     }
 
     const unitSalePriceToman = variant.product.salePriceToman;
@@ -767,20 +1111,6 @@ export class OrdersService {
         },
       });
     }
-  }
-
-  private calculatePlatingPrice(weightGrams: string, pricePerGramToman: number): number {
-    const [wholePart, fractionPart = ''] = weightGrams.split('.');
-    const normalizedFraction = fractionPart.padEnd(3, '0').slice(0, 3);
-    const milliGrams = BigInt(wholePart) * 1000n + BigInt(normalizedFraction || '0');
-    const totalMilliToman = milliGrams * BigInt(pricePerGramToman);
-    const roundedToman = (totalMilliToman + 500n) / 1000n;
-
-    if (roundedToman > BigInt(TOMAN_INT_MAX)) {
-      throw new BadRequestException('Calculated plating price exceeds the supported range.');
-    }
-
-    return Number(roundedToman);
   }
 
   private assertSafeTomanAmount(amount: number): void {

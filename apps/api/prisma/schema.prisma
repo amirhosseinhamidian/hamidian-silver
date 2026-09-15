@@ -9,55 +9,100 @@ datasource db {
 }
 
 model User {
-  id                                  String                        @id @default(uuid()) @db.Uuid
-  phone                               String                        @unique @db.VarChar(20)
-  firstName                           String?                       @db.VarChar(100)
-  lastName                            String?                       @db.VarChar(100)
-  isActive                            Boolean                       @default(true)
-  phoneVerifiedAt                     DateTime?                     @db.Timestamptz(3)
-  lastLoginAt                         DateTime?                     @db.Timestamptz(3)
-  createdAt                           DateTime                      @default(now()) @db.Timestamptz(3)
-  updatedAt                           DateTime                      @updatedAt @db.Timestamptz(3)
-  deletedAt                           DateTime?                     @db.Timestamptz(3)
+  id                                  String                           @id @default(uuid()) @db.Uuid
+  phone                               String                           @unique @db.VarChar(20)
+  firstName                           String?                          @db.VarChar(100)
+  lastName                            String?                          @db.VarChar(100)
+  isActive                            Boolean                          @default(true)
+  phoneVerifiedAt                     DateTime?                        @db.Timestamptz(3)
+  lastLoginAt                         DateTime?                        @db.Timestamptz(3)
+  createdAt                           DateTime                         @default(now()) @db.Timestamptz(3)
+  updatedAt                           DateTime                         @updatedAt @db.Timestamptz(3)
+  deletedAt                           DateTime?                        @db.Timestamptz(3)
   roles                               UserRole[]
   sessions                            AuthSession[]
-  inventoryMovements                  InventoryMovement[]           @relation("InventoryMovementActor")
-  priceChanges                        ProductPriceHistory[]         @relation("ProductPriceHistoryActor")
-  platingRateChanges                  PlatingRateHistory[]          @relation("PlatingRateHistoryActor")
+  inventoryMovements                  InventoryMovement[]              @relation("InventoryMovementActor")
+  priceChanges                        ProductPriceHistory[]            @relation("ProductPriceHistoryActor")
+  platingRateChanges                  PlatingRateHistory[]             @relation("PlatingRateHistoryActor")
   orders                              Order[]
-  orderStatusChanges                  OrderStatusHistory[]          @relation("OrderStatusHistoryActor")
+  orderStatusChanges                  OrderStatusHistory[]             @relation("OrderStatusHistoryActor")
   addresses                           UserAddress[]
-  shipmentStatusChanges               ShipmentStatusHistory[]       @relation("ShipmentStatusHistoryActor")
-  paymentGatewaySettingChanges        PaymentGatewaySetting[]       @relation("PaymentGatewaySettingUpdater")
-  paymentReconciliationsResolved      PaymentReconciliation[]       @relation("PaymentReconciliationResolver")
-  paymentInitiationRecoveriesResolved PaymentAttempt[]              @relation("PaymentInitiationRecoveryResolver")
-  supplierPayablesSettled             SupplierPayable[]             @relation("SupplierPayableSettler")
-  supplierSettlementsCreated          SupplierSettlement[]          @relation("SupplierSettlementCreator")
-  supplierSettlementsPaid             SupplierSettlement[]          @relation("SupplierSettlementPayer")
-  supplierSettlementsCancelled        SupplierSettlement[]          @relation("SupplierSettlementCanceller")
-  paymentRefundsRequested             PaymentRefund[]               @relation("PaymentRefundRequester")
-  paymentRefundsConfirmed             PaymentRefund[]               @relation("PaymentRefundConfirmer")
-  paymentRefundsCancelled             PaymentRefund[]               @relation("PaymentRefundCanceller")
-  orderReturnsRequested               OrderReturn[]                 @relation("OrderReturnRequester")
-  orderReturnsReceived                OrderReturn[]                 @relation("OrderReturnReceiver")
-  orderReturnsCancelled               OrderReturn[]                 @relation("OrderReturnCanceller")
-  supplierCreditsCreated              SupplierCredit[]              @relation("SupplierCreditCreator")
-  supplierCreditApplicationsApplied   SupplierCreditApplication[]   @relation("SupplierCreditApplicationApplier")
-  supplierCreditApplicationsRemoved   SupplierCreditApplication[]   @relation("SupplierCreditApplicationRemover")
-  orderCostEntriesCreated             OrderCostEntry[]              @relation("OrderCostEntryCreator")
-  platingFulfillmentsStarted          OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentStarter")
-  platingFulfillmentsCompleted        OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentCompleter")
-  platingFulfillmentsCancelled        OrderPlatingFulfillment[]     @relation("OrderPlatingFulfillmentCanceller")
-  operationalAlertRecipients          OperationalAlertOutboxEvent[] @relation("OperationalAlertRecipient")
-  notificationRecoveriesResolved NotificationOutboxRecovery[]  @relation("NotificationOutboxRecoveryResolver")
-  operationalAlertRecoveriesResolved   OperationalAlertOutboxRecovery[] @relation("OperationalAlertOutboxRecoveryResolver")
-  operationalIncidentsAcknowledged    OperationalIncident[]         @relation("OperationalIncidentAcknowledger")
-  operationalIncidentsAssigned        OperationalIncident[]         @relation("OperationalIncidentAssignee")
-  operationalIncidentActivities       OperationalIncidentActivity[] @relation("OperationalIncidentActivityActor")
+  shipmentStatusChanges               ShipmentStatusHistory[]          @relation("ShipmentStatusHistoryActor")
+  paymentGatewaySettingChanges        PaymentGatewaySetting[]          @relation("PaymentGatewaySettingUpdater")
+  siteSettingsChanges                 SiteSettings[]                   @relation("SiteSettingsUpdater")
+  paymentReconciliationsResolved      PaymentReconciliation[]          @relation("PaymentReconciliationResolver")
+  paymentInitiationRecoveriesResolved PaymentAttempt[]                 @relation("PaymentInitiationRecoveryResolver")
+  paymentReceiptsVerified             PaymentAttempt[]                 @relation("PaymentReceiptVerifier")
+  cardToCardAccountsUpdated           CardToCardAccount[]              @relation("CardToCardAccountUpdater")
+  supplierPayablesSettled             SupplierPayable[]                @relation("SupplierPayableSettler")
+  supplierSettlementsCreated          SupplierSettlement[]             @relation("SupplierSettlementCreator")
+  supplierSettlementsPaid             SupplierSettlement[]             @relation("SupplierSettlementPayer")
+  supplierSettlementsCancelled        SupplierSettlement[]             @relation("SupplierSettlementCanceller")
+  paymentRefundsRequested             PaymentRefund[]                  @relation("PaymentRefundRequester")
+  paymentRefundsConfirmed             PaymentRefund[]                  @relation("PaymentRefundConfirmer")
+  paymentRefundsCancelled             PaymentRefund[]                  @relation("PaymentRefundCanceller")
+  orderReturnsRequested               OrderReturn[]                    @relation("OrderReturnRequester")
+  orderReturnsReceived                OrderReturn[]                    @relation("OrderReturnReceiver")
+  orderReturnsCancelled               OrderReturn[]                    @relation("OrderReturnCanceller")
+  orderReturnsAuthorized              Order[]                          @relation("OrderReturnAuthorizer")
+  supplierCreditsCreated              SupplierCredit[]                 @relation("SupplierCreditCreator")
+  supplierCreditApplicationsApplied   SupplierCreditApplication[]      @relation("SupplierCreditApplicationApplier")
+  supplierCreditApplicationsRemoved   SupplierCreditApplication[]      @relation("SupplierCreditApplicationRemover")
+  orderCostEntriesCreated             OrderCostEntry[]                 @relation("OrderCostEntryCreator")
+  platingFulfillmentsStarted          OrderPlatingFulfillment[]        @relation("OrderPlatingFulfillmentStarter")
+  platingFulfillmentsCompleted        OrderPlatingFulfillment[]        @relation("OrderPlatingFulfillmentCompleter")
+  platingFulfillmentsCancelled        OrderPlatingFulfillment[]        @relation("OrderPlatingFulfillmentCanceller")
+  operationalAlertRecipients          OperationalAlertOutboxEvent[]    @relation("OperationalAlertRecipient")
+  notificationRecoveriesResolved      NotificationOutboxRecovery[]     @relation("NotificationOutboxRecoveryResolver")
+  operationalAlertRecoveriesResolved  OperationalAlertOutboxRecovery[] @relation("OperationalAlertOutboxRecoveryResolver")
+  operationalIncidentsAcknowledged    OperationalIncident[]            @relation("OperationalIncidentAcknowledger")
+  operationalIncidentsAssigned        OperationalIncident[]            @relation("OperationalIncidentAssignee")
+  operationalIncidentActivities       OperationalIncidentActivity[]    @relation("OperationalIncidentActivityActor")
+  auditLogs                           AuditLog[]                        @relation("AuditLogActor")
+  stockNotificationSubscriptions      StockNotificationSubscription[]
+  storefrontContentPageChanges        StorefrontContentPage[]           @relation("StorefrontContentPageUpdater")
+  shippingPricingSettingsChanges      ShippingPricingSettings[]         @relation("ShippingPricingSettingsUpdater")
+  shippingCarriersUpdated             ShippingCarrier[]                 @relation("ShippingCarrierUpdater")
 
   @@index([isActive])
   @@index([deletedAt])
   @@map("users")
+}
+
+enum AuditOutcome {
+  SUCCESS
+  FAILURE
+}
+
+model AuditLog {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorUserId String       @db.Uuid
+  action      String       @db.VarChar(180)
+  title       String?      @db.VarChar(500)
+  operationType String?    @db.VarChar(80)
+  entityName  String?      @db.VarChar(200)
+  resource    String       @db.VarChar(80)
+  resourceId  String?      @db.Uuid
+  method      String       @db.VarChar(10)
+  path        String       @db.VarChar(500)
+  statusCode  Int
+  outcome     AuditOutcome
+  ipAddress   String?      @db.VarChar(64)
+  userAgent   String?      @db.VarChar(500)
+  requestId   String?      @db.VarChar(120)
+  durationMs  Int
+  metadata    Json?
+  changes     Json?
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  actor       User         @relation("AuditLogActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([outcome, createdAt])
+  @@index([resource, resourceId, createdAt])
+  @@index([action, createdAt])
+  @@index([operationType, createdAt])
+  @@map("audit_logs")
 }
 
 model Role {
@@ -183,25 +228,214 @@ enum ProductStatus {
   ARCHIVED
 }
 
+enum HomepageHeroPlacement {
+  PRIMARY
+  SECONDARY
+}
+
+enum StorefrontContentPageKey {
+  ABOUT
+  CONTACT
+  SERVICES
+  TERMS
+  PRIVACY
+  SIZE_GUIDE
+  FAQ
+}
+
+enum SeoRedirectEntityType {
+  PRODUCT
+  CATEGORY
+  BRAND
+}
+
+model SeoRedirect {
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourcePath      String                @unique @db.VarChar(1000)
+  destinationPath String                @db.VarChar(1000)
+  entityType      SeoRedirectEntityType
+  entityId        String                @db.Uuid
+  createdAt       DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime              @updatedAt @db.Timestamptz(3)
+
+  @@index([entityType, entityId])
+  @@index([destinationPath])
+  @@map("seo_redirects")
+}
+
 model Media {
-  id             String         @id @default(uuid()) @db.Uuid
-  storageKey     String         @unique @db.VarChar(500)
-  originalName   String?        @db.VarChar(255)
-  mimeType       String         @db.VarChar(100)
-  width          Int?
-  height         Int?
-  sizeBytes      Int
-  altText        String?        @db.VarChar(255)
-  createdAt      DateTime       @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime       @updatedAt @db.Timestamptz(3)
-  deletedAt      DateTime?      @db.Timestamptz(3)
-  categoryImages Category[]     @relation("CategoryImage")
-  brandImages    Brand[]        @relation("BrandImage")
-  countryImages  Country[]      @relation("CountryImage")
-  productMedia   ProductMedia[]
+  id                      String         @id @default(uuid()) @db.Uuid
+  storageKey              String         @unique @db.VarChar(500)
+  originalName            String?        @db.VarChar(255)
+  mimeType                String         @db.VarChar(100)
+  width                   Int?
+  height                  Int?
+  sizeBytes               Int
+  altText                 String?        @db.VarChar(255)
+  createdAt               DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime       @updatedAt @db.Timestamptz(3)
+  deletedAt               DateTime?      @db.Timestamptz(3)
+  categoryImages          Category[]     @relation("CategoryImage")
+  categoryHeroMobileImages Category[]    @relation("CategoryHeroMobileImage")
+  brandImages             Brand[]        @relation("BrandImage")
+  brandHeroImages         Brand[]        @relation("BrandHeroImage")
+  brandHeroMobileImages   Brand[]        @relation("BrandHeroMobileImage")
+  countryImages           Country[]      @relation("CountryImage")
+  productMedia            ProductMedia[]
+  siteSettingsCatalogHero SiteSettings[] @relation("SiteSettingsCatalogHero")
+  siteSettingsCatalogHeroMobile SiteSettings[] @relation("SiteSettingsCatalogHeroMobile")
+  siteSettingsSeoDefaultOg        SiteSettings[] @relation("SiteSettingsSeoDefaultOg")
+  siteSettingsSeoOrganizationLogo SiteSettings[] @relation("SiteSettingsSeoOrganizationLogo")
+  siteSettingsSeoHomeOg           SiteSettings[] @relation("SiteSettingsSeoHomeOg")
+  homepageHeroSlides      HomepageHeroSlide[] @relation("HomepageHeroMedia")
+  homepageHeroMobileSlides HomepageHeroSlide[] @relation("HomepageHeroMobileMedia")
+  storefrontContentHeroes StorefrontContentPage[] @relation("StorefrontContentPageHero")
+  storefrontContentMobileHeroes StorefrontContentPage[] @relation("StorefrontContentPageMobileHero")
+  storefrontContentSeoOg          StorefrontContentPage[] @relation("StorefrontContentPageSeoOg")
+  categorySeoOgImages     Category[] @relation("CategorySeoOgImage")
+  brandSeoOgImages        Brand[]    @relation("BrandSeoOgImage")
+  productSeoOgImages      Product[]  @relation("ProductSeoOgImage")
+  shippingPricingCarrierLogos ShippingPricingSettings[] @relation("ShippingPricingCarrierLogo")
+  shippingCarrierLogos        ShippingCarrier[]        @relation("ShippingCarrierLogo")
+  shipmentCarrierLogoSnapshots Shipment[] @relation("ShipmentCarrierLogoSnapshot")
 
   @@index([deletedAt])
   @@map("media")
+}
+
+model SiteSettings {
+  id                  String   @id @default("site") @db.VarChar(32)
+  headerCategoryIds   String[] @default([]) @db.Uuid
+  announcementEnabled Boolean  @default(false)
+  announcementMessage String?  @db.VarChar(500)
+  announcementCountdownMode String @default("NONE") @db.VarChar(16)
+  announcementDurationSeconds Int?
+  announcementEndsAt DateTime? @db.Timestamptz(3)
+  announcementCtaLabel String? @db.VarChar(100)
+  announcementCtaHref String?  @db.VarChar(1000)
+  catalogHeroEnabled  Boolean  @default(false)
+  catalogHeroTitle    String?  @db.VarChar(200)
+  catalogHeroSubtitle String?  @db.VarChar(500)
+  catalogHeroMediaId  String?  @db.Uuid
+  catalogHeroMobileMediaId String? @db.Uuid
+  galleryName         String?  @db.VarChar(150)
+  footerAbout         String?  @db.VarChar(1000)
+  contactAddress      String?  @db.VarChar(1000)
+  contactPhoneNumbers String[] @default([]) @db.VarChar(20)
+  contactEmail        String?  @db.VarChar(320)
+  instagramUrl        String?  @db.VarChar(1000)
+  telegramUrl         String?  @db.VarChar(1000)
+  baleUrl             String?  @db.VarChar(1000)
+  seoSiteName                 String   @default("نقره حمیدیان") @db.VarChar(120)
+  seoDefaultTitle             String   @default("نقره حمیدیان") @db.VarChar(200)
+  seoTitleTemplate            String   @default("%s | نقره حمیدیان") @db.VarChar(200)
+  seoDefaultDescription       String   @default("فروشگاه آنلاین و گالری نقره حمیدیان") @db.VarChar(500)
+  seoDefaultOgMediaId         String?  @db.Uuid
+  seoOrganizationName         String   @default("نقره حمیدیان") @db.VarChar(200)
+  seoOrganizationLogoMediaId String?  @db.Uuid
+  seoSocialProfileUrls        String[] @default([]) @db.VarChar(1000)
+  seoHomeTitle                String?  @db.VarChar(200)
+  seoHomeDescription          String?  @db.VarChar(500)
+  seoHomeOgMediaId            String?  @db.Uuid
+  manufacturerCountriesEnabled Boolean @default(false)
+  updatedByUserId     String?  @db.Uuid
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @db.Timestamptz(3)
+  catalogHeroMedia    Media?   @relation("SiteSettingsCatalogHero", fields: [catalogHeroMediaId], references: [id], onDelete: SetNull)
+  catalogHeroMobileMedia Media? @relation("SiteSettingsCatalogHeroMobile", fields: [catalogHeroMobileMediaId], references: [id], onDelete: SetNull)
+  seoDefaultOgMedia   Media?   @relation("SiteSettingsSeoDefaultOg", fields: [seoDefaultOgMediaId], references: [id], onDelete: SetNull)
+  seoOrganizationLogoMedia Media? @relation("SiteSettingsSeoOrganizationLogo", fields: [seoOrganizationLogoMediaId], references: [id], onDelete: SetNull)
+  seoHomeOgMedia      Media?   @relation("SiteSettingsSeoHomeOg", fields: [seoHomeOgMediaId], references: [id], onDelete: SetNull)
+  updatedBy           User?    @relation("SiteSettingsUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([catalogHeroMediaId])
+  @@index([catalogHeroMobileMediaId])
+  @@index([seoDefaultOgMediaId])
+  @@index([seoOrganizationLogoMediaId])
+  @@index([seoHomeOgMediaId])
+  @@index([updatedByUserId])
+  @@map("site_settings")
+}
+
+model ShippingPricingSettings {
+  id                  String   @id @default("shipping") @db.VarChar(32)
+  mode                String   @db.VarChar(16)
+  baseCostToman       Int
+  thresholdToman      Int?
+  discountedCostToman Int?
+  carrierName         String?  @db.VarChar(200)
+  carrierTrackingUrl  String?  @db.VarChar(1000)
+  carrierLogoMediaId  String?  @db.Uuid
+  updatedByUserId     String?  @db.Uuid
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @db.Timestamptz(3)
+  updatedBy           User?    @relation("ShippingPricingSettingsUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  carrierLogo         Media?   @relation("ShippingPricingCarrierLogo", fields: [carrierLogoMediaId], references: [id], onDelete: SetNull)
+
+  @@index([carrierLogoMediaId])
+  @@index([updatedByUserId])
+  @@map("shipping_pricing_settings")
+}
+
+model ShippingCarrier {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @unique @db.VarChar(200)
+  trackingUrl     String?  @db.VarChar(1000)
+  logoMediaId     String?  @db.Uuid
+  isActive        Boolean  @default(true)
+  updatedByUserId String?  @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  logo            Media?   @relation("ShippingCarrierLogo", fields: [logoMediaId], references: [id], onDelete: SetNull)
+  updatedBy       User?    @relation("ShippingCarrierUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([isActive, createdAt])
+  @@index([logoMediaId])
+  @@index([updatedByUserId])
+  @@map("shipping_carriers")
+}
+
+model StorefrontContentPage {
+  key             StorefrontContentPageKey @id
+  title           String                   @db.VarChar(200)
+  eyebrow         String?                  @db.VarChar(100)
+  subtitle        String?                  @db.VarChar(500)
+  body            String?
+  heroMediaId     String?                  @db.Uuid
+  heroMobileMediaId String?                @db.Uuid
+  seoTitle        String?                  @db.VarChar(200)
+  seoDescription  String?                  @db.VarChar(500)
+  seoCanonicalPath String?                  @db.VarChar(1000)
+  seoNoIndex       Boolean                  @default(false)
+  seoOgMediaId     String?                  @db.Uuid
+  updatedByUserId String?                  @db.Uuid
+  createdAt       DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                 @updatedAt @db.Timestamptz(3)
+  heroMedia       Media?                   @relation("StorefrontContentPageHero", fields: [heroMediaId], references: [id], onDelete: SetNull)
+  heroMobileMedia Media?                   @relation("StorefrontContentPageMobileHero", fields: [heroMobileMediaId], references: [id], onDelete: SetNull)
+  seoOgMedia       Media?                   @relation("StorefrontContentPageSeoOg", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
+  updatedBy       User?                    @relation("StorefrontContentPageUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  sections        StorefrontContentSection[]
+
+  @@index([heroMediaId])
+  @@index([heroMobileMediaId])
+  @@index([seoOgMediaId])
+  @@index([updatedByUserId])
+  @@map("storefront_content_pages")
+}
+
+model StorefrontContentSection {
+  id        String                   @id @default(uuid()) @db.Uuid
+  pageKey   StorefrontContentPageKey
+  title     String                   @db.VarChar(200)
+  body      String?
+  sortOrder Int                      @default(0)
+  createdAt DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime                 @updatedAt @db.Timestamptz(3)
+  page      StorefrontContentPage    @relation(fields: [pageKey], references: [key], onDelete: Cascade)
+
+  @@index([pageKey, sortOrder])
+  @@map("storefront_content_sections")
 }
 
 model Category {
@@ -209,8 +443,14 @@ model Category {
   name        String            @db.VarChar(150)
   slug        String            @unique @db.VarChar(180)
   description String?
+  seoTitle         String?           @db.VarChar(200)
+  seoDescription   String?           @db.VarChar(500)
+  seoCanonicalPath String?           @db.VarChar(1000)
+  seoNoIndex       Boolean           @default(false)
+  seoOgMediaId     String?           @db.Uuid
   parentId    String?           @db.Uuid
   imageId     String?           @db.Uuid
+  heroMobileImageId String?     @db.Uuid
   sortOrder   Int               @default(0)
   isActive    Boolean           @default(true)
   createdAt   DateTime          @default(now()) @db.Timestamptz(3)
@@ -219,10 +459,15 @@ model Category {
   parent      Category?         @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
   children    Category[]        @relation("CategoryTree")
   image       Media?            @relation("CategoryImage", fields: [imageId], references: [id], onDelete: SetNull)
+  heroMobileImage Media?        @relation("CategoryHeroMobileImage", fields: [heroMobileImageId], references: [id], onDelete: SetNull)
+  seoOgMedia       Media?            @relation("CategorySeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   products    ProductCategory[]
+  homepageFeature HomepageFeaturedCategory?
 
   @@index([parentId])
   @@index([imageId])
+  @@index([heroMobileImageId])
+  @@index([seoOgMediaId])
   @@index([isActive, sortOrder])
   @@index([deletedAt])
   @@map("categories")
@@ -233,15 +478,31 @@ model Brand {
   name        String    @db.VarChar(150)
   slug        String    @unique @db.VarChar(180)
   description String?
+  seoTitle         String?   @db.VarChar(200)
+  seoDescription   String?   @db.VarChar(500)
+  seoCanonicalPath String?   @db.VarChar(1000)
+  seoNoIndex       Boolean   @default(false)
+  seoOgMediaId     String?   @db.Uuid
   imageId     String?   @db.Uuid
+  heroImageId String?   @db.Uuid
+  heroMobileImageId String? @db.Uuid
+  originCountryId String? @db.Uuid
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt   DateTime? @db.Timestamptz(3)
   image       Media?    @relation("BrandImage", fields: [imageId], references: [id], onDelete: SetNull)
+  heroImage   Media?    @relation("BrandHeroImage", fields: [heroImageId], references: [id], onDelete: SetNull)
+  heroMobileImage Media? @relation("BrandHeroMobileImage", fields: [heroMobileImageId], references: [id], onDelete: SetNull)
+  seoOgMedia       Media?    @relation("BrandSeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
+  originCountry Country? @relation("BrandOriginCountry", fields: [originCountryId], references: [id], onDelete: SetNull)
   products    Product[]
 
   @@index([imageId])
+  @@index([heroImageId])
+  @@index([heroMobileImageId])
+  @@index([seoOgMediaId])
+  @@index([originCountryId])
   @@index([isActive])
   @@index([deletedAt])
   @@map("brands")
@@ -252,6 +513,7 @@ model Country {
   name      String    @db.VarChar(120)
   slug      String    @unique @db.VarChar(160)
   isoCode   String    @unique @db.Char(2)
+  description String?
   imageId   String?   @db.Uuid
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now()) @db.Timestamptz(3)
@@ -259,6 +521,8 @@ model Country {
   deletedAt DateTime? @db.Timestamptz(3)
   image     Media?    @relation("CountryImage", fields: [imageId], references: [id], onDelete: SetNull)
   products  Product[]
+  originBrands Brand[] @relation("BrandOriginCountry")
+  homepageManufacturerFeature HomepageManufacturerCountry?
 
   @@index([imageId])
   @@index([isActive])
@@ -288,46 +552,125 @@ model Product {
   slug             String                @unique @db.VarChar(220)
   shortDescription String?
   description      String?
+  seoTitle         String?               @db.VarChar(200)
+  seoDescription   String?               @db.VarChar(500)
+  seoCanonicalPath String?               @db.VarChar(1000)
+  seoNoIndex       Boolean                @default(false)
+  seoOgMediaId     String?               @db.Uuid
   status           ProductStatus         @default(DRAFT)
   sizeMode         SizeMode              @default(NONE)
   brandId          String?               @db.Uuid
   countryId        String?               @db.Uuid
-  salePriceToman   Int?
+  salePriceToman               Int?
+  compareAtPriceToman          Int?
   createdAt        DateTime              @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime              @updatedAt @db.Timestamptz(3)
   deletedAt        DateTime?             @db.Timestamptz(3)
   brand            Brand?                @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  seoOgMedia       Media?                @relation("ProductSeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   country          Country?              @relation(fields: [countryId], references: [id], onDelete: SetNull)
   categories       ProductCategory[]
   variants         ProductVariant[]
   media            ProductMedia[]
+  attributes       ProductAttribute[]
   suppliers        ProductSupplier[]
   priceHistory     ProductPriceHistory[]
+  stockNotificationSubscriptions StockNotificationSubscription[]
+  homepagePopularFeature HomepagePopularProduct?
 
   @@index([brandId])
   @@index([countryId])
+  @@index([seoOgMediaId])
   @@index([status])
   @@index([deletedAt])
   @@map("products")
 }
 
+model ProductAttribute {
+  id        String   @id @default(uuid()) @db.Uuid
+  productId String   @db.Uuid
+  key       String   @db.VarChar(100)
+  value     String   @db.VarChar(500)
+  sortOrder Int
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, key])
+  @@unique([productId, sortOrder])
+  @@map("product_attributes")
+}
+
+model HomepageHeroSlide {
+  id          String                @id @default(uuid()) @db.Uuid
+  placement   HomepageHeroPlacement
+  mediaId     String                @db.Uuid
+  mobileMediaId String?             @db.Uuid
+  title       String?               @db.VarChar(200)
+  subtitle    String?               @db.VarChar(500)
+  actionLabel String?               @db.VarChar(100)
+  actionHref  String?               @db.VarChar(1000)
+  sortOrder   Int                   @default(0)
+  isActive    Boolean               @default(true)
+  createdAt   DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime              @updatedAt @db.Timestamptz(3)
+  media       Media                 @relation("HomepageHeroMedia", fields: [mediaId], references: [id], onDelete: Restrict)
+  mobileMedia Media?                @relation("HomepageHeroMobileMedia", fields: [mobileMediaId], references: [id], onDelete: SetNull)
+
+  @@index([placement, isActive, sortOrder])
+  @@index([mediaId])
+  @@index([mobileMediaId])
+  @@map("homepage_hero_slides")
+}
+
+model HomepageFeaturedCategory {
+  categoryId String   @id @db.Uuid
+  priority   Int      @unique
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("homepage_featured_categories")
+}
+
+model HomepagePopularProduct {
+  productId String   @id @db.Uuid
+  priority  Int      @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("homepage_popular_products")
+}
+
+model HomepageManufacturerCountry {
+  countryId String   @id @db.Uuid
+  priority  Int      @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  country   Country  @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  @@map("homepage_manufacturer_countries")
+}
+
 model ProductVariant {
-  id              String                 @id @default(uuid()) @db.Uuid
-  productId       String                 @db.Uuid
-  sizeId          String?                @db.Uuid
-  sku             String                 @unique @db.VarChar(100)
-  name            String?                @db.VarChar(150)
-  weightGrams     Decimal?               @db.Decimal(10, 3)
-  isActive        Boolean                @default(true)
-  createdAt       DateTime               @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime               @updatedAt @db.Timestamptz(3)
-  deletedAt       DateTime?              @db.Timestamptz(3)
-  product         Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
-  size            Size?                  @relation(fields: [sizeId], references: [id], onDelete: SetNull)
-  inventories     Inventory[]
-  platingEligible Boolean                @default(false)
-  platingOptions  ProductPlatingOption[]
-  orderItems      OrderItem[]
+  id                             String                          @id @default(uuid()) @db.Uuid
+  productId                      String                          @db.Uuid
+  sizeId                         String?                         @db.Uuid
+  sku                            String                          @unique @db.VarChar(100)
+  name                           String?                         @db.VarChar(150)
+  weightGrams                    Decimal?                        @db.Decimal(10, 3)
+  isActive                       Boolean                         @default(true)
+  createdAt                      DateTime                        @default(now()) @db.Timestamptz(3)
+  updatedAt                      DateTime                        @updatedAt @db.Timestamptz(3)
+  deletedAt                      DateTime?                       @db.Timestamptz(3)
+  product                        Product                         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size                           Size?                           @relation(fields: [sizeId], references: [id], onDelete: SetNull)
+  inventories                    Inventory[]
+  platingEligible                Boolean                         @default(false)
+  platingOptions                 ProductPlatingOption[]
+  orderItems                     OrderItem[]
+  stockNotificationSubscriptions StockNotificationSubscription[]
 
   @@unique([productId, sizeId])
   @@index([productId, isActive])
@@ -467,15 +810,17 @@ model ProductSupplier {
 }
 
 model ProductPriceHistory {
-  id                 String   @id @default(uuid()) @db.Uuid
-  productId          String   @db.Uuid
-  changedByUserId    String?  @db.Uuid
-  previousPriceToman Int?
-  newPriceToman      Int
-  reason             String?  @db.VarChar(500)
-  createdAt          DateTime @default(now()) @db.Timestamptz(3)
-  product            Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
-  changedBy          User?    @relation("ProductPriceHistoryActor", fields: [changedByUserId], references: [id], onDelete: SetNull)
+  id                          String   @id @default(uuid()) @db.Uuid
+  productId                   String   @db.Uuid
+  changedByUserId             String?  @db.Uuid
+  previousPriceToman          Int?
+  newPriceToman               Int
+  previousCompareAtPriceToman Int?
+  newCompareAtPriceToman      Int?
+  reason                      String?  @db.VarChar(500)
+  createdAt                   DateTime @default(now()) @db.Timestamptz(3)
+  product                     Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  changedBy                   User?    @relation("ProductPriceHistoryActor", fields: [changedByUserId], references: [id], onDelete: SetNull)
 
   @@index([productId, createdAt])
   @@index([changedByUserId])
@@ -596,9 +941,13 @@ model Order {
   paidAt                DateTime?                     @db.Timestamptz(3)
   cancelledAt           DateTime?                     @db.Timestamptz(3)
   deliveredAt           DateTime?                     @db.Timestamptz(3)
+  returnAuthorizedAt    DateTime?                     @db.Timestamptz(3)
+  returnAuthorizedByUserId String?                    @db.Uuid
+  returnAuthorizationReason String?                   @db.VarChar(500)
   createdAt             DateTime                      @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime                      @updatedAt @db.Timestamptz(3)
   user                  User                          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  returnAuthorizedBy    User?                         @relation("OrderReturnAuthorizer", fields: [returnAuthorizedByUserId], references: [id], onDelete: SetNull)
   warehouse             Warehouse                     @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
   shippingAddress       OrderAddress?
   items                 OrderItem[]
@@ -617,6 +966,7 @@ model Order {
   @@index([userId, createdAt])
   @@index([status, createdAt])
   @@index([reservationExpiresAt])
+  @@index([returnAuthorizedByUserId])
   @@map("orders")
 }
 
@@ -783,10 +1133,19 @@ model SupplierCredit {
 
 enum NotificationOutboxEventType {
   PAYMENT_VERIFIED
+  PAYMENT_RECEIPT_SUBMITTED
   SHIPMENT_TRACKING_AVAILABLE
   ORDER_SHIPPED
   ORDER_DELIVERED
   PAYMENT_RECONCILIATION_REQUIRED
+  STOCK_AVAILABLE
+}
+
+enum StockNotificationStatus {
+  ACTIVE
+  QUEUED
+  NOTIFIED
+  CANCELLED
 }
 
 enum NotificationOutboxStatus {
@@ -835,6 +1194,7 @@ enum SupplierSettlementStatus {
 
 enum PaymentStatus {
   PENDING
+  AWAITING_REVIEW
   PAID
   PARTIALLY_REFUNDED
   CANCELLED
@@ -852,6 +1212,7 @@ enum PaymentRefundStatus {
 enum PaymentAttemptStatus {
   CREATED
   REDIRECTED
+  AWAITING_REVIEW
   VERIFIED
   FAILED
   RECONCILIATION_REQUIRED
@@ -921,6 +1282,13 @@ model PaymentAttempt {
   failureCode                        String?                @db.VarChar(120)
   failureMessage                     String?                @db.VarChar(500)
   verifiedAt                         DateTime?              @db.Timestamptz(3)
+  receiptData                        Bytes?                 @db.ByteA
+  receiptMimeType                    String?                @db.VarChar(100)
+  receiptOriginalName                String?                @db.VarChar(255)
+  receiptSizeBytes                   Int?
+  receiptUploadedAt                  DateTime?              @db.Timestamptz(3)
+  receiptVerifiedAt                  DateTime?              @db.Timestamptz(3)
+  receiptVerifiedByUserId            String?                @db.Uuid
   initiationRecoveryResolution       String?                @db.VarChar(32)
   initiationRecoveryNote             String?                @db.VarChar(400)
   initiationRecoveryResolvedByUserId String?                @db.Uuid
@@ -930,10 +1298,13 @@ model PaymentAttempt {
   payment                            Payment                @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   reconciliation                     PaymentReconciliation?
   initiationRecoveryResolvedBy       User?                  @relation("PaymentInitiationRecoveryResolver", fields: [initiationRecoveryResolvedByUserId], references: [id], onDelete: Restrict)
+  receiptVerifiedBy                  User?                  @relation("PaymentReceiptVerifier", fields: [receiptVerifiedByUserId], references: [id], onDelete: Restrict)
 
   @@unique([provider, authority])
   @@index([paymentId, createdAt])
   @@index([status, createdAt])
+  @@index([receiptUploadedAt])
+  @@index([receiptVerifiedByUserId])
   @@index([initiationRecoveryResolvedByUserId])
   @@index([initiationRecoveryResolvedAt])
   @@map("payment_attempts")
@@ -958,7 +1329,7 @@ model PaymentReconciliation {
   reason              String                           @db.VarChar(500)
   status              PaymentReconciliationStatus      @default(OPEN)
   resolution          PaymentReconciliationResolution?
-  externalReference   String?                       @db.VarChar(255)
+  externalReference   String?                          @db.VarChar(255)
   resolutionNote      String?                          @db.VarChar(1000)
   resolvedByUserId    String?                          @db.Uuid
   resolvedAt          DateTime?                        @db.Timestamptz(3)
@@ -1131,20 +1502,20 @@ model SupplierSettlementItem {
 }
 
 model NotificationOutboxEvent {
-  id               String                      @id @default(uuid()) @db.Uuid
+  id               String                       @id @default(uuid()) @db.Uuid
   type             NotificationOutboxEventType
-  aggregateType    String                      @db.VarChar(64)
-  aggregateId      String                      @db.Uuid
-  deduplicationKey String                      @unique @db.VarChar(255)
+  aggregateType    String                       @db.VarChar(64)
+  aggregateId      String                       @db.Uuid
+  deduplicationKey String                       @unique @db.VarChar(255)
   payload          Json
-  status           NotificationOutboxStatus    @default(PENDING)
-  attempts         Int                         @default(0)
-  nextAttemptAt    DateTime                    @default(now()) @db.Timestamptz(3)
-  claimedAt        DateTime?                   @db.Timestamptz(3)
-  processedAt      DateTime?                   @db.Timestamptz(3)
-  lastError        String?                     @db.VarChar(1000)
-  createdAt        DateTime                    @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime                    @updatedAt @db.Timestamptz(3)
+  status           NotificationOutboxStatus     @default(PENDING)
+  attempts         Int                          @default(0)
+  nextAttemptAt    DateTime                     @default(now()) @db.Timestamptz(3)
+  claimedAt        DateTime?                    @db.Timestamptz(3)
+  processedAt      DateTime?                    @db.Timestamptz(3)
+  lastError        String?                      @db.VarChar(1000)
+  createdAt        DateTime                     @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime                     @updatedAt @db.Timestamptz(3)
   recoveries       NotificationOutboxRecovery[]
 
   @@index([status, nextAttemptAt])
@@ -1153,28 +1524,48 @@ model NotificationOutboxEvent {
   @@map("notification_outbox_events")
 }
 
+model StockNotificationSubscription {
+  id         String                      @id @default(uuid()) @db.Uuid
+  userId     String                      @db.Uuid
+  productId  String                      @db.Uuid
+  variantId  String?                     @db.Uuid
+  status     StockNotificationStatus     @default(ACTIVE)
+  queuedAt   DateTime?                   @db.Timestamptz(3)
+  notifiedAt DateTime?                   @db.Timestamptz(3)
+  createdAt  DateTime                    @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime                    @updatedAt @db.Timestamptz(3)
+  user       User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product    Product                     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant    ProductVariant?             @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([productId, status])
+  @@index([variantId, status])
+  @@map("stock_notification_subscriptions")
+}
+
 model OperationalAlertOutboxEvent {
-  id                  String                   @id @default(uuid()) @db.Uuid
-  orderId             String                   @db.Uuid
-  recipientUserId     String?                  @db.Uuid
-  recipientPhone      String                   @db.VarChar(20)
-  code                String                   @db.VarChar(80)
+  id                  String                           @id @default(uuid()) @db.Uuid
+  orderId             String                           @db.Uuid
+  recipientUserId     String?                          @db.Uuid
+  recipientPhone      String                           @db.VarChar(20)
+  code                String                           @db.VarChar(80)
   level               OperationalAlertLevel
-  priority            String                   @db.VarChar(16)
-  incidentFingerprint String                   @db.VarChar(180)
-  deduplicationKey    String                   @unique @db.VarChar(255)
-  dueAt               DateTime?                @db.Timestamptz(3)
+  priority            String                           @db.VarChar(16)
+  incidentFingerprint String                           @db.VarChar(180)
+  deduplicationKey    String                           @unique @db.VarChar(255)
+  dueAt               DateTime?                        @db.Timestamptz(3)
   payload             Json
-  status              NotificationOutboxStatus @default(PENDING)
-  attempts            Int                      @default(0)
-  nextAttemptAt       DateTime                 @default(now()) @db.Timestamptz(3)
-  claimedAt           DateTime?                @db.Timestamptz(3)
-  processedAt         DateTime?                @db.Timestamptz(3)
-  lastError           String?                  @db.VarChar(1000)
-  createdAt           DateTime                 @default(now()) @db.Timestamptz(3)
-  updatedAt           DateTime                 @updatedAt @db.Timestamptz(3)
-  order               Order                    @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  recipient           User?                    @relation("OperationalAlertRecipient", fields: [recipientUserId], references: [id], onDelete: SetNull)
+  status              NotificationOutboxStatus         @default(PENDING)
+  attempts            Int                              @default(0)
+  nextAttemptAt       DateTime                         @default(now()) @db.Timestamptz(3)
+  claimedAt           DateTime?                        @db.Timestamptz(3)
+  processedAt         DateTime?                        @db.Timestamptz(3)
+  lastError           String?                          @db.VarChar(1000)
+  createdAt           DateTime                         @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime                         @updatedAt @db.Timestamptz(3)
+  order               Order                            @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  recipient           User?                            @relation("OperationalAlertRecipient", fields: [recipientUserId], references: [id], onDelete: SetNull)
   recoveries          OperationalAlertOutboxRecovery[]
 
   @@index([status, nextAttemptAt])
@@ -1186,15 +1577,15 @@ model OperationalAlertOutboxEvent {
 }
 
 model NotificationOutboxRecovery {
-  id               String                               @id @default(uuid()) @db.Uuid
-  eventId          String                               @db.Uuid
-  resolution       NotificationOutboxRecoveryResolution
+  id                    String                               @id @default(uuid()) @db.Uuid
+  eventId               String                               @db.Uuid
+  resolution            NotificationOutboxRecoveryResolution
   note                  String                               @db.VarChar(1000)
   unknownReasonSnapshot String?                              @db.VarChar(1000)
   resolvedByUserId      String                               @db.Uuid
-  createdAt        DateTime                             @default(now()) @db.Timestamptz(3)
-  event            NotificationOutboxEvent              @relation(fields: [eventId], references: [id], onDelete: Restrict)
-  resolvedBy       User                                 @relation("NotificationOutboxRecoveryResolver", fields: [resolvedByUserId], references: [id], onDelete: Restrict)
+  createdAt             DateTime                             @default(now()) @db.Timestamptz(3)
+  event                 NotificationOutboxEvent              @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  resolvedBy            User                                 @relation("NotificationOutboxRecoveryResolver", fields: [resolvedByUserId], references: [id], onDelete: Restrict)
 
   @@index([eventId, createdAt])
   @@index([resolvedByUserId, createdAt])
@@ -1202,15 +1593,15 @@ model NotificationOutboxRecovery {
 }
 
 model OperationalAlertOutboxRecovery {
-  id               String                               @id @default(uuid()) @db.Uuid
-  eventId          String                               @db.Uuid
-  resolution       NotificationOutboxRecoveryResolution
+  id                    String                               @id @default(uuid()) @db.Uuid
+  eventId               String                               @db.Uuid
+  resolution            NotificationOutboxRecoveryResolution
   note                  String                               @db.VarChar(1000)
   unknownReasonSnapshot String?                              @db.VarChar(1000)
   resolvedByUserId      String                               @db.Uuid
-  createdAt        DateTime                             @default(now()) @db.Timestamptz(3)
-  event            OperationalAlertOutboxEvent          @relation(fields: [eventId], references: [id], onDelete: Restrict)
-  resolvedBy       User                                 @relation("OperationalAlertOutboxRecoveryResolver", fields: [resolvedByUserId], references: [id], onDelete: Restrict)
+  createdAt             DateTime                             @default(now()) @db.Timestamptz(3)
+  event                 OperationalAlertOutboxEvent          @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  resolvedBy            User                                 @relation("OperationalAlertOutboxRecoveryResolver", fields: [resolvedByUserId], references: [id], onDelete: Restrict)
 
   @@index([eventId, createdAt])
   @@index([resolvedByUserId, createdAt])
@@ -1280,6 +1671,22 @@ model PaymentGatewaySetting {
   @@map("payment_gateway_settings")
 }
 
+model CardToCardAccount {
+  id              String   @id @default(uuid()) @db.Uuid
+  cardNumber      String   @unique @db.VarChar(16)
+  holderName      String   @db.VarChar(150)
+  bankName        String   @db.VarChar(100)
+  isActive        Boolean  @default(false)
+  updatedByUserId String?  @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  updatedBy       User?    @relation("CardToCardAccountUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([isActive])
+  @@index([updatedByUserId])
+  @@map("card_to_card_accounts")
+}
+
 enum ShipmentStatus {
   PENDING
   READY
@@ -1310,6 +1717,10 @@ model Shipment {
   estimatedDeliveryDays   Int?
   providerShipmentId      String?                       @db.VarChar(255)
   trackingCode            String?                       @db.VarChar(255)
+  carrierNameSnapshot     String?                       @db.VarChar(200)
+  carrierTrackingUrlSnapshot String?                    @db.VarChar(1000)
+  carrierLogoMediaIdSnapshot String?                    @db.Uuid
+  carrierPresentationSnapshottedAt DateTime?            @db.Timestamptz(3)
   providerCreateError     String?                       @db.VarChar(500)
   creationAttemptedAt     DateTime?                     @db.Timestamptz(3)
   lastProviderStatus      String?                       @db.VarChar(255)
@@ -1323,6 +1734,7 @@ model Shipment {
   createdAt               DateTime                      @default(now()) @db.Timestamptz(3)
   updatedAt               DateTime                      @updatedAt @db.Timestamptz(3)
   order                   Order                         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  carrierLogoSnapshot     Media?                        @relation("ShipmentCarrierLogoSnapshot", fields: [carrierLogoMediaIdSnapshot], references: [id], onDelete: SetNull)
   statusHistory           ShipmentStatusHistory[]
 
   @@index([status, createdAt])
@@ -1331,6 +1743,7 @@ model Shipment {
   @@index([providerCreationState, creationAttemptedAt])
   @@index([provider, providerShipmentId])
   @@index([trackingCode])
+  @@index([carrierLogoMediaIdSnapshot])
   @@map("shipments")
 }
 

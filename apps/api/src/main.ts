@@ -1,22 +1,17 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { configureApp, configureHttpServer, getListenOptions } from './app.setup';
+import { configureSwagger } from './openapi';
 
 const bootstrapLogger = new Logger('Bootstrap');
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   configureApp(app);
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Hamidian Silver API')
-    .setDescription('Backend API documentation')
-    .setVersion('1.0')
-    .build();
-
-  SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, swaggerConfig));
+  configureSwagger(app);
   app.enableShutdownHooks();
 
   const { host, port } = getListenOptions(app);

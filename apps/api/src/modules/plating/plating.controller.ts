@@ -28,6 +28,12 @@ export class PlatingController {
     return this.platingService.listRates();
   }
 
+  @Get('catalog')
+  @RequirePermissions(PERMISSION_CODES.PRICING_READ)
+  listCatalogConfiguration() {
+    return this.platingService.listCatalogConfiguration();
+  }
+
   @Put('rates/:type')
   @RequirePermissions(PERMISSION_CODES.PRICING_WRITE)
   setRate(

@@ -1,15 +1,19 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   ArrayUnique,
   IsArray,
   IsBoolean,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   Length,
+  Matches,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -57,6 +61,20 @@ export class CreateProductMediaDto {
   altText?: string;
 }
 
+export class ProductAttributeInputDto {
+  @IsString()
+  @Length(1, 100)
+  key!: string;
+
+  @IsString()
+  @Length(1, 500)
+  value!: string;
+
+  @IsInt()
+  @Min(1)
+  sortOrder!: number;
+}
+
 export class CreateProductDto {
   @IsString()
   @Length(1, 200)
@@ -75,6 +93,30 @@ export class CreateProductDto {
   description?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  seoTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  seoDescription?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  @Matches(/^\/(?!\/)[^\s?#]*$/)
+  seoCanonicalPath?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  seoNoIndex?: boolean;
+
+  @IsOptional()
+  @IsUUID('4')
+  seoOgMediaId?: string;
+
+  @IsOptional()
   @IsEnum(ProductStatus)
   status?: ProductStatus;
 
@@ -88,6 +130,16 @@ export class CreateProductDto {
   @IsOptional()
   @IsUUID('4')
   countryId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  salePriceToman?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  compareAtPriceToman?: number;
 
   @IsOptional()
   @IsArray()
@@ -107,4 +159,11 @@ export class CreateProductDto {
   @ValidateNested({ each: true })
   @Type(() => CreateProductMediaDto)
   media?: CreateProductMediaDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(30)
+  @ValidateNested({ each: true })
+  @Type(() => ProductAttributeInputDto)
+  attributes?: ProductAttributeInputDto[];
 }
