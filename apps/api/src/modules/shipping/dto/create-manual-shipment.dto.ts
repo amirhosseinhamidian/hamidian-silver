@@ -1,9 +1,14 @@
-import { IsInt, IsOptional, IsString, Length, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, ValidateIf } from 'class-validator';
 
 export class CreateManualShipmentDto {
+  @IsOptional()
+  @IsUUID('4')
+  carrierId?: string;
+
+  @ValidateIf((dto: CreateManualShipmentDto) => !dto.carrierId)
   @IsString()
   @Length(2, 200)
-  serviceName!: string;
+  serviceName?: string;
 
   @IsOptional()
   @IsInt()

@@ -62,6 +62,7 @@ describe('admin navigation', () => {
       'finance',
       'users',
       'roles',
+      'shipping-settings',
       'settings',
       'audit',
     ]);
@@ -86,6 +87,7 @@ describe('admin navigation', () => {
     expect(getAdminSection('products')?.permissions).toEqual(['catalog.read']);
     expect(getAdminSection('variants')?.permissions).toEqual(['catalog.read']);
     expect(getAdminSection('payment-gateways')?.permissions).toEqual(['settings.read']);
+    expect(getAdminSection('shipping-settings')?.permissions).toEqual(['settings.read']);
     expect(getAdminSection('transactions')?.permissions).toEqual(['finance.read']);
     expect(getAdminSection('reconciliations')?.permissions).toEqual(['finance.read']);
     expect(getAdminSection('refunds')?.permissions).toEqual(['finance.read']);

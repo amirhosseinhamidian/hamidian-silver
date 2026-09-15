@@ -62,6 +62,7 @@ model User {
   stockNotificationSubscriptions      StockNotificationSubscription[]
   storefrontContentPageChanges        StorefrontContentPage[]           @relation("StorefrontContentPageUpdater")
   shippingPricingSettingsChanges      ShippingPricingSettings[]         @relation("ShippingPricingSettingsUpdater")
+  shippingCarriersUpdated             ShippingCarrier[]                 @relation("ShippingCarrierUpdater")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -294,6 +295,9 @@ model Media {
   categorySeoOgImages     Category[] @relation("CategorySeoOgImage")
   brandSeoOgImages        Brand[]    @relation("BrandSeoOgImage")
   productSeoOgImages      Product[]  @relation("ProductSeoOgImage")
+  shippingPricingCarrierLogos ShippingPricingSettings[] @relation("ShippingPricingCarrierLogo")
+  shippingCarrierLogos        ShippingCarrier[]        @relation("ShippingCarrierLogo")
+  shipmentCarrierLogoSnapshots Shipment[] @relation("ShipmentCarrierLogoSnapshot")
 
   @@index([deletedAt])
   @@map("media")
@@ -359,13 +363,36 @@ model ShippingPricingSettings {
   baseCostToman       Int
   thresholdToman      Int?
   discountedCostToman Int?
+  carrierName         String?  @db.VarChar(200)
+  carrierTrackingUrl  String?  @db.VarChar(1000)
+  carrierLogoMediaId  String?  @db.Uuid
   updatedByUserId     String?  @db.Uuid
   createdAt           DateTime @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime @updatedAt @db.Timestamptz(3)
   updatedBy           User?    @relation("ShippingPricingSettingsUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  carrierLogo         Media?   @relation("ShippingPricingCarrierLogo", fields: [carrierLogoMediaId], references: [id], onDelete: SetNull)
 
+  @@index([carrierLogoMediaId])
   @@index([updatedByUserId])
   @@map("shipping_pricing_settings")
+}
+
+model ShippingCarrier {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @unique @db.VarChar(200)
+  trackingUrl     String?  @db.VarChar(1000)
+  logoMediaId     String?  @db.Uuid
+  isActive        Boolean  @default(true)
+  updatedByUserId String?  @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  logo            Media?   @relation("ShippingCarrierLogo", fields: [logoMediaId], references: [id], onDelete: SetNull)
+  updatedBy       User?    @relation("ShippingCarrierUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([isActive, createdAt])
+  @@index([logoMediaId])
+  @@index([updatedByUserId])
+  @@map("shipping_carriers")
 }
 
 model StorefrontContentPage {
@@ -1690,6 +1717,10 @@ model Shipment {
   estimatedDeliveryDays   Int?
   providerShipmentId      String?                       @db.VarChar(255)
   trackingCode            String?                       @db.VarChar(255)
+  carrierNameSnapshot     String?                       @db.VarChar(200)
+  carrierTrackingUrlSnapshot String?                    @db.VarChar(1000)
+  carrierLogoMediaIdSnapshot String?                    @db.Uuid
+  carrierPresentationSnapshottedAt DateTime?            @db.Timestamptz(3)
   providerCreateError     String?                       @db.VarChar(500)
   creationAttemptedAt     DateTime?                     @db.Timestamptz(3)
   lastProviderStatus      String?                       @db.VarChar(255)
@@ -1703,6 +1734,7 @@ model Shipment {
   createdAt               DateTime                      @default(now()) @db.Timestamptz(3)
   updatedAt               DateTime                      @updatedAt @db.Timestamptz(3)
   order                   Order                         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  carrierLogoSnapshot     Media?                        @relation("ShipmentCarrierLogoSnapshot", fields: [carrierLogoMediaIdSnapshot], references: [id], onDelete: SetNull)
   statusHistory           ShipmentStatusHistory[]
 
   @@index([status, createdAt])
@@ -1711,6 +1743,7 @@ model Shipment {
   @@index([providerCreationState, creationAttemptedAt])
   @@index([provider, providerShipmentId])
   @@index([trackingCode])
+  @@index([carrierLogoMediaIdSnapshot])
   @@map("shipments")
 }
 

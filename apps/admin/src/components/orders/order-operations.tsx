@@ -81,9 +81,11 @@ export function OrderOperations({ order, canUpdateStatus, canCancel }: OrderOper
   const nextStatus = nextOrderStatuses[order.status];
   const transitionBlocker = nextStatus ? statusTransitionBlocker(order, nextStatus) : null;
   const returnEligible = order.status === 'SHIPPED' || order.status === 'DELIVERED';
+  const canCancelPendingOrder =
+    canCancel && order.status === 'PENDING_PAYMENT' && order.payment?.status !== 'AWAITING_REVIEW';
   const hasAvailableAction =
     (canUpdateStatus && Boolean(nextStatus)) ||
-    (canCancel && order.status === 'PENDING_PAYMENT') ||
+    canCancelPendingOrder ||
     (canUpdateStatus && returnEligible && !order.returnAuthorization);
 
   if (!hasAvailableAction && !order.returnAuthorization) return null;
@@ -194,7 +196,7 @@ export function OrderOperations({ order, canUpdateStatus, canCancel }: OrderOper
             </div>
           ) : null}
 
-          {canCancel && order.status === 'PENDING_PAYMENT' ? (
+          {canCancelPendingOrder ? (
             <div className="rounded-[var(--admin-radius-md)] border border-red-200 bg-red-50/50 p-3">
               <p className="text-sm font-bold text-[var(--admin-color-danger)]">
                 لغو مدیریتی سفارش

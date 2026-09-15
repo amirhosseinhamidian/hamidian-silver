@@ -22,3 +22,15 @@ export async function forwardShippingMutation(
     return Response.json({ message: 'Shipping service is unavailable.' }, { status: 502 });
   }
 }
+
+export function forwardShippingCarrierMutation(
+  request: Request,
+  carrierId?: string,
+): Promise<Response> {
+  const suffix = carrierId ? `/${encodeURIComponent(carrierId)}` : '';
+  return forwardShippingMutation(
+    request,
+    `/api/v1/shipping/carriers${suffix}`,
+    request.method as 'POST' | 'PATCH',
+  );
+}

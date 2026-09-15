@@ -7,6 +7,7 @@ describe('ShippingPricingService', () => {
   const actorUserId = '10000000-0000-4000-8000-000000000001';
   const prisma = {
     shippingPricingSettings: { findUnique: jest.fn(), upsert: jest.fn() },
+    media: { findFirst: jest.fn() },
   };
 
   beforeEach(() => jest.clearAllMocks());
@@ -24,6 +25,10 @@ describe('ShippingPricingService', () => {
       baseCostToman: 85_000,
       thresholdToman: null,
       discountedCostToman: null,
+      carrierName: null,
+      carrierTrackingUrl: null,
+      carrierLogoMediaId: null,
+      carrierLogo: null,
       source: 'ENVIRONMENT',
       updatedByUserId: null,
       updatedAt: null,

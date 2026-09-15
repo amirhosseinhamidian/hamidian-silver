@@ -16,3 +16,7 @@ export function formatTomanPrice(value: number | null): string {
 
   return `${formatPersianGroupedInteger(value)} تومان`;
 }
+
+export function formatShippingToman(value: number): string {
+  return value === 0 ? 'رایگان' : formatTomanPrice(value);
+}

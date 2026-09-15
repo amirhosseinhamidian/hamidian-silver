@@ -2484,6 +2484,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/shipping/carriers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ShippingController_listCarriers_v1"];
+        put?: never;
+        post: operations["ShippingController_createCarrier_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/shipping/carriers/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ShippingController_listActiveCarriers_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/shipping/carriers/{carrierId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["ShippingController_updateCarrier_v1"];
+        trace?: never;
+    };
     "/api/v1/shipping/pricing": {
         parameters: {
             query?: never;
@@ -3623,6 +3671,11 @@ export interface components {
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
             payment: components["schemas"]["CustomerOrderPaymentDto"] | null;
             trackingCode: string | null;
+            shippingMethodName: string | null;
+            /** Format: uri */
+            shippingTrackingUrl: string | null;
+            /** Format: uri */
+            shippingCarrierLogoUrl: string | null;
             /** Format: date-time */
             paidAt: string | null;
             /** Format: date-time */
@@ -3653,6 +3706,11 @@ export interface components {
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
             payment: components["schemas"]["CustomerOrderPaymentDto"] | null;
             trackingCode: string | null;
+            shippingMethodName: string | null;
+            /** Format: uri */
+            shippingTrackingUrl: string | null;
+            /** Format: uri */
+            shippingCarrierLogoUrl: string | null;
             /** Format: date-time */
             paidAt: string | null;
             /** Format: date-time */
@@ -3882,12 +3940,59 @@ export interface components {
             thresholdToman: number | null;
             discountedCostToman: number | null;
         };
+        AdminSiteMediaDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uri */
+            url: string | null;
+            mimeType: string;
+            altText: string | null;
+        };
+        ShippingCarrierDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uri */
+            trackingUrl: string | null;
+            /** Format: uuid */
+            logoMediaId: string | null;
+            logo: components["schemas"]["AdminSiteMediaDto"] | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            name: string;
+            isActive: boolean;
+        };
+        CreateShippingCarrierDto: {
+            name: string;
+            /** Format: uri */
+            trackingUrl?: string | null;
+            /** Format: uuid */
+            logoMediaId?: string | null;
+            /** @default true */
+            isActive: boolean;
+        };
+        UpdateShippingCarrierDto: {
+            name?: string;
+            /** Format: uri */
+            trackingUrl?: string | null;
+            /** Format: uuid */
+            logoMediaId?: string | null;
+            /** @default true */
+            isActive: boolean;
+        };
         AdminShippingPricingSettingsDto: {
             /** @enum {string} */
             mode: "FREE" | "FIXED";
             baseCostToman: number;
             thresholdToman: number | null;
             discountedCostToman: number | null;
+            carrierName: string | null;
+            /** Format: uri */
+            carrierTrackingUrl: string | null;
+            /** Format: uuid */
+            carrierLogoMediaId: string | null;
+            carrierLogo: components["schemas"]["AdminSiteMediaDto"] | null;
             /** @enum {string} */
             source: "DATABASE" | "ENVIRONMENT";
             /** Format: uuid */
@@ -3906,7 +4011,9 @@ export interface components {
             serviceCode: string;
         };
         CreateManualShipmentDto: {
-            serviceName: string;
+            /** Format: uuid */
+            carrierId?: string;
+            serviceName?: string;
             estimatedDeliveryDays?: number;
             reason: string;
         };
@@ -3920,14 +4027,6 @@ export interface components {
             trackingCode?: string;
             providerShipmentId?: string;
             reason?: string;
-        };
-        AdminSiteMediaDto: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uri */
-            url: string | null;
-            mimeType: string;
-            altText: string | null;
         };
         PublicSiteSettingsHeaderCategoryDto: {
             /** Format: uuid */
@@ -8349,6 +8448,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ShippingPricingSettingsDto"];
+                };
+            };
+        };
+    };
+    ShippingController_listCarriers_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShippingCarrierDto"][];
+                };
+            };
+        };
+    };
+    ShippingController_createCarrier_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateShippingCarrierDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShippingCarrierDto"];
+                };
+            };
+        };
+    };
+    ShippingController_listActiveCarriers_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShippingCarrierDto"][];
+                };
+            };
+        };
+    };
+    ShippingController_updateCarrier_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                carrierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateShippingCarrierDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShippingCarrierDto"];
                 };
             };
         };

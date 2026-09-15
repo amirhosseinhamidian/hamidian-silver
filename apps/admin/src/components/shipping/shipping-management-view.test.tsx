@@ -82,9 +82,9 @@ describe('ShippingManagementView', () => {
     vi.stubGlobal('fetch', vi.fn());
   });
 
-  it('shows the manual policy and responsive shipping queue', () => {
+  it('shows the responsive shipping queue without provider-specific warnings', () => {
     render(<ShippingManagementView orders={[order()]} failed={false} canCreate canUpdateStatus />);
-    expect(screen.getByText('ارسال دستی بدون Postex')).toBeInTheDocument();
+    expect(screen.queryByText(/Postex/i)).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'کارت‌های مدیریت ارسال' })).toHaveClass('md:hidden');
   });
 
@@ -103,6 +103,47 @@ describe('ShippingManagementView', () => {
         method: 'POST',
         body: JSON.stringify({
           serviceName: 'ارسال استاندارد',
+          estimatedDeliveryDays: 3,
+          reason: 'بسته آماده تحویل است',
+        }),
+      }),
+    );
+  });
+
+  it('uses a configured active carrier when creating a manual shipment', async () => {
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(new Response('{}', { status: 201 }));
+    render(
+      <ShippingManagementView
+        orders={[order()]}
+        failed={false}
+        canCreate
+        canUpdateStatus
+        carriers={[
+          {
+            id: '11111111-1111-4111-8111-111111111111',
+            name: 'ماهکس',
+            trackingUrl: 'https://mahex.com/tracking',
+            logoMediaId: null,
+            logo: null,
+            isActive: true,
+            createdAt: '2026-09-15T00:00:00.000Z',
+            updatedAt: '2026-09-15T00:00:00.000Z',
+          },
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getAllByRole('button', { name: 'ساخت مرسوله دستی' })[0]);
+    expect(screen.getByLabelText(/شرکت ارسال‌کننده/)).toHaveTextContent('ماهکس');
+    fireEvent.change(screen.getByLabelText(/یادداشت عملیات/), {
+      target: { value: 'بسته آماده تحویل است' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/shipping/orders/order-1/manual',
+      expect.objectContaining({
+        body: JSON.stringify({
+          carrierId: '11111111-1111-4111-8111-111111111111',
           estimatedDeliveryDays: 3,
           reason: 'بسته آماده تحویل است',
         }),

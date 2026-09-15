@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import {
   AdminShippingPricingSettingsDto,
   ShippingPricingSettingsDto,
@@ -18,6 +19,14 @@ type ShippingPricingRecord = Readonly<{
   baseCostToman: number;
   thresholdToman: number | null;
   discountedCostToman: number | null;
+  carrierName: string | null;
+  carrierTrackingUrl: string | null;
+  carrierLogoMediaId: string | null;
+  carrierLogo: Readonly<{
+    storageKey: string;
+    mimeType: string;
+    altText: string | null;
+  }> | null;
   updatedByUserId: string | null;
   updatedAt: Date;
 }>;
@@ -29,6 +38,7 @@ export class ShippingPricingService {
   constructor(
     private readonly prisma: PrismaService,
     @Optional() private readonly config?: ConfigService,
+    @Optional() private readonly publicMediaUrl?: PublicMediaUrlService,
   ) {}
 
   async getPublicSettings(): Promise<ShippingPricingSettingsDto> {
@@ -40,6 +50,10 @@ export class ShippingPricingService {
     if (!settings) {
       return {
         ...this.environmentFallback(),
+        carrierName: null,
+        carrierTrackingUrl: null,
+        carrierLogoMediaId: null,
+        carrierLogo: null,
         source: 'ENVIRONMENT',
         updatedByUserId: null,
         updatedAt: null,
@@ -48,6 +62,7 @@ export class ShippingPricingService {
 
     return {
       ...this.projectSettings(settings),
+      ...this.projectCarrierSettings(settings),
       source: 'DATABASE',
       updatedByUserId: settings.updatedByUserId,
       updatedAt: settings.updatedAt.toISOString(),
@@ -63,13 +78,40 @@ export class ShippingPricingService {
       where: { id: SHIPPING_SETTINGS_ID },
       create: { id: SHIPPING_SETTINGS_ID, ...policy, updatedByUserId: actorUserId },
       update: { ...policy, updatedByUserId: actorUserId },
+      include: { carrierLogo: true },
     });
 
     return {
       ...this.projectSettings(settings),
+      ...this.projectCarrierSettings(settings),
       source: 'DATABASE',
       updatedByUserId: settings.updatedByUserId,
       updatedAt: settings.updatedAt.toISOString(),
+    };
+  }
+
+  async getCarrierSnapshot(reader: ShippingPricingReader = this.prisma) {
+    const settings = await reader.shippingPricingSettings.findUnique({
+      where: { id: SHIPPING_SETTINGS_ID },
+      select: { carrierName: true, carrierTrackingUrl: true, carrierLogoMediaId: true },
+    });
+    return {
+      carrierNameSnapshot: settings?.carrierName ?? null,
+      carrierTrackingUrlSnapshot: settings?.carrierTrackingUrl ?? null,
+      carrierLogoMediaIdSnapshot: settings?.carrierLogoMediaId ?? null,
+      carrierPresentationSnapshottedAt: new Date(),
+    };
+  }
+
+  async getPublicCarrierPresentation() {
+    const settings = await this.findSettings(this.prisma);
+    if (!settings) return null;
+    return {
+      name: settings.carrierName,
+      trackingUrl: settings.carrierTrackingUrl,
+      logoUrl: settings.carrierLogo
+        ? (this.publicMediaUrl?.resolve(settings.carrierLogo.storageKey) ?? null)
+        : null,
     };
   }
 
@@ -97,7 +139,10 @@ export class ShippingPricingService {
   }
 
   private findSettings(reader: ShippingPricingReader): Promise<ShippingPricingRecord | null> {
-    return reader.shippingPricingSettings.findUnique({ where: { id: SHIPPING_SETTINGS_ID } });
+    return reader.shippingPricingSettings.findUnique({
+      where: { id: SHIPPING_SETTINGS_ID },
+      include: { carrierLogo: true },
+    });
   }
 
   private environmentFallback(): ShippingPricingSettingsDto {
@@ -118,6 +163,22 @@ export class ShippingPricingService {
       baseCostToman: mode === 'FREE' ? 0 : settings.baseCostToman,
       thresholdToman: mode === 'FIXED' ? settings.thresholdToman : null,
       discountedCostToman: mode === 'FIXED' ? settings.discountedCostToman : null,
+    };
+  }
+
+  private projectCarrierSettings(settings: ShippingPricingRecord) {
+    return {
+      carrierName: settings.carrierName,
+      carrierTrackingUrl: settings.carrierTrackingUrl,
+      carrierLogoMediaId: settings.carrierLogoMediaId,
+      carrierLogo: settings.carrierLogo
+        ? {
+            id: settings.carrierLogoMediaId!,
+            url: this.publicMediaUrl?.resolve(settings.carrierLogo.storageKey) ?? null,
+            mimeType: settings.carrierLogo.mimeType,
+            altText: settings.carrierLogo.altText,
+          }
+        : null,
     };
   }
 

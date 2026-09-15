@@ -69,6 +69,9 @@ export type CustomerOrder = Readonly<{
   grandTotalToman: number;
   returnAuthorized: boolean;
   trackingCode: string | null;
+  shippingMethodName: string | null;
+  shippingTrackingUrl: string | null;
+  shippingCarrierLogoUrl: string | null;
   reservationExpiresAt: string;
   paidAt: string | null;
   cancelledAt: string | null;

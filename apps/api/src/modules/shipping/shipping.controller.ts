@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Put } from '@nestjs/common';
-import { ApiOkResponse } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { Public } from '../auth/public.decorator';
 import type { AuthenticatedPrincipal } from '../authorization/authorization.types';
@@ -14,6 +14,12 @@ import {
   ShippingPricingSettingsDto,
 } from './dto/shipping-pricing-settings.dto';
 import { UpdateShippingPricingSettingsDto } from './dto/update-shipping-pricing-settings.dto';
+import {
+  CreateShippingCarrierDto,
+  ShippingCarrierDto,
+  UpdateShippingCarrierDto,
+} from './dto/shipping-carrier.dto';
+import { ShippingCarriersService } from './shipping-carriers.service';
 import { ShippingPricingService } from './shipping-pricing.service';
 import { ShippingService } from './shipping.service';
 
@@ -22,6 +28,7 @@ export class ShippingController {
   constructor(
     private readonly shippingService: ShippingService,
     private readonly shippingPricingService: ShippingPricingService,
+    private readonly shippingCarriersService: ShippingCarriersService,
   ) {}
 
   @Public()
@@ -29,6 +36,41 @@ export class ShippingController {
   @ApiOkResponse({ type: ShippingPricingSettingsDto })
   getPublicPricing(): Promise<ShippingPricingSettingsDto> {
     return this.shippingPricingService.getPublicSettings();
+  }
+
+  @Get('carriers')
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_READ)
+  @ApiOkResponse({ type: ShippingCarrierDto, isArray: true })
+  listCarriers() {
+    return this.shippingCarriersService.listAll();
+  }
+
+  @Get('carriers/active')
+  @RequirePermissions(PERMISSION_CODES.ORDERS_TRACKING_WRITE)
+  @ApiOkResponse({ type: ShippingCarrierDto, isArray: true })
+  listActiveCarriers() {
+    return this.shippingCarriersService.listActive();
+  }
+
+  @Post('carriers')
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_WRITE)
+  @ApiCreatedResponse({ type: ShippingCarrierDto })
+  createCarrier(
+    @Body() dto: CreateShippingCarrierDto,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ) {
+    return this.shippingCarriersService.create(dto, principal.userId);
+  }
+
+  @Patch('carriers/:carrierId')
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_WRITE)
+  @ApiOkResponse({ type: ShippingCarrierDto })
+  updateCarrier(
+    @Param('carrierId', new ParseUUIDPipe({ version: '4' })) carrierId: string,
+    @Body() dto: UpdateShippingCarrierDto,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ) {
+    return this.shippingCarriersService.update(carrierId, dto, principal.userId);
   }
 
   @Get('pricing')

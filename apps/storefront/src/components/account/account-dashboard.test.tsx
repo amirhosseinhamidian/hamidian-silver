@@ -42,7 +42,7 @@ describe('AccountDashboard', () => {
             {
               id: 'order-1',
               orderNumber: 'HS-1001',
-              status: 'SHIPPED',
+              status: 'DELIVERED',
               grandTotalToman: 3_000_000,
               trackingCode: 'POST-123',
               createdAt: '2026-09-05T12:00:00.000Z',
@@ -91,7 +91,8 @@ describe('AccountDashboard', () => {
       'src',
       'https://media.example/ring.webp',
     );
-    expect(within(panel).getByText('POST-۱۲۳')).toBeInTheDocument();
+    expect(within(panel).queryByText('POST-۱۲۳')).not.toBeInTheDocument();
+    expect(within(panel).queryByText('کد رهگیری ثبت نشده است.')).not.toBeInTheDocument();
     expect(within(panel).getByRole('link', { name: 'مشاهده جزئیات سفارش' })).toHaveAttribute(
       'href',
       '/account/orders/order-1',

@@ -6132,6 +6132,123 @@
         ]
       }
     },
+    "/api/v1/shipping/carriers": {
+      "get": {
+        "operationId": "ShippingController_listCarriers_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ShippingCarrierDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      },
+      "post": {
+        "operationId": "ShippingController_createCarrier_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShippingCarrierDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShippingCarrierDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      }
+    },
+    "/api/v1/shipping/carriers/active": {
+      "get": {
+        "operationId": "ShippingController_listActiveCarriers_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ShippingCarrierDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      }
+    },
+    "/api/v1/shipping/carriers/{carrierId}": {
+      "patch": {
+        "operationId": "ShippingController_updateCarrier_v1",
+        "parameters": [
+          {
+            "name": "carrierId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateShippingCarrierDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShippingCarrierDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      }
+    },
     "/api/v1/shipping/pricing": {
       "get": {
         "operationId": "ShippingController_getAdminPricing_v1",
@@ -10126,6 +10243,20 @@
             "type": "string",
             "nullable": true
           },
+          "shippingMethodName": {
+            "type": "string",
+            "nullable": true
+          },
+          "shippingTrackingUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "shippingCarrierLogoUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
           "paidAt": {
             "format": "date-time",
             "type": "string",
@@ -10200,6 +10331,9 @@
           "status",
           "payment",
           "trackingCode",
+          "shippingMethodName",
+          "shippingTrackingUrl",
+          "shippingCarrierLogoUrl",
           "paidAt",
           "cancelledAt",
           "deliveredAt",
@@ -10247,6 +10381,20 @@
           "trackingCode": {
             "type": "string",
             "nullable": true
+          },
+          "shippingMethodName": {
+            "type": "string",
+            "nullable": true
+          },
+          "shippingTrackingUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "shippingCarrierLogoUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
           },
           "paidAt": {
             "format": "date-time",
@@ -10313,6 +10461,9 @@
           "status",
           "payment",
           "trackingCode",
+          "shippingMethodName",
+          "shippingTrackingUrl",
+          "shippingCarrierLogoUrl",
           "paidAt",
           "cancelledAt",
           "deliveredAt",
@@ -11131,6 +11282,138 @@
           "discountedCostToman"
         ]
       },
+      "AdminSiteMediaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "altText": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "mimeType",
+          "altText"
+        ]
+      },
+      "ShippingCarrierDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "trackingUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "logoMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "logo": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AdminSiteMediaDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "trackingUrl",
+          "logoMediaId",
+          "logo",
+          "createdAt",
+          "updatedAt",
+          "name",
+          "isActive"
+        ]
+      },
+      "CreateShippingCarrierDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "trackingUrl": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000,
+            "format": "uri"
+          },
+          "logoMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateShippingCarrierDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "trackingUrl": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000,
+            "format": "uri"
+          },
+          "logoMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
       "AdminShippingPricingSettingsDto": {
         "type": "object",
         "properties": {
@@ -11155,6 +11438,29 @@
             "nullable": true,
             "minimum": 0
           },
+          "carrierName": {
+            "type": "string",
+            "nullable": true
+          },
+          "carrierTrackingUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "carrierLogoMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "carrierLogo": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AdminSiteMediaDto"
+              }
+            ]
+          },
           "source": {
             "enum": [
               "DATABASE",
@@ -11178,6 +11484,10 @@
           "baseCostToman",
           "thresholdToman",
           "discountedCostToman",
+          "carrierName",
+          "carrierTrackingUrl",
+          "carrierLogoMediaId",
+          "carrierLogo",
           "source",
           "updatedByUserId",
           "updatedAt"
@@ -11232,6 +11542,10 @@
       "CreateManualShipmentDto": {
         "type": "object",
         "properties": {
+          "carrierId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "serviceName": {
             "type": "string",
             "minLength": 2,
@@ -11249,7 +11563,6 @@
           }
         },
         "required": [
-          "serviceName",
           "reason"
         ]
       },
@@ -11303,33 +11616,6 @@
         },
         "required": [
           "status"
-        ]
-      },
-      "AdminSiteMediaDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "url": {
-            "type": "string",
-            "nullable": true,
-            "format": "uri"
-          },
-          "mimeType": {
-            "type": "string"
-          },
-          "altText": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "id",
-          "url",
-          "mimeType",
-          "altText"
         ]
       },
       "PublicSiteSettingsHeaderCategoryDto": {
@@ -12093,7 +12379,6 @@
             "format": "uuid"
           },
           "sections": {
-            "maxItems": 12,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/UpdateContentPageSectionDto"

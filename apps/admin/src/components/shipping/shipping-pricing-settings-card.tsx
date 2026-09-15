@@ -61,7 +61,6 @@ export function ShippingPricingSettingsCard({ data, canRead, canWrite }: Props) 
       return setError(
         'هزینه شرطی باید از هزینه ثابت ارسال کمتر باشد؛ برای ارسال رایگان صفر بزنید.',
       );
-
     setPending(true);
     setError('');
     setSuccess('');
@@ -81,7 +80,7 @@ export function ShippingPricingSettingsCard({ data, canRead, canWrite }: Props) 
       if (!payload)
         return setError('تنظیمات ذخیره شد اما پاسخ سرویس معتبر نبود. صفحه را تازه کنید.');
       setSettings(payload);
-      setSuccess('تنظیمات هزینه ارسال ذخیره شد و برای سفارش‌های جدید اعمال می‌شود.');
+      setSuccess('تنظیمات هزینه ارسال ذخیره شد.');
     } catch {
       setError(errorMessage(502));
     } finally {
@@ -91,14 +90,14 @@ export function ShippingPricingSettingsCard({ data, canRead, canWrite }: Props) 
 
   if (!canRead) {
     return (
-      <Card title="تنظیم هزینه ارسال" description="سیاست هزینه‌ای سفارش‌های جدید">
+      <Card title="تنظیمات هزینه ارسال" description="روش محاسبه هزینه ارسال">
         <Alert tone="neutral">برای مشاهده این بخش به مجوز خواندن تنظیمات نیاز دارید.</Alert>
       </Card>
     );
   }
   if (data?.failed || !settings) {
     return (
-      <Card title="تنظیم هزینه ارسال" description="سیاست هزینه‌ای سفارش‌های جدید">
+      <Card title="تنظیمات هزینه ارسال" description="روش محاسبه هزینه ارسال">
         <Alert tone="danger">
           دریافت تنظیمات هزینه ارسال انجام نشد. صفحه را دوباره بارگذاری کنید.
         </Alert>
@@ -107,10 +106,7 @@ export function ShippingPricingSettingsCard({ data, canRead, canWrite }: Props) 
   }
 
   return (
-    <Card
-      title="تنظیم هزینه ارسال"
-      description="هزینه نهایی هنگام ثبت سفارش دوباره در سرور محاسبه و روی سفارش ذخیره می‌شود."
-    >
+    <Card title="تنظیمات هزینه ارسال" description="هزینه ارسال سفارش‌ها را مدیریت کنید.">
       <form onSubmit={(event) => void submit(event)} className="space-y-5">
         {settings.source === 'ENVIRONMENT' ? (
           <Alert tone="info">

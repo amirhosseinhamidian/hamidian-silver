@@ -376,6 +376,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['orders.read'],
       },
       {
+        id: 'shipping-settings',
+        label: 'تنظیمات ارسال',
+        shortLabel: 'تنظیمات ارسال',
+        href: '/shipping-settings',
+        icon: 'settings',
+        description: 'هزینه و اطلاعات شرکت حمل',
+        roadmapStage: 38,
+        permissions: ['settings.read'],
+      },
+      {
         id: 'settings',
         label: 'تنظیمات سامانه',
         shortLabel: 'تنظیمات',

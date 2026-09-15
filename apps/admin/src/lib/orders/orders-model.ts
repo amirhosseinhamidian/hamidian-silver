@@ -565,7 +565,6 @@ export function orderItemCount(order: AdminOrder): number {
 
 export function orderRequiresAttention(order: AdminOrder): boolean {
   return (
-    order.payment?.attempts.some((attempt) => attempt.status === 'AWAITING_REVIEW') === true ||
     order.payment?.status === 'RECONCILIATION_REQUIRED' ||
     order.shipment?.status === 'FAILED' ||
     (order.status === 'PAID' && order.payment?.status !== 'PAID')

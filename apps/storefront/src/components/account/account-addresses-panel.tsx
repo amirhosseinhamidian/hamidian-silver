@@ -1,5 +1,6 @@
 'use client';
 
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useMemo, useState, type FormEvent } from 'react';
 
 import type { CustomerAddress } from '@/components/account/account-types';
@@ -49,8 +50,10 @@ export function AccountAddressesPanel({
   });
   const [submitting, setSubmitting] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cityOptions = useMemo(() => cityOptionsFor(draft.province), [draft.province]);
+  const deleteCandidate = addresses.find((address) => address.id === deleteCandidateId) ?? null;
 
   function update<Key extends keyof AddressDraft>(key: Key, value: AddressDraft[Key]) {
     setDraft((current) => ({ ...current, [key]: toPersianDigits(value) }));
@@ -122,11 +125,11 @@ export function AccountAddressesPanel({
   }
 
   async function remove(addressId: string) {
-    if (!window.confirm('این آدرس حذف شود؟')) return;
     setPendingId(addressId);
     setError(null);
     try {
       await mutate(`/api/profile/addresses/${addressId}`, { method: 'DELETE' });
+      setDeleteCandidateId(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'حذف آدرس انجام نشد.');
     } finally {
@@ -150,7 +153,7 @@ export function AccountAddressesPanel({
         </Button>
       </div>
 
-      {error ? (
+      {error && !deleteCandidate ? (
         <p role="alert" className="mt-5 text-sm text-red-700">
           {error}
         </p>
@@ -315,7 +318,10 @@ export function AccountAddressesPanel({
                   size="sm"
                   variant="ghost"
                   disabled={pendingId === address.id}
-                  onClick={() => void remove(address.id)}
+                  onClick={() => {
+                    setError(null);
+                    setDeleteCandidateId(address.id);
+                  }}
                 >
                   حذف
                 </Button>
@@ -324,6 +330,51 @@ export function AccountAddressesPanel({
           ))}
         </ul>
       )}
+
+      <DialogPrimitive.Root
+        open={deleteCandidate !== null}
+        onOpenChange={(open) => {
+          if (!open && pendingId !== deleteCandidateId) {
+            setDeleteCandidateId(null);
+            setError(null);
+          }
+        }}
+      >
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-[90] bg-black/45 backdrop-blur-[2px]" />
+          <DialogPrimitive.Content
+            dir="rtl"
+            className="fixed left-1/2 top-1/2 z-[100] w-[min(27rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-[var(--sf-radius-lg)] border border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)] p-6 shadow-2xl outline-none sm:p-8"
+          >
+            <DialogPrimitive.Title className="text-xl font-bold">حذف آدرس</DialogPrimitive.Title>
+            <DialogPrimitive.Description className="mt-3 text-sm leading-7 text-[var(--sf-color-muted)]">
+              آدرس «{toPersianDigits(deleteCandidate?.title ?? '')}» حذف شود؟ این عملیات قابل بازگشت
+              نیست.
+            </DialogPrimitive.Description>
+
+            {error ? (
+              <p role="alert" className="mt-4 text-sm text-red-700">
+                {error}
+              </p>
+            ) : null}
+
+            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <DialogPrimitive.Close asChild>
+                <Button type="button" variant="outline" disabled={pendingId === deleteCandidateId}>
+                  انصراف
+                </Button>
+              </DialogPrimitive.Close>
+              <Button
+                type="button"
+                loading={pendingId === deleteCandidateId}
+                onClick={() => deleteCandidate && void remove(deleteCandidate.id)}
+              >
+                تأیید حذف
+              </Button>
+            </div>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </section>
   );
 }

@@ -15,7 +15,7 @@ import { FormField } from '@/components/ui/form-field';
 import { Select } from '@/components/ui/select';
 import { trackBeginCheckout } from '@/lib/analytics/commerce-events';
 import { AUTHENTICATION_SUCCEEDED_EVENT, openAuthModal } from '@/lib/auth/events';
-import { formatTomanPrice } from '@/lib/catalog/presentation';
+import { formatShippingToman, formatTomanPrice } from '@/lib/catalog/presentation';
 import { useCart } from '@/lib/cart/cart-store';
 import { buildCreateOrderBody } from '@/lib/checkout/checkout-payload';
 import { cityOptionsFor, PROVINCE_OPTIONS } from '@/lib/checkout/iran-locations';
@@ -822,9 +822,7 @@ export function CheckoutFlow({
             <span>
               {displayedShippingToman === null
                 ? 'هنگام ثبت سفارش'
-                : displayedShippingToman === 0
-                  ? 'رایگان'
-                  : formatTomanPrice(displayedShippingToman)}
+                : formatShippingToman(displayedShippingToman)}
             </span>
           </div>
         </div>
@@ -844,7 +842,7 @@ export function CheckoutFlow({
             </p>
           </div>
         ) : null}
-        <div className="flex items-center gap-4 lg:mt-3 lg:block">
+        <div className="flex items-center gap-4 mt-3 lg:block">
           <div className="min-w-0 flex-1 lg:flex lg:items-center lg:justify-between lg:gap-4">
             <span className="block text-xs text-[var(--sf-color-muted)] lg:text-sm">
               مبلغ قابل پرداخت

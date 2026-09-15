@@ -77,7 +77,16 @@ describe('OrdersService customer projection security', () => {
       {
         id: orderId,
         returnAuthorizedAt: new Date('2026-09-06T13:00:00.000Z'),
-        shipment: { trackingCode: 'POST-123' },
+        shipment: {
+          provider: 'postex',
+          providerServiceCode: 'IR_POST|EXPRESS',
+          providerServiceName: 'پست پیشتاز',
+          carrierNameSnapshot: 'پست ایران',
+          carrierTrackingUrlSnapshot: 'https://tracking.post.ir/',
+          carrierLogoSnapshot: null,
+          carrierPresentationSnapshottedAt: new Date('2026-09-06T08:00:00.000Z'),
+          trackingCode: 'POST-123',
+        },
         items: [
           {
             id: '30000000-0000-4000-8000-000000000001',
@@ -111,6 +120,9 @@ describe('OrdersService customer projection security', () => {
     expect(order).toEqual(
       expect.objectContaining({
         trackingCode: 'POST-123',
+        shippingMethodName: 'پست ایران',
+        shippingTrackingUrl: 'https://tracking.post.ir/',
+        shippingCarrierLogoUrl: null,
         returnAuthorized: true,
         items: [
           expect.objectContaining({

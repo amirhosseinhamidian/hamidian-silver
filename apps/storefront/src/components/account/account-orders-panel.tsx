@@ -39,7 +39,7 @@ export function AccountOrdersPanel({ orders }: Readonly<{ orders: CustomerOrder[
               <header className="grid gap-3 border-b border-[var(--sf-color-border)] bg-[var(--sf-color-surface)] p-4 text-sm sm:grid-cols-2 sm:items-center lg:grid-cols-5">
                 <div>
                   <span className="block text-xs text-[var(--sf-color-subtle)]">شماره سفارش</span>
-                  <span className="mt-1 block font-medium" dir="ltr">
+                  <span className="mt-1 block font-medium" dir="rtl">
                     {toPersianDigits(order.orderNumber)}
                   </span>
                 </div>
@@ -96,17 +96,23 @@ export function AccountOrdersPanel({ orders }: Readonly<{ orders: CustomerOrder[
                 ))}
               </ul>
 
-              <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--sf-color-border)] px-4 py-3 text-sm">
-                {order.trackingCode ? (
-                  <p>
-                    کد رهگیری:{' '}
-                    <span className="font-medium" dir="ltr">
-                      {toPersianDigits(order.trackingCode)}
-                    </span>
-                  </p>
-                ) : (
-                  <span className="text-[var(--sf-color-subtle)]">کد رهگیری ثبت نشده است.</span>
-                )}
+              <footer
+                className={`flex flex-wrap items-center gap-3 border-t border-[var(--sf-color-border)] px-4 py-3 text-sm ${
+                  order.status === 'DELIVERED' ? 'justify-end' : 'justify-between'
+                }`}
+              >
+                {order.status !== 'DELIVERED' ? (
+                  order.trackingCode ? (
+                    <p>
+                      کد رهگیری:{' '}
+                      <span className="font-medium" dir="ltr">
+                        {toPersianDigits(order.trackingCode)}
+                      </span>
+                    </p>
+                  ) : (
+                    <span className="text-[var(--sf-color-subtle)]">کد رهگیری ثبت نشده است.</span>
+                  )
+                ) : null}
                 <Link
                   href={`/account/orders/${order.id}`}
                   className="border-b border-[var(--sf-color-border-strong)] font-medium hover:border-[var(--sf-color-ink)]"

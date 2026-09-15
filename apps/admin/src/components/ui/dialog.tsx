@@ -57,11 +57,11 @@ export function DialogContent({
 
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="admin-dialog-overlay fixed inset-0 z-[100] bg-slate-950/45 backdrop-blur-[2px]" />
+      <DialogPrimitive.Overlay className="admin-dialog-overlay fixed inset-0 z-[1000] bg-slate-950/45 backdrop-blur-[2px]" />
       <DialogPrimitive.Content
         aria-describedby={descriptionId}
         className={cn(
-          'admin-dialog-content fixed inset-x-3 top-1/2 z-[101] max-h-[calc(100dvh-1.5rem)] -translate-y-1/2 overflow-y-auto rounded-[var(--admin-radius-lg)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] shadow-[var(--admin-shadow-lg)] outline-none sm:inset-x-auto sm:left-1/2 sm:w-[calc(100%-3rem)] sm:-translate-x-1/2',
+          'admin-dialog-content fixed inset-x-3 top-1/2 z-[10100] max-h-[calc(100dvh-1.5rem)] -translate-y-1/2 overflow-y-auto rounded-[var(--admin-radius-lg)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] shadow-[var(--admin-shadow-lg)] outline-none sm:inset-x-auto sm:left-1/2 sm:w-[calc(100%-3rem)] sm:-translate-x-1/2',
           sizeClassNames[size],
           className,
         )}

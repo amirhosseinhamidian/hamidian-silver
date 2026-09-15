@@ -131,6 +131,28 @@ describe('admin orders model', () => {
     ).toBe(true);
   });
 
+  it('treats a submitted card-to-card receipt as an expected review state', () => {
+    const order = parseAdminOrders(payload)?.[0];
+    expect(
+      order &&
+        orderRequiresAttention({
+          ...order,
+          status: 'PENDING_PAYMENT',
+          payment: order.payment && {
+            ...order.payment,
+            status: 'AWAITING_REVIEW',
+            attempts: [
+              {
+                ...order.payment.attempts[0]!,
+                provider: 'card_to_card',
+                status: 'AWAITING_REVIEW',
+              },
+            ],
+          },
+        }),
+    ).toBe(false);
+  });
+
   it('parses manual shipment details and its timeline', () => {
     const raw = structuredClone(payload);
     raw[0].shipment = {

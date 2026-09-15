@@ -26,6 +26,32 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 const RESERVATION_TTL_MINUTES = 15;
 
+type ShippingCarrierPresentation = Readonly<{
+  name: string | null;
+  trackingUrl: string | null;
+  logoUrl: string | null;
+}>;
+
+function publicShippingMethodName(
+  shipment: Readonly<{
+    provider: string;
+    providerServiceName: string | null;
+    carrierNameSnapshot: string | null;
+    carrierPresentationSnapshottedAt: Date | null;
+  }> | null,
+  fallback: ShippingCarrierPresentation | null,
+): string | null {
+  if (!shipment) return null;
+  if (shipment.carrierPresentationSnapshottedAt) {
+    return shipment.carrierNameSnapshot ?? shipment.providerServiceName ?? shipment.provider;
+  }
+  if (fallback?.name) return fallback.name;
+  if (shipment.providerServiceName) return shipment.providerServiceName;
+  if (shipment.provider.toLowerCase() === 'postex') return 'پستکس';
+  if (shipment.provider.toLowerCase() === 'manual') return 'ارسال فروشگاه';
+  return shipment.provider;
+}
+
 const CUSTOMER_ORDER_ITEM_SELECT = {
   id: true,
   variantId: true,
@@ -95,6 +121,13 @@ const CUSTOMER_ORDER_LIST_SELECT = {
   updatedAt: true,
   shipment: {
     select: {
+      provider: true,
+      providerServiceCode: true,
+      providerServiceName: true,
+      carrierNameSnapshot: true,
+      carrierTrackingUrlSnapshot: true,
+      carrierLogoSnapshot: { select: { storageKey: true } },
+      carrierPresentationSnapshottedAt: true,
       trackingCode: true,
     },
   },
@@ -452,7 +485,7 @@ export class OrdersService {
       });
     });
 
-    return this.toCustomerOrder(order);
+    return this.toCustomerOrder(order, null);
   }
 
   private async resolveInitialShippingCostToman(
@@ -484,7 +517,8 @@ export class OrdersService {
       select: CUSTOMER_ORDER_LIST_SELECT,
     });
 
-    return orders.map((order) => this.toCustomerOrder(order));
+    const carrier = await this.shippingPricing?.getPublicCarrierPresentation();
+    return orders.map((order) => this.toCustomerOrder(order, carrier ?? null));
   }
 
   async countMyOrders(userId: string) {
@@ -505,10 +539,14 @@ export class OrdersService {
       throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
     }
 
-    return this.toCustomerOrder(order);
+    const carrier = await this.shippingPricing?.getPublicCarrierPresentation();
+    return this.toCustomerOrder(order, carrier ?? null);
   }
 
-  private toCustomerOrder(order: CustomerOrderListRecord | CustomerOrderDetailRecord) {
+  private toCustomerOrder(
+    order: CustomerOrderListRecord | CustomerOrderDetailRecord,
+    carrier: ShippingCarrierPresentation | null,
+  ) {
     const { shipment, payment, items: selectedItems, returnAuthorizedAt, ...summary } = order;
     const items = Array.isArray(selectedItems) ? selectedItems : [];
     const latestAttempt = payment?.attempts[0];
@@ -517,6 +555,15 @@ export class OrdersService {
       ...summary,
       returnAuthorized: returnAuthorizedAt !== null,
       trackingCode: shipment?.trackingCode ?? null,
+      shippingMethodName: publicShippingMethodName(shipment ?? null, carrier),
+      shippingTrackingUrl: shipment?.carrierPresentationSnapshottedAt
+        ? shipment.carrierTrackingUrlSnapshot
+        : (carrier?.trackingUrl ?? null),
+      shippingCarrierLogoUrl: shipment?.carrierPresentationSnapshottedAt
+        ? shipment.carrierLogoSnapshot
+          ? (this.publicMediaUrl?.resolve(shipment.carrierLogoSnapshot.storageKey) ?? null)
+          : null
+        : (carrier?.logoUrl ?? null),
       payment: payment
         ? {
             status: payment.status,

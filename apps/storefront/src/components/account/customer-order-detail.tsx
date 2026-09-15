@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { FiCheck, FiCopy } from 'react-icons/fi';
 
 import {
   customerOrderStatusLabel,
@@ -20,7 +21,7 @@ import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AUTHENTICATION_SUCCEEDED_EVENT, openAuthModal } from '@/lib/auth/events';
-import { formatTomanPrice } from '@/lib/catalog/presentation';
+import { formatShippingToman, formatTomanPrice } from '@/lib/catalog/presentation';
 
 type OrderDetailState =
   | { status: 'loading' }
@@ -54,10 +55,20 @@ function TotalRow({ label, value, negative = false, strong = false }: TotalRowPr
   );
 }
 
+function ShippingTotalRow({ value }: Readonly<{ value: number }>) {
+  return (
+    <div className="flex justify-between gap-4 text-sm">
+      <span className="text-[var(--sf-color-muted)]">هزینه ارسال</span>
+      <span>{formatShippingToman(value)}</span>
+    </div>
+  );
+}
+
 function OrderTimeline({ order }: Readonly<{ order: CustomerOrderDetail }>) {
   const history = order.statusHistory.length
     ? order.statusHistory
     : [{ fromStatus: null, toStatus: order.status, createdAt: order.updatedAt }];
+  const awaitingReceiptReview = order.payment?.status === 'AWAITING_REVIEW';
 
   return (
     <section
@@ -68,32 +79,46 @@ function OrderTimeline({ order }: Readonly<{ order: CustomerOrderDetail }>) {
         روند سفارش
       </h2>
       <ol className="mt-6 space-y-0">
-        {history.map((entry, index) => (
-          <li
-            key={`${entry.toStatus}-${entry.createdAt}-${index}`}
-            className="relative grid grid-cols-[1rem_1fr] gap-4 pb-7 last:pb-0"
-          >
-            {index < history.length - 1 ? (
+        {history.map((entry, index) => {
+          const isCurrentReceiptReview =
+            awaitingReceiptReview &&
+            index === history.length - 1 &&
+            entry.toStatus === 'PENDING_PAYMENT';
+          const createdAt = isCurrentReceiptReview
+            ? (order.payment?.receiptUploadedAt ?? entry.createdAt)
+            : entry.createdAt;
+
+          return (
+            <li
+              key={`${entry.toStatus}-${entry.createdAt}-${index}`}
+              className="relative grid grid-cols-[1rem_1fr] gap-4 pb-7 last:pb-0"
+            >
+              {index < history.length - 1 ? (
+                <span
+                  aria-hidden="true"
+                  className="absolute right-[0.4375rem] top-4 h-[calc(100%-0.25rem)] w-px bg-[var(--sf-color-border-strong)]"
+                />
+              ) : null}
               <span
                 aria-hidden="true"
-                className="absolute right-[0.4375rem] top-4 h-[calc(100%-0.25rem)] w-px bg-[var(--sf-color-border-strong)]"
+                className="relative z-10 mt-1 size-4 rounded-full border-4 border-[var(--sf-color-canvas)] bg-[var(--sf-color-ink)] ring-1 ring-[var(--sf-color-ink)]"
               />
-            ) : null}
-            <span
-              aria-hidden="true"
-              className="relative z-10 mt-1 size-4 rounded-full border-4 border-[var(--sf-color-canvas)] bg-[var(--sf-color-ink)] ring-1 ring-[var(--sf-color-ink)]"
-            />
-            <div>
-              <p className="font-medium">{orderStatusLabel(entry.toStatus)}</p>
-              <time
-                dateTime={entry.createdAt}
-                className="mt-1 block text-xs text-[var(--sf-color-subtle)]"
-              >
-                {formatOrderDate(entry.createdAt, true)}
-              </time>
-            </div>
-          </li>
-        ))}
+              <div>
+                <p className="font-medium">
+                  {isCurrentReceiptReview
+                    ? 'در انتظار بررسی رسید'
+                    : orderStatusLabel(entry.toStatus)}
+                </p>
+                <time
+                  dateTime={createdAt}
+                  className="mt-1 block text-xs text-[var(--sf-color-subtle)]"
+                >
+                  {formatOrderDate(createdAt, true)}
+                </time>
+              </div>
+            </li>
+          );
+        })}
       </ol>
     </section>
   );
@@ -105,8 +130,27 @@ export function canShowCustomerReturns(
   return order.returnAuthorized && (order.status === 'SHIPPED' || order.status === 'DELIVERED');
 }
 
+export function canShowCustomerTracking(
+  order: Pick<CustomerOrderDetail, 'status' | 'trackingCode'>,
+): boolean {
+  return order.status !== 'DELIVERED' && Boolean(order.trackingCode);
+}
+
 export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string }>) {
   const [state, setState] = useState<OrderDetailState>({ status: 'loading' });
+  const [trackingCopyStatus, setTrackingCopyStatus] = useState<'idle' | 'copied' | 'failed'>(
+    'idle',
+  );
+
+  async function copyTrackingCode(trackingCode: string) {
+    try {
+      await navigator.clipboard.writeText(trackingCode);
+      setTrackingCopyStatus('copied');
+      window.setTimeout(() => setTrackingCopyStatus('idle'), 2500);
+    } catch {
+      setTrackingCopyStatus('failed');
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -182,6 +226,7 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
 
   const { order } = state;
   const address = order.shippingAddress;
+  const trackingCode = order.status !== 'DELIVERED' ? order.trackingCode : null;
 
   return (
     <main id="main-content" className="sf-container pb-[var(--sf-section-space)] pt-8 sm:pt-10">
@@ -350,7 +395,7 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
               {order.discountTotalToman > 0 ? (
                 <TotalRow label="تخفیف" value={order.discountTotalToman} negative />
               ) : null}
-              <TotalRow label="هزینه ارسال" value={order.shippingTotalToman} />
+              <ShippingTotalRow value={order.shippingTotalToman} />
               {order.taxTotalToman > 0 ? (
                 <TotalRow label="مالیات" value={order.taxTotalToman} />
               ) : null}
@@ -377,7 +422,7 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
             </p>
           </section>
 
-          {order.trackingCode ? (
+          {trackingCode ? (
             <section
               aria-labelledby="order-tracking-heading"
               className="border border-[var(--sf-color-border)] p-5"
@@ -385,10 +430,71 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
               <h2 id="order-tracking-heading" className="text-xl font-medium">
                 رهگیری مرسوله
               </h2>
+              {order.shippingMethodName ? (
+                <div className="mt-4 flex items-center gap-3">
+                  {order.shippingCarrierLogoUrl ? (
+                    <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border border-[var(--sf-color-border)] bg-white p-1.5">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- Admin-uploaded media uses the configured public media origin. */}
+                      <img
+                        src={order.shippingCarrierLogoUrl}
+                        alt=""
+                        className="size-full object-contain"
+                      />
+                    </span>
+                  ) : null}
+                  <div>
+                    <p className="text-xs text-[var(--sf-color-subtle)]">شیوه ارسال</p>
+                    <p className="mt-1 font-medium">{toPersianDigits(order.shippingMethodName)}</p>
+                  </div>
+                </div>
+              ) : null}
               <p className="mt-3 text-sm text-[var(--sf-color-muted)]">کد رهگیری</p>
-              <p className="mt-1 font-medium" dir="ltr">
-                {toPersianDigits(order.trackingCode)}
-              </p>
+              <div className="mt-2 flex flex-col gap-2 ">
+                <p
+                  className="min-w-0 flex-1 select-all break-all border border-[var(--sf-color-border)] bg-[var(--sf-color-surface)] px-3 py-2.5 font-medium"
+                  dir="ltr"
+                >
+                  {toPersianDigits(trackingCode)}
+                </p>
+                <Button
+                  variant="outline"
+                  className="sm:self-stretch"
+                  onClick={() => void copyTrackingCode(trackingCode)}
+                >
+                  {trackingCopyStatus === 'copied' ? (
+                    <FiCheck aria-hidden="true" />
+                  ) : (
+                    <FiCopy aria-hidden="true" />
+                  )}
+                  {trackingCopyStatus === 'copied' ? 'کپی شد' : 'کپی کد رهگیری'}
+                </Button>
+              </div>
+              {trackingCopyStatus === 'failed' ? (
+                <p role="alert" className="mt-2 text-xs text-red-700">
+                  کپی خودکار انجام نشد؛ کد رهگیری را به‌صورت دستی انتخاب و کپی کنید.
+                </p>
+              ) : (
+                <span className="sr-only" role="status" aria-live="polite">
+                  {trackingCopyStatus === 'copied' ? 'کد رهگیری کپی شد.' : ''}
+                </span>
+              )}
+              {order.shippingTrackingUrl ? (
+                <div className="mt-5 border-t border-[var(--sf-color-border)] pt-4">
+                  <p className="text-sm leading-7 text-[var(--sf-color-muted)]">
+                    برای مشاهده آخرین وضعیت مرسوله، کد رهگیری را کپی کنید و در وب‌سایت شرکت ارسال
+                    وارد کنید.
+                  </p>
+                  <ButtonLink
+                    href={order.shippingTrackingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="solid"
+                    className="mt-3 w-full"
+                  >
+                    استعلام وضعیت
+                  </ButtonLink>
+                </div>
+              ) : null}
             </section>
           ) : null}
 

@@ -7,6 +7,7 @@ import {
 } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { ShippingProvider } from './shipping-provider.port';
+import type { ShippingCarriersService } from './shipping-carriers.service';
 import { ShippingService } from './shipping.service';
 
 describe('ShippingService manual fulfillment', () => {
@@ -68,6 +69,46 @@ describe('ShippingService manual fulfillment', () => {
         providerCreationState: ShipmentProviderCreationState.CREATED,
         shippingCostToman: 0,
         totalWeightGrams: '8.500',
+      }),
+    });
+
+    const shippingCarriers = {
+      snapshotActive: jest.fn().mockResolvedValue({
+        serviceName: 'ماهکس',
+        snapshot: {
+          carrierNameSnapshot: 'ماهکس',
+          carrierTrackingUrlSnapshot: 'https://mahex.com/tracking',
+          carrierLogoMediaIdSnapshot: null,
+          carrierPresentationSnapshottedAt: new Date('2026-09-15T00:00:00.000Z'),
+        },
+      }),
+    };
+    const configuredCarrierService = new ShippingService(
+      prisma as unknown as PrismaService,
+      provider,
+      undefined,
+      undefined,
+      undefined,
+      shippingCarriers as unknown as ShippingCarriersService,
+    );
+    await configuredCarrierService.createManualShipment(
+      orderId,
+      {
+        carrierId: '40000000-0000-4000-8000-000000000001',
+        estimatedDeliveryDays: 3,
+        reason: 'بسته آماده است',
+      },
+      actorUserId,
+    );
+    expect(shippingCarriers.snapshotActive).toHaveBeenCalledWith(
+      '40000000-0000-4000-8000-000000000001',
+      tx,
+    );
+    expect(tx.shipment.create).toHaveBeenLastCalledWith({
+      data: expect.objectContaining({
+        providerServiceName: 'ماهکس',
+        carrierNameSnapshot: 'ماهکس',
+        carrierTrackingUrlSnapshot: 'https://mahex.com/tracking',
       }),
     });
   });

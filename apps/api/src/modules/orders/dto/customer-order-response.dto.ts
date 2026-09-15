@@ -100,6 +100,15 @@ export class CustomerOrderSummaryDto {
 
   @ApiProperty({ type: String, nullable: true })
   trackingCode!: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  shippingMethodName!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, format: 'uri' })
+  shippingTrackingUrl!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, format: 'uri' })
+  shippingCarrierLogoUrl!: string | null;
   reservationExpiresAt!: Date;
 
   @ApiProperty({ type: Date, nullable: true })

@@ -110,6 +110,75 @@ describe('OrderManagementView', () => {
     expect(within(dialog).getByText('۱۲۳۴۵۶۷۸۹۰')).toBeInTheDocument();
   });
 
+  it('presents card-to-card review without an operational mismatch or cancellation action', async () => {
+    const awaitingReviewOrder: AdminOrder = {
+      ...order,
+      status: 'PENDING_PAYMENT',
+      paidAt: null,
+      payment: order.payment && {
+        ...order.payment,
+        status: 'AWAITING_REVIEW',
+        paidAt: null,
+        attempts: [
+          {
+            ...order.payment.attempts[0]!,
+            provider: 'card_to_card',
+            status: 'AWAITING_REVIEW',
+            verifiedAt: null,
+            receiptMimeType: 'image/jpeg',
+            receiptOriginalName: 'receipt.jpg',
+            receiptSizeBytes: 120_000,
+            receiptUploadedAt: '2026-09-07T12:04:00.000Z',
+          },
+        ],
+      },
+    };
+    render(<OrderManagementView orders={[awaitingReviewOrder]} failed={false} canCancel />);
+    const mobileCards = screen.getByRole('region', { name: 'کارت‌های سفارش' });
+    fireEvent.click(within(mobileCards).getByRole('button', { name: 'مشاهده جزئیات و عملیات' }));
+    const dialog = await screen.findByRole('dialog', { name: 'سفارش HS-۱۲۳۴' });
+
+    expect(within(dialog).queryByText('این سفارش نیازمند بررسی است')).not.toBeInTheDocument();
+    expect(within(dialog).getByText('پرداخت کارت‌به‌کارت ثبت شده است')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('کارت‌به‌کارت').length).toBeGreaterThan(0);
+    expect(within(dialog).queryByText('لغو مدیریتی سفارش')).not.toBeInTheDocument();
+    expect(within(dialog).getAllByText('در انتظار بررسی رسید').length).toBeGreaterThan(0);
+  });
+
+  it('labels the initial card-to-card timeline step as receipt registration', async () => {
+    const approvedCardToCardOrder: AdminOrder = {
+      ...order,
+      payment: order.payment && {
+        ...order.payment,
+        attempts: [
+          {
+            ...order.payment.attempts[0]!,
+            provider: 'card_to_card',
+            providerReference: 'CARD-HS-1234',
+          },
+        ],
+      },
+      timeline: [
+        {
+          id: 'history-created',
+          fromStatus: null,
+          toStatus: 'PENDING_PAYMENT',
+          reason: 'Order created',
+          actor: 'امیرحسین حمیدیان',
+          createdAt: '2026-09-07T12:00:00.000Z',
+        },
+        ...order.timeline,
+      ],
+    };
+    render(<OrderManagementView orders={[approvedCardToCardOrder]} failed={false} />);
+    const mobileCards = screen.getByRole('region', { name: 'کارت‌های سفارش' });
+    fireEvent.click(within(mobileCards).getByRole('button', { name: 'مشاهده جزئیات و عملیات' }));
+    const dialog = await screen.findByRole('dialog', { name: 'سفارش HS-۱۲۳۴' });
+
+    expect(within(dialog).getByText('در انتظار ثبت رسید کارت‌به‌کارت')).toBeInTheDocument();
+    expect(within(dialog).queryByText('در انتظار پرداخت')).not.toBeInTheDocument();
+  });
+
   it('filters orders by localized search input', () => {
     render(<OrderManagementView orders={[order]} failed={false} />);
     fireEvent.change(screen.getByRole('searchbox', { name: 'جستجوی سفارش' }), {

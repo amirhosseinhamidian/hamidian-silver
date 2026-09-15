@@ -16,6 +16,7 @@ import { MobileDataCard } from '@/components/ui/mobile-data-card';
 import { ResponsiveDataView } from '@/components/ui/responsive-data-view';
 import { Select } from '@/components/ui/select';
 import type { AdminOrder, AdminShipmentStatus } from '@/lib/orders/orders-model';
+import type { AdminShippingCarrier } from '@/lib/shipping/shipping-pricing-model';
 import {
   formatAdminDateTime,
   formatAdminInteger,
@@ -30,6 +31,7 @@ type Props = Readonly<{
   failed: boolean;
   canCreate: boolean;
   canUpdateStatus: boolean;
+  carriers?: readonly AdminShippingCarrier[];
 }>;
 
 type ShippingFilter = 'all' | 'uncreated' | AdminShipmentStatus;
@@ -220,7 +222,13 @@ function mutationError(status: number) {
   return 'عملیات ارسال انجام نشد. دوباره تلاش کنید.';
 }
 
-export function ShippingManagementView({ orders, failed, canCreate, canUpdateStatus }: Props) {
+export function ShippingManagementView({
+  orders,
+  failed,
+  canCreate,
+  canUpdateStatus,
+  carriers = [],
+}: Props) {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<ShippingFilter>('all');
@@ -228,6 +236,7 @@ export function ShippingManagementView({ orders, failed, canCreate, canUpdateSta
   const [mobileDetailsId, setMobileDetailsId] = useState<string | null>(null);
   const [action, setAction] = useState<ShippingAction | null>(null);
   const [serviceName, setServiceName] = useState('ارسال استاندارد');
+  const [carrierSelection, setCarrierSelection] = useState(carriers[0]?.id ?? 'custom');
   const [estimatedDays, setEstimatedDays] = useState('۳');
   const [trackingCode, setTrackingCode] = useState('');
   const [reason, setReason] = useState('');
@@ -266,7 +275,8 @@ export function ShippingManagementView({ orders, failed, canCreate, canUpdateSta
   function openAction(nextAction: ShippingAction) {
     setMobileDetailsId(null);
     setAction(nextAction);
-    setServiceName('ارسال استاندارد');
+    setCarrierSelection(carriers[0]?.id ?? 'custom');
+    setServiceName(carriers.length ? '' : 'ارسال استاندارد');
     setEstimatedDays('۳');
     setTrackingCode(nextAction.order.shipment?.trackingCode ?? '');
     setReason('');
@@ -284,12 +294,20 @@ export function ShippingManagementView({ orders, failed, canCreate, canUpdateSta
     let payload: Record<string, string | number>;
     if (action.kind === 'create') {
       const days = Number(toAsciiDigits(estimatedDays));
-      if (serviceName.trim().length < 2 || !Number.isInteger(days) || days < 1 || days > 30)
-        return setError('نام سرویس و زمان تحویل بین ۱ تا ۳۰ روز را درست وارد کنید.');
+      const selectedCarrier = carriers.find((carrier) => carrier.id === carrierSelection);
+      if (
+        (!selectedCarrier && serviceName.trim().length < 2) ||
+        !Number.isInteger(days) ||
+        days < 1 ||
+        days > 30
+      )
+        return setError('شرکت ارسال و زمان تحویل بین ۱ تا ۳۰ روز را درست وارد کنید.');
       endpoint = `/api/shipping/orders/${encodeURIComponent(action.order.id)}/manual`;
       method = 'POST';
       payload = {
-        serviceName: serviceName.trim(),
+        ...(selectedCarrier
+          ? { carrierId: selectedCarrier.id }
+          : { serviceName: serviceName.trim() }),
         estimatedDeliveryDays: days,
         reason: cleanReason,
       };
@@ -429,10 +447,6 @@ export function ShippingManagementView({ orders, failed, canCreate, canUpdateSta
           tone={counts.failed ? 'danger' : 'neutral'}
         />
       </section>
-      <Alert tone="info" title="ارسال دستی بدون Postex">
-        هزینه آنلاین استعلام نمی‌شود؛ مبلغ ارسال ثبت‌شده سفارش حفظ می‌شود و کد رهگیری هنگام تحویل
-        مرسوله به پست وارد خواهد شد.
-      </Alert>
       <FilterBar
         activeCount={Number(Boolean(needle)) + Number(filter !== 'all')}
         resetAction={
@@ -556,21 +570,40 @@ export function ShippingManagementView({ orders, failed, canCreate, canUpdateSta
           <form id="shipping-operation-form" onSubmit={submit} className="space-y-4">
             {action?.kind === 'create' ? (
               <>
-                <Alert tone="info">
-                  مرسوله داخل سامانه ساخته می‌شود و هیچ درخواستی به Postex ارسال نخواهد شد.
-                </Alert>
-                <FormField id="manual-service-name" label="نام سرویس ارسال" required>
+                <FormField id="manual-carrier" label="شرکت ارسال‌کننده" required>
                   {(props) => (
-                    <Input
+                    <Select
                       {...props}
-                      value={serviceName}
-                      maxLength={200}
-                      placeholder="مثلاً پست پیشتاز"
-                      onChange={(event) => setServiceName(toPersianDigits(event.target.value))}
+                      value={carrierSelection}
+                      options={[
+                        ...carriers.map((carrier) => ({
+                          value: carrier.id,
+                          label: carrier.name,
+                        })),
+                        { value: 'custom', label: 'سایر (ورود نام دستی)' },
+                      ]}
+                      onValueChange={(value) => {
+                        setCarrierSelection(value);
+                        setError('');
+                      }}
                       disabled={pending}
                     />
                   )}
                 </FormField>
+                {carrierSelection === 'custom' ? (
+                  <FormField id="manual-service-name" label="نام شیوه ارسال" required>
+                    {(props) => (
+                      <Input
+                        {...props}
+                        value={serviceName}
+                        maxLength={200}
+                        placeholder="مثلاً پیک اختصاصی"
+                        onChange={(event) => setServiceName(toPersianDigits(event.target.value))}
+                        disabled={pending}
+                      />
+                    )}
+                  </FormField>
+                ) : null}
                 <FormField
                   id="manual-estimated-days"
                   label="زمان تقریبی تحویل"

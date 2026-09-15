@@ -83,8 +83,36 @@ const shipmentStatusPresentation: Record<AdminShipmentStatus, string> = {
 
 const decimalFormatter = new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 3 });
 
-function OrderStatusBadge({ status }: Readonly<{ status: AdminOrderStatus }>) {
-  const presentation = orderStatusPresentation[status];
+function paymentMethodLabel(provider: string | undefined): string {
+  if (!provider) return 'ثبت نشده';
+  if (provider.toLowerCase() === 'card_to_card') return 'کارت‌به‌کارت';
+  return 'درگاه بانکی';
+}
+
+function paymentProviderLabel(provider: string): string {
+  return provider.toLowerCase() === 'card_to_card' ? 'کارت‌به‌کارت' : provider;
+}
+
+function timelineStatusLabel(
+  order: AdminOrder,
+  entry: AdminOrder['timeline'][number],
+  index: number,
+): string {
+  const isCardToCard = order.payment?.attempts[0]?.provider.toLowerCase() === 'card_to_card';
+  if (!isCardToCard || entry.toStatus !== 'PENDING_PAYMENT') {
+    return orderStatusPresentation[entry.toStatus].label;
+  }
+
+  const isCurrentReviewStep =
+    order.payment?.status === 'AWAITING_REVIEW' && index === order.timeline.length - 1;
+  return isCurrentReviewStep ? 'در انتظار بررسی رسید' : 'در انتظار ثبت رسید کارت‌به‌کارت';
+}
+
+function OrderStatusBadge({ order }: Readonly<{ order: AdminOrder }>) {
+  const presentation =
+    order.status === 'PENDING_PAYMENT' && order.payment?.status === 'AWAITING_REVIEW'
+      ? { label: 'در انتظار بررسی رسید', tone: 'warning' as const }
+      : orderStatusPresentation[order.status];
   return (
     <Badge tone={presentation.tone} dot>
       {presentation.label}
@@ -175,6 +203,9 @@ function OrderDetails({
   canCancel: boolean;
 }>) {
   const latestAttempt = order.payment?.attempts[0];
+  const isAwaitingCardToCardReview =
+    order.payment?.status === 'AWAITING_REVIEW' &&
+    latestAttempt?.provider.toLowerCase() === 'card_to_card';
   return (
     <div className="space-y-4">
       {orderRequiresAttention(order) ? (
@@ -183,8 +214,14 @@ function OrderDetails({
         </Alert>
       ) : null}
 
+      {isAwaitingCardToCardReview ? (
+        <Alert tone="warning" title="پرداخت کارت‌به‌کارت ثبت شده است">
+          رسید مشتری دریافت شده و تا زمان تأیید مدیر در صف بررسی می‌ماند.
+        </Alert>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
-        <OrderStatusBadge status={order.status} />
+        <OrderStatusBadge order={order} />
         <PaymentStatusBadge order={order} />
         {order.shipment ? (
           <Badge tone={order.shipment.status === 'FAILED' ? 'danger' : 'neutral'}>
@@ -236,20 +273,24 @@ function OrderDetails({
         </div>
       </Card>
 
-      <Card title="پرداخت" description="وضعیت مالی و آخرین تلاش‌های درگاه">
+      <Card title="پرداخت" description="وضعیت مالی و آخرین تلاش‌های پرداخت">
         {order.payment ? (
           <div className="space-y-4">
             <DetailRows
               rows={[
                 ['وضعیت', paymentStatusPresentation[order.payment.status].label],
+                ['شیوه پرداخت', paymentMethodLabel(latestAttempt?.provider)],
                 ['مبلغ پرداخت', formatAdminToman(order.payment.amountToman)],
                 ['مبلغ بازپرداخت', formatAdminToman(order.payment.refundedAmountToman)],
                 [
                   'زمان پرداخت',
                   order.payment.paidAt ? formatAdminDateTime(order.payment.paidAt) : 'ثبت نشده',
                 ],
-                ['آخرین درگاه', latestAttempt?.provider ?? 'ثبت نشده'],
-                ['مرجع درگاه', latestAttempt?.providerReference ?? 'ثبت نشده'],
+                [
+                  'ارائه‌دهنده',
+                  latestAttempt ? paymentProviderLabel(latestAttempt.provider) : 'ثبت نشده',
+                ],
+                ['مرجع پرداخت', latestAttempt?.providerReference ?? 'ثبت نشده'],
               ]}
             />
             {order.payment.attempts.length ? (
@@ -262,7 +303,9 @@ function OrderDetails({
                       className="rounded-lg bg-[var(--admin-color-surface-subtle)] p-3 text-xs"
                     >
                       <div className="flex justify-between gap-3">
-                        <span className="font-bold">{toPersianDigits(attempt.provider)}</span>
+                        <span className="font-bold">
+                          {toPersianDigits(paymentProviderLabel(attempt.provider))}
+                        </span>
                         <span>{attemptStatusPresentation[attempt.status]}</span>
                       </div>
                       <p className="mt-1 text-[var(--admin-color-muted)]">
@@ -319,16 +362,14 @@ function OrderDetails({
       <Card title="تاریخچه وضعیت" description="روند ثبت‌شده سفارش">
         {order.timeline.length ? (
           <ol className="relative space-y-0 before:absolute before:inset-y-3 before:start-[0.3125rem] before:w-px before:bg-[var(--admin-color-border)]">
-            {order.timeline.map((entry) => (
+            {order.timeline.map((entry, index) => (
               <li key={entry.id} className="relative pb-4 ps-6 last:pb-0">
                 <span
                   aria-hidden="true"
                   className="absolute start-0 top-1.5 size-2.5 rounded-full border-2 border-white bg-[var(--admin-color-primary)] ring-1 ring-[var(--admin-color-border)]"
                 />
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-bold">
-                    {orderStatusPresentation[entry.toStatus].label}
-                  </p>
+                  <p className="text-sm font-bold">{timelineStatusLabel(order, entry, index)}</p>
                   <time className="text-xs text-[var(--admin-color-subtle)]">
                     {formatAdminDateTime(entry.createdAt)}
                   </time>
@@ -390,7 +431,7 @@ function OrderMobileCard({
     <MobileDataCard
       eyebrow={toPersianDigits(order.orderNumber)}
       title={order.customer.name ?? formatAdminPhone(order.customer.phone)}
-      status={<OrderStatusBadge status={order.status} />}
+      status={<OrderStatusBadge order={order} />}
       className={orderRequiresAttention(order) ? 'border-red-200' : undefined}
       items={[
         { label: 'مبلغ', value: formatAdminToman(order.grandTotalToman) },
@@ -490,7 +531,7 @@ export function OrderManagementView({
     {
       id: 'status',
       header: 'وضعیت سفارش',
-      cell: (order) => <OrderStatusBadge status={order.status} />,
+      cell: (order) => <OrderStatusBadge order={order} />,
     },
     { id: 'payment', header: 'پرداخت', cell: (order) => <PaymentStatusBadge order={order} /> },
     {
