@@ -55,12 +55,17 @@ if [[ $old = "$releases/"* ]]; then
     [[ -f $old/.hamidian-release-sha && $(<"$old/.hamidian-release-sha") = "$old_tag" ]] || fail 'current managed release marker is invalid'
 fi
 [[ $(stat -c %u -- "$old") = 0 ]] || fail 'current directory must be root-owned'
-if [[ -e $root/previous ]]; then
+if [[ -e $root/previous && ! -L $root/previous ]]; then
     fail 'previous must be absent or a symlink; do not overwrite an existing path'
 fi
+
 if [[ -L $root/previous ]]; then
-    prior=$(realpath -e -- "$root/previous") || fail 'previous release link is broken'
-    [[ -f $prior/compose.production.yaml && $(stat -c %u -- "$prior") = 0 ]] || fail 'previous release is invalid'
+    prior=$(realpath -e -- "$root/previous") ||
+        fail 'previous release link is broken'
+
+    [[ -f $prior/compose.production.yaml &&
+       $(stat -c %u -- "$prior") = 0 ]] ||
+        fail 'previous release is invalid'
 fi
 compose "$old" "$old_tag" config --quiet
 compose "$release" "$sha" config --quiet
