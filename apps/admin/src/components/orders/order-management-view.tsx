@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 
 import { OrderOperations } from '@/components/orders/order-operations';
+import { PaymentReceiptReview } from '@/components/orders/payment-receipt-review';
 import { Alert } from '@/components/ui/alert';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { BottomSheet, BottomSheetContent, BottomSheetTrigger } from '@/components/ui/bottom-sheet';
@@ -62,6 +63,7 @@ const paymentStatusPresentation: Record<AdminPaymentStatus, { label: string; ton
 const attemptStatusPresentation: Record<AdminPaymentAttemptStatus, string> = {
   CREATED: 'ایجادشده',
   REDIRECTED: 'هدایت به درگاه',
+  AWAITING_REVIEW: 'رسید در انتظار تأیید',
   VERIFIED: 'تأییدشده',
   FAILED: 'ناموفق',
   RECONCILIATION_REQUIRED: 'نیازمند مغایرت‌گیری',
@@ -91,6 +93,15 @@ function OrderStatusBadge({ status }: Readonly<{ status: AdminOrderStatus }>) {
 
 function PaymentStatusBadge({ order }: Readonly<{ order: AdminOrder }>) {
   if (!order.payment) return <Badge tone="neutral">بدون رکورد پرداخت</Badge>;
+
+  if (
+    order.payment.attempts.some(
+      (attempt) => attempt.status === 'AWAITING_REVIEW',
+    )
+  ) {
+    return <Badge tone="warning" dot>رسید در انتظار تأیید</Badge>;
+  }
+
   const presentation = paymentStatusPresentation[order.payment.status];
   return (
     <Badge tone={presentation.tone} dot>
@@ -261,6 +272,12 @@ function OrderDetails({
                         <p className="mt-2 text-[var(--admin-color-danger)]">
                           {toPersianDigits(attempt.failureMessage)}
                         </p>
+                      ) : null}
+                      {attempt.receiptUploadedAt ? (
+                        <PaymentReceiptReview
+                          attempt={attempt}
+                          canConfirm={canUpdateStatus}
+                        />
                       ) : null}
                     </li>
                   ))}

@@ -19,6 +19,7 @@ function firstValue(value: string | string[] | undefined): string | undefined {
 export default async function PaymentResultPage({ searchParams }: PaymentResultPageProps) {
   const query = await searchParams;
   const orderId = firstValue(query.orderId);
+  const receiptSubmitted = firstValue(query.receipt) === '1';
   let order: CustomerOrderDetail | null = null;
 
   if (orderId) {
@@ -31,6 +32,10 @@ export default async function PaymentResultPage({ searchParams }: PaymentResultP
   }
 
   return (
-    <PaymentResult status={verifiedPaymentStatus(order?.status)} orderId={orderId} order={order} />
+    <PaymentResult
+      status={receiptSubmitted ? 'receipt-pending' : verifiedPaymentStatus(order?.status)}
+      orderId={orderId}
+      order={order}
+    />
   );
 }

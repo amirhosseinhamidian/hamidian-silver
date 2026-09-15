@@ -1,8 +1,10 @@
 import {
   BadGatewayException,
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
+  NotFoundException,
   Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -33,6 +35,17 @@ import {
   type PaymentGateway,
   type VerifyGatewayPaymentInput,
 } from './payment-gateway.port';
+
+const CARD_TO_CARD_PROVIDER = 'card_to_card';
+const MAX_RECEIPT_SIZE_BYTES = 10 * 1024 * 1024;
+const RECEIPT_REVIEW_HOLD_MS = 7 * 24 * 60 * 60 * 1000;
+
+export type PaymentReceiptUpload = {
+  buffer: Buffer;
+  mimetype: string;
+  originalname: string;
+  size: number;
+};
 
 type InitiationContext = {
   attemptId: string;
@@ -436,6 +449,241 @@ export class PaymentsService {
     }
   }
 
+  getCardToCardSettings() {
+    const enabled = this.config.get<boolean>('CARD_TO_CARD_ENABLED', false);
+    const cardNumber = this.config.get<string>('CARD_TO_CARD_NUMBER')?.trim() ?? '';
+    const holderName = this.config.get<string>('CARD_TO_CARD_HOLDER_NAME')?.trim() ?? '';
+    const bankName = this.config.get<string>('CARD_TO_CARD_BANK_NAME')?.trim() ?? '';
+    const configured =
+      enabled && /^\d{16}$/.test(cardNumber) && holderName.length >= 2 && bankName.length >= 2;
+
+    return {
+      enabled: configured,
+      cardNumber: configured ? cardNumber : null,
+      holderName: configured ? holderName : null,
+      bankName: configured ? bankName : null,
+    };
+  }
+
+  async submitCardToCardReceipt(
+    userId: string,
+    orderId: string,
+    idempotencyKey: string,
+    file?: PaymentReceiptUpload,
+  ) {
+    if (!this.getCardToCardSettings().enabled) {
+      throw new ConflictException('Card-to-card payment is not available.');
+    }
+
+    const receipt = this.validatePaymentReceipt(file);
+
+    return this.prisma.$transaction(async (transaction) => {
+      await lockOrderRowForUpdate(transaction, orderId);
+
+      const order = await transaction.order.findFirst({
+        where: { id: orderId, userId },
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          grandTotalToman: true,
+          reservationExpiresAt: true,
+        },
+      });
+
+      if (!order) {
+        throw new DomainException(ErrorCode.ORDER_NOT_FOUND, 'Order was not found.');
+      }
+      if (order.status !== OrderStatus.PENDING_PAYMENT) {
+        throw new ConflictException('Order is not awaiting payment.');
+      }
+      if (order.reservationExpiresAt <= new Date()) {
+        throw new ConflictException('Order inventory reservation has expired.');
+      }
+
+      const payment = await transaction.payment.upsert({
+        where: { orderId: order.id },
+        update: {},
+        create: {
+          orderId: order.id,
+          amountToman: order.grandTotalToman,
+        },
+      });
+
+      if (payment.status !== PaymentStatus.PENDING) {
+        throw new ConflictException('Payment is not pending.');
+      }
+      if (payment.amountToman !== order.grandTotalToman) {
+        throw new ConflictException('Order and payment amounts do not match.');
+      }
+
+      const existingForOrder = await transaction.paymentAttempt.findFirst({
+        where: {
+          paymentId: payment.id,
+          provider: CARD_TO_CARD_PROVIDER,
+          status: {
+            in: [PaymentAttemptStatus.AWAITING_REVIEW, PaymentAttemptStatus.VERIFIED],
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (existingForOrder) {
+        return {
+          attemptId: existingForOrder.id,
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          status: existingForOrder.status,
+          receiptUploadedAt: existingForOrder.receiptUploadedAt,
+          alreadySubmitted: true,
+        };
+      }
+
+      const existingKey = await transaction.paymentAttempt.findUnique({
+        where: { idempotencyKey },
+      });
+
+      if (existingKey) {
+        if (
+          existingKey.paymentId !== payment.id ||
+          existingKey.provider !== CARD_TO_CARD_PROVIDER
+        ) {
+          throw new ConflictException('Idempotency key is already in use.');
+        }
+
+        return {
+          attemptId: existingKey.id,
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          status: existingKey.status,
+          receiptUploadedAt: existingKey.receiptUploadedAt,
+          alreadySubmitted: true,
+        };
+      }
+
+      await transaction.paymentAttempt.updateMany({
+        where: {
+          paymentId: payment.id,
+          provider: { not: CARD_TO_CARD_PROVIDER },
+          status: {
+            in: [PaymentAttemptStatus.CREATED, PaymentAttemptStatus.REDIRECTED],
+          },
+        },
+        data: {
+          status: PaymentAttemptStatus.FAILED,
+          failureCode: 'PAYMENT_METHOD_CHANGED',
+          failureMessage: 'Payment method changed to card-to-card.',
+        },
+      });
+
+      const uploadedAt = new Date();
+      const attempt = await transaction.paymentAttempt.create({
+        data: {
+          paymentId: payment.id,
+          idempotencyKey,
+          provider: CARD_TO_CARD_PROVIDER,
+          status: PaymentAttemptStatus.AWAITING_REVIEW,
+          amountToman: payment.amountToman,
+          receiptData: Uint8Array.from(receipt.buffer),
+          receiptMimeType: receipt.mimeType,
+          receiptOriginalName: receipt.originalName,
+          receiptSizeBytes: receipt.size,
+          receiptUploadedAt: uploadedAt,
+        },
+      });
+
+      await transaction.order.update({
+        where: { id: order.id },
+        data: {
+          reservationExpiresAt: new Date(uploadedAt.getTime() + RECEIPT_REVIEW_HOLD_MS),
+        },
+      });
+
+      await this.outbox?.enqueueOrderEvent(transaction, {
+        type: NotificationOutboxEventType.PAYMENT_RECEIPT_SUBMITTED,
+        orderId: order.id,
+        deduplicationKey: `payment-attempt:${attempt.id}:receipt-submitted`,
+        payload: {
+          paymentAttemptId: attempt.id,
+          provider: CARD_TO_CARD_PROVIDER,
+        },
+      });
+
+      return {
+        attemptId: attempt.id,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        status: attempt.status,
+        receiptUploadedAt: uploadedAt,
+        alreadySubmitted: false,
+      };
+    });
+  }
+
+  async getCardToCardReceipt(attemptId: string) {
+    const attempt = await this.prisma.paymentAttempt.findUnique({
+      where: { id: attemptId },
+      select: {
+        provider: true,
+        receiptData: true,
+        receiptMimeType: true,
+        receiptOriginalName: true,
+      },
+    });
+
+    if (
+      !attempt ||
+      attempt.provider !== CARD_TO_CARD_PROVIDER ||
+      !attempt.receiptData ||
+      !attempt.receiptMimeType ||
+      !attempt.receiptOriginalName
+    ) {
+      throw new NotFoundException('Payment receipt was not found.');
+    }
+
+    return {
+      data: Buffer.from(attempt.receiptData),
+      mimeType: attempt.receiptMimeType,
+      originalName: attempt.receiptOriginalName,
+    };
+  }
+
+  async confirmCardToCardReceipt(attemptId: string, actorUserId: string) {
+    const attempt = await this.prisma.paymentAttempt.findUnique({
+      where: { id: attemptId },
+      select: {
+        id: true,
+        provider: true,
+        status: true,
+        receiptData: true,
+        payment: {
+          select: {
+            order: {
+              select: { orderNumber: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!attempt || attempt.provider !== CARD_TO_CARD_PROVIDER || !attempt.receiptData) {
+      throw new NotFoundException('Payment receipt was not found.');
+    }
+
+    if (attempt.status === PaymentAttemptStatus.VERIFIED) {
+      return { success: true, alreadyVerified: true };
+    }
+
+    if (attempt.status !== PaymentAttemptStatus.AWAITING_REVIEW) {
+      throw new ConflictException('Payment receipt is not awaiting review.');
+    }
+
+    const referenceId =
+      `CARD-${attempt.payment.order.orderNumber}-` + attempt.id.slice(0, 8).toUpperCase();
+
+    return this.finalizeVerifiedPayment(attempt.id, null, referenceId, undefined, actorUserId);
+  }
+
   async getOrderPayment(userId: string, orderId: string) {
     const payment = await this.prisma.payment.findFirst({
       where: {
@@ -625,10 +873,12 @@ export class PaymentsService {
 
   private async finalizeVerifiedPayment(
     attemptId: string,
-    authority: string,
+    authority: string | null,
     referenceId: string,
     actualFeeToman?: number,
+    actorUserId: string | null = null,
   ) {
+    const isManualReceipt = authority === null;
     return this.prisma.$transaction(async (transaction) => {
       const attempt = await transaction.paymentAttempt.findUnique({
         where: {
@@ -651,7 +901,7 @@ export class PaymentsService {
         throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment attempt was not found.');
       }
 
-      if (attempt.authority !== authority) {
+      if (!isManualReceipt && attempt.authority !== authority) {
         throw new DomainException(
           ErrorCode.PAYMENT_CALLBACK_INVALID,
           'Payment authority does not match.',
@@ -669,7 +919,23 @@ export class PaymentsService {
         };
       }
 
-      if (attempt.status !== PaymentAttemptStatus.REDIRECTED) {
+      const expectedStatus = isManualReceipt
+        ? PaymentAttemptStatus.AWAITING_REVIEW
+        : PaymentAttemptStatus.REDIRECTED;
+
+      if (
+        isManualReceipt &&
+        (attempt.provider !== CARD_TO_CARD_PROVIDER ||
+          !attempt.receiptData ||
+          !attempt.receiptUploadedAt)
+      ) {
+        throw new ConflictException('Card-to-card receipt metadata is incomplete.');
+      }
+
+      if (attempt.status !== expectedStatus) {
+        if (isManualReceipt) {
+          throw new ConflictException(`Payment attempt reached ${attempt.status}.`);
+        }
         return this.recordPaymentReconciliationInTransaction(
           transaction,
           attempt.id,
@@ -679,6 +945,9 @@ export class PaymentsService {
       }
 
       if (order.status !== OrderStatus.PENDING_PAYMENT) {
+        if (isManualReceipt) {
+          throw new ConflictException(`Order reached ${order.status}.`);
+        }
         return this.recordPaymentReconciliationInTransaction(
           transaction,
           attempt.id,
@@ -688,6 +957,9 @@ export class PaymentsService {
       }
 
       if (attempt.payment.status !== PaymentStatus.PENDING) {
+        if (isManualReceipt) {
+          throw new ConflictException(`Payment reached ${attempt.payment.status}.`);
+        }
         return this.recordPaymentReconciliationInTransaction(
           transaction,
           attempt.id,
@@ -700,6 +972,9 @@ export class PaymentsService {
         attempt.amountToman !== attempt.payment.amountToman ||
         attempt.payment.amountToman !== order.grandTotalToman
       ) {
+        if (isManualReceipt) {
+          throw new ConflictException('Payment amount snapshots do not match.');
+        }
         return this.recordPaymentReconciliationInTransaction(
           transaction,
           attempt.id,
@@ -721,6 +996,9 @@ export class PaymentsService {
       });
 
       if (claimed.count !== 1) {
+        if (isManualReceipt) {
+          throw new ConflictException('Order status changed during receipt confirmation.');
+        }
         return this.recordPaymentReconciliationInTransaction(
           transaction,
           attempt.id,
@@ -737,7 +1015,7 @@ export class PaymentsService {
           actorUserId: null,
           fromStatus: OrderStatus.PENDING_PAYMENT,
           toStatus: OrderStatus.PAID,
-          reason: 'Payment verified',
+          reason: isManualReceipt ? 'Card-to-card receipt approved' : 'Payment verified',
         },
       });
 
@@ -752,6 +1030,7 @@ export class PaymentsService {
           verifiedAt: paidAt,
           failureCode: null,
           failureMessage: null,
+          receiptVerifiedByUserId: isManualReceipt ? actorUserId : undefined,
         },
       });
 
@@ -819,6 +1098,53 @@ export class PaymentsService {
         referenceId,
       };
     });
+  }
+
+  private validatePaymentReceipt(file?: PaymentReceiptUpload) {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('Payment receipt image is required.');
+    }
+    if (
+      !Number.isSafeInteger(file.size) ||
+      file.size <= 0 ||
+      file.size > MAX_RECEIPT_SIZE_BYTES ||
+      file.size !== file.buffer.length
+    ) {
+      throw new BadRequestException('Receipt image must be smaller than 10 MB.');
+    }
+
+    const isJpeg = file.buffer[0] === 0xff && file.buffer[1] === 0xd8 && file.buffer[2] === 0xff;
+    const isPng = file.buffer
+      .subarray(0, 8)
+      .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    const isWebp =
+      file.buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+      file.buffer.subarray(8, 12).toString('ascii') === 'WEBP';
+
+    const detectedMimeType = isJpeg
+      ? 'image/jpeg'
+      : isPng
+        ? 'image/png'
+        : isWebp
+          ? 'image/webp'
+          : null;
+
+    if (!detectedMimeType || detectedMimeType !== file.mimetype.toLowerCase()) {
+      throw new BadRequestException('Only valid JPEG, PNG, or WebP receipts are accepted.');
+    }
+
+    const originalName =
+      file.originalname
+        .replace(/[\u0000-\u001f\u007f/\\]/g, '')
+        .trim()
+        .slice(0, 255) || `receipt.${detectedMimeType.split('/')[1]}`;
+
+    return {
+      buffer: file.buffer,
+      size: file.size,
+      mimeType: detectedMimeType,
+      originalName,
+    };
   }
 
   private recordPaymentReconciliation(attemptId: string, referenceId: string, reason: string) {

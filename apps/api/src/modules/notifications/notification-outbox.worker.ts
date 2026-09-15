@@ -443,7 +443,12 @@ export class NotificationOutboxWorker {
       case NotificationOutboxEventType.PAYMENT_VERIFIED:
         return {
           phone: order.user.phone,
-          text: `پرداخت سفارش ${order.orderNumber} با موفقیت ثبت شد.`,
+          text: `پرداخت سفارش ${order.orderNumber} تأیید شد و سفارش وارد مرحله آماده‌سازی می‌شود.`,
+        };
+      case NotificationOutboxEventType.PAYMENT_RECEIPT_SUBMITTED:
+        return {
+          phone: order.user.phone,
+          text: `رسید کارت‌به‌کارت سفارش ${order.orderNumber} دریافت شد و پس از بررسی نتیجه اطلاع‌رسانی می‌شود.`,
         };
       case NotificationOutboxEventType.SHIPMENT_TRACKING_AVAILABLE:
         if (!order.shipment?.trackingCode) {

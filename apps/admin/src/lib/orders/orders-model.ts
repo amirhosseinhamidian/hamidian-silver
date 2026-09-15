@@ -5,7 +5,7 @@ export type AdminPaymentStatus =
   'PENDING' | 'PAID' | 'PARTIALLY_REFUNDED' | 'CANCELLED' | 'RECONCILIATION_REQUIRED' | 'REFUNDED';
 
 export type AdminPaymentAttemptStatus =
-  'CREATED' | 'REDIRECTED' | 'VERIFIED' | 'FAILED' | 'RECONCILIATION_REQUIRED' | 'RECONCILED';
+  'CREATED' | 'REDIRECTED' | 'AWAITING_REVIEW' | 'VERIFIED' | 'FAILED' | 'RECONCILIATION_REQUIRED' | 'RECONCILED';
 
 export type AdminShipmentStatus =
   'PENDING' | 'READY' | 'HANDED_OVER' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED' | 'CANCELLED';
@@ -54,6 +54,10 @@ export type AdminPaymentAttempt = Readonly<{
   failureCode: string | null;
   failureMessage: string | null;
   verifiedAt: string | null;
+  receiptMimeType: string | null;
+  receiptOriginalName: string | null;
+  receiptSizeBytes: number | null;
+  receiptUploadedAt: string | null;
   createdAt: string;
 }>;
 
@@ -155,6 +159,7 @@ const PAYMENT_STATUSES = new Set<AdminPaymentStatus>([
 const ATTEMPT_STATUSES = new Set<AdminPaymentAttemptStatus>([
   'CREATED',
   'REDIRECTED',
+  'AWAITING_REVIEW',
   'VERIFIED',
   'FAILED',
   'RECONCILIATION_REQUIRED',
@@ -273,6 +278,8 @@ function parseAttempt(value: unknown): AdminPaymentAttempt | null {
   const amountToman = number(attempt.amountToman);
   const createdAt = date(attempt.createdAt);
   const verifiedAt = nullableDate(attempt.verifiedAt);
+  const receiptUploadedAt = nullableDate(attempt.receiptUploadedAt);
+  const receiptSizeBytes = number(attempt.receiptSizeBytes);
   if (
     !id ||
     !provider ||
@@ -280,7 +287,8 @@ function parseAttempt(value: unknown): AdminPaymentAttempt | null {
     !ATTEMPT_STATUSES.has(status) ||
     amountToman === null ||
     !createdAt ||
-    (attempt.verifiedAt != null && !verifiedAt)
+    (attempt.verifiedAt != null && !verifiedAt) ||
+    (attempt.receiptUploadedAt != null && !receiptUploadedAt)
   )
     return null;
   return {
@@ -292,6 +300,10 @@ function parseAttempt(value: unknown): AdminPaymentAttempt | null {
     failureCode: text(attempt.failureCode),
     failureMessage: text(attempt.failureMessage),
     verifiedAt,
+    receiptMimeType: text(attempt.receiptMimeType),
+    receiptOriginalName: text(attempt.receiptOriginalName),
+    receiptSizeBytes,
+    receiptUploadedAt,
     createdAt,
   };
 }
@@ -540,6 +552,9 @@ export function orderItemCount(order: AdminOrder): number {
 
 export function orderRequiresAttention(order: AdminOrder): boolean {
   return (
+    order.payment?.attempts.some(
+      (attempt) => attempt.status === 'AWAITING_REVIEW',
+    ) === true ||
     order.payment?.status === 'RECONCILIATION_REQUIRED' ||
     order.shipment?.status === 'FAILED' ||
     (order.status === 'PAID' && order.payment?.status !== 'PAID')

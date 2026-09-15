@@ -1,7 +1,7 @@
 import type { components } from '@hamidian/contracts';
 import { cookies } from 'next/headers';
 
-import { createServerApiClient } from '@/lib/api/server-client';
+import { createServerApiClient, normalizeApiOrigin } from '@/lib/api/server-client';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
 
 type CreateOrderBody = components['schemas']['CreateOrderDto'];
@@ -77,4 +77,72 @@ export async function initiateCheckoutPayment(request: Request): Promise<Respons
   );
 
   return responseFromApi(response, data ?? error);
+}
+
+function apiOrigin(): string {
+  const configuredOrigin = process.env.HAMIDIAN_API_ORIGIN;
+  if (!configuredOrigin) {
+    throw new Error('HAMIDIAN_API_ORIGIN is required for checkout requests.');
+  }
+  return normalizeApiOrigin(configuredOrigin);
+}
+
+async function forwardAuthenticatedResponse(
+  path: string,
+  accessToken: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const response = await fetch(`${apiOrigin()}${path}`, {
+    ...init,
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+      ...init.headers,
+    },
+  });
+
+  return new Response(await response.arrayBuffer(), {
+    status: response.status,
+    headers: {
+      'Content-Type': response.headers.get('content-type') ?? 'application/json',
+      'Cache-Control': 'no-store',
+    },
+  });
+}
+
+export async function getCardToCardSettings(): Promise<Response> {
+  const accessToken = await getSessionToken();
+  if (!accessToken) return authenticationRequired();
+
+  try {
+    return await forwardAuthenticatedResponse(
+      '/api/v1/payments/card-to-card/settings',
+      accessToken,
+    );
+  } catch {
+    return Response.json({ message: 'Payment service is unavailable.' }, { status: 502 });
+  }
+}
+
+export async function submitCardToCardReceipt(request: Request): Promise<Response> {
+  const accessToken = await getSessionToken();
+  if (!accessToken) return authenticationRequired();
+
+  const body = await request.formData();
+  const orderId = body.get('orderId');
+  if (typeof orderId !== 'string' || !orderId) {
+    return Response.json({ message: 'orderId is required.' }, { status: 400 });
+  }
+  body.delete('orderId');
+
+  try {
+    return await forwardAuthenticatedResponse(
+      `/api/v1/payments/orders/${encodeURIComponent(orderId)}/card-to-card/receipt`,
+      accessToken,
+      { method: 'POST', body },
+    );
+  } catch {
+    return Response.json({ message: 'Payment service is unavailable.' }, { status: 502 });
+  }
 }

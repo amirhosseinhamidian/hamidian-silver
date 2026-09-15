@@ -3,6 +3,10 @@
 import type { components } from '@hamidian/contracts';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
+import {
+  CardToCardPaymentModal,
+  type CardToCardSettings,
+} from '@/components/checkout/card-to-card-payment-modal';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input, Textarea } from '@/components/ui/form-control';
@@ -29,6 +33,8 @@ type AuthState =
   | { status: 'forbidden' }
   | { status: 'authenticated'; user: CurrentUser };
 type CheckoutPriceChange = Readonly<{ previousTotalToman: number; orderTotalToman: number }>;
+type PaymentMethod = 'gateway' | 'card_to_card';
+
 type UserAddress = Readonly<{
   id: string;
   title: string;
@@ -141,6 +147,14 @@ export function CheckoutFlow({
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
   const [staleCart, setStaleCart] = useState(false);
   const [uncertainCheckout, setUncertainCheckout] = useState<'order' | 'payment' | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('gateway');
+  const [cardToCardSettings, setCardToCardSettings] = useState<CardToCardSettings | null>(null);
+  const [cardToCardOrder, setCardToCardOrder] = useState<{
+    id: string;
+    number: string;
+    amountToman: number;
+  } | null>(null);
+  const [cardToCardModalOpen, setCardToCardModalOpen] = useState(false);
   const paymentIdempotencyKey = useRef<string | null>(null);
   const checkoutTracked = useRef(false);
 
@@ -226,6 +240,30 @@ export function CheckoutFlow({
       })
       .catch(() => active && setAddressError('دریافت آدرس‌های ذخیره‌شده انجام نشد.'))
       .finally(() => active && setAddressesLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [auth.status]);
+
+  useEffect(() => {
+    if (auth.status !== 'authenticated') return;
+    let active = true;
+
+    void fetch('/api/checkout/card-to-card', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!active || !response.ok) return;
+        const payload = (await response.json()) as CardToCardSettings;
+        if (
+          typeof payload.enabled === 'boolean' &&
+          (payload.cardNumber === null || typeof payload.cardNumber === 'string') &&
+          (payload.holderName === null || typeof payload.holderName === 'string') &&
+          (payload.bankName === null || typeof payload.bankName === 'string')
+        ) {
+          setCardToCardSettings(payload);
+        }
+      })
+      .catch(() => undefined);
+
     return () => {
       active = false;
     };
@@ -369,6 +407,22 @@ export function CheckoutFlow({
       }
 
       setPriceChange(null);
+
+      if (paymentMethod === 'card_to_card') {
+        if (!cardToCardSettings?.enabled || !orderId) {
+          setCheckoutError('پرداخت کارت‌به‌کارت در حال حاضر در دسترس نیست.');
+          return;
+        }
+
+        setCardToCardOrder({
+          id: orderId,
+          number: orderNumber ?? '',
+          amountToman: pendingOrderTotalToman ?? estimatedTotalToman,
+        });
+        setCardToCardModalOpen(true);
+        return;
+      }
+
       phase = 'payment';
       paymentIdempotencyKey.current ??= crypto.randomUUID();
       const paymentResponse = await fetch('/api/checkout/payment', {
@@ -696,6 +750,60 @@ export function CheckoutFlow({
             ) : null}
           </div>
         )}
+
+        <fieldset className="mt-10">
+          <legend className="text-xl font-medium">روش پرداخت</legend>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <label
+              className={`cursor-pointer rounded-[var(--sf-radius-md)] border p-4 transition ${
+                paymentMethod === 'gateway'
+                  ? 'border-[var(--sf-color-ink)] bg-[var(--sf-color-surface)]'
+                  : 'border-[var(--sf-color-border)]'
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="gateway"
+                  checked={paymentMethod === 'gateway'}
+                  onChange={() => setPaymentMethod('gateway')}
+                  className="size-4 accent-[var(--sf-color-ink)]"
+                />
+                <strong className="text-sm">پرداخت از طریق درگاه بانکی</strong>
+              </span>
+              <span className="mt-2 block ps-7 text-xs leading-6 text-[var(--sf-color-muted)]">
+                انتقال امن به درگاه پرداخت آنلاین
+              </span>
+            </label>
+
+            <label
+              className={`rounded-[var(--sf-radius-md)] border p-4 transition ${
+                cardToCardSettings?.enabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-55'
+              } ${
+                paymentMethod === 'card_to_card'
+                  ? 'border-[var(--sf-color-ink)] bg-[var(--sf-color-surface)]'
+                  : 'border-[var(--sf-color-border)]'
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="card_to_card"
+                  disabled={!cardToCardSettings?.enabled}
+                  checked={paymentMethod === 'card_to_card'}
+                  onChange={() => setPaymentMethod('card_to_card')}
+                  className="size-4 accent-[var(--sf-color-ink)]"
+                />
+                <strong className="text-sm">پرداخت کارت‌به‌کارت</strong>
+              </span>
+              <span className="mt-2 block ps-7 text-xs leading-6 text-[var(--sf-color-muted)]">
+                در این روش هزینه مالیات و کارمزد پرداخت از طریق درگاه بانکی وجود ندارد.
+              </span>
+            </label>
+          </div>
+        </fieldset>
       </section>
 
       <aside className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-12px_36px_rgb(17_17_17/0.1)] lg:sticky lg:inset-auto lg:top-20 lg:z-auto lg:h-fit lg:border lg:p-5 lg:shadow-none">
@@ -764,6 +872,10 @@ export function CheckoutFlow({
             >
               {priceChange
                 ? 'تأیید مبلغ جدید و پرداخت'
+                : paymentMethod === 'card_to_card'
+                  ? pendingOrderId
+                    ? 'ادامه پرداخت کارت‌به‌کارت'
+                    : 'ثبت سفارش و پرداخت کارت‌به‌کارت'
                 : pendingOrderId
                   ? 'تلاش مجدد برای پرداخت'
                   : 'ثبت سفارش و پرداخت'}
@@ -781,6 +893,23 @@ export function CheckoutFlow({
           </ButtonLink>
         </div>
       </aside>
+
+      {cardToCardOrder && cardToCardSettings ? (
+        <CardToCardPaymentModal
+          open={cardToCardModalOpen}
+          orderId={cardToCardOrder.id}
+          orderNumber={cardToCardOrder.number}
+          amountToman={cardToCardOrder.amountToman}
+          settings={cardToCardSettings}
+          onClose={() => setCardToCardModalOpen(false)}
+          onSubmitted={() => {
+            clearCart();
+            window.location.assign(
+              `/payment/result?orderId=${encodeURIComponent(cardToCardOrder.id)}&receipt=1`,
+            );
+          }}
+        />
+      ) : null}
     </form>
   );
 }

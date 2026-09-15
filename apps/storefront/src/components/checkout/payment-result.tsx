@@ -14,7 +14,7 @@ import { ButtonLink } from '@/components/ui/button';
 import type { CommerceItemInput } from '@/lib/analytics/commerce-events';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 
-export type PaymentResultStatus = 'success' | 'pending' | 'failed';
+export type PaymentResultStatus = 'success' | 'receipt-pending' | 'pending' | 'failed';
 
 type PaymentResultProps = Readonly<{
   status: PaymentResultStatus;
@@ -37,6 +37,13 @@ const RESULT_CONTENT: Record<
     description: 'پرداخت تأیید شده و سفارش برای آماده‌سازی به گالری ارسال شده است.',
     icon: FiCheck,
   },
+  'receipt-pending': {
+    eyebrow: 'رسید با موفقیت ثبت شد',
+    title: 'رسید پرداخت شما دریافت شد',
+    description:
+      'پس از بررسی و تأیید رسید پرداخت، مراحل آماده‌سازی و ارسال محصول انجام خواهد شد.',
+    icon: FiCheck,
+  },
   pending: {
     eyebrow: 'بررسی پرداخت',
     title: 'نتیجه پرداخت در حال بررسی است',
@@ -55,6 +62,7 @@ const RESULT_CONTENT: Record<
 
 function resultActionLabel(status: PaymentResultStatus): string {
   if (status === 'success') return 'مشاهده جزئیات سفارش';
+  if (status === 'receipt-pending') return 'پیگیری وضعیت رسید';
   if (status === 'pending') return 'بررسی وضعیت سفارش';
   return 'بررسی و تلاش مجدد';
 }
@@ -122,22 +130,40 @@ function OrderItems({ order }: Readonly<{ order: CustomerOrderDetail }>) {
 }
 
 function NextSteps({ status }: Readonly<{ status: PaymentResultStatus }>) {
-  if (status !== 'success') return null;
+  if (status !== 'success' && status !== 'receipt-pending') return null;
 
-  const steps = [
-    {
-      title: 'پرداخت تأیید شد',
-      description: 'سفارش شما ثبت شده و پرداخت آن با موفقیت تأیید شده است.',
-    },
-    {
-      title: 'آماده‌سازی سفارش',
-      description: 'محصولات بررسی و با توجه به آبکاری انتخابی برای ارسال آماده می‌شوند.',
-    },
-    {
-      title: 'ارسال و رهگیری',
-      description: 'پس از ارسال، کد رهگیری در جزئیات سفارش حساب کاربری نمایش داده می‌شود.',
-    },
-  ];
+  const steps =
+    status === 'receipt-pending'
+      ? [
+          {
+            title: 'رسید دریافت شد',
+            description: 'تصویر رسید شما با موفقیت ثبت شده و در صف بررسی قرار گرفته است.',
+          },
+          {
+            title: 'بررسی و تأیید',
+            description:
+              'پس از تطبیق مبلغ و اطلاعات پرداخت، نتیجه از طریق پیامک اطلاع داده می‌شود.',
+          },
+          {
+            title: 'آماده‌سازی و ارسال',
+            description: 'پس از تأیید رسید، سفارش برای آماده‌سازی و ارسال وارد عملیات می‌شود.',
+          },
+        ]
+      : [
+          {
+            title: 'پرداخت تأیید شد',
+            description: 'سفارش شما ثبت شده و پرداخت آن با موفقیت تأیید شده است.',
+          },
+          {
+            title: 'آماده‌سازی سفارش',
+            description: 'محصولات بررسی و با توجه به آبکاری انتخابی برای ارسال آماده می‌شوند.',
+          },
+          {
+            title: 'ارسال و رهگیری',
+            description:
+              'پس از ارسال، کد رهگیری در جزئیات سفارش حساب کاربری نمایش داده می‌شود.',
+          },
+        ];
 
   return (
     <section
@@ -244,7 +270,7 @@ export function PaymentResult({ status, orderId, order = null }: PaymentResultPr
       <header className="border-b border-[var(--sf-color-border)] bg-[var(--sf-color-surface)]">
         <div className="sf-container py-12 text-center sm:py-18">
           <span
-            className={`mx-auto flex size-14 items-center justify-center rounded-full border ${status === 'success' ? 'border-[var(--sf-color-ink)] bg-[var(--sf-color-ink)] text-white' : 'border-[var(--sf-color-border-strong)] bg-[var(--sf-color-canvas)]'}`}
+            className={`mx-auto flex size-14 items-center justify-center rounded-full border ${status === 'success' || status === 'receipt-pending' ? 'border-[var(--sf-color-ink)] bg-[var(--sf-color-ink)] text-white' : 'border-[var(--sf-color-border-strong)] bg-[var(--sf-color-canvas)]'}`}
           >
             <StatusIcon aria-hidden="true" size={24} />
           </span>
