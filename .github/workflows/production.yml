@@ -96,7 +96,17 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
-          ssh_args=(-i "$RUNNER_TEMP/hamidian-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$RUNNER_TEMP/hamidian-ssh/known_hosts" -o ConnectTimeout=15)
+          ssh_args=(
+              -i "$RUNNER_TEMP/hamidian-ssh/key"
+              -o BatchMode=yes
+              -o IdentitiesOnly=yes
+              -o StrictHostKeyChecking=yes
+              -o "UserKnownHostsFile=$RUNNER_TEMP/hamidian-ssh/known_hosts"
+              -o ConnectTimeout=15
+              -o ServerAliveInterval=30
+              -o ServerAliveCountMax=20
+              -o TCPKeepAlive=yes
+            )
           git archive --format=tar "$GITHUB_SHA" | ssh "${ssh_args[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "sudo -n /usr/local/libexec/hamidian-silver/receive-production-release.py $GITHUB_SHA"
           ssh "${ssh_args[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "sudo -n /usr/local/libexec/hamidian-silver/deploy-production.sh $GITHUB_SHA"
       - name: Remove temporary runner SSH key
