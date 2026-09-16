@@ -37,6 +37,9 @@ export class AdminHomepageHeroSlideDto {
   @ApiProperty({ type: String, nullable: true })
   actionHref!: string | null;
 
+  @ApiProperty({ example: '#FFFFFF', pattern: '^#[0-9A-Fa-f]{6}$' })
+  contentColor!: string;
+
   sortOrder!: number;
   isActive!: boolean;
 }

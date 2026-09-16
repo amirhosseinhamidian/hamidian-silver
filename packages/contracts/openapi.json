@@ -11875,6 +11875,11 @@
             "type": "string",
             "nullable": true
           },
+          "contentColor": {
+            "type": "string",
+            "example": "#FFFFFF",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          },
           "media": {
             "$ref": "#/components/schemas/PublicCatalogMediaDto"
           },
@@ -11893,6 +11898,7 @@
           "subtitle",
           "actionLabel",
           "actionHref",
+          "contentColor",
           "media",
           "mobileMedia"
         ]
@@ -12452,6 +12458,11 @@
             "type": "string",
             "nullable": true
           },
+          "contentColor": {
+            "type": "string",
+            "example": "#FFFFFF",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          },
           "id": {
             "type": "string"
           },
@@ -12473,6 +12484,7 @@
           "subtitle",
           "actionLabel",
           "actionHref",
+          "contentColor",
           "id",
           "mediaId",
           "sortOrder",
@@ -12584,13 +12596,18 @@
             "minLength": 1,
             "maxLength": 1000
           },
+          "contentColor": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          },
           "isActive": {
             "type": "boolean"
           }
         },
         "required": [
           "mediaId",
-          "mobileMediaId"
+          "mobileMediaId",
+          "contentColor"
         ]
       },
       "UpdateHomepageDto": {

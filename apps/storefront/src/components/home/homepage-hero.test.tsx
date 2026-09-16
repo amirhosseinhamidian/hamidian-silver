@@ -10,6 +10,7 @@ function slide(title: string, href = '/products'): PublicHomepageHeroSlide {
     subtitle: 'توضیح اسلاید',
     actionLabel: 'مشاهده',
     actionHref: href,
+    contentColor: '#C7A45A',
     media: {
       url: `https://media.test/${title}.webp`,
       mimeType: 'image/webp',
@@ -35,7 +36,11 @@ describe('HomepageHero', () => {
       'aria-roledescription',
     );
     expect(screen.queryByRole('button', { name: 'اسلاید بعدی' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'مشاهده' })).toHaveAttribute('href', '/products');
+    expect(screen.getByRole('region', { name: 'هیرو' })).toHaveStyle({ color: '#C7A45A' });
+    expect(screen.getByRole('link', { name: 'مشاهده' })).toHaveClass(
+      'border-current',
+      'text-current',
+    );
   });
 
   it('enables manual carousel controls only when multiple slides exist', () => {

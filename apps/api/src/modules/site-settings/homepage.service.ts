@@ -182,6 +182,7 @@ export class HomepageService {
       subtitle: slide.subtitle,
       actionLabel: slide.actionLabel,
       actionHref: slide.actionHref,
+      contentColor: slide.contentColor,
       sortOrder: slide.sortOrder,
       isActive: slide.isActive,
     });
@@ -323,6 +324,7 @@ export class HomepageService {
       subtitle: nullableText(slide.subtitle),
       actionLabel,
       actionHref,
+      contentColor: slide.contentColor.toUpperCase(),
       isActive: slide.isActive ?? true,
     };
   }
@@ -429,6 +431,7 @@ export class HomepageService {
     subtitle: string | null;
     actionLabel: string | null;
     actionHref: string | null;
+    contentColor: string;
     media: {
       storageKey: string;
       mimeType: string;
@@ -453,6 +456,7 @@ export class HomepageService {
       subtitle: slide.subtitle,
       actionLabel: slide.actionLabel,
       actionHref: slide.actionHref,
+      contentColor: slide.contentColor,
       media: {
         url: this.publicMediaUrlService.resolve(slide.media.storageKey),
         mimeType: slide.media.mimeType,

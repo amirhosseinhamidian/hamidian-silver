@@ -89,6 +89,7 @@ function blankSlide(kind: 'primary' | 'secondary'): EditableSlide {
     subtitle: null,
     actionLabel: null,
     actionHref: null,
+    contentColor: '#FFFFFF',
     sortOrder: 1,
     isActive: true,
   };
@@ -272,6 +273,24 @@ function HeroSlideEditor({
                 value={slide.actionHref ?? ''}
                 onChange={(event) => update('actionHref', event.currentTarget.value || null)}
                 placeholder="/products یا https://example.com"
+                disabled={disabled}
+              />
+            )}
+          </FormField>
+          <FormField
+            id={`${slide.id}-content-color`}
+            label="رنگ محتوای Hero"
+            hint="برای عنوان، زیرعنوان، دکمه و کنترل‌های اسلایدر"
+          >
+            {(props) => (
+              <Input
+                {...props}
+                type="color"
+                value={slide.contentColor}
+                onChange={(event) =>
+                  update('contentColor', event.currentTarget.value.toUpperCase())
+                }
+                className="h-11 cursor-pointer p-1"
                 disabled={disabled}
               />
             )}
@@ -1277,6 +1296,7 @@ export function SiteSettingsView({
       subtitle: slide.subtitle?.trim() || null,
       actionLabel: slide.actionLabel?.trim() || null,
       actionHref: slide.actionHref?.trim() || null,
+      contentColor: slide.contentColor,
       isActive: slide.isActive,
     });
     try {

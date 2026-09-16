@@ -610,6 +610,7 @@ model HomepageHeroSlide {
   subtitle    String?               @db.VarChar(500)
   actionLabel String?               @db.VarChar(100)
   actionHref  String?               @db.VarChar(1000)
+  contentColor String               @default("#FFFFFF") @map("content_color") @db.VarChar(7)
   sortOrder   Int                   @default(0)
   isActive    Boolean               @default(true)
   createdAt   DateTime              @default(now()) @db.Timestamptz(3)

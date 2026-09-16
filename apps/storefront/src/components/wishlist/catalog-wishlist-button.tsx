@@ -37,15 +37,20 @@ export function CatalogWishlistButton({ item }: CatalogWishlistButtonProps) {
       title={label}
       onClick={handleToggle}
       className="
-        sf-catalog-card__wishlist absolute right-3 top-3 z-20 inline-flex
-        size-11 items-center justify-center rounded-full border
-        border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)]
-        text-[var(--sf-color-ink)] shadow-sm outline-none
+        sf-catalog-card__wishlist absolute right-2 top-2 z-20 inline-flex
+        size-8 items-center justify-center rounded-full border border-transparent
+        bg-transparent text-[var(--sf-color-ink)] shadow-none outline-none
         hover:border-[var(--sf-color-ink)]
         focus-visible:border-[var(--sf-color-ink)]
+        sm:right-3 sm:top-3 sm:size-11 sm:border-[var(--sf-color-border)]
+        sm:bg-[var(--sf-color-canvas)] sm:shadow-sm
       "
     >
-      <FiHeart aria-hidden="true" size={21} fill={active ? 'currentColor' : 'none'} />
+      <FiHeart
+        aria-hidden="true"
+        className="size-4 sm:size-[21px]"
+        fill={active ? 'currentColor' : 'none'}
+      />
     </button>
   );
 }

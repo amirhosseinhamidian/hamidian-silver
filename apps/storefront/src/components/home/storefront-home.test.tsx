@@ -86,7 +86,11 @@ describe('StorefrontHome', () => {
     const firstCategory = screen.getByRole('heading', { name: 'انگشتر' });
     const popular = screen.getByRole('heading', { name: 'محبوب‌ترین محصولات' });
     const brands = screen.getByRole('heading', { name: 'برندها' });
+    const firstBrand = screen.getByRole('heading', { name: 'برند 1' });
     const lastCategory = screen.getByRole('heading', { name: 'گردنبند' });
+
+    expect(newProducts).toHaveClass('text-lg', 'sm:text-3xl');
+    expect(firstBrand.closest('ul')).toHaveClass('grid-cols-4');
 
     expect(newProducts.compareDocumentPosition(firstCategory)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
