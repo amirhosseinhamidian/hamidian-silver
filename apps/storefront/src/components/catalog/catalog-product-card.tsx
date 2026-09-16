@@ -74,7 +74,9 @@ export function CatalogProductCard({
         ) : null}
 
         <Link href={`/products/${product.slug}`} className="mt-2 block">
-          <h2 className="text-xs font-medium leading-5 sm:text-base sm:leading-6">{product.name}</h2>
+          <h2 className="text-xs font-medium leading-5 sm:text-base sm:leading-6">
+            {product.name}
+          </h2>
         </Link>
 
         {product.shortDescription ? (
