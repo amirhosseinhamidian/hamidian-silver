@@ -11,7 +11,7 @@ type StorefrontHomeProps = Readonly<{ homepage: PublicHomepage }>;
 function SectionHeading({ title, href }: Readonly<{ title: string; href?: string }>) {
   return (
     <div className="mb-8 flex items-end justify-between gap-4 sm:mb-10">
-      <h2 className="text-2xl font-medium sm:text-3xl">{title}</h2>
+      <h2 className="text-lg font-medium sm:text-3xl">{title}</h2>
       {href ? (
         <Link
           href={href}
@@ -112,11 +112,11 @@ export function StorefrontHome({ homepage }: StorefrontHomeProps) {
           className="sf-container py-[var(--sf-section-space)]"
         >
           <SectionHeading title="برندها" href="/brands" />
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-4">
+          <ul className="grid grid-cols-4 gap-x-2 gap-y-6 sm:gap-x-4 sm:gap-y-10">
             {featuredBrands.map((brand) => (
               <li key={brand.id}>
                 <Link href={`/brands/${brand.slug}`} className="group block text-center">
-                  <div className="mx-auto aspect-[4/3] w-full max-w-40 overflow-hidden">
+                  <div className="mx-auto aspect-[4/3] w-full max-w-20 overflow-hidden sm:max-w-40">
                     <CatalogMedia
                       media={brand.image}
                       alt={brand.name}
@@ -124,9 +124,9 @@ export function StorefrontHome({ homepage }: StorefrontHomeProps) {
                       imageClassName="object-contain grayscale transition duration-500 ease-out group-hover:scale-105 group-hover:grayscale-0"
                     />
                   </div>
-                  <h3 className="mt-4 text-base font-medium">{brand.name}</h3>
+                  <h3 className="mt-2 text-xs font-medium sm:mt-4 sm:text-base">{brand.name}</h3>
                   {brand.originCountry ? (
-                    <p className="mt-1 text-xs text-[var(--sf-color-muted)]">
+                    <p className="mt-1 text-[0.625rem] text-[var(--sf-color-muted)] sm:text-xs">
                       برند {brand.originCountry.name}
                     </p>
                   ) : null}

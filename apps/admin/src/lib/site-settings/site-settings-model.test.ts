@@ -108,6 +108,7 @@ describe('site settings model', () => {
       subtitle: null,
       actionLabel: null,
       actionHref: null,
+      contentColor: '#c7a45a',
       sortOrder: 1,
       isActive: true,
     };
@@ -123,6 +124,7 @@ describe('site settings model', () => {
 
     expect(result?.primaryHeroSlides[0]?.media.url).toContain('hero.webp');
     expect(result?.primaryHeroSlides[0]?.mobileMedia?.url).toContain('hero-mobile.webp');
+    expect(result?.primaryHeroSlides[0]?.contentColor).toBe('#C7A45A');
     expect(result?.categoryIds).toEqual(['category-1']);
     expect(result?.popularProductIds).toEqual(['product-1']);
     expect(result?.manufacturerCountriesEnabled).toBe(true);

@@ -8,6 +8,7 @@ import {
   IsString,
   IsUUID,
   Length,
+  Matches,
   Max,
   Min,
   ValidateNested,
@@ -39,6 +40,10 @@ export class UpdateHomepageHeroSlideDto {
   @IsString()
   @Length(1, 1000)
   actionHref?: string | null;
+
+  @IsString()
+  @Matches(/^#[0-9A-Fa-f]{6}$/)
+  contentColor!: string;
 
   @IsOptional()
   @IsBoolean()

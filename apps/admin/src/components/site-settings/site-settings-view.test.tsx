@@ -173,6 +173,63 @@ describe('SiteSettingsView', () => {
     expect(screen.getByRole('button', { name: 'ذخیره تنظیمات صفحه اصلی' })).toBeDisabled();
   });
 
+  it('uses one content color for all elements of a homepage hero', async () => {
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ updatedAt: '2026-09-16T12:00:00.000Z' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    render(
+      <SiteSettingsView
+        data={{
+          ...data,
+          homepage: {
+            ...data.homepage!,
+            primaryHeroSlides: [
+              {
+                id: 'slide-1',
+                mediaId: 'media-1',
+                media: {
+                  id: 'media-1',
+                  url: 'https://media.example.com/hero.webp',
+                  mimeType: 'image/webp',
+                  altText: 'Hero',
+                },
+                mobileMediaId: 'media-2',
+                mobileMedia: {
+                  id: 'media-2',
+                  url: 'https://media.example.com/hero-mobile.webp',
+                  mimeType: 'image/webp',
+                  altText: 'Hero mobile',
+                },
+                title: 'کالکشن تازه',
+                subtitle: 'درخشش نقره',
+                actionLabel: 'مشاهده',
+                actionHref: '/products',
+                contentColor: '#FFFFFF',
+                sortOrder: 1,
+                isActive: true,
+              },
+            ],
+          },
+        }}
+        canWrite
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('رنگ محتوای Hero'), {
+      target: { value: '#c7a45a' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره تنظیمات صفحه اصلی' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      primaryHeroSlides: [{ contentColor: '#C7A45A' }],
+    });
+  });
+
   it('prevents enabling manufacturer countries with fewer than four selections', () => {
     render(<SiteSettingsView data={data} canWrite />);
 

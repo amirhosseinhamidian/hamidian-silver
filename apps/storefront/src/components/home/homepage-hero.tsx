@@ -16,7 +16,7 @@ type HomepageHeroProps = Readonly<{
 
 function HeroAction({ href, label }: Readonly<{ href: string; label: string }>) {
   const className =
-    'inline-flex min-h-11 items-center justify-center border border-white px-7 text-sm font-medium text-white transition-colors hover:bg-white hover:text-black';
+    'inline-flex min-h-11 items-center justify-center border border-current px-7 text-sm font-medium text-current transition-opacity hover:opacity-75';
 
   return href.startsWith('/') && !href.startsWith('//') ? (
     <Link href={href} className={className}>
@@ -88,7 +88,8 @@ export function HomepageHero({
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
-      className={`relative isolate overflow-hidden bg-black text-white ${compact ? 'min-h-[70svh]' : 'min-h-[calc(100svh-5rem)]'}`}
+      style={{ color: activeSlide.contentColor }}
+      className={`relative isolate overflow-hidden bg-black ${compact ? 'min-h-[70svh]' : 'min-h-[calc(100svh-5rem)]'}`}
     >
       {slides.map((slide, index) =>
         slide.media.url ? (
@@ -113,7 +114,7 @@ export function HomepageHero({
             </h1>
           ) : null}
           {activeSlide.subtitle ? (
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 sm:text-lg">
+            <p className="mt-4 max-w-2xl text-sm leading-7 opacity-90 sm:text-lg">
               {activeSlide.subtitle}
             </p>
           ) : null}
@@ -133,7 +134,7 @@ export function HomepageHero({
             onClick={() =>
               setActiveIndex((current) => (current - 1 + slides.length) % slides.length)
             }
-            className="absolute start-4 top-1/2 z-20 flex size-11 -translate-y-1/2 items-center justify-center border border-white/70 bg-black/15 transition-colors hover:bg-black/40 sm:start-8"
+            className="absolute start-4 top-1/2 z-20 flex size-11 -translate-y-1/2 items-center justify-center border border-current bg-black/15 opacity-70 transition-[background-color,opacity] hover:bg-black/40 hover:opacity-100 sm:start-8"
           >
             <FiChevronRight aria-hidden="true" className="size-6" />
           </button>
@@ -141,7 +142,7 @@ export function HomepageHero({
             type="button"
             aria-label="اسلاید بعدی"
             onClick={() => setActiveIndex((current) => (current + 1) % slides.length)}
-            className="absolute end-4 top-1/2 z-20 flex size-11 -translate-y-1/2 items-center justify-center border border-white/70 bg-black/15 transition-colors hover:bg-black/40 sm:end-8"
+            className="absolute end-4 top-1/2 z-20 flex size-11 -translate-y-1/2 items-center justify-center border border-current bg-black/15 opacity-70 transition-[background-color,opacity] hover:bg-black/40 hover:opacity-100 sm:end-8"
           >
             <FiChevronLeft aria-hidden="true" className="size-6" />
           </button>
@@ -153,7 +154,7 @@ export function HomepageHero({
                 aria-label={`نمایش اسلاید ${index + 1}`}
                 aria-current={index === activeIndex ? 'true' : undefined}
                 onClick={() => setActiveIndex(index)}
-                className={`h-1 transition-all ${index === activeIndex ? 'w-10 bg-white' : 'w-5 bg-white/50 hover:bg-white/80'}`}
+                className={`h-1 bg-current transition-all ${index === activeIndex ? 'w-10 opacity-100' : 'w-5 opacity-50 hover:opacity-80'}`}
               />
             ))}
           </div>

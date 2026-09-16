@@ -81,14 +81,25 @@ describe('CatalogProductCard', () => {
   it('renders an optional merchandising badge', () => {
     render(<CatalogProductCard product={product} badge="جدید" />);
 
-    expect(screen.getByText('جدید')).toHaveClass('bg-[var(--sf-color-ink)]', 'text-white');
+    expect(screen.getByText('جدید')).toHaveClass(
+      'bg-[var(--sf-color-ink)]',
+      'px-1.5',
+      'text-[0.625rem]',
+      'text-white',
+    );
   });
 
   it('offers a card wishlist action with the current product snapshot', () => {
     render(<CatalogProductCard product={product} />);
 
     const button = screen.getByRole('button', { name: 'افزودن به علاقه‌مندی‌ها' });
-    expect(button).toHaveClass('sf-catalog-card__wishlist');
+    expect(button).toHaveClass(
+      'sf-catalog-card__wishlist',
+      'size-8',
+      'border-transparent',
+      'bg-transparent',
+      'sm:size-11',
+    );
     expect(button).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.click(button);

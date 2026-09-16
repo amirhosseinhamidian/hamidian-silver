@@ -4086,6 +4086,8 @@ export interface components {
             subtitle: string | null;
             actionLabel: string | null;
             actionHref: string | null;
+            /** @example #FFFFFF */
+            contentColor: string;
             media: components["schemas"]["PublicCatalogMediaDto"];
             mobileMedia: components["schemas"]["PublicCatalogMediaDto"] | null;
         };
@@ -4207,6 +4209,8 @@ export interface components {
             subtitle: string | null;
             actionLabel: string | null;
             actionHref: string | null;
+            /** @example #FFFFFF */
+            contentColor: string;
             id: string;
             mediaId: string;
             sortOrder: number;
@@ -4235,6 +4239,7 @@ export interface components {
             subtitle?: string | null;
             actionLabel?: string | null;
             actionHref?: string | null;
+            contentColor: string;
             isActive?: boolean;
         };
         UpdateHomepageDto: {

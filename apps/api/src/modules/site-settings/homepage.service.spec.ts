@@ -63,6 +63,7 @@ describe('HomepageService', () => {
         subtitle: null,
         actionLabel: 'مشاهده',
         actionHref: '/products',
+        contentColor: '#C7A45A',
         media,
         mobileMedia,
       },
@@ -73,6 +74,7 @@ describe('HomepageService', () => {
         subtitle: null,
         actionLabel: null,
         actionHref: null,
+        contentColor: '#FFFFFF',
         media,
         mobileMedia,
       },
@@ -159,6 +161,7 @@ describe('HomepageService', () => {
     expect(result.primaryHeroSlides[0]?.mobileMedia?.url).toBe(
       'https://media.hamidian.test/homepage/hero-mobile.webp',
     );
+    expect(result.primaryHeroSlides[0]?.contentColor).toBe('#C7A45A');
     expect(result.secondaryHero).not.toBeNull();
     expect(result.newProducts).toEqual([{ id: 'new-1' }]);
     expect(result.featuredCategories).toEqual([{ id: 'category-1', name: 'انگشتر', priority: 1 }]);
@@ -185,6 +188,7 @@ describe('HomepageService', () => {
               mobileMediaId: '10000000-0000-4000-8000-000000000002',
               actionLabel: 'مشاهده',
               actionHref: 'javascript:alert(1)',
+              contentColor: '#FFFFFF',
             },
           ],
           categoryIds: [],
@@ -210,6 +214,7 @@ describe('HomepageService', () => {
         subtitle: null,
         actionLabel: null,
         actionHref: null,
+        contentColor: '#C7A45A',
         sortOrder: 1,
         isActive: true,
         media: { id: 'media-1', ...media },
@@ -235,6 +240,7 @@ describe('HomepageService', () => {
       mimeType: 'image/webp',
       altText: 'تصویر هیرو',
     });
+    expect(result.primaryHeroSlides[0]?.contentColor).toBe('#C7A45A');
   });
 
   it('replaces homepage configuration transactionally in the requested order', async () => {
@@ -281,6 +287,7 @@ describe('HomepageService', () => {
             title: '  عنوان  ',
             actionLabel: 'خرید',
             actionHref: '/products',
+            contentColor: '#c7a45a',
           },
         ],
         categoryIds: [
@@ -305,6 +312,7 @@ describe('HomepageService', () => {
           placement: HomepageHeroPlacement.PRIMARY,
           sortOrder: 1,
           title: 'عنوان',
+          contentColor: '#C7A45A',
         }),
       ],
     });

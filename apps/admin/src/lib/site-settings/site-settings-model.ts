@@ -60,6 +60,7 @@ export type AdminHomepageSlide = Readonly<{
   subtitle: string | null;
   actionLabel: string | null;
   actionHref: string | null;
+  contentColor: string;
   sortOrder: number;
   isActive: boolean;
 }>;
@@ -298,6 +299,7 @@ function parseSlide(value: unknown): AdminHomepageSlide | null {
   const mobileMediaId = nullableText(source?.mobileMediaId);
   const mobileMedia = source?.mobileMedia === null ? null : parseMedia(source?.mobileMedia);
   const sortOrder = finiteNumber(source?.sortOrder);
+  const contentColor = text(source?.contentColor);
   const fields = [
     nullableText(source?.title),
     nullableText(source?.subtitle),
@@ -309,6 +311,8 @@ function parseSlide(value: unknown): AdminHomepageSlide | null {
     !id ||
     !mediaId ||
     !media ||
+    !contentColor ||
+    !/^#[0-9A-Fa-f]{6}$/.test(contentColor) ||
     mobileMediaId === undefined ||
     Boolean(mobileMediaId) !== Boolean(mobileMedia) ||
     sortOrder === null ||
@@ -327,6 +331,7 @@ function parseSlide(value: unknown): AdminHomepageSlide | null {
     subtitle: fields[1]!,
     actionLabel: fields[2]!,
     actionHref: fields[3]!,
+    contentColor: contentColor.toUpperCase(),
     sortOrder,
     isActive: source.isActive,
   };
