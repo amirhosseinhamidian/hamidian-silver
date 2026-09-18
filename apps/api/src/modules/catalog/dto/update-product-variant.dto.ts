@@ -21,6 +21,16 @@ export class UpdateProductVariantDto {
   weightGrams?: number | null;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  salePriceToman?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  compareAtPriceToman?: number | null;
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 }

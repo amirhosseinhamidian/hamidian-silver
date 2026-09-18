@@ -39,6 +39,16 @@ export class CreateProductVariantDto {
   weightGrams?: number;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  salePriceToman?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  compareAtPriceToman?: number;
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 }

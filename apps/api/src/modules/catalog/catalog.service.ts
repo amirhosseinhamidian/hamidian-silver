@@ -144,12 +144,16 @@ export class CatalogService {
             id: { in: sizeIds },
             isActive: true,
             deletedAt: null,
+            group: { isActive: true, deletedAt: null },
           },
-          select: { id: true },
+          select: { id: true, groupId: true },
         });
 
         if (sizes.length !== sizeIds.length) {
           throw new NotFoundException('One or more sizes were not found.');
+        }
+        if (new Set(sizes.map(({ groupId }) => groupId)).size !== 1) {
+          throw new BadRequestException('All sized variants of a product must use one size group.');
         }
       }
 
@@ -176,6 +180,19 @@ export class CatalogService {
         dto.compareAtPriceToman <= dto.salePriceToman
       ) {
         throw new BadRequestException('Compare price must be greater than sale price.');
+      }
+
+      for (const variant of dto.variants) {
+        const salePriceToman = variant.salePriceToman ?? dto.salePriceToman ?? null;
+        const compareAtPriceToman = variant.compareAtPriceToman ?? dto.compareAtPriceToman ?? null;
+        if (salePriceToman === null) {
+          throw new BadRequestException('Every variant or its product must have a sale price.');
+        }
+        if (compareAtPriceToman !== null && compareAtPriceToman <= salePriceToman) {
+          throw new BadRequestException(
+            'Variant compare price must be greater than its sale price.',
+          );
+        }
       }
 
       if (
@@ -225,6 +242,8 @@ export class CatalogService {
           sku: variant.sku,
           name: variant.name,
           weightGrams: variant.weightGrams,
+          salePriceToman: variant.salePriceToman,
+          compareAtPriceToman: variant.compareAtPriceToman,
           isActive: variant.isActive ?? true,
         })),
       });
@@ -268,7 +287,7 @@ export class CatalogService {
           },
           variants: {
             include: {
-              size: true,
+              size: { include: { group: true } },
             },
           },
           media: {
@@ -367,7 +386,7 @@ export class CatalogService {
               deletedAt: null,
             },
             include: {
-              size: true,
+              size: { include: { group: true } },
             },
           },
           media: {
@@ -406,7 +425,7 @@ export class CatalogService {
         categories: { include: { category: true } },
         variants: {
           where: { deletedAt: null },
-          include: { size: true },
+          include: { size: { include: { group: true } } },
         },
         media: {
           orderBy: { sortOrder: 'asc' },
@@ -534,7 +553,10 @@ export class CatalogService {
           brand: true,
           country: true,
           categories: { include: { category: true } },
-          variants: { where: { deletedAt: null }, include: { size: true } },
+          variants: {
+            where: { deletedAt: null },
+            include: { size: { include: { group: true } } },
+          },
           media: { orderBy: { sortOrder: 'asc' }, include: { media: true } },
           attributes: { orderBy: { sortOrder: 'asc' } },
           seoOgMedia: true,
@@ -952,6 +974,13 @@ export class CatalogService {
               salePriceToman: true,
               compareAtPriceToman: true,
               sizeMode: true,
+              variants: {
+                where: { isActive: true, deletedAt: null },
+                select: {
+                  salePriceToman: true,
+                  compareAtPriceToman: true,
+                },
+              },
               brand: {
                 select: {
                   id: true,
@@ -1039,6 +1068,16 @@ export class CatalogService {
     return {
       items: orderedPageProducts.map((product) => {
         const availableQuantity = availabilityByProductId.get(product.id) ?? 0;
+        const lowestPricedVariant = (product.variants ?? [])
+          .map((variant) => ({
+            salePriceToman: variant.salePriceToman ?? product.salePriceToman,
+            compareAtPriceToman: variant.compareAtPriceToman ?? product.compareAtPriceToman,
+          }))
+          .filter(
+            (variant): variant is { salePriceToman: number; compareAtPriceToman: number | null } =>
+              variant.salePriceToman !== null,
+          )
+          .sort((left, right) => left.salePriceToman - right.salePriceToman)[0];
         const primaryMedia =
           product.media.find((item) => item.isPrimary && !item.media.deletedAt) ??
           product.media.find((item) => !item.media.deletedAt);
@@ -1078,8 +1117,9 @@ export class CatalogService {
           shortDescription: product.shortDescription,
           seoCanonicalPath: product.seoCanonicalPath,
           seoNoIndex: product.seoNoIndex,
-          salePriceToman: product.salePriceToman,
-          compareAtPriceToman: product.compareAtPriceToman,
+          salePriceToman: lowestPricedVariant?.salePriceToman ?? product.salePriceToman,
+          compareAtPriceToman:
+            lowestPricedVariant?.compareAtPriceToman ?? product.compareAtPriceToman,
           sizeMode: product.sizeMode,
           brand,
           categories: product.categories
@@ -1315,6 +1355,8 @@ export class CatalogService {
             id: true,
             name: true,
             weightGrams: true,
+            salePriceToman: true,
+            compareAtPriceToman: true,
             platingEligible: true,
             platingOptions: {
               where: {
@@ -1340,6 +1382,17 @@ export class CatalogService {
                 label: true,
                 isActive: true,
                 deletedAt: true,
+                group: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    selectionLabel: true,
+                    cartLabel: true,
+                    isActive: true,
+                    deletedAt: true,
+                  },
+                },
               },
             },
             inventories: {
@@ -1419,12 +1472,24 @@ export class CatalogService {
         id: variant.id,
         name: variant.name,
         weightGrams: variant.weightGrams === null ? null : Number(variant.weightGrams),
+        salePriceToman: variant.salePriceToman ?? product.salePriceToman,
+        compareAtPriceToman: variant.compareAtPriceToman ?? product.compareAtPriceToman,
         size:
-          variant.size?.isActive && !variant.size.deletedAt
+          variant.size?.isActive &&
+          !variant.size.deletedAt &&
+          variant.size.group.isActive &&
+          !variant.size.group.deletedAt
             ? {
                 id: variant.size.id,
                 code: variant.size.code,
                 label: variant.size.label,
+                group: {
+                  id: variant.size.group.id,
+                  code: variant.size.group.code,
+                  name: variant.size.group.name,
+                  selectionLabel: variant.size.group.selectionLabel,
+                  cartLabel: variant.size.group.cartLabel,
+                },
               }
             : null,
         availableQuantity,

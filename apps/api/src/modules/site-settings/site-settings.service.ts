@@ -14,7 +14,7 @@ import { UpdateSiteSettingsDto } from './dto/update-site-settings.dto';
 const SITE_SETTINGS_ID = 'site';
 const DEFAULT_SEO_SITE_NAME = 'نقره حمیدیان';
 const DEFAULT_SEO_TITLE = 'نقره حمیدیان';
-const DEFAULT_SEO_TITLE_TEMPLATE = '%s | نقره حمیدیان';
+const DEFAULT_SEO_TITLE_TEMPLATE = '%s | گالری حمدیان';
 const DEFAULT_SEO_DESCRIPTION = 'فروشگاه آنلاین و گالری نقره حمیدیان';
 
 type SiteSettingsMedia = Readonly<{

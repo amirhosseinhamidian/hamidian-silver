@@ -72,6 +72,11 @@ export class UpdateHomepageDto {
   @IsUUID('4', { each: true })
   popularProductIds!: string[];
 
+  @IsArray()
+  @ArrayMaxSize(4)
+  @IsUUID('4', { each: true })
+  featuredBrandIds!: string[];
+
   @IsBoolean()
   manufacturerCountriesEnabled!: boolean;
 

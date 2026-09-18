@@ -31,6 +31,7 @@ export class HomepageService {
       heroSlides,
       categorySelections,
       popularSelections,
+      brandSelections,
       manufacturerCountrySelections,
       newProducts,
       brands,
@@ -54,6 +55,13 @@ export class HomepageService {
         },
         orderBy: { priority: 'asc' },
         select: { product: { select: { slug: true } } },
+      }),
+      this.prisma.homepageFeaturedBrand.findMany({
+        where: {
+          brand: { isActive: true, deletedAt: null },
+        },
+        orderBy: { priority: 'asc' },
+        select: { brandId: true },
       }),
       this.prisma.homepageManufacturerCountry.findMany({
         where: { country: { isActive: true, deletedAt: null } },
@@ -95,6 +103,7 @@ export class HomepageService {
       ),
     ]);
     const categoryById = new Map(categories.map((category) => [category.id, category] as const));
+    const brandById = new Map(brands.map((brand) => [brand.id, brand] as const));
     const primaryHeroSlides = heroSlides
       .filter(({ placement }) => placement === HomepageHeroPlacement.PRIMARY)
       .flatMap((slide) => {
@@ -117,7 +126,10 @@ export class HomepageService {
         return category ? [{ ...category, priority }] : [];
       }),
       popularProducts,
-      featuredBrands: brands.slice(0, 4),
+      featuredBrands: brandSelections.flatMap(({ brandId }) => {
+        const brand = brandById.get(brandId);
+        return brand ? [brand] : [];
+      }),
       manufacturerCountriesEnabled,
       manufacturerCountries: manufacturerCountriesEnabled
         ? manufacturerCountrySelections.map(({ country, priority }) => ({
@@ -142,19 +154,21 @@ export class HomepageService {
   }
 
   async getAdminHomepage(): Promise<AdminHomepageDto> {
-    const [slides, categories, products, manufacturerCountries, settings] = await Promise.all([
-      this.prisma.homepageHeroSlide.findMany({
-        orderBy: [{ placement: 'asc' }, { sortOrder: 'asc' }, { id: 'asc' }],
-        include: { media: true, mobileMedia: true },
-      }),
-      this.prisma.homepageFeaturedCategory.findMany({ orderBy: { priority: 'asc' } }),
-      this.prisma.homepagePopularProduct.findMany({ orderBy: { priority: 'asc' } }),
-      this.prisma.homepageManufacturerCountry.findMany({ orderBy: { priority: 'asc' } }),
-      this.prisma.siteSettings.findUnique({
-        where: { id: SITE_SETTINGS_ID },
-        select: { manufacturerCountriesEnabled: true, updatedAt: true },
-      }),
-    ]);
+    const [slides, categories, products, brands, manufacturerCountries, settings] =
+      await Promise.all([
+        this.prisma.homepageHeroSlide.findMany({
+          orderBy: [{ placement: 'asc' }, { sortOrder: 'asc' }, { id: 'asc' }],
+          include: { media: true, mobileMedia: true },
+        }),
+        this.prisma.homepageFeaturedCategory.findMany({ orderBy: { priority: 'asc' } }),
+        this.prisma.homepagePopularProduct.findMany({ orderBy: { priority: 'asc' } }),
+        this.prisma.homepageFeaturedBrand.findMany({ orderBy: { priority: 'asc' } }),
+        this.prisma.homepageManufacturerCountry.findMany({ orderBy: { priority: 'asc' } }),
+        this.prisma.siteSettings.findUnique({
+          where: { id: SITE_SETTINGS_ID },
+          select: { manufacturerCountriesEnabled: true, updatedAt: true },
+        }),
+      ]);
 
     const projectSlide = (slide: (typeof slides)[number]) => ({
       id: slide.id,
@@ -204,6 +218,10 @@ export class HomepageService {
         id: productId,
         priority,
       })),
+      featuredBrands: brands.map(({ brandId, priority }) => ({
+        id: brandId,
+        priority,
+      })),
       manufacturerCountriesEnabled: settings?.manufacturerCountriesEnabled ?? false,
       manufacturerCountries: manufacturerCountries.map(({ countryId, priority }) => ({
         id: countryId,
@@ -248,6 +266,7 @@ export class HomepageService {
       ),
       this.validateCategories(dto.categoryIds),
       this.validateProducts(dto.popularProductIds),
+      this.validateBrands(dto.featuredBrandIds),
       this.validateCountries(dto.manufacturerCountryIds),
     ]);
 
@@ -255,6 +274,7 @@ export class HomepageService {
       await transaction.homepageHeroSlide.deleteMany();
       await transaction.homepageFeaturedCategory.deleteMany();
       await transaction.homepagePopularProduct.deleteMany();
+      await transaction.homepageFeaturedBrand.deleteMany();
       await transaction.homepageManufacturerCountry.deleteMany();
 
       if (slides.length > 0) {
@@ -274,6 +294,15 @@ export class HomepageService {
         await transaction.homepagePopularProduct.createMany({
           data: dto.popularProductIds.map((productId, index) => ({
             productId,
+            priority: index + 1,
+          })),
+        });
+      }
+
+      if (dto.featuredBrandIds.length > 0) {
+        await transaction.homepageFeaturedBrand.createMany({
+          data: dto.featuredBrandIds.map((brandId, index) => ({
+            brandId,
             priority: index + 1,
           })),
         });
@@ -357,6 +386,10 @@ export class HomepageService {
       throw new BadRequestException('Homepage popular products must be unique.');
     }
 
+    if (hasDuplicates(dto.featuredBrandIds)) {
+      throw new BadRequestException('Homepage featured brands must be unique.');
+    }
+
     if (hasDuplicates(dto.manufacturerCountryIds)) {
       throw new BadRequestException('Homepage manufacturer countries must be unique.');
     }
@@ -399,6 +432,19 @@ export class HomepageService {
 
     if (products.length !== productIds.length) {
       throw new NotFoundException('One or more homepage products were not found.');
+    }
+  }
+
+  private async validateBrands(brandIds: string[]): Promise<void> {
+    if (brandIds.length === 0) return;
+
+    const brands = await this.prisma.brand.findMany({
+      where: { id: { in: brandIds }, isActive: true, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (brands.length !== brandIds.length) {
+      throw new NotFoundException('One or more homepage brands were not found.');
     }
   }
 

@@ -7,6 +7,7 @@ import { requestAdminCatalog, readJsonResponse } from '@/lib/catalog/catalog-api
 import {
   parseAdminHomepageSettings,
   parseAdminSiteSettings,
+  parseBrandReferences,
   parseCategoryReferences,
   parseCountryReferences,
   parseProductReferences,
@@ -20,6 +21,7 @@ export type SiteSettingsData = Readonly<{
   homepage: AdminHomepageSettings | null;
   categories: readonly SiteSettingsReference[];
   products: readonly SiteSettingsReference[];
+  brands: readonly SiteSettingsReference[];
   countries: readonly SiteSettingsReference[];
   failed: boolean;
 }>;
@@ -42,7 +44,7 @@ export async function loadSiteSettingsData(): Promise<SiteSettingsData> {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token) throw new Error('Authenticated admin session is required.');
 
-  const [settings, homepage, categories, products, countries] = await Promise.all([
+  const [settings, homepage, categories, products, brands, countries] = await Promise.all([
     load('/api/v1/site-settings', token, parseAdminSiteSettings),
     load('/api/v1/site-settings/homepage', token, parseAdminHomepageSettings),
     load('/api/v1/catalog/public/categories', token, parseCategoryReferences),
@@ -51,6 +53,7 @@ export async function loadSiteSettingsData(): Promise<SiteSettingsData> {
       token,
       parseProductReferences,
     ),
+    load('/api/v1/catalog/public/brands', token, parseBrandReferences),
     load('/api/v1/catalog/countries', token, parseCountryReferences),
   ]);
 
@@ -59,7 +62,8 @@ export async function loadSiteSettingsData(): Promise<SiteSettingsData> {
     homepage,
     categories: categories ?? [],
     products: products ?? [],
+    brands: brands ?? [],
     countries: countries ?? [],
-    failed: !settings || !homepage || !categories || !products || !countries,
+    failed: !settings || !homepage || !categories || !products || !brands || !countries,
   };
 }

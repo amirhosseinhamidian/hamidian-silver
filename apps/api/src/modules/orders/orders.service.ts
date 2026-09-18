@@ -967,6 +967,7 @@ export class OrdersService {
       name: string | null;
       weightGrams: { toString(): string } | null;
       platingEligible: boolean;
+      salePriceToman: number | null;
       size: { label: string } | null;
       product: {
         name: string;
@@ -986,7 +987,8 @@ export class OrdersService {
       }>;
     },
   ): PreparedOrderItem {
-    if (variant.product.salePriceToman === null) {
+    const effectiveSalePriceToman = variant.salePriceToman ?? variant.product.salePriceToman;
+    if (effectiveSalePriceToman === null) {
       throw new BadRequestException('Product sale price is not configured.');
     }
 
@@ -1021,7 +1023,7 @@ export class OrdersService {
       unitPlatingPriceToman = calculatePlatingPriceToman(platingWeightGrams, platingRateToman);
     }
 
-    const unitSalePriceToman = variant.product.salePriceToman;
+    const unitSalePriceToman = effectiveSalePriceToman;
     const lineTotalToman = (unitSalePriceToman + unitPlatingPriceToman) * item.quantity;
 
     this.assertSafeTomanAmount(lineTotalToman);

@@ -71,21 +71,39 @@ export type AdminCountry = Readonly<{
   productCount: number;
 }>;
 
-export type CatalogSize = Readonly<{
+export type CatalogSizeGroup = Readonly<{
   id: string;
   code: string;
-  label: string;
+  name: string;
+  selectionLabel: string;
+  cartLabel: string;
   sortOrder: number;
   active: boolean;
 }>;
 
-export type VariantSize = Readonly<{ id: string; label: string }>;
+export type CatalogSize = Readonly<{
+  id: string;
+  groupId: string;
+  code: string;
+  label: string;
+  sortOrder: number;
+  active: boolean;
+  group: CatalogSizeGroup;
+}>;
+
+export type VariantSize = Readonly<{
+  id: string;
+  label: string;
+  group: CatalogSizeGroup;
+}>;
 
 export type AdminProductVariant = Readonly<{
   id: string;
   sku: string;
   name: string | null;
   weightGrams: number | null;
+  salePriceToman: number | null;
+  compareAtPriceToman: number | null;
   active: boolean;
   size: VariantSize | null;
 }>;
@@ -118,6 +136,7 @@ export type AdminProduct = Readonly<{
   description: string | null;
   status: ProductStatus;
   sizeMode: ProductSizeMode;
+  sizeGroup: CatalogSizeGroup | null;
   salePriceToman: number | null;
   compareAtPriceToman: number | null;
   seoTitle: string | null;
@@ -186,14 +205,39 @@ function parseVariant(value: unknown): AdminProductVariant | null {
   const sku = text(item?.sku);
   if (!id || !sku) return null;
 
-  const parsedSize = lookup(item?.size, 'label');
+  const size = record(item?.size);
+  const sizeId = text(size?.id);
+  const sizeLabel = text(size?.label);
+  const sizeGroup = parseSizeGroup(size?.group);
   return {
     id,
     sku,
     name: text(item?.name),
     weightGrams: number(item?.weightGrams),
+    salePriceToman: number(item?.salePriceToman),
+    compareAtPriceToman: number(item?.compareAtPriceToman),
     active: item?.isActive !== false,
-    size: parsedSize ? { id: parsedSize.id, label: parsedSize.name } : null,
+    size:
+      sizeId && sizeLabel && sizeGroup ? { id: sizeId, label: sizeLabel, group: sizeGroup } : null,
+  };
+}
+
+function parseSizeGroup(value: unknown): CatalogSizeGroup | null {
+  const item = record(value);
+  const id = text(item?.id);
+  const code = text(item?.code);
+  const name = text(item?.name);
+  const selectionLabel = text(item?.selectionLabel);
+  const cartLabel = text(item?.cartLabel);
+  if (!id || !code || !name || !selectionLabel || !cartLabel) return null;
+  return {
+    id,
+    code,
+    name,
+    selectionLabel,
+    cartLabel,
+    sortOrder: number(item?.sortOrder) ?? 0,
+    active: item?.isActive !== false,
   };
 }
 
@@ -289,6 +333,7 @@ export function parseAdminProduct(value: unknown): AdminProduct | null {
     description: text(item?.description),
     status,
     sizeMode,
+    sizeGroup: variants.find((variant) => variant.size)?.size?.group ?? null,
     salePriceToman: number(item?.salePriceToman),
     compareAtPriceToman: number(item?.compareAtPriceToman),
     seoTitle: text(item?.seoTitle),
@@ -466,17 +511,28 @@ export function parseCatalogSizes(value: unknown): readonly CatalogSize[] | null
       const id = text(item?.id);
       const code = text(item?.code);
       const label = text(item?.label);
-      if (!id || !code || !label) return null;
+      const group = parseSizeGroup(item?.group);
+      if (!id || !code || !label || !group) return null;
       return {
         id,
+        groupId: group.id,
         code,
         label,
         sortOrder: number(item?.sortOrder) ?? 0,
         active: item?.isActive !== false,
+        group,
       };
     })
     .filter((item): item is CatalogSize => item !== null);
   return items.length === value.length ? items : null;
+}
+
+export function parseCatalogSizeGroups(value: unknown): readonly CatalogSizeGroup[] | null {
+  if (!Array.isArray(value)) return null;
+  const groups = value
+    .map(parseSizeGroup)
+    .filter((group): group is CatalogSizeGroup => group !== null);
+  return groups.length === value.length ? groups : null;
 }
 
 function first(value: string | string[] | undefined): string {

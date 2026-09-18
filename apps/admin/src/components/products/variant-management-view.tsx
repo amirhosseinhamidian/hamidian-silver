@@ -2,7 +2,10 @@
 
 import Link from 'next/link';
 
-import { CatalogSizeManager } from '@/components/products/product-variant-manager';
+import {
+  CatalogSizeGroupManager,
+  CatalogSizeManager,
+} from '@/components/products/product-variant-manager';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button, ButtonLink } from '@/components/ui/button';
@@ -129,7 +132,7 @@ export function VariantManagementView({ data, filters, canWrite }: Props) {
         {canWrite ? <ButtonLink href="/products/new">ساخت محصول جدید</ButtonLink> : null}
       </header>
 
-      {data.products.failed || data.sizes.failed ? (
+      {data.products.failed || data.sizes.failed || data.sizeGroups.failed ? (
         <Alert tone="danger" title="بخشی از اطلاعات دریافت نشد" className="mt-5">
           اتصال API را بررسی و صفحه را دوباره بارگذاری کنید.
         </Alert>
@@ -240,8 +243,18 @@ export function VariantManagementView({ data, filters, canWrite }: Props) {
       </div>
 
       <div className="mt-6">
+        {data.sizeGroups.data ? (
+          <CatalogSizeGroupManager groups={data.sizeGroups.data} canWrite={canWrite} />
+        ) : null}
+      </div>
+
+      <div className="mt-6">
         {data.sizes.data ? (
-          <CatalogSizeManager sizes={data.sizes.data} canWrite={canWrite} />
+          <CatalogSizeManager
+            sizes={data.sizes.data}
+            sizeGroups={data.sizeGroups.data ?? []}
+            canWrite={canWrite}
+          />
         ) : null}
       </div>
     </main>

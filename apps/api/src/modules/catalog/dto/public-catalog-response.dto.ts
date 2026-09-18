@@ -99,10 +99,21 @@ export class PublicCatalogBrandPageDto extends PublicCatalogBrandDto {
   seoOgMedia?: PublicCatalogMediaDto | null;
 }
 
+export class PublicCatalogSizeGroupDto {
+  id!: string;
+  code!: string;
+  name!: string;
+  selectionLabel!: string;
+  cartLabel!: string;
+}
+
 export class PublicCatalogSizeDto {
   id!: string;
   code!: string;
   label!: string;
+
+  @ApiProperty({ type: () => PublicCatalogSizeGroupDto })
+  group!: PublicCatalogSizeGroupDto;
 }
 
 export class PublicCatalogPlatingOptionDto {
@@ -121,6 +132,12 @@ export class PublicCatalogVariantDto {
 
   @ApiProperty({ type: Number, nullable: true })
   weightGrams!: number | null;
+
+  @ApiProperty({ type: Number, nullable: true })
+  salePriceToman!: number | null;
+
+  @ApiProperty({ type: Number, nullable: true })
+  compareAtPriceToman!: number | null;
 
   @ApiProperty({ type: () => PublicCatalogSizeDto, nullable: true })
   size!: PublicCatalogSizeDto | null;

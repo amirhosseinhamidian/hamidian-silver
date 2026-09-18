@@ -65,7 +65,7 @@ const DEFAULT_PUBLIC_SITE_SETTINGS: PublicSiteSettings = {
   baleUrl: null,
   seoSiteName: 'نقره حمیدیان',
   seoDefaultTitle: 'نقره حمیدیان',
-  seoTitleTemplate: '%s | نقره حمیدیان',
+  seoTitleTemplate: '%s | گالری حمدیان',
   seoDefaultDescription: 'فروشگاه آنلاین و گالری نقره حمیدیان',
   seoDefaultOgMedia: null,
   seoOrganizationName: 'نقره حمیدیان',

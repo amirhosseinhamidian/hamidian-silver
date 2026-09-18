@@ -404,6 +404,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/size-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_listSizeGroups_v1"];
+        put?: never;
+        post: operations["CatalogController_createSizeGroup_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/size-groups/{groupId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogController_updateSizeGroup_v1"];
+        trace?: never;
+    };
     "/api/v1/catalog/sizes/{sizeId}": {
         parameters: {
             query?: never;
@@ -3139,7 +3171,15 @@ export interface components {
         PublicCatalogProductSuggestionsDto: {
             items: components["schemas"]["PublicCatalogProductSuggestionDto"][];
         };
+        PublicCatalogSizeGroupDto: {
+            id: string;
+            code: string;
+            name: string;
+            selectionLabel: string;
+            cartLabel: string;
+        };
         PublicCatalogSizeDto: {
+            group: components["schemas"]["PublicCatalogSizeGroupDto"];
             id: string;
             code: string;
             label: string;
@@ -3153,6 +3193,8 @@ export interface components {
         PublicCatalogVariantDto: {
             name: string | null;
             weightGrams: number | null;
+            salePriceToman: number | null;
+            compareAtPriceToman: number | null;
             size: components["schemas"]["PublicCatalogSizeDto"] | null;
             platingOptions: components["schemas"]["PublicCatalogPlatingOptionDto"][];
             id: string;
@@ -3280,12 +3322,32 @@ export interface components {
             isActive?: boolean;
         };
         CreateSizeDto: {
+            /** Format: uuid */
+            groupId: string;
             code: string;
             label: string;
             sortOrder?: number;
             isActive?: boolean;
         };
+        CreateSizeGroupDto: {
+            code: string;
+            name: string;
+            selectionLabel: string;
+            cartLabel: string;
+            sortOrder?: number;
+            isActive?: boolean;
+        };
+        UpdateSizeGroupDto: {
+            code?: string;
+            name?: string;
+            selectionLabel?: string;
+            cartLabel?: string;
+            sortOrder?: number;
+            isActive?: boolean;
+        };
         UpdateSizeDto: {
+            /** Format: uuid */
+            groupId?: string;
             code?: string;
             label?: string;
             sortOrder?: number;
@@ -3297,6 +3359,8 @@ export interface components {
             /** Format: uuid */
             sizeId?: string;
             weightGrams?: number;
+            salePriceToman?: number;
+            compareAtPriceToman?: number;
             isActive?: boolean;
         };
         CreateProductMediaDto: {
@@ -3343,6 +3407,8 @@ export interface components {
             /** Format: uuid */
             sizeId?: string | null;
             weightGrams?: number | null;
+            salePriceToman?: number | null;
+            compareAtPriceToman?: number | null;
             isActive?: boolean;
         };
         UpdateProductDto: {
@@ -4225,6 +4291,7 @@ export interface components {
             secondaryHero: components["schemas"]["AdminHomepageHeroSlideDto"] | null;
             featuredCategories: components["schemas"]["AdminHomepageSelectionDto"][];
             popularProducts: components["schemas"]["AdminHomepageSelectionDto"][];
+            featuredBrands: components["schemas"]["AdminHomepageSelectionDto"][];
             manufacturerCountries: components["schemas"]["AdminHomepageSelectionDto"][];
             /** Format: date-time */
             updatedAt: string | null;
@@ -4247,6 +4314,7 @@ export interface components {
             secondaryHero?: components["schemas"]["UpdateHomepageHeroSlideDto"] | null;
             categoryIds: string[];
             popularProductIds: string[];
+            featuredBrandIds: string[];
             manufacturerCountriesEnabled: boolean;
             manufacturerCountryIds: string[];
         };
@@ -5271,6 +5339,71 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    CatalogController_listSizeGroups_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    CatalogController_createSizeGroup_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSizeGroupDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_updateSizeGroup_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSizeGroupDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content?: never;
             };
         };
@@ -5294,7 +5427,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": Record<string, never>;
+                };
             };
         };
     };

@@ -17,6 +17,10 @@ const data: SiteSettingsData = {
     { id: 'product-1', label: 'انگشتر مهتاب' },
     { id: 'product-2', label: 'گردنبند آوین' },
   ],
+  brands: [
+    { id: 'brand-1', label: 'تیفانی' },
+    { id: 'brand-2', label: 'کارتیر' },
+  ],
   countries: [
     { id: 'country-1', label: 'ایران' },
     { id: 'country-2', label: 'ایتالیا' },
@@ -51,7 +55,7 @@ const data: SiteSettingsData = {
     baleUrl: null,
     seoSiteName: 'نقره حمیدیان',
     seoDefaultTitle: 'فروشگاه نقره حمیدیان',
-    seoTitleTemplate: '%s | نقره حمیدیان',
+    seoTitleTemplate: '%s | گالری حمدیان',
     seoDefaultDescription: 'خرید آنلاین زیورآلات نقره',
     seoDefaultOgMediaId: null,
     seoDefaultOgMedia: null,
@@ -70,6 +74,7 @@ const data: SiteSettingsData = {
     secondaryHero: null,
     categoryIds: ['category-1'],
     popularProductIds: ['product-1'],
+    featuredBrandIds: ['brand-1'],
     manufacturerCountriesEnabled: false,
     manufacturerCountryIds: [],
     updatedAt: null,
@@ -94,6 +99,10 @@ describe('SiteSettingsView', () => {
       'admin-select-trigger',
     );
     expect(screen.getByRole('combobox', { name: 'افزودن به محصولات محبوب' })).toBeEnabled();
+    expect(screen.getByText('چیدمان محتوای صفحه اصلی')).toBeInTheDocument();
+    expect(
+      screen.getByRole('combobox', { name: 'افزودن به برندهای منتخب صفحه اصلی' }),
+    ).toBeEnabled();
     expect(screen.getByRole('combobox', { name: 'افزودن به کشورهای منتخب صفحه اصلی' })).toHaveClass(
       'admin-select-trigger',
     );
@@ -227,6 +236,25 @@ describe('SiteSettingsView', () => {
     const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
     expect(JSON.parse(String(request.body))).toMatchObject({
       primaryHeroSlides: [{ contentColor: '#C7A45A' }],
+    });
+  });
+
+  it('saves configured popular products and featured brand order', async () => {
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ updatedAt: '2026-09-17T12:00:00.000Z' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    render(<SiteSettingsView data={data} canWrite />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره تنظیمات صفحه اصلی' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      popularProductIds: ['product-1'],
+      featuredBrandIds: ['brand-1'],
     });
   });
 

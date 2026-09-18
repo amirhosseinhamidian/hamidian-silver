@@ -26,11 +26,13 @@ describe('HomepageService', () => {
     homepageHeroSlide: { findMany: jest.fn() },
     homepageFeaturedCategory: { findMany: jest.fn() },
     homepagePopularProduct: { findMany: jest.fn() },
+    homepageFeaturedBrand: { findMany: jest.fn() },
     homepageManufacturerCountry: { findMany: jest.fn() },
     siteSettings: { findUnique: jest.fn() },
     media: { findMany: jest.fn() },
     category: { findMany: jest.fn() },
     product: { findMany: jest.fn() },
+    brand: { findMany: jest.fn() },
     country: { findMany: jest.fn() },
     $transaction: jest.fn(),
   };
@@ -54,7 +56,7 @@ describe('HomepageService', () => {
     );
   });
 
-  it('assembles ordered public merchandising and limits brands to four', async () => {
+  it('assembles ordered public merchandising with configured brands', async () => {
     prisma.homepageHeroSlide.findMany.mockResolvedValue([
       {
         id: 'hero-1',
@@ -84,6 +86,12 @@ describe('HomepageService', () => {
     ]);
     prisma.homepagePopularProduct.findMany.mockResolvedValue([
       { product: { slug: 'popular-ring' } },
+    ]);
+    prisma.homepageFeaturedBrand.findMany.mockResolvedValue([
+      { brandId: 'brand-3' },
+      { brandId: 'brand-1' },
+      { brandId: 'brand-4' },
+      { brandId: 'brand-2' },
     ]);
     prisma.homepageManufacturerCountry.findMany.mockResolvedValue([
       {
@@ -169,7 +177,12 @@ describe('HomepageService', () => {
       expect.objectContaining({ id: 'popular-1', slug: 'popular-ring' }),
     ]);
     expect(result.popularProducts[0]).not.toHaveProperty('description');
-    expect(result.featuredBrands).toHaveLength(4);
+    expect(result.featuredBrands.map(({ id }) => id)).toEqual([
+      'brand-3',
+      'brand-1',
+      'brand-4',
+      'brand-2',
+    ]);
     expect(result.manufacturerCountries.map(({ slug }) => slug)).toEqual([
       'italy',
       'iran',
@@ -193,6 +206,7 @@ describe('HomepageService', () => {
           ],
           categoryIds: [],
           popularProductIds: [],
+          featuredBrandIds: [],
           manufacturerCountriesEnabled: false,
           manufacturerCountryIds: [],
         },
@@ -223,6 +237,7 @@ describe('HomepageService', () => {
     ]);
     prisma.homepageFeaturedCategory.findMany.mockResolvedValue([]);
     prisma.homepagePopularProduct.findMany.mockResolvedValue([]);
+    prisma.homepageFeaturedBrand.findMany.mockResolvedValue([{ brandId: 'brand-2', priority: 1 }]);
     prisma.homepageManufacturerCountry.findMany.mockResolvedValue([]);
     prisma.siteSettings.findUnique.mockResolvedValue(null);
 
@@ -241,6 +256,7 @@ describe('HomepageService', () => {
       altText: 'تصویر هیرو',
     });
     expect(result.primaryHeroSlides[0]?.contentColor).toBe('#C7A45A');
+    expect(result.featuredBrands).toEqual([{ id: 'brand-2', priority: 1 }]);
   });
 
   it('replaces homepage configuration transactionally in the requested order', async () => {
@@ -253,6 +269,10 @@ describe('HomepageService', () => {
       { id: '30000000-0000-4000-8000-000000000002' },
     ]);
     prisma.product.findMany.mockResolvedValue([{ id: '40000000-0000-4000-8000-000000000001' }]);
+    prisma.brand.findMany.mockResolvedValue([
+      { id: '60000000-0000-4000-8000-000000000001' },
+      { id: '60000000-0000-4000-8000-000000000002' },
+    ]);
     prisma.country.findMany.mockResolvedValue([
       { id: '50000000-0000-4000-8000-000000000001' },
       { id: '50000000-0000-4000-8000-000000000002' },
@@ -263,6 +283,7 @@ describe('HomepageService', () => {
       homepageHeroSlide: { deleteMany: jest.fn(), createMany: jest.fn() },
       homepageFeaturedCategory: { deleteMany: jest.fn(), createMany: jest.fn() },
       homepagePopularProduct: { deleteMany: jest.fn(), createMany: jest.fn() },
+      homepageFeaturedBrand: { deleteMany: jest.fn(), createMany: jest.fn() },
       homepageManufacturerCountry: { deleteMany: jest.fn(), createMany: jest.fn() },
       siteSettings: { upsert: jest.fn() },
     };
@@ -272,6 +293,7 @@ describe('HomepageService', () => {
     prisma.homepageHeroSlide.findMany.mockResolvedValue([]);
     prisma.homepageFeaturedCategory.findMany.mockResolvedValue([]);
     prisma.homepagePopularProduct.findMany.mockResolvedValue([]);
+    prisma.homepageFeaturedBrand.findMany.mockResolvedValue([]);
     prisma.homepageManufacturerCountry.findMany.mockResolvedValue([]);
     prisma.siteSettings.findUnique.mockResolvedValue({
       manufacturerCountriesEnabled: true,
@@ -295,6 +317,10 @@ describe('HomepageService', () => {
           '30000000-0000-4000-8000-000000000002',
         ],
         popularProductIds: ['40000000-0000-4000-8000-000000000001'],
+        featuredBrandIds: [
+          '60000000-0000-4000-8000-000000000002',
+          '60000000-0000-4000-8000-000000000001',
+        ],
         manufacturerCountriesEnabled: true,
         manufacturerCountryIds: [
           '50000000-0000-4000-8000-000000000004',
@@ -320,6 +346,12 @@ describe('HomepageService', () => {
       data: [
         { categoryId: '30000000-0000-4000-8000-000000000001', priority: 1 },
         { categoryId: '30000000-0000-4000-8000-000000000002', priority: 2 },
+      ],
+    });
+    expect(transaction.homepageFeaturedBrand.createMany).toHaveBeenCalledWith({
+      data: [
+        { brandId: '60000000-0000-4000-8000-000000000002', priority: 1 },
+        { brandId: '60000000-0000-4000-8000-000000000001', priority: 2 },
       ],
     });
     expect(transaction.homepageManufacturerCountry.createMany).toHaveBeenCalledWith({
@@ -348,6 +380,7 @@ describe('HomepageService', () => {
           secondaryHero: null,
           categoryIds: [],
           popularProductIds: [],
+          featuredBrandIds: [],
           manufacturerCountriesEnabled: true,
           manufacturerCountryIds: [
             '50000000-0000-4000-8000-000000000001',
@@ -366,6 +399,7 @@ describe('HomepageService', () => {
     prisma.homepageHeroSlide.findMany.mockResolvedValue([]);
     prisma.homepageFeaturedCategory.findMany.mockResolvedValue([]);
     prisma.homepagePopularProduct.findMany.mockResolvedValue([]);
+    prisma.homepageFeaturedBrand.findMany.mockResolvedValue([]);
     prisma.homepageManufacturerCountry.findMany.mockResolvedValue([
       {
         priority: 1,
@@ -391,6 +425,7 @@ describe('HomepageService', () => {
           secondaryHero: null,
           categoryIds: [],
           popularProductIds: [],
+          featuredBrandIds: [],
           manufacturerCountriesEnabled: false,
           manufacturerCountryIds: Array.from(
             { length: 9 },

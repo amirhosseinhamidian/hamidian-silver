@@ -32,7 +32,7 @@ function getCartVariantLabel(variant: ProductVariant): string {
   const sizeLabel = variant.size?.label?.trim();
 
   if (sizeLabel) {
-    return `سایز: ${sizeLabel}`;
+    return `${variant.size?.group.cartLabel ?? 'سایز'}: ${sizeLabel}`;
   }
 
   const modelName = variant.name?.trim();
@@ -76,20 +76,31 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   const maxQuantity = selectedVariant
     ? Math.max(1, Math.min(99, selectedVariant.availableQuantity))
     : 1;
+  const selectedSalePriceToman = selectedVariant?.salePriceToman ?? product.salePriceToman;
+  const selectedCompareAtPriceToman =
+    selectedVariant?.compareAtPriceToman ?? product.compareAtPriceToman;
   const unitPriceToman =
-    product.salePriceToman === null
+    selectedSalePriceToman === null
       ? null
-      : product.salePriceToman + (selectedPlating?.unitPriceToman ?? 0);
-  const discountPercent = getDiscountPercent(product.compareAtPriceToman, product.salePriceToman);
+      : selectedSalePriceToman + (selectedPlating?.unitPriceToman ?? 0);
+  const discountPercent = getDiscountPercent(selectedCompareAtPriceToman, selectedSalePriceToman);
   const canAdd =
     selectedVariant?.isAvailable === true &&
     selectedVariant.availableQuantity > 0 &&
-    product.salePriceToman !== null;
+    selectedSalePriceToman !== null;
   const hasMultipleVariants = product.variants.length > 1;
   const isSizeSelection = product.sizeMode === 'SIZED';
-  const selectorLabel = isSizeSelection ? 'انتخاب سایز' : 'انتخاب مدل';
+  const sizeGroup = product.variants.find((variant) => variant.size?.group)?.size?.group ?? null;
+  const selectorLabel = isSizeSelection
+    ? (sizeGroup?.selectionLabel ?? 'انتخاب سایز')
+    : 'انتخاب مدل';
+  const sizeLabel = sizeGroup?.cartLabel ?? 'سایز';
+  const showSizeGuide = isSizeSelection && sizeLabel === 'سایز';
   const hasPurchasableVariant = product.variants.some(
     (variant) => variant.isAvailable && variant.availableQuantity > 0,
+  );
+  const hasPricedVariant = product.variants.some(
+    (variant) => (variant.salePriceToman ?? product.salePriceToman) !== null,
   );
   const notificationVariant =
     selectedVariant && (!selectedVariant.isAvailable || selectedVariant.availableQuantity <= 0)
@@ -98,9 +109,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   const showStockNotification = notificationVariant !== null || !hasPurchasableVariant;
   const desktopAddButtonDisabled = !canAdd;
   const mobileAddButtonDisabled =
-    product.salePriceToman === null ||
-    !hasPurchasableVariant ||
-    (selectedVariant !== null && !canAdd);
+    !hasPricedVariant || !hasPurchasableVariant || (selectedVariant !== null && !canAdd);
 
   function selectVariant(nextVariantId: string) {
     setVariantId(nextVariantId);
@@ -119,7 +128,9 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
     }
 
     if (hasMultipleVariants) {
-      const message = isSizeSelection ? 'لطفاً سایز را انتخاب کنید.' : 'لطفاً مدل را انتخاب کنید.';
+      const message = isSizeSelection
+        ? `لطفاً ${sizeLabel} را انتخاب کنید.`
+        : 'لطفاً مدل را انتخاب کنید.';
       setVariantMessage(message);
       setSelectionToast(message);
       variantSelectorRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
@@ -133,7 +144,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       !requestVariantSelection() ||
       !selectedVariant ||
       !canAdd ||
-      product.salePriceToman === null
+      selectedSalePriceToman === null
     ) {
       return;
     }
@@ -144,8 +155,8 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       productName: product.name,
       variantLabel: getCartVariantLabel(selectedVariant),
       media: product.primaryMedia,
-      unitSalePriceToman: product.salePriceToman,
-      unitCompareAtPriceToman: product.compareAtPriceToman ?? null,
+      unitSalePriceToman: selectedSalePriceToman,
+      unitCompareAtPriceToman: selectedCompareAtPriceToman ?? null,
       platingType,
       unitPlatingPriceToman: selectedPlating?.unitPriceToman ?? 0,
       platingLeadTimeDays: selectedPlating?.leadTimeDays ?? 0,
@@ -160,7 +171,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       variant: [getCartVariantLabel(selectedVariant), platingType && platingLabels[platingType]]
         .filter(Boolean)
         .join(' / '),
-      priceToman: product.salePriceToman + (selectedPlating?.unitPriceToman ?? 0),
+      priceToman: selectedSalePriceToman + (selectedPlating?.unitPriceToman ?? 0),
       quantity: 1,
     });
   }
@@ -174,7 +185,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         انتخاب و خرید
       </h2>
 
-      {isSizeSelection && !hasMultipleVariants ? (
+      {showSizeGuide && !hasMultipleVariants ? (
         <Link
           href="/size-guide"
           className="mt-4 inline-flex border-b border-[var(--sf-color-border-strong)] text-xs"
@@ -188,7 +199,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
           <legend className="sr-only">{selectorLabel}</legend>
           <div className="flex items-center justify-between gap-4">
             <span className="text-xs text-[var(--sf-color-muted)]">{selectorLabel}</span>
-            {isSizeSelection ? (
+            {showSizeGuide ? (
               <Link
                 href="/size-guide"
                 className="border-b border-[var(--sf-color-border-strong)] text-xs"
@@ -318,7 +329,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
             {discountPercent !== null ? (
               <div className="mt-2 flex items-center justify-end gap-2 text-xs text-[var(--sf-color-muted)]">
                 <span className="line-through">
-                  {formatTomanPrice(product.compareAtPriceToman)}
+                  {formatTomanPrice(selectedCompareAtPriceToman)}
                 </span>
                 <DiscountBadge percent={discountPercent} />
               </div>
@@ -330,7 +341,9 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         </div>
       ) : hasMultipleVariants ? (
         <p className="mt-6 hidden text-sm text-[var(--sf-color-muted)] lg:block">
-          {isSizeSelection ? 'برای ادامه سایز را انتخاب کنید.' : 'برای ادامه مدل را انتخاب کنید.'}
+          {isSizeSelection
+            ? `برای ادامه ${sizeLabel} را انتخاب کنید.`
+            : 'برای ادامه مدل را انتخاب کنید.'}
         </p>
       ) : null}
 
@@ -359,7 +372,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         )}
       </div>
 
-      {product.salePriceToman === null ? (
+      {!hasPricedVariant ? (
         <p className="mt-3 text-xs leading-6 text-[var(--sf-color-muted)]">
           این محصول تا زمان تعیین قیمت قابل افزودن به سبد خرید نیست.
         </p>
@@ -390,7 +403,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         <div className="mx-auto w-full min-w-0 max-w-xl">
           {discountPercent !== null ? (
             <div className="flex items-center justify-end gap-2 text-xs text-[var(--sf-color-muted)]">
-              <span className="line-through">{formatTomanPrice(product.compareAtPriceToman)}</span>
+              <span className="line-through">{formatTomanPrice(selectedCompareAtPriceToman)}</span>
               <DiscountBadge percent={discountPercent} />
             </div>
           ) : null}

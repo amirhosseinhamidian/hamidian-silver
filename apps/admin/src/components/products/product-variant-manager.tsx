@@ -12,11 +12,22 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { DataTableColumn } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { MoneyInput } from '@/components/ui/money-input';
 import { MobileDataCard } from '@/components/ui/mobile-data-card';
 import { ResponsiveDataView } from '@/components/ui/responsive-data-view';
 import { Select } from '@/components/ui/select';
-import type { AdminProduct, AdminProductVariant, CatalogSize } from '@/lib/catalog/catalog-model';
-import { formatAdminInteger, toAsciiDigits, toPersianDigits } from '@/lib/presentation/formatters';
+import type {
+  AdminProduct,
+  AdminProductVariant,
+  CatalogSize,
+  CatalogSizeGroup,
+} from '@/lib/catalog/catalog-model';
+import {
+  formatAdminInteger,
+  formatAdminToman,
+  toAsciiDigits,
+  toPersianDigits,
+} from '@/lib/presentation/formatters';
 
 type ProductVariantManagerProps = Readonly<{
   product: AdminProduct;
@@ -99,6 +110,8 @@ function VariantForm({
     const name = String(formData.get('name') ?? '').trim();
     const selectedSizeId = String(formData.get('sizeId') ?? 'none');
     const weightGrams = optionalNumber(formData, 'weightGrams');
+    const salePriceToman = optionalNumber(formData, 'salePriceToman');
+    const compareAtPriceToman = optionalNumber(formData, 'compareAtPriceToman');
 
     if (!sku) return setError('SKU الزامی است.');
     if (weightGrams === undefined || (weightGrams !== null && weightGrams < 0)) {
@@ -106,6 +119,17 @@ function VariantForm({
     }
     if (product.sizeMode === 'SIZED' && selectedSizeId === 'none') {
       return setError('برای این محصول انتخاب سایز الزامی است.');
+    }
+    if (salePriceToman === undefined || compareAtPriceToman === undefined) {
+      return setError('قیمت‌ها باید فقط شامل عدد باشند.');
+    }
+    const effectiveSalePrice = salePriceToman ?? product.salePriceToman;
+    const effectiveComparePrice = compareAtPriceToman ?? product.compareAtPriceToman;
+    if (effectiveSalePrice === null) {
+      return setError('قیمت فروش مستقل تنوع یا قیمت پیش‌فرض محصول الزامی است.');
+    }
+    if (effectiveComparePrice !== null && effectiveComparePrice <= effectiveSalePrice) {
+      return setError('قیمت قبل از تخفیف تنوع باید بیشتر از قیمت فروش آن باشد.');
     }
 
     const payload: Record<string, unknown> = {
@@ -121,6 +145,10 @@ function VariantForm({
     else if (variant) payload.name = null;
     if (weightGrams !== null) payload.weightGrams = weightGrams;
     else if (variant) payload.weightGrams = null;
+    if (salePriceToman !== null) payload.salePriceToman = salePriceToman;
+    else if (variant) payload.salePriceToman = null;
+    if (compareAtPriceToman !== null) payload.compareAtPriceToman = compareAtPriceToman;
+    else if (variant) payload.compareAtPriceToman = null;
     const endpoint = variant
       ? `/api/catalog/products/${product.id}/variants/${variant.id}`
       : `/api/catalog/products/${product.id}/variants`;
@@ -145,7 +173,10 @@ function VariantForm({
   }
 
   const sizeOptions = sizes
-    .filter((size) => size.active || size.id === variant?.size?.id)
+    .filter(
+      (size) =>
+        size.groupId === product.sizeGroup?.id && (size.active || size.id === variant?.size?.id),
+    )
     .map((size) => ({
       value: size.id,
       label: `${size.label} — ${toPersianDigits(size.code)}`,
@@ -214,6 +245,38 @@ function VariantForm({
             placeholder="مثلاً ۴٫۲۵۰"
             inputMode="decimal"
             onInput={localizeNumberInput}
+          />
+        )}
+      </FormField>
+      <FormField
+        id={`${formId}-sale-price`}
+        label="قیمت فروش این تنوع"
+        hint="در صورت خالی‌بودن، قیمت پیش‌فرض محصول استفاده می‌شود."
+      >
+        {(props) => (
+          <MoneyInput
+            {...props}
+            name="salePriceToman"
+            defaultValue={
+              variant?.salePriceToman === null || variant?.salePriceToman === undefined
+                ? ''
+                : toPersianDigits(variant.salePriceToman)
+            }
+            placeholder="مثلاً ۴٬۷۰۰٬۰۰۰"
+          />
+        )}
+      </FormField>
+      <FormField id={`${formId}-compare-price`} label="قیمت قبل از تخفیف این تنوع">
+        {(props) => (
+          <MoneyInput
+            {...props}
+            name="compareAtPriceToman"
+            defaultValue={
+              variant?.compareAtPriceToman === null || variant?.compareAtPriceToman === undefined
+                ? ''
+                : toPersianDigits(variant.compareAtPriceToman)
+            }
+            placeholder="مثلاً ۵٬۲۰۰٬۰۰۰"
           />
         )}
       </FormField>
@@ -304,6 +367,10 @@ function VariantMobileCard({
       items={[
         { label: 'سایز', value: variant.size?.label ?? 'ندارد' },
         { label: 'وزن', value: formatWeight(variant.weightGrams) },
+        {
+          label: 'قیمت فروش',
+          value: formatAdminToman(variant.salePriceToman ?? product.salePriceToman ?? 0),
+        },
       ]}
       detailsTitle={`تنوع ${toPersianDigits(variant.sku)}`}
       detailsDescription="جزئیات کامل و امکان ویرایش سریع"
@@ -330,22 +397,29 @@ function VariantMobileCard({
 
 type SizeFormProps = Readonly<{
   formId: string;
+  sizeGroups: readonly CatalogSizeGroup[];
   size?: CatalogSize;
   onSaved: () => void;
   onPendingChange: (pending: boolean) => void;
 }>;
 
-function SizeForm({ formId, size, onSaved, onPendingChange }: SizeFormProps) {
+function SizeForm({ formId, sizeGroups, size, onSaved, onPendingChange }: SizeFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const activeGroups = sizeGroups.filter((group) => group.active);
+  const defaultGroupId =
+    size?.groupId ?? (activeGroups.length === 1 ? activeGroups[0]?.id : undefined) ?? 'none';
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const code = String(formData.get('code') ?? '').trim();
     const label = String(formData.get('label') ?? '').trim();
+    const groupId = String(formData.get('groupId') ?? 'none');
     const sortOrder = optionalNumber(formData, 'sortOrder');
-    if (!code || !label) return setError('کد و عنوان نمایشی سایز الزامی هستند.');
+    if (!code || !label || groupId === 'none') {
+      return setError('گروه، کد و عنوان نمایشی سایز الزامی هستند.');
+    }
     if (
       sortOrder === undefined ||
       sortOrder === null ||
@@ -362,6 +436,7 @@ function SizeForm({ formId, size, onSaved, onPendingChange }: SizeFormProps) {
         method: size ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          groupId,
           code,
           label,
           sortOrder,
@@ -386,6 +461,21 @@ function SizeForm({ formId, size, onSaved, onPendingChange }: SizeFormProps) {
           {error}
         </Alert>
       ) : null}
+      <FormField id={`${formId}-group`} label="گروه سایزبندی" required>
+        {(props) => (
+          <Select
+            {...props}
+            name="groupId"
+            defaultValue={defaultGroupId}
+            options={[
+              { value: 'none', label: 'انتخاب گروه' },
+              ...sizeGroups
+                .filter((group) => group.active || group.id === size?.groupId)
+                .map((group) => ({ value: group.id, label: group.name })),
+            ]}
+          />
+        )}
+      </FormField>
       <FormField id={`${formId}-code`} label="کد سایز" required>
         {(props) => (
           <Input
@@ -434,7 +524,10 @@ function SizeForm({ formId, size, onSaved, onPendingChange }: SizeFormProps) {
   );
 }
 
-function SizeSheet({ size }: Readonly<{ size?: CatalogSize }>) {
+function SizeSheet({
+  sizeGroups,
+  size,
+}: Readonly<{ sizeGroups: readonly CatalogSizeGroup[]; size?: CatalogSize }>) {
   const formId = useId();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -461,6 +554,7 @@ function SizeSheet({ size }: Readonly<{ size?: CatalogSize }>) {
       >
         <SizeForm
           formId={formId}
+          sizeGroups={sizeGroups}
           size={size}
           onSaved={() => setOpen(false)}
           onPendingChange={setPending}
@@ -470,7 +564,15 @@ function SizeSheet({ size }: Readonly<{ size?: CatalogSize }>) {
   );
 }
 
-function SizeMobileCard({ size, canWrite }: Readonly<{ size: CatalogSize; canWrite: boolean }>) {
+function SizeMobileCard({
+  sizeGroups,
+  size,
+  canWrite,
+}: Readonly<{
+  sizeGroups: readonly CatalogSizeGroup[];
+  size: CatalogSize;
+  canWrite: boolean;
+}>) {
   const formId = useId();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -479,7 +581,10 @@ function SizeMobileCard({ size, canWrite }: Readonly<{ size: CatalogSize; canWri
       eyebrow={`کد ${toPersianDigits(size.code)}`}
       title={size.label}
       status={statusBadge(size.active)}
-      items={[{ label: 'ترتیب نمایش', value: formatAdminInteger(size.sortOrder) }]}
+      items={[
+        { label: 'گروه', value: size.group.name },
+        { label: 'ترتیب نمایش', value: formatAdminInteger(size.sortOrder) },
+      ]}
       detailsTitle={`سایز ${size.label}`}
       detailsDescription="جزئیات کامل و امکان ویرایش سریع"
       detailsLabel={canWrite ? 'مشاهده جزئیات و عملیات' : 'مشاهده جزئیات'}
@@ -489,6 +594,7 @@ function SizeMobileCard({ size, canWrite }: Readonly<{ size: CatalogSize; canWri
         canWrite ? (
           <SizeForm
             formId={formId}
+            sizeGroups={sizeGroups}
             size={size}
             onSaved={() => setOpen(false)}
             onPendingChange={setPending}
@@ -518,6 +624,11 @@ export function ProductVariantManager({ product, sizes }: ProductVariantManagerP
     { id: 'name', header: 'نام تنوع', cell: (variant) => variant.name ?? '—' },
     { id: 'size', header: 'سایز', cell: (variant) => variant.size?.label ?? '—' },
     { id: 'weight', header: 'وزن', cell: (variant) => formatWeight(variant.weightGrams) },
+    {
+      id: 'price',
+      header: 'قیمت فروش',
+      cell: (variant) => formatAdminToman(variant.salePriceToman ?? product.salePriceToman ?? 0),
+    },
     { id: 'status', header: 'وضعیت', cell: (variant) => statusBadge(variant.active) },
     {
       id: 'actions',
@@ -570,13 +681,266 @@ export function ProductVariantManager({ product, sizes }: ProductVariantManagerP
   );
 }
 
+type SizeGroupFormProps = Readonly<{
+  formId: string;
+  group?: CatalogSizeGroup;
+  onSaved: () => void;
+  onPendingChange: (pending: boolean) => void;
+}>;
+
+function SizeGroupForm({ formId, group, onSaved, onPendingChange }: SizeGroupFormProps) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const code = String(formData.get('code') ?? '').trim();
+    const name = String(formData.get('name') ?? '').trim();
+    const selectionLabel = String(formData.get('selectionLabel') ?? '').trim();
+    const cartLabel = String(formData.get('cartLabel') ?? '').trim();
+    const sortOrder = optionalNumber(formData, 'sortOrder');
+    if (!code || !name || !selectionLabel || !cartLabel) {
+      return setError('کد، نام و عنوان‌های نمایشی گروه الزامی هستند.');
+    }
+    if (sortOrder === undefined || sortOrder === null || !Number.isInteger(sortOrder)) {
+      return setError('ترتیب نمایش باید یک عدد صحیح صفر یا بزرگ‌تر باشد.');
+    }
+
+    setError(null);
+    onPendingChange(true);
+    try {
+      const response = await fetch(
+        group ? `/api/catalog/size-groups/${group.id}` : '/api/catalog/size-groups',
+        {
+          method: group ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code,
+            name,
+            selectionLabel,
+            cartLabel,
+            sortOrder,
+            isActive: formData.get('isActive') === 'on',
+          }),
+        },
+      );
+      const payload = (await response.json().catch(() => null)) as unknown;
+      if (!response.ok) throw new Error(apiError(payload));
+      onSaved();
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : apiError(null));
+    } finally {
+      onPendingChange(false);
+    }
+  }
+
+  return (
+    <form id={formId} onSubmit={(event) => void submit(event)} className="space-y-4">
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      <FormField id={`${formId}-code`} label="کد گروه" required>
+        {(props) => (
+          <Input
+            {...props}
+            name="code"
+            defaultValue={group?.code}
+            placeholder="مثلاً NECKLACE_LENGTH"
+            dir="ltr"
+            maxLength={50}
+          />
+        )}
+      </FormField>
+      <FormField id={`${formId}-name`} label="نام گروه" required>
+        {(props) => (
+          <Input
+            {...props}
+            name="name"
+            defaultValue={group?.name}
+            placeholder="مثلاً طول گردنبند"
+            maxLength={100}
+          />
+        )}
+      </FormField>
+      <FormField id={`${formId}-selection-label`} label="عنوان انتخاب در صفحه محصول" required>
+        {(props) => (
+          <Input
+            {...props}
+            name="selectionLabel"
+            defaultValue={group?.selectionLabel}
+            placeholder="مثلاً انتخاب طول"
+            maxLength={100}
+          />
+        )}
+      </FormField>
+      <FormField id={`${formId}-cart-label`} label="عنوان در سبد و سفارش" required>
+        {(props) => (
+          <Input
+            {...props}
+            name="cartLabel"
+            defaultValue={group?.cartLabel}
+            placeholder="مثلاً طول"
+            maxLength={50}
+          />
+        )}
+      </FormField>
+      <FormField id={`${formId}-order`} label="ترتیب نمایش" required>
+        {(props) => (
+          <Input
+            {...props}
+            name="sortOrder"
+            defaultValue={toPersianDigits(group?.sortOrder ?? 0)}
+            inputMode="numeric"
+            onInput={localizeNumberInput}
+          />
+        )}
+      </FormField>
+      <Checkbox
+        id={`${formId}-active`}
+        name="isActive"
+        label="گروه فعال باشد"
+        description="گروه غیرفعال برای سایزهای جدید قابل انتخاب نیست."
+        defaultChecked={group?.active ?? true}
+      />
+    </form>
+  );
+}
+
+function SizeGroupSheet({ group }: Readonly<{ group?: CatalogSizeGroup }>) {
+  const formId = useId();
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  return (
+    <BottomSheet open={open} onOpenChange={setOpen}>
+      <BottomSheetTrigger asChild>
+        <Button variant={group ? 'ghost' : 'outline'} size="sm">
+          {group ? 'ویرایش' : 'افزودن گروه'}
+        </Button>
+      </BottomSheetTrigger>
+      <BottomSheetContent
+        title={group ? `ویرایش ${group.name}` : 'افزودن گروه سایزبندی'}
+        description="هر گروه مجموعه مقادیر مرتبط و واژگان نمایشی خودش را دارد."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>
+              انصراف
+            </Button>
+            <Button type="submit" form={formId} loading={pending}>
+              ذخیره گروه
+            </Button>
+          </>
+        }
+      >
+        <SizeGroupForm
+          formId={formId}
+          group={group}
+          onSaved={() => setOpen(false)}
+          onPendingChange={setPending}
+        />
+      </BottomSheetContent>
+    </BottomSheet>
+  );
+}
+
+export function CatalogSizeGroupManager({
+  groups,
+  canWrite = true,
+}: Readonly<{ groups: readonly CatalogSizeGroup[]; canWrite?: boolean }>) {
+  const columns: readonly DataTableColumn<CatalogSizeGroup>[] = [
+    { id: 'name', header: 'نام گروه', cell: (group) => group.name },
+    { id: 'selection', header: 'عنوان انتخاب', cell: (group) => group.selectionLabel },
+    { id: 'cart', header: 'عنوان سبد', cell: (group) => group.cartLabel },
+    { id: 'status', header: 'وضعیت', cell: (group) => statusBadge(group.active) },
+    ...(canWrite
+      ? ([
+          {
+            id: 'actions',
+            header: 'عملیات',
+            cell: (group: CatalogSizeGroup) => <SizeGroupSheet group={group} />,
+          },
+        ] as const)
+      : []),
+  ];
+
+  return (
+    <Card
+      title="گروه‌های سایزبندی"
+      description="گروه‌های انگشتر، طول گردنبند و طول دستبند را جداگانه مدیریت کنید."
+      action={canWrite ? <SizeGroupSheet /> : undefined}
+    >
+      <ResponsiveDataView
+        mobileLabel="کارت‌های گروه سایزبندی"
+        renderMobileCard={(group) => <SizeGroupMobileCard group={group} canWrite={canWrite} />}
+        caption="جدول گروه‌های سایزبندی"
+        columns={columns}
+        rows={groups}
+        getRowKey={(group) => group.id}
+        emptyTitle="گروهی ثبت نشده است"
+        emptyDescription="اولین گروه سایزبندی را اضافه کنید."
+        compact
+      />
+    </Card>
+  );
+}
+
+function SizeGroupMobileCard({
+  group,
+  canWrite,
+}: Readonly<{ group: CatalogSizeGroup; canWrite: boolean }>) {
+  const formId = useId();
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+
+  return (
+    <MobileDataCard
+      eyebrow={group.code}
+      title={group.name}
+      status={statusBadge(group.active)}
+      items={[
+        { label: 'عنوان انتخاب', value: group.selectionLabel },
+        { label: 'عنوان سبد', value: group.cartLabel },
+      ]}
+      detailsTitle={`گروه ${group.name}`}
+      detailsDescription="جزئیات کامل و امکان ویرایش سریع"
+      detailsLabel={canWrite ? 'مشاهده جزئیات و عملیات' : 'مشاهده جزئیات'}
+      detailsOpen={open}
+      onDetailsOpenChange={setOpen}
+      details={
+        canWrite ? (
+          <SizeGroupForm
+            formId={formId}
+            group={group}
+            onSaved={() => setOpen(false)}
+            onPendingChange={setPending}
+          />
+        ) : (
+          <Alert tone="neutral">برای ویرایش گروه به مجوز مدیریت کاتالوگ نیاز دارید.</Alert>
+        )
+      }
+      detailsFooter={
+        canWrite ? (
+          <Button type="submit" form={formId} loading={pending}>
+            ذخیره تغییرات
+          </Button>
+        ) : undefined
+      }
+    />
+  );
+}
+
 export function CatalogSizeManager({
   sizes,
+  sizeGroups,
   canWrite = true,
-}: Readonly<{ sizes: readonly CatalogSize[]; canWrite?: boolean }>) {
+}: Readonly<{
+  sizes: readonly CatalogSize[];
+  sizeGroups: readonly CatalogSizeGroup[];
+  canWrite?: boolean;
+}>) {
   const sizeColumns: readonly DataTableColumn<CatalogSize>[] = [
     { id: 'label', header: 'عنوان', cell: (size) => size.label },
     { id: 'code', header: 'کد', cell: (size) => toPersianDigits(size.code) },
+    { id: 'group', header: 'گروه', cell: (size) => size.group.name },
     { id: 'order', header: 'ترتیب', cell: (size) => formatAdminInteger(size.sortOrder) },
     { id: 'status', header: 'وضعیت', cell: (size) => statusBadge(size.active) },
     ...(canWrite
@@ -584,7 +948,7 @@ export function CatalogSizeManager({
           {
             id: 'actions',
             header: 'عملیات',
-            cell: (size: CatalogSize) => <SizeSheet size={size} />,
+            cell: (size: CatalogSize) => <SizeSheet sizeGroups={sizeGroups} size={size} />,
           },
         ] as const)
       : []),
@@ -594,11 +958,13 @@ export function CatalogSizeManager({
     <Card
       title="سایزهای کاتالوگ"
       description="سایزهای مشترک محصولات سایزبندی‌شده را تعریف، مرتب یا غیرفعال کنید."
-      action={canWrite ? <SizeSheet /> : undefined}
+      action={canWrite ? <SizeSheet sizeGroups={sizeGroups} /> : undefined}
     >
       <ResponsiveDataView
         mobileLabel="کارت‌های سایز کاتالوگ"
-        renderMobileCard={(size) => <SizeMobileCard size={size} canWrite={canWrite} />}
+        renderMobileCard={(size) => (
+          <SizeMobileCard sizeGroups={sizeGroups} size={size} canWrite={canWrite} />
+        )}
         caption="جدول سایزهای کاتالوگ"
         columns={sizeColumns}
         rows={sizes}

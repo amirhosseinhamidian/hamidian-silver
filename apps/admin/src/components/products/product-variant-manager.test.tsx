@@ -5,12 +5,22 @@ import {
   CatalogSizeManager,
   ProductVariantManager,
 } from '@/components/products/product-variant-manager';
-import type { AdminProduct, CatalogSize } from '@/lib/catalog/catalog-model';
+import type { AdminProduct, CatalogSize, CatalogSizeGroup } from '@/lib/catalog/catalog-model';
 
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
 
 afterEach(() => vi.unstubAllGlobals());
+
+const ringSizeGroup: CatalogSizeGroup = {
+  id: 'group-ring',
+  code: 'RING',
+  name: 'سایز انگشتر',
+  selectionLabel: 'انتخاب سایز',
+  cartLabel: 'سایز',
+  sortOrder: 1,
+  active: true,
+};
 
 const product: AdminProduct = {
   id: 'product-1',
@@ -39,17 +49,28 @@ const product: AdminProduct = {
       sku: 'RING-52',
       name: 'سایز ۵۲',
       weightGrams: 4.25,
+      salePriceToman: 4_500_000,
+      compareAtPriceToman: null,
       active: true,
-      size: { id: 'size-1', label: 'سایز ۵۲' },
+      size: { id: 'size-1', label: 'سایز ۵۲', group: ringSizeGroup },
     },
   ],
   media: [],
   attributes: [],
   mediaCount: 0,
+  sizeGroup: ringSizeGroup,
 };
 
 const sizes: readonly CatalogSize[] = [
-  { id: 'size-1', code: '52', label: 'سایز ۵۲', sortOrder: 1, active: true },
+  {
+    id: 'size-1',
+    groupId: ringSizeGroup.id,
+    code: '52',
+    label: 'سایز ۵۲',
+    sortOrder: 1,
+    active: true,
+    group: ringSizeGroup,
+  },
 ];
 
 function jsonResponse(body: unknown = { success: true }): Response {
@@ -87,7 +108,7 @@ describe('ProductVariantManager', () => {
   it('creates catalog sizes with normalized Persian numeric input', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse());
     vi.stubGlobal('fetch', fetchMock);
-    render(<CatalogSizeManager sizes={sizes} />);
+    render(<CatalogSizeManager sizes={sizes} sizeGroups={[ringSizeGroup]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'افزودن سایز' }));
     const dialog = await screen.findByRole('dialog', { name: 'افزودن سایز جدید' });
@@ -104,6 +125,7 @@ describe('ProductVariantManager', () => {
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
+          groupId: ringSizeGroup.id,
           code: '54',
           label: 'سایز ۵۴',
           sortOrder: 3,

@@ -38,6 +38,8 @@ type EditableProductVariant = Readonly<{
   name: string;
   sizeId: string;
   weightGrams: string;
+  salePriceToman: string;
+  compareAtPriceToman: string;
 }>;
 
 function createAttributeId(): string {
@@ -51,6 +53,8 @@ function createVariant(): EditableProductVariant {
     name: '',
     sizeId: 'none',
     weightGrams: '',
+    salePriceToman: '',
+    compareAtPriceToman: '',
   };
 }
 
@@ -92,6 +96,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
   const router = useRouter();
   const product = data.product;
   const [sizeMode, setSizeMode] = useState<ProductSizeMode>(product?.sizeMode ?? 'NONE');
+  const [sizeGroupId, setSizeGroupId] = useState(product?.sizeGroup?.id ?? 'none');
   const [seo, setSeo] = useState(() => createSeoEditorValue(product));
   const [attributes, setAttributes] = useState<EditableProductAttribute[]>(() =>
     (product?.attributes ?? []).map((attribute) => ({
@@ -180,6 +185,8 @@ export function ProductForm({ data, mode }: ProductFormProps) {
         name: variant.name.trim(),
         sizeId: variant.sizeId,
         weightGrams: optionalNumberValue(variant.weightGrams),
+        salePriceToman: optionalNumberValue(variant.salePriceToman),
+        compareAtPriceToman: optionalNumberValue(variant.compareAtPriceToman),
       }));
       if (normalizedVariants.some((variant) => !variant.sku)) {
         setError('SKU همه تنوع‌ها الزامی است.');
@@ -192,6 +199,15 @@ export function ProductForm({ data, mode }: ProductFormProps) {
         setError('وزن تنوع‌ها باید فقط شامل عدد و حداکثر سه رقم اعشار باشد.');
         return;
       }
+      if (
+        normalizedVariants.some(
+          (variant) =>
+            Number.isNaN(variant.salePriceToman) || Number.isNaN(variant.compareAtPriceToman),
+        )
+      ) {
+        setError('قیمت تنوع‌ها باید فقط شامل عدد باشد.');
+        return;
+      }
       const normalizedSkus = normalizedVariants.map((variant) => variant.sku.toLowerCase());
       if (new Set(normalizedSkus).size !== normalizedSkus.length) {
         setError('SKU تنوع‌ها نباید تکراری باشد.');
@@ -202,9 +218,32 @@ export function ProductForm({ data, mode }: ProductFormProps) {
         return;
       }
       if (sizeMode === 'SIZED') {
+        if (sizeGroupId === 'none') {
+          setError('برای محصول سایزبندی‌شده انتخاب گروه سایزبندی الزامی است.');
+          return;
+        }
         const sizeIds = normalizedVariants.map((variant) => variant.sizeId);
         if (new Set(sizeIds).size !== sizeIds.length) {
           setError('هر سایز فقط می‌تواند به یک تنوع این محصول اختصاص داده شود.');
+          return;
+        }
+        const allowedSizeIds = new Set(
+          data.sizes.filter((size) => size.groupId === sizeGroupId).map((size) => size.id),
+        );
+        if (sizeIds.some((sizeId) => !allowedSizeIds.has(sizeId))) {
+          setError('تمام تنوع‌ها باید از گروه سایزبندی انتخاب‌شده باشند.');
+          return;
+        }
+      }
+      for (const variant of normalizedVariants) {
+        const effectiveSalePrice = variant.salePriceToman ?? salePriceToman;
+        const effectiveComparePrice = variant.compareAtPriceToman ?? compareAtPriceToman;
+        if (effectiveSalePrice === undefined) {
+          setError('برای هر تنوع قیمت فروش مستقل یا قیمت پیش‌فرض محصول را ثبت کنید.');
+          return;
+        }
+        if (effectiveComparePrice !== undefined && effectiveComparePrice <= effectiveSalePrice) {
+          setError('قیمت قبل از تخفیف هر تنوع باید بیشتر از قیمت فروش آن باشد.');
           return;
         }
       }
@@ -220,6 +259,10 @@ export function ProductForm({ data, mode }: ProductFormProps) {
         sku: variant.sku,
         ...(variant.name ? { name: variant.name } : {}),
         ...(variant.weightGrams !== undefined ? { weightGrams: variant.weightGrams } : {}),
+        ...(variant.salePriceToman !== undefined ? { salePriceToman: variant.salePriceToman } : {}),
+        ...(variant.compareAtPriceToman !== undefined
+          ? { compareAtPriceToman: variant.compareAtPriceToman }
+          : {}),
         ...(sizeMode === 'SIZED' ? { sizeId: variant.sizeId } : {}),
         isActive: true,
       }));
@@ -329,9 +372,12 @@ export function ProductForm({ data, mode }: ProductFormProps) {
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="قیمت‌گذاری" description="مبالغ به تومان ثبت می‌شوند">
+        <Card
+          title="قیمت‌گذاری"
+          description="این مبالغ پیش‌فرض هستند؛ قیمت ثبت‌شده روی هر تنوع اولویت دارد."
+        >
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="product-sale-price" label="قیمت فروش">
+            <FormField id="product-sale-price" label="قیمت فروش پیش‌فرض">
               {(props) => (
                 <MoneyInput
                   {...props}
@@ -345,7 +391,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
                 />
               )}
             </FormField>
-            <FormField id="product-compare-price" label="قیمت قبل از تخفیف">
+            <FormField id="product-compare-price" label="قیمت قبل از تخفیف پیش‌فرض">
               {(props) => (
                 <MoneyInput
                   {...props}
@@ -585,7 +631,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
             </Button>
           }
         >
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <FormField id="product-status" label="وضعیت اولیه" required>
               {(props) => (
                 <Select
@@ -611,7 +657,10 @@ export function ProductForm({ data, mode }: ProductFormProps) {
                   {...props}
                   name="sizeMode"
                   value={sizeMode}
-                  onValueChange={(value) => setSizeMode(value as ProductSizeMode)}
+                  onValueChange={(value) => {
+                    setSizeMode(value as ProductSizeMode);
+                    if (value !== 'SIZED') setSizeGroupId('none');
+                  }}
                   required
                   options={[
                     { value: 'NONE', label: 'بدون سایز' },
@@ -621,6 +670,33 @@ export function ProductForm({ data, mode }: ProductFormProps) {
                 />
               )}
             </FormField>
+            {sizeMode === 'SIZED' ? (
+              <FormField
+                id="product-size-group"
+                label="گروه سایزبندی"
+                hint="فقط مقادیر همین گروه برای تنوع‌ها نمایش داده می‌شوند."
+                required
+              >
+                {(props) => (
+                  <Select
+                    {...props}
+                    value={sizeGroupId}
+                    onValueChange={(value) => {
+                      setSizeGroupId(value);
+                      setVariants((current) =>
+                        current.map((variant) => ({ ...variant, sizeId: 'none' })),
+                      );
+                    }}
+                    options={[
+                      { value: 'none', label: 'انتخاب گروه سایزبندی' },
+                      ...data.sizeGroups
+                        .filter((group) => group.active)
+                        .map((group) => ({ value: group.id, label: group.name })),
+                    ]}
+                  />
+                )}
+              </FormField>
+            ) : null}
           </div>
 
           <Alert tone="info" className="mt-4">
@@ -660,7 +736,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
                       حذف تنوع
                     </Button>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <FormField
                       id={`product-variant-${variant.id}-sku`}
                       label={`SKU تنوع ${number}`}
@@ -711,7 +787,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
                             options={[
                               { value: 'none', label: 'انتخاب سایز' },
                               ...data.sizes
-                                .filter((size) => size.active)
+                                .filter((size) => size.active && size.groupId === sizeGroupId)
                                 .map((size) => ({ value: size.id, label: size.label })),
                             ]}
                           />
@@ -734,6 +810,40 @@ export function ProductForm({ data, mode }: ProductFormProps) {
                             updateVariant({
                               weightGrams: toPersianDigits(toAsciiDigits(event.target.value)),
                             })
+                          }
+                        />
+                      )}
+                    </FormField>
+                    <FormField
+                      id={`product-variant-${variant.id}-sale-price`}
+                      label={`قیمت فروش تنوع ${number}`}
+                      hint="اختیاری؛ جایگزین قیمت پیش‌فرض"
+                    >
+                      {(props) => (
+                        <MoneyInput
+                          {...props}
+                          value={variant.salePriceToman}
+                          placeholder="مثلاً ۴٬۷۰۰٬۰۰۰"
+                          disabled={pending}
+                          onChange={(event) =>
+                            updateVariant({ salePriceToman: event.currentTarget.value })
+                          }
+                        />
+                      )}
+                    </FormField>
+                    <FormField
+                      id={`product-variant-${variant.id}-compare-price`}
+                      label={`قیمت قبل از تخفیف تنوع ${number}`}
+                      hint="اختیاری"
+                    >
+                      {(props) => (
+                        <MoneyInput
+                          {...props}
+                          value={variant.compareAtPriceToman}
+                          placeholder="مثلاً ۵٬۲۰۰٬۰۰۰"
+                          disabled={pending}
+                          onChange={(event) =>
+                            updateVariant({ compareAtPriceToman: event.currentTarget.value })
                           }
                         />
                       )}

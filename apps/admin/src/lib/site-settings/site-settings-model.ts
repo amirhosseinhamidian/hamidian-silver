@@ -70,6 +70,7 @@ export type AdminHomepageSettings = Readonly<{
   secondaryHero: AdminHomepageSlide | null;
   categoryIds: readonly string[];
   popularProductIds: readonly string[];
+  featuredBrandIds: readonly string[];
   manufacturerCountriesEnabled: boolean;
   manufacturerCountryIds: readonly string[];
   updatedAt: string | null;
@@ -213,7 +214,7 @@ export function parseAdminSiteSettings(value: unknown): AdminSiteSettings | null
   const seoDefaultTitle =
     source?.seoDefaultTitle === undefined ? 'فروشگاه نقره حمیدیان' : text(source?.seoDefaultTitle);
   const seoTitleTemplate =
-    source?.seoTitleTemplate === undefined ? '%s | نقره حمیدیان' : text(source?.seoTitleTemplate);
+    source?.seoTitleTemplate === undefined ? '%s | گالری حمدیان' : text(source?.seoTitleTemplate);
   const seoDefaultDescription =
     source?.seoDefaultDescription === undefined
       ? 'خرید آنلاین زیورآلات نقره از گالری حمیدیان'
@@ -348,6 +349,9 @@ export function parseAdminHomepageSettings(value: unknown): AdminHomepageSetting
   const products = Array.isArray(source.popularProducts)
     ? source.popularProducts.map((item) => text(record(item)?.id))
     : null;
+  const brands = Array.isArray(source.featuredBrands)
+    ? source.featuredBrands.map((item) => text(record(item)?.id))
+    : null;
   const manufacturerCountries = Array.isArray(source.manufacturerCountries)
     ? source.manufacturerCountries.map((item) => text(record(item)?.id))
     : null;
@@ -359,6 +363,8 @@ export function parseAdminHomepageSettings(value: unknown): AdminHomepageSetting
     categories.some((id) => !id) ||
     !products ||
     products.some((id) => !id) ||
+    !brands ||
+    brands.some((id) => !id) ||
     typeof source.manufacturerCountriesEnabled !== 'boolean' ||
     !manufacturerCountries ||
     manufacturerCountries.some((id) => !id) ||
@@ -371,6 +377,7 @@ export function parseAdminHomepageSettings(value: unknown): AdminHomepageSetting
     secondaryHero: secondary,
     categoryIds: categories as string[],
     popularProductIds: products as string[],
+    featuredBrandIds: brands as string[],
     manufacturerCountriesEnabled: source.manufacturerCountriesEnabled,
     manufacturerCountryIds: manufacturerCountries as string[],
     updatedAt,
@@ -403,6 +410,10 @@ export function parseProductReferences(value: unknown): readonly SiteSettingsRef
     return id && label ? { id, label } : null;
   });
   return parsed.some((item) => item === null) ? null : (parsed as SiteSettingsReference[]);
+}
+
+export function parseBrandReferences(value: unknown): readonly SiteSettingsReference[] | null {
+  return parseCategoryReferences(value);
 }
 
 export function parseCountryReferences(value: unknown): readonly SiteSettingsReference[] | null {
