@@ -20,6 +20,67 @@ const data: ProductFormData = {
 };
 
 describe('ProductForm', () => {
+  it('uploads selected product images and includes them when creating the product', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: '10000000-0000-4000-8000-000000000010' }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: '10000000-0000-4000-8000-000000000011' }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 'product-1' }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ProductForm data={data} mode="create" />);
+
+    fireEvent.change(screen.getByLabelText(/نام محصول/), { target: { value: 'انگشتر نقره' } });
+    fireEvent.change(screen.getByLabelText(/اسلاگ محصول/), { target: { value: 'silver-ring' } });
+    fireEvent.change(screen.getByLabelText('قیمت فروش پیش‌فرض'), {
+      target: { value: '۴٬۵۰۰٬۰۰۰' },
+    });
+    fireEvent.change(screen.getByLabelText(/SKU تنوع ۱/), { target: { value: 'RING-001' } });
+    const front = new File(['front'], 'front.webp', { type: 'image/webp' });
+    const side = new File(['side'], 'side.png', { type: 'image/png' });
+    fireEvent.change(screen.getByLabelText('انتخاب تصاویر محصول از دستگاه'), {
+      target: { files: [front, side] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'ساخت محصول' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/catalog/media');
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/catalog/media');
+    const [path, init] = fetchMock.mock.calls[2] as [string, RequestInit];
+    expect(path).toBe('/api/catalog/products');
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      media: [
+        {
+          mediaId: '10000000-0000-4000-8000-000000000010',
+          sortOrder: 0,
+          isPrimary: true,
+          altText: 'انگشتر نقره',
+        },
+        {
+          mediaId: '10000000-0000-4000-8000-000000000011',
+          sortOrder: 1,
+          isPrimary: false,
+          altText: 'انگشتر نقره',
+        },
+      ],
+    });
+    expect(router.push).toHaveBeenCalledWith('/variants/product-1');
+  });
+
   it('normalizes Persian price and weight digits before creating a product', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ id: 'product-1' }), {
