@@ -328,7 +328,7 @@ model SiteSettings {
   baleUrl             String?  @db.VarChar(1000)
   seoSiteName                 String   @default("نقره حمیدیان") @db.VarChar(120)
   seoDefaultTitle             String   @default("نقره حمیدیان") @db.VarChar(200)
-  seoTitleTemplate            String   @default("%s | نقره حمیدیان") @db.VarChar(200)
+  seoTitleTemplate            String   @default("%s | گالری حمدیان") @db.VarChar(200)
   seoDefaultDescription       String   @default("فروشگاه آنلاین و گالری نقره حمیدیان") @db.VarChar(500)
   seoDefaultOgMediaId         String?  @db.Uuid
   seoOrganizationName         String   @default("نقره حمیدیان") @db.VarChar(200)
@@ -497,6 +497,7 @@ model Brand {
   seoOgMedia       Media?    @relation("BrandSeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   originCountry Country? @relation("BrandOriginCountry", fields: [originCountryId], references: [id], onDelete: SetNull)
   products    Product[]
+  homepageFeature HomepageFeaturedBrand?
 
   @@index([imageId])
   @@index([heroImageId])
@@ -530,17 +531,39 @@ model Country {
   @@map("countries")
 }
 
+model SizeGroup {
+  id             String    @id @default(uuid()) @db.Uuid
+  code           String    @unique @db.VarChar(50)
+  name           String    @db.VarChar(100)
+  selectionLabel String    @db.VarChar(100)
+  cartLabel      String    @db.VarChar(50)
+  sortOrder      Int       @default(0)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime? @db.Timestamptz(3)
+  sizes          Size[]
+
+  @@index([isActive, sortOrder])
+  @@index([deletedAt])
+  @@map("size_groups")
+}
+
 model Size {
   id        String           @id @default(uuid()) @db.Uuid
-  code      String           @unique @db.VarChar(50)
+  groupId   String           @db.Uuid
+  code      String           @db.VarChar(50)
   label     String           @db.VarChar(100)
   sortOrder Int              @default(0)
   isActive  Boolean          @default(true)
   createdAt DateTime         @default(now()) @db.Timestamptz(3)
   updatedAt DateTime         @updatedAt @db.Timestamptz(3)
   deletedAt DateTime?        @db.Timestamptz(3)
+  group     SizeGroup        @relation(fields: [groupId], references: [id], onDelete: Restrict)
   variants  ProductVariant[]
 
+  @@unique([groupId, code])
+  @@index([groupId, isActive, sortOrder])
   @@index([isActive, sortOrder])
   @@index([deletedAt])
   @@map("sizes")
@@ -644,6 +667,16 @@ model HomepagePopularProduct {
   @@map("homepage_popular_products")
 }
 
+model HomepageFeaturedBrand {
+  brandId   String   @id @db.Uuid
+  priority  Int      @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("homepage_featured_brands")
+}
+
 model HomepageManufacturerCountry {
   countryId String   @id @db.Uuid
   priority  Int      @unique
@@ -661,6 +694,8 @@ model ProductVariant {
   sku                            String                          @unique @db.VarChar(100)
   name                           String?                         @db.VarChar(150)
   weightGrams                    Decimal?                        @db.Decimal(10, 3)
+  salePriceToman                 Int?
+  compareAtPriceToman            Int?
   isActive                       Boolean                         @default(true)
   createdAt                      DateTime                        @default(now()) @db.Timestamptz(3)
   updatedAt                      DateTime                        @updatedAt @db.Timestamptz(3)

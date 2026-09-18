@@ -5,7 +5,7 @@ import type { PublicSiteSettings } from '@/lib/site-settings/public-site-setting
 
 const DEFAULT_SITE_NAME = 'نقره حمیدیان';
 const DEFAULT_TITLE = 'نقره حمیدیان';
-const DEFAULT_TITLE_TEMPLATE = '%s | نقره حمیدیان';
+const DEFAULT_TITLE_TEMPLATE = '%s | گالری حمدیان';
 const DEFAULT_DESCRIPTION = 'فروشگاه آنلاین و گالری نقره حمیدیان';
 const DEVELOPMENT_ORIGIN = 'http://localhost:3000';
 

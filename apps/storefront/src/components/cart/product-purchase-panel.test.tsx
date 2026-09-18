@@ -13,6 +13,14 @@ const cartStoreMock = vi.hoisted(() => ({
   removeItem: vi.fn(),
 }));
 
+const ringSizeGroup = {
+  id: 'group-ring',
+  code: 'RING',
+  name: 'سایز انگشتر',
+  selectionLabel: 'انتخاب سایز',
+  cartLabel: 'سایز',
+};
+
 vi.mock('@/lib/cart/cart-store', () => ({
   useCart: () => ({
     items: cartStoreMock.items,
@@ -44,10 +52,13 @@ const product: PublicCatalogProductDetail = {
       id: '10000000-0000-4000-8000-000000000011',
       name: null,
       weightGrams: 4.25,
+      salePriceToman: 800_000,
+      compareAtPriceToman: null,
       size: {
         id: '10000000-0000-4000-8000-000000000012',
         code: '52',
         label: '52',
+        group: ringSizeGroup,
       },
       platingOptions: [
         {
@@ -63,10 +74,13 @@ const product: PublicCatalogProductDetail = {
       id: '10000000-0000-4000-8000-000000000013',
       name: null,
       weightGrams: 4.5,
+      salePriceToman: 850_000,
+      compareAtPriceToman: null,
       size: {
         id: '10000000-0000-4000-8000-000000000014',
         code: '54',
         label: '54',
+        group: ringSizeGroup,
       },
       platingOptions: [],
       availableQuantity: 0,
@@ -192,6 +206,44 @@ describe('ProductPurchasePanel', () => {
     expect(cartStoreMock.addItem).toHaveBeenCalledWith(
       expect.objectContaining({
         variantLabel: 'مدل: کلاسیک',
+      }),
+    );
+  });
+
+  it('uses the selected necklace length label and its independent price', () => {
+    const lengthGroup = {
+      ...ringSizeGroup,
+      id: 'group-necklace-length',
+      code: 'NECKLACE_LENGTH',
+      name: 'طول گردنبند',
+      selectionLabel: 'انتخاب طول',
+      cartLabel: 'طول',
+    };
+    const necklaceProduct: PublicCatalogProductDetail = {
+      ...product,
+      name: 'گردنبند نقره',
+      slug: 'silver-necklace',
+      variants: product.variants.map((variant, index) => ({
+        ...variant,
+        salePriceToman: index === 0 ? 900_000 : 1_050_000,
+        size: variant.size ? { ...variant.size, group: lengthGroup } : null,
+        availableQuantity: 3,
+        isAvailable: true,
+      })),
+    };
+
+    render(<ProductPurchasePanel product={necklaceProduct} />);
+
+    expect(screen.getByRole('group', { name: 'انتخاب طول' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'راهنمای انتخاب سایز' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: '54' }));
+    expect(screen.getAllByText(formatTomanPrice(1_050_000))).toHaveLength(2);
+    fireEvent.click(screen.getAllByRole('button', { name: 'افزودن به سبد خرید' })[0]);
+
+    expect(cartStoreMock.addItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variantLabel: 'طول: 54',
+        unitSalePriceToman: 1_050_000,
       }),
     );
   });

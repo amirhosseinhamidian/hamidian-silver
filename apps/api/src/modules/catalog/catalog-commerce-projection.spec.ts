@@ -44,6 +44,8 @@ describe('CatalogService commerce projection', () => {
         {
           id: '10000000-0000-4000-8000-000000000002',
           name: null,
+          salePriceToman: 925_000,
+          compareAtPriceToman: 1_050_000,
           weightGrams: {
             toString: () => '4.250',
             valueOf: () => 4.25,
@@ -64,6 +66,15 @@ describe('CatalogService commerce projection', () => {
             label: '52',
             isActive: true,
             deletedAt: null,
+            group: {
+              id: 'group-ring',
+              code: 'RING',
+              name: 'سایز انگشتر',
+              selectionLabel: 'انتخاب سایز',
+              cartLabel: 'سایز',
+              isActive: true,
+              deletedAt: null,
+            },
           },
           inventories: [
             {
@@ -90,6 +101,8 @@ describe('CatalogService commerce projection', () => {
     expect(product.variants).toEqual([
       expect.objectContaining({
         id: '10000000-0000-4000-8000-000000000002',
+        salePriceToman: 925_000,
+        compareAtPriceToman: 1_050_000,
         availableQuantity: 2,
         isAvailable: true,
         platingOptions: [

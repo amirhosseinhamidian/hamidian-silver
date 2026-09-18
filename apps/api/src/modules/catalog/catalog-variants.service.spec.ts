@@ -37,10 +37,16 @@ describe('CatalogVariantsService', () => {
     const sizeId = '10000000-0000-4000-8000-000000000001';
     const transaction = {
       product: {
-        findFirst: jest.fn().mockResolvedValue({ id: 'product-1', sizeMode: SizeMode.SIZED }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'product-1',
+          sizeMode: SizeMode.SIZED,
+          salePriceToman: 850_000,
+          compareAtPriceToman: null,
+        }),
       },
-      size: { findFirst: jest.fn().mockResolvedValue({ id: sizeId }) },
+      size: { findFirst: jest.fn().mockResolvedValue({ id: sizeId, groupId: 'group-ring' }) },
       productVariant: {
+        findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({ id: 'variant-1', sku: 'RING-52' }),
       },
     };
@@ -59,7 +65,7 @@ describe('CatalogVariantsService', () => {
         weightGrams: 4.25,
         isActive: true,
       }),
-      include: { size: true },
+      include: { size: { include: { group: true } } },
     });
   });
 

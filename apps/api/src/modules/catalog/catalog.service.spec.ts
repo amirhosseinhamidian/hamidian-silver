@@ -143,7 +143,11 @@ describe('CatalogService', () => {
         findMany: jest.fn().mockResolvedValue([{ id: categoryId }]),
       },
       size: {
-        findMany: jest.fn().mockResolvedValue([{ id: sizeId }]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { id: sizeId, groupId: 'group-ring', group: { isActive: true, deletedAt: null } },
+          ]),
       },
       media: {
         findMany: jest.fn().mockResolvedValue([{ id: mediaId }]),
@@ -178,6 +182,7 @@ describe('CatalogService', () => {
       slug: 'silver-ring',
       status: ProductStatus.ACTIVE,
       sizeMode: SizeMode.SIZED,
+      salePriceToman: 850_000,
       brandId,
       countryId,
       categoryIds: [categoryId],
@@ -712,9 +717,13 @@ describe('CatalogService', () => {
           name: 'Available second',
           slug: 'available-second',
           shortDescription: null,
-          salePriceToman: 900_000,
+          salePriceToman: null,
           compareAtPriceToman: null,
           sizeMode: SizeMode.NONE,
+          variants: [
+            { salePriceToman: 950_000, compareAtPriceToman: null },
+            { salePriceToman: 900_000, compareAtPriceToman: 1_000_000 },
+          ],
           brand: null,
           categories: [],
           media: [],
@@ -729,6 +738,7 @@ describe('CatalogService', () => {
           salePriceToman: 800_000,
           compareAtPriceToman: null,
           sizeMode: SizeMode.NONE,
+          variants: [],
           brand: null,
           categories: [],
           media: [],
@@ -754,6 +764,8 @@ describe('CatalogService', () => {
             id: availableSecondId,
             availableQuantity: 3,
             isAvailable: true,
+            salePriceToman: 900_000,
+            compareAtPriceToman: 1_000_000,
           }),
         ],
         page: 1,
@@ -777,6 +789,7 @@ describe('CatalogService', () => {
       expect.objectContaining({
         seoCanonicalPath: true,
         seoNoIndex: true,
+        variants: expect.any(Object),
       }),
     );
   });

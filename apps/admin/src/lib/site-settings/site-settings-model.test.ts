@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   parseAdminHomepageSettings,
   parseAdminSiteSettings,
+  parseBrandReferences,
   parseCategoryReferences,
   parseCountryReferences,
   parseProductReferences,
@@ -40,7 +41,7 @@ describe('site settings model', () => {
       baleUrl: null,
       seoSiteName: 'نقره حمیدیان',
       seoDefaultTitle: 'فروشگاه نقره حمیدیان',
-      seoTitleTemplate: '%s | نقره حمیدیان',
+      seoTitleTemplate: '%s | گالری حمدیان',
       seoDefaultDescription: 'خرید آنلاین نقره',
       seoDefaultOgMediaId: null,
       seoDefaultOgMedia: null,
@@ -117,6 +118,7 @@ describe('site settings model', () => {
       secondaryHero: null,
       featuredCategories: [{ id: 'category-1', priority: 1 }],
       popularProducts: [{ id: 'product-1', priority: 1 }],
+      featuredBrands: [{ id: 'brand-1', priority: 1 }],
       manufacturerCountriesEnabled: true,
       manufacturerCountries: [{ id: 'country-1', priority: 1 }],
       updatedAt: null,
@@ -127,6 +129,7 @@ describe('site settings model', () => {
     expect(result?.primaryHeroSlides[0]?.contentColor).toBe('#C7A45A');
     expect(result?.categoryIds).toEqual(['category-1']);
     expect(result?.popularProductIds).toEqual(['product-1']);
+    expect(result?.featuredBrandIds).toEqual(['brand-1']);
     expect(result?.manufacturerCountriesEnabled).toBe(true);
     expect(result?.manufacturerCountryIds).toEqual(['country-1']);
   });
@@ -137,6 +140,9 @@ describe('site settings model', () => {
     ]);
     expect(parseProductReferences({ items: [{ id: 'product-1', name: 'گردنبند آوین' }] })).toEqual([
       { id: 'product-1', label: 'گردنبند آوین' },
+    ]);
+    expect(parseBrandReferences([{ id: 'brand-1', name: 'تیفانی' }])).toEqual([
+      { id: 'brand-1', label: 'تیفانی' },
     ]);
   });
 

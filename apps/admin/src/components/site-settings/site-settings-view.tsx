@@ -413,26 +413,40 @@ function HomepageSection({
         </Card>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <OrderedSiteSelection
-          label="دسته‌های منتخب صفحه اصلی"
-          description="چهار دسته به‌ترتیب اولویت؛ دو مورد بالا و دو مورد پایین Hero دوم نمایش داده می‌شوند."
-          options={data.categories}
-          selectedIds={homepage.categoryIds}
-          max={4}
-          disabled={!canWrite || pending !== null}
-          onChange={(categoryIds) => setHomepage({ ...homepage, categoryIds })}
-        />
-        <OrderedSiteSelection
-          label="محصولات محبوب"
-          description="تا هشت محصول فعال برای سکشن محبوب‌ترین محصولات."
-          options={data.products}
-          selectedIds={homepage.popularProductIds}
-          max={8}
-          disabled={!canWrite || pending !== null}
-          onChange={(popularProductIds) => setHomepage({ ...homepage, popularProductIds })}
-        />
-      </div>
+      <Card
+        title="چیدمان محتوای صفحه اصلی"
+        description="دسته‌ها، محصولات محبوب و برندهای منتخب را انتخاب و ترتیب نمایش آن‌ها را مشخص کنید."
+      >
+        <div className="grid gap-4 xl:grid-cols-3">
+          <OrderedSiteSelection
+            label="دسته‌های منتخب صفحه اصلی"
+            description="چهار دسته به‌ترتیب اولویت؛ دو مورد بالا و دو مورد پایین Hero دوم نمایش داده می‌شوند."
+            options={data.categories}
+            selectedIds={homepage.categoryIds}
+            max={4}
+            disabled={!canWrite || pending !== null}
+            onChange={(categoryIds) => setHomepage({ ...homepage, categoryIds })}
+          />
+          <OrderedSiteSelection
+            label="محصولات محبوب"
+            description="تا هشت محصول فعال برای سکشن محبوب‌ترین محصولات."
+            options={data.products}
+            selectedIds={homepage.popularProductIds}
+            max={8}
+            disabled={!canWrite || pending !== null}
+            onChange={(popularProductIds) => setHomepage({ ...homepage, popularProductIds })}
+          />
+          <OrderedSiteSelection
+            label="برندهای منتخب صفحه اصلی"
+            description="حداکثر چهار برند فعال؛ ترتیب این فهرست در صفحه اصلی حفظ می‌شود."
+            options={data.brands}
+            selectedIds={homepage.featuredBrandIds}
+            max={4}
+            disabled={!canWrite || pending !== null}
+            onChange={(featuredBrandIds) => setHomepage({ ...homepage, featuredBrandIds })}
+          />
+        </div>
+      </Card>
 
       <Card
         title="کشورهای سازنده"
@@ -1006,7 +1020,7 @@ function SeoSettingsSection({
                 dir="ltr"
                 value={settings.seoTitleTemplate}
                 maxLength={200}
-                placeholder="%s | نقره حمیدیان"
+                placeholder="%s | گالری حمدیان"
                 disabled={disabled}
                 onChange={(event) =>
                   onChange({ ...settings, seoTitleTemplate: event.currentTarget.value })
@@ -1307,6 +1321,7 @@ export function SiteSettingsView({
           : null,
         categoryIds: currentHomepage.categoryIds,
         popularProductIds: currentHomepage.popularProductIds,
+        featuredBrandIds: currentHomepage.featuredBrandIds,
         manufacturerCountriesEnabled: currentHomepage.manufacturerCountriesEnabled,
         manufacturerCountryIds: currentHomepage.manufacturerCountryIds,
       });
@@ -1328,8 +1343,8 @@ export function SiteSettingsView({
       ) : null}
       {data.failed ? (
         <Alert tone="warning">
-          برخی گزینه‌های مرجع دریافت نشدند؛ قبل از ذخیره دسته، محصول یا کشور، اتصال API را بررسی
-          کنید.
+          برخی گزینه‌های مرجع دریافت نشدند؛ قبل از ذخیره دسته، محصول، برند یا کشور، اتصال API را
+          بررسی کنید.
         </Alert>
       ) : null}
       {error ? (

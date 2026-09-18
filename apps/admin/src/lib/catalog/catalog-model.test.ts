@@ -11,6 +11,16 @@ import {
   productStatusLabel,
 } from '@/lib/catalog/catalog-model';
 
+const ringSizeGroup = {
+  id: 'group-ring',
+  code: 'RING',
+  name: 'سایز انگشتر',
+  selectionLabel: 'انتخاب سایز',
+  cartLabel: 'سایز',
+  sortOrder: 1,
+  isActive: true,
+};
+
 const product = {
   id: '10000000-0000-4000-8000-000000000001',
   name: 'انگشتر نقره',
@@ -32,8 +42,10 @@ const product = {
       sku: 'RING-52',
       name: 'سایز ۵۲',
       weightGrams: '4.250',
+      salePriceToman: 4_700_000,
+      compareAtPriceToman: null,
       isActive: true,
-      size: { id: 'size-1', label: '۵۲' },
+      size: { id: 'size-1', label: '۵۲', group: ringSizeGroup },
     },
   ],
   media: [
@@ -109,9 +121,35 @@ describe('catalog model', () => {
   it('parses operational size metadata', () => {
     expect(
       parseCatalogSizes([
-        { id: 'size-1', code: '52', label: 'سایز ۵۲', sortOrder: 2, isActive: false },
+        {
+          id: 'size-1',
+          groupId: ringSizeGroup.id,
+          code: '52',
+          label: 'سایز ۵۲',
+          sortOrder: 2,
+          isActive: false,
+          group: ringSizeGroup,
+        },
       ]),
-    ).toEqual([{ id: 'size-1', code: '52', label: 'سایز ۵۲', sortOrder: 2, active: false }]);
+    ).toEqual([
+      {
+        id: 'size-1',
+        groupId: ringSizeGroup.id,
+        code: '52',
+        label: 'سایز ۵۲',
+        sortOrder: 2,
+        active: false,
+        group: {
+          id: ringSizeGroup.id,
+          code: 'RING',
+          name: 'سایز انگشتر',
+          selectionLabel: 'انتخاب سایز',
+          cartLabel: 'سایز',
+          sortOrder: 1,
+          active: true,
+        },
+      },
+    ]);
     expect(parseCatalogSizes([{ id: 'size-1', label: 'ناقص' }])).toBeNull();
   });
 

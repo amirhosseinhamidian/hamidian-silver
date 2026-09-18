@@ -1264,7 +1264,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1284,6 +1291,82 @@
                 }
               }
             }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/size-groups": {
+      "post": {
+        "operationId": "CatalogController_createSizeGroup_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSizeGroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "get": {
+        "operationId": "CatalogController_listSizeGroups_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/size-groups/{groupId}": {
+      "patch": {
+        "operationId": "CatalogController_updateSizeGroup_v1",
+        "parameters": [
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSizeGroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
           }
         },
         "tags": [
@@ -1316,7 +1399,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -8099,9 +8189,39 @@
           "items"
         ]
       },
+      "PublicCatalogSizeGroupDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "selectionLabel": {
+            "type": "string"
+          },
+          "cartLabel": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "selectionLabel",
+          "cartLabel"
+        ]
+      },
       "PublicCatalogSizeDto": {
         "type": "object",
         "properties": {
+          "group": {
+            "$ref": "#/components/schemas/PublicCatalogSizeGroupDto"
+          },
           "id": {
             "type": "string"
           },
@@ -8113,6 +8233,7 @@
           }
         },
         "required": [
+          "group",
           "id",
           "code",
           "label"
@@ -8152,6 +8273,14 @@
             "type": "number",
             "nullable": true
           },
+          "salePriceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "compareAtPriceToman": {
+            "type": "number",
+            "nullable": true
+          },
           "size": {
             "nullable": true,
             "type": "object",
@@ -8180,6 +8309,8 @@
         "required": [
           "name",
           "weightGrams",
+          "salePriceToman",
+          "compareAtPriceToman",
           "size",
           "platingOptions",
           "id",
@@ -8660,6 +8791,10 @@
       "CreateSizeDto": {
         "type": "object",
         "properties": {
+          "groupId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "code": {
             "type": "string",
             "minLength": 1,
@@ -8679,13 +8814,88 @@
           }
         },
         "required": [
+          "groupId",
           "code",
           "label"
         ]
       },
+      "CreateSizeGroupDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "selectionLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "cartLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 0
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "selectionLabel",
+          "cartLabel"
+        ]
+      },
+      "UpdateSizeGroupDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "selectionLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "cartLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 0
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
       "UpdateSizeDto": {
         "type": "object",
         "properties": {
+          "groupId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "code": {
             "type": "string",
             "minLength": 1,
@@ -8723,6 +8933,14 @@
             "format": "uuid"
           },
           "weightGrams": {
+            "type": "number",
+            "minimum": 0
+          },
+          "salePriceToman": {
+            "type": "number",
+            "minimum": 0
+          },
+          "compareAtPriceToman": {
             "type": "number",
             "minimum": 0
           },
@@ -8910,6 +9128,16 @@
             "format": "uuid"
           },
           "weightGrams": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "salePriceToman": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "compareAtPriceToman": {
             "type": "number",
             "nullable": true,
             "minimum": 0
@@ -12536,6 +12764,12 @@
               "$ref": "#/components/schemas/AdminHomepageSelectionDto"
             }
           },
+          "featuredBrands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminHomepageSelectionDto"
+            }
+          },
           "manufacturerCountries": {
             "type": "array",
             "items": {
@@ -12556,6 +12790,7 @@
           "secondaryHero",
           "featuredCategories",
           "popularProducts",
+          "featuredBrands",
           "manufacturerCountries",
           "updatedAt",
           "manufacturerCountriesEnabled"
@@ -12645,6 +12880,14 @@
               "format": "uuid"
             }
           },
+          "featuredBrandIds": {
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
           "manufacturerCountriesEnabled": {
             "type": "boolean"
           },
@@ -12661,6 +12904,7 @@
           "primaryHeroSlides",
           "categoryIds",
           "popularProductIds",
+          "featuredBrandIds",
           "manufacturerCountriesEnabled",
           "manufacturerCountryIds"
         ]

@@ -9,6 +9,7 @@ import {
   parseAdminCategories,
   parseAdminCountries,
   parseCatalogLookups,
+  parseCatalogSizeGroups,
   parseCatalogSizes,
   parseProductList,
   type AdminProduct,
@@ -18,6 +19,7 @@ import {
   type CatalogFilters,
   type CatalogLookup,
   type CatalogSize,
+  type CatalogSizeGroup,
   type ProductListResult,
 } from '@/lib/catalog/catalog-model';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
@@ -36,11 +38,13 @@ export type ProductFormData = Readonly<{
   countries: readonly CatalogLookup[];
   categories: readonly CatalogLookup[];
   sizes: readonly CatalogSize[];
+  sizeGroups: readonly CatalogSizeGroup[];
 }>;
 
 export type VariantManagementData = Readonly<{
   products: CatalogResource<ProductListResult>;
   sizes: CatalogResource<readonly CatalogSize[]>;
+  sizeGroups: CatalogResource<readonly CatalogSizeGroup[]>;
 }>;
 
 export type CategoryManagementData = CatalogResource<readonly AdminCategory[]>;
@@ -105,15 +109,16 @@ export async function loadVariantManagement(
   if (filters.q) query.set('q', filters.q);
   if (filters.status) query.set('status', filters.status);
 
-  const [products, sizes] = await Promise.all([
+  const [products, sizes, sizeGroups] = await Promise.all([
     load(
       requestAdminCatalog(`/api/v1/catalog/products?${query.toString()}`, token),
       parseProductList,
     ),
     load(requestAdminCatalog('/api/v1/catalog/sizes', token), parseCatalogSizes),
+    load(requestAdminCatalog('/api/v1/catalog/size-groups', token), parseCatalogSizeGroups),
   ]);
 
-  return { products, sizes };
+  return { products, sizes, sizeGroups };
 }
 
 export async function loadProductForm(productId?: string): Promise<ProductFormData | null> {
@@ -124,12 +129,13 @@ export async function loadProductForm(productId?: string): Promise<ProductFormDa
         parseAdminProduct,
       )
     : Promise.resolve({ data: null, failed: false } as CatalogResource<AdminProduct>);
-  const [product, brands, countries, categories, sizes] = await Promise.all([
+  const [product, brands, countries, categories, sizes, sizeGroups] = await Promise.all([
     productRequest,
     load(requestAdminCatalog('/api/v1/catalog/brands', token), parseCatalogLookups),
     load(requestAdminCatalog('/api/v1/catalog/countries', token), parseCatalogLookups),
     load(requestAdminCatalog('/api/v1/catalog/categories', token), parseCatalogLookups),
     load(requestAdminCatalog('/api/v1/catalog/sizes', token), parseCatalogSizes),
+    load(requestAdminCatalog('/api/v1/catalog/size-groups', token), parseCatalogSizeGroups),
   ]);
 
   if (
@@ -138,10 +144,12 @@ export async function loadProductForm(productId?: string): Promise<ProductFormDa
     countries.failed ||
     categories.failed ||
     sizes.failed ||
+    sizeGroups.failed ||
     !brands.data ||
     !countries.data ||
     !categories.data ||
-    !sizes.data
+    !sizes.data ||
+    !sizeGroups.data
   ) {
     return null;
   }
@@ -152,6 +160,7 @@ export async function loadProductForm(productId?: string): Promise<ProductFormDa
     countries: countries.data,
     categories: categories.data,
     sizes: sizes.data,
+    sizeGroups: sizeGroups.data,
   };
 }
 

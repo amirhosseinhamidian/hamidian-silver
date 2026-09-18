@@ -62,6 +62,9 @@ export class AdminHomepageDto {
   @ApiProperty({ type: () => AdminHomepageSelectionDto, isArray: true })
   popularProducts!: AdminHomepageSelectionDto[];
 
+  @ApiProperty({ type: () => AdminHomepageSelectionDto, isArray: true })
+  featuredBrands!: AdminHomepageSelectionDto[];
+
   manufacturerCountriesEnabled!: boolean;
 
   @ApiProperty({ type: () => AdminHomepageSelectionDto, isArray: true })

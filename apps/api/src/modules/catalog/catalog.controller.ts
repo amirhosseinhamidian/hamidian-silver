@@ -35,6 +35,7 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
 import { CreateProductDto, CreateProductVariantDto } from './dto/create-product.dto';
 import { CreateSizeDto } from './dto/create-size.dto';
+import { CreateSizeGroupDto } from './dto/create-size-group.dto';
 import { PublicCatalogQueryDto } from './dto/public-catalog-query.dto';
 import { PublicCatalogSuggestionsQueryDto } from './dto/public-catalog-suggestions-query.dto';
 import { ReorderProductMediaDto } from './dto/reorder-product-media.dto';
@@ -54,6 +55,7 @@ import { UpdateBrandDto } from './dto/update-brand.dto';
 import { UpdateCountryDto } from './dto/update-country.dto';
 import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
 import { UpdateSizeDto } from './dto/update-size.dto';
+import { UpdateSizeGroupDto } from './dto/update-size-group.dto';
 import type { CatalogUploadFile } from './local-media-storage.service';
 import { PublicMediaUrlService } from './public-media-url.service';
 
@@ -417,6 +419,27 @@ export class CatalogController {
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
   createSize(@Body() dto: CreateSizeDto) {
     return this.catalogVariantsService.createSize(dto);
+  }
+
+  @Post('size-groups')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  createSizeGroup(@Body() dto: CreateSizeGroupDto) {
+    return this.catalogVariantsService.createSizeGroup(dto);
+  }
+
+  @Get('size-groups')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
+  listSizeGroups() {
+    return this.catalogVariantsService.listSizeGroups();
+  }
+
+  @Patch('size-groups/:groupId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  updateSizeGroup(
+    @Param('groupId', new ParseUUIDPipe({ version: '4' })) groupId: string,
+    @Body() dto: UpdateSizeGroupDto,
+  ) {
+    return this.catalogVariantsService.updateSizeGroup(groupId, dto);
   }
 
   @Get('sizes')

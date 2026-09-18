@@ -16,6 +16,7 @@ const data: ProductFormData = {
   countries: [],
   categories: [{ id: '10000000-0000-4000-8000-000000000001', name: 'انگشتر' }],
   sizes: [],
+  sizeGroups: [],
 };
 
 describe('ProductForm', () => {
@@ -31,7 +32,9 @@ describe('ProductForm', () => {
 
     fireEvent.change(screen.getByLabelText(/نام محصول/), { target: { value: 'انگشتر نقره' } });
     fireEvent.change(screen.getByLabelText(/اسلاگ محصول/), { target: { value: 'silver-ring' } });
-    fireEvent.change(screen.getByLabelText(/قیمت فروش/), { target: { value: '۴٬۵۰۰٬۰۰۰' } });
+    fireEvent.change(screen.getByLabelText('قیمت فروش پیش‌فرض'), {
+      target: { value: '۴٬۵۰۰٬۰۰۰' },
+    });
     fireEvent.change(screen.getByLabelText(/SKU تنوع ۱/), { target: { value: 'RING-۰۰۱' } });
     fireEvent.change(screen.getByLabelText(/وزن تنوع ۱/), { target: { value: '۴٫۲۵' } });
     fireEvent.click(screen.getByLabelText('انگشتر'));
@@ -63,6 +66,9 @@ describe('ProductForm', () => {
     fireEvent.change(screen.getByLabelText(/اسلاگ محصول/), {
       target: { value: 'silver-necklace' },
     });
+    fireEvent.change(screen.getByLabelText('قیمت فروش پیش‌فرض'), {
+      target: { value: '۵٬۰۰۰٬۰۰۰' },
+    });
     fireEvent.change(screen.getByLabelText(/SKU تنوع ۱/), { target: { value: 'NECKLACE-A' } });
     fireEvent.change(screen.getByLabelText(/نام تنوع ۱/), { target: { value: 'مدل نقره‌ای' } });
     fireEvent.click(screen.getByRole('button', { name: 'افزودن تنوع' }));
@@ -90,6 +96,9 @@ describe('ProductForm', () => {
 
     fireEvent.change(screen.getByLabelText(/نام محصول/), { target: { value: 'انگشتر نقره' } });
     fireEvent.change(screen.getByLabelText(/اسلاگ محصول/), { target: { value: 'silver-ring' } });
+    fireEvent.change(screen.getByLabelText('قیمت فروش پیش‌فرض'), {
+      target: { value: '۴٬۵۰۰٬۰۰۰' },
+    });
     fireEvent.change(screen.getByLabelText(/SKU تنوع ۱/), { target: { value: 'RING-001' } });
     fireEvent.click(screen.getByRole('button', { name: 'افزودن ویژگی' }));
     fireEvent.click(screen.getByRole('button', { name: 'افزودن ویژگی' }));
