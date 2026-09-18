@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { type FormEvent, useState } from 'react';
+import { type ChangeEvent, type FormEvent, useId, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import {
@@ -41,6 +41,15 @@ type EditableProductVariant = Readonly<{
   salePriceToman: string;
   compareAtPriceToman: string;
 }>;
+
+const MAX_PRODUCT_IMAGES = 12;
+const MAX_PRODUCT_IMAGE_BYTES = 10 * 1024 * 1024;
+const ACCEPTED_PRODUCT_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/avif',
+]);
 
 function createAttributeId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `attribute-${Date.now()}-${Math.random()}`;
@@ -92,8 +101,37 @@ function apiError(payload: unknown): string {
   return 'ذخیره محصول انجام نشد. اطلاعات را بررسی و دوباره تلاش کنید.';
 }
 
+async function uploadProductImages(files: readonly File[], altText: string) {
+  const uploaded: Array<{
+    mediaId: string;
+    sortOrder: number;
+    isPrimary: boolean;
+    altText: string;
+  }> = [];
+
+  for (const [index, file] of files.entries()) {
+    const body = new FormData();
+    body.set('file', file);
+    body.set('altText', altText);
+    const response = await fetch('/api/catalog/media', { method: 'POST', body });
+    const payload = (await response.json().catch(() => null)) as unknown;
+    if (!response.ok) throw new Error(apiError(payload));
+    const mediaId =
+      typeof payload === 'object' &&
+      payload !== null &&
+      typeof (payload as { id?: unknown }).id === 'string'
+        ? (payload as { id: string }).id
+        : null;
+    if (!mediaId) throw new Error('شناسه تصویر بارگذاری‌شده دریافت نشد. دوباره تلاش کنید.');
+    uploaded.push({ mediaId, sortOrder: index, isPrimary: index === 0, altText });
+  }
+
+  return uploaded;
+}
+
 export function ProductForm({ data, mode }: ProductFormProps) {
   const router = useRouter();
+  const productImagesInputId = useId();
   const product = data.product;
   const [sizeMode, setSizeMode] = useState<ProductSizeMode>(product?.sizeMode ?? 'NONE');
   const [sizeGroupId, setSizeGroupId] = useState(product?.sizeGroup?.id ?? 'none');
@@ -106,8 +144,32 @@ export function ProductForm({ data, mode }: ProductFormProps) {
     })),
   );
   const [variants, setVariants] = useState<EditableProductVariant[]>(() => [createVariant()]);
+  const [productImages, setProductImages] = useState<readonly File[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function selectProductImages(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.currentTarget.files ?? []);
+    if (files.length > MAX_PRODUCT_IMAGES) {
+      event.currentTarget.value = '';
+      setProductImages([]);
+      setError('حداکثر ۱۲ تصویر برای هر محصول مجاز است.');
+      return;
+    }
+    if (
+      files.some(
+        (file) =>
+          !ACCEPTED_PRODUCT_IMAGE_TYPES.has(file.type) || file.size > MAX_PRODUCT_IMAGE_BYTES,
+      )
+    ) {
+      event.currentTarget.value = '';
+      setProductImages([]);
+      setError('هر تصویر باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
+      return;
+    }
+    setError(null);
+    setProductImages(files);
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -281,6 +343,10 @@ export function ProductForm({ data, mode }: ProductFormProps) {
     setPending(true);
     setError(null);
     try {
+      if (mode === 'create' && productImages.length > 0) {
+        payload.media = await uploadProductImages(productImages, name);
+      }
+
       const endpoint =
         mode === 'create' ? '/api/catalog/products' : `/api/catalog/products/${product?.id}`;
       const response = await fetch(endpoint, {
@@ -605,6 +671,68 @@ export function ProductForm({ data, mode }: ProductFormProps) {
           </p>
         )}
       </Card>
+
+      {mode === 'create' ? (
+        <Card
+          title="تصاویر محصول"
+          description="تصاویر را همین‌جا انتخاب کنید؛ هنگام ساخت محصول بارگذاری و به‌ترتیب انتخاب ثبت می‌شوند."
+        >
+          <label
+            htmlFor={productImagesInputId}
+            className="grid min-h-36 cursor-pointer place-items-center rounded-[var(--admin-radius-lg)] border border-dashed border-[var(--admin-color-border-strong)] bg-[var(--admin-color-surface-subtle)] p-5 text-center outline-none focus-within:shadow-[var(--admin-focus-ring)]"
+          >
+            <span>
+              <strong className="block text-sm">افزودن تصاویر محصول</strong>
+              <span className="mt-2 block text-xs leading-5 text-[var(--admin-color-muted)]">
+                JPEG، PNG، WebP یا AVIF؛ حداکثر ۱۲ تصویر و هر فایل حداکثر ۱۰ مگابایت
+              </span>
+              {productImages.length > 0 ? (
+                <span className="mt-3 block text-sm font-bold text-[var(--admin-color-success)]">
+                  {toPersianDigits(productImages.length)} تصویر انتخاب شد
+                </span>
+              ) : null}
+            </span>
+            <input
+              id={productImagesInputId}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              multiple
+              className="sr-only"
+              disabled={pending}
+              aria-label="انتخاب تصاویر محصول از دستگاه"
+              onChange={selectProductImages}
+            />
+          </label>
+
+          {productImages.length > 0 ? (
+            <ul className="mt-4 grid gap-2 sm:grid-cols-2" aria-label="تصاویر انتخاب‌شده محصول">
+              {productImages.map((file, index) => (
+                <li
+                  key={`${file.name}-${file.lastModified}-${index}`}
+                  className="flex items-center justify-between gap-3 rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] px-3 py-2"
+                >
+                  <span className="min-w-0 truncate text-xs" dir="auto">
+                    {toPersianDigits(index + 1)}. {file.name}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={pending}
+                    onClick={() =>
+                      setProductImages((current) =>
+                        current.filter((_, currentIndex) => currentIndex !== index),
+                      )
+                    }
+                  >
+                    حذف
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </Card>
+      ) : null}
 
       <SeoEditor
         value={seo}

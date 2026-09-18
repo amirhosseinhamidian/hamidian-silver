@@ -16,7 +16,7 @@ export default async function NewProductPage() {
         <Badge tone="info">مرحله {formatAdminInteger(5)}</Badge>
         <h1 className="mt-3 text-2xl font-black sm:text-3xl">افزودن محصول</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--admin-color-muted)]">
-          اطلاعات پایه و همه تنوع‌های فعلی محصول را ثبت کنید؛ تصاویر پس از ساخت محصول اضافه می‌شوند.
+          اطلاعات پایه، تصاویر و همه تنوع‌های فعلی محصول را در یک مرحله ثبت کنید.
         </p>
       </header>
       {data ? (
