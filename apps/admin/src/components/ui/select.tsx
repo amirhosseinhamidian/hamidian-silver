@@ -11,6 +11,8 @@ export type SelectOption = Readonly<{
   disabled?: boolean;
 }>;
 
+export const SELECT_CONTENT_LAYER_CLASS = 'z-[130]';
+
 type SelectProps = Readonly<{
   name?: string;
   value?: string;
@@ -105,7 +107,10 @@ export function Select({
           position="popper"
           sideOffset={5}
           collisionPadding={12}
-          className="z-[100] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] shadow-[var(--admin-shadow-md)]"
+          className={cn(
+            SELECT_CONTENT_LAYER_CLASS,
+            'min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] shadow-[var(--admin-shadow-md)]',
+          )}
         >
           <SelectPrimitive.Viewport className="max-h-72 overflow-y-auto p-1">
             {options.map((option) => (

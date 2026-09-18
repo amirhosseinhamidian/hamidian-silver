@@ -6,7 +6,7 @@ import { Badge } from './badge';
 import { Button, IconButton } from './button';
 import { Input } from './form-control';
 import { FormField } from './form-field';
-import { Select } from './select';
+import { Select, SELECT_CONTENT_LAYER_CLASS } from './select';
 
 describe('admin UI primitives', () => {
   it('prevents repeated actions while a button is loading', () => {
@@ -48,6 +48,11 @@ describe('admin UI primitives', () => {
       />,
     );
     expect(screen.getByRole('combobox', { name: 'وضعیت' })).toHaveTextContent('فعال');
+  });
+
+  it('keeps select content above bottom-sheet layers', () => {
+    const layer = Number(SELECT_CONTENT_LAYER_CLASS.match(/\d+/)?.[0]);
+    expect(layer).toBeGreaterThan(121);
   });
 
   it('pairs operational colors with readable status text', () => {
