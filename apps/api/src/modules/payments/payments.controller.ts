@@ -22,6 +22,7 @@ import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PaymentCallbackQueryDto } from './dto/payment-callback-query.dto';
 import { PaymentInitiationResponseDto } from './dto/payment-initiation-response.dto';
+import { RejectCardToCardReceiptDto } from './dto/reject-card-to-card-receipt.dto';
 import { SubmitCardToCardReceiptDto } from './dto/submit-card-to-card-receipt.dto';
 import { PaymentsService, type PaymentReceiptUpload } from './payments.service';
 import { CardToCardAccountsService } from './card-to-card-accounts.service';
@@ -113,6 +114,16 @@ export class PaymentsController {
     @Param('attemptId', new ParseUUIDPipe({ version: '4' })) attemptId: string,
   ) {
     return this.paymentsService.confirmCardToCardReceipt(attemptId, principal.userId);
+  }
+
+  @Post('attempts/:attemptId/receipt/reject')
+  @RequirePermissions(PERMISSION_CODES.ORDERS_STATUS_WRITE)
+  rejectCardToCardReceipt(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Param('attemptId', new ParseUUIDPipe({ version: '4' })) attemptId: string,
+    @Body() dto: RejectCardToCardReceiptDto,
+  ) {
+    return this.paymentsService.rejectCardToCardReceipt(attemptId, principal.userId, dto.reason);
   }
 
   @Post('orders/:orderId/initiate')

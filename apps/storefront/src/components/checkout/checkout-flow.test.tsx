@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CheckoutFlow } from '@/components/checkout/checkout-flow';
@@ -88,19 +88,21 @@ describe('CheckoutFlow price integrity', () => {
         ]);
       }
 
+      if (url === '/api/checkout/card-to-card') {
+        return jsonResponse({
+          enabled: true,
+          cardNumber: '6037991234567890',
+          holderName: 'گالری حمدیان',
+          bankName: 'بانک ملی',
+        });
+      }
+
       if (url === '/api/checkout/order') {
         return jsonResponse({
           id: '22222222-2222-4222-8222-222222222222',
           orderNumber: 'HS-TEST',
           shippingTotalToman: 50_000,
           grandTotalToman: 850_000,
-        });
-      }
-
-      if (url === '/api/checkout/payment') {
-        return jsonResponse({
-          alreadyPaid: true,
-          paymentUrl: null,
         });
       }
 
@@ -112,7 +114,7 @@ describe('CheckoutFlow price integrity', () => {
 
     await screen.findByText('اطلاعات ارسال');
     await screen.findByText('آدرس پیش‌فرض');
-    fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }));
 
     const priceAlert = await screen.findByRole('alert');
     expect(priceAlert).toHaveTextContent('مبلغ جدید را بررسی و تأیید کنید.');
@@ -128,15 +130,11 @@ describe('CheckoutFlow price integrity', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'تأیید مبلغ جدید و پرداخت' }));
 
-    await waitFor(() => {
-      expect(
-        fetchMock.mock.calls.filter(([input]) => String(input) === '/api/checkout/payment'),
-      ).toHaveLength(1);
-    });
+    expect(await screen.findByRole('dialog', { name: 'اطلاعات کارت مقصد' })).toBeInTheDocument();
     expect(
       fetchMock.mock.calls.filter(([input]) => String(input) === '/api/checkout/order'),
     ).toHaveLength(1);
-    expect(clearCart).toHaveBeenCalledOnce();
+    expect(clearCart).not.toHaveBeenCalled();
   });
 
   it('distinguishes an unavailable API from an expired session without discarding the cart', async () => {
@@ -194,14 +192,16 @@ describe('CheckoutFlow price integrity', () => {
       const rendered = render(<CheckoutFlow shippingPricing={freeShipping} />);
 
       await screen.findByText('آدرس پیش‌فرض');
-      fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت' }));
+      fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }));
 
       expect(await screen.findByText(/محصول، موجودی یا آدرس ذخیره‌شده/)).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'بازبینی و اصلاح سبد خرید' })).toHaveAttribute(
         'href',
         '/cart',
       );
-      expect(screen.queryByRole('button', { name: 'ثبت سفارش و پرداخت' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }),
+      ).not.toBeInTheDocument();
       expect(
         fetchMock.mock.calls.some(([input]) => String(input) === '/api/checkout/payment'),
       ).toBe(false);
@@ -210,7 +210,7 @@ describe('CheckoutFlow price integrity', () => {
     }
   });
 
-  it('blocks another payment attempt when initiation returns an uncertain result', async () => {
+  it('keeps bank gateway disabled with a coming-soon badge and selects card-to-card', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === '/api/auth/me') return jsonResponse({ phone: '09120000000' });
@@ -228,28 +228,27 @@ describe('CheckoutFlow price integrity', () => {
             isDefault: true,
           },
         ]);
-      if (url === '/api/checkout/order')
+      if (url === '/api/checkout/card-to-card') {
         return jsonResponse({
-          id: '22222222-2222-4222-8222-222222222222',
-          orderNumber: 'HS-1001',
-          shippingTotalToman: 0,
-          grandTotalToman: 800_000,
+          enabled: true,
+          cardNumber: '6037991234567890',
+          holderName: 'گالری حمدیان',
+          bankName: 'بانک ملی',
         });
-      if (url === '/api/checkout/payment') return jsonResponse({ message: 'Gateway timeout' }, 503);
+      }
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal('fetch', fetchMock);
     render(<CheckoutFlow shippingPricing={freeShipping} />);
 
     await screen.findByText('آدرس پیش‌فرض');
-    fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت' }));
-
-    expect(await screen.findByText(/وضعیت آغاز پرداخت مشخص نیست/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'بررسی وضعیت سفارش' })).toHaveAttribute(
-      'href',
-      '/account/orders/22222222-2222-4222-8222-222222222222',
-    );
-    expect(screen.queryByRole('button', { name: 'تلاش مجدد برای پرداخت' })).not.toBeInTheDocument();
-    expect(clearCart).not.toHaveBeenCalled();
+    const paymentRadios = screen.getAllByRole('radio');
+    expect(paymentRadios).toHaveLength(2);
+    expect(paymentRadios[0]).toBeDisabled();
+    expect(screen.getByText('به‌زودی')).toBeInTheDocument();
+    expect(paymentRadios[1]).toBeChecked();
+    expect(
+      screen.getByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }),
+    ).toBeInTheDocument();
   });
 });
