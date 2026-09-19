@@ -20,6 +20,7 @@ const order: CustomerOrderDetail = {
   shippingMethodName: null,
   shippingTrackingUrl: null,
   shippingCarrierLogoUrl: null,
+  shippingPayOnDelivery: false,
   reservationExpiresAt: '2026-09-07T13:00:00.000Z',
   paidAt: '2026-09-07T12:02:00.000Z',
   cancelledAt: null,

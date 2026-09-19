@@ -59,6 +59,10 @@ export class CreateOrderItemDto {
 export class CreateOrderDto {
   @IsOptional()
   @IsUUID('4')
+  shippingCarrierId?: string;
+
+  @IsOptional()
+  @IsUUID('4')
   userAddressId?: string;
 
   @IsOptional()

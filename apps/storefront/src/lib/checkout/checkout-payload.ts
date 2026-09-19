@@ -11,11 +11,13 @@ type CheckoutAddress =
 export function buildCreateOrderBody(
   items: readonly CartItem[],
   address: CheckoutAddress,
+  shippingCarrierId?: string,
 ): CreateOrderDto {
   const orderAddress = 'recipientName' in address ? { shippingAddress: address } : address;
 
   return {
     ...orderAddress,
+    ...(shippingCarrierId ? { shippingCarrierId } : {}),
     items: items.map((item) => ({
       variantId: item.variantId,
       quantity: item.quantity,

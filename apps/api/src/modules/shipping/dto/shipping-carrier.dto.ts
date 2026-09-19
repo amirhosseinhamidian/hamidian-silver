@@ -1,5 +1,16 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString, IsUrl, IsUUID, Length, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
+  IsUUID,
+  Length,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { AdminSiteMediaDto } from '../../site-settings/dto/admin-site-media.dto';
 
 export class CreateShippingCarrierDto {
@@ -19,6 +30,34 @@ export class CreateShippingCarrierDto {
   @IsOptional()
   @IsUUID('4')
   logoMediaId?: string | null;
+
+  @ApiPropertyOptional({ enum: ['FREE', 'FIXED', 'COLLECT'], default: 'FREE' })
+  @IsOptional()
+  @IsIn(['FREE', 'FIXED', 'COLLECT'])
+  pricingMode?: 'FREE' | 'FIXED' | 'COLLECT';
+
+  @ApiPropertyOptional({ minimum: 0, default: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  baseCostToman?: number;
+
+  @ApiPropertyOptional({ nullable: true, minimum: 1 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  thresholdToman?: number | null;
+
+  @ApiPropertyOptional({ nullable: true, minimum: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  discountedCostToman?: number | null;
+
+  @ApiPropertyOptional({ enum: ['NATIONWIDE', 'TEHRAN_ONLY'], default: 'NATIONWIDE' })
+  @IsOptional()
+  @IsIn(['NATIONWIDE', 'TEHRAN_ONLY'])
+  serviceArea?: 'NATIONWIDE' | 'TEHRAN_ONLY';
 
   @ApiPropertyOptional({ default: true })
   @IsOptional()
@@ -43,6 +82,20 @@ export class ShippingCarrierDto {
   @ApiProperty({ type: () => AdminSiteMediaDto, nullable: true })
   logo!: AdminSiteMediaDto | null;
 
+  @ApiProperty({ enum: ['FREE', 'FIXED', 'COLLECT'] })
+  pricingMode!: 'FREE' | 'FIXED' | 'COLLECT';
+
+  baseCostToman!: number;
+
+  @ApiProperty({ nullable: true })
+  thresholdToman!: number | null;
+
+  @ApiProperty({ nullable: true })
+  discountedCostToman!: number | null;
+
+  @ApiProperty({ enum: ['NATIONWIDE', 'TEHRAN_ONLY'] })
+  serviceArea!: 'NATIONWIDE' | 'TEHRAN_ONLY';
+
   isActive!: boolean;
 
   @ApiProperty({ format: 'date-time' })
@@ -50,4 +103,28 @@ export class ShippingCarrierDto {
 
   @ApiProperty({ format: 'date-time' })
   updatedAt!: string;
+}
+
+export class PublicShippingOptionDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  name!: string;
+
+  @ApiProperty({ type: () => AdminSiteMediaDto, nullable: true })
+  logo!: AdminSiteMediaDto | null;
+
+  @ApiProperty({ enum: ['FREE', 'FIXED', 'COLLECT'] })
+  pricingMode!: 'FREE' | 'FIXED' | 'COLLECT';
+
+  baseCostToman!: number;
+
+  @ApiProperty({ nullable: true })
+  thresholdToman!: number | null;
+
+  @ApiProperty({ nullable: true })
+  discountedCostToman!: number | null;
+
+  @ApiProperty({ enum: ['NATIONWIDE', 'TEHRAN_ONLY'] })
+  serviceArea!: 'NATIONWIDE' | 'TEHRAN_ONLY';
 }

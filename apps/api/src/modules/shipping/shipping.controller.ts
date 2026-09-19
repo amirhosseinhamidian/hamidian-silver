@@ -16,6 +16,7 @@ import {
 import { UpdateShippingPricingSettingsDto } from './dto/update-shipping-pricing-settings.dto';
 import {
   CreateShippingCarrierDto,
+  PublicShippingOptionDto,
   ShippingCarrierDto,
   UpdateShippingCarrierDto,
 } from './dto/shipping-carrier.dto';
@@ -36,6 +37,13 @@ export class ShippingController {
   @ApiOkResponse({ type: ShippingPricingSettingsDto })
   getPublicPricing(): Promise<ShippingPricingSettingsDto> {
     return this.shippingPricingService.getPublicSettings();
+  }
+
+  @Public()
+  @Get('options/public')
+  @ApiOkResponse({ type: PublicShippingOptionDto, isArray: true })
+  listPublicShippingOptions() {
+    return this.shippingCarriersService.listPublicOptions();
   }
 
   @Get('carriers')

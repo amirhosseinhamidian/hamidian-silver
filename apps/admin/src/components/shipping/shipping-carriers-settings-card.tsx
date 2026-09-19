@@ -8,9 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { Checkbox } from '@/components/ui/checkbox';
+import { MoneyInput } from '@/components/ui/money-input';
+import { Select } from '@/components/ui/select';
+import { parseAdminMoneyInput, toPersianDigits } from '@/lib/presentation/formatters';
 import {
   parseAdminShippingCarrier,
   type AdminShippingCarrier,
+  type ShippingCarrierPricingMode,
+  type ShippingCarrierServiceArea,
 } from '@/lib/shipping/shipping-pricing-model';
 import type { SiteMedia } from '@/lib/site-settings/site-settings-model';
 
@@ -32,6 +38,164 @@ function validTrackingUrl(value: string): boolean {
   return !value.trim() || value.trim().startsWith('https://');
 }
 
+function money(value: number | null): string {
+  return value === null ? '' : toPersianDigits(value);
+}
+
+function pricingValues(
+  mode: ShippingCarrierPricingMode,
+  baseCost: string,
+  thresholdEnabled: boolean,
+  threshold: string,
+  discountedCost: string,
+) {
+  return {
+    pricingMode: mode,
+    baseCostToman: mode === 'FIXED' ? parseAdminMoneyInput(baseCost) : 0,
+    thresholdToman: mode === 'FIXED' && thresholdEnabled ? parseAdminMoneyInput(threshold) : null,
+    discountedCostToman:
+      mode === 'FIXED' && thresholdEnabled ? parseAdminMoneyInput(discountedCost) : null,
+  };
+}
+
+function validatePricing(values: ReturnType<typeof pricingValues>): string | null {
+  if (values.pricingMode === 'FIXED' && (!values.baseCostToman || values.baseCostToman <= 0))
+    return 'هزینه ثابت ارسال باید بیشتر از صفر باشد.';
+  if (
+    values.pricingMode === 'FIXED' &&
+    ((values.thresholdToman === null) !== (values.discountedCostToman === null) ||
+      (values.thresholdToman !== null &&
+        (values.thresholdToman <= 0 ||
+          values.discountedCostToman === null ||
+          values.discountedCostToman >= (values.baseCostToman ?? 0))))
+  )
+    return 'حد نصاب و هزینه بعد از آن را معتبر و کمتر از هزینه ثابت وارد کنید.';
+  return null;
+}
+
+function CarrierPricingFields({
+  prefix,
+  mode,
+  setMode,
+  baseCost,
+  setBaseCost,
+  thresholdEnabled,
+  setThresholdEnabled,
+  threshold,
+  setThreshold,
+  discountedCost,
+  setDiscountedCost,
+  serviceArea,
+  setServiceArea,
+  disabled,
+}: Readonly<{
+  prefix: string;
+  mode: ShippingCarrierPricingMode;
+  setMode: (value: ShippingCarrierPricingMode) => void;
+  baseCost: string;
+  setBaseCost: (value: string) => void;
+  thresholdEnabled: boolean;
+  setThresholdEnabled: (value: boolean) => void;
+  threshold: string;
+  setThreshold: (value: string) => void;
+  discountedCost: string;
+  setDiscountedCost: (value: string) => void;
+  serviceArea: ShippingCarrierServiceArea;
+  setServiceArea: (value: ShippingCarrierServiceArea) => void;
+  disabled: boolean;
+}>) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <FormField id={`${prefix}-pricing-mode`} label="روش محاسبه هزینه" required>
+        {(props) => (
+          <Select
+            {...props}
+            value={mode}
+            disabled={disabled}
+            options={[
+              { value: 'FREE', label: 'ارسال رایگان' },
+              { value: 'FIXED', label: 'هزینه ثابت' },
+              { value: 'COLLECT', label: 'پس‌کرایه پیک تهران' },
+            ]}
+            onValueChange={(value) => {
+              const next = value as ShippingCarrierPricingMode;
+              setMode(next);
+              if (next === 'COLLECT') setServiceArea('TEHRAN_ONLY');
+              if (next !== 'FIXED') setThresholdEnabled(false);
+            }}
+          />
+        )}
+      </FormField>
+      <FormField id={`${prefix}-service-area`} label="محدوده ارسال" required>
+        {(props) => (
+          <Select
+            {...props}
+            value={serviceArea}
+            disabled={disabled || mode === 'COLLECT'}
+            options={[
+              { value: 'NATIONWIDE', label: 'سراسر کشور' },
+              { value: 'TEHRAN_ONLY', label: 'فقط شهر تهران' },
+            ]}
+            onValueChange={(value) => setServiceArea(value as ShippingCarrierServiceArea)}
+          />
+        )}
+      </FormField>
+      {mode === 'FIXED' ? (
+        <>
+          <FormField id={`${prefix}-base-cost`} label="هزینه ثابت (تومان)" required>
+            {(props) => (
+              <MoneyInput
+                {...props}
+                value={baseCost}
+                disabled={disabled}
+                onChange={(event) => setBaseCost(event.target.value)}
+              />
+            )}
+          </FormField>
+          <div className="flex items-end pb-2">
+            <Checkbox
+              id={`${prefix}-threshold-enabled`}
+              checked={thresholdEnabled}
+              disabled={disabled}
+              label="هزینه متفاوت بعد از حد نصاب"
+              onChange={(event) => setThresholdEnabled(event.target.checked)}
+            />
+          </div>
+          {thresholdEnabled ? (
+            <>
+              <FormField id={`${prefix}-threshold`} label="حداقل مبلغ سبد (تومان)" required>
+                {(props) => (
+                  <MoneyInput
+                    {...props}
+                    value={threshold}
+                    disabled={disabled}
+                    onChange={(event) => setThreshold(event.target.value)}
+                  />
+                )}
+              </FormField>
+              <FormField
+                id={`${prefix}-discounted-cost`}
+                label="هزینه بعد از حد نصاب (تومان)"
+                hint="برای رایگان‌شدن ارسال، صفر وارد کنید."
+                required
+              >
+                {(props) => (
+                  <MoneyInput
+                    {...props}
+                    value={discountedCost}
+                    disabled={disabled}
+                    onChange={(event) => setDiscountedCost(event.target.value)}
+                  />
+                )}
+              </FormField>
+            </>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 function CarrierEditor({
   carrier,
   canWrite,
@@ -48,6 +212,12 @@ function CarrierEditor({
   const [name, setName] = useState(carrier.name);
   const [trackingUrl, setTrackingUrl] = useState(carrier.trackingUrl ?? '');
   const [logo, setLogo] = useState<SiteMedia | null>(carrier.logo);
+  const [pricingMode, setPricingMode] = useState(carrier.pricingMode);
+  const [baseCost, setBaseCost] = useState(money(carrier.baseCostToman));
+  const [thresholdEnabled, setThresholdEnabled] = useState(carrier.thresholdToman !== null);
+  const [threshold, setThreshold] = useState(money(carrier.thresholdToman));
+  const [discountedCost, setDiscountedCost] = useState(money(carrier.discountedCostToman));
+  const [serviceArea, setServiceArea] = useState(carrier.serviceArea);
   const [pending, setPending] = useState(false);
 
   async function update(values: Record<string, unknown>, success: string) {
@@ -67,6 +237,12 @@ function CarrierEditor({
       setName(updated.name);
       setTrackingUrl(updated.trackingUrl ?? '');
       setLogo(updated.logo);
+      setPricingMode(updated.pricingMode);
+      setBaseCost(money(updated.baseCostToman));
+      setThresholdEnabled(updated.thresholdToman !== null);
+      setThreshold(money(updated.thresholdToman));
+      setDiscountedCost(money(updated.discountedCostToman));
+      setServiceArea(updated.serviceArea);
       onUpdated(updated);
       onSuccess(success);
     } catch (caught) {
@@ -81,11 +257,22 @@ function CarrierEditor({
     if (name.trim().length < 2) return onError('نام شرکت ارسال باید حداقل ۲ نویسه باشد.');
     if (!validTrackingUrl(trackingUrl))
       return onError('نشانی سایت استعلام باید با https:// آغاز شود.');
+    const pricing = pricingValues(
+      pricingMode,
+      baseCost,
+      thresholdEnabled,
+      threshold,
+      discountedCost,
+    );
+    const pricingError = validatePricing(pricing);
+    if (pricingError) return onError(pricingError);
     void update(
       {
         name: name.trim(),
         trackingUrl: trackingUrl.trim() || null,
         logoMediaId: logo?.id ?? null,
+        ...pricing,
+        serviceArea,
       },
       `اطلاعات «${name.trim()}» ذخیره شد.`,
     );
@@ -154,6 +341,22 @@ function CarrierEditor({
           onUploaded={setLogo}
           onClear={() => setLogo(null)}
         />
+        <CarrierPricingFields
+          prefix={`carrier-${carrier.id}`}
+          mode={pricingMode}
+          setMode={setPricingMode}
+          baseCost={baseCost}
+          setBaseCost={setBaseCost}
+          thresholdEnabled={thresholdEnabled}
+          setThresholdEnabled={setThresholdEnabled}
+          threshold={threshold}
+          setThreshold={setThreshold}
+          discountedCost={discountedCost}
+          setDiscountedCost={setDiscountedCost}
+          serviceArea={serviceArea}
+          setServiceArea={setServiceArea}
+          disabled={!canWrite || pending}
+        />
         <Button type="submit" loading={pending} disabled={!canWrite || name.trim().length < 2}>
           ذخیره شرکت
         </Button>
@@ -167,6 +370,12 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
   const [name, setName] = useState('');
   const [trackingUrl, setTrackingUrl] = useState('');
   const [logo, setLogo] = useState<SiteMedia | null>(null);
+  const [pricingMode, setPricingMode] = useState<ShippingCarrierPricingMode>('FREE');
+  const [baseCost, setBaseCost] = useState('');
+  const [thresholdEnabled, setThresholdEnabled] = useState(false);
+  const [threshold, setThreshold] = useState('');
+  const [discountedCost, setDiscountedCost] = useState('');
+  const [serviceArea, setServiceArea] = useState<ShippingCarrierServiceArea>('NATIONWIDE');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -177,6 +386,15 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
     if (name.trim().length < 2) return setError('نام شرکت ارسال باید حداقل ۲ نویسه باشد.');
     if (!validTrackingUrl(trackingUrl))
       return setError('نشانی سایت استعلام باید با https:// آغاز شود.');
+    const pricing = pricingValues(
+      pricingMode,
+      baseCost,
+      thresholdEnabled,
+      threshold,
+      discountedCost,
+    );
+    const pricingError = validatePricing(pricing);
+    if (pricingError) return setError(pricingError);
     setPending(true);
     setError('');
     setSuccess('');
@@ -188,6 +406,8 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
           name: name.trim(),
           trackingUrl: trackingUrl.trim() || null,
           logoMediaId: logo?.id ?? null,
+          ...pricing,
+          serviceArea,
           isActive: true,
         }),
       });
@@ -199,6 +419,12 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
       setName('');
       setTrackingUrl('');
       setLogo(null);
+      setPricingMode('FREE');
+      setBaseCost('');
+      setThresholdEnabled(false);
+      setThreshold('');
+      setDiscountedCost('');
+      setServiceArea('NATIONWIDE');
       setSuccess(`شرکت «${created.name}» اضافه و برای ساخت مرسوله فعال شد.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : responseMessage(null));
@@ -214,8 +440,8 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
           شرکت‌های ارسال
         </h2>
         <p className="mt-2 text-sm leading-7 text-[var(--admin-color-muted)]">
-          شرکت‌های فعال هنگام ساخت مرسوله دستی در دسترس هستند. نام، نماد و نشانی استعلام شرکت
-          انتخاب‌شده روی همان مرسوله ذخیره می‌شود.
+          شرکت‌های فعال در صفحه پرداخت و هنگام ساخت مرسوله در دسترس هستند. هزینه، محدوده ارسال و
+          اطلاعات شرکت انتخاب‌شده روی سفارش ذخیره می‌شود.
         </p>
       </div>
       {error ? <Alert tone="danger">{error}</Alert> : null}
@@ -263,6 +489,24 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
               onUploaded={setLogo}
               onClear={() => setLogo(null)}
             />
+            <div className="lg:col-span-2">
+              <CarrierPricingFields
+                prefix="new-carrier"
+                mode={pricingMode}
+                setMode={setPricingMode}
+                baseCost={baseCost}
+                setBaseCost={setBaseCost}
+                thresholdEnabled={thresholdEnabled}
+                setThresholdEnabled={setThresholdEnabled}
+                threshold={threshold}
+                setThreshold={setThreshold}
+                discountedCost={discountedCost}
+                setDiscountedCost={setDiscountedCost}
+                serviceArea={serviceArea}
+                setServiceArea={setServiceArea}
+                disabled={pending}
+              />
+            </div>
             <div className="flex items-end">
               <Button type="submit" loading={pending} disabled={name.trim().length < 2}>
                 افزودن شرکت

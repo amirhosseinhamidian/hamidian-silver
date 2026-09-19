@@ -55,11 +55,14 @@ function TotalRow({ label, value, negative = false, strong = false }: TotalRowPr
   );
 }
 
-function ShippingTotalRow({ value }: Readonly<{ value: number }>) {
+function ShippingTotalRow({
+  value,
+  payOnDelivery = false,
+}: Readonly<{ value: number; payOnDelivery?: boolean }>) {
   return (
     <div className="flex justify-between gap-4 text-sm">
       <span className="text-[var(--sf-color-muted)]">هزینه ارسال</span>
-      <span>{formatShippingToman(value)}</span>
+      <span>{payOnDelivery ? 'پس‌کرایه' : formatShippingToman(value)}</span>
     </div>
   );
 }
@@ -395,7 +398,10 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
               {order.discountTotalToman > 0 ? (
                 <TotalRow label="تخفیف" value={order.discountTotalToman} negative />
               ) : null}
-              <ShippingTotalRow value={order.shippingTotalToman} />
+              <ShippingTotalRow
+                value={order.shippingTotalToman}
+                payOnDelivery={order.shippingPayOnDelivery}
+              />
               {order.taxTotalToman > 0 ? (
                 <TotalRow label="مالیات" value={order.taxTotalToman} />
               ) : null}

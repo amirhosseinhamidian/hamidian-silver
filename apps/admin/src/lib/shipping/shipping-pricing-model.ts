@@ -1,6 +1,8 @@
 import type { SiteMedia } from '@/lib/site-settings/site-settings-model';
 
 export type ShippingPricingMode = 'FREE' | 'FIXED';
+export type ShippingCarrierPricingMode = 'FREE' | 'FIXED' | 'COLLECT';
+export type ShippingCarrierServiceArea = 'NATIONWIDE' | 'TEHRAN_ONLY';
 
 export type AdminShippingCarrier = Readonly<{
   id: string;
@@ -8,6 +10,11 @@ export type AdminShippingCarrier = Readonly<{
   trackingUrl: string | null;
   logoMediaId: string | null;
   logo: SiteMedia | null;
+  pricingMode: ShippingCarrierPricingMode;
+  baseCostToman: number;
+  thresholdToman: number | null;
+  discountedCostToman: number | null;
+  serviceArea: ShippingCarrierServiceArea;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -58,6 +65,21 @@ export function parseAdminShippingCarrier(value: unknown): AdminShippingCarrier 
   const trackingUrl = nullableText(source.trackingUrl);
   const logoMediaId = nullableText(source.logoMediaId);
   const carrierLogo = media(source.logo);
+  const pricingMode =
+    source.pricingMode === 'FREE' ||
+    source.pricingMode === 'FIXED' ||
+    source.pricingMode === 'COLLECT'
+      ? source.pricingMode
+      : null;
+  const baseCostToman = nonNegativeInteger(source.baseCostToman);
+  const thresholdToman =
+    source.thresholdToman === null ? null : nonNegativeInteger(source.thresholdToman);
+  const discountedCostToman =
+    source.discountedCostToman === null ? null : nonNegativeInteger(source.discountedCostToman);
+  const serviceArea =
+    source.serviceArea === 'NATIONWIDE' || source.serviceArea === 'TEHRAN_ONLY'
+      ? source.serviceArea
+      : null;
   if (
     typeof source.id !== 'string' ||
     typeof source.name !== 'string' ||
@@ -65,9 +87,25 @@ export function parseAdminShippingCarrier(value: unknown): AdminShippingCarrier 
     trackingUrl === undefined ||
     logoMediaId === undefined ||
     carrierLogo === undefined ||
+    !pricingMode ||
+    baseCostToman === null ||
+    !serviceArea ||
     typeof source.isActive !== 'boolean' ||
     typeof source.createdAt !== 'string' ||
     typeof source.updatedAt !== 'string'
+  )
+    return null;
+  if (
+    (pricingMode !== 'FIXED' &&
+      (baseCostToman !== 0 || thresholdToman !== null || discountedCostToman !== null)) ||
+    (pricingMode === 'FIXED' &&
+      (baseCostToman <= 0 ||
+        (thresholdToman === null) !== (discountedCostToman === null) ||
+        (thresholdToman !== null &&
+          (thresholdToman <= 0 ||
+            discountedCostToman === null ||
+            discountedCostToman >= baseCostToman)))) ||
+    (pricingMode === 'COLLECT' && serviceArea !== 'TEHRAN_ONLY')
   )
     return null;
   return {
@@ -76,6 +114,11 @@ export function parseAdminShippingCarrier(value: unknown): AdminShippingCarrier 
     trackingUrl,
     logoMediaId,
     logo: carrierLogo,
+    pricingMode,
+    baseCostToman,
+    thresholdToman,
+    discountedCostToman,
+    serviceArea,
     isActive: source.isActive,
     createdAt: source.createdAt,
     updatedAt: source.updatedAt,
