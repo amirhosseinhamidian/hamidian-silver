@@ -50,6 +50,7 @@ type UserAddress = Readonly<{
 type AddressFields = Omit<UserAddress, 'id' | 'isDefault'>;
 
 const NEW_ADDRESS_VALUE = '__new_address__';
+const BANK_GATEWAY_CHECKOUT_ENABLED = false;
 const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
 
@@ -149,7 +150,7 @@ export function CheckoutFlow({
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
   const [staleCart, setStaleCart] = useState(false);
   const [uncertainCheckout, setUncertainCheckout] = useState<'order' | 'payment' | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('gateway');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card_to_card');
   const [cardToCardSettings, setCardToCardSettings] = useState<CardToCardSettings | null>(null);
   const [cardToCardOrder, setCardToCardOrder] = useState<{
     id: string;
@@ -316,6 +317,7 @@ export function CheckoutFlow({
 
   async function submitCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!BANK_GATEWAY_CHECKOUT_ENABLED && paymentMethod === 'gateway') return;
     if (
       auth.status !== 'authenticated' ||
       items.length === 0 ||
@@ -757,25 +759,23 @@ export function CheckoutFlow({
           <legend className="text-xl font-medium">روش پرداخت</legend>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <label
-              className={`cursor-pointer rounded-[var(--sf-radius-md)] border p-4 transition ${
-                paymentMethod === 'gateway'
-                  ? 'border-[var(--sf-color-ink)] bg-[var(--sf-color-surface)]'
-                  : 'border-[var(--sf-color-border)]'
-              }`}
+              aria-disabled="true"
+              className="cursor-not-allowed rounded-[var(--sf-radius-md)] border border-[var(--sf-color-border)] p-4 opacity-55"
             >
               <span className="flex items-center gap-3">
                 <input
                   type="radio"
                   name="paymentMethod"
                   value="gateway"
+                  disabled
                   checked={paymentMethod === 'gateway'}
                   onChange={() => setPaymentMethod('gateway')}
                   className="size-4 accent-[var(--sf-color-ink)]"
                 />
                 <strong className="text-sm">پرداخت از طریق درگاه بانکی</strong>
-              </span>
-              <span className="mt-2 block ps-7 text-xs leading-6 text-[var(--sf-color-muted)]">
-                انتقال امن به درگاه پرداخت آنلاین
+                <span className="rounded-full bg-[var(--sf-color-ink)] px-2 py-0.5 text-[0.65rem] font-medium text-white">
+                  به‌زودی
+                </span>
               </span>
             </label>
 

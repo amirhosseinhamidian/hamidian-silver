@@ -173,7 +173,12 @@ export class NotificationOutboxWorker {
         let message: { phone: string; text: string };
 
         try {
-          message = await this.buildMessage(event.type, event.aggregateType, event.aggregateId);
+          message = await this.buildMessage(
+            event.type,
+            event.aggregateType,
+            event.aggregateId,
+            event.payload,
+          );
         } catch (error) {
           await this.failBeforeDispatch(event.id, claimedAt, event.attempts + 1, error);
           continue;
@@ -358,6 +363,7 @@ export class NotificationOutboxWorker {
     type: NotificationOutboxEventType,
     aggregateType: string,
     aggregateId: string,
+    payload: unknown,
   ): Promise<{ phone: string; text: string }> {
     if (
       aggregateType === 'STOCK_SUBSCRIPTION' &&
@@ -450,6 +456,11 @@ export class NotificationOutboxWorker {
           phone: order.user.phone,
           text: `رسید کارت‌به‌کارت سفارش ${order.orderNumber} دریافت شد و پس از بررسی نتیجه اطلاع‌رسانی می‌شود.`,
         };
+      case NotificationOutboxEventType.PAYMENT_RECEIPT_REJECTED:
+        return {
+          phone: order.user.phone,
+          text: `رسید کارت‌به‌کارت سفارش ${order.orderNumber} رد شد. دلیل: ${this.readReceiptRejectionReason(payload)} لطفاً رسید صحیح را دوباره ثبت کنید.`,
+        };
       case NotificationOutboxEventType.SHIPMENT_TRACKING_AVAILABLE:
         if (!order.shipment?.trackingCode) {
           throw new Error('Shipment tracking code is not available yet.');
@@ -482,6 +493,20 @@ export class NotificationOutboxWorker {
   private retryDelayMs(attempt: number): number {
     const exponent = Math.max(0, Math.min(attempt - 1, 6));
     return Math.min(60 * 60 * 1000, 60 * 1000 * 2 ** exponent);
+  }
+
+  private readReceiptRejectionReason(payload: unknown): string {
+    if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'reason' in payload &&
+      typeof payload.reason === 'string'
+    ) {
+      const reason = payload.reason.trim();
+      if (reason.length >= 3 && reason.length <= 200) return reason;
+    }
+
+    throw new Error('Receipt rejection reason is missing from the notification payload.');
   }
 
   private readPositiveInteger(value: unknown, fallback: number): number {

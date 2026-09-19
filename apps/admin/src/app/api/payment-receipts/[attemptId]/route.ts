@@ -60,3 +60,36 @@ export async function POST(_request: Request, { params }: RouteContext) {
     return Response.json({ message: 'Receipt service is unavailable.' }, { status: 502 });
   }
 }
+
+export async function PATCH(request: Request, { params }: RouteContext) {
+  const accessToken = await token();
+  if (!accessToken) {
+    return Response.json({ message: 'Authentication required.' }, { status: 401 });
+  }
+
+  const { attemptId } = await params;
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ message: 'Invalid request body.' }, { status: 400 });
+  }
+
+  try {
+    const response = await requestAdminCatalog(
+      `/api/v1/payments/attempts/${encodeURIComponent(attemptId)}/receipt/reject`,
+      accessToken,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+    );
+
+    return Response.json((await readJsonResponse(response)) ?? null, {
+      status: response.status,
+    });
+  } catch {
+    return Response.json({ message: 'Receipt service is unavailable.' }, { status: 502 });
+  }
+}

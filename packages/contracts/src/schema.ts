@@ -2164,6 +2164,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payments/attempts/{attemptId}/receipt/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PaymentsController_rejectCardToCardReceipt_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/payments/orders/{orderId}/initiate": {
         parameters: {
             query?: never;
@@ -3881,6 +3897,9 @@ export interface components {
             holderName: string | null;
             bankName: string | null;
             enabled: boolean;
+        };
+        RejectCardToCardReceiptDto: {
+            reason: string;
         };
         InitiatePaymentDto: {
             /** @enum {string} */
@@ -8010,6 +8029,29 @@ export interface operations {
                 content: {
                     "application/json": Record<string, never>;
                 };
+            };
+        };
+    };
+    PaymentsController_rejectCardToCardReceipt_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attemptId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectCardToCardReceiptDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

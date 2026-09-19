@@ -113,6 +113,20 @@ describe('NotificationOutboxWorker', () => {
     );
   });
 
+  it('includes the snapshotted rejection reason in a rejected receipt SMS', async () => {
+    const { worker, smsSender } = createWorker({
+      type: NotificationOutboxEventType.PAYMENT_RECEIPT_REJECTED,
+      payload: { reason: 'تصویر رسید خوانا نیست.' },
+    });
+
+    await worker.dispatchPending();
+
+    expect(smsSender.sendMessage).toHaveBeenCalledWith({
+      phone: '+989120000000',
+      text: 'رسید کارت‌به‌کارت سفارش HS-TEST رد شد. دلیل: تصویر رسید خوانا نیست. لطفاً رسید صحیح را دوباره ثبت کنید.',
+    });
+  });
+
   it('marks a definitive send failure for retry from dispatching', async () => {
     const { worker, prisma, smsSender } = createWorker();
 

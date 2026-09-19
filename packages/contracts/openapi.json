@@ -5361,6 +5361,39 @@
         ]
       }
     },
+    "/api/v1/payments/attempts/{attemptId}/receipt/reject": {
+      "post": {
+        "operationId": "PaymentsController_rejectCardToCardReceipt_v1",
+        "parameters": [
+          {
+            "name": "attemptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectCardToCardReceiptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
     "/api/v1/payments/orders/{orderId}/initiate": {
       "post": {
         "operationId": "PaymentsController_initiateOrderPayment_v1",
@@ -11023,6 +11056,19 @@
           "holderName",
           "bankName",
           "enabled"
+        ]
+      },
+      "RejectCardToCardReceiptDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "InitiatePaymentDto": {

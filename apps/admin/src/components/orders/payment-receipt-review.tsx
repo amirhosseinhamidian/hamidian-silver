@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/form-control';
 import type { AdminPaymentAttempt } from '@/lib/orders/orders-model';
 
 type PaymentReceiptReviewProps = Readonly<{
@@ -17,10 +18,14 @@ export function PaymentReceiptReview({ attempt, canConfirm }: PaymentReceiptRevi
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [rejected, setRejected] = useState(false);
+  const [showRejectionForm, setShowRejectionForm] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const imageUrl = `/api/payment-receipts/${encodeURIComponent(attempt.id)}`;
-  const awaitingReview = attempt.status === 'AWAITING_REVIEW' && !confirmed;
+  const awaitingReview = attempt.status === 'AWAITING_REVIEW' && !confirmed && !rejected;
 
   async function confirmReceipt() {
     if (confirming || !window.confirm('از تطبیق مبلغ و صحت رسید اطمینان دارید؟')) {
@@ -54,6 +59,48 @@ export function PaymentReceiptReview({ attempt, canConfirm }: PaymentReceiptRevi
       setError('ارتباط با سرویس پرداخت برقرار نشد.');
     } finally {
       setConfirming(false);
+    }
+  }
+
+  async function rejectReceipt() {
+    const reason = rejectionReason.trim();
+    if (rejecting || reason.length < 3) {
+      setError('دلیل رد رسید باید حداقل ۳ نویسه باشد.');
+      return;
+    }
+
+    setRejecting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(imageUrl, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!response.ok) {
+        let message = 'رد رسید انجام نشد.';
+        try {
+          const payload = (await response.json()) as {
+            message?: string | string[];
+            error?: { message?: string | string[] };
+          };
+          const received = payload.error?.message ?? payload.message;
+          message = Array.isArray(received) ? received.join('، ') : received || message;
+        } catch {
+          // Keep fallback.
+        }
+        setError(message);
+        return;
+      }
+
+      setRejected(true);
+      setShowRejectionForm(false);
+      router.refresh();
+    } catch {
+      setError('ارتباط با سرویس پرداخت برقرار نشد.');
+    } finally {
+      setRejecting(false);
     }
   }
 
@@ -99,8 +146,66 @@ export function PaymentReceiptReview({ attempt, canConfirm }: PaymentReceiptRevi
           >
             {confirmed || attempt.status === 'VERIFIED' ? 'رسید تأیید شده' : 'تأیید رسید و پرداخت'}
           </Button>
+          {awaitingReview && canConfirm ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="danger"
+              className="mt-4 ms-2"
+              disabled={confirming || rejecting}
+              onClick={() => {
+                setError(null);
+                setShowRejectionForm((current) => !current);
+              }}
+            >
+              رد رسید
+            </Button>
+          ) : null}
         </div>
       </div>
+
+      {showRejectionForm && awaitingReview ? (
+        <div className="mt-4 space-y-3 border-t border-[var(--admin-color-border)] pt-4">
+          <label htmlFor={`receipt-rejection-${attempt.id}`} className="block text-sm font-bold">
+            دلیل رد رسید
+          </label>
+          <Textarea
+            id={`receipt-rejection-${attempt.id}`}
+            value={rejectionReason}
+            maxLength={200}
+            placeholder="مثلاً مبلغ واریزی با مبلغ سفارش مطابقت ندارد."
+            onChange={(event) => setRejectionReason(event.target.value)}
+          />
+          <p className="text-xs text-[var(--admin-color-muted)]">
+            این دلیل در پیامک برای مشتری ارسال می‌شود و باید واضح و محترمانه باشد.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="danger"
+              loading={rejecting}
+              disabled={rejectionReason.trim().length < 3 || confirming}
+              onClick={() => void rejectReceipt()}
+            >
+              تأیید رد و ارسال پیامک
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={rejecting}
+              onClick={() => setShowRejectionForm(false)}
+            >
+              انصراف
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {rejected || attempt.failureCode === 'CARD_TO_CARD_RECEIPT_REJECTED' ? (
+        <Alert tone="warning">رسید رد شده و امکان ثبت رسید جدید برای مشتری باز است.</Alert>
+      ) : null}
 
       {error ? <Alert tone="danger">{error}</Alert> : null}
 

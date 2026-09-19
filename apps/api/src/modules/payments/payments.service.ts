@@ -715,6 +715,96 @@ export class PaymentsService {
     return this.finalizeVerifiedPayment(attempt.id, null, referenceId, undefined, actorUserId);
   }
 
+  async rejectCardToCardReceipt(attemptId: string, actorUserId: string, reason: string) {
+    const rejectionReason = reason.trim().replace(/\s+/g, ' ');
+    if (rejectionReason.length < 3 || rejectionReason.length > 200) {
+      throw new BadRequestException(
+        'Receipt rejection reason must be between 3 and 200 characters.',
+      );
+    }
+
+    return this.prisma.$transaction(async (transaction) => {
+      const attempt = await transaction.paymentAttempt.findUnique({
+        where: { id: attemptId },
+        select: {
+          id: true,
+          provider: true,
+          status: true,
+          receiptData: true,
+          failureCode: true,
+          paymentId: true,
+          payment: {
+            select: {
+              status: true,
+              orderId: true,
+              order: {
+                select: { status: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!attempt || attempt.provider !== CARD_TO_CARD_PROVIDER || !attempt.receiptData) {
+        throw new NotFoundException('Payment receipt was not found.');
+      }
+      if (
+        attempt.status === PaymentAttemptStatus.FAILED &&
+        attempt.failureCode === 'CARD_TO_CARD_RECEIPT_REJECTED'
+      ) {
+        return { success: true, alreadyRejected: true };
+      }
+      if (
+        attempt.status !== PaymentAttemptStatus.AWAITING_REVIEW ||
+        attempt.payment.status !== PaymentStatus.AWAITING_REVIEW ||
+        attempt.payment.order.status !== OrderStatus.PENDING_PAYMENT
+      ) {
+        throw new ConflictException('Payment receipt is not awaiting review.');
+      }
+
+      const rejectedAttempt = await transaction.paymentAttempt.updateMany({
+        where: {
+          id: attempt.id,
+          status: PaymentAttemptStatus.AWAITING_REVIEW,
+        },
+        data: {
+          status: PaymentAttemptStatus.FAILED,
+          failureCode: 'CARD_TO_CARD_RECEIPT_REJECTED',
+          failureMessage: rejectionReason,
+        },
+      });
+      if (rejectedAttempt.count !== 1) {
+        throw new ConflictException('Payment receipt state changed during rejection.');
+      }
+
+      const reopenedPayment = await transaction.payment.updateMany({
+        where: {
+          id: attempt.paymentId,
+          status: PaymentStatus.AWAITING_REVIEW,
+        },
+        data: {
+          status: PaymentStatus.PENDING,
+        },
+      });
+      if (reopenedPayment.count !== 1) {
+        throw new ConflictException('Payment state changed during receipt rejection.');
+      }
+
+      await this.outbox?.enqueueOrderEvent(transaction, {
+        type: NotificationOutboxEventType.PAYMENT_RECEIPT_REJECTED,
+        orderId: attempt.payment.orderId,
+        deduplicationKey: `payment-attempt:${attempt.id}:receipt-rejected`,
+        payload: {
+          paymentAttemptId: attempt.id,
+          reason: rejectionReason,
+          rejectedByUserId: actorUserId,
+        },
+      });
+
+      return { success: true, alreadyRejected: false };
+    });
+  }
+
   async getOrderPayment(userId: string, orderId: string) {
     const payment = await this.prisma.payment.findFirst({
       where: {
