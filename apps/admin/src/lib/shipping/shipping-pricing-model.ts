@@ -7,6 +7,7 @@ export type ShippingCarrierServiceArea = 'NATIONWIDE' | 'TEHRAN_ONLY';
 export type AdminShippingCarrier = Readonly<{
   id: string;
   name: string;
+  subtitle: string | null;
   trackingUrl: string | null;
   logoMediaId: string | null;
   logo: SiteMedia | null;
@@ -63,6 +64,7 @@ export function parseAdminShippingCarrier(value: unknown): AdminShippingCarrier 
   const source = record(value);
   if (!source) return null;
   const trackingUrl = nullableText(source.trackingUrl);
+  const subtitle = nullableText(source.subtitle);
   const logoMediaId = nullableText(source.logoMediaId);
   const carrierLogo = media(source.logo);
   const pricingMode =
@@ -84,6 +86,7 @@ export function parseAdminShippingCarrier(value: unknown): AdminShippingCarrier 
     typeof source.id !== 'string' ||
     typeof source.name !== 'string' ||
     !source.name.trim() ||
+    subtitle === undefined ||
     trackingUrl === undefined ||
     logoMediaId === undefined ||
     carrierLogo === undefined ||
@@ -111,6 +114,7 @@ export function parseAdminShippingCarrier(value: unknown): AdminShippingCarrier 
   return {
     id: source.id,
     name: source.name.trim(),
+    subtitle,
     trackingUrl,
     logoMediaId,
     logo: carrierLogo,

@@ -5,10 +5,15 @@ import { FiCheck, FiClipboard, FiUploadCloud, FiX } from 'react-icons/fi';
 
 import { Button } from '@/components/ui/button';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
+import {
+  IRANIAN_BANKS,
+  recommendTransfer,
+} from '@/lib/checkout/transfer-recommendation';
 
 export type CardToCardSettings = Readonly<{
   enabled: boolean;
   cardNumber: string | null;
+  ibanNumber: string | null;
   holderName: string | null;
   bankName: string | null;
 }>;
@@ -30,6 +35,10 @@ function groupedCardNumber(cardNumber: string): string {
   return cardNumber.replace(/(\d{4})(?=\d)/g, '$1 ');
 }
 
+function groupedIban(ibanNumber: string): string {
+  return `IR${ibanNumber}`.replace(/(.{4})(?=.)/g, '$1 ');
+}
+
 export function CardToCardPaymentModal({
   open,
   orderId,
@@ -40,7 +49,8 @@ export function CardToCardPaymentModal({
   onSubmitted,
 }: CardToCardPaymentModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'card' | 'iban' | null>(null);
+  const [sourceBank, setSourceBank] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +73,10 @@ export function CardToCardPaymentModal({
     )} مگابایت`;
   }, [file]);
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  const recommendation = useMemo(
+    () => recommendTransfer(amountToman, sourceBank, settings.bankName ?? ''),
+    [amountToman, settings.bankName, sourceBank],
+  );
 
   useEffect(
     () => () => {
@@ -71,24 +85,19 @@ export function CardToCardPaymentModal({
     [previewUrl],
   );
 
-  if (
-    !open ||
-    !settings.enabled ||
-    !settings.cardNumber ||
-    !settings.holderName ||
-    !settings.bankName
-  ) {
+  const { cardNumber, ibanNumber, holderName, bankName } = settings;
+
+  if (!open || !settings.enabled || !cardNumber || !ibanNumber || !holderName || !bankName) {
     return null;
   }
 
-  async function copyCardNumber() {
-    if (!settings.cardNumber) return;
+  async function copyValue(value: string, kind: 'card' | 'iban') {
     try {
-      await navigator.clipboard.writeText(settings.cardNumber);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2500);
+      await navigator.clipboard.writeText(value);
+      setCopied(kind);
+      window.setTimeout(() => setCopied(null), 2500);
     } catch {
-      setError('کپی خودکار انجام نشد؛ شماره کارت را به‌صورت دستی انتخاب کنید.');
+      setError('کپی خودکار انجام نشد؛ شماره را به‌صورت دستی انتخاب کنید.');
     }
   }
 
@@ -200,37 +209,115 @@ export function CardToCardPaymentModal({
               <div className="absolute -bottom-24 -start-10 size-48 rounded-full bg-white/[0.04]" />
               <div className="relative flex min-h-56 flex-col justify-between">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm font-medium">{settings.bankName}</span>
+                  <span className="text-sm font-medium">{bankName}</span>
                   <span className="size-10 rounded-full border border-white/25 bg-white/10" />
                 </div>
                 <button
                   type="button"
                   dir="ltr"
-                  onClick={copyCardNumber}
+                  onClick={() => void copyValue(cardNumber, 'card')}
                   className="my-7 whitespace-nowrap text-center font-mono text-[clamp(1.5rem,7vw,1.875rem)] tracking-normal sm:text-4xl sm:tracking-[0.08em]"
                   title="کپی شماره کارت"
                 >
-                  {groupedCardNumber(settings.cardNumber)}
+                  {groupedCardNumber(cardNumber)}
                 </button>
                 <div>
                   <p className="text-[0.65rem] text-white/55">صاحب حساب</p>
-                  <p className="mt-1 text-sm">{settings.holderName}</p>
+                  <p className="mt-1 text-sm">{holderName}</p>
                 </div>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={copyCardNumber}
+              onClick={() => void copyValue(cardNumber, 'card')}
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--sf-color-border)] px-4 py-3 text-sm font-medium"
             >
-              {copied ? <FiCheck aria-hidden="true" /> : <FiClipboard aria-hidden="true" />}
-              {copied ? 'شماره کارت کپی شد' : 'کپی شماره کارت'}
+              {copied === 'card' ? (
+                <FiCheck aria-hidden="true" />
+              ) : (
+                <FiClipboard aria-hidden="true" />
+              )}
+              {copied === 'card' ? 'شماره کارت کپی شد' : 'کپی شماره کارت'}
             </button>
+
+            <div className="mt-4 rounded-2xl border border-[var(--sf-color-border)] bg-[var(--sf-color-surface)] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs text-[var(--sf-color-muted)]">شماره شبا</p>
+                  <p className="mt-1 text-[0.7rem] text-[var(--sf-color-muted)]">
+                    در زمان کپی، فقط ۲۴ رقم بدون IR کپی می‌شود.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void copyValue(ibanNumber, 'iban')}
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--sf-color-border)] px-3 py-2 text-xs font-medium"
+                  title="کپی شماره شبا بدون IR"
+                >
+                  {copied === 'iban' ? (
+                    <FiCheck aria-hidden="true" />
+                  ) : (
+                    <FiClipboard aria-hidden="true" />
+                  )}
+                  {copied === 'iban' ? 'بدون IR کپی شد' : 'کپی شبا'}
+                </button>
+              </div>
+              <button
+                type="button"
+                dir="ltr"
+                onClick={() => void copyValue(ibanNumber, 'iban')}
+                className="mt-4 w-full break-all text-center font-mono text-sm tracking-[0.06em] sm:text-base"
+                title="کپی شماره شبا بدون IR"
+              >
+                {groupedIban(ibanNumber)}
+              </button>
+            </div>
 
             <div className="mt-5 flex items-center justify-between gap-4 border-y border-[var(--sf-color-border)] py-4 text-sm">
               <span className="text-[var(--sf-color-muted)]">مبلغ واریز</span>
               <strong className="text-lg sm:text-xl">{formatTomanPrice(amountToman)}</strong>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-[var(--sf-color-border)] p-4">
+              <label htmlFor="source-bank" className="text-xs text-[var(--sf-color-muted)]">
+                بانک مبدأ شما کدام است؟
+              </label>
+              <select
+                id="source-bank"
+                value={sourceBank}
+                onChange={(event) => setSourceBank(event.target.value)}
+                className="mt-2 min-h-11 w-full rounded-xl border border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)] px-3 text-sm outline-none focus:border-[var(--sf-color-ink)]"
+              >
+                <option value="">انتخاب بانک مبدأ (اختیاری)</option>
+                {IRANIAN_BANKS.map((bank) => (
+                  <option key={bank} value={bank}>
+                    {bank}
+                  </option>
+                ))}
+              </select>
+
+              <div className="mt-4 border-t border-[var(--sf-color-border)] pt-4">
+                <p className="text-xs text-[var(--sf-color-muted)]">
+                  روش پیشنهادی برای پرداخت این سفارش
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <strong className="text-base">{recommendation.title}</strong>
+                  <span className="rounded-full bg-[var(--sf-color-ink)] px-2 py-1 text-[0.65rem] text-white">
+                    {recommendation.speed}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs leading-6">{recommendation.description}</p>
+                {recommendation.alternative ? (
+                  <p className="mt-2 text-xs leading-6 text-[var(--sf-color-muted)]">
+                    {recommendation.alternative}
+                  </p>
+                ) : null}
+                <p className="mt-3 text-[0.68rem] leading-5 text-[var(--sf-color-muted)]">
+                  سقف قابل استفاده ممکن است با توجه به بانک، نوع حساب و محدودیت همراه‌بانک شما
+                  متفاوت باشد.
+                </p>
+              </div>
             </div>
 
             <p className="mt-4 text-xs leading-6 text-[var(--sf-color-muted)]">

@@ -11,10 +11,12 @@ import {
   CreateCardToCardAccountDto,
   UpdateCardToCardAccountDto,
 } from './dto/card-to-card-account.dto';
+import { hasValidIranianIbanChecksum } from './iranian-iban';
 
 const ACCOUNT_SELECT = {
   id: true,
   cardNumber: true,
+  ibanNumber: true,
   holderName: true,
   bankName: true,
   isActive: true,
@@ -28,10 +30,11 @@ export class CardToCardAccountsService {
 
   async getPublicSettings() {
     const account = await this.prisma.cardToCardAccount.findFirst({
-      where: { isActive: true },
+      where: { isActive: true, ibanNumber: { not: null } },
       orderBy: { updatedAt: 'desc' },
       select: {
         cardNumber: true,
+        ibanNumber: true,
         holderName: true,
         bankName: true,
       },
@@ -39,7 +42,13 @@ export class CardToCardAccountsService {
 
     return account
       ? { enabled: true, ...account }
-      : { enabled: false, cardNumber: null, holderName: null, bankName: null };
+      : {
+          enabled: false,
+          cardNumber: null,
+          ibanNumber: null,
+          holderName: null,
+          bankName: null,
+        };
   }
 
   listAccounts() {
@@ -52,10 +61,11 @@ export class CardToCardAccountsService {
   async createAccount(dto: CreateCardToCardAccountDto, actorUserId: string) {
     const input = {
       cardNumber: dto.cardNumber,
+      ibanNumber: dto.ibanNumber,
       holderName: dto.holderName.trim(),
       bankName: dto.bankName.trim(),
     };
-    this.assertNames(input.holderName, input.bankName);
+    this.assertAccountInput(input.holderName, input.bankName, input.ibanNumber);
 
     try {
       const created = await this.prisma.$transaction(async (transaction) => {
@@ -99,6 +109,10 @@ export class CardToCardAccountsService {
     if (!current) throw new NotFoundException('Card-to-card account was not found.');
 
     const normalized = this.normalizeInput(dto);
+
+    if (dto.isActive === true && !(normalized.ibanNumber ?? current.ibanNumber)) {
+      throw new BadRequestException('IBAN is required before activating this account.');
+    }
 
     try {
       const updated = await this.prisma.$transaction(async (transaction) => {
@@ -185,28 +199,32 @@ export class CardToCardAccountsService {
   private normalizeInput(dto: UpdateCardToCardAccountDto) {
     const holderName = dto.holderName?.trim();
     const bankName = dto.bankName?.trim();
-    this.assertNames(holderName, bankName);
+    this.assertAccountInput(holderName, bankName, dto.ibanNumber);
 
     return {
       ...(dto.cardNumber === undefined ? {} : { cardNumber: dto.cardNumber }),
+      ...(dto.ibanNumber === undefined ? {} : { ibanNumber: dto.ibanNumber }),
       ...(holderName === undefined ? {} : { holderName }),
       ...(bankName === undefined ? {} : { bankName }),
     };
   }
 
-  private assertNames(holderName?: string, bankName?: string) {
+  private assertAccountInput(holderName?: string, bankName?: string, ibanNumber?: string) {
     if (holderName !== undefined && holderName.length < 2) {
       throw new BadRequestException('Account holder name is invalid.');
     }
     if (bankName !== undefined && bankName.length < 2) {
       throw new BadRequestException('Bank name is invalid.');
     }
+    if (ibanNumber !== undefined && !hasValidIranianIbanChecksum(ibanNumber)) {
+      throw new BadRequestException('Iranian IBAN checksum is invalid.');
+    }
   }
 
   private rethrowConstraintError(error: unknown): never {
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
       throw new ConflictException(
-        'This card number is already registered or another card is active.',
+        'This card number or IBAN is already registered, or another card is active.',
       );
     }
     throw error;

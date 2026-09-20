@@ -5,6 +5,7 @@ export type PublicShippingPricing = components['schemas']['ShippingPricingSettin
 export type PublicShippingOption = Readonly<{
   id: string;
   name: string;
+  subtitle: string | null;
   logo: Readonly<{ url: string | null; altText: string | null }> | null;
   pricingMode: 'FREE' | 'FIXED' | 'COLLECT';
   baseCostToman: number;

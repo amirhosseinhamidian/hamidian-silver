@@ -22,7 +22,7 @@ type CardToCardSettingsViewProps = Readonly<{
 const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
 
-function asciiDigits(value: string): string {
+function asciiDigits(value: string, maxLength: number): string {
   return [...value]
     .map((character) => {
       const persianIndex = PERSIAN_DIGITS.indexOf(character);
@@ -32,11 +32,25 @@ function asciiDigits(value: string): string {
     })
     .join('')
     .replace(/\D/g, '')
-    .slice(0, 16);
+    .slice(0, maxLength);
 }
 
 function groupedCardNumber(value: string): string {
   return value.replace(/(\d{4})(?=\d)/g, '$1 ');
+}
+
+function groupedIban(value: string): string {
+  return `IR${value}`.replace(/(.{4})(?=.)/g, '$1 ');
+}
+
+function hasValidIranianIbanChecksum(value: string): boolean {
+  if (!/^\d{24}$/.test(value)) return false;
+  const rearranged = `${value.slice(2)}1827${value.slice(0, 2)}`;
+  let remainder = 0;
+  for (const character of rearranged) {
+    remainder = (remainder * 10 + Number(character)) % 97;
+  }
+  return remainder === 1;
 }
 
 function responseError(payload: unknown): string {
@@ -52,16 +66,29 @@ function responseError(payload: unknown): string {
 export function CardToCardSettingsView({ initialAccounts, canWrite }: CardToCardSettingsViewProps) {
   const [accounts, setAccounts] = useState(initialAccounts);
   const [cardNumber, setCardNumber] = useState('');
+  const [ibanNumber, setIbanNumber] = useState('');
   const [holderName, setHolderName] = useState('');
   const [bankName, setBankName] = useState('');
   const [activate, setActivate] = useState(initialAccounts.length === 0);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [editingIbanAccountId, setEditingIbanAccountId] = useState<string | null>(
+    initialAccounts.find((account) => !account.ibanNumber)?.id ?? null,
+  );
+  const [ibanDraft, setIbanDraft] = useState('');
 
   async function addAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending || cardNumber.length !== 16 || !holderName.trim() || !bankName.trim()) return;
+    if (
+      pending ||
+      cardNumber.length !== 16 ||
+      !hasValidIranianIbanChecksum(ibanNumber) ||
+      !holderName.trim() ||
+      !bankName.trim()
+    ) {
+      return;
+    }
 
     setPending('create');
     setError(null);
@@ -72,6 +99,7 @@ export function CardToCardSettingsView({ initialAccounts, canWrite }: CardToCard
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cardNumber,
+          ibanNumber,
           holderName: holderName.trim(),
           bankName: bankName.trim(),
           isActive: activate,
@@ -87,10 +115,41 @@ export function CardToCardSettingsView({ initialAccounts, canWrite }: CardToCard
         ...current.map((account) => (created.isActive ? { ...account, isActive: false } : account)),
       ]);
       setCardNumber('');
+      setIbanNumber('');
       setHolderName('');
       setBankName('');
       setActivate(false);
-      setMessage('کارت جدید با موفقیت اضافه شد.');
+      setMessage('حساب جدید با موفقیت اضافه شد.');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : responseError(null));
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function updateAccountIban(account: AdminCardToCardAccount) {
+    if (pending || !hasValidIranianIbanChecksum(ibanDraft)) return;
+
+    setPending(`iban:${account.id}`);
+    setError(null);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/card-to-card-accounts/${encodeURIComponent(account.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ibanNumber: ibanDraft }),
+      });
+      const payload = (await response.json().catch(() => null)) as unknown;
+      if (!response.ok) throw new Error(responseError(payload));
+      const updated = parseCardToCardAccount(payload);
+      if (!updated) throw new Error('پاسخ سرویس تنظیمات معتبر نبود.');
+
+      setAccounts((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      setEditingIbanAccountId(null);
+      setIbanDraft('');
+      setMessage('شماره شبا با موفقیت ذخیره شد.');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : responseError(null));
     } finally {
@@ -121,7 +180,7 @@ export function CardToCardSettingsView({ initialAccounts, canWrite }: CardToCard
       );
       setMessage(
         updated.isActive
-          ? 'کارت انتخاب‌شده برای پرداخت مشتری فعال شد.'
+          ? 'حساب انتخاب‌شده برای پرداخت مشتری فعال شد.'
           : 'پرداخت کارت‌به‌کارت غیرفعال شد.',
       );
     } catch (caught) {
@@ -146,7 +205,7 @@ export function CardToCardSettingsView({ initialAccounts, canWrite }: CardToCard
       const payload = (await response.json().catch(() => null)) as unknown;
       if (!response.ok) throw new Error(responseError(payload));
       setAccounts((current) => current.filter((item) => item.id !== account.id));
-      setMessage('کارت حذف شد.');
+      setMessage('حساب حذف شد.');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : responseError(null));
     } finally {
@@ -161,7 +220,8 @@ export function CardToCardSettingsView({ initialAccounts, canWrite }: CardToCard
           کارت‌به‌کارت
         </h2>
         <p className="mt-2 text-sm leading-7 text-[var(--admin-color-muted)]">
-          چند کارت می‌توانید ثبت کنید؛ فقط کارت فعال در checkout به مشتری نمایش داده می‌شود.
+          چند حساب می‌توانید ثبت کنید؛ فقط حساب فعال و دارای شماره شبای معتبر در checkout به مشتری
+          نمایش داده می‌شود.
         </p>
       </div>
 
@@ -170,10 +230,10 @@ export function CardToCardSettingsView({ initialAccounts, canWrite }: CardToCard
 
       {canWrite ? (
         <Card
-          title="افزودن کارت"
-          description="اطلاعات حساب مقصد را دقیقاً مطابق کارت بانکی ثبت کنید."
+          title="افزودن حساب مقصد"
+          description="اطلاعات کارت و شماره شبای همان حساب را دقیق ثبت کنید."
         >
-          <form className="grid gap-4 lg:grid-cols-3" onSubmit={addAccount}>
+          <form className="grid gap-4 lg:grid-cols-2" onSubmit={addAccount}>
             <FormField id="card-number" label="شماره کارت" required>
               {(controlProps) => (
                 <Input
@@ -183,7 +243,25 @@ export function CardToCardSettingsView({ initialAccounts, canWrite }: CardToCard
                   autoComplete="off"
                   value={cardNumber}
                   placeholder="6037991234567890"
-                  onChange={(event) => setCardNumber(asciiDigits(event.target.value))}
+                  onChange={(event) => setCardNumber(asciiDigits(event.target.value, 16))}
+                />
+              )}
+            </FormField>
+            <FormField
+              id="account-iban-number"
+              label="شماره شبا"
+              hint="با یا بدون IR قابل ورود است؛ ۲۴ رقم شبا ذخیره می‌شود."
+              required
+            >
+              {(controlProps) => (
+                <Input
+                  {...controlProps}
+                  dir="ltr"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={ibanNumber}
+                  placeholder="IR820540102680020817909002"
+                  onChange={(event) => setIbanNumber(asciiDigits(event.target.value, 24))}
                 />
               )}
             </FormField>
@@ -205,21 +283,26 @@ export function CardToCardSettingsView({ initialAccounts, canWrite }: CardToCard
                 />
               )}
             </FormField>
-            <label className="flex min-h-10 items-center gap-3 text-sm lg:col-span-2">
+            <label className="flex min-h-10 items-center gap-3 text-sm">
               <input
                 type="checkbox"
                 checked={activate}
                 onChange={(event) => setActivate(event.target.checked)}
                 className="size-4 accent-[var(--admin-color-primary)]"
               />
-              این کارت پس از ثبت فعال شود
+              این حساب پس از ثبت فعال شود
             </label>
             <Button
               type="submit"
               loading={pending === 'create'}
-              disabled={cardNumber.length !== 16 || !holderName.trim() || !bankName.trim()}
+              disabled={
+                cardNumber.length !== 16 ||
+                !hasValidIranianIbanChecksum(ibanNumber) ||
+                !holderName.trim() ||
+                !bankName.trim()
+              }
             >
-              افزودن کارت
+              افزودن حساب
             </Button>
           </form>
         </Card>
@@ -240,18 +323,91 @@ export function CardToCardSettingsView({ initialAccounts, canWrite }: CardToCard
             <p className="font-mono text-xl tracking-[0.08em]" dir="ltr">
               {groupedCardNumber(account.cardNumber)}
             </p>
+            {account.ibanNumber ? (
+              <div className="mt-4 border-t border-[var(--admin-color-border)] pt-4">
+                <p className="text-xs text-[var(--admin-color-muted)]">شماره شبا</p>
+                <p className="mt-1 break-all font-mono text-sm tracking-[0.04em]" dir="ltr">
+                  {groupedIban(account.ibanNumber)}
+                </p>
+              </div>
+            ) : (
+              <Alert tone="warning" className="mt-4">
+                شماره شبای این حساب قدیمی هنوز ثبت نشده و تا زمان تکمیل در checkout نمایش داده
+                نمی‌شود.
+              </Alert>
+            )}
+
+            {canWrite && editingIbanAccountId === account.id ? (
+              <div className="mt-4 rounded-xl border border-[var(--admin-color-border)] p-3">
+                <label htmlFor={`iban-${account.id}`} className="text-xs font-bold">
+                  شماره شبای جدید
+                </label>
+                <Input
+                  id={`iban-${account.id}`}
+                  className="mt-2"
+                  dir="ltr"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={ibanDraft}
+                  placeholder="IR820540102680020817909002"
+                  onChange={(event) => setIbanDraft(asciiDigits(event.target.value, 24))}
+                />
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    loading={pending === `iban:${account.id}`}
+                    disabled={!hasValidIranianIbanChecksum(ibanDraft)}
+                    onClick={() => void updateAccountIban(account)}
+                  >
+                    ذخیره شبا
+                  </Button>
+                  {account.ibanNumber ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={pending !== null}
+                      onClick={() => {
+                        setEditingIbanAccountId(null);
+                        setIbanDraft('');
+                      }}
+                    >
+                      انصراف
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
             <p className="mt-3 text-xs text-[var(--admin-color-muted)]">
               آخرین تغییر: {formatAdminDateTime(account.updatedAt)}
             </p>
             {canWrite ? (
               <div className="mt-5 flex flex-wrap gap-2 border-t border-[var(--admin-color-border)] pt-4">
                 <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={pending !== null}
+                  onClick={() => {
+                    setEditingIbanAccountId(account.id);
+                    setIbanDraft(account.ibanNumber ?? '');
+                  }}
+                >
+                  {account.ibanNumber ? 'ویرایش شبا' : 'تکمیل شبا'}
+                </Button>
+                <Button
                   variant={account.isActive ? 'outline' : 'primary'}
                   size="sm"
                   loading={pending === account.id}
+                  disabled={pending !== null || (!account.isActive && !account.ibanNumber)}
                   onClick={() => void toggleAccount(account)}
                 >
-                  {account.isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن'}
+                  {account.isActive
+                    ? 'غیرفعال‌کردن'
+                    : account.ibanNumber
+                      ? 'فعال‌کردن'
+                      : 'ابتدا شبا را تکمیل کنید'}
                 </Button>
                 <Button
                   variant="danger"
@@ -269,7 +425,8 @@ export function CardToCardSettingsView({ initialAccounts, canWrite }: CardToCard
 
       {accounts.length === 0 ? (
         <Alert tone="info">
-          تا زمانی که کارتی ثبت و فعال نشود، کارت‌به‌کارت در checkout نمایش داده نمی‌شود.
+          تا زمانی که حساب دارای کارت و شبا ثبت و فعال نشود، کارت‌به‌کارت در checkout نمایش داده
+          نمی‌شود.
         </Alert>
       ) : null}
     </section>

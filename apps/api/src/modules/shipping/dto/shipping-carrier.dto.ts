@@ -19,6 +19,11 @@ export class CreateShippingCarrierDto {
   @Length(2, 200)
   name!: string;
 
+  @ApiProperty({ minLength: 2, maxLength: 240 })
+  @IsString()
+  @Length(2, 240)
+  subtitle!: string;
+
   @ApiPropertyOptional({ nullable: true, format: 'uri', maxLength: 1000 })
   @IsOptional()
   @IsString()
@@ -73,6 +78,9 @@ export class ShippingCarrierDto {
 
   name!: string;
 
+  @ApiProperty({ nullable: true, minLength: 2, maxLength: 240 })
+  subtitle!: string | null;
+
   @ApiProperty({ nullable: true, format: 'uri' })
   trackingUrl!: string | null;
 
@@ -110,6 +118,9 @@ export class PublicShippingOptionDto {
   id!: string;
 
   name!: string;
+
+  @ApiProperty({ nullable: true, minLength: 2, maxLength: 240 })
+  subtitle!: string | null;
 
   @ApiProperty({ type: () => AdminSiteMediaDto, nullable: true })
   logo!: AdminSiteMediaDto | null;
