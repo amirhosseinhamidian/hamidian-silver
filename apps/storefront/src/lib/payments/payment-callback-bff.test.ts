@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   handleGenericPaymentCallback,
@@ -17,6 +17,10 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+beforeEach(() => {
+  vi.stubEnv('STOREFRONT_PUBLIC_ORIGIN', 'https://shop.example');
+});
+
 describe('payment callback BFF', () => {
   it('forwards only supported gateway query values and returns to a successful result', async () => {
     const fetchMock = vi
@@ -27,7 +31,7 @@ describe('payment callback BFF', () => {
 
     const response = await handleGenericPaymentCallback(
       new Request(
-        'https://shop.example/api/payment/callback/attempt-1?Authority=AUTH-1&Status=OK&ignored=value',
+        'https://0.0.0.0:3000/api/payment/callback/attempt-1?Authority=AUTH-1&Status=OK&ignored=value',
       ),
       'attempt-1',
     );

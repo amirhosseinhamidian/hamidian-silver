@@ -1,4 +1,5 @@
 import { normalizeApiOrigin } from '@/lib/api/server-client';
+import { getStorefrontMetadataBase } from '@/lib/seo/metadata';
 
 type PaymentCallbackPayload = Readonly<{
   success?: boolean;
@@ -37,8 +38,8 @@ function callbackResultStatus(
   return payload?.success ? 'success' : 'pending';
 }
 
-function resultRedirect(request: Request, status: PaymentResultStatus, orderId?: string): Response {
-  const resultUrl = new URL('/payment/result', request.url);
+function resultRedirect(status: PaymentResultStatus, orderId?: string): Response {
+  const resultUrl = new URL('/payment/result', getStorefrontMetadataBase());
   resultUrl.searchParams.set('status', status);
   if (orderId) resultUrl.searchParams.set('orderId', orderId);
   return Response.redirect(resultUrl, 303);
@@ -65,12 +66,11 @@ async function forwardGetCallback(
     const response = await fetch(upstreamUrl, { cache: 'no-store' });
     const payload = await readCallbackPayload(response);
     return resultRedirect(
-      request,
       callbackResultStatus(response, payload),
       typeof payload?.orderId === 'string' ? payload.orderId : undefined,
     );
   } catch {
-    return resultRedirect(request, 'pending');
+    return resultRedirect('pending');
   }
 }
 
@@ -107,12 +107,11 @@ export async function handleMellatPaymentCallback(
     });
     const payload = await readCallbackPayload(response);
     return resultRedirect(
-      request,
       callbackResultStatus(response, payload),
       typeof payload?.orderId === 'string' ? payload.orderId : undefined,
     );
   } catch {
-    return resultRedirect(request, 'pending');
+    return resultRedirect('pending');
   }
 }
 
