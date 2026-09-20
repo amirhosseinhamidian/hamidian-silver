@@ -4,20 +4,15 @@ import Link from 'next/link';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
+import { PlatingTypeIndicator } from '@/components/plating/plating-type-indicator';
 import { ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QuantityControl } from '@/components/ui/quantity-control';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
-import type { CartPlatingType } from '@/lib/cart/cart-state';
 import { useCart } from '@/lib/cart/cart-store';
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
-
-const platingLabels: Record<CartPlatingType, string> = {
-  GOLD: 'آبکاری طلا',
-  RHODIUM: 'آبکاری رودیوم',
-};
 
 export default function CartPage() {
   const { items, itemCount, subtotalToman, setQuantity, removeItem } = useCart();
@@ -104,10 +99,10 @@ export default function CartPage() {
                       </p>
                     ) : null}
                     {item.platingType ? (
-                      <p className="mt-1 text-sm text-(--sf-color-muted)">
-                        {platingLabels[item.platingType]}
+                      <p className="mt-1 flex flex-wrap items-center gap-1 text-sm text-(--sf-color-muted)">
+                        <PlatingTypeIndicator type={item.platingType} />
                         {item.platingLeadTimeDays > 0
-                          ? ` · ${persianNumber.format(item.platingLeadTimeDays)} روز آماده‌سازی`
+                          ? `· ${persianNumber.format(item.platingLeadTimeDays)} روز آماده‌سازی`
                           : ''}
                       </p>
                     ) : null}

@@ -355,7 +355,12 @@ function ProductMobileCard({
 }
 
 function RateCard({ rate }: Readonly<{ rate: AdminPricingRate }>) {
-  const label = rate.type === 'GOLD' ? 'آبکاری طلا' : 'آبکاری رودیوم';
+  const label =
+    rate.type === 'GOLD'
+      ? 'آبکاری طلا'
+      : rate.type === 'ROSE_GOLD'
+        ? 'آبکاری رزگلد'
+        : 'آبکاری رودیوم';
   return (
     <Card
       title={label}

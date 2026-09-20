@@ -22,7 +22,7 @@ export type AdminPlatingOrderItem = Readonly<{
   variantName: string | null;
   sku: string;
   quantity: number;
-  platingType: 'GOLD' | 'RHODIUM';
+  platingType: 'GOLD' | 'ROSE_GOLD' | 'RHODIUM';
   platingWeightGrams: number | null;
   leadTimeDays: number | null;
 }>;
@@ -138,7 +138,7 @@ function parseItem(value: unknown): AdminPlatingOrderItem | null {
     !productName ||
     !sku ||
     quantity === null ||
-    (platingType !== 'GOLD' && platingType !== 'RHODIUM') ||
+    (platingType !== 'GOLD' && platingType !== 'ROSE_GOLD' && platingType !== 'RHODIUM') ||
     (platingWeightGrams === null && rawWeight !== null) ||
     (leadTimeDays === null && rawLeadTime !== null)
   ) {

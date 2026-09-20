@@ -20,7 +20,7 @@ function payload() {
         variantNameSnapshot: 'سایز ۵۲',
         skuSnapshot: 'RING-52',
         quantity: 1,
-        platingType: 'GOLD',
+        platingType: 'ROSE_GOLD',
         platingWeightGrams: '4.250',
         platingLeadTimeDays: 3,
       },
@@ -59,7 +59,13 @@ describe('plating operations model', () => {
         orderId: 'order-1',
         platingTotalToman: 250_000,
         fulfillmentStatus: 'IN_PROGRESS',
-        items: [expect.objectContaining({ platingWeightGrams: 4.25, leadTimeDays: 3 })],
+        items: [
+          expect.objectContaining({
+            platingType: 'ROSE_GOLD',
+            platingWeightGrams: 4.25,
+            leadTimeDays: 3,
+          }),
+        ],
         fulfillment: expect.objectContaining({ startNote: 'تحویل به کارگاه مرکزی' }),
       }),
     ]);

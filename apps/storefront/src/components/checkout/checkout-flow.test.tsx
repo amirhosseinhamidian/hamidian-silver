@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CheckoutFlow } from '@/components/checkout/checkout-flow';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import type { CartItem } from '@/lib/cart/cart-state';
+import type { PublicShippingOption } from '@/lib/shipping/public-shipping-pricing';
 
 const cartItem: CartItem = {
   key: 'variant-1:NONE',
@@ -27,6 +28,29 @@ const freeShipping = {
   thresholdToman: null,
   discountedCostToman: null,
 } as const;
+
+const shippingOptions: readonly PublicShippingOption[] = [
+  {
+    id: '44444444-4444-4444-8444-444444444441',
+    name: 'پست پیشتاز',
+    logo: null,
+    pricingMode: 'FREE',
+    baseCostToman: 0,
+    thresholdToman: null,
+    discountedCostToman: null,
+    serviceArea: 'NATIONWIDE',
+  },
+  {
+    id: '44444444-4444-4444-8444-444444444442',
+    name: 'ماهکس',
+    logo: null,
+    pricingMode: 'FIXED',
+    baseCostToman: 70_000,
+    thresholdToman: null,
+    discountedCostToman: null,
+    serviceArea: 'NATIONWIDE',
+  },
+];
 
 const { clearCart, routerPush } = vi.hoisted(() => ({
   clearCart: vi.fn(),
@@ -110,7 +134,7 @@ describe('CheckoutFlow price integrity', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<CheckoutFlow shippingPricing={freeShipping} />);
+    render(<CheckoutFlow shippingOptions={shippingOptions} />);
 
     await screen.findByText('اطلاعات ارسال');
     await screen.findByText('آدرس پیش‌فرض');
@@ -118,6 +142,15 @@ describe('CheckoutFlow price integrity', () => {
 
     const priceAlert = await screen.findByRole('alert');
     expect(priceAlert).toHaveTextContent('مبلغ جدید را بررسی و تأیید کنید.');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/checkout/order',
+      expect.objectContaining({
+        body: expect.stringContaining(shippingOptions[0]!.id),
+      }),
+    );
+    for (const radio of screen.getAllByRole('radio', { name: /پست پیشتاز|ماهکس/ })) {
+      expect(radio).toBeDisabled();
+    }
     expect(
       screen
         .getAllByText(formatTomanPrice(800_000))

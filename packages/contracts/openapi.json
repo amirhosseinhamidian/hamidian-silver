@@ -3852,6 +3852,7 @@
             "schema": {
               "enum": [
                 "GOLD",
+                "ROSE_GOLD",
                 "RHODIUM"
               ],
               "type": "string"
@@ -3889,6 +3890,7 @@
             "schema": {
               "enum": [
                 "GOLD",
+                "ROSE_GOLD",
                 "RHODIUM"
               ],
               "type": "string"
@@ -3967,6 +3969,7 @@
             "schema": {
               "enum": [
                 "GOLD",
+                "ROSE_GOLD",
                 "RHODIUM"
               ],
               "type": "string"
@@ -4042,6 +4045,7 @@
             "schema": {
               "enum": [
                 "GOLD",
+                "ROSE_GOLD",
                 "RHODIUM"
               ],
               "type": "string"
@@ -8302,6 +8306,7 @@
           "type": {
             "enum": [
               "GOLD",
+              "ROSE_GOLD",
               "RHODIUM"
             ],
             "type": "string"
@@ -10221,6 +10226,7 @@
             "type": "string",
             "enum": [
               "GOLD",
+              "ROSE_GOLD",
               "RHODIUM"
             ]
           }
@@ -10357,6 +10363,7 @@
             "nullable": true,
             "enum": [
               "GOLD",
+              "ROSE_GOLD",
               "RHODIUM"
             ],
             "type": "string"

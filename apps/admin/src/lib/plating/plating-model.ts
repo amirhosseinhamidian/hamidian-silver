@@ -1,4 +1,4 @@
-export type AdminPlatingType = 'GOLD' | 'RHODIUM';
+export type AdminPlatingType = 'GOLD' | 'ROSE_GOLD' | 'RHODIUM';
 
 export type AdminPlatingRate = Readonly<{
   id: string;
@@ -33,7 +33,7 @@ export type AdminPlatingVariant = Readonly<{
   options: readonly AdminPlatingOption[];
 }>;
 
-const PLATING_TYPES = new Set<AdminPlatingType>(['GOLD', 'RHODIUM']);
+const PLATING_TYPES = new Set<AdminPlatingType>(['GOLD', 'ROSE_GOLD', 'RHODIUM']);
 const PRODUCT_STATUSES = new Set<AdminPlatingVariant['productStatus']>([
   'DRAFT',
   'ACTIVE',
@@ -160,5 +160,7 @@ export function parsePlatingVariants(value: unknown): readonly AdminPlatingVaria
 }
 
 export function platingTypeLabel(type: AdminPlatingType): string {
-  return type === 'GOLD' ? 'آبکاری طلا' : 'آبکاری رودیوم';
+  if (type === 'GOLD') return 'آبکاری طلا';
+  if (type === 'ROSE_GOLD') return 'آبکاری رزگلد';
+  return 'آبکاری رودیوم';
 }

@@ -25,6 +25,7 @@ import {
   type AdminPaymentStatus,
   type AdminShipmentStatus,
 } from '@/lib/orders/orders-model';
+import { platingTypeLabel } from '@/lib/plating/plating-model';
 import {
   formatAdminDateTime,
   formatAdminInteger,
@@ -181,7 +182,7 @@ function OrderItemCard({ item }: Readonly<{ item: AdminOrderItem }>) {
       {item.platingType || item.unitWeightGrams !== null || item.supplierName ? (
         <p className="mt-3 text-xs leading-6 text-[var(--admin-color-muted)]">
           {item.platingType
-            ? `${item.platingType === 'GOLD' ? 'آبکاری طلا' : 'آبکاری رودیوم'}: ${formatAdminToman(item.unitPlatingPriceToman)}`
+            ? `${platingTypeLabel(item.platingType)}: ${formatAdminToman(item.unitPlatingPriceToman)}`
             : 'بدون آبکاری'}
           {item.unitWeightGrams !== null
             ? ` · وزن ${decimalFormatter.format(item.unitWeightGrams)} گرم`

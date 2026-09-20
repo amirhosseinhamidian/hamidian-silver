@@ -871,6 +871,7 @@ model ProductPriceHistory {
 
 enum PlatingType {
   GOLD
+  ROSE_GOLD
   RHODIUM
 }
 

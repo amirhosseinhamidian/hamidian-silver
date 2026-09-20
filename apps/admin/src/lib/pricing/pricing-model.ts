@@ -14,7 +14,7 @@ export type AdminPricingProduct = Readonly<{
 
 export type AdminPricingRate = Readonly<{
   id: string;
-  type: 'GOLD' | 'RHODIUM';
+  type: 'GOLD' | 'ROSE_GOLD' | 'RHODIUM';
   pricePerGramToman: number;
   leadTimeDays: number;
   active: boolean;
@@ -43,7 +43,7 @@ export type AdminPricingCatalog = Readonly<{
 }>;
 
 const PRODUCT_STATUSES = new Set<AdminPricingProductStatus>(['DRAFT', 'ACTIVE', 'ARCHIVED']);
-const PLATING_TYPES = new Set<AdminPricingRate['type']>(['GOLD', 'RHODIUM']);
+const PLATING_TYPES = new Set<AdminPricingRate['type']>(['GOLD', 'ROSE_GOLD', 'RHODIUM']);
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
@@ -152,7 +152,12 @@ function parsePlatingHistory(value: unknown): AdminPricingHistory | null {
   return {
     id,
     kind: 'PLATING',
-    title: type === 'GOLD' ? 'نرخ آبکاری طلا' : 'نرخ آبکاری رودیوم',
+    title:
+      type === 'GOLD'
+        ? 'نرخ آبکاری طلا'
+        : type === 'ROSE_GOLD'
+          ? 'نرخ آبکاری رزگلد'
+          : 'نرخ آبکاری رودیوم',
     previousPriceToman: number(item?.previousPricePerGramToman),
     newPriceToman: nextPrice,
     previousCompareAtPriceToman: null,

@@ -25,6 +25,7 @@ import {
   type AdminPlatingSla,
   type AdminPlatingSlaState,
 } from '@/lib/plating-operations/plating-operations-model';
+import { platingTypeLabel } from '@/lib/plating/plating-model';
 import {
   formatAdminDateTime,
   formatAdminInteger,
@@ -243,7 +244,7 @@ function OrderDetails({
                   </p>
                 </div>
                 <Badge tone={item.platingType === 'GOLD' ? 'warning' : 'info'}>
-                  {item.platingType === 'GOLD' ? 'طلا' : 'رودیوم'}
+                  {platingTypeLabel(item.platingType).replace('آبکاری ', '')}
                 </Badge>
               </div>
               <p className="mt-2 text-xs text-[var(--admin-color-muted)]">

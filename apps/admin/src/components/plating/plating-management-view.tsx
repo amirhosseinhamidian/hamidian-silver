@@ -31,7 +31,7 @@ import {
   toPersianDigits,
 } from '@/lib/presentation/formatters';
 
-const PLATING_TYPES: readonly AdminPlatingType[] = ['GOLD', 'RHODIUM'];
+const PLATING_TYPES: readonly AdminPlatingType[] = ['GOLD', 'ROSE_GOLD', 'RHODIUM'];
 
 type PlatingManagementViewProps = Readonly<{
   rates: readonly AdminPlatingRate[];
@@ -248,9 +248,17 @@ function RateCard({
   return (
     <Card
       title={platingTypeLabel(type)}
-      description={type === 'GOLD' ? 'پوشش طلایی محصولات نقره' : 'پوشش رودیوم با ظاهر روشن'}
+      description={
+        type === 'GOLD'
+          ? 'پوشش طلایی محصولات نقره'
+          : type === 'ROSE_GOLD'
+            ? 'پوشش رزگلد با تناژ گرم و صورتی'
+            : 'پوشش رودیوم با ظاهر روشن'
+      }
       action={canWrite ? <RateSheet type={type} rate={rate} /> : null}
-      className={type === 'GOLD' ? 'border-amber-200' : undefined}
+      className={
+        type === 'GOLD' ? 'border-amber-200' : type === 'ROSE_GOLD' ? 'border-rose-200' : undefined
+      }
     >
       {rate ? (
         <div className="grid grid-cols-2 gap-3">
@@ -508,7 +516,7 @@ function optionBadges(variant: AdminPlatingVariant) {
     <div className="flex flex-wrap gap-1">
       {active.map((option) => (
         <Badge key={option.type} tone={option.type === 'GOLD' ? 'warning' : 'info'}>
-          {option.type === 'GOLD' ? 'طلا' : 'رودیوم'}
+          {platingTypeLabel(option.type).replace('آبکاری ', '')}
         </Badge>
       ))}
     </div>
@@ -656,7 +664,7 @@ export function PlatingManagementView({
           تا زمان بازیابی نرخ‌ها، گزینه جدیدی را فعال نکنید.
         </Alert>
       ) : null}
-      <section aria-label="نرخ‌های آبکاری" className="grid gap-3 lg:grid-cols-2">
+      <section aria-label="نرخ‌های آبکاری" className="grid gap-3 lg:grid-cols-3">
         {PLATING_TYPES.map((type) => (
           <RateCard
             key={type}
@@ -681,7 +689,7 @@ export function PlatingManagementView({
       </div>
       <Card
         title="آبکاری تنوع‌های محصول"
-        description="وزن مبنا و گزینه‌های طلا یا رودیوم را برای هر SKU کنترل کنید."
+        description="وزن مبنا و گزینه‌های طلا، رزگلد یا رودیوم را برای هر SKU کنترل کنید."
       >
         {missingWeights > 0 ? (
           <Alert tone="warning" className="mb-4">

@@ -796,7 +796,10 @@ export function CheckoutFlow({
                   return (
                     <label
                       key={option.id}
-                      className={`cursor-pointer rounded-[var(--sf-radius-md)] border p-4 transition ${
+                      aria-disabled={pendingOrderId ? 'true' : undefined}
+                      className={`rounded-[var(--sf-radius-md)] border p-4 transition ${
+                        pendingOrderId ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                      } ${
                         selectedShippingOption?.id === option.id
                           ? 'border-[var(--sf-color-ink)] bg-[var(--sf-color-surface)]'
                           : 'border-[var(--sf-color-border)]'
@@ -807,6 +810,7 @@ export function CheckoutFlow({
                           type="radio"
                           name="shippingCarrier"
                           value={option.id}
+                          disabled={Boolean(pendingOrderId)}
                           checked={selectedShippingOption?.id === option.id}
                           onChange={() => setShippingCarrierId(option.id)}
                           className="size-4 accent-[var(--sf-color-ink)]"

@@ -66,6 +66,11 @@ const product: PublicCatalogProductDetail = {
           unitPriceToman: 25_000,
           leadTimeDays: 2,
         },
+        {
+          type: 'ROSE_GOLD',
+          unitPriceToman: 30_000,
+          leadTimeDays: 3,
+        },
       ],
       availableQuantity: 3,
       isAvailable: true,
@@ -148,6 +153,17 @@ describe('ProductPurchasePanel', () => {
 
     fireEvent.click(within(quantityControls[0]!).getByRole('button', { name: 'حذف از سبد خرید' }));
     expect(cartStoreMock.removeItem).toHaveBeenCalledWith(`${addedItem.variantId}:GOLD`);
+  });
+
+  it('shows rose-gold as a distinct colored plating option', () => {
+    render(<ProductPurchasePanel product={product} />);
+
+    fireEvent.click(screen.getByRole('radio', { name: '52' }));
+    const roseGoldOption = screen.getByRole('radio', { name: /آبکاری رزگلد/ });
+    expect(roseGoldOption).toBeInTheDocument();
+    expect(
+      screen.getByText('آبکاری رزگلد').closest('[data-plating-type="ROSE_GOLD"]'),
+    ).toBeInTheDocument();
   });
 
   it('uses the current cart quantity when the product page is revisited', () => {

@@ -5,9 +5,9 @@ import Link from 'next/link';
 import {
   customerOrderStatusLabel,
   formatOrderDate,
-  orderItemDetails,
   paymentMethodLabel,
 } from '@/components/account/account-order-presentation';
+import { CustomerOrderItemDetails } from '@/components/account/customer-order-item-details';
 import type { CustomerOrder } from '@/components/account/account-types';
 import { toPersianDigits } from '@/components/account/account-types';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
@@ -87,9 +87,10 @@ export function AccountOrdersPanel({ orders }: Readonly<{ orders: CustomerOrder[
                       >
                         {toPersianDigits(item.productNameSnapshot)}
                       </Link>
-                      <p className="mt-2 text-xs leading-6 text-[var(--sf-color-muted)]">
-                        {orderItemDetails(item)}
-                      </p>
+                      <CustomerOrderItemDetails
+                        item={item}
+                        className="mt-2 text-xs leading-6 text-[var(--sf-color-muted)]"
+                      />
                       <p className="mt-2 text-sm">{formatTomanPrice(item.lineTotalToman)}</p>
                     </div>
                   </li>

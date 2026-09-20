@@ -6,6 +6,7 @@ import { FiAlertCircle } from 'react-icons/fi';
 
 import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { StockNotificationButton } from '@/components/catalog/stock-notification-button';
+import { PlatingTypeIndicator } from '@/components/plating/plating-type-indicator';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { QuantityControl } from '@/components/ui/quantity-control';
 import { trackAddToCart } from '@/lib/analytics/commerce-events';
@@ -14,13 +15,9 @@ import { getDiscountPercent } from '@/lib/catalog/pricing';
 import type { PublicCatalogProductDetail } from '@/lib/catalog/public-catalog';
 import { cartItemKey, type CartPlatingType } from '@/lib/cart/cart-state';
 import { useCart } from '@/lib/cart/cart-store';
+import { platingPresentation } from '@/lib/plating/presentation';
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
-
-const platingLabels: Record<CartPlatingType, string> = {
-  GOLD: 'آبکاری طلا',
-  RHODIUM: 'آبکاری رودیوم',
-};
 
 type ProductVariant = PublicCatalogProductDetail['variants'][number];
 
@@ -168,7 +165,10 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       itemName: product.name,
       brand: product.brand?.name,
       category: product.categories[0]?.name,
-      variant: [getCartVariantLabel(selectedVariant), platingType && platingLabels[platingType]]
+      variant: [
+        getCartVariantLabel(selectedVariant),
+        platingType && platingPresentation(platingType).label,
+      ]
         .filter(Boolean)
         .join(' / '),
       priceToman: selectedSalePriceToman + (selectedPlating?.unitPriceToman ?? 0),
@@ -291,7 +291,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
                     transition-colors peer-checked:border-[var(--sf-color-ink)]
                   "
                 >
-                  <span>{platingLabels[option.type]}</span>
+                  <PlatingTypeIndicator type={option.type} />
                   <span className="text-left text-xs leading-5 text-[var(--sf-color-muted)]">
                     + {formatTomanPrice(option.unitPriceToman)}
                     {option.leadTimeDays > 0 ? (

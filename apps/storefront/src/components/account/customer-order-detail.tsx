@@ -7,10 +7,10 @@ import { FiCheck, FiCopy } from 'react-icons/fi';
 import {
   customerOrderStatusLabel,
   formatOrderDate,
-  orderItemDetails,
   orderStatusLabel,
   paymentMethodLabel,
 } from '@/components/account/account-order-presentation';
+import { CustomerOrderItemDetails } from '@/components/account/customer-order-item-details';
 import type { CustomerOrderDetail } from '@/components/account/account-types';
 import { readResponseError, toPersianDigits } from '@/components/account/account-types';
 import { CancelPendingOrder } from '@/components/account/cancel-pending-order';
@@ -290,9 +290,10 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
                     >
                       {toPersianDigits(item.productNameSnapshot)}
                     </Link>
-                    <p className="mt-2 text-xs leading-6 text-[var(--sf-color-muted)]">
-                      {orderItemDetails(item)}
-                    </p>
+                    <CustomerOrderItemDetails
+                      item={item}
+                      className="mt-2 text-xs leading-6 text-[var(--sf-color-muted)]"
+                    />
                     <p className="mt-1 text-xs text-[var(--sf-color-subtle)]">
                       کد کالا: {toPersianDigits(item.skuSnapshot)}
                     </p>

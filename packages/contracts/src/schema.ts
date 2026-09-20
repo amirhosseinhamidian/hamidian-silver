@@ -3218,7 +3218,7 @@ export interface components {
         };
         PublicCatalogPlatingOptionDto: {
             /** @enum {string} */
-            type: "GOLD" | "RHODIUM";
+            type: "GOLD" | "ROSE_GOLD" | "RHODIUM";
             unitPriceToman: number;
             leadTimeDays: number;
         };
@@ -3699,7 +3699,7 @@ export interface components {
             variantId: string;
             quantity: number;
             /** @enum {string} */
-            platingType?: "GOLD" | "RHODIUM";
+            platingType?: "GOLD" | "ROSE_GOLD" | "RHODIUM";
         };
         CreateOrderDto: {
             /** Format: uuid */
@@ -3732,7 +3732,7 @@ export interface components {
             variantNameSnapshot: string | null;
             sizeLabelSnapshot: string | null;
             /** @enum {string|null} */
-            platingType: "GOLD" | "RHODIUM" | null;
+            platingType: "GOLD" | "ROSE_GOLD" | "RHODIUM" | null;
             platingWeightGrams: string | null;
             platingRateToman: number | null;
             platingLeadTimeDays: number | null;
@@ -7126,7 +7126,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                type: "GOLD" | "RHODIUM";
+                type: "GOLD" | "ROSE_GOLD" | "RHODIUM";
             };
             cookie?: never;
         };
@@ -7149,7 +7149,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                type: "GOLD" | "RHODIUM";
+                type: "GOLD" | "ROSE_GOLD" | "RHODIUM";
             };
             cookie?: never;
         };
@@ -7194,7 +7194,7 @@ export interface operations {
             header?: never;
             path: {
                 variantId: string;
-                type: "GOLD" | "RHODIUM";
+                type: "GOLD" | "ROSE_GOLD" | "RHODIUM";
             };
             cookie?: never;
         };
@@ -7239,7 +7239,7 @@ export interface operations {
             header?: never;
             path: {
                 variantId: string;
-                type: "GOLD" | "RHODIUM";
+                type: "GOLD" | "ROSE_GOLD" | "RHODIUM";
             };
             cookie?: never;
         };

@@ -14,6 +14,15 @@ afterEach(() => {
 
 const rates: readonly AdminPlatingRate[] = [
   {
+    id: 'rate-rose-gold',
+    type: 'ROSE_GOLD',
+    pricePerGramToman: 50_000,
+    leadTimeDays: 3,
+    active: true,
+    createdAt: '2026-09-07T10:00:00.000Z',
+    updatedAt: '2026-09-07T11:00:00.000Z',
+  },
+  {
     id: 'rate-gold',
     type: 'GOLD',
     pricePerGramToman: 50_000,
@@ -75,7 +84,8 @@ describe('PlatingManagementView', () => {
     expect(screen.getByRole('region', { name: 'کارت‌های تنظیمات آبکاری' })).toHaveClass(
       'md:hidden',
     );
-    expect(screen.getByText('۵۰٬۰۰۰ تومان')).toBeInTheDocument();
+    expect(screen.getAllByText('۵۰٬۰۰۰ تومان')).toHaveLength(2);
+    expect(screen.getByText('آبکاری رزگلد')).toBeInTheDocument();
     expect(screen.getAllByText('انگشتر آذر').length).toBeGreaterThan(0);
   });
 
