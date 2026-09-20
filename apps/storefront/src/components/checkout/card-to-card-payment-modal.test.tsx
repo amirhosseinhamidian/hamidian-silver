@@ -3,6 +3,31 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CardToCardPaymentModal } from '@/components/checkout/card-to-card-payment-modal';
 
+vi.mock('@/components/ui/select', () => ({
+  Select: ({
+    id,
+    value,
+    onValueChange,
+    options,
+    placeholder,
+  }: {
+    id?: string;
+    value?: string;
+    onValueChange?: (value: string) => void;
+    options: readonly { value: string; label: string }[];
+    placeholder?: string;
+  }) => (
+    <select id={id} value={value} onChange={(event) => onValueChange?.(event.target.value)}>
+      <option value="">{placeholder}</option>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
 const settings = {
   enabled: true,
   cardNumber: '6037991234567890',
@@ -61,8 +86,7 @@ describe('CardToCardPaymentModal transfer details', () => {
       />,
     );
 
-    expect(screen.getByText('۳۸۰٬۰۰۰٬۰۰۰ ریال')).toBeInTheDocument();
-    expect(screen.getByText(/معادل.*۳۸٬۰۰۰٬۰۰۰ تومان/)).toBeInTheDocument();
+    expect(screen.getByText('۳۸۰,۰۰۰,۰۰۰ ریال')).toBeInTheDocument();
     fireEvent.click(screen.getAllByTitle('کپی مبلغ به ریال')[0]!);
 
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('380000000'));

@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { FiCheck, FiClipboard, FiUploadCloud, FiX } from 'react-icons/fi';
 
 import { Button } from '@/components/ui/button';
-import { formatRialPrice, formatTomanPrice } from '@/lib/catalog/presentation';
+import { Select } from '@/components/ui/select';
+import { formatRialPrice } from '@/lib/catalog/presentation';
 import { IRANIAN_BANKS, recommendTransfer } from '@/lib/checkout/transfer-recommendation';
-import { Select } from '../ui/select';
 
 export type CardToCardSettings = Readonly<{
   enabled: boolean;
