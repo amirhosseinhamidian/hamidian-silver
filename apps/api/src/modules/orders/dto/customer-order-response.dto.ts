@@ -109,6 +109,8 @@ export class CustomerOrderSummaryDto {
 
   @ApiProperty({ type: String, nullable: true, format: 'uri' })
   shippingCarrierLogoUrl!: string | null;
+
+  shippingPayOnDelivery!: boolean;
   reservationExpiresAt!: Date;
 
   @ApiProperty({ type: Date, nullable: true })

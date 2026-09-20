@@ -3852,6 +3852,7 @@
             "schema": {
               "enum": [
                 "GOLD",
+                "ROSE_GOLD",
                 "RHODIUM"
               ],
               "type": "string"
@@ -3889,6 +3890,7 @@
             "schema": {
               "enum": [
                 "GOLD",
+                "ROSE_GOLD",
                 "RHODIUM"
               ],
               "type": "string"
@@ -3967,6 +3969,7 @@
             "schema": {
               "enum": [
                 "GOLD",
+                "ROSE_GOLD",
                 "RHODIUM"
               ],
               "type": "string"
@@ -4042,6 +4045,7 @@
             "schema": {
               "enum": [
                 "GOLD",
+                "ROSE_GOLD",
                 "RHODIUM"
               ],
               "type": "string"
@@ -6255,6 +6259,30 @@
         ]
       }
     },
+    "/api/v1/shipping/options/public": {
+      "get": {
+        "operationId": "ShippingController_listPublicShippingOptions_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicShippingOptionDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Shipping"
+        ]
+      }
+    },
     "/api/v1/shipping/carriers": {
       "get": {
         "operationId": "ShippingController_listCarriers_v1",
@@ -8278,6 +8306,7 @@
           "type": {
             "enum": [
               "GOLD",
+              "ROSE_GOLD",
               "RHODIUM"
             ],
             "type": "string"
@@ -10197,6 +10226,7 @@
             "type": "string",
             "enum": [
               "GOLD",
+              "ROSE_GOLD",
               "RHODIUM"
             ]
           }
@@ -10209,6 +10239,10 @@
       "CreateOrderDto": {
         "type": "object",
         "properties": {
+          "shippingCarrierId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "userAddressId": {
             "type": "string",
             "format": "uuid"
@@ -10329,6 +10363,7 @@
             "nullable": true,
             "enum": [
               "GOLD",
+              "ROSE_GOLD",
               "RHODIUM"
             ],
             "type": "string"
@@ -10575,6 +10610,9 @@
           "returnAuthorized": {
             "type": "boolean"
           },
+          "shippingPayOnDelivery": {
+            "type": "boolean"
+          },
           "reservationExpiresAt": {
             "format": "date-time",
             "type": "string"
@@ -10610,6 +10648,7 @@
           "taxTotalToman",
           "grandTotalToman",
           "returnAuthorized",
+          "shippingPayOnDelivery",
           "reservationExpiresAt",
           "createdAt",
           "updatedAt"
@@ -10705,6 +10744,9 @@
           "returnAuthorized": {
             "type": "boolean"
           },
+          "shippingPayOnDelivery": {
+            "type": "boolean"
+          },
           "reservationExpiresAt": {
             "format": "date-time",
             "type": "string"
@@ -10738,6 +10780,7 @@
           "taxTotalToman",
           "grandTotalToman",
           "returnAuthorized",
+          "shippingPayOnDelivery",
           "reservationExpiresAt",
           "createdAt",
           "updatedAt"
@@ -11583,6 +11626,63 @@
           "altText"
         ]
       },
+      "PublicShippingOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "logo": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AdminSiteMediaDto"
+              }
+            ]
+          },
+          "pricingMode": {
+            "enum": [
+              "FREE",
+              "FIXED",
+              "COLLECT"
+            ],
+            "type": "string"
+          },
+          "thresholdToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "discountedCostToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "serviceArea": {
+            "enum": [
+              "NATIONWIDE",
+              "TEHRAN_ONLY"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "baseCostToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "logo",
+          "pricingMode",
+          "thresholdToman",
+          "discountedCostToman",
+          "serviceArea",
+          "name",
+          "baseCostToman"
+        ]
+      },
       "ShippingCarrierDto": {
         "type": "object",
         "properties": {
@@ -11609,6 +11709,29 @@
               }
             ]
           },
+          "pricingMode": {
+            "enum": [
+              "FREE",
+              "FIXED",
+              "COLLECT"
+            ],
+            "type": "string"
+          },
+          "thresholdToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "discountedCostToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "serviceArea": {
+            "enum": [
+              "NATIONWIDE",
+              "TEHRAN_ONLY"
+            ],
+            "type": "string"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -11620,6 +11743,9 @@
           "name": {
             "type": "string"
           },
+          "baseCostToman": {
+            "type": "number"
+          },
           "isActive": {
             "type": "boolean"
           }
@@ -11629,9 +11755,14 @@
           "trackingUrl",
           "logoMediaId",
           "logo",
+          "pricingMode",
+          "thresholdToman",
+          "discountedCostToman",
+          "serviceArea",
           "createdAt",
           "updatedAt",
           "name",
+          "baseCostToman",
           "isActive"
         ]
       },
@@ -11653,6 +11784,38 @@
             "type": "string",
             "nullable": true,
             "format": "uuid"
+          },
+          "pricingMode": {
+            "enum": [
+              "FREE",
+              "FIXED",
+              "COLLECT"
+            ],
+            "type": "string",
+            "default": "FREE"
+          },
+          "baseCostToman": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "thresholdToman": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1
+          },
+          "discountedCostToman": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "serviceArea": {
+            "enum": [
+              "NATIONWIDE",
+              "TEHRAN_ONLY"
+            ],
+            "type": "string",
+            "default": "NATIONWIDE"
           },
           "isActive": {
             "type": "boolean",
@@ -11681,6 +11844,38 @@
             "type": "string",
             "nullable": true,
             "format": "uuid"
+          },
+          "pricingMode": {
+            "enum": [
+              "FREE",
+              "FIXED",
+              "COLLECT"
+            ],
+            "type": "string",
+            "default": "FREE"
+          },
+          "baseCostToman": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "thresholdToman": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1
+          },
+          "discountedCostToman": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "serviceArea": {
+            "enum": [
+              "NATIONWIDE",
+              "TEHRAN_ONLY"
+            ],
+            "type": "string",
+            "default": "NATIONWIDE"
           },
           "isActive": {
             "type": "boolean",

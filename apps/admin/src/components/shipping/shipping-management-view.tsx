@@ -147,6 +147,23 @@ function ShipmentDetails({ order }: Readonly<{ order: AdminOrder }>) {
           ]}
         />
       </Card>
+      {order.shippingSelection ? (
+        <Card title="روش ارسال انتخاب‌شده مشتری">
+          <DetailRows
+            rows={[
+              ['شرکت ارسال', order.shippingSelection.carrierName],
+              [
+                'نحوه پرداخت هزینه ارسال',
+                order.shippingSelection.pricingMode === 'COLLECT'
+                  ? 'پس‌کرایه هنگام تحویل'
+                  : order.shippingTotalToman === 0
+                    ? 'رایگان'
+                    : 'پرداخت‌شده همراه سفارش',
+              ],
+            ]}
+          />
+        </Card>
+      ) : null}
       <Card title="مشخصات مرسوله">
         {shipment ? (
           <DetailRows
@@ -275,8 +292,12 @@ export function ShippingManagementView({
   function openAction(nextAction: ShippingAction) {
     setMobileDetailsId(null);
     setAction(nextAction);
-    setCarrierSelection(carriers[0]?.id ?? 'custom');
-    setServiceName(carriers.length ? '' : 'ارسال استاندارد');
+    setCarrierSelection(
+      nextAction.order.shippingSelection?.carrierId ?? carriers[0]?.id ?? 'custom',
+    );
+    setServiceName(
+      nextAction.order.shippingSelection?.carrierName ?? (carriers.length ? '' : 'ارسال استاندارد'),
+    );
     setEstimatedDays('۳');
     setTrackingCode(nextAction.order.shipment?.trackingCode ?? '');
     setReason('');
@@ -294,9 +315,12 @@ export function ShippingManagementView({
     let payload: Record<string, string | number>;
     if (action.kind === 'create') {
       const days = Number(toAsciiDigits(estimatedDays));
-      const selectedCarrier = carriers.find((carrier) => carrier.id === carrierSelection);
+      const orderCarrierId = action.order.shippingSelection?.carrierId;
+      const selectedCarrier = orderCarrierId
+        ? null
+        : carriers.find((carrier) => carrier.id === carrierSelection);
       if (
-        (!selectedCarrier && serviceName.trim().length < 2) ||
+        (!orderCarrierId && !selectedCarrier && serviceName.trim().length < 2) ||
         !Number.isInteger(days) ||
         days < 1 ||
         days > 30
@@ -305,9 +329,11 @@ export function ShippingManagementView({
       endpoint = `/api/shipping/orders/${encodeURIComponent(action.order.id)}/manual`;
       method = 'POST';
       payload = {
-        ...(selectedCarrier
-          ? { carrierId: selectedCarrier.id }
-          : { serviceName: serviceName.trim() }),
+        ...(orderCarrierId
+          ? { carrierId: orderCarrierId }
+          : selectedCarrier
+            ? { carrierId: selectedCarrier.id }
+            : { serviceName: serviceName.trim() }),
         estimatedDeliveryDays: days,
         reason: cleanReason,
       };
@@ -389,7 +415,7 @@ export function ShippingManagementView({
     {
       id: 'service',
       header: 'سرویس',
-      cell: (order) => order.shipment?.serviceName ?? '—',
+      cell: (order) => order.shipment?.serviceName ?? order.shippingSelection?.carrierName ?? '—',
       visibility: 'lg',
     },
     {
@@ -494,7 +520,11 @@ export function ShippingManagementView({
             eyebrow={toPersianDigits(order.customer.name ?? formatAdminPhone(order.customer.phone))}
             status={<StatusBadge order={order} />}
             items={[
-              { label: 'سرویس', value: order.shipment?.serviceName ?? 'ثبت نشده' },
+              {
+                label: 'سرویس',
+                value:
+                  order.shipment?.serviceName ?? order.shippingSelection?.carrierName ?? 'ثبت نشده',
+              },
               {
                 label: 'هزینه',
                 value:
@@ -570,27 +600,34 @@ export function ShippingManagementView({
           <form id="shipping-operation-form" onSubmit={submit} className="space-y-4">
             {action?.kind === 'create' ? (
               <>
-                <FormField id="manual-carrier" label="شرکت ارسال‌کننده" required>
-                  {(props) => (
-                    <Select
-                      {...props}
-                      value={carrierSelection}
-                      options={[
-                        ...carriers.map((carrier) => ({
-                          value: carrier.id,
-                          label: carrier.name,
-                        })),
-                        { value: 'custom', label: 'سایر (ورود نام دستی)' },
-                      ]}
-                      onValueChange={(value) => {
-                        setCarrierSelection(value);
-                        setError('');
-                      }}
-                      disabled={pending}
-                    />
-                  )}
-                </FormField>
-                {carrierSelection === 'custom' ? (
+                {action.order.shippingSelection ? (
+                  <Alert tone="info" title="روش ارسال انتخاب‌شده مشتری">
+                    مرسوله با «{action.order.shippingSelection.carrierName}» ساخته می‌شود. این
+                    انتخاب برای حفظ سفارش مشتری قابل تغییر نیست.
+                  </Alert>
+                ) : (
+                  <FormField id="manual-carrier" label="شرکت ارسال‌کننده" required>
+                    {(props) => (
+                      <Select
+                        {...props}
+                        value={carrierSelection}
+                        options={[
+                          ...carriers.map((carrier) => ({
+                            value: carrier.id,
+                            label: carrier.name,
+                          })),
+                          { value: 'custom', label: 'سایر (ورود نام دستی)' },
+                        ]}
+                        onValueChange={(value) => {
+                          setCarrierSelection(value);
+                          setError('');
+                        }}
+                        disabled={pending}
+                      />
+                    )}
+                  </FormField>
+                )}
+                {!action.order.shippingSelection && carrierSelection === 'custom' ? (
                   <FormField id="manual-service-name" label="نام شیوه ارسال" required>
                     {(props) => (
                       <Input

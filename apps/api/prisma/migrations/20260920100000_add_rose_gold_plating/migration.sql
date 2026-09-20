@@ -1,0 +1,1 @@
+ALTER TYPE "PlatingType" ADD VALUE 'ROSE_GOLD';

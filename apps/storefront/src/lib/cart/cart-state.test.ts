@@ -89,6 +89,26 @@ describe('cart state', () => {
     ]);
   });
 
+  it('restores rose-gold plating as a supported cart selection', () => {
+    const restored = deserializeCart(
+      JSON.stringify([
+        {
+          ...baseItem,
+          platingType: 'ROSE_GOLD',
+          unitPlatingPriceToman: 30_000,
+          platingLeadTimeDays: 3,
+        },
+      ]),
+    );
+
+    expect(restored).toEqual([
+      expect.objectContaining({
+        key: `${baseItem.variantId}:ROSE_GOLD`,
+        platingType: 'ROSE_GOLD',
+      }),
+    ]);
+  });
+
   it('rejects an unsafe persisted compare price', () => {
     expect(
       deserializeCart(

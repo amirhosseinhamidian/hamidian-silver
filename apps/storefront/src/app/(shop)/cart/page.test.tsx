@@ -6,7 +6,7 @@ import { formatTomanPrice } from '@/lib/catalog/presentation';
 
 const { cartItem, removeItem } = vi.hoisted(() => ({
   cartItem: {
-    key: 'variant-1:GOLD',
+    key: 'variant-1:ROSE_GOLD',
     variantId: '11111111-1111-4111-8111-111111111111',
     productSlug: 'silver-ring',
     productName: 'انگشتر نقره',
@@ -14,7 +14,7 @@ const { cartItem, removeItem } = vi.hoisted(() => ({
     media: null,
     unitSalePriceToman: 800_000,
     unitCompareAtPriceToman: 1_000_000,
-    platingType: 'GOLD' as const,
+    platingType: 'ROSE_GOLD' as const,
     unitPlatingPriceToman: 25_000,
     platingLeadTimeDays: 2,
     quantity: 1,
@@ -45,6 +45,11 @@ describe('CartPage', () => {
     expect(screen.getAllByText(formatTomanPrice(825_000)).length).toBeGreaterThan(0);
     expect(screen.getByText('۲۰٪')).toHaveClass('bg-[var(--sf-color-ink)]', 'text-white');
     expect(screen.queryByText(/تخفیف/)).not.toBeInTheDocument();
+    expect(screen.getByText('آبکاری رزگلد')).toBeInTheDocument();
+    expect(screen.getByText('آبکاری رزگلد').parentElement).toHaveAttribute(
+      'data-plating-type',
+      'ROSE_GOLD',
+    );
   });
 
   it('uses the quantity control remove action when a line has one item', () => {

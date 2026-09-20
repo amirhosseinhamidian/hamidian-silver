@@ -12,11 +12,13 @@ const ATTEMPT_ID = '40000000-0000-4000-8000-000000000001';
 const PRODUCT_ID = '10000000-0000-4000-8000-000000000001';
 const VARIANT_ID = '20000000-0000-4000-8000-000000000001';
 const ADDRESS_ID = '50000000-0000-4000-8000-000000000001';
+const SHIPPING_CARRIER_ID = '90000000-0000-4000-8000-000000000001';
 const CREATED_AT = '2026-09-11T08:00:00.000Z';
 const PAID_AT = '2026-09-11T08:02:00.000Z';
 
 let paymentConfirmed = false;
 let orderCreated = false;
+let receiptSubmitted = false;
 let apiUnavailable = false;
 
 const media = {
@@ -96,6 +98,15 @@ function order() {
     reservationExpiresAt: '2026-09-11T08:30:00.000Z',
     createdAt: CREATED_AT,
     updatedAt: paymentConfirmed ? PAID_AT : CREATED_AT,
+    payment: receiptSubmitted
+      ? {
+          status: 'AWAITING_REVIEW',
+          method: 'CARD_TO_CARD',
+          receiptAvailable: true,
+          receiptOriginalName: 'receipt.png',
+          receiptUploadedAt: PAID_AT,
+        }
+      : null,
     items: [
       {
         id: '60000000-0000-4000-8000-000000000001',
@@ -193,6 +204,7 @@ async function handler(request, response) {
   if (request.method === 'POST' && url.pathname === '/__e2e/reset') {
     paymentConfirmed = false;
     orderCreated = false;
+    receiptSubmitted = false;
     apiUnavailable = false;
     return json(response, 200, { reset: true });
   }
@@ -254,6 +266,21 @@ async function handler(request, response) {
     });
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/v1/shipping/options/public') {
+    return json(response, 200, [
+      {
+        id: SHIPPING_CARRIER_ID,
+        name: 'پست پیشتاز',
+        logo: null,
+        pricingMode: 'FREE',
+        baseCostToman: 0,
+        thresholdToman: null,
+        discountedCostToman: null,
+        serviceArea: 'NATIONWIDE',
+      },
+    ]);
+  }
+
   if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/products/silver-ring') {
     return json(response, 200, product);
   }
@@ -293,12 +320,23 @@ async function handler(request, response) {
     return json(response, 200, [address]);
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/v1/payments/card-to-card/settings') {
+    if (!requireAuthentication(request, response)) return;
+    return json(response, 200, {
+      enabled: true,
+      cardNumber: '6037991234567890',
+      holderName: 'گالری حمدیان',
+      bankName: 'بانک ملی',
+    });
+  }
+
   if (request.method === 'POST' && url.pathname === '/api/v1/orders') {
     if (!requireAuthentication(request, response)) return;
     const payload = await body(request);
     const item = payload.items?.[0];
     if (
       payload.userAddressId !== ADDRESS_ID ||
+      payload.shippingCarrierId !== SHIPPING_CARRIER_ID ||
       item?.variantId !== VARIANT_ID ||
       item.quantity !== 1
     ) {
@@ -306,6 +344,27 @@ async function handler(request, response) {
     }
     orderCreated = true;
     return json(response, 201, order());
+  }
+
+  if (
+    request.method === 'POST' &&
+    url.pathname === `/api/v1/payments/orders/${ORDER_ID}/card-to-card/receipt`
+  ) {
+    if (!requireAuthentication(request, response)) return;
+    if (!orderCreated) return json(response, 409, { message: 'Order has not been created.' });
+    if (!(request.headers['content-type'] ?? '').startsWith('multipart/form-data;')) {
+      return json(response, 415, { message: 'Receipt must use multipart form data.' });
+    }
+    for await (const chunk of request) {
+      // Drain the multipart upload; payload details are validated by component tests.
+      void chunk;
+    }
+    receiptSubmitted = true;
+    return json(response, 201, {
+      orderId: ORDER_ID,
+      status: 'AWAITING_REVIEW',
+      receiptUploadedAt: PAID_AT,
+    });
   }
 
   if (

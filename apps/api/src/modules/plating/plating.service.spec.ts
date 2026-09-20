@@ -102,7 +102,7 @@ describe('PlatingService', () => {
       platingRate: {
         findUnique: jest.fn().mockResolvedValue({
           id: rateId,
-          type: PlatingType.RHODIUM,
+          type: PlatingType.ROSE_GOLD,
           pricePerGramToman: 30_000,
           leadTimeDays: 1,
           isActive: true,
@@ -120,7 +120,7 @@ describe('PlatingService', () => {
     );
 
     await service.setRate(
-      PlatingType.RHODIUM,
+      PlatingType.ROSE_GOLD,
       {
         pricePerGramToman: 30_000,
         leadTimeDays: 1,

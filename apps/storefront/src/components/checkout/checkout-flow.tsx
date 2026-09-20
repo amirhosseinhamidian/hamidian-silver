@@ -20,7 +20,10 @@ import { useCart } from '@/lib/cart/cart-store';
 import { buildCreateOrderBody } from '@/lib/checkout/checkout-payload';
 import { cityOptionsFor, PROVINCE_OPTIONS } from '@/lib/checkout/iran-locations';
 import {
+  calculateShippingOptionCost,
   calculatePublicShippingCost,
+  shippingOptionSupportsDestination,
+  type PublicShippingOption,
   type PublicShippingPricing,
 } from '@/lib/shipping/public-shipping-pricing';
 
@@ -131,7 +134,11 @@ async function readError(response: Response): Promise<{ message: string; code: s
 
 export function CheckoutFlow({
   shippingPricing = null,
-}: Readonly<{ shippingPricing?: PublicShippingPricing | null }>) {
+  shippingOptions = [],
+}: Readonly<{
+  shippingPricing?: PublicShippingPricing | null;
+  shippingOptions?: readonly PublicShippingOption[];
+}>) {
   const router = useRouter();
   const { items, itemCount, subtotalToman, clearCart } = useCart();
   const [auth, setAuth] = useState<AuthState>({ status: 'checking' });
@@ -151,6 +158,7 @@ export function CheckoutFlow({
   const [staleCart, setStaleCart] = useState(false);
   const [uncertainCheckout, setUncertainCheckout] = useState<'order' | 'payment' | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card_to_card');
+  const [shippingCarrierId, setShippingCarrierId] = useState(shippingOptions[0]?.id ?? '');
   const [cardToCardSettings, setCardToCardSettings] = useState<CardToCardSettings | null>(null);
   const [cardToCardOrder, setCardToCardOrder] = useState<{
     id: string;
@@ -180,9 +188,23 @@ export function CheckoutFlow({
       ? options
       : [{ value: addressFields.city, label: addressFields.city }, ...options];
   }, [addressFields.city, addressFields.province]);
-  const estimatedShippingToman = shippingPricing
-    ? calculatePublicShippingCost(shippingPricing, subtotalToman)
-    : null;
+  const shippingDestination = selectedAddress ?? addressFields;
+  const availableShippingOptions = useMemo(
+    () =>
+      shippingOptions.filter((option) =>
+        shippingOptionSupportsDestination(option, shippingDestination),
+      ),
+    [shippingDestination, shippingOptions],
+  );
+  const selectedShippingOption =
+    availableShippingOptions.find((option) => option.id === shippingCarrierId) ??
+    availableShippingOptions[0] ??
+    null;
+  const estimatedShippingToman = selectedShippingOption
+    ? calculateShippingOptionCost(selectedShippingOption, subtotalToman)
+    : shippingPricing
+      ? calculatePublicShippingCost(shippingPricing, subtotalToman)
+      : null;
   const estimatedTotalToman = subtotalToman + (estimatedShippingToman ?? 0);
 
   useEffect(() => {
@@ -318,6 +340,10 @@ export function CheckoutFlow({
   async function submitCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!BANK_GATEWAY_CHECKOUT_ENABLED && paymentMethod === 'gateway') return;
+    if (!selectedShippingOption && !shippingPricing) {
+      setCheckoutError('برای آدرس انتخاب‌شده یک روش ارسال انتخاب کنید.');
+      return;
+    }
     if (
       auth.status !== 'authenticated' ||
       items.length === 0 ||
@@ -345,17 +371,21 @@ export function CheckoutFlow({
         }
 
         const orderBody = userAddressId
-          ? buildCreateOrderBody(items, { userAddressId })
-          : buildCreateOrderBody(items, {
-              shippingAddress: {
-                recipientName: addressFields.recipientName.trim(),
-                phone: toAsciiDigits(addressFields.phone),
-                province: addressFields.province,
-                city: addressFields.city,
-                addressLine: addressFields.addressLine.trim(),
-                postalCode: digitsOnly(addressFields.postalCode, 10),
+          ? buildCreateOrderBody(items, { userAddressId }, selectedShippingOption?.id)
+          : buildCreateOrderBody(
+              items,
+              {
+                shippingAddress: {
+                  recipientName: addressFields.recipientName.trim(),
+                  phone: toAsciiDigits(addressFields.phone),
+                  province: addressFields.province,
+                  city: addressFields.city,
+                  addressLine: addressFields.addressLine.trim(),
+                  postalCode: digitsOnly(addressFields.postalCode, 10),
+                },
               },
-            });
+              selectedShippingOption?.id,
+            );
         const orderResponse = await fetch('/api/checkout/order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -398,7 +428,7 @@ export function CheckoutFlow({
         setPendingOrderShippingToman(order.shippingTotalToman);
         setCompletedOrderNumber(order.orderNumber);
         if (
-          !shippingPricing ||
+          (!selectedShippingOption && !shippingPricing) ||
           order.shippingTotalToman !== estimatedShippingToman ||
           order.grandTotalToman !== estimatedTotalToman
         ) {
@@ -549,6 +579,7 @@ export function CheckoutFlow({
   ];
   const payableAmount = pendingOrderTotalToman ?? estimatedTotalToman;
   const displayedShippingToman = pendingOrderShippingToman ?? estimatedShippingToman;
+  const shippingIsCollect = selectedShippingOption?.pricingMode === 'COLLECT';
 
   return (
     <form
@@ -756,6 +787,66 @@ export function CheckoutFlow({
         )}
 
         <fieldset className="mt-10">
+          <legend className="text-xl font-medium">روش ارسال</legend>
+          {shippingOptions.length ? (
+            availableShippingOptions.length ? (
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {availableShippingOptions.map((option) => {
+                  const cost = calculateShippingOptionCost(option, subtotalToman);
+                  return (
+                    <label
+                      key={option.id}
+                      aria-disabled={pendingOrderId ? 'true' : undefined}
+                      className={`rounded-[var(--sf-radius-md)] border p-4 transition ${
+                        pendingOrderId ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                      } ${
+                        selectedShippingOption?.id === option.id
+                          ? 'border-[var(--sf-color-ink)] bg-[var(--sf-color-surface)]'
+                          : 'border-[var(--sf-color-border)]'
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="shippingCarrier"
+                          value={option.id}
+                          disabled={Boolean(pendingOrderId)}
+                          checked={selectedShippingOption?.id === option.id}
+                          onChange={() => setShippingCarrierId(option.id)}
+                          className="size-4 accent-[var(--sf-color-ink)]"
+                        />
+                        {option.logo?.url ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- Carrier logos use admin-managed public media URLs.
+                          <img
+                            src={option.logo.url}
+                            alt=""
+                            className="size-9 rounded-full border border-[var(--sf-color-border)] object-contain p-1"
+                          />
+                        ) : null}
+                        <strong className="text-sm">{option.name}</strong>
+                      </span>
+                      <span className="mt-2 block ps-7 text-xs text-[var(--sf-color-muted)]">
+                        {option.pricingMode === 'COLLECT'
+                          ? 'ویژه شهر تهران · هزینه هنگام تحویل'
+                          : formatShippingToman(cost)}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <p role="alert" className="mt-4 text-sm text-red-600">
+                برای این مقصد روش ارسال فعالی وجود ندارد.
+              </p>
+            )
+          ) : shippingPricing ? null : (
+            <p role="alert" className="mt-4 text-sm text-red-600">
+              در حال حاضر روش ارسال فعالی ثبت نشده است.
+            </p>
+          )}
+        </fieldset>
+
+        <fieldset className="mt-10">
           <legend className="text-xl font-medium">روش پرداخت</legend>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <label
@@ -820,9 +911,11 @@ export function CheckoutFlow({
           <div className="flex items-center justify-between gap-4">
             <span className="text-[var(--sf-color-muted)]">هزینه ارسال</span>
             <span>
-              {displayedShippingToman === null
-                ? 'هنگام ثبت سفارش'
-                : formatShippingToman(displayedShippingToman)}
+              {shippingIsCollect
+                ? 'پس‌کرایه'
+                : displayedShippingToman === null
+                  ? 'هنگام ثبت سفارش'
+                  : formatShippingToman(displayedShippingToman)}
             </span>
           </div>
         </div>

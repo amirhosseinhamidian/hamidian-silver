@@ -41,7 +41,7 @@ export type AdminOrderItem = Readonly<{
   unitSalePriceToman: number;
   unitSupplierPriceToman: number | null;
   supplierName: string | null;
-  platingType: 'GOLD' | 'RHODIUM' | null;
+  platingType: 'GOLD' | 'ROSE_GOLD' | 'RHODIUM' | null;
   unitPlatingPriceToman: number;
   platingLeadTimeDays: number | null;
   unitWeightGrams: number | null;
@@ -126,6 +126,13 @@ export type AdminOrderReturnAuthorization = Readonly<{
   actor: string;
 }>;
 
+export type AdminOrderShippingSelection = Readonly<{
+  carrierId: string;
+  carrierName: string;
+  pricingMode: 'FREE' | 'FIXED' | 'COLLECT';
+  serviceArea: 'NATIONWIDE' | 'TEHRAN_ONLY';
+}>;
+
 export type AdminOrder = Readonly<{
   id: string;
   orderNumber: string;
@@ -140,6 +147,7 @@ export type AdminOrder = Readonly<{
   paidAt: string | null;
   cancelledAt: string | null;
   deliveredAt: string | null;
+  shippingSelection: AdminOrderShippingSelection | null;
   returnAuthorization: AdminOrderReturnAuthorization | null;
   createdAt: string;
   updatedAt: string;
@@ -193,7 +201,11 @@ const SHIPMENT_PROVIDER_CREATION_STATES = new Set<AdminShipmentProviderCreationS
   'CREATED',
   'UNKNOWN',
 ]);
-const PLATING_TYPES = new Set<NonNullable<AdminOrderItem['platingType']>>(['GOLD', 'RHODIUM']);
+const PLATING_TYPES = new Set<NonNullable<AdminOrderItem['platingType']>>([
+  'GOLD',
+  'ROSE_GOLD',
+  'RHODIUM',
+]);
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -482,6 +494,15 @@ function parseOrder(value: unknown): AdminOrder | null {
   const shippingTotalToman = number(order.shippingTotalToman);
   const taxTotalToman = number(order.taxTotalToman);
   const grandTotalToman = number(order.grandTotalToman);
+  const shippingCarrierId = text(order.shippingCarrierIdSnapshot);
+  const shippingCarrierName = text(order.shippingCarrierNameSnapshot);
+  const shippingPricingMode = text(order.shippingPricingModeSnapshot);
+  const shippingServiceArea = text(order.shippingServiceAreaSnapshot);
+  const hasShippingSelection =
+    shippingCarrierId !== null ||
+    shippingCarrierName !== null ||
+    shippingPricingMode !== null ||
+    shippingServiceArea !== null;
   if (
     !id ||
     !orderNumber ||
@@ -498,6 +519,11 @@ function parseOrder(value: unknown): AdminOrder | null {
     shippingTotalToman === null ||
     taxTotalToman === null ||
     grandTotalToman === null ||
+    (hasShippingSelection &&
+      (!shippingCarrierId ||
+        !shippingCarrierName ||
+        !['FREE', 'FIXED', 'COLLECT'].includes(shippingPricingMode ?? '') ||
+        !['NATIONWIDE', 'TEHRAN_ONLY'].includes(shippingServiceArea ?? ''))) ||
     (order.paidAt != null && !paidAt) ||
     (order.cancelledAt != null && !cancelledAt) ||
     (order.deliveredAt != null && !deliveredAt) ||
@@ -535,6 +561,14 @@ function parseOrder(value: unknown): AdminOrder | null {
     paidAt,
     cancelledAt,
     deliveredAt,
+    shippingSelection: hasShippingSelection
+      ? {
+          carrierId: shippingCarrierId!,
+          carrierName: shippingCarrierName!,
+          pricingMode: shippingPricingMode as AdminOrderShippingSelection['pricingMode'],
+          serviceArea: shippingServiceArea as AdminOrderShippingSelection['serviceArea'],
+        }
+      : null,
     returnAuthorization: returnAuthorizedAt
       ? {
           authorizedAt: returnAuthorizedAt,

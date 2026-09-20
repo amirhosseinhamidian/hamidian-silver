@@ -1,11 +1,8 @@
 import Link from 'next/link';
 import { FiAlertTriangle, FiCheck, FiClock, FiMapPin, FiPackage } from 'react-icons/fi';
 
-import {
-  formatOrderDate,
-  orderItemDetails,
-  orderStatusLabel,
-} from '@/components/account/account-order-presentation';
+import { formatOrderDate, orderStatusLabel } from '@/components/account/account-order-presentation';
+import { CustomerOrderItemDetails } from '@/components/account/customer-order-item-details';
 import type { CustomerOrderDetail } from '@/components/account/account-types';
 import { toPersianDigits } from '@/components/account/account-types';
 import { PurchaseAnalytics } from '@/components/analytics/conversion-trackers';
@@ -116,9 +113,10 @@ function OrderItems({ order }: Readonly<{ order: CustomerOrderDetail }>) {
               >
                 {toPersianDigits(item.productNameSnapshot)}
               </Link>
-              <p className="mt-2 text-xs leading-6 text-[var(--sf-color-muted)]">
-                {orderItemDetails(item)}
-              </p>
+              <CustomerOrderItemDetails
+                item={item}
+                className="mt-2 text-xs leading-6 text-[var(--sf-color-muted)]"
+              />
               <p className="mt-3 text-sm font-medium">{formatTomanPrice(item.lineTotalToman)}</p>
             </div>
           </li>

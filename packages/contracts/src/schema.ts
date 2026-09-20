@@ -2532,6 +2532,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/shipping/options/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ShippingController_listPublicShippingOptions_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/shipping/carriers": {
         parameters: {
             query?: never;
@@ -3202,7 +3218,7 @@ export interface components {
         };
         PublicCatalogPlatingOptionDto: {
             /** @enum {string} */
-            type: "GOLD" | "RHODIUM";
+            type: "GOLD" | "ROSE_GOLD" | "RHODIUM";
             unitPriceToman: number;
             leadTimeDays: number;
         };
@@ -3683,9 +3699,11 @@ export interface components {
             variantId: string;
             quantity: number;
             /** @enum {string} */
-            platingType?: "GOLD" | "RHODIUM";
+            platingType?: "GOLD" | "ROSE_GOLD" | "RHODIUM";
         };
         CreateOrderDto: {
+            /** Format: uuid */
+            shippingCarrierId?: string;
             /** Format: uuid */
             userAddressId?: string;
             shippingAddress?: components["schemas"]["CreateOrderAddressDto"];
@@ -3714,7 +3732,7 @@ export interface components {
             variantNameSnapshot: string | null;
             sizeLabelSnapshot: string | null;
             /** @enum {string|null} */
-            platingType: "GOLD" | "RHODIUM" | null;
+            platingType: "GOLD" | "ROSE_GOLD" | "RHODIUM" | null;
             platingWeightGrams: string | null;
             platingRateToman: number | null;
             platingLeadTimeDays: number | null;
@@ -3776,6 +3794,7 @@ export interface components {
             taxTotalToman: number;
             grandTotalToman: number;
             returnAuthorized: boolean;
+            shippingPayOnDelivery: boolean;
             /** Format: date-time */
             reservationExpiresAt: string;
             /** Format: date-time */
@@ -3809,6 +3828,7 @@ export interface components {
             taxTotalToman: number;
             grandTotalToman: number;
             returnAuthorized: boolean;
+            shippingPayOnDelivery: boolean;
             /** Format: date-time */
             reservationExpiresAt: string;
             /** Format: date-time */
@@ -4033,6 +4053,19 @@ export interface components {
             mimeType: string;
             altText: string | null;
         };
+        PublicShippingOptionDto: {
+            /** Format: uuid */
+            id: string;
+            logo: components["schemas"]["AdminSiteMediaDto"] | null;
+            /** @enum {string} */
+            pricingMode: "FREE" | "FIXED" | "COLLECT";
+            thresholdToman: number | null;
+            discountedCostToman: number | null;
+            /** @enum {string} */
+            serviceArea: "NATIONWIDE" | "TEHRAN_ONLY";
+            name: string;
+            baseCostToman: number;
+        };
         ShippingCarrierDto: {
             /** Format: uuid */
             id: string;
@@ -4041,11 +4074,18 @@ export interface components {
             /** Format: uuid */
             logoMediaId: string | null;
             logo: components["schemas"]["AdminSiteMediaDto"] | null;
+            /** @enum {string} */
+            pricingMode: "FREE" | "FIXED" | "COLLECT";
+            thresholdToman: number | null;
+            discountedCostToman: number | null;
+            /** @enum {string} */
+            serviceArea: "NATIONWIDE" | "TEHRAN_ONLY";
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
             name: string;
+            baseCostToman: number;
             isActive: boolean;
         };
         CreateShippingCarrierDto: {
@@ -4054,6 +4094,20 @@ export interface components {
             trackingUrl?: string | null;
             /** Format: uuid */
             logoMediaId?: string | null;
+            /**
+             * @default FREE
+             * @enum {string}
+             */
+            pricingMode: "FREE" | "FIXED" | "COLLECT";
+            /** @default 0 */
+            baseCostToman: number;
+            thresholdToman?: number | null;
+            discountedCostToman?: number | null;
+            /**
+             * @default NATIONWIDE
+             * @enum {string}
+             */
+            serviceArea: "NATIONWIDE" | "TEHRAN_ONLY";
             /** @default true */
             isActive: boolean;
         };
@@ -4063,6 +4117,20 @@ export interface components {
             trackingUrl?: string | null;
             /** Format: uuid */
             logoMediaId?: string | null;
+            /**
+             * @default FREE
+             * @enum {string}
+             */
+            pricingMode: "FREE" | "FIXED" | "COLLECT";
+            /** @default 0 */
+            baseCostToman: number;
+            thresholdToman?: number | null;
+            discountedCostToman?: number | null;
+            /**
+             * @default NATIONWIDE
+             * @enum {string}
+             */
+            serviceArea: "NATIONWIDE" | "TEHRAN_ONLY";
             /** @default true */
             isActive: boolean;
         };
@@ -7058,7 +7126,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                type: "GOLD" | "RHODIUM";
+                type: "GOLD" | "ROSE_GOLD" | "RHODIUM";
             };
             cookie?: never;
         };
@@ -7081,7 +7149,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                type: "GOLD" | "RHODIUM";
+                type: "GOLD" | "ROSE_GOLD" | "RHODIUM";
             };
             cookie?: never;
         };
@@ -7126,7 +7194,7 @@ export interface operations {
             header?: never;
             path: {
                 variantId: string;
-                type: "GOLD" | "RHODIUM";
+                type: "GOLD" | "ROSE_GOLD" | "RHODIUM";
             };
             cookie?: never;
         };
@@ -7171,7 +7239,7 @@ export interface operations {
             header?: never;
             path: {
                 variantId: string;
-                type: "GOLD" | "RHODIUM";
+                type: "GOLD" | "ROSE_GOLD" | "RHODIUM";
             };
             cookie?: never;
         };
@@ -8630,6 +8698,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ShippingPricingSettingsDto"];
+                };
+            };
+        };
+    };
+    ShippingController_listPublicShippingOptions_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicShippingOptionDto"][];
                 };
             };
         };

@@ -298,6 +298,7 @@ model Media {
   shippingPricingCarrierLogos ShippingPricingSettings[] @relation("ShippingPricingCarrierLogo")
   shippingCarrierLogos        ShippingCarrier[]        @relation("ShippingCarrierLogo")
   shipmentCarrierLogoSnapshots Shipment[] @relation("ShipmentCarrierLogoSnapshot")
+  orderShippingCarrierLogos   Order[]                  @relation("OrderShippingCarrierLogoSnapshot")
 
   @@index([deletedAt])
   @@map("media")
@@ -382,6 +383,11 @@ model ShippingCarrier {
   name            String   @unique @db.VarChar(200)
   trackingUrl     String?  @db.VarChar(1000)
   logoMediaId     String?  @db.Uuid
+  pricingMode     String   @default("FREE") @db.VarChar(16)
+  baseCostToman   Int      @default(0)
+  thresholdToman  Int?
+  discountedCostToman Int?
+  serviceArea     String   @default("NATIONWIDE") @db.VarChar(16)
   isActive        Boolean  @default(true)
   updatedByUserId String?  @db.Uuid
   createdAt       DateTime @default(now()) @db.Timestamptz(3)
@@ -865,6 +871,7 @@ model ProductPriceHistory {
 
 enum PlatingType {
   GOLD
+  ROSE_GOLD
   RHODIUM
 }
 
@@ -971,6 +978,12 @@ model Order {
   platingTotalToman     Int                           @default(0)
   discountTotalToman    Int                           @default(0)
   shippingTotalToman    Int                           @default(0)
+  shippingCarrierIdSnapshot String?                   @db.Uuid
+  shippingCarrierNameSnapshot String?                 @db.VarChar(200)
+  shippingCarrierTrackingUrlSnapshot String?          @db.VarChar(1000)
+  shippingCarrierLogoMediaIdSnapshot String?          @db.Uuid
+  shippingPricingModeSnapshot String?                 @db.VarChar(16)
+  shippingServiceAreaSnapshot String?                 @db.VarChar(16)
   taxTotalToman         Int                           @default(0)
   grandTotalToman       Int
   reservationExpiresAt  DateTime                      @db.Timestamptz(3)
@@ -998,11 +1011,13 @@ model Order {
   platingFulfillment    OrderPlatingFulfillment?
   operationalAlerts     OperationalAlertOutboxEvent[]
   operationalIncidents  OperationalIncident[]
+  shippingCarrierLogoSnapshot Media?                  @relation("OrderShippingCarrierLogoSnapshot", fields: [shippingCarrierLogoMediaIdSnapshot], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
   @@index([reservationExpiresAt])
   @@index([returnAuthorizedByUserId])
+  @@index([shippingCarrierLogoMediaIdSnapshot])
   @@map("orders")
 }
 

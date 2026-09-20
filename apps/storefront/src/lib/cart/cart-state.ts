@@ -1,4 +1,6 @@
-export type CartPlatingType = 'GOLD' | 'RHODIUM';
+import { isStorefrontPlatingType, type StorefrontPlatingType } from '@/lib/plating/presentation';
+
+export type CartPlatingType = StorefrontPlatingType;
 
 export type CartVariantAttribute = Readonly<{
   name: string;
@@ -81,7 +83,7 @@ function normalizePlatingType(value: unknown): CartPlatingType | null | undefine
     return null;
   }
 
-  return value === 'GOLD' || value === 'RHODIUM' ? value : undefined;
+  return isStorefrontPlatingType(value) ? value : undefined;
 }
 
 function normalizeStoredCartItem(value: unknown): CartItem | null {

@@ -51,6 +51,7 @@ describe('CustomerOrderDetailView', () => {
         shippingMethodName: 'پست پیشتاز',
         shippingTrackingUrl: 'https://tracking.post.ir/',
         shippingCarrierLogoUrl: 'https://media.example/post-logo.webp',
+        shippingPayOnDelivery: false,
         reservationExpiresAt: '2026-09-05T13:00:00.000Z',
         paidAt: '2026-09-05T12:10:00.000Z',
         cancelledAt: null,
@@ -95,7 +96,7 @@ describe('CustomerOrderDetailView', () => {
             variantNameSnapshot: 'مدل اصلی',
             skuSnapshot: 'RING-1001',
             sizeLabelSnapshot: '7',
-            platingType: 'GOLD',
+            platingType: 'ROSE_GOLD',
             platingWeightGrams: '0.5',
             platingRateToman: 200_000,
             platingLeadTimeDays: 2,
@@ -131,6 +132,11 @@ describe('CustomerOrderDetailView', () => {
     expect(screen.getByText('خیابان ولیعصر، پلاک ۱۲', { exact: false })).toBeInTheDocument();
     expect(screen.getByText('POST-۱۲۳')).toBeInTheDocument();
     expect(screen.getByText('پست پیشتاز')).toBeInTheDocument();
+    expect(screen.getByText('آبکاری رزگلد')).toBeInTheDocument();
+    expect(screen.getByText('آبکاری رزگلد').parentElement).toHaveAttribute(
+      'data-plating-type',
+      'ROSE_GOLD',
+    );
     expect(
       container.querySelector('img[src="https://media.example/post-logo.webp"]'),
     ).toHaveAttribute('src', 'https://media.example/post-logo.webp');
@@ -178,6 +184,7 @@ describe('CustomerOrderDetailView', () => {
           shippingMethodName: null,
           shippingTrackingUrl: null,
           shippingCarrierLogoUrl: null,
+          shippingPayOnDelivery: false,
           reservationExpiresAt: '2026-09-05T12:15:00.000Z',
           paidAt: null,
           cancelledAt: null,

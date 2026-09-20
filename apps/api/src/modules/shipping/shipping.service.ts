@@ -561,10 +561,23 @@ export class ShippingService {
       this.requireShippingAddress(order.shippingAddress);
       const totalWeightGrams = this.calculateTotalWeightGrams(order.items);
       const createdAt = new Date();
-      const selectedCarrier =
-        dto.carrierId && this.shippingCarriers
-          ? await this.shippingCarriers.snapshotActive(dto.carrierId, transaction)
+      const orderCarrier =
+        order.shippingCarrierIdSnapshot && order.shippingCarrierNameSnapshot
+          ? {
+              serviceName: order.shippingCarrierNameSnapshot,
+              snapshot: {
+                carrierNameSnapshot: order.shippingCarrierNameSnapshot,
+                carrierTrackingUrlSnapshot: order.shippingCarrierTrackingUrlSnapshot,
+                carrierLogoMediaIdSnapshot: order.shippingCarrierLogoMediaIdSnapshot,
+                carrierPresentationSnapshottedAt: new Date(),
+              },
+            }
           : null;
+      const selectedCarrier =
+        orderCarrier ??
+        (dto.carrierId && this.shippingCarriers
+          ? await this.shippingCarriers.snapshotActive(dto.carrierId, transaction)
+          : null);
       const carrier = selectedCarrier?.snapshot ?? {
         carrierNameSnapshot: null,
         carrierTrackingUrlSnapshot: null,

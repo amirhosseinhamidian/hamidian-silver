@@ -21,6 +21,7 @@ function order(shipment: AdminOrder['shipment'] = null): AdminOrder {
     paidAt: '2026-09-07T12:05:00.000Z',
     cancelledAt: null,
     deliveredAt: null,
+    shippingSelection: null,
     returnAuthorization: null,
     createdAt: '2026-09-07T12:00:00.000Z',
     updatedAt: '2026-09-07T12:05:00.000Z',
@@ -125,6 +126,11 @@ describe('ShippingManagementView', () => {
             trackingUrl: 'https://mahex.com/tracking',
             logoMediaId: null,
             logo: null,
+            pricingMode: 'FREE',
+            baseCostToman: 0,
+            thresholdToman: null,
+            discountedCostToman: null,
+            serviceArea: 'NATIONWIDE',
             isActive: true,
             createdAt: '2026-09-15T00:00:00.000Z',
             updatedAt: '2026-09-15T00:00:00.000Z',
@@ -146,6 +152,49 @@ describe('ShippingManagementView', () => {
           carrierId: '11111111-1111-4111-8111-111111111111',
           estimatedDeliveryDays: 3,
           reason: 'بسته آماده تحویل است',
+        }),
+      }),
+    );
+  });
+
+  it('locks and submits the carrier selected by the customer', async () => {
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(new Response('{}', { status: 201 }));
+    const selectedOrder = {
+      ...order(),
+      shippingSelection: {
+        carrierId: '22222222-2222-4222-8222-222222222222',
+        carrierName: 'پیک تهران',
+        pricingMode: 'COLLECT' as const,
+        serviceArea: 'TEHRAN_ONLY' as const,
+      },
+    };
+    render(
+      <ShippingManagementView
+        orders={[selectedOrder]}
+        failed={false}
+        canCreate
+        canUpdateStatus
+        carriers={[]}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'ساخت مرسوله دستی' })[0]);
+    expect(screen.getByText('روش ارسال انتخاب‌شده مشتری')).toBeInTheDocument();
+    expect(screen.getByText(/مرسوله با «پیک تهران» ساخته می‌شود/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/شرکت ارسال‌کننده/)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/یادداشت عملیات/), {
+      target: { value: 'ارسال طبق انتخاب مشتری' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/shipping/orders/order-1/manual',
+      expect.objectContaining({
+        body: JSON.stringify({
+          carrierId: '22222222-2222-4222-8222-222222222222',
+          estimatedDeliveryDays: 3,
+          reason: 'ارسال طبق انتخاب مشتری',
         }),
       }),
     );

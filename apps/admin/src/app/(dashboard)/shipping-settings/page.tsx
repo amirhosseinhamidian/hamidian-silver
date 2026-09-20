@@ -1,4 +1,3 @@
-import { ShippingPricingSettingsCard } from '@/components/shipping/shipping-pricing-settings-card';
 import { ShippingCarriersSettingsCard } from '@/components/shipping/shipping-carriers-settings-card';
 import { Badge } from '@/components/ui/badge';
 import { requireAdminSession } from '@/lib/auth/session';
@@ -20,15 +19,10 @@ export default async function ShippingSettingsPage() {
         <Badge tone="info">مرحله {formatAdminInteger(38)}</Badge>
         <h1 className="mt-3 text-2xl font-black sm:text-3xl">تنظیمات ارسال</h1>
         <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--admin-color-muted)]">
-          هزینه ارسال و اطلاعات شرکت حمل نمایش‌داده‌شده به مشتری را مدیریت کنید.
+          شرکت‌های قابل انتخاب در checkout، هزینه و محدوده ارسال هر شرکت را مدیریت کنید.
         </p>
       </header>
       <div className="space-y-8 pt-6">
-        <ShippingPricingSettingsCard
-          data={data}
-          canRead
-          canWrite={user.permissions.includes('settings.write')}
-        />
         {!data.failed ? (
           <ShippingCarriersSettingsCard
             initialCarriers={data.carriers}

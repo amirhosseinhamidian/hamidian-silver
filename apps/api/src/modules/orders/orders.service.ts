@@ -19,6 +19,7 @@ import { normalizeIranianMobile } from '../auth/phone-normalizer';
 import { attachHumanAuditEvent } from '../audit/audit-event';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { ShippingPricingService } from '../shipping/shipping-pricing.service';
+import { ShippingCarriersService } from '../shipping/shipping-carriers.service';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderAddressDto, CreateOrderDto, CreateOrderItemDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
@@ -110,6 +111,10 @@ const CUSTOMER_ORDER_LIST_SELECT = {
   platingTotalToman: true,
   discountTotalToman: true,
   shippingTotalToman: true,
+  shippingCarrierNameSnapshot: true,
+  shippingCarrierTrackingUrlSnapshot: true,
+  shippingPricingModeSnapshot: true,
+  shippingCarrierLogoSnapshot: { select: { storageKey: true } },
   taxTotalToman: true,
   grandTotalToman: true,
   reservationExpiresAt: true,
@@ -314,6 +319,7 @@ export class OrdersService {
     private readonly publicMediaUrl?: PublicMediaUrlService,
     @Optional() private readonly config?: ConfigService,
     @Optional() private readonly shippingPricing?: ShippingPricingService,
+    @Optional() private readonly shippingCarriers?: ShippingCarriersService,
   ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
@@ -408,10 +414,13 @@ export class OrdersService {
         0,
       );
       const cartSubtotalToman = merchandiseTotalToman + platingTotalToman;
-      const shippingTotalToman = await this.resolveInitialShippingCostToman(
+      const shippingSelection = await this.resolveShippingSelection(
+        dto.shippingCarrierId,
         cartSubtotalToman,
+        shippingAddress,
         transaction,
       );
+      const shippingTotalToman = shippingSelection.costToman;
       const grandTotalToman = merchandiseTotalToman + platingTotalToman + shippingTotalToman;
 
       this.assertSafeTomanAmount(merchandiseTotalToman);
@@ -433,6 +442,7 @@ export class OrdersService {
           merchandiseTotalToman,
           platingTotalToman,
           shippingTotalToman,
+          ...shippingSelection.snapshot,
           grandTotalToman,
           reservationExpiresAt,
           shippingAddress: {
@@ -504,6 +514,27 @@ export class OrdersService {
     return this.config?.get<number>('MANUAL_SHIPPING_COST_TOMAN', 0) ?? 0;
   }
 
+  private async resolveShippingSelection(
+    carrierId: string | undefined,
+    cartSubtotalToman: number,
+    destination: Readonly<{ province: string; city: string }>,
+    transaction: Prisma.TransactionClient,
+  ) {
+    if (this.shippingCarriers) {
+      if (!carrierId) throw new BadRequestException('Select a shipping carrier.');
+      return this.shippingCarriers.quoteForCheckout(
+        carrierId,
+        cartSubtotalToman,
+        destination,
+        transaction,
+      );
+    }
+    return {
+      costToman: await this.resolveInitialShippingCostToman(cartSubtotalToman, transaction),
+      snapshot: {},
+    };
+  }
+
   async listMyOrders(userId: string, query: ListOrdersQueryDto) {
     const orders = await this.prisma.order.findMany({
       where: {
@@ -547,7 +578,17 @@ export class OrdersService {
     order: CustomerOrderListRecord | CustomerOrderDetailRecord,
     carrier: ShippingCarrierPresentation | null,
   ) {
-    const { shipment, payment, items: selectedItems, returnAuthorizedAt, ...summary } = order;
+    const {
+      shipment,
+      payment,
+      items: selectedItems,
+      returnAuthorizedAt,
+      shippingCarrierNameSnapshot,
+      shippingCarrierTrackingUrlSnapshot,
+      shippingPricingModeSnapshot,
+      shippingCarrierLogoSnapshot,
+      ...summary
+    } = order;
     const items = Array.isArray(selectedItems) ? selectedItems : [];
     const latestAttempt = payment?.attempts[0];
 
@@ -555,15 +596,24 @@ export class OrdersService {
       ...summary,
       returnAuthorized: returnAuthorizedAt !== null,
       trackingCode: shipment?.trackingCode ?? null,
-      shippingMethodName: publicShippingMethodName(shipment ?? null, carrier),
-      shippingTrackingUrl: shipment?.carrierPresentationSnapshottedAt
-        ? shipment.carrierTrackingUrlSnapshot
-        : (carrier?.trackingUrl ?? null),
-      shippingCarrierLogoUrl: shipment?.carrierPresentationSnapshottedAt
-        ? shipment.carrierLogoSnapshot
-          ? (this.publicMediaUrl?.resolve(shipment.carrierLogoSnapshot.storageKey) ?? null)
-          : null
-        : (carrier?.logoUrl ?? null),
+      shippingMethodName: shipment
+        ? publicShippingMethodName(shipment, carrier)
+        : (shippingCarrierNameSnapshot ?? null),
+      shippingTrackingUrl: shipment
+        ? shipment.carrierPresentationSnapshottedAt
+          ? shipment.carrierTrackingUrlSnapshot
+          : (carrier?.trackingUrl ?? null)
+        : (shippingCarrierTrackingUrlSnapshot ?? null),
+      shippingCarrierLogoUrl: shipment
+        ? shipment.carrierPresentationSnapshottedAt
+          ? shipment.carrierLogoSnapshot
+            ? (this.publicMediaUrl?.resolve(shipment.carrierLogoSnapshot.storageKey) ?? null)
+            : null
+          : (carrier?.logoUrl ?? null)
+        : shippingCarrierLogoSnapshot
+          ? (this.publicMediaUrl?.resolve(shippingCarrierLogoSnapshot.storageKey) ?? null)
+          : null,
+      shippingPayOnDelivery: shippingPricingModeSnapshot === 'COLLECT',
       payment: payment
         ? {
             status: payment.status,

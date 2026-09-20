@@ -15,6 +15,10 @@ const payload = [
     platingTotalToman: 100_000,
     discountTotalToman: 50_000,
     shippingTotalToman: 80_000,
+    shippingCarrierIdSnapshot: '40000000-0000-4000-8000-000000000001',
+    shippingCarrierNameSnapshot: 'پست پیشتاز',
+    shippingPricingModeSnapshot: 'FIXED',
+    shippingServiceAreaSnapshot: 'NATIONWIDE',
     taxTotalToman: 0,
     grandTotalToman: 1_330_000,
     reservationExpiresAt: '2026-09-07T12:15:00.000Z',
@@ -106,6 +110,12 @@ describe('admin orders model', () => {
         customer: expect.objectContaining({ name: 'علی رضایی' }),
         address: expect.objectContaining({ postalCode: '1234567890' }),
         payment: expect.objectContaining({ status: 'PAID' }),
+        shippingSelection: {
+          carrierId: '40000000-0000-4000-8000-000000000001',
+          carrierName: 'پست پیشتاز',
+          pricingMode: 'FIXED',
+          serviceArea: 'NATIONWIDE',
+        },
         returnAuthorization: {
           authorizedAt: '2026-09-07T15:00:00.000Z',
           reason: 'ارسال کالای اشتباه تأیید شد.',

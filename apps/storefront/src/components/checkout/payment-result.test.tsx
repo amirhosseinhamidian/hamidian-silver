@@ -20,6 +20,7 @@ const order: CustomerOrderDetail = {
   shippingMethodName: null,
   shippingTrackingUrl: null,
   shippingCarrierLogoUrl: null,
+  shippingPayOnDelivery: false,
   reservationExpiresAt: '2026-09-07T13:00:00.000Z',
   paidAt: '2026-09-07T12:02:00.000Z',
   cancelledAt: null,
@@ -86,6 +87,7 @@ describe('PaymentResult', () => {
     expect(screen.getAllByText('HS-۱۰۰۱')).toHaveLength(2);
     expect(screen.getByRole('heading', { name: 'کالاهای سفارش' })).toBeInTheDocument();
     expect(screen.getByText('انگشتر نقره مدل ۲')).toBeInTheDocument();
+    expect(screen.getByText('آبکاری طلا')).toBeInTheDocument();
     expect(screen.getByText('۲ کالا')).toBeInTheDocument();
     expect(screen.getAllByText(formatTomanPrice(2_150_000))).not.toHaveLength(0);
     expect(screen.getByRole('heading', { name: 'نشانی تحویل' })).toBeInTheDocument();

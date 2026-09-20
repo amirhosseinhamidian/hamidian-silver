@@ -74,6 +74,7 @@ describe('plating model', () => {
         options: [expect.objectContaining({ type: 'GOLD', active: true })],
       }),
     ]);
+    expect(platingTypeLabel('ROSE_GOLD')).toBe('آبکاری رزگلد');
     expect(platingTypeLabel('RHODIUM')).toBe('آبکاری رودیوم');
   });
 });

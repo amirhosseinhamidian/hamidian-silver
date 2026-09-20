@@ -57,7 +57,7 @@ const DEMO_CATALOG_PRODUCTS: readonly DemoProductDefinition[] = [
     slug: 'silver-ring-azar',
     shortDescription: 'انگشتر مینیمال نقره با فرم روان و پرداخت براق.',
     description:
-      'مدل آذر برای استفاده روزمره طراحی شده و در چند سایز عرضه می‌شود. امکان انتخاب آبکاری طلا یا رودیوم برای این مدل فعال است.',
+      'مدل آذر برای استفاده روزمره طراحی شده و در چند سایز عرضه می‌شود. امکان انتخاب آبکاری طلا، رزگلد یا رودیوم برای این مدل فعال است.',
     salePriceToman: 3_950_000,
     sizeMode: SizeMode.SIZED,
     categorySlug: 'rings',
@@ -639,6 +639,19 @@ async function seedDemoCatalog(): Promise<void> {
       leadTimeDays: 3,
     },
   });
+  const roseGoldRate = await prisma.platingRate.upsert({
+    where: { type: PlatingType.ROSE_GOLD },
+    update: {
+      pricePerGramToman: 38_000,
+      leadTimeDays: 3,
+      isActive: true,
+    },
+    create: {
+      type: PlatingType.ROSE_GOLD,
+      pricePerGramToman: 38_000,
+      leadTimeDays: 3,
+    },
+  });
   const rhodiumRate = await prisma.platingRate.upsert({
     where: { type: PlatingType.RHODIUM },
     update: {
@@ -752,7 +765,7 @@ async function seedDemoCatalog(): Promise<void> {
       });
 
       if (variantDefinition.platingEligible) {
-        for (const platingRateId of [goldRate.id, rhodiumRate.id]) {
+        for (const platingRateId of [goldRate.id, roseGoldRate.id, rhodiumRate.id]) {
           await prisma.productPlatingOption.upsert({
             where: {
               variantId_platingRateId: {
