@@ -281,6 +281,7 @@ export function CheckoutFlow({
         if (
           typeof payload.enabled === 'boolean' &&
           (payload.cardNumber === null || typeof payload.cardNumber === 'string') &&
+          (payload.ibanNumber === null || typeof payload.ibanNumber === 'string') &&
           (payload.holderName === null || typeof payload.holderName === 'string') &&
           (payload.bankName === null || typeof payload.bankName === 'string')
         ) {
@@ -797,7 +798,7 @@ export function CheckoutFlow({
                     <label
                       key={option.id}
                       aria-disabled={pendingOrderId ? 'true' : undefined}
-                      className={`rounded-[var(--sf-radius-md)] border p-4 transition ${
+                      className={`rounded-[var(--sf-radius-md)] border p-4 transition sm:p-5 ${
                         pendingOrderId ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
                       } ${
                         selectedShippingOption?.id === option.id
@@ -805,7 +806,7 @@ export function CheckoutFlow({
                           : 'border-[var(--sf-color-border)]'
                       }`}
                     >
-                      <span className="flex items-center gap-3">
+                      <span className="flex items-start gap-3">
                         <input
                           type="radio"
                           name="shippingCarrier"
@@ -813,22 +814,32 @@ export function CheckoutFlow({
                           disabled={Boolean(pendingOrderId)}
                           checked={selectedShippingOption?.id === option.id}
                           onChange={() => setShippingCarrierId(option.id)}
-                          className="size-4 accent-[var(--sf-color-ink)]"
+                          className="mt-1.5 size-4 shrink-0 accent-[var(--sf-color-ink)]"
                         />
                         {option.logo?.url ? (
                           // eslint-disable-next-line @next/next/no-img-element -- Carrier logos use admin-managed public media URLs.
                           <img
                             src={option.logo.url}
                             alt=""
-                            className="size-9 rounded-full border border-[var(--sf-color-border)] object-contain p-1"
+                            className="size-11 shrink-0 rounded-full border border-[var(--sf-color-border)] bg-white object-contain p-1.5"
                           />
                         ) : null}
-                        <strong className="text-sm">{option.name}</strong>
-                      </span>
-                      <span className="mt-2 block ps-7 text-xs text-[var(--sf-color-muted)]">
-                        {option.pricingMode === 'COLLECT'
-                          ? 'ویژه شهر تهران · هزینه هنگام تحویل'
-                          : formatShippingToman(cost)}
+                        <span className="min-w-0 flex-1">
+                          <strong className="block text-sm sm:text-base">{option.name}</strong>
+                          <span className="mt-1.5 flex flex-wrap items-baseline gap-x-1 text-xs">
+                            <span className="text-[var(--sf-color-muted)]">هزینه ارسال:</span>
+                            <span className="font-medium text-[var(--sf-color-ink)]">
+                              {option.pricingMode === 'COLLECT'
+                                ? 'پرداخت هنگام تحویل'
+                                : formatShippingToman(cost)}
+                            </span>
+                          </span>
+                          {option.subtitle ? (
+                            <span className="mt-2 block text-xs leading-6 text-[var(--sf-color-muted)]">
+                              {option.subtitle}
+                            </span>
+                          ) : null}
+                        </span>
                       </span>
                     </label>
                   );

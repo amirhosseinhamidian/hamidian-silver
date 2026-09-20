@@ -30,6 +30,7 @@ describe('calculatePublicShippingCost', () => {
 const fixedOption: PublicShippingOption = {
   id: '10000000-0000-4000-8000-000000000001',
   name: 'پست',
+  subtitle: 'ارسال سراسری با رهگیری مرسوله',
   logo: null,
   pricingMode: 'FIXED',
   baseCostToman: 100_000,

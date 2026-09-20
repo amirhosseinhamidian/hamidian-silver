@@ -33,6 +33,7 @@ const shippingOptions: readonly PublicShippingOption[] = [
   {
     id: '44444444-4444-4444-8444-444444444441',
     name: 'پست پیشتاز',
+    subtitle: 'ارسال اقتصادی با پوشش سراسری کشور',
     logo: null,
     pricingMode: 'FREE',
     baseCostToman: 0,
@@ -43,6 +44,7 @@ const shippingOptions: readonly PublicShippingOption[] = [
   {
     id: '44444444-4444-4444-8444-444444444442',
     name: 'ماهکس',
+    subtitle: 'تحویل سریع‌تر با رهگیری آنلاین مرسوله',
     logo: null,
     pricingMode: 'FIXED',
     baseCostToman: 70_000,
@@ -116,6 +118,7 @@ describe('CheckoutFlow price integrity', () => {
         return jsonResponse({
           enabled: true,
           cardNumber: '6037991234567890',
+          ibanNumber: '820540102680020817909002',
           holderName: 'گالری حمدیان',
           bankName: 'بانک ملی',
         });
@@ -138,6 +141,9 @@ describe('CheckoutFlow price integrity', () => {
 
     await screen.findByText('اطلاعات ارسال');
     await screen.findByText('آدرس پیش‌فرض');
+    expect(screen.getByText('ارسال اقتصادی با پوشش سراسری کشور')).toBeInTheDocument();
+    expect(screen.getByText('تحویل سریع‌تر با رهگیری آنلاین مرسوله')).toBeInTheDocument();
+    expect(screen.getAllByText('هزینه ارسال:')).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }));
 
     const priceAlert = await screen.findByRole('alert');
@@ -265,6 +271,7 @@ describe('CheckoutFlow price integrity', () => {
         return jsonResponse({
           enabled: true,
           cardNumber: '6037991234567890',
+          ibanNumber: '820540102680020817909002',
           holderName: 'گالری حمدیان',
           bankName: 'بانک ملی',
         });

@@ -123,6 +123,7 @@ describe('ShippingManagementView', () => {
           {
             id: '11111111-1111-4111-8111-111111111111',
             name: 'ماهکس',
+            subtitle: 'تحویل سریع‌تر با رهگیری آنلاین مرسوله',
             trackingUrl: 'https://mahex.com/tracking',
             logoMediaId: null,
             logo: null,

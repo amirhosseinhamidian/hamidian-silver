@@ -271,6 +271,7 @@ async function handler(request, response) {
       {
         id: SHIPPING_CARRIER_ID,
         name: 'پست پیشتاز',
+        subtitle: 'ارسال اقتصادی با پوشش سراسری کشور',
         logo: null,
         pricingMode: 'FREE',
         baseCostToman: 0,
@@ -325,6 +326,7 @@ async function handler(request, response) {
     return json(response, 200, {
       enabled: true,
       cardNumber: '6037991234567890',
+      ibanNumber: '820540102680020817909002',
       holderName: 'گالری حمدیان',
       bankName: 'بانک ملی',
     });

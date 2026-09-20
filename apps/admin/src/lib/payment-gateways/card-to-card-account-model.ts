@@ -1,6 +1,7 @@
 export type AdminCardToCardAccount = Readonly<{
   id: string;
   cardNumber: string;
+  ibanNumber: string | null;
   holderName: string;
   bankName: string;
   isActive: boolean;
@@ -18,6 +19,8 @@ export function parseCardToCardAccount(value: unknown): AdminCardToCardAccount |
     typeof value.id !== 'string' ||
     typeof value.cardNumber !== 'string' ||
     !/^\d{16}$/.test(value.cardNumber) ||
+    (value.ibanNumber !== null &&
+      (typeof value.ibanNumber !== 'string' || !/^\d{24}$/.test(value.ibanNumber))) ||
     typeof value.holderName !== 'string' ||
     typeof value.bankName !== 'string' ||
     typeof value.isActive !== 'boolean' ||
@@ -30,6 +33,7 @@ export function parseCardToCardAccount(value: unknown): AdminCardToCardAccount |
   return {
     id: value.id,
     cardNumber: value.cardNumber,
+    ibanNumber: value.ibanNumber,
     holderName: value.holderName,
     bankName: value.bankName,
     isActive: value.isActive,

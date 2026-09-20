@@ -517,7 +517,7 @@ export class PaymentsService {
       }
 
       const activeAccount = await transaction.cardToCardAccount.findFirst({
-        where: { isActive: true },
+        where: { isActive: true, ibanNumber: { not: null } },
         select: { id: true },
       });
       if (!activeAccount) {

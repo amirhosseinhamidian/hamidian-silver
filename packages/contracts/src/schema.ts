@@ -3914,6 +3914,7 @@ export interface components {
         };
         PublicCardToCardSettingsDto: {
             cardNumber: string | null;
+            ibanNumber: string | null;
             holderName: string | null;
             bankName: string | null;
             enabled: boolean;
@@ -3942,6 +3943,7 @@ export interface components {
             isEnabled: boolean;
         };
         CardToCardAccountResponseDto: {
+            ibanNumber: string | null;
             id: string;
             cardNumber: string;
             holderName: string;
@@ -3954,12 +3956,14 @@ export interface components {
         };
         CreateCardToCardAccountDto: {
             cardNumber: string;
+            ibanNumber: string;
             holderName: string;
             bankName: string;
             isActive?: boolean;
         };
         UpdateCardToCardAccountDto: {
             cardNumber?: string;
+            ibanNumber?: string;
             holderName?: string;
             bankName?: string;
             isActive?: boolean;
@@ -4056,6 +4060,7 @@ export interface components {
         PublicShippingOptionDto: {
             /** Format: uuid */
             id: string;
+            subtitle: string | null;
             logo: components["schemas"]["AdminSiteMediaDto"] | null;
             /** @enum {string} */
             pricingMode: "FREE" | "FIXED" | "COLLECT";
@@ -4069,6 +4074,7 @@ export interface components {
         ShippingCarrierDto: {
             /** Format: uuid */
             id: string;
+            subtitle: string | null;
             /** Format: uri */
             trackingUrl: string | null;
             /** Format: uuid */
@@ -4090,6 +4096,7 @@ export interface components {
         };
         CreateShippingCarrierDto: {
             name: string;
+            subtitle: string;
             /** Format: uri */
             trackingUrl?: string | null;
             /** Format: uuid */
@@ -4113,6 +4120,7 @@ export interface components {
         };
         UpdateShippingCarrierDto: {
             name?: string;
+            subtitle?: string;
             /** Format: uri */
             trackingUrl?: string | null;
             /** Format: uuid */

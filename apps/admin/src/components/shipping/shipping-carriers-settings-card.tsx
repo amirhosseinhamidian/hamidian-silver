@@ -210,6 +210,7 @@ function CarrierEditor({
   onSuccess: (message: string) => void;
 }>) {
   const [name, setName] = useState(carrier.name);
+  const [subtitle, setSubtitle] = useState(carrier.subtitle ?? '');
   const [trackingUrl, setTrackingUrl] = useState(carrier.trackingUrl ?? '');
   const [logo, setLogo] = useState<SiteMedia | null>(carrier.logo);
   const [pricingMode, setPricingMode] = useState(carrier.pricingMode);
@@ -235,6 +236,7 @@ function CarrierEditor({
       const updated = parseAdminShippingCarrier(payload);
       if (!updated) throw new Error('پاسخ سرویس شرکت‌های ارسال معتبر نبود.');
       setName(updated.name);
+      setSubtitle(updated.subtitle ?? '');
       setTrackingUrl(updated.trackingUrl ?? '');
       setLogo(updated.logo);
       setPricingMode(updated.pricingMode);
@@ -255,6 +257,8 @@ function CarrierEditor({
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (name.trim().length < 2) return onError('نام شرکت ارسال باید حداقل ۲ نویسه باشد.');
+    if (subtitle.trim().length < 2)
+      return onError('زیرعنوان روش ارسال باید حداقل ۲ نویسه باشد.');
     if (!validTrackingUrl(trackingUrl))
       return onError('نشانی سایت استعلام باید با https:// آغاز شود.');
     const pricing = pricingValues(
@@ -269,6 +273,7 @@ function CarrierEditor({
     void update(
       {
         name: name.trim(),
+        subtitle: subtitle.trim(),
         trackingUrl: trackingUrl.trim() || null,
         logoMediaId: logo?.id ?? null,
         ...pricing,
@@ -315,6 +320,23 @@ function CarrierEditor({
           )}
         </FormField>
         <FormField
+          id={`carrier-subtitle-${carrier.id}`}
+          label="زیرعنوان روش ارسال"
+          hint="یک توضیح کوتاه درباره مزیت یا نحوه سرویس‌دهی این شرکت بنویسید."
+          required
+        >
+          {(props) => (
+            <Input
+              {...props}
+              value={subtitle}
+              maxLength={240}
+              placeholder="مثلاً ارسال سریع با رهگیری آنلاین"
+              disabled={!canWrite || pending}
+              onChange={(event) => setSubtitle(event.target.value)}
+            />
+          )}
+        </FormField>
+        <FormField
           id={`carrier-url-${carrier.id}`}
           label="نشانی سایت استعلام"
           hint="نشانی کامل و امن را با https:// وارد کنید."
@@ -357,7 +379,11 @@ function CarrierEditor({
           setServiceArea={setServiceArea}
           disabled={!canWrite || pending}
         />
-        <Button type="submit" loading={pending} disabled={!canWrite || name.trim().length < 2}>
+        <Button
+          type="submit"
+          loading={pending}
+          disabled={!canWrite || name.trim().length < 2 || subtitle.trim().length < 2}
+        >
           ذخیره شرکت
         </Button>
       </form>
@@ -368,6 +394,7 @@ function CarrierEditor({
 export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Props) {
   const [carriers, setCarriers] = useState(initialCarriers);
   const [name, setName] = useState('');
+  const [subtitle, setSubtitle] = useState('');
   const [trackingUrl, setTrackingUrl] = useState('');
   const [logo, setLogo] = useState<SiteMedia | null>(null);
   const [pricingMode, setPricingMode] = useState<ShippingCarrierPricingMode>('FREE');
@@ -384,6 +411,8 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
     event.preventDefault();
     if (pending || !canWrite) return;
     if (name.trim().length < 2) return setError('نام شرکت ارسال باید حداقل ۲ نویسه باشد.');
+    if (subtitle.trim().length < 2)
+      return setError('زیرعنوان روش ارسال باید حداقل ۲ نویسه باشد.');
     if (!validTrackingUrl(trackingUrl))
       return setError('نشانی سایت استعلام باید با https:// آغاز شود.');
     const pricing = pricingValues(
@@ -404,6 +433,7 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
+          subtitle: subtitle.trim(),
           trackingUrl: trackingUrl.trim() || null,
           logoMediaId: logo?.id ?? null,
           ...pricing,
@@ -417,6 +447,7 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
       if (!created) throw new Error('پاسخ سرویس شرکت‌های ارسال معتبر نبود.');
       setCarriers((current) => [created, ...current]);
       setName('');
+      setSubtitle('');
       setTrackingUrl('');
       setLogo(null);
       setPricingMode('FREE');
@@ -458,6 +489,23 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
                   placeholder="مثلاً ماهکس"
                   disabled={pending}
                   onChange={(event) => setName(event.target.value)}
+                />
+              )}
+            </FormField>
+            <FormField
+              id="new-carrier-subtitle"
+              label="زیرعنوان روش ارسال"
+              hint="یک توضیح کوتاه درباره مزیت یا نحوه سرویس‌دهی این شرکت بنویسید."
+              required
+            >
+              {(props) => (
+                <Input
+                  {...props}
+                  value={subtitle}
+                  maxLength={240}
+                  placeholder="مثلاً ارسال سریع با رهگیری آنلاین"
+                  disabled={pending}
+                  onChange={(event) => setSubtitle(event.target.value)}
                 />
               )}
             </FormField>
@@ -508,7 +556,11 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
               />
             </div>
             <div className="flex items-end">
-              <Button type="submit" loading={pending} disabled={name.trim().length < 2}>
+              <Button
+                type="submit"
+                loading={pending}
+                disabled={name.trim().length < 2 || subtitle.trim().length < 2}
+              >
                 افزودن شرکت
               </Button>
             </div>

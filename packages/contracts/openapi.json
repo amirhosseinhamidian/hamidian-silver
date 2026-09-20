@@ -11082,6 +11082,10 @@
             "type": "string",
             "nullable": true
           },
+          "ibanNumber": {
+            "type": "string",
+            "nullable": true
+          },
           "holderName": {
             "type": "string",
             "nullable": true
@@ -11096,6 +11100,7 @@
         },
         "required": [
           "cardNumber",
+          "ibanNumber",
           "holderName",
           "bankName",
           "enabled"
@@ -11191,6 +11196,10 @@
       "CardToCardAccountResponseDto": {
         "type": "object",
         "properties": {
+          "ibanNumber": {
+            "type": "string",
+            "nullable": true
+          },
           "id": {
             "type": "string"
           },
@@ -11216,6 +11225,7 @@
           }
         },
         "required": [
+          "ibanNumber",
           "id",
           "cardNumber",
           "holderName",
@@ -11231,6 +11241,10 @@
           "cardNumber": {
             "type": "string",
             "pattern": "^\\d{16}$"
+          },
+          "ibanNumber": {
+            "type": "string",
+            "pattern": "^\\d{24}$"
           },
           "holderName": {
             "type": "string",
@@ -11248,6 +11262,7 @@
         },
         "required": [
           "cardNumber",
+          "ibanNumber",
           "holderName",
           "bankName"
         ]
@@ -11258,6 +11273,10 @@
           "cardNumber": {
             "type": "string",
             "pattern": "^\\d{16}$"
+          },
+          "ibanNumber": {
+            "type": "string",
+            "pattern": "^\\d{24}$"
           },
           "holderName": {
             "type": "string",
@@ -11633,6 +11652,12 @@
             "type": "string",
             "format": "uuid"
           },
+          "subtitle": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 2,
+            "maxLength": 240
+          },
           "logo": {
             "nullable": true,
             "type": "object",
@@ -11674,6 +11699,7 @@
         },
         "required": [
           "id",
+          "subtitle",
           "logo",
           "pricingMode",
           "thresholdToman",
@@ -11689,6 +11715,12 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 2,
+            "maxLength": 240
           },
           "trackingUrl": {
             "type": "string",
@@ -11752,6 +11784,7 @@
         },
         "required": [
           "id",
+          "subtitle",
           "trackingUrl",
           "logoMediaId",
           "logo",
@@ -11773,6 +11806,11 @@
             "type": "string",
             "minLength": 2,
             "maxLength": 200
+          },
+          "subtitle": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 240
           },
           "trackingUrl": {
             "type": "string",
@@ -11823,7 +11861,8 @@
           }
         },
         "required": [
-          "name"
+          "name",
+          "subtitle"
         ]
       },
       "UpdateShippingCarrierDto": {
@@ -11833,6 +11872,11 @@
             "type": "string",
             "minLength": 2,
             "maxLength": 200
+          },
+          "subtitle": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 240
           },
           "trackingUrl": {
             "type": "string",

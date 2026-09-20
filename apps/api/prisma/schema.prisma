@@ -381,6 +381,7 @@ model ShippingPricingSettings {
 model ShippingCarrier {
   id              String   @id @default(uuid()) @db.Uuid
   name            String   @unique @db.VarChar(200)
+  subtitle        String?  @db.VarChar(240)
   trackingUrl     String?  @db.VarChar(1000)
   logoMediaId     String?  @db.Uuid
   pricingMode     String   @default("FREE") @db.VarChar(16)
@@ -1726,6 +1727,7 @@ model PaymentGatewaySetting {
 model CardToCardAccount {
   id              String   @id @default(uuid()) @db.Uuid
   cardNumber      String   @unique @db.VarChar(16)
+  ibanNumber      String?  @unique @db.VarChar(24)
   holderName      String   @db.VarChar(150)
   bankName        String   @db.VarChar(100)
   isActive        Boolean  @default(false)

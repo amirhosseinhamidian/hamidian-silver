@@ -50,6 +50,7 @@ export class ShippingCarriersService {
       return {
         id: projected.id,
         name: projected.name,
+        subtitle: projected.subtitle,
         logo: projected.logo,
         pricingMode: projected.pricingMode,
         baseCostToman: projected.baseCostToman,
@@ -61,6 +62,9 @@ export class ShippingCarriersService {
   }
 
   async create(dto: CreateShippingCarrierDto, actorUserId: string) {
+    if (!dto.subtitle?.trim()) {
+      throw new BadRequestException('Shipping carrier subtitle is required.');
+    }
     const input = await this.normalize({
       ...dto,
       pricingMode: dto.pricingMode ?? 'FREE',
@@ -85,6 +89,7 @@ export class ShippingCarriersService {
         entityName: carrier.name,
         changes: [
           { field: 'name', label: 'نام شرکت', before: null, after: carrier.name },
+          { field: 'subtitle', label: 'زیرعنوان', before: null, after: carrier.subtitle },
           { field: 'isActive', label: 'وضعیت فعال', before: false, after: carrier.isActive },
         ],
       });
@@ -101,6 +106,7 @@ export class ShippingCarriersService {
     if (!current) throw new NotFoundException('Shipping carrier was not found.');
     const input = await this.normalize({
       name: dto.name ?? current.name,
+      subtitle: dto.subtitle === undefined ? (current.subtitle ?? undefined) : dto.subtitle,
       trackingUrl: dto.trackingUrl === undefined ? current.trackingUrl : dto.trackingUrl,
       logoMediaId: dto.logoMediaId === undefined ? current.logoMediaId : dto.logoMediaId,
       pricingMode: dto.pricingMode ?? (current.pricingMode as 'FREE' | 'FIXED' | 'COLLECT'),
@@ -131,6 +137,16 @@ export class ShippingCarriersService {
           ...(current.name === carrier.name
             ? []
             : [{ field: 'name', label: 'نام شرکت', before: current.name, after: carrier.name }]),
+          ...(current.subtitle === carrier.subtitle
+            ? []
+            : [
+                {
+                  field: 'subtitle',
+                  label: 'زیرعنوان',
+                  before: current.subtitle,
+                  after: carrier.subtitle,
+                },
+              ]),
           ...(current.isActive === carrier.isActive
             ? []
             : [
@@ -219,6 +235,10 @@ export class ShippingCarriersService {
     if (name !== undefined && name.length < 2) {
       throw new BadRequestException('Shipping carrier name is invalid.');
     }
+    const subtitle = dto.subtitle?.trim() || null;
+    if (dto.subtitle !== undefined && (!subtitle || subtitle.length < 2)) {
+      throw new BadRequestException('Shipping carrier subtitle is invalid.');
+    }
     const rawTrackingUrl = dto.trackingUrl?.trim() || null;
     let trackingUrl: string | null | undefined;
     if (dto.trackingUrl !== undefined) {
@@ -278,6 +298,7 @@ export class ShippingCarriersService {
     }
     return {
       name: name!,
+      subtitle,
       trackingUrl: trackingUrl ?? null,
       logoMediaId: logoMediaId ?? null,
       pricingMode,
@@ -292,6 +313,7 @@ export class ShippingCarriersService {
     return {
       id: carrier.id,
       name: carrier.name,
+      subtitle: carrier.subtitle,
       trackingUrl: carrier.trackingUrl,
       logoMediaId: carrier.logoMediaId,
       logo: carrier.logo
