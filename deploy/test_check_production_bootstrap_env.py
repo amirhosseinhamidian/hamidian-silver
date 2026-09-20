@@ -23,7 +23,7 @@ class ProductionBootstrapValidationTests(unittest.TestCase):
 
     def test_disallows_demo_and_gateway_flags(self):
         self.assertTrue(module.validate(self.good + 'SEED_DEMO_CATALOG=true\n'))
-        self.assertTrue(module.validate(self.good + 'OPERATIONAL_PAYMENT_GATEWAY=zarinpal\n'))
+        self.assertTrue(module.validate(self.good + 'OPERATIONAL_PAYMENT_GATEWAY=irandargah\n'))
 
     def test_rejects_duplicate_and_interpolated_fields(self):
         self.assertTrue(module.validate(self.good + 'OPERATIONAL_ADMIN_PHONE=09123456789\n'))

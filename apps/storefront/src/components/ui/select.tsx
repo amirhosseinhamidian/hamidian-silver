@@ -132,7 +132,7 @@ export function Select({
           sideOffset={4}
           collisionPadding={12}
           className="
-            z-[80]
+            z-[1000]
 
             min-w-[var(--radix-select-trigger-width)]
 

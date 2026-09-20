@@ -6,8 +6,8 @@ import {
 } from '@/lib/payment-gateways/payment-gateway-model';
 
 const gateway = {
-  provider: 'zarinpal',
-  displayName: 'زرین‌پال',
+  provider: 'irandargah',
+  displayName: 'ایران‌درگاه',
   sortOrder: 10,
   isEnabled: true,
   isImplemented: true,
@@ -17,14 +17,13 @@ const gateway = {
 };
 
 describe('payment gateway model', () => {
-  it('parses and sorts the three supported gateway states', () => {
+  it('parses and sorts the supported gateway states', () => {
     expect(
       parsePaymentGatewaySettings([
-        { ...gateway, provider: 'mellat', displayName: 'ملت', sortOrder: 30 },
         gateway,
-        { ...gateway, provider: 'zibal', displayName: 'زیبال', sortOrder: 20 },
+        { ...gateway, provider: 'mellat', displayName: 'ملت', sortOrder: 20 },
       ])?.map(({ provider }) => provider),
-    ).toEqual(['zarinpal', 'zibal', 'mellat']);
+    ).toEqual(['irandargah', 'mellat']);
   });
 
   it('rejects malformed or unknown gateway responses', () => {

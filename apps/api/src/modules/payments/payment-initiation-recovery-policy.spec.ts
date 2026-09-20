@@ -15,6 +15,20 @@ describe('PaymentInitiationRecoveryPolicy', () => {
     return new PaymentInitiationRecoveryPolicy(config as unknown as ConfigService);
   }
 
+  it('accepts only the canonical IranDargah redirect for the configured environment', () => {
+    const policy = createPolicy({ IRANDARGAH_SANDBOX: false });
+    const paymentUrl = 'https://ipg.irandargah.com/startpay/2025100121424146HC';
+
+    expect(
+      policy.requireCanonicalRedirect({
+        provider: 'irandargah',
+        attemptId,
+        authority: '2025100121424146HC',
+        paymentUrl,
+      }),
+    ).toBe(paymentUrl);
+  });
+
   it('accepts only the canonical Zarinpal redirect for the configured environment', () => {
     const policy = createPolicy({
       ZARINPAL_SANDBOX: true,

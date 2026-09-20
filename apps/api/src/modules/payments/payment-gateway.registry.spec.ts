@@ -2,6 +2,7 @@ import { BadRequestException, ServiceUnavailableException } from '@nestjs/common
 import type { ConfigService } from '@nestjs/config';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { ZarinpalPaymentGateway } from './adapters/zarinpal-payment.gateway';
+import type { IranDargahPaymentGateway } from './adapters/irandargah-payment.gateway';
 import { PAYMENT_GATEWAY_CODES } from './payment-gateway.constants';
 import { PaymentGatewayRegistry } from './payment-gateway.registry';
 import type { PaymentGateway } from './payment-gateway.port';
@@ -27,36 +28,45 @@ describe('PaymentGatewayRegistry', () => {
     verify: jest.fn(),
   };
 
+  const iranDargah: jest.Mocked<PaymentGateway> = {
+    providerCode: PAYMENT_GATEWAY_CODES.IRANDARGAH,
+    initiate: jest.fn(),
+    verify: jest.fn(),
+  };
+
   let registry: PaymentGatewayRegistry;
 
   beforeEach(() => {
     jest.clearAllMocks();
     config.get.mockImplementation((key: string, fallback: unknown) =>
-      key === 'ZARINPAL_MERCHANT_ID' ? '' : fallback,
+      key === 'IRANDARGAH_API_TOKEN' ? '' : fallback,
     );
     registry = new PaymentGatewayRegistry(
       prisma as unknown as PrismaService,
       config as unknown as ConfigService,
       zarinpal as unknown as ZarinpalPaymentGateway,
+      undefined,
+      undefined,
+      iranDargah as unknown as IranDargahPaymentGateway,
     );
   });
 
   it('shows enabled and configured as separate manager-visible states', async () => {
     prisma.paymentGatewaySetting.findMany.mockResolvedValue([
       {
-        provider: PAYMENT_GATEWAY_CODES.ZARINPAL,
+        provider: PAYMENT_GATEWAY_CODES.IRANDARGAH,
         isEnabled: true,
         updatedAt: new Date('2026-08-30T12:00:00.000Z'),
       },
     ]);
 
     const settings = await registry.listGatewaySettings();
-    const zarinpalSetting = settings.find(
-      ({ provider }) => provider === PAYMENT_GATEWAY_CODES.ZARINPAL,
+    const iranDargahSetting = settings.find(
+      ({ provider }) => provider === PAYMENT_GATEWAY_CODES.IRANDARGAH,
     );
     const zibalSetting = settings.find(({ provider }) => provider === PAYMENT_GATEWAY_CODES.ZIBAL);
 
-    expect(zarinpalSetting).toEqual(
+    expect(iranDargahSetting).toEqual(
       expect.objectContaining({
         isEnabled: true,
         isImplemented: true,
@@ -64,30 +74,23 @@ describe('PaymentGatewayRegistry', () => {
         isAvailable: false,
       }),
     );
-    expect(zibalSetting).toEqual(
-      expect.objectContaining({
-        isEnabled: false,
-        isImplemented: false,
-        isConfigured: false,
-        isAvailable: false,
-      }),
-    );
+    expect(zibalSetting).toBeUndefined();
   });
 
   it('lets Manager enable a gateway even before credentials are configured', async () => {
     prisma.paymentGatewaySetting.upsert.mockResolvedValue({
-      provider: PAYMENT_GATEWAY_CODES.ZIBAL,
+      provider: PAYMENT_GATEWAY_CODES.IRANDARGAH,
       isEnabled: true,
       updatedAt: new Date('2026-08-30T12:00:00.000Z'),
     });
 
     await expect(
-      registry.updateGatewaySetting(PAYMENT_GATEWAY_CODES.ZIBAL, true, actorUserId),
+      registry.updateGatewaySetting(PAYMENT_GATEWAY_CODES.IRANDARGAH, true, actorUserId),
     ).resolves.toEqual(
       expect.objectContaining({
-        provider: PAYMENT_GATEWAY_CODES.ZIBAL,
+        provider: PAYMENT_GATEWAY_CODES.IRANDARGAH,
         isEnabled: true,
-        isImplemented: false,
+        isImplemented: true,
         isConfigured: false,
         isAvailable: false,
       }),
@@ -95,14 +98,14 @@ describe('PaymentGatewayRegistry', () => {
 
     expect(prisma.paymentGatewaySetting.upsert).toHaveBeenCalledWith({
       where: {
-        provider: PAYMENT_GATEWAY_CODES.ZIBAL,
+        provider: PAYMENT_GATEWAY_CODES.IRANDARGAH,
       },
       update: {
         isEnabled: true,
         updatedByUserId: actorUserId,
       },
       create: {
-        provider: PAYMENT_GATEWAY_CODES.ZIBAL,
+        provider: PAYMENT_GATEWAY_CODES.IRANDARGAH,
         isEnabled: true,
         updatedByUserId: actorUserId,
       },
@@ -116,25 +119,25 @@ describe('PaymentGatewayRegistry', () => {
 
   it('routes initiation only when the gateway is enabled and configured', async () => {
     config.get.mockImplementation((key: string, fallback: unknown) =>
-      key === 'ZARINPAL_MERCHANT_ID' ? '00000000-0000-4000-8000-000000000001' : fallback,
+      key === 'IRANDARGAH_API_TOKEN' ? `idg_test_${'a'.repeat(32)}` : fallback,
     );
     prisma.paymentGatewaySetting.findUnique.mockResolvedValue({
       isEnabled: true,
     });
-    zarinpal.initiate.mockResolvedValue({
+    iranDargah.initiate.mockResolvedValue({
       authority: 'AUTH-1',
       paymentUrl: 'https://gateway.example/AUTH-1',
     });
 
     await registry.initiate({
-      provider: PAYMENT_GATEWAY_CODES.ZARINPAL,
+      provider: PAYMENT_GATEWAY_CODES.IRANDARGAH,
       attemptId: '20000000-0000-4000-8000-000000000001',
       orderNumber: 'HS-TEST',
       amountRial: '10000000',
       callbackUrl: 'https://api.example.com/payments/callback',
     });
 
-    expect(zarinpal.initiate).toHaveBeenCalledTimes(1);
+    expect(iranDargah.initiate).toHaveBeenCalledTimes(1);
   });
 
   it('does not require the gateway to remain enabled during verification', async () => {
@@ -163,7 +166,7 @@ describe('PaymentGatewayRegistry', () => {
 
     await expect(
       registry.initiate({
-        provider: PAYMENT_GATEWAY_CODES.ZARINPAL,
+        provider: PAYMENT_GATEWAY_CODES.IRANDARGAH,
         attemptId: '20000000-0000-4000-8000-000000000001',
         orderNumber: 'HS-TEST',
         amountRial: '10000000',

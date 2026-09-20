@@ -27,7 +27,9 @@ class ProductionEnvValidationTests(unittest.TestCase):
             "MANUAL_SHIPPING_COST_TOMAN": "0",
             "SMS_PROVIDER": "disabled",
             "PAYMENT_PROVIDER": "disabled",
-            "ZARINPAL_SANDBOX": "true",
+            "IRANDARGAH_API_TOKEN": "idg_live_" + "a" * 32,
+            "IRANDARGAH_SANDBOX": "false",
+            "IRANDARGAH_REQUEST_TIMEOUT_MS": "8000",
         }
 
     def test_valid_encoded_password_is_not_reported(self):
@@ -51,7 +53,6 @@ class ProductionEnvValidationTests(unittest.TestCase):
 
     def test_rejects_multiple_gateway_credentials_and_postex(self):
         env = self.fixture()
-        env["ZIBAL_MERCHANT_ID"] = "merchant"
         env["MELLAT_TERMINAL_ID"] = "123"
         env["MELLAT_USERNAME"] = "username"
         env["MELLAT_PASSWORD"] = "credential"

@@ -1,5 +1,6 @@
 import { normalizeIranianMobile } from '../src/modules/auth/phone-normalizer';
 import {
+  isConfigurablePaymentGatewayCode,
   isPaymentGatewayCode,
   type PaymentGatewayCode,
 } from '../src/modules/payments/payment-gateway.constants';
@@ -65,16 +66,17 @@ function parsePaymentGateway(env: NodeJS.ProcessEnv): PaymentGatewayCode | null 
 
   if (value === 'disabled') return null;
 
-  if (!isPaymentGatewayCode(value)) {
-    throw new Error('OPERATIONAL_PAYMENT_GATEWAY must be disabled, zarinpal, zibal, or mellat.');
+  if (!isPaymentGatewayCode(value) || !isConfigurablePaymentGatewayCode(value)) {
+    throw new Error('OPERATIONAL_PAYMENT_GATEWAY must be disabled, irandargah, or mellat.');
   }
 
-  const requiredCredentialKeys: Record<PaymentGatewayCode, readonly string[]> = {
-    zarinpal: ['ZARINPAL_MERCHANT_ID'],
-    zibal: ['ZIBAL_MERCHANT_ID'],
+  const requiredCredentialKeys: Partial<Record<PaymentGatewayCode, readonly string[]>> = {
+    irandargah: ['IRANDARGAH_API_TOKEN'],
     mellat: ['MELLAT_TERMINAL_ID', 'MELLAT_USERNAME', 'MELLAT_PASSWORD'],
   };
-  const missingCredentials = requiredCredentialKeys[value].filter((key) => !env[key]?.trim());
+  const missingCredentials = (requiredCredentialKeys[value] ?? []).filter(
+    (key) => !env[key]?.trim(),
+  );
 
   if (missingCredentials.length > 0) {
     throw new Error(

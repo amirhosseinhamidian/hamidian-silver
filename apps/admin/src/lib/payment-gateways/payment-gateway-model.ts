@@ -1,4 +1,4 @@
-export const PAYMENT_GATEWAY_PROVIDERS = ['zarinpal', 'zibal', 'mellat'] as const;
+export const PAYMENT_GATEWAY_PROVIDERS = ['irandargah', 'mellat'] as const;
 
 export type AdminPaymentGatewayProvider = (typeof PAYMENT_GATEWAY_PROVIDERS)[number];
 
@@ -20,13 +20,9 @@ export type PaymentGatewayMetadata = Readonly<{
 
 export const PAYMENT_GATEWAY_METADATA: Record<AdminPaymentGatewayProvider, PaymentGatewayMetadata> =
   {
-    zarinpal: {
-      description: 'پرداخت اینترنتی زرین‌پال با امکان استفاده از محیط آزمایشی.',
-      credentialKeys: ['ZARINPAL_MERCHANT_ID'],
-    },
-    zibal: {
-      description: 'پرداخت اینترنتی از طریق درگاه واسط زیبال.',
-      credentialKeys: ['ZIBAL_MERCHANT_ID'],
+    irandargah: {
+      description: 'پرداخت اینترنتی ایران‌درگاه با توکن اختصاصی محیط عملیاتی یا آزمایشی.',
+      credentialKeys: ['IRANDARGAH_API_TOKEN'],
     },
     mellat: {
       description: 'درگاه مستقیم به‌پرداخت ملت برای پذیرنده بانکی.',

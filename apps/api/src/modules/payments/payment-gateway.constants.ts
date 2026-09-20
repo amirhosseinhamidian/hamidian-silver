@@ -1,4 +1,5 @@
 export const PAYMENT_GATEWAY_CODES = {
+  IRANDARGAH: 'irandargah',
   ZARINPAL: 'zarinpal',
   ZIBAL: 'zibal',
   MELLAT: 'mellat',
@@ -14,19 +15,14 @@ export type PaymentGatewayDefinition = {
 
 export const PAYMENT_GATEWAY_DEFINITIONS: readonly PaymentGatewayDefinition[] = [
   {
-    code: PAYMENT_GATEWAY_CODES.ZARINPAL,
-    displayName: 'زرین‌پال',
+    code: PAYMENT_GATEWAY_CODES.IRANDARGAH,
+    displayName: 'ایران‌درگاه',
     sortOrder: 10,
-  },
-  {
-    code: PAYMENT_GATEWAY_CODES.ZIBAL,
-    displayName: 'زیبال',
-    sortOrder: 20,
   },
   {
     code: PAYMENT_GATEWAY_CODES.MELLAT,
     displayName: 'درگاه مستقیم بانک ملت',
-    sortOrder: 30,
+    sortOrder: 20,
   },
 ];
 
@@ -34,4 +30,8 @@ const PAYMENT_GATEWAY_CODE_SET = new Set<string>(Object.values(PAYMENT_GATEWAY_C
 
 export function isPaymentGatewayCode(value: string): value is PaymentGatewayCode {
   return PAYMENT_GATEWAY_CODE_SET.has(value);
+}
+
+export function isConfigurablePaymentGatewayCode(value: string): value is PaymentGatewayCode {
+  return PAYMENT_GATEWAY_DEFINITIONS.some(({ code }) => code === value);
 }

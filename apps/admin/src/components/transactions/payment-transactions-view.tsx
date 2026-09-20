@@ -56,6 +56,7 @@ const STATUS_PRESENTATION: Record<
 };
 
 const PROVIDER_LABELS: Readonly<Record<string, string>> = {
+  irandargah: 'ایران‌درگاه',
   zarinpal: 'زرین‌پال',
   zibal: 'زیبال',
   mellat: 'بانک ملت',

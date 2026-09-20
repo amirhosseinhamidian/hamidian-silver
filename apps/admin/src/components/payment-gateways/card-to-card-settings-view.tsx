@@ -144,9 +144,7 @@ export function CardToCardSettingsView({ initialAccounts, canWrite }: CardToCard
       const updated = parseCardToCardAccount(payload);
       if (!updated) throw new Error('پاسخ سرویس تنظیمات معتبر نبود.');
 
-      setAccounts((current) =>
-        current.map((item) => (item.id === updated.id ? updated : item)),
-      );
+      setAccounts((current) => current.map((item) => (item.id === updated.id ? updated : item)));
       setEditingIbanAccountId(null);
       setIbanDraft('');
       setMessage('شماره شبا با موفقیت ذخیره شد.');

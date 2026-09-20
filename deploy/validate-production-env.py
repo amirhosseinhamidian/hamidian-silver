@@ -19,15 +19,15 @@ ALLOWED_KEYS = frozenset(
         "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "DATABASE_URL", "OTP_PEPPER",
         "MEDIA_PUBLIC_BASE_URL", "CORS_ORIGINS", "PAYMENT_CALLBACK_URL",
         "SMS_PROVIDER", "KAVENEGAR_API_KEY", "KAVENEGAR_OTP_TEMPLATE", "KAVENEGAR_SENDER",
-        "PAYMENT_PROVIDER", "ZARINPAL_SANDBOX", "ZARINPAL_MERCHANT_ID",
-        "ZIBAL_MERCHANT_ID", "MELLAT_TERMINAL_ID", "MELLAT_USERNAME", "MELLAT_PASSWORD",
+        "PAYMENT_PROVIDER", "IRANDARGAH_API_TOKEN", "IRANDARGAH_SANDBOX",
+        "IRANDARGAH_REQUEST_TIMEOUT_MS", "MELLAT_TERMINAL_ID", "MELLAT_USERNAME", "MELLAT_PASSWORD",
         "SHIPPING_PROVIDER", "MANUAL_SHIPPING_COST_TOMAN",
         "NEXT_PUBLIC_GA_MEASUREMENT_ID", "GOOGLE_SITE_VERIFICATION",
     }
 )
 NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 DB_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
-GUID_RE = re.compile(r"^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$")
+IRANDARGAH_LIVE_TOKEN_RE = re.compile(r"^idg_live_[A-Za-z0-9_-]{16,}$")
 
 
 def parse_env(contents: str) -> tuple[dict[str, str], list[str]]:
@@ -119,14 +119,20 @@ def validate(values: dict[str, str]) -> list[str]:
     # PAYMENT_PROVIDER is a legacy flag; availability is set in Admin/DB.
     if values.get("PAYMENT_PROVIDER") != "disabled":
         errors.append("PAYMENT_PROVIDER must remain disabled; enable one gateway through Admin/DB")
-    if values.get("ZARINPAL_SANDBOX") not in ("true", "false"):
-        errors.append("ZARINPAL_SANDBOX must be true or false")
-    if values.get("ZARINPAL_MERCHANT_ID") and not GUID_RE.fullmatch(values["ZARINPAL_MERCHANT_ID"]):
-        errors.append("ZARINPAL_MERCHANT_ID must be a UUID")
-    mellat = tuple(values.get(key, "") for key in ("MELLAT_TERMINAL_ID", "MELLAT_USERNAME", "MELLAT_PASSWORD"))
+    if values.get("IRANDARGAH_SANDBOX") != "false":
+        errors.append("IRANDARGAH_SANDBOX must be false in production")
+    if not IRANDARGAH_LIVE_TOKEN_RE.fullmatch(values.get("IRANDARGAH_API_TOKEN", "")):
+        errors.append("IRANDARGAH_API_TOKEN must be a live idg_live_ token")
+    timeout = values.get("IRANDARGAH_REQUEST_TIMEOUT_MS", "")
+    if not timeout.isdigit() or not 1000 <= int(timeout or "0") <= 60000:
+        errors.append("IRANDARGAH_REQUEST_TIMEOUT_MS must be between 1000 and 60000")
+    mellat = tuple(
+        values.get(key, "")
+        for key in ("MELLAT_TERMINAL_ID", "MELLAT_USERNAME", "MELLAT_PASSWORD")
+    )
     if any(mellat) and (not all(mellat) or not mellat[0].isdigit()):
         errors.append("MELLAT_TERMINAL_ID, MELLAT_USERNAME, MELLAT_PASSWORD must be complete")
-    configured = sum(bool(part) for part in (values.get("ZARINPAL_MERCHANT_ID"), values.get("ZIBAL_MERCHANT_ID"), mellat[0]))
+    configured = sum(bool(part) for part in (values.get("IRANDARGAH_API_TOKEN"), mellat[0]))
     if configured > 1:
         errors.append("Configure credentials for only one payment gateway initially")
     return errors

@@ -84,7 +84,7 @@ export class PaymentsService {
     const requestedProvider = dto.provider;
     const provider =
       this.gateway.providerCode === 'registry'
-        ? (requestedProvider ?? PAYMENT_GATEWAY_CODES.ZARINPAL)
+        ? (requestedProvider ?? PAYMENT_GATEWAY_CODES.IRANDARGAH)
         : this.gateway.providerCode;
     let context: InitiationContext;
 
