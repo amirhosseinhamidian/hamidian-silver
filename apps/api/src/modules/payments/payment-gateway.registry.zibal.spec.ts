@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { ZarinpalPaymentGateway } from './adapters/zarinpal-payment.gateway';
@@ -34,7 +35,7 @@ describe('PaymentGatewayRegistry Zibal integration', () => {
     jest.clearAllMocks();
   });
 
-  it('reports Zibal implemented but unavailable until merchant credentials exist', async () => {
+  it('does not expose Zibal in manager settings', async () => {
     config.get.mockImplementation((key: string, fallback: unknown) =>
       key === 'ZIBAL_MERCHANT_ID' ? '' : fallback,
     );
@@ -56,17 +57,10 @@ describe('PaymentGatewayRegistry Zibal integration', () => {
     const settings = await registry.listGatewaySettings();
     const zibalSetting = settings.find(({ provider }) => provider === PAYMENT_GATEWAY_CODES.ZIBAL);
 
-    expect(zibalSetting).toEqual(
-      expect.objectContaining({
-        isEnabled: true,
-        isImplemented: true,
-        isConfigured: false,
-        isAvailable: false,
-      }),
-    );
+    expect(zibalSetting).toBeUndefined();
   });
 
-  it('routes enabled and configured Zibal initiations to the Zibal adapter', async () => {
+  it('rejects new Zibal initiations while retaining its adapter for old verification', async () => {
     config.get.mockImplementation((key: string, fallback: unknown) =>
       key === 'ZIBAL_MERCHANT_ID' ? 'zibal-test-merchant' : fallback,
     );
@@ -85,15 +79,17 @@ describe('PaymentGatewayRegistry Zibal integration', () => {
       zibal as unknown as ZibalPaymentGateway,
     );
 
-    await registry.initiate({
-      provider: PAYMENT_GATEWAY_CODES.ZIBAL,
-      attemptId: '10000000-0000-4000-8000-000000000001',
-      orderNumber: 'HS-TEST',
-      amountRial: '12000000',
-      callbackUrl: 'https://api.example.com/callback',
-    });
+    await expect(
+      registry.initiate({
+        provider: PAYMENT_GATEWAY_CODES.ZIBAL,
+        attemptId: '10000000-0000-4000-8000-000000000001',
+        orderNumber: 'HS-TEST',
+        amountRial: '12000000',
+        callbackUrl: 'https://api.example.com/callback',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
 
-    expect(zibal.initiate).toHaveBeenCalledTimes(1);
+    expect(zibal.initiate).not.toHaveBeenCalled();
     expect(zarinpal.initiate).not.toHaveBeenCalled();
   });
 });

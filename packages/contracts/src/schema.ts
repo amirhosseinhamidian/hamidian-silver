@@ -3924,7 +3924,7 @@ export interface components {
         };
         InitiatePaymentDto: {
             /** @enum {string} */
-            provider?: "zarinpal" | "zibal" | "mellat";
+            provider?: "irandargah" | "mellat";
             idempotencyKey: string;
         };
         PaymentInitiationResponseDto: {
@@ -8521,7 +8521,7 @@ export interface operations {
         parameters: {
             query?: {
                 q?: string;
-                provider?: "zarinpal" | "mellat" | "zibal";
+                provider?: "irandargah" | "mellat" | "zarinpal" | "zibal";
                 status?: "FAILED" | "AWAITING_REVIEW" | "RECONCILIATION_REQUIRED" | "CREATED" | "REDIRECTED" | "VERIFIED" | "RECONCILED";
                 page?: number;
                 pageSize?: number;

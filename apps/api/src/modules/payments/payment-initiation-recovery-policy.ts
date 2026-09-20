@@ -48,6 +48,8 @@ export class PaymentInitiationRecoveryPolicy {
     authority: string,
   ): string {
     switch (provider) {
+      case PAYMENT_GATEWAY_CODES.IRANDARGAH:
+        return this.buildIranDargahUrl(authority);
       case PAYMENT_GATEWAY_CODES.ZARINPAL:
         return this.buildZarinpalUrl(authority);
       case PAYMENT_GATEWAY_CODES.ZIBAL:
@@ -55,6 +57,22 @@ export class PaymentInitiationRecoveryPolicy {
       case PAYMENT_GATEWAY_CODES.MELLAT:
         return this.buildMellatUrl(attemptId, authority);
     }
+  }
+
+  private buildIranDargahUrl(authority: string): string {
+    if (!/^[A-Za-z0-9]+$/.test(authority)) {
+      throw new DomainException(
+        ErrorCode.PAYMENT_CALLBACK_INVALID,
+        'Recovered IranDargah authority is invalid.',
+      );
+    }
+
+    const sandbox = this.config.get<boolean>('IRANDARGAH_SANDBOX', true);
+    const baseUrl = sandbox
+      ? 'https://sandbox.irandargah.com/startpay/'
+      : 'https://ipg.irandargah.com/startpay/';
+
+    return `${baseUrl}${encodeURIComponent(authority)}`;
   }
 
   private buildZarinpalUrl(authority: string): string {

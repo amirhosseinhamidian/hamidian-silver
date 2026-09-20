@@ -22,7 +22,7 @@ production و staging همیشه هم‌زمان روی ۸ GB RAM/۵۰ GB دیس
 | secrets                      | `/etc/hamidian-silver/production.env`         | `/etc/hamidian-silver/staging.env` و `staging-bootstrap.env`                          |
 | پورت‌های میزبان              | loopback 3100–3102                            | فقط loopback 3200–3202؛ DB/Redis بدون port                                            |
 | دامنه                        | `hamidian.shop`                               | `staging.hamidian.shop`، `admin.staging.hamidian.shop`، `media.staging.hamidian.shop` |
-| پرداخت                       | یک درگاه واقعی پس از VPS-011                  | **فقط زرین‌پال sandbox**، فعال‌سازی در DB staging از Admin                            |
+| پرداخت                       | یک درگاه واقعی پس از VPS-011                  | **فقط ایران‌درگاه sandbox**، فعال‌سازی در DB staging از Admin                         |
 | ارسال / آمار                 | Postex خاموش                                  | ارسال دستی، GA/Search Console خاموش، noindex                                          |
 
 ## ۱. پیش‌نیازهای بیرونی؛ قبل از هر درخواست صدور گواهی
@@ -79,11 +79,11 @@ postgresql://hamidian_staging:<رمز-مخصوص-staging>@postgres:5432/hamidian
 است هزینه داشته باشد؛ فقط به شمارهٔ تحت کنترل شما تست بفرستید. هرگز
 `console`، کد OTP ثابتِ E2E محلی یا شمارهٔ کاربر واقعی را وارد staging نکنید.
 
-برای پرداخت، فقط در صورت وجود شناسهٔ معتبر sandbox زرین‌پال، آن را در فایل
+برای پرداخت، فقط در صورت وجود توکن معتبر sandbox ایران‌درگاه، آن را در فایل
 staging وارد کنید و پس از seed از پنل **staging** فقط همان gateway را فعال
 کنید. وجود credential به‌تنهایی gateway را فعال نمی‌کند. Compose هم
-`ZARINPAL_SANDBOX=true` را ثابت می‌کند و validator مقدار فایل را کنترل
-می‌کند؛ زیبال/ملت/اعتبارنامهٔ واقعی در staging مجاز نیستند. اگر sandbox یا
+`IRANDARGAH_SANDBOX=true` را ثابت می‌کند و validator مقدار فایل را کنترل
+می‌کند؛ ملت/توکن عملیاتی در staging مجاز نیستند. اگر sandbox یا
 Kavenegar در دسترس نیست، مرحلهٔ E2E خرید **ناتمام** می‌ماند؛ نه اینکه
 نتیجهٔ mock را پرداخت واقعی فرض کنیم.
 

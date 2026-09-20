@@ -66,7 +66,7 @@ describe('PaymentsService multi-gateway routing', () => {
         create: jest.fn().mockResolvedValue({
           id: attemptId,
           paymentId,
-          provider: PAYMENT_GATEWAY_CODES.ZIBAL,
+          provider: PAYMENT_GATEWAY_CODES.IRANDARGAH,
           amountToman: 1_000_000,
           authority: null,
           paymentUrl: null,
@@ -85,8 +85,8 @@ describe('PaymentsService multi-gateway routing', () => {
     prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 1 });
 
     await service.initiateOrderPayment(userId, orderId, {
-      provider: PAYMENT_GATEWAY_CODES.ZIBAL,
-      idempotencyKey: 'checkout-zibal-001',
+      provider: PAYMENT_GATEWAY_CODES.IRANDARGAH,
+      idempotencyKey: 'checkout-irandargah-001',
     });
 
     expect(transaction.$queryRaw).toHaveBeenCalledTimes(1);
@@ -97,14 +97,14 @@ describe('PaymentsService multi-gateway routing', () => {
     expect(transaction.paymentAttempt.create).toHaveBeenCalledWith({
       data: {
         paymentId,
-        idempotencyKey: 'checkout-zibal-001',
-        provider: PAYMENT_GATEWAY_CODES.ZIBAL,
+        idempotencyKey: 'checkout-irandargah-001',
+        provider: PAYMENT_GATEWAY_CODES.IRANDARGAH,
         amountToman: 1_000_000,
       },
     });
 
     expect(registryGateway.initiate).toHaveBeenCalledWith({
-      provider: PAYMENT_GATEWAY_CODES.ZIBAL,
+      provider: PAYMENT_GATEWAY_CODES.IRANDARGAH,
       attemptId,
       orderNumber: 'HS-TEST',
       amountRial: '10000000',

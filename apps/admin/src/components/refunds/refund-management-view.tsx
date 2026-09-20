@@ -74,6 +74,7 @@ const PAYMENT_STATUS_LABELS: Readonly<Record<string, string>> = {
 function providerLabel(provider: string | null) {
   if (!provider) return 'ثبت نشده';
   const labels: Readonly<Record<string, string>> = {
+    irandargah: 'ایران‌درگاه',
     zarinpal: 'زرین‌پال',
     zibal: 'زیبال',
     mellat: 'بانک ملت',

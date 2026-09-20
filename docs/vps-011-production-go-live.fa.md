@@ -14,7 +14,7 @@ VPS-010 معادل اجرای موفق staging نیست. تا وقتی تمام 
 - workflow `verify` همان SHA سبز، HTTPS staging و Basic Auth و سلامت آن؛
 - ورود OTP واقعاً ارسالی Kavenegar به شمارهٔ خود، سبد و checkout با کالای
   demo و ارسال دستی؛
-- **یک پرداخت موفق sandbox زرین‌پال** از مسیر بازگشت HTTPS staging و تطابق
+- **یک پرداخت موفق sandbox ایران‌درگاه** از مسیر بازگشت HTTPS staging و تطابق
   وضعیت payment attempt و سفارش در پنل؛ مسیر pending/unknown نیز موفقیت کاذب
   نشان ندهد؛
 - restore آزمایشیِ بکاپ و E2E موبایل/دسکتاپ بدون دست‌زدن به دادهٔ production؛
@@ -156,7 +156,7 @@ docker system df
 اگر restore، محتوای واقعی، HTTPS یا ظرفیت fail شد، **NO-GO**: درگاه را
 فعال نکنید. سپس فقط با اختیار صریح مالک: `SMS_PROVIDER=kavenegar` با کلید
 و template واقعی، و اعتبارنامهٔ فقط **یک** درگاه معتبر در
-`production.env` تنظیم شوند (زرین‌پال واقعی: `ZARINPAL_SANDBOX=false`).
+`production.env` تنظیم شوند (`IRANDARGAH_API_TOKEN=idg_live_...` و `IRANDARGAH_SANDBOX=false`).
 فایل خصوصی را دوباره validate کنید و سرویس API را با همان Compose و
 `up -d --no-build --wait --wait-timeout 240 api` بازآفرینی کنید؛ پیش از
 ادامه health را چک کنید. در پنل production همان **یک** درگاه را فعال و

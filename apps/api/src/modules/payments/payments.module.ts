@@ -3,6 +3,7 @@ import { DatabaseModule } from '../../infrastructure/database/database.module';
 import { MellatPaymentGateway } from './adapters/mellat-payment.gateway';
 import { ZarinpalPaymentGateway } from './adapters/zarinpal-payment.gateway';
 import { ZibalPaymentGateway } from './adapters/zibal-payment.gateway';
+import { IranDargahPaymentGateway } from './adapters/irandargah-payment.gateway';
 import { PAYMENT_GATEWAY } from './payment-gateway.port';
 import { PaymentGatewaySettingsController } from './payment-gateway-settings.controller';
 import { PAYMENT_GATEWAY_REGISTRY, PaymentGatewayRegistry } from './payment-gateway.registry';
@@ -40,6 +41,7 @@ import { CardToCardAccountsService } from './card-to-card-accounts.service';
     PaymentsService,
     ZarinpalPaymentGateway,
     ZibalPaymentGateway,
+    IranDargahPaymentGateway,
     MellatPaymentGateway,
     PaymentGatewayRegistry,
     PaymentInitiationRecoveryPolicy,

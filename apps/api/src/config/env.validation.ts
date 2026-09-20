@@ -61,13 +61,19 @@ export const envValidationSchema = Joi.object({
     then: Joi.string().min(1).required(),
     otherwise: Joi.string().allow('').optional(),
   }),
-  PAYMENT_PROVIDER: Joi.string().valid('disabled', 'zarinpal').default('disabled'),
+  PAYMENT_PROVIDER: Joi.string().valid('disabled', 'irandargah').default('disabled'),
   PAYMENT_CALLBACK_URL: Joi.string()
     .uri({ scheme: ['http', 'https'] })
     .default('http://localhost:3000/api/v1/payments/callback'),
   ZARINPAL_MERCHANT_ID: Joi.string().guid().allow('').optional(),
   ZARINPAL_SANDBOX: Joi.boolean().truthy('true').falsy('false').default(true),
   ZIBAL_MERCHANT_ID: Joi.string().min(1).allow('').optional(),
+  IRANDARGAH_API_TOKEN: Joi.string()
+    .pattern(/^idg_(?:live|test)_[A-Za-z0-9_-]{16,}$/)
+    .allow('')
+    .optional(),
+  IRANDARGAH_SANDBOX: Joi.boolean().truthy('true').falsy('false').default(true),
+  IRANDARGAH_REQUEST_TIMEOUT_MS: Joi.number().integer().min(1000).max(60000).default(8000),
   MELLAT_TERMINAL_ID: Joi.string().pattern(/^\d+$/).allow('').optional(),
   MELLAT_USERNAME: Joi.string().min(1).allow('').optional(),
   MELLAT_PASSWORD: Joi.string().min(1).allow('').optional(),

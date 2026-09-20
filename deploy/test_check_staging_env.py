@@ -26,7 +26,8 @@ def fixture():
         'PAYMENT_CALLBACK_URL': 'https://staging.hamidian.shop/api/payment/callback',
         'SMS_PROVIDER': 'disabled',
         'PAYMENT_PROVIDER': 'disabled',
-        'ZARINPAL_SANDBOX': 'true',
+        'IRANDARGAH_SANDBOX': 'true',
+        'IRANDARGAH_REQUEST_TIMEOUT_MS': '8000',
         'SHIPPING_PROVIDER': 'disabled',
         'MANUAL_SHIPPING_COST_TOMAN': '0',
         'NEXT_PUBLIC_GA_MEASUREMENT_ID': '',
@@ -49,12 +50,12 @@ class StagingEnvTests(unittest.TestCase):
     def test_live_payment_and_production_urls_are_rejected(self):
         values = fixture()
         values.update({
-            'ZARINPAL_SANDBOX': 'false',
+            'IRANDARGAH_SANDBOX': 'false',
             'PAYMENT_CALLBACK_URL': 'https://hamidian.shop/api/payment/callback',
-            'ZIBAL_MERCHANT_ID': 'live',
+            'IRANDARGAH_API_TOKEN': 'idg_live_' + 'a' * 32,
         })
         result = ' '.join(checker.validate(values))
-        for name in ('ZARINPAL_SANDBOX', 'PAYMENT_CALLBACK_URL', 'ZIBAL_MERCHANT_ID'):
+        for name in ('IRANDARGAH_SANDBOX', 'PAYMENT_CALLBACK_URL', 'IRANDARGAH_API_TOKEN'):
             self.assertIn(name, result)
 
     def test_console_sms_is_rejected(self):

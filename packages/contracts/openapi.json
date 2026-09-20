@@ -5984,8 +5984,9 @@
             "schema": {
               "type": "string",
               "enum": [
-                "zarinpal",
+                "irandargah",
                 "mellat",
+                "zarinpal",
                 "zibal"
               ]
             }
@@ -11124,8 +11125,7 @@
         "properties": {
           "provider": {
             "enum": [
-              "zarinpal",
-              "zibal",
+              "irandargah",
               "mellat"
             ],
             "type": "string"

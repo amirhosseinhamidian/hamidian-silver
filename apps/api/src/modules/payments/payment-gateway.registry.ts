@@ -9,9 +9,11 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { ZarinpalPaymentGateway } from './adapters/zarinpal-payment.gateway';
 import { MellatPaymentGateway } from './adapters/mellat-payment.gateway';
 import { ZibalPaymentGateway } from './adapters/zibal-payment.gateway';
+import { IranDargahPaymentGateway } from './adapters/irandargah-payment.gateway';
 import {
   PAYMENT_GATEWAY_CODES,
   PAYMENT_GATEWAY_DEFINITIONS,
+  isConfigurablePaymentGatewayCode,
   isPaymentGatewayCode,
   type PaymentGatewayCode,
 } from './payment-gateway.constants';
@@ -37,6 +39,7 @@ export class PaymentGatewayRegistry implements PaymentGateway {
     zarinpalGateway: ZarinpalPaymentGateway,
     @Optional() zibalGateway?: ZibalPaymentGateway,
     @Optional() mellatGateway?: MellatPaymentGateway,
+    @Optional() iranDargahGateway?: IranDargahPaymentGateway,
   ) {
     const gateways: Array<[PaymentGatewayCode, PaymentGateway]> = [
       [PAYMENT_GATEWAY_CODES.ZARINPAL, zarinpalGateway],
@@ -50,11 +53,20 @@ export class PaymentGatewayRegistry implements PaymentGateway {
       gateways.push([PAYMENT_GATEWAY_CODES.MELLAT, mellatGateway]);
     }
 
+    if (iranDargahGateway) {
+      gateways.push([PAYMENT_GATEWAY_CODES.IRANDARGAH, iranDargahGateway]);
+    }
+
     this.gateways = new Map<PaymentGatewayCode, PaymentGateway>(gateways);
   }
 
   async initiate(input: InitiateGatewayPaymentInput): Promise<InitiateGatewayPaymentResult> {
     const provider = this.requireProvider(input.provider);
+
+    if (!isConfigurablePaymentGatewayCode(provider)) {
+      throw new BadRequestException('Selected payment gateway is no longer available.');
+    }
+
     const setting = await this.prisma.paymentGatewaySetting.findUnique({
       where: {
         provider,
@@ -170,7 +182,7 @@ export class PaymentGatewayRegistry implements PaymentGateway {
   }
 
   private requireProvider(provider: string | undefined): PaymentGatewayCode {
-    const resolved = provider ?? PAYMENT_GATEWAY_CODES.ZARINPAL;
+    const resolved = provider ?? PAYMENT_GATEWAY_CODES.IRANDARGAH;
 
     if (!isPaymentGatewayCode(resolved)) {
       throw new BadRequestException('Unknown payment gateway.');
@@ -199,6 +211,12 @@ export class PaymentGatewayRegistry implements PaymentGateway {
 
   private isConfigured(provider: PaymentGatewayCode): boolean {
     switch (provider) {
+      case PAYMENT_GATEWAY_CODES.IRANDARGAH:
+        return this.config
+          .get<string>('IRANDARGAH_API_TOKEN', '')
+          .startsWith(
+            this.config.get<boolean>('IRANDARGAH_SANDBOX', true) ? 'idg_test_' : 'idg_live_',
+          );
       case PAYMENT_GATEWAY_CODES.ZARINPAL:
         return Boolean(this.config.get<string>('ZARINPAL_MERCHANT_ID', ''));
       case PAYMENT_GATEWAY_CODES.ZIBAL:

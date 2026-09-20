@@ -14,8 +14,8 @@ afterEach(() => {
 
 const settings: readonly AdminPaymentGatewaySetting[] = [
   {
-    provider: 'zarinpal',
-    displayName: 'زرین‌پال',
+    provider: 'irandargah',
+    displayName: 'ایران‌درگاه',
     sortOrder: 10,
     isEnabled: true,
     isImplemented: true,
@@ -24,19 +24,9 @@ const settings: readonly AdminPaymentGatewaySetting[] = [
     updatedAt: '2026-09-08T09:00:00.000Z',
   },
   {
-    provider: 'zibal',
-    displayName: 'زیبال',
-    sortOrder: 20,
-    isEnabled: false,
-    isImplemented: true,
-    isConfigured: true,
-    isAvailable: false,
-    updatedAt: null,
-  },
-  {
     provider: 'mellat',
     displayName: 'درگاه مستقیم بانک ملت',
-    sortOrder: 30,
+    sortOrder: 20,
     isEnabled: false,
     isImplemented: true,
     isConfigured: false,
@@ -50,7 +40,7 @@ describe('PaymentGatewaySettingsView', () => {
     render(<PaymentGatewaySettingsView initialSettings={settings} failed={false} canWrite />);
 
     expect(screen.getByRole('region', { name: 'فهرست درگاه‌های پرداخت' })).toBeInTheDocument();
-    expect(screen.getByText('ZARINPAL_MERCHANT_ID')).toBeInTheDocument();
+    expect(screen.getByText('IRANDARGAH_API_TOKEN')).toBeInTheDocument();
     expect(screen.getByText('MELLAT_PASSWORD')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'فعال‌کردن درگاه مستقیم بانک ملت' })).toBeDisabled();
     expect(screen.getAllByText('آماده پرداخت')).toHaveLength(1);
@@ -58,7 +48,7 @@ describe('PaymentGatewaySettingsView', () => {
   });
 
   it('activates a configured gateway through the same-origin BFF', async () => {
-    const updated = { ...settings[1], isEnabled: true, isAvailable: true };
+    const updated = { ...settings[0], isEnabled: false, isAvailable: false };
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify(updated), {
         status: 200,
@@ -68,18 +58,18 @@ describe('PaymentGatewaySettingsView', () => {
     vi.stubGlobal('fetch', fetchMock);
     render(<PaymentGatewaySettingsView initialSettings={settings} failed={false} canWrite />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'فعال‌کردن زیبال' }));
+    fireEvent.click(screen.getByRole('button', { name: 'غیرفعال‌کردن ایران‌درگاه' }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/payment-gateways/zibal',
+      '/api/payment-gateways/irandargah',
       expect.objectContaining({
         method: 'PATCH',
-        body: JSON.stringify({ isEnabled: true }),
+        body: JSON.stringify({ isEnabled: false }),
       }),
     );
-    expect(await screen.findByText('زیبال برای پرداخت مشتری فعال شد.')).toBeInTheDocument();
-    expect(screen.getAllByText('آماده پرداخت')).toHaveLength(2);
+    expect(await screen.findByText(/ایران‌درگاه غیرفعال شد/)).toBeInTheDocument();
+    expect(screen.queryByText('آماده پرداخت')).not.toBeInTheDocument();
     expect(router.refresh).toHaveBeenCalledTimes(1);
   });
 
@@ -89,7 +79,7 @@ describe('PaymentGatewaySettingsView', () => {
     );
     const list = screen.getByRole('region', { name: 'فهرست درگاه‌های پرداخت' });
     expect(within(list).queryByRole('button')).not.toBeInTheDocument();
-    expect(within(list).getAllByText('فقط مشاهده')).toHaveLength(3);
+    expect(within(list).getAllByText('فقط مشاهده')).toHaveLength(2);
   });
 
   it('shows a clear failure state when gateway settings cannot be loaded', () => {

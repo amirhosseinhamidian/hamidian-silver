@@ -62,7 +62,7 @@ def validate(values: dict[str, str], production: dict[str, str] | None = None) -
         'CORS_ORIGINS': 'https://staging.hamidian.shop,https://admin.staging.hamidian.shop',
         'PAYMENT_CALLBACK_URL': 'https://staging.hamidian.shop/api/payment/callback',
         'PAYMENT_PROVIDER': 'disabled',
-        'ZARINPAL_SANDBOX': 'true',
+        'IRANDARGAH_SANDBOX': 'true',
         'SHIPPING_PROVIDER': 'disabled',
         'NEXT_PUBLIC_GA_MEASUREMENT_ID': '',
         'GOOGLE_SITE_VERIFICATION': '',
@@ -81,12 +81,15 @@ def validate(values: dict[str, str], production: dict[str, str] | None = None) -
     shipping = values.get('MANUAL_SHIPPING_COST_TOMAN', '')
     if not shipping.isascii() or not shipping.isdigit() or int(shipping or '0') > 2_147_483_647:
         errors.append('MANUAL_SHIPPING_COST_TOMAN must be unsigned and within range')
-    merchant = values.get('ZARINPAL_MERCHANT_ID', '')
-    if merchant and not shared.GUID_RE.fullmatch(merchant):
-        errors.append('ZARINPAL_MERCHANT_ID must be a UUID')
-    for name in ('ZIBAL_MERCHANT_ID', 'MELLAT_TERMINAL_ID', 'MELLAT_USERNAME', 'MELLAT_PASSWORD'):
+    token = values.get('IRANDARGAH_API_TOKEN', '')
+    if token and not re.fullmatch(r'^idg_test_[A-Za-z0-9_-]{16,}$', token):
+        errors.append('IRANDARGAH_API_TOKEN must be an idg_test_ token in staging')
+    timeout = values.get('IRANDARGAH_REQUEST_TIMEOUT_MS', '')
+    if not timeout.isdigit() or not 1000 <= int(timeout or '0') <= 60000:
+        errors.append('IRANDARGAH_REQUEST_TIMEOUT_MS must be between 1000 and 60000')
+    for name in ('MELLAT_TERMINAL_ID', 'MELLAT_USERNAME', 'MELLAT_PASSWORD'):
         if values.get(name):
-            errors.append(f'{name} is forbidden in staging; use only Zarinpal sandbox')
+            errors.append(f'{name} is forbidden in staging; use only IranDargah sandbox')
     return errors
 
 

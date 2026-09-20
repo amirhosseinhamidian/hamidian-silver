@@ -257,8 +257,7 @@ function CarrierEditor({
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (name.trim().length < 2) return onError('نام شرکت ارسال باید حداقل ۲ نویسه باشد.');
-    if (subtitle.trim().length < 2)
-      return onError('زیرعنوان روش ارسال باید حداقل ۲ نویسه باشد.');
+    if (subtitle.trim().length < 2) return onError('زیرعنوان روش ارسال باید حداقل ۲ نویسه باشد.');
     if (!validTrackingUrl(trackingUrl))
       return onError('نشانی سایت استعلام باید با https:// آغاز شود.');
     const pricing = pricingValues(
@@ -411,8 +410,7 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
     event.preventDefault();
     if (pending || !canWrite) return;
     if (name.trim().length < 2) return setError('نام شرکت ارسال باید حداقل ۲ نویسه باشد.');
-    if (subtitle.trim().length < 2)
-      return setError('زیرعنوان روش ارسال باید حداقل ۲ نویسه باشد.');
+    if (subtitle.trim().length < 2) return setError('زیرعنوان روش ارسال باید حداقل ۲ نویسه باشد.');
     if (!validTrackingUrl(trackingUrl))
       return setError('نشانی سایت استعلام باید با https:// آغاز شود.');
     const pricing = pricingValues(

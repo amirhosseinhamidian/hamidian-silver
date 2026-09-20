@@ -21,12 +21,12 @@ describe('parseOperationalSeedConfig', () => {
   it('allows exactly one configured gateway to be selected', () => {
     const config = parseOperationalSeedConfig({
       ...BASE_ENV,
-      OPERATIONAL_PAYMENT_GATEWAY: 'zarinpal',
-      ZARINPAL_MERCHANT_ID: '00000000-0000-4000-8000-000000000001',
+      OPERATIONAL_PAYMENT_GATEWAY: 'irandargah',
+      IRANDARGAH_API_TOKEN: `idg_live_${'a'.repeat(32)}`,
       MANUAL_SHIPPING_COST_TOMAN: '85000',
     });
 
-    expect(config.paymentGateway).toBe('zarinpal');
+    expect(config.paymentGateway).toBe('irandargah');
     expect(config.manualShippingCostToman).toBe(85_000);
   });
 

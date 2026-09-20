@@ -64,6 +64,7 @@ function paymentStatusLabel(status: string) {
 
 function providerLabel(provider: string) {
   const labels: Readonly<Record<string, string>> = {
+    irandargah: 'ایران‌درگاه',
     zarinpal: 'زرین‌پال',
     zibal: 'زیبال',
     mellat: 'بانک ملت',

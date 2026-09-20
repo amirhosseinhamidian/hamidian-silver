@@ -38,6 +38,11 @@ type AuthState =
   | { status: 'authenticated'; user: CurrentUser };
 type CheckoutPriceChange = Readonly<{ previousTotalToman: number; orderTotalToman: number }>;
 type PaymentMethod = 'gateway' | 'card_to_card';
+type AvailablePaymentGateway = Readonly<{
+  provider: string;
+  displayName: string;
+  sortOrder: number;
+}>;
 
 type UserAddress = Readonly<{
   id: string;
@@ -53,7 +58,6 @@ type UserAddress = Readonly<{
 type AddressFields = Omit<UserAddress, 'id' | 'isDefault'>;
 
 const NEW_ADDRESS_VALUE = '__new_address__';
-const BANK_GATEWAY_CHECKOUT_ENABLED = false;
 const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
 
@@ -160,6 +164,7 @@ export function CheckoutFlow({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card_to_card');
   const [shippingCarrierId, setShippingCarrierId] = useState(shippingOptions[0]?.id ?? '');
   const [cardToCardSettings, setCardToCardSettings] = useState<CardToCardSettings | null>(null);
+  const [bankGateway, setBankGateway] = useState<AvailablePaymentGateway | null>(null);
   const [cardToCardOrder, setCardToCardOrder] = useState<{
     id: string;
     number: string;
@@ -274,6 +279,36 @@ export function CheckoutFlow({
     if (auth.status !== 'authenticated') return;
     let active = true;
 
+    void fetch('/api/checkout/payment-gateways', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!active || !response.ok) return;
+        const payload: unknown = await response.json();
+        if (!Array.isArray(payload)) return;
+        const iranDargah = payload.find((gateway): gateway is AvailablePaymentGateway =>
+          Boolean(
+            gateway &&
+            typeof gateway === 'object' &&
+            'provider' in gateway &&
+            gateway.provider === 'irandargah' &&
+            'displayName' in gateway &&
+            typeof gateway.displayName === 'string' &&
+            'sortOrder' in gateway &&
+            typeof gateway.sortOrder === 'number',
+          ),
+        );
+        if (iranDargah) setBankGateway(iranDargah);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, [auth.status]);
+
+  useEffect(() => {
+    if (auth.status !== 'authenticated') return;
+    let active = true;
+
     void fetch('/api/checkout/card-to-card', { cache: 'no-store' })
       .then(async (response) => {
         if (!active || !response.ok) return;
@@ -340,7 +375,7 @@ export function CheckoutFlow({
 
   async function submitCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!BANK_GATEWAY_CHECKOUT_ENABLED && paymentMethod === 'gateway') return;
+    if (!bankGateway && paymentMethod === 'gateway') return;
     if (!selectedShippingOption && !shippingPricing) {
       setCheckoutError('برای آدرس انتخاب‌شده یک روش ارسال انتخاب کنید.');
       return;
@@ -463,7 +498,11 @@ export function CheckoutFlow({
       const paymentResponse = await fetch('/api/checkout/payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, idempotencyKey: paymentIdempotencyKey.current }),
+        body: JSON.stringify({
+          orderId,
+          idempotencyKey: paymentIdempotencyKey.current,
+          provider: bankGateway?.provider,
+        }),
       });
       if (!paymentResponse.ok) {
         if (paymentResponse.status === 401) setAuth({ status: 'anonymous', expired: true });
@@ -861,23 +900,31 @@ export function CheckoutFlow({
           <legend className="text-xl font-medium">روش پرداخت</legend>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <label
-              aria-disabled="true"
-              className="cursor-not-allowed rounded-[var(--sf-radius-md)] border border-[var(--sf-color-border)] p-4 opacity-55"
+              aria-disabled={bankGateway ? undefined : 'true'}
+              className={`rounded-[var(--sf-radius-md)] border p-4 transition ${
+                bankGateway ? 'cursor-pointer' : 'cursor-not-allowed opacity-55'
+              } ${
+                paymentMethod === 'gateway'
+                  ? 'border-[var(--sf-color-ink)] bg-[var(--sf-color-surface)]'
+                  : 'border-[var(--sf-color-border)]'
+              }`}
             >
               <span className="flex items-center gap-3">
                 <input
                   type="radio"
                   name="paymentMethod"
                   value="gateway"
-                  disabled
+                  disabled={!bankGateway}
                   checked={paymentMethod === 'gateway'}
                   onChange={() => setPaymentMethod('gateway')}
                   className="size-4 accent-[var(--sf-color-ink)]"
                 />
                 <strong className="text-sm">پرداخت از طریق درگاه بانکی</strong>
-                <span className="rounded-full bg-[var(--sf-color-ink)] px-2 py-0.5 text-[0.65rem] font-medium text-white">
-                  به‌زودی
-                </span>
+              </span>
+              <span className="mt-2 block ps-7 text-xs leading-6 text-[var(--sf-color-muted)]">
+                {bankGateway
+                  ? `پرداخت امن و آنلاین از طریق ${bankGateway.displayName}`
+                  : 'درگاه بانکی در حال حاضر در دسترس نیست.'}
               </span>
             </label>
 
@@ -951,7 +998,7 @@ export function CheckoutFlow({
             <span className="block text-xs text-[var(--sf-color-muted)] lg:text-sm">
               مبلغ قابل پرداخت
             </span>
-            <strong className="mt-1 block whitespace-nowrap text-lg font-bold lg:mt-0 lg:text-xl">
+            <strong className="mt-1 block whitespace-nowrap text-lg font-bold lg:mt-0 lg:text-2xl">
               {formatTomanPrice(priceChange?.orderTotalToman ?? payableAmount)}
             </strong>
           </div>

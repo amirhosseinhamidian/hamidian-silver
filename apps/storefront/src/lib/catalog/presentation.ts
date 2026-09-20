@@ -1,6 +1,7 @@
 const westernIntegerFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
 });
+
 const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
 
 function formatPersianGroupedInteger(value: number): string {
@@ -19,4 +20,16 @@ export function formatTomanPrice(value: number | null): string {
 
 export function formatShippingToman(value: number): string {
   return value === 0 ? 'رایگان' : formatTomanPrice(value);
+}
+
+export function formatRialPrice(value: number | null): string {
+  if (value === null) {
+    return 'برای اطلاع از قیمت تماس بگیرید';
+  }
+
+  return `${formatPersianGroupedInteger(value)} ریال`;
+}
+
+export function formatShippingRial(value: number): string {
+  return value === 0 ? 'رایگان' : formatRialPrice(value);
 }

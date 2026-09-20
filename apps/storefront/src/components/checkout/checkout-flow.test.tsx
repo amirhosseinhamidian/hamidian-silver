@@ -249,7 +249,7 @@ describe('CheckoutFlow price integrity', () => {
     }
   });
 
-  it('keeps bank gateway disabled with a coming-soon badge and selects card-to-card', async () => {
+  it('enables IranDargah when the API reports it as available', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === '/api/auth/me') return jsonResponse({ phone: '09120000000' });
@@ -276,19 +276,25 @@ describe('CheckoutFlow price integrity', () => {
           bankName: 'بانک ملی',
         });
       }
+      if (url === '/api/checkout/payment-gateways') {
+        return jsonResponse([
+          { provider: 'irandargah', displayName: 'ایران‌درگاه', sortOrder: 10 },
+        ]);
+      }
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal('fetch', fetchMock);
     render(<CheckoutFlow shippingPricing={freeShipping} />);
 
     await screen.findByText('آدرس پیش‌فرض');
+    await screen.findByText('پرداخت امن و آنلاین از طریق ایران‌درگاه');
     const paymentRadios = screen.getAllByRole('radio');
     expect(paymentRadios).toHaveLength(2);
-    expect(paymentRadios[0]).toBeDisabled();
-    expect(screen.getByText('به‌زودی')).toBeInTheDocument();
+    expect(paymentRadios[0]).toBeEnabled();
+    expect(screen.getByText('پرداخت امن و آنلاین از طریق ایران‌درگاه')).toBeInTheDocument();
     expect(paymentRadios[1]).toBeChecked();
-    expect(
-      screen.getByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }),
-    ).toBeInTheDocument();
+    fireEvent.click(paymentRadios[0]!);
+    expect(paymentRadios[0]).toBeChecked();
+    expect(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت' })).toBeInTheDocument();
   });
 });

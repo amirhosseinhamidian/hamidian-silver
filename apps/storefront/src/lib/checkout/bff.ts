@@ -11,8 +11,6 @@ type CheckoutPaymentRequest = InitiatePaymentBody & {
   orderId: string;
 };
 
-const BANK_GATEWAY_CHECKOUT_ENABLED = false;
-
 function createApiClient(accessToken: string) {
   const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;
 
@@ -54,10 +52,6 @@ export async function createCheckoutOrder(request: Request): Promise<Response> {
 }
 
 export async function initiateCheckoutPayment(request: Request): Promise<Response> {
-  if (!BANK_GATEWAY_CHECKOUT_ENABLED) {
-    return new Response(null, { status: 404 });
-  }
-
   const accessToken = await getSessionToken();
 
   if (!accessToken) {
@@ -83,6 +77,17 @@ export async function initiateCheckoutPayment(request: Request): Promise<Respons
   );
 
   return responseFromApi(response, data ?? error);
+}
+
+export async function getAvailablePaymentGateways(): Promise<Response> {
+  const accessToken = await getSessionToken();
+  if (!accessToken) return authenticationRequired();
+
+  try {
+    return await forwardAuthenticatedResponse('/api/v1/payments/gateways', accessToken);
+  } catch {
+    return Response.json({ message: 'Payment service is unavailable.' }, { status: 502 });
+  }
 }
 
 function apiOrigin(): string {
