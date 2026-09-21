@@ -177,7 +177,7 @@ export function PaymentReceiptReview({ attempt, canConfirm }: PaymentReceiptRevi
             onChange={(event) => setRejectionReason(event.target.value)}
           />
           <p className="text-xs text-[var(--admin-color-muted)]">
-            این دلیل در پیامک برای مشتری ارسال می‌شود و باید واضح و محترمانه باشد.
+            این دلیل در جزئیات سفارش مشتری نمایش داده می‌شود و باید واضح و محترمانه باشد.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -188,7 +188,7 @@ export function PaymentReceiptReview({ attempt, canConfirm }: PaymentReceiptRevi
               disabled={rejectionReason.trim().length < 3 || confirming}
               onClick={() => void rejectReceipt()}
             >
-              تأیید رد و ارسال پیامک
+              تأیید رد رسید
             </Button>
             <Button
               type="button"

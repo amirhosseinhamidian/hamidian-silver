@@ -136,6 +136,7 @@ export type AdminOrderShippingSelection = Readonly<{
 export type AdminOrder = Readonly<{
   id: string;
   orderNumber: string;
+  customerNote: string | null;
   status: AdminOrderStatus;
   merchandiseTotalToman: number;
   platingTotalToman: number;
@@ -550,6 +551,7 @@ function parseOrder(value: unknown): AdminOrder | null {
   return {
     id,
     orderNumber,
+    customerNote: text(order.customerNote),
     status,
     merchandiseTotalToman,
     platingTotalToman,

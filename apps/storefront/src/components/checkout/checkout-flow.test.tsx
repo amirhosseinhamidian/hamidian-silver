@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CheckoutFlow } from '@/components/checkout/checkout-flow';
@@ -124,6 +124,12 @@ describe('CheckoutFlow price integrity', () => {
         });
       }
 
+      if (url === '/api/checkout/payment-gateways') {
+        return jsonResponse([
+          { provider: 'irandargah', displayName: 'ایران‌درگاه', sortOrder: 10 },
+        ]);
+      }
+
       if (url === '/api/checkout/order') {
         return jsonResponse({
           id: '22222222-2222-4222-8222-222222222222',
@@ -144,6 +150,9 @@ describe('CheckoutFlow price integrity', () => {
     expect(screen.getByText('ارسال اقتصادی با پوشش سراسری کشور')).toBeInTheDocument();
     expect(screen.getByText('تحویل سریع‌تر با رهگیری آنلاین مرسوله')).toBeInTheDocument();
     expect(screen.getAllByText('هزینه ارسال:')).toHaveLength(2);
+    const cardToCardRadio = screen.getByRole('radio', { name: /پرداخت کارت‌به‌کارت/ });
+    await waitFor(() => expect(cardToCardRadio).toBeEnabled());
+    fireEvent.click(cardToCardRadio);
     fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }));
 
     const priceAlert = await screen.findByRole('alert');
@@ -224,6 +233,11 @@ describe('CheckoutFlow price integrity', () => {
               isDefault: true,
             },
           ]);
+        if (url === '/api/checkout/payment-gateways') {
+          return jsonResponse([
+            { provider: 'irandargah', displayName: 'ایران‌درگاه', sortOrder: 10 },
+          ]);
+        }
         if (url === '/api/checkout/order') return response;
         throw new Error(`Unexpected request: ${url}`);
       });
@@ -231,16 +245,15 @@ describe('CheckoutFlow price integrity', () => {
       const rendered = render(<CheckoutFlow shippingPricing={freeShipping} />);
 
       await screen.findByText('آدرس پیش‌فرض');
-      fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }));
+      await screen.findByText('پرداخت امن و آنلاین از طریق ایران‌درگاه');
+      fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت' }));
 
       expect(await screen.findByText(/محصول، موجودی یا آدرس ذخیره‌شده/)).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'بازبینی و اصلاح سبد خرید' })).toHaveAttribute(
         'href',
         '/cart',
       );
-      expect(
-        screen.queryByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'ثبت سفارش و پرداخت' })).not.toBeInTheDocument();
       expect(
         fetchMock.mock.calls.some(([input]) => String(input) === '/api/checkout/payment'),
       ).toBe(false);
@@ -249,7 +262,7 @@ describe('CheckoutFlow price integrity', () => {
     }
   });
 
-  it('enables IranDargah when the API reports it as available', async () => {
+  it('selects IranDargah by default when the API reports it as available', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === '/api/auth/me') return jsonResponse({ phone: '09120000000' });
@@ -292,9 +305,12 @@ describe('CheckoutFlow price integrity', () => {
     expect(paymentRadios).toHaveLength(2);
     expect(paymentRadios[0]).toBeEnabled();
     expect(screen.getByText('پرداخت امن و آنلاین از طریق ایران‌درگاه')).toBeInTheDocument();
-    expect(paymentRadios[1]).toBeChecked();
-    fireEvent.click(paymentRadios[0]!);
     expect(paymentRadios[0]).toBeChecked();
     expect(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت' })).toBeInTheDocument();
+    fireEvent.click(paymentRadios[1]!);
+    expect(paymentRadios[1]).toBeChecked();
+    expect(
+      screen.getByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }),
+    ).toBeInTheDocument();
   });
 });

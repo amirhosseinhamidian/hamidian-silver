@@ -56,6 +56,7 @@ const EVENT_LABELS: Readonly<Record<string, string>> = {
   SHIPMENT_TRACKING_AVAILABLE: 'کد رهگیری آماده',
   ORDER_SHIPPED: 'ارسال سفارش',
   ORDER_DELIVERED: 'تحویل سفارش',
+  ORDER_CANCELLED: 'لغو سفارش',
   PAYMENT_RECONCILIATION_REQUIRED: 'نیازمند مغایرت‌گیری پرداخت',
   STOCK_AVAILABLE: 'موجودشدن کالا',
 };

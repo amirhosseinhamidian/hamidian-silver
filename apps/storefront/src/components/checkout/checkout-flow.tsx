@@ -58,8 +58,10 @@ type UserAddress = Readonly<{
 type AddressFields = Omit<UserAddress, 'id' | 'isDefault'>;
 
 const NEW_ADDRESS_VALUE = '__new_address__';
+const CUSTOMER_NOTE_MAX_LENGTH = 1000;
 const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+const PERSIAN_INTEGER_FORMATTER = new Intl.NumberFormat('fa-IR');
 
 function toAsciiDigits(value: string): string {
   return [...value]
@@ -161,7 +163,7 @@ export function CheckoutFlow({
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
   const [staleCart, setStaleCart] = useState(false);
   const [uncertainCheckout, setUncertainCheckout] = useState<'order' | 'payment' | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card_to_card');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('gateway');
   const [shippingCarrierId, setShippingCarrierId] = useState(shippingOptions[0]?.id ?? '');
   const [cardToCardSettings, setCardToCardSettings] = useState<CardToCardSettings | null>(null);
   const [bankGateway, setBankGateway] = useState<AvailablePaymentGateway | null>(null);
@@ -171,6 +173,7 @@ export function CheckoutFlow({
     amountToman: number;
   } | null>(null);
   const [cardToCardModalOpen, setCardToCardModalOpen] = useState(false);
+  const [customerNote, setCustomerNote] = useState('');
   const paymentIdempotencyKey = useRef<string | null>(null);
   const checkoutTracked = useRef(false);
 
@@ -407,7 +410,7 @@ export function CheckoutFlow({
         }
 
         const orderBody = userAddressId
-          ? buildCreateOrderBody(items, { userAddressId }, selectedShippingOption?.id)
+          ? buildCreateOrderBody(items, { userAddressId }, selectedShippingOption?.id, customerNote)
           : buildCreateOrderBody(
               items,
               {
@@ -421,6 +424,7 @@ export function CheckoutFlow({
                 },
               },
               selectedShippingOption?.id,
+              customerNote,
             );
         const orderResponse = await fetch('/api/checkout/order', {
           method: 'POST',
@@ -895,6 +899,29 @@ export function CheckoutFlow({
             </p>
           )}
         </fieldset>
+
+        <div className="mt-10">
+          <FormField
+            id="customerNote"
+            label="توضیحات سفارش یا تحویل"
+            hint="اگر برای آماده‌سازی سفارش یا زمان و شیوه تحویل نکته‌ای دارید، اینجا بنویسید."
+          >
+            {(props) => (
+              <Textarea
+                {...props}
+                value={customerNote}
+                placeholder="مثلاً لطفاً پیش از تحویل تماس بگیرید."
+                maxLength={CUSTOMER_NOTE_MAX_LENGTH}
+                disabled={Boolean(pendingOrderId)}
+                onChange={(event) => setCustomerNote(event.target.value)}
+              />
+            )}
+          </FormField>
+          <p className="mt-2 text-end text-xs text-[var(--sf-color-subtle)]">
+            {PERSIAN_INTEGER_FORMATTER.format(customerNote.length)} از{' '}
+            {PERSIAN_INTEGER_FORMATTER.format(CUSTOMER_NOTE_MAX_LENGTH)} کاراکتر
+          </p>
+        </div>
 
         <fieldset className="mt-10">
           <legend className="text-xl font-medium">روش پرداخت</legend>

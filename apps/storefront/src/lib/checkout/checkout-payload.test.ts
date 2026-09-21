@@ -65,4 +65,18 @@ describe('buildCreateOrderBody', () => {
     expect(JSON.stringify(body)).not.toContain('unitCompareAtPriceToman');
     expect(JSON.stringify(body)).not.toContain('unitPlatingPriceToman');
   });
+
+  it('trims and includes an optional customer note', () => {
+    expect(
+      buildCreateOrderBody([baseItem], address, undefined, '  لطفاً قبل از تحویل تماس بگیرید.  '),
+    ).toEqual(
+      expect.objectContaining({
+        customerNote: 'لطفاً قبل از تحویل تماس بگیرید.',
+      }),
+    );
+
+    expect(buildCreateOrderBody([baseItem], address, undefined, '   ')).not.toHaveProperty(
+      'customerNote',
+    );
+  });
 });

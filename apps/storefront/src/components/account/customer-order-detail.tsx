@@ -67,6 +67,18 @@ function ShippingTotalRow({
   );
 }
 
+function OrderReasonNotice({ title, reason }: Readonly<{ title: string; reason: string }>) {
+  return (
+    <section
+      aria-label={title}
+      className="border border-amber-300 bg-amber-50 p-5 text-amber-950 sm:p-6"
+    >
+      <h2 className="text-base font-medium">{title}</h2>
+      <p className="mt-2 text-sm leading-7">{toPersianDigits(reason)}</p>
+    </section>
+  );
+}
+
 function OrderTimeline({ order }: Readonly<{ order: CustomerOrderDetail }>) {
   const history = order.statusHistory.length
     ? order.statusHistory
@@ -312,6 +324,24 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
 
           <OrderTimeline order={order} />
 
+          {order.customerNote ? (
+            <section
+              aria-labelledby="customer-order-note-heading"
+              className="border border-[var(--sf-color-border)] bg-[var(--sf-color-surface)] p-5 sm:p-6"
+            >
+              <h2 id="customer-order-note-heading" className="text-xl font-medium">
+                توضیحات سفارش و تحویل
+              </h2>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[var(--sf-color-muted)]">
+                {toPersianDigits(order.customerNote)}
+              </p>
+            </section>
+          ) : null}
+
+          {order.status === 'CANCELLED' && order.cancellationReason ? (
+            <OrderReasonNotice title="دلیل لغو سفارش" reason={order.cancellationReason} />
+          ) : null}
+
           {order.payment ? (
             <section
               aria-labelledby="order-payment-information-heading"
@@ -336,6 +366,14 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
                   </dd>
                 </div>
               </dl>
+              {order.payment.rejectionReason ? (
+                <div className="mt-5">
+                  <OrderReasonNotice
+                    title="علت رد رسید پرداخت"
+                    reason={order.payment.rejectionReason}
+                  />
+                </div>
+              ) : null}
               {order.payment.method === 'CARD_TO_CARD' && order.payment.receiptAvailable ? (
                 <figure className="mt-6">
                   <div className="overflow-hidden border border-[var(--sf-color-border)] bg-[var(--sf-color-surface)]">

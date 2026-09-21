@@ -10,6 +10,7 @@ const payload = [
   {
     id: 'order-1',
     orderNumber: 'HS-1234',
+    customerNote: 'لطفاً پیش از تحویل تماس بگیرید.',
     status: 'PAID',
     merchandiseTotalToman: 1_200_000,
     platingTotalToman: 100_000,
@@ -107,6 +108,7 @@ describe('admin orders model', () => {
     expect(orders?.[0]).toEqual(
       expect.objectContaining({
         orderNumber: 'HS-1234',
+        customerNote: 'لطفاً پیش از تحویل تماس بگیرید.',
         customer: expect.objectContaining({ name: 'علی رضایی' }),
         address: expect.objectContaining({ postalCode: '1234567890' }),
         payment: expect.objectContaining({ status: 'PAID' }),

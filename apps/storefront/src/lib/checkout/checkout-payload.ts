@@ -12,12 +12,15 @@ export function buildCreateOrderBody(
   items: readonly CartItem[],
   address: CheckoutAddress,
   shippingCarrierId?: string,
+  customerNote?: string,
 ): CreateOrderDto {
   const orderAddress = 'recipientName' in address ? { shippingAddress: address } : address;
+  const normalizedCustomerNote = customerNote?.trim();
 
   return {
     ...orderAddress,
     ...(shippingCarrierId ? { shippingCarrierId } : {}),
+    ...(normalizedCustomerNote ? { customerNote: normalizedCustomerNote } : {}),
     items: items.map((item) => ({
       variantId: item.variantId,
       quantity: item.quantity,

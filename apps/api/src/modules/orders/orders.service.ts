@@ -8,6 +8,7 @@ import { calculatePlatingPriceToman } from '../../common/plating-price';
 import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import {
+  NotificationOutboxEventType,
   OrderStatus,
   PaymentStatus,
   PlatingType,
@@ -18,6 +19,7 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { normalizeIranianMobile } from '../auth/phone-normalizer';
 import { attachHumanAuditEvent } from '../audit/audit-event';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
+import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { ShippingPricingService } from '../shipping/shipping-pricing.service';
 import { ShippingCarriersService } from '../shipping/shipping-carriers.service';
 import { CancelOrderDto } from './dto/cancel-order.dto';
@@ -157,6 +159,23 @@ const CUSTOMER_ORDER_LIST_SELECT = {
 
 const CUSTOMER_ORDER_DETAIL_SELECT = {
   ...CUSTOMER_ORDER_LIST_SELECT,
+  customerNote: true,
+  payment: {
+    select: {
+      status: true,
+      attempts: {
+        take: 1,
+        orderBy: { createdAt: 'desc' as const },
+        select: {
+          provider: true,
+          failureCode: true,
+          failureMessage: true,
+          receiptOriginalName: true,
+          receiptUploadedAt: true,
+        },
+      },
+    },
+  },
   shippingAddress: {
     select: {
       recipientName: true,
@@ -174,6 +193,7 @@ const CUSTOMER_ORDER_DETAIL_SELECT = {
     select: {
       fromStatus: true,
       toStatus: true,
+      reason: true,
       createdAt: true,
     },
   },
@@ -320,10 +340,12 @@ export class OrdersService {
     @Optional() private readonly config?: ConfigService,
     @Optional() private readonly shippingPricing?: ShippingPricingService,
     @Optional() private readonly shippingCarriers?: ShippingCarriersService,
+    @Optional() private readonly outbox?: NotificationOutboxService,
   ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
     this.assertUniqueItemSelections(dto.items);
+    const customerNote = dto.customerNote?.trim() || null;
 
     const order = await this.prisma.$transaction(async (transaction) => {
       const shippingAddress = await this.resolveShippingAddress(transaction, userId, dto);
@@ -444,6 +466,7 @@ export class OrdersService {
           shippingTotalToman,
           ...shippingSelection.snapshot,
           grandTotalToman,
+          customerNote,
           reservationExpiresAt,
           shippingAddress: {
             create: shippingAddress,
@@ -591,6 +614,12 @@ export class OrdersService {
     } = order;
     const items = Array.isArray(selectedItems) ? selectedItems : [];
     const latestAttempt = payment?.attempts[0];
+    const statusHistory = 'statusHistory' in order ? order.statusHistory : undefined;
+    const cancellationReason =
+      [...(statusHistory ?? [])]
+        .reverse()
+        .find((entry) => entry.toStatus === OrderStatus.CANCELLED)
+        ?.reason?.trim() || null;
 
     return {
       ...summary,
@@ -627,6 +656,13 @@ export class OrdersService {
               latestAttempt.receiptUploadedAt !== null,
             receiptOriginalName: latestAttempt?.receiptOriginalName ?? null,
             receiptUploadedAt: latestAttempt?.receiptUploadedAt ?? null,
+            rejectionReason:
+              payment.status === PaymentStatus.PENDING &&
+              latestAttempt &&
+              'failureCode' in latestAttempt &&
+              latestAttempt.failureCode === 'CARD_TO_CARD_RECEIPT_REJECTED'
+                ? (latestAttempt.failureMessage ?? null)
+                : null,
           }
         : null,
       items: items.map(({ variant, returnAllocatedQuantity, ...item }) => {
@@ -648,6 +684,12 @@ export class OrdersService {
             : null,
         };
       }),
+      ...(statusHistory
+        ? {
+            cancellationReason,
+            statusHistory: statusHistory.map(({ reason: _reason, ...entry }) => entry),
+          }
+        : {}),
     };
   }
 
@@ -823,6 +865,9 @@ export class OrdersService {
     actorUserId: string,
     ownerUserId?: string,
   ) {
+    const cancellationReason =
+      dto.reason?.trim() || (ownerUserId ? 'لغو سفارش توسط مشتری' : 'لغو سفارش توسط مدیریت');
+
     return this.prisma.$transaction(async (transaction) => {
       const order = await transaction.order.findUnique({
         where: {
@@ -930,7 +975,7 @@ export class OrdersService {
             reservedDelta: -quantity,
             onHandAfter: inventory.onHand,
             reservedAfter: nextReserved,
-            reason: dto.reason ?? 'Order cancelled',
+            reason: cancellationReason,
             referenceType: 'ORDER',
             referenceId: order.id,
           },
@@ -949,8 +994,14 @@ export class OrdersService {
           actorUserId,
           fromStatus: order.status,
           toStatus: OrderStatus.CANCELLED,
-          reason: dto.reason,
+          reason: cancellationReason,
         },
+      });
+
+      await this.outbox?.enqueueOrderEvent(transaction, {
+        type: NotificationOutboxEventType.ORDER_CANCELLED,
+        orderId: order.id,
+        deduplicationKey: `order:${order.id}:cancelled`,
       });
 
       return cancelled;

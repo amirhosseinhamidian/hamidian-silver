@@ -11,6 +11,15 @@ const absoluteProductionPath = Joi.string()
     'string.absolutePath': '{{#label}} must be an absolute filesystem path in production',
   });
 
+const kavenegarTemplate = Joi.when('SMS_PROVIDER', {
+  is: 'kavenegar',
+  // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+  then: Joi.string()
+    .pattern(/^[A-Za-z0-9-]+$/)
+    .required(),
+  otherwise: Joi.string().allow('').optional(),
+});
+
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
   HOST: Joi.string().default('0.0.0.0'),
@@ -61,6 +70,13 @@ export const envValidationSchema = Joi.object({
     then: Joi.string().min(1).required(),
     otherwise: Joi.string().allow('').optional(),
   }),
+  KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE: kavenegarTemplate,
+  KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE: kavenegarTemplate,
+  KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE: kavenegarTemplate,
+  KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE: kavenegarTemplate,
+  KAVENEGAR_ORDER_SHIPPED_TEMPLATE: kavenegarTemplate,
+  KAVENEGAR_ORDER_DELIVERED_TEMPLATE: kavenegarTemplate,
+  KAVENEGAR_ORDER_CANCELLED_TEMPLATE: kavenegarTemplate,
   PAYMENT_PROVIDER: Joi.string().valid('disabled', 'irandargah').default('disabled'),
   PAYMENT_CALLBACK_URL: Joi.string()
     .uri({ scheme: ['http', 'https'] })

@@ -19,6 +19,10 @@ ALLOWED_KEYS = frozenset(
         "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "DATABASE_URL", "OTP_PEPPER",
         "MEDIA_PUBLIC_BASE_URL", "CORS_ORIGINS", "PAYMENT_CALLBACK_URL",
         "SMS_PROVIDER", "KAVENEGAR_API_KEY", "KAVENEGAR_OTP_TEMPLATE", "KAVENEGAR_SENDER",
+        "KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE", "KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE",
+        "KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE", "KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE",
+        "KAVENEGAR_ORDER_SHIPPED_TEMPLATE", "KAVENEGAR_ORDER_DELIVERED_TEMPLATE",
+        "KAVENEGAR_ORDER_CANCELLED_TEMPLATE",
         "PAYMENT_PROVIDER", "IRANDARGAH_API_TOKEN", "IRANDARGAH_SANDBOX",
         "IRANDARGAH_REQUEST_TIMEOUT_MS", "MELLAT_TERMINAL_ID", "MELLAT_USERNAME", "MELLAT_PASSWORD",
         "SHIPPING_PROVIDER", "MANUAL_SHIPPING_COST_TOMAN",
@@ -28,6 +32,16 @@ ALLOWED_KEYS = frozenset(
 NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 DB_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 IRANDARGAH_LIVE_TOKEN_RE = re.compile(r"^idg_live_[A-Za-z0-9_-]{16,}$")
+KAVENEGAR_TEMPLATE_RE = re.compile(r"^[A-Za-z0-9-]+$")
+KAVENEGAR_ORDER_TEMPLATE_KEYS = (
+    "KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE",
+    "KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE",
+    "KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE",
+    "KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE",
+    "KAVENEGAR_ORDER_SHIPPED_TEMPLATE",
+    "KAVENEGAR_ORDER_DELIVERED_TEMPLATE",
+    "KAVENEGAR_ORDER_CANCELLED_TEMPLATE",
+)
 
 
 def parse_env(contents: str) -> tuple[dict[str, str], list[str]]:
@@ -110,11 +124,14 @@ def validate(values: dict[str, str]) -> list[str]:
     sms = values.get("SMS_PROVIDER")
     if sms not in ("disabled", "kavenegar"):
         errors.append("SMS_PROVIDER must be disabled or kavenegar (never console in production)")
-    if sms == "kavenegar" and (
-        len(values.get("KAVENEGAR_API_KEY", "")) < 10
-        or not values.get("KAVENEGAR_OTP_TEMPLATE")
-    ):
-        errors.append("KAVENEGAR_API_KEY and KAVENEGAR_OTP_TEMPLATE are required for kavenegar")
+    if sms == "kavenegar":
+        if len(values.get("KAVENEGAR_API_KEY", "")) < 10 or not values.get(
+            "KAVENEGAR_OTP_TEMPLATE"
+        ):
+            errors.append("KAVENEGAR_API_KEY and KAVENEGAR_OTP_TEMPLATE are required for kavenegar")
+        for key in KAVENEGAR_ORDER_TEMPLATE_KEYS:
+            if not KAVENEGAR_TEMPLATE_RE.fullmatch(values.get(key, "")):
+                errors.append(f"{key} must be a configured Kavenegar template name")
 
     # PAYMENT_PROVIDER is a legacy flag; availability is set in Admin/DB.
     if values.get("PAYMENT_PROVIDER") != "disabled":

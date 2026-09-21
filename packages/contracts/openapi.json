@@ -10240,6 +10240,10 @@
       "CreateOrderDto": {
         "type": "object",
         "properties": {
+          "customerNote": {
+            "type": "string",
+            "maxLength": 1000
+          },
           "shippingCarrierId": {
             "type": "string",
             "format": "uuid"
@@ -10296,6 +10300,10 @@
             "type": "string",
             "nullable": true
           },
+          "rejectionReason": {
+            "type": "string",
+            "nullable": true
+          },
           "receiptAvailable": {
             "type": "boolean"
           }
@@ -10305,6 +10313,7 @@
           "method",
           "receiptOriginalName",
           "receiptUploadedAt",
+          "rejectionReason",
           "receiptAvailable"
         ]
       },
@@ -10575,6 +10584,10 @@
               "$ref": "#/components/schemas/CustomerOrderItemDto"
             }
           },
+          "customerNote": {
+            "type": "string",
+            "nullable": true
+          },
           "shippingAddress": {
             "$ref": "#/components/schemas/CustomerOrderShippingAddressDto"
           },
@@ -10583,6 +10596,10 @@
             "items": {
               "$ref": "#/components/schemas/CustomerOrderStatusHistoryDto"
             }
+          },
+          "cancellationReason": {
+            "type": "string",
+            "nullable": true
           },
           "id": {
             "type": "string"
@@ -10638,8 +10655,10 @@
           "cancelledAt",
           "deliveredAt",
           "items",
+          "customerNote",
           "shippingAddress",
           "statusHistory",
+          "cancellationReason",
           "id",
           "orderNumber",
           "merchandiseTotalToman",

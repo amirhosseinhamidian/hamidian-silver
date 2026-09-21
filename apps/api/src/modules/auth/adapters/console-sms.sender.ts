@@ -1,5 +1,10 @@
 import { Logger } from '@nestjs/common';
-import type { SendOtpMessage, SendSmsMessage, SmsSender } from '../sms-sender.port';
+import type {
+  SendOtpMessage,
+  SendSmsMessage,
+  SendSmsTemplateMessage,
+  SmsSender,
+} from '../sms-sender.port';
 
 export class ConsoleSmsSender implements SmsSender {
   private readonly logger = new Logger(ConsoleSmsSender.name);
@@ -16,5 +21,11 @@ export class ConsoleSmsSender implements SmsSender {
 
   async sendMessage(message: SendSmsMessage): Promise<void> {
     this.logger.log(`[LOCAL SMS] phone=${message.phone} message=${message.text}`);
+  }
+
+  async sendTemplate(message: SendSmsTemplateMessage): Promise<void> {
+    this.logger.log(
+      `[LOCAL SMS TEMPLATE] phone=${message.phone} template=${message.template} token=${message.token}`,
+    );
   }
 }

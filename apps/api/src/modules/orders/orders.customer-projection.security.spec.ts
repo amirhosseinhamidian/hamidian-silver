@@ -40,6 +40,7 @@ describe('OrdersService customer projection security', () => {
     expect(itemSelect).not.toHaveProperty('supplierIdSnapshot');
     expect(itemSelect).not.toHaveProperty('supplierNameSnapshot');
     expect(query.select.payment.select.attempts.select).not.toHaveProperty('receiptData');
+    expect(query.select.payment.select.attempts.select).not.toHaveProperty('failureMessage');
   });
 
   it('scopes customer order detail and hides staff audit metadata', async () => {
@@ -59,10 +60,16 @@ describe('OrdersService customer projection security', () => {
     expect(query.select.statusHistory.select).toEqual({
       fromStatus: true,
       toStatus: true,
+      reason: true,
       createdAt: true,
     });
     expect(query.select.statusHistory.select).not.toHaveProperty('actorUserId');
-    expect(query.select.statusHistory.select).not.toHaveProperty('reason');
+    expect(query.select.payment.select.attempts.select).toEqual(
+      expect.objectContaining({
+        failureCode: true,
+        failureMessage: true,
+      }),
+    );
   });
 
   it('returns public product media and tracking data with customer orders', async () => {
@@ -139,6 +146,66 @@ describe('OrdersService customer projection security', () => {
     expect(order.items[0]).not.toHaveProperty('variant');
     expect(order.items[0]).not.toHaveProperty('returnAllocatedQuantity');
     expect(order).not.toHaveProperty('returnAuthorizedAt');
+  });
+
+  it('returns customer-facing rejection and cancellation reasons without exposing history notes', async () => {
+    prisma.order.findFirst.mockResolvedValue({
+      id: orderId,
+      status: 'CANCELLED',
+      customerNote: 'لطفاً بسته به نگهبانی تحویل داده شود.',
+      returnAuthorizedAt: null,
+      shippingCarrierNameSnapshot: null,
+      shippingCarrierTrackingUrlSnapshot: null,
+      shippingPricingModeSnapshot: null,
+      shippingCarrierLogoSnapshot: null,
+      shipment: null,
+      payment: {
+        status: 'PENDING',
+        attempts: [
+          {
+            provider: 'card_to_card',
+            failureCode: 'CARD_TO_CARD_RECEIPT_REJECTED',
+            failureMessage: 'مبلغ واریزی صحیح نیست.',
+            receiptOriginalName: 'receipt.jpg',
+            receiptUploadedAt: new Date('2026-09-21T10:00:00.000Z'),
+          },
+        ],
+      },
+      items: [],
+      statusHistory: [
+        {
+          fromStatus: null,
+          toStatus: 'PENDING_PAYMENT',
+          reason: 'Internal creation note',
+          createdAt: new Date('2026-09-21T09:00:00.000Z'),
+        },
+        {
+          fromStatus: 'PENDING_PAYMENT',
+          toStatus: 'CANCELLED',
+          reason: 'کالا دیگر موجود نیست.',
+          createdAt: new Date('2026-09-21T10:05:00.000Z'),
+        },
+      ],
+    });
+
+    const order = await service.getMyOrder(userId, orderId);
+
+    expect(order.customerNote).toBe('لطفاً بسته به نگهبانی تحویل داده شود.');
+
+    expect(order.cancellationReason).toBe('کالا دیگر موجود نیست.');
+    expect(order.payment?.rejectionReason).toBe('مبلغ واریزی صحیح نیست.');
+    expect(order.statusHistory).toEqual([
+      {
+        fromStatus: null,
+        toStatus: 'PENDING_PAYMENT',
+        createdAt: new Date('2026-09-21T09:00:00.000Z'),
+      },
+      {
+        fromStatus: 'PENDING_PAYMENT',
+        toStatus: 'CANCELLED',
+        createdAt: new Date('2026-09-21T10:05:00.000Z'),
+      },
+    ]);
   });
 
   it('counts every order owned by the authenticated customer', async () => {

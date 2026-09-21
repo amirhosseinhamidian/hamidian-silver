@@ -8,7 +8,12 @@ import {
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { isSmsDeliveryUnknownError } from '../auth/sms-delivery-unknown.error';
-import { SMS_SENDER, type SmsSender } from '../auth/sms-sender.port';
+import {
+  SMS_SENDER,
+  type SendSmsMessage,
+  type SendSmsTemplateMessage,
+  type SmsSender,
+} from '../auth/sms-sender.port';
 
 const DEFAULT_BATCH_SIZE = 50;
 const MAX_BATCH_SIZE = 200;
@@ -22,6 +27,13 @@ export class NotificationOutboxWorker {
   private readonly logger = new Logger(NotificationOutboxWorker.name);
   private readonly batchSize: number;
   private readonly staleMs: number;
+  private readonly paymentVerifiedTemplate: string;
+  private readonly paymentReceiptSubmittedTemplate: string;
+  private readonly paymentReceiptRejectedTemplate: string;
+  private readonly shipmentTrackingTemplate: string;
+  private readonly orderShippedTemplate: string;
+  private readonly orderDeliveredTemplate: string;
+  private readonly orderCancelledTemplate: string;
   private running = false;
 
   constructor(
@@ -43,6 +55,19 @@ export class NotificationOutboxWorker {
       ) *
       60 *
       1000;
+    this.paymentVerifiedTemplate = config.get<string>('KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE', '');
+    this.paymentReceiptSubmittedTemplate = config.get<string>(
+      'KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE',
+      '',
+    );
+    this.paymentReceiptRejectedTemplate = config.get<string>(
+      'KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE',
+      '',
+    );
+    this.shipmentTrackingTemplate = config.get<string>('KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE', '');
+    this.orderShippedTemplate = config.get<string>('KAVENEGAR_ORDER_SHIPPED_TEMPLATE', '');
+    this.orderDeliveredTemplate = config.get<string>('KAVENEGAR_ORDER_DELIVERED_TEMPLATE', '');
+    this.orderCancelledTemplate = config.get<string>('KAVENEGAR_ORDER_CANCELLED_TEMPLATE', '');
   }
 
   @Cron(CronExpression.EVERY_MINUTE, {
@@ -159,18 +184,7 @@ export class NotificationOutboxWorker {
           continue;
         }
 
-        if (!this.smsSender.sendMessage) {
-          await this.failBeforeDispatch(
-            event.id,
-            claimedAt,
-            event.attempts + 1,
-            new Error('Configured SMS sender does not support transactional messages.'),
-          );
-          continue;
-        }
-
-        const sendMessage = this.smsSender.sendMessage.bind(this.smsSender);
-        let message: { phone: string; text: string };
+        let message: SendSmsMessage | SendSmsTemplateMessage | null;
 
         try {
           message = await this.buildMessage(
@@ -181,6 +195,36 @@ export class NotificationOutboxWorker {
           );
         } catch (error) {
           await this.failBeforeDispatch(event.id, claimedAt, event.attempts + 1, error);
+          continue;
+        }
+
+        if (message === null) {
+          await this.prisma.notificationOutboxEvent.updateMany({
+            where: {
+              id: event.id,
+              status: NotificationOutboxStatus.PROCESSING,
+              claimedAt,
+            },
+            data: {
+              status: NotificationOutboxStatus.SENT,
+              processedAt: new Date(),
+              claimedAt: null,
+              lastError: null,
+            },
+          });
+          continue;
+        }
+
+        if (
+          ('template' in message && !this.smsSender.sendTemplate) ||
+          ('text' in message && !this.smsSender.sendMessage)
+        ) {
+          await this.failBeforeDispatch(
+            event.id,
+            claimedAt,
+            event.attempts + 1,
+            new Error('Configured SMS sender does not support this notification type.'),
+          );
           continue;
         }
 
@@ -200,7 +244,11 @@ export class NotificationOutboxWorker {
         }
 
         try {
-          await sendMessage(message);
+          if ('template' in message) {
+            await this.smsSender.sendTemplate!(message);
+          } else {
+            await this.smsSender.sendMessage!(message);
+          }
 
           const sent = await this.prisma.notificationOutboxEvent.updateMany({
             where: {
@@ -363,8 +411,8 @@ export class NotificationOutboxWorker {
     type: NotificationOutboxEventType,
     aggregateType: string,
     aggregateId: string,
-    payload: unknown,
-  ): Promise<{ phone: string; text: string }> {
+    _payload: unknown,
+  ): Promise<SendSmsMessage | SendSmsTemplateMessage | null> {
     if (
       aggregateType === 'STOCK_SUBSCRIPTION' &&
       type === NotificationOutboxEventType.STOCK_AVAILABLE
@@ -441,50 +489,63 @@ export class NotificationOutboxWorker {
       throw new Error('Notification order was not found.');
     }
 
-    const trackingSuffix = order.shipment?.trackingCode
-      ? ` کد رهگیری: ${order.shipment.trackingCode}`
-      : '';
-
     switch (type) {
       case NotificationOutboxEventType.PAYMENT_VERIFIED:
-        return {
-          phone: order.user.phone,
-          text: `پرداخت سفارش ${order.orderNumber} تأیید شد و سفارش وارد مرحله آماده‌سازی می‌شود.`,
-        };
+        return this.templateMessage(
+          order.user.phone,
+          this.paymentVerifiedTemplate,
+          'KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE',
+          order.orderNumber,
+        );
       case NotificationOutboxEventType.PAYMENT_RECEIPT_SUBMITTED:
-        return {
-          phone: order.user.phone,
-          text: `رسید کارت‌به‌کارت سفارش ${order.orderNumber} دریافت شد و پس از بررسی نتیجه اطلاع‌رسانی می‌شود.`,
-        };
+        return this.templateMessage(
+          order.user.phone,
+          this.paymentReceiptSubmittedTemplate,
+          'KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE',
+          order.orderNumber,
+        );
       case NotificationOutboxEventType.PAYMENT_RECEIPT_REJECTED:
-        return {
-          phone: order.user.phone,
-          text: `رسید کارت‌به‌کارت سفارش ${order.orderNumber} رد شد. دلیل: ${this.readReceiptRejectionReason(payload)} لطفاً رسید صحیح را دوباره ثبت کنید.`,
-        };
+        return this.templateMessage(
+          order.user.phone,
+          this.paymentReceiptRejectedTemplate,
+          'KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE',
+          order.orderNumber,
+        );
       case NotificationOutboxEventType.SHIPMENT_TRACKING_AVAILABLE:
         if (!order.shipment?.trackingCode) {
           throw new Error('Shipment tracking code is not available yet.');
         }
 
-        return {
-          phone: order.user.phone,
-          text: `کد رهگیری سفارش ${order.orderNumber}: ${order.shipment.trackingCode}`,
-        };
+        return this.templateMessage(
+          order.user.phone,
+          this.shipmentTrackingTemplate,
+          'KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE',
+          order.orderNumber,
+          order.shipment.trackingCode,
+        );
       case NotificationOutboxEventType.ORDER_SHIPPED:
-        return {
-          phone: order.user.phone,
-          text: `سفارش ${order.orderNumber} ارسال شد.${trackingSuffix}`,
-        };
+        return this.templateMessage(
+          order.user.phone,
+          this.orderShippedTemplate,
+          'KAVENEGAR_ORDER_SHIPPED_TEMPLATE',
+          order.orderNumber,
+        );
       case NotificationOutboxEventType.ORDER_DELIVERED:
-        return {
-          phone: order.user.phone,
-          text: `سفارش ${order.orderNumber} تحویل شد. از خرید شما سپاسگزاریم.`,
-        };
+        return this.templateMessage(
+          order.user.phone,
+          this.orderDeliveredTemplate,
+          'KAVENEGAR_ORDER_DELIVERED_TEMPLATE',
+          order.orderNumber,
+        );
+      case NotificationOutboxEventType.ORDER_CANCELLED:
+        return this.templateMessage(
+          order.user.phone,
+          this.orderCancelledTemplate,
+          'KAVENEGAR_ORDER_CANCELLED_TEMPLATE',
+          order.orderNumber,
+        );
       case NotificationOutboxEventType.PAYMENT_RECONCILIATION_REQUIRED:
-        return {
-          phone: order.user.phone,
-          text: `پرداخت سفارش ${order.orderNumber} ثبت شده و در حال بررسی است. لطفاً تا پایان بررسی پرداخت مجدد انجام ندهید.`,
-        };
+        return null;
       case NotificationOutboxEventType.STOCK_AVAILABLE:
         throw new Error('Stock notification event has an invalid aggregate type.');
     }
@@ -495,18 +556,32 @@ export class NotificationOutboxWorker {
     return Math.min(60 * 60 * 1000, 60 * 1000 * 2 ** exponent);
   }
 
-  private readReceiptRejectionReason(payload: unknown): string {
-    if (
-      typeof payload === 'object' &&
-      payload !== null &&
-      'reason' in payload &&
-      typeof payload.reason === 'string'
-    ) {
-      const reason = payload.reason.trim();
-      if (reason.length >= 3 && reason.length <= 200) return reason;
+  private templateMessage(
+    phone: string,
+    template: string,
+    environmentKey: string,
+    token: string,
+    token2?: string,
+  ): SendSmsTemplateMessage {
+    const normalizedTemplate = template.trim();
+    if (!normalizedTemplate) {
+      throw new Error(`${environmentKey} is required for order notifications.`);
     }
 
-    throw new Error('Receipt rejection reason is missing from the notification payload.');
+    return {
+      phone,
+      template: normalizedTemplate,
+      token: this.templateToken(token, 'order number'),
+      ...(token2 ? { token2: this.templateToken(token2, 'tracking code') } : {}),
+    };
+  }
+
+  private templateToken(value: string, label: string): string {
+    const token = value.trim();
+    if (!token || token.length > 100 || /[\s_]/u.test(token)) {
+      throw new Error(`Kavenegar ${label} token must be 1-100 characters without spaces or _.`);
+    }
+    return token;
   }
 
   private readPositiveInteger(value: unknown, fallback: number): number {
