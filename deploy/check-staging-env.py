@@ -61,6 +61,7 @@ def validate(values: dict[str, str], production: dict[str, str] | None = None) -
         'MEDIA_PUBLIC_BASE_URL': 'https://media.staging.hamidian.shop/media',
         'CORS_ORIGINS': 'https://staging.hamidian.shop,https://admin.staging.hamidian.shop',
         'PAYMENT_CALLBACK_URL': 'https://staging.hamidian.shop/api/payment/callback',
+        'ADMIN_APP_ORIGIN': 'https://admin.staging.hamidian.shop',
         'PAYMENT_PROVIDER': 'disabled',
         'IRANDARGAH_SANDBOX': 'true',
         'SHIPPING_PROVIDER': 'disabled',
@@ -70,6 +71,12 @@ def validate(values: dict[str, str], production: dict[str, str] | None = None) -
     for name, expected in fixed.items():
         if values.get(name) != expected:
             errors.append(f'{name} must match staging-only configuration')
+    for name in ('TELEGRAM_BOT_TOKEN', 'BALE_BOT_TOKEN'):
+        if values.get(name) and len(values[name]) < 20:
+            errors.append(f'{name} must contain a valid bot token or remain empty')
+    messaging_timeout = values.get('ADMIN_MESSAGING_REQUEST_TIMEOUT_MS', '')
+    if not messaging_timeout.isdigit() or not 1000 <= int(messaging_timeout or '0') <= 60000:
+        errors.append('ADMIN_MESSAGING_REQUEST_TIMEOUT_MS must be between 1000 and 60000')
     sms = values.get('SMS_PROVIDER')
     if sms not in ('disabled', 'kavenegar'):
         errors.append('SMS_PROVIDER must be disabled or kavenegar (never console)')

@@ -2,6 +2,7 @@ import {
   hasAllAdminPermissions,
   type AdminCurrentUser,
   type AdminPermission,
+  type AdminRole,
 } from '@/lib/auth/access-control';
 
 export type AdminNavigationIcon =
@@ -38,6 +39,7 @@ export type AdminNavigationGroup = Readonly<{
 type AdminNavigationDefinition = AdminNavigationItem &
   Readonly<{
     permissions: readonly AdminPermission[];
+    roles?: readonly AdminRole[];
   }>;
 
 type AdminNavigationGroupDefinition = Readonly<{
@@ -366,6 +368,17 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['users.read'],
       },
       {
+        id: 'order-notifications',
+        label: 'اعلان سفارش مدیران',
+        shortLabel: 'اعلان سفارش',
+        href: '/order-notifications',
+        icon: 'alerts',
+        description: 'اتصال تلگرام و بله ادمین‌ها و مدیران',
+        roadmapStage: 39,
+        permissions: ['settings.write'],
+        roles: ['MANAGER'],
+      },
+      {
         id: 'notification-outbox',
         label: 'صف ارسال اعلان‌ها',
         shortLabel: 'Outbox',
@@ -427,6 +440,7 @@ export function getAdminNavigation(user: AdminCurrentUser): readonly AdminNaviga
     label: group.label,
     items: group.items
       .filter((item) => hasAllAdminPermissions(user, item.permissions))
+      .filter((item) => !item.roles || item.roles.some((role) => user.roles.includes(role)))
       .map(toNavigationItem),
   })).filter((group) => group.items.length > 0);
 }
