@@ -10,6 +10,7 @@ import {
   IsUUID,
   Length,
   Max,
+  MaxLength,
   Min,
   Matches,
   ValidateNested,
@@ -57,6 +58,11 @@ export class CreateOrderItemDto {
 }
 
 export class CreateOrderDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  customerNote?: string;
+
   @IsOptional()
   @IsUUID('4')
   shippingCarrierId?: string;

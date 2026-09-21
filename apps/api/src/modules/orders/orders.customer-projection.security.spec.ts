@@ -152,6 +152,7 @@ describe('OrdersService customer projection security', () => {
     prisma.order.findFirst.mockResolvedValue({
       id: orderId,
       status: 'CANCELLED',
+      customerNote: 'لطفاً بسته به نگهبانی تحویل داده شود.',
       returnAuthorizedAt: null,
       shippingCarrierNameSnapshot: null,
       shippingCarrierTrackingUrlSnapshot: null,
@@ -188,6 +189,8 @@ describe('OrdersService customer projection security', () => {
     });
 
     const order = await service.getMyOrder(userId, orderId);
+
+    expect(order.customerNote).toBe('لطفاً بسته به نگهبانی تحویل داده شود.');
 
     expect(order.cancellationReason).toBe('کالا دیگر موجود نیست.');
     expect(order.payment?.rejectionReason).toBe('مبلغ واریزی صحیح نیست.');

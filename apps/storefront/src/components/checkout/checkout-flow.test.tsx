@@ -253,9 +253,7 @@ describe('CheckoutFlow price integrity', () => {
         'href',
         '/cart',
       );
-      expect(
-        screen.queryByRole('button', { name: 'ثبت سفارش و پرداخت' }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'ثبت سفارش و پرداخت' })).not.toBeInTheDocument();
       expect(
         fetchMock.mock.calls.some(([input]) => String(input) === '/api/checkout/payment'),
       ).toBe(false);

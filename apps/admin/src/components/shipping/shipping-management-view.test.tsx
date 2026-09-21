@@ -10,6 +10,7 @@ function order(shipment: AdminOrder['shipment'] = null): AdminOrder {
   return {
     id: 'order-1',
     orderNumber: 'HS-1701',
+    customerNote: null,
     status: 'PROCESSING',
     merchandiseTotalToman: 2_500_000,
     platingTotalToman: 0,

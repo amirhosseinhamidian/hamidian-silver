@@ -324,6 +324,20 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
 
           <OrderTimeline order={order} />
 
+          {order.customerNote ? (
+            <section
+              aria-labelledby="customer-order-note-heading"
+              className="border border-[var(--sf-color-border)] bg-[var(--sf-color-surface)] p-5 sm:p-6"
+            >
+              <h2 id="customer-order-note-heading" className="text-xl font-medium">
+                توضیحات سفارش و تحویل
+              </h2>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[var(--sf-color-muted)]">
+                {toPersianDigits(order.customerNote)}
+              </p>
+            </section>
+          ) : null}
+
           {order.status === 'CANCELLED' && order.cancellationReason ? (
             <OrderReasonNotice title="دلیل لغو سفارش" reason={order.cancellationReason} />
           ) : null}

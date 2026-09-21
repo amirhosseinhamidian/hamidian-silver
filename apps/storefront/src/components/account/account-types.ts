@@ -101,6 +101,7 @@ export type CustomerOrderShippingAddress = Readonly<{
 
 export type CustomerOrderDetail = CustomerOrder &
   Readonly<{
+    customerNote: string | null;
     shippingAddress: CustomerOrderShippingAddress;
     statusHistory: CustomerOrderStatusHistory[];
     cancellationReason: string | null;

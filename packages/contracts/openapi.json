@@ -10240,6 +10240,10 @@
       "CreateOrderDto": {
         "type": "object",
         "properties": {
+          "customerNote": {
+            "type": "string",
+            "maxLength": 1000
+          },
           "shippingCarrierId": {
             "type": "string",
             "format": "uuid"
@@ -10580,6 +10584,10 @@
               "$ref": "#/components/schemas/CustomerOrderItemDto"
             }
           },
+          "customerNote": {
+            "type": "string",
+            "nullable": true
+          },
           "shippingAddress": {
             "$ref": "#/components/schemas/CustomerOrderShippingAddressDto"
           },
@@ -10647,6 +10655,7 @@
           "cancelledAt",
           "deliveredAt",
           "items",
+          "customerNote",
           "shippingAddress",
           "statusHistory",
           "cancellationReason",

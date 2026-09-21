@@ -263,6 +263,14 @@ function OrderDetails({
         />
       </Card>
 
+      {order.customerNote ? (
+        <Card title="توضیحات مشتری" description="یادداشت ثبت‌شده هنگام نهایی‌کردن سفارش">
+          <p className="whitespace-pre-wrap text-sm leading-7 text-[var(--admin-color-muted)]">
+            {toPersianDigits(order.customerNote)}
+          </p>
+        </Card>
+      ) : null}
+
       <Card
         title={`اقلام سفارش (${formatAdminInteger(orderItemCount(order))})`}
         description={`${formatAdminInteger(order.items.length)} ردیف کالا`}

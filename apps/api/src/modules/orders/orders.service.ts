@@ -159,6 +159,7 @@ const CUSTOMER_ORDER_LIST_SELECT = {
 
 const CUSTOMER_ORDER_DETAIL_SELECT = {
   ...CUSTOMER_ORDER_LIST_SELECT,
+  customerNote: true,
   payment: {
     select: {
       status: true,
@@ -344,6 +345,7 @@ export class OrdersService {
 
   async createOrder(userId: string, dto: CreateOrderDto) {
     this.assertUniqueItemSelections(dto.items);
+    const customerNote = dto.customerNote?.trim() || null;
 
     const order = await this.prisma.$transaction(async (transaction) => {
       const shippingAddress = await this.resolveShippingAddress(transaction, userId, dto);
@@ -464,6 +466,7 @@ export class OrdersService {
           shippingTotalToman,
           ...shippingSelection.snapshot,
           grandTotalToman,
+          customerNote,
           reservationExpiresAt,
           shippingAddress: {
             create: shippingAddress,

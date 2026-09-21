@@ -8,6 +8,7 @@ import { formatTomanPrice } from '@/lib/catalog/presentation';
 const order: CustomerOrderDetail = {
   id: 'order-1',
   orderNumber: 'HS-1001',
+  customerNote: null,
   status: 'PAID',
   merchandiseTotalToman: 2_000_000,
   platingTotalToman: 100_000,

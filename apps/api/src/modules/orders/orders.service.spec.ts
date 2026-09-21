@@ -116,6 +116,7 @@ describe('OrdersService', () => {
     );
 
     await service.createOrder(userId, {
+      customerNote: '  لطفاً پیش از تحویل تماس بگیرید.  ',
       shippingAddress: {
         recipientName: 'Test Customer',
         phone: '09123456789',
@@ -142,6 +143,7 @@ describe('OrdersService', () => {
         platingTotalToman: 425_000,
         shippingTotalToman: 85_000,
         grandTotalToman: 3_210_000,
+        customerNote: 'لطفاً پیش از تحویل تماس بگیرید.',
         items: {
           create: [
             expect.objectContaining({

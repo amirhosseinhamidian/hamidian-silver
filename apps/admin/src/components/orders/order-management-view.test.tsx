@@ -11,6 +11,7 @@ vi.mock('next/navigation', () => ({
 const order: AdminOrder = {
   id: 'order-1',
   orderNumber: 'HS-1234',
+  customerNote: 'لطفاً پیش از تحویل تماس بگیرید.',
   status: 'PAID',
   merchandiseTotalToman: 1_200_000,
   platingTotalToman: 100_000,
@@ -109,6 +110,8 @@ describe('OrderManagementView', () => {
     expect(within(dialog).getByText('انگشتر آذر')).toBeInTheDocument();
     expect(within(dialog).getByText('تاریخچه وضعیت')).toBeInTheDocument();
     expect(within(dialog).getByText('۱۲۳۴۵۶۷۸۹۰')).toBeInTheDocument();
+    expect(within(dialog).getByText('توضیحات مشتری')).toBeInTheDocument();
+    expect(within(dialog).getByText('لطفاً پیش از تحویل تماس بگیرید.')).toBeInTheDocument();
   });
 
   it('presents card-to-card review without an operational mismatch or cancellation action', async () => {

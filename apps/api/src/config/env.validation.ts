@@ -14,7 +14,9 @@ const absoluteProductionPath = Joi.string()
 const kavenegarTemplate = Joi.when('SMS_PROVIDER', {
   is: 'kavenegar',
   // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
-  then: Joi.string().pattern(/^[A-Za-z0-9-]+$/).required(),
+  then: Joi.string()
+    .pattern(/^[A-Za-z0-9-]+$/)
+    .required(),
   otherwise: Joi.string().allow('').optional(),
 });
 

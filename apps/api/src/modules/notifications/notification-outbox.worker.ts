@@ -64,10 +64,7 @@ export class NotificationOutboxWorker {
       'KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE',
       '',
     );
-    this.shipmentTrackingTemplate = config.get<string>(
-      'KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE',
-      '',
-    );
+    this.shipmentTrackingTemplate = config.get<string>('KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE', '');
     this.orderShippedTemplate = config.get<string>('KAVENEGAR_ORDER_SHIPPED_TEMPLATE', '');
     this.orderDeliveredTemplate = config.get<string>('KAVENEGAR_ORDER_DELIVERED_TEMPLATE', '');
     this.orderCancelledTemplate = config.get<string>('KAVENEGAR_ORDER_CANCELLED_TEMPLATE', '');

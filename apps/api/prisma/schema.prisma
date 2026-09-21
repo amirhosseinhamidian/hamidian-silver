@@ -987,6 +987,7 @@ model Order {
   shippingServiceAreaSnapshot String?                 @db.VarChar(16)
   taxTotalToman         Int                           @default(0)
   grandTotalToman       Int
+  customerNote          String?                       @db.VarChar(1000)
   reservationExpiresAt  DateTime                      @db.Timestamptz(3)
   paidAt                DateTime?                     @db.Timestamptz(3)
   cancelledAt           DateTime?                     @db.Timestamptz(3)

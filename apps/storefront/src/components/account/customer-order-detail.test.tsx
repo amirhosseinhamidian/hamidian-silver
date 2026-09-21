@@ -251,6 +251,7 @@ describe('CustomerOrderDetailView', () => {
           createdAt: '2026-09-05T12:00:00.000Z',
           updatedAt: '2026-09-05T12:10:00.000Z',
           cancellationReason: 'کالا دیگر موجود نیست.',
+          customerNote: 'لطفاً قبل از تحویل تماس بگیرید.',
           statusHistory: [
             {
               fromStatus: null,
@@ -282,5 +283,7 @@ describe('CustomerOrderDetailView', () => {
     expect(screen.getByText('کالا دیگر موجود نیست.')).toBeInTheDocument();
     expect(screen.getByText('علت رد رسید پرداخت')).toBeInTheDocument();
     expect(screen.getByText('مبلغ واریزی با مبلغ سفارش مطابقت ندارد.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'توضیحات سفارش و تحویل' })).toBeInTheDocument();
+    expect(screen.getByText('لطفاً قبل از تحویل تماس بگیرید.')).toBeInTheDocument();
   });
 });

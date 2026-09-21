@@ -3702,6 +3702,7 @@ export interface components {
             platingType?: "GOLD" | "ROSE_GOLD" | "RHODIUM";
         };
         CreateOrderDto: {
+            customerNote?: string;
             /** Format: uuid */
             shippingCarrierId?: string;
             /** Format: uuid */
@@ -3784,6 +3785,7 @@ export interface components {
             /** Format: date-time */
             deliveredAt: string | null;
             items: components["schemas"]["CustomerOrderItemDto"][];
+            customerNote: string | null;
             shippingAddress: components["schemas"]["CustomerOrderShippingAddressDto"];
             statusHistory: components["schemas"]["CustomerOrderStatusHistoryDto"][];
             cancellationReason: string | null;

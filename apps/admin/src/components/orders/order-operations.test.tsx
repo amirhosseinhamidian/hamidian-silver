@@ -14,6 +14,7 @@ function makeOrder(overrides: Partial<AdminOrder> = {}): AdminOrder {
   return {
     id: 'order-1',
     orderNumber: 'HS-1234',
+    customerNote: null,
     status: 'PAID',
     merchandiseTotalToman: 1_000_000,
     platingTotalToman: 0,

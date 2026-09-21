@@ -156,6 +156,9 @@ export class CustomerOrderStatusHistoryDto {
 }
 
 export class CustomerOrderDetailDto extends CustomerOrderSummaryDto {
+  @ApiProperty({ type: String, nullable: true })
+  customerNote!: string | null;
+
   @ApiProperty({ type: () => CustomerOrderShippingAddressDto })
   shippingAddress!: CustomerOrderShippingAddressDto;
 
