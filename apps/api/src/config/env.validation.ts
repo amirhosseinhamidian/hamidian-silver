@@ -75,7 +75,6 @@ export const envValidationSchema = Joi.object({
   KAVENEGAR_ORDER_SHIPPED_TEMPLATE: kavenegarTemplate,
   KAVENEGAR_ORDER_DELIVERED_TEMPLATE: kavenegarTemplate,
   KAVENEGAR_ORDER_CANCELLED_TEMPLATE: kavenegarTemplate,
-  KAVENEGAR_PAYMENT_REVIEW_TEMPLATE: kavenegarTemplate,
   PAYMENT_PROVIDER: Joi.string().valid('disabled', 'irandargah').default('disabled'),
   PAYMENT_CALLBACK_URL: Joi.string()
     .uri({ scheme: ['http', 'https'] })

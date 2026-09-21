@@ -34,7 +34,6 @@ export class NotificationOutboxWorker {
   private readonly orderShippedTemplate: string;
   private readonly orderDeliveredTemplate: string;
   private readonly orderCancelledTemplate: string;
-  private readonly paymentReviewTemplate: string;
   private running = false;
 
   constructor(
@@ -72,7 +71,6 @@ export class NotificationOutboxWorker {
     this.orderShippedTemplate = config.get<string>('KAVENEGAR_ORDER_SHIPPED_TEMPLATE', '');
     this.orderDeliveredTemplate = config.get<string>('KAVENEGAR_ORDER_DELIVERED_TEMPLATE', '');
     this.orderCancelledTemplate = config.get<string>('KAVENEGAR_ORDER_CANCELLED_TEMPLATE', '');
-    this.paymentReviewTemplate = config.get<string>('KAVENEGAR_PAYMENT_REVIEW_TEMPLATE', '');
   }
 
   @Cron(CronExpression.EVERY_MINUTE, {
@@ -189,7 +187,7 @@ export class NotificationOutboxWorker {
           continue;
         }
 
-        let message: SendSmsMessage | SendSmsTemplateMessage;
+        let message: SendSmsMessage | SendSmsTemplateMessage | null;
 
         try {
           message = await this.buildMessage(
@@ -200,6 +198,23 @@ export class NotificationOutboxWorker {
           );
         } catch (error) {
           await this.failBeforeDispatch(event.id, claimedAt, event.attempts + 1, error);
+          continue;
+        }
+
+        if (message === null) {
+          await this.prisma.notificationOutboxEvent.updateMany({
+            where: {
+              id: event.id,
+              status: NotificationOutboxStatus.PROCESSING,
+              claimedAt,
+            },
+            data: {
+              status: NotificationOutboxStatus.SENT,
+              processedAt: new Date(),
+              claimedAt: null,
+              lastError: null,
+            },
+          });
           continue;
         }
 
@@ -400,7 +415,7 @@ export class NotificationOutboxWorker {
     aggregateType: string,
     aggregateId: string,
     _payload: unknown,
-  ): Promise<SendSmsMessage | SendSmsTemplateMessage> {
+  ): Promise<SendSmsMessage | SendSmsTemplateMessage | null> {
     if (
       aggregateType === 'STOCK_SUBSCRIPTION' &&
       type === NotificationOutboxEventType.STOCK_AVAILABLE
@@ -533,12 +548,7 @@ export class NotificationOutboxWorker {
           order.orderNumber,
         );
       case NotificationOutboxEventType.PAYMENT_RECONCILIATION_REQUIRED:
-        return this.templateMessage(
-          order.user.phone,
-          this.paymentReviewTemplate,
-          'KAVENEGAR_PAYMENT_REVIEW_TEMPLATE',
-          order.orderNumber,
-        );
+        return null;
       case NotificationOutboxEventType.STOCK_AVAILABLE:
         throw new Error('Stock notification event has an invalid aggregate type.');
     }

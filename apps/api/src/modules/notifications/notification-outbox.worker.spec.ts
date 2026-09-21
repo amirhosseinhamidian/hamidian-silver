@@ -70,7 +70,6 @@ describe('NotificationOutboxWorker', () => {
       KAVENEGAR_ORDER_SHIPPED_TEMPLATE: 'order-shipped',
       KAVENEGAR_ORDER_DELIVERED_TEMPLATE: 'order-delivered',
       KAVENEGAR_ORDER_CANCELLED_TEMPLATE: 'order-cancelled',
-      KAVENEGAR_PAYMENT_REVIEW_TEMPLATE: 'payment-review',
     };
     const config = {
       get: jest.fn((key: string, fallback?: unknown) => templates[key] ?? fallback),
@@ -167,6 +166,26 @@ describe('NotificationOutboxWorker', () => {
       template: 'order-cancelled',
       token: 'HS-TEST',
     });
+  });
+
+  it('settles payment review events without sending a customer SMS', async () => {
+    const { worker, prisma, smsSender } = createWorker({
+      type: NotificationOutboxEventType.PAYMENT_RECONCILIATION_REQUIRED,
+    });
+
+    await worker.dispatchPending();
+
+    expect(smsSender.sendMessage).not.toHaveBeenCalled();
+    expect(smsSender.sendTemplate).not.toHaveBeenCalled();
+    expect(prisma.notificationOutboxEvent.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: NotificationOutboxStatus.SENT,
+          claimedAt: null,
+          lastError: null,
+        }),
+      }),
+    );
   });
 
   it('marks a definitive send failure for retry from dispatching', async () => {

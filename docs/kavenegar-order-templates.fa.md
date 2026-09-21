@@ -4,7 +4,7 @@
 
 ## قالب‌های لازم
 
-در پنل کاوه‌نگار، از بخش «اعتبارسنجی / قالب‌ها» هشت قالب زیر را بسازید. نام قالب‌ها انگلیسی و بدون فاصله یا `_` است.
+در پنل کاوه‌نگار، از بخش «اعتبارسنجی / قالب‌ها» هفت قالب زیر را بسازید. نام قالب‌ها انگلیسی و بدون فاصله یا `_` است.
 
 ### تأیید پرداخت
 
@@ -86,17 +86,6 @@
 
 دلیل کامل لغو سفارش در صفحه جزئیات سفارش مشتری نمایش داده می‌شود و داخل توکن پیامک قرار نمی‌گیرد.
 
-### پرداخت در حال بررسی
-
-- نام: `hamidianpaymentreview`
-- متغیر: `KAVENEGAR_PAYMENT_REVIEW_TEMPLATE`
-
-```text
-پرداخت سفارش %token ثبت شده و در حال بررسی است.
-لطفاً تا پایان بررسی پرداخت مجدد انجام ندهید.
-نقره حمیدیان
-```
-
 ## تنظیم production.env
 
 بعد از تأیید همه قالب‌ها، این مقادیر را به `/etc/hamidian-silver/production.env` اضافه کنید:
@@ -113,7 +102,6 @@ KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE=hamidiantracking
 KAVENEGAR_ORDER_SHIPPED_TEMPLATE=hamidianshipped
 KAVENEGAR_ORDER_DELIVERED_TEMPLATE=hamidiandelivered
 KAVENEGAR_ORDER_CANCELLED_TEMPLATE=hamidiancancelled
-KAVENEGAR_PAYMENT_REVIEW_TEMPLATE=hamidianpaymentreview
 ```
 
 `KAVENEGAR_SENDER` فقط برای پیام آزاد اعلان موجودشدن کالا استفاده می‌شود. پیام‌های سفارش و OTP به sender وابسته نیستند.
