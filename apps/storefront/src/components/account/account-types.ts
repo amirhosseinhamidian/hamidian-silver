@@ -55,6 +55,7 @@ export type CustomerOrderPayment = Readonly<{
   receiptAvailable: boolean;
   receiptOriginalName: string | null;
   receiptUploadedAt: string | null;
+  rejectionReason: string | null;
 }>;
 
 export type CustomerOrder = Readonly<{
@@ -102,6 +103,7 @@ export type CustomerOrderDetail = CustomerOrder &
   Readonly<{
     shippingAddress: CustomerOrderShippingAddress;
     statusHistory: CustomerOrderStatusHistory[];
+    cancellationReason: string | null;
   }>;
 
 export type CustomerOrderReturnItem = Readonly<{

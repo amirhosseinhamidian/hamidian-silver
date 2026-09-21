@@ -10296,6 +10296,10 @@
             "type": "string",
             "nullable": true
           },
+          "rejectionReason": {
+            "type": "string",
+            "nullable": true
+          },
           "receiptAvailable": {
             "type": "boolean"
           }
@@ -10305,6 +10309,7 @@
           "method",
           "receiptOriginalName",
           "receiptUploadedAt",
+          "rejectionReason",
           "receiptAvailable"
         ]
       },
@@ -10584,6 +10589,10 @@
               "$ref": "#/components/schemas/CustomerOrderStatusHistoryDto"
             }
           },
+          "cancellationReason": {
+            "type": "string",
+            "nullable": true
+          },
           "id": {
             "type": "string"
           },
@@ -10640,6 +10649,7 @@
           "items",
           "shippingAddress",
           "statusHistory",
+          "cancellationReason",
           "id",
           "orderNumber",
           "merchandiseTotalToman",

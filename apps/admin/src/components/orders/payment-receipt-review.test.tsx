@@ -40,7 +40,7 @@ describe('PaymentReceiptReview', () => {
     fireEvent.change(screen.getByLabelText('دلیل رد رسید'), {
       target: { value: 'تصویر رسید خوانا نیست.' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'تأیید رد و ارسال پیامک' }));
+    fireEvent.click(screen.getByRole('button', { name: 'تأیید رد رسید' }));
 
     await waitFor(() => {
       expect(request).toHaveBeenCalledWith(

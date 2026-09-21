@@ -172,6 +172,7 @@ describe('CustomerOrderDetailView', () => {
             receiptAvailable: true,
             receiptOriginalName: 'receipt.jpg',
             receiptUploadedAt: '2026-09-05T12:05:00.000Z',
+            rejectionReason: null,
           },
           merchandiseTotalToman: 2_000_000,
           platingTotalToman: 0,
@@ -198,6 +199,7 @@ describe('CustomerOrderDetailView', () => {
               createdAt: '2026-09-05T12:00:00.000Z',
             },
           ],
+          cancellationReason: null,
           items: [],
           shippingAddress: {},
         }),
@@ -212,5 +214,73 @@ describe('CustomerOrderDetailView', () => {
     expect(within(timeline!).getByText('در انتظار بررسی رسید')).toBeInTheDocument();
     expect(within(timeline!).queryByText('در انتظار پرداخت')).not.toBeInTheDocument();
     expect(screen.getByText('رایگان')).toBeInTheDocument();
+  });
+
+  it('shows receipt rejection and order cancellation reasons only in order details', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValueOnce(
+        jsonResponse({
+          id: 'order-3',
+          orderNumber: 'HS-1003',
+          status: 'CANCELLED',
+          payment: {
+            status: 'PENDING',
+            method: 'CARD_TO_CARD',
+            receiptAvailable: true,
+            receiptOriginalName: 'receipt.jpg',
+            receiptUploadedAt: '2026-09-05T12:05:00.000Z',
+            rejectionReason: 'مبلغ واریزی با مبلغ سفارش مطابقت ندارد.',
+          },
+          merchandiseTotalToman: 2_000_000,
+          platingTotalToman: 0,
+          discountTotalToman: 0,
+          shippingTotalToman: 0,
+          taxTotalToman: 0,
+          grandTotalToman: 2_000_000,
+          returnAuthorized: false,
+          trackingCode: null,
+          shippingMethodName: null,
+          shippingTrackingUrl: null,
+          shippingCarrierLogoUrl: null,
+          shippingPayOnDelivery: false,
+          reservationExpiresAt: '2026-09-05T12:15:00.000Z',
+          paidAt: null,
+          cancelledAt: '2026-09-05T12:10:00.000Z',
+          deliveredAt: null,
+          createdAt: '2026-09-05T12:00:00.000Z',
+          updatedAt: '2026-09-05T12:10:00.000Z',
+          cancellationReason: 'کالا دیگر موجود نیست.',
+          statusHistory: [
+            {
+              fromStatus: null,
+              toStatus: 'PENDING_PAYMENT',
+              createdAt: '2026-09-05T12:00:00.000Z',
+            },
+            {
+              fromStatus: 'PENDING_PAYMENT',
+              toStatus: 'CANCELLED',
+              createdAt: '2026-09-05T12:10:00.000Z',
+            },
+          ],
+          items: [],
+          shippingAddress: {
+            recipientName: 'مشتری تست',
+            phone: '09120000000',
+            province: 'تهران',
+            city: 'تهران',
+            addressLine: 'نشانی تست',
+            postalCode: '1234567890',
+          },
+        }),
+      ),
+    );
+
+    render(<CustomerOrderDetailView orderId="order-3" />);
+
+    expect(await screen.findByText('دلیل لغو سفارش')).toBeInTheDocument();
+    expect(screen.getByText('کالا دیگر موجود نیست.')).toBeInTheDocument();
+    expect(screen.getByText('علت رد رسید پرداخت')).toBeInTheDocument();
+    expect(screen.getByText('مبلغ واریزی با مبلغ سفارش مطابقت ندارد.')).toBeInTheDocument();
   });
 });

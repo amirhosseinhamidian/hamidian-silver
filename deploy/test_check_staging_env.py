@@ -63,6 +63,19 @@ class StagingEnvTests(unittest.TestCase):
         values['SMS_PROVIDER'] = 'console'
         self.assertIn('SMS_PROVIDER', ' '.join(checker.validate(values)))
 
+    def test_kavenegar_requires_all_order_templates(self):
+        values = fixture()
+        values.update({
+            'SMS_PROVIDER': 'kavenegar',
+            'KAVENEGAR_API_KEY': 'kavenegar-test-api-key',
+            'KAVENEGAR_OTP_TEMPLATE': 'hamidianotp',
+        })
+        result = ' '.join(checker.validate(values))
+        self.assertIn('KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE', result)
+
+        values.update({key: 'approved-template' for key in checker.shared.KAVENEGAR_ORDER_TEMPLATE_KEYS})
+        self.assertEqual(checker.validate(values), [])
+
     def test_bootstrap_rejects_unknown_or_injected_fields(self):
         result = checker.validate_bootstrap(
             'OPERATIONAL_ADMIN_PHONE=09123456789\n'

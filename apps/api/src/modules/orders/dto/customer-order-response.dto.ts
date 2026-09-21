@@ -20,6 +20,9 @@ export class CustomerOrderPaymentDto {
 
   @ApiProperty({ type: Date, nullable: true })
   receiptUploadedAt!: Date | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  rejectionReason!: string | null;
 }
 
 export class CustomerOrderMediaDto {
@@ -158,4 +161,7 @@ export class CustomerOrderDetailDto extends CustomerOrderSummaryDto {
 
   @ApiProperty({ type: () => CustomerOrderStatusHistoryDto, isArray: true })
   statusHistory!: CustomerOrderStatusHistoryDto[];
+
+  @ApiProperty({ type: String, nullable: true })
+  cancellationReason!: string | null;
 }

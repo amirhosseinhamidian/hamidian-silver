@@ -1,5 +1,10 @@
 import { ServiceUnavailableException } from '@nestjs/common';
-import type { SendOtpMessage, SendSmsMessage, SmsSender } from '../sms-sender.port';
+import type {
+  SendOtpMessage,
+  SendSmsMessage,
+  SendSmsTemplateMessage,
+  SmsSender,
+} from '../sms-sender.port';
 
 export class DisabledSmsSender implements SmsSender {
   async sendOtp(_message: SendOtpMessage): Promise<void> {
@@ -7,6 +12,10 @@ export class DisabledSmsSender implements SmsSender {
   }
 
   async sendMessage(_message: SendSmsMessage): Promise<void> {
+    throw new ServiceUnavailableException('SMS delivery is not configured.');
+  }
+
+  async sendTemplate(_message: SendSmsTemplateMessage): Promise<void> {
     throw new ServiceUnavailableException('SMS delivery is not configured.');
   }
 }

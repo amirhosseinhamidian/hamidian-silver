@@ -60,6 +60,43 @@ describe('KavenegarSmsSender transactional SMS', () => {
     expect(body.get('sender')).toBe('10004346');
   });
 
+  it('sends an approved template through Kavenegar VerifyLookup', async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          return: {
+            status: 200,
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    );
+    const sender = createSender();
+
+    await sender.sendTemplate({
+      phone: '+989120000000',
+      template: 'hamidiantracking',
+      token: 'HS-TEST',
+      token2: 'TRACK-1',
+    });
+
+    const [url, request] = fetchSpy.mock.calls[0];
+    const parsedUrl = new URL(String(url));
+
+    expect(parsedUrl.pathname).toContain('/verify/lookup.json');
+    expect(request?.method).toBe('GET');
+    expect(parsedUrl.searchParams.get('receptor')).toBe('09120000000');
+    expect(parsedUrl.searchParams.get('template')).toBe('hamidiantracking');
+    expect(parsedUrl.searchParams.get('token')).toBe('HS-TEST');
+    expect(parsedUrl.searchParams.get('token2')).toBe('TRACK-1');
+    expect(parsedUrl.searchParams.has('sender')).toBe(false);
+  });
+
   it('marks network failures as an unknown delivery outcome', async () => {
     fetchSpy.mockRejectedValueOnce(new Error('socket closed'));
     const sender = createSender();

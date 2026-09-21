@@ -60,9 +60,20 @@ describe('NotificationOutboxWorker', () => {
     const smsSender: SmsSender = {
       sendOtp: jest.fn(),
       sendMessage: jest.fn().mockResolvedValue(undefined),
+      sendTemplate: jest.fn().mockResolvedValue(undefined),
+    };
+    const templates: Record<string, string> = {
+      KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE: 'payment-verified',
+      KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE: 'payment-receipt-submitted',
+      KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE: 'payment-receipt-rejected',
+      KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE: 'shipment-tracking',
+      KAVENEGAR_ORDER_SHIPPED_TEMPLATE: 'order-shipped',
+      KAVENEGAR_ORDER_DELIVERED_TEMPLATE: 'order-delivered',
+      KAVENEGAR_ORDER_CANCELLED_TEMPLATE: 'order-cancelled',
+      KAVENEGAR_PAYMENT_REVIEW_TEMPLATE: 'payment-review',
     };
     const config = {
-      get: jest.fn(),
+      get: jest.fn((key: string, fallback?: unknown) => templates[key] ?? fallback),
     };
 
     return {
@@ -81,9 +92,10 @@ describe('NotificationOutboxWorker', () => {
 
     await worker.dispatchPending();
 
-    expect(smsSender.sendMessage).toHaveBeenCalledWith({
+    expect(smsSender.sendTemplate).toHaveBeenCalledWith({
       phone: '+989120000000',
-      text: 'پرداخت سفارش HS-TEST تأیید شد و سفارش وارد مرحله آماده‌سازی می‌شود.',
+      template: 'payment-verified',
+      token: 'HS-TEST',
     });
     const claimedAt = prisma.notificationOutboxEvent.updateMany.mock.calls[0]?.[0].data.claimedAt;
     expect(claimedAt).toBeInstanceOf(Date);
@@ -113,7 +125,7 @@ describe('NotificationOutboxWorker', () => {
     );
   });
 
-  it('includes the snapshotted rejection reason in a rejected receipt SMS', async () => {
+  it('uses the approved template for a rejected receipt SMS', async () => {
     const { worker, smsSender } = createWorker({
       type: NotificationOutboxEventType.PAYMENT_RECEIPT_REJECTED,
       payload: { reason: 'تصویر رسید خوانا نیست.' },
@@ -121,16 +133,46 @@ describe('NotificationOutboxWorker', () => {
 
     await worker.dispatchPending();
 
-    expect(smsSender.sendMessage).toHaveBeenCalledWith({
+    expect(smsSender.sendTemplate).toHaveBeenCalledWith({
       phone: '+989120000000',
-      text: 'رسید کارت‌به‌کارت سفارش HS-TEST رد شد. دلیل: تصویر رسید خوانا نیست. لطفاً رسید صحیح را دوباره ثبت کنید.',
+      template: 'payment-receipt-rejected',
+      token: 'HS-TEST',
+    });
+  });
+
+  it('passes the order number and tracking code to the shipment template', async () => {
+    const { worker, smsSender } = createWorker({
+      type: NotificationOutboxEventType.SHIPMENT_TRACKING_AVAILABLE,
+    });
+
+    await worker.dispatchPending();
+
+    expect(smsSender.sendTemplate).toHaveBeenCalledWith({
+      phone: '+989120000000',
+      template: 'shipment-tracking',
+      token: 'HS-TEST',
+      token2: 'TRACK-1',
+    });
+  });
+
+  it('uses the approved template for an order cancellation', async () => {
+    const { worker, smsSender } = createWorker({
+      type: NotificationOutboxEventType.ORDER_CANCELLED,
+    });
+
+    await worker.dispatchPending();
+
+    expect(smsSender.sendTemplate).toHaveBeenCalledWith({
+      phone: '+989120000000',
+      template: 'order-cancelled',
+      token: 'HS-TEST',
     });
   });
 
   it('marks a definitive send failure for retry from dispatching', async () => {
     const { worker, prisma, smsSender } = createWorker();
 
-    (smsSender.sendMessage as jest.Mock).mockRejectedValueOnce(new Error('Kavenegar rejected'));
+    (smsSender.sendTemplate as jest.Mock).mockRejectedValueOnce(new Error('Kavenegar rejected'));
 
     await worker.dispatchPending();
 
@@ -180,7 +222,7 @@ describe('NotificationOutboxWorker', () => {
   it('quarantines an ambiguous send instead of automatically retrying it', async () => {
     const { worker, prisma, smsSender } = createWorker();
 
-    (smsSender.sendMessage as jest.Mock).mockRejectedValueOnce(
+    (smsSender.sendTemplate as jest.Mock).mockRejectedValueOnce(
       new SmsDeliveryUnknownError('Kavenegar'),
     );
 
@@ -213,6 +255,7 @@ describe('NotificationOutboxWorker', () => {
     await worker.dispatchPending();
 
     expect(smsSender.sendMessage).not.toHaveBeenCalled();
+    expect(smsSender.sendTemplate).not.toHaveBeenCalled();
     expect(prisma.notificationOutboxEvent.updateMany).toHaveBeenCalledTimes(1);
     expect(prisma.notificationOutboxEvent.updateMany).toHaveBeenCalledWith({
       where: {
@@ -237,6 +280,7 @@ describe('NotificationOutboxWorker', () => {
     await worker.dispatchPending();
 
     expect(smsSender.sendMessage).not.toHaveBeenCalled();
+    expect(smsSender.sendTemplate).not.toHaveBeenCalled();
     expect(prisma.notificationOutboxEvent.updateMany).toHaveBeenCalledWith({
       where: {
         id: '10000000-0000-4000-8000-000000000001',

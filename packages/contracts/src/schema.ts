@@ -3717,6 +3717,7 @@ export interface components {
             receiptOriginalName: string | null;
             /** Format: date-time */
             receiptUploadedAt: string | null;
+            rejectionReason: string | null;
             receiptAvailable: boolean;
         };
         CustomerOrderMediaDto: {
@@ -3785,6 +3786,7 @@ export interface components {
             items: components["schemas"]["CustomerOrderItemDto"][];
             shippingAddress: components["schemas"]["CustomerOrderShippingAddressDto"];
             statusHistory: components["schemas"]["CustomerOrderStatusHistoryDto"][];
+            cancellationReason: string | null;
             id: string;
             orderNumber: string;
             merchandiseTotalToman: number;

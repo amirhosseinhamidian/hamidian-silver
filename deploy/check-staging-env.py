@@ -73,11 +73,14 @@ def validate(values: dict[str, str], production: dict[str, str] | None = None) -
     sms = values.get('SMS_PROVIDER')
     if sms not in ('disabled', 'kavenegar'):
         errors.append('SMS_PROVIDER must be disabled or kavenegar (never console)')
-    if sms == 'kavenegar' and (
-        len(values.get('KAVENEGAR_API_KEY', '')) < 10
-        or not values.get('KAVENEGAR_OTP_TEMPLATE')
-    ):
-        errors.append('Kavenegar test SMS requires API key and OTP template')
+    if sms == 'kavenegar':
+        if len(values.get('KAVENEGAR_API_KEY', '')) < 10 or not values.get(
+            'KAVENEGAR_OTP_TEMPLATE'
+        ):
+            errors.append('Kavenegar test SMS requires API key and OTP template')
+        for name in shared.KAVENEGAR_ORDER_TEMPLATE_KEYS:
+            if not shared.KAVENEGAR_TEMPLATE_RE.fullmatch(values.get(name, '')):
+                errors.append(f'{name} must be a configured Kavenegar template name')
     shipping = values.get('MANUAL_SHIPPING_COST_TOMAN', '')
     if not shipping.isascii() or not shipping.isdigit() or int(shipping or '0') > 2_147_483_647:
         errors.append('MANUAL_SHIPPING_COST_TOMAN must be unsigned and within range')

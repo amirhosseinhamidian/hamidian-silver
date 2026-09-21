@@ -1,7 +1,12 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SmsDeliveryUnknownError } from '../sms-delivery-unknown.error';
-import type { SendOtpMessage, SendSmsMessage, SmsSender } from '../sms-sender.port';
+import type {
+  SendOtpMessage,
+  SendSmsMessage,
+  SendSmsTemplateMessage,
+  SmsSender,
+} from '../sms-sender.port';
 
 type KavenegarResponse = {
   return?: {
@@ -95,6 +100,52 @@ export class KavenegarSmsSender implements SmsSender {
 
     if (payload.return?.status !== 200) {
       throw new ServiceUnavailableException('Kavenegar rejected the SMS request.');
+    }
+  }
+
+  async sendTemplate(message: SendSmsTemplateMessage): Promise<void> {
+    const url = new URL(
+      `https://api.kavenegar.com/v1/${encodeURIComponent(this.apiKey)}/verify/lookup.json`,
+    );
+
+    url.searchParams.set('receptor', this.toKavenegarReceptor(message.phone));
+    url.searchParams.set('template', message.template);
+    url.searchParams.set('token', message.token);
+
+    for (const key of ['token2', 'token3', 'token10', 'token20'] as const) {
+      const value = message[key];
+      if (value) url.searchParams.set(key, value);
+    }
+
+    let response: Response;
+
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+        signal: AbortSignal.timeout(5_000),
+      });
+    } catch {
+      throw new SmsDeliveryUnknownError('Kavenegar');
+    }
+
+    if (!response.ok) {
+      if (response.status >= 500) {
+        throw new SmsDeliveryUnknownError('Kavenegar');
+      }
+
+      throw new ServiceUnavailableException('Kavenegar rejected the SMS template request.');
+    }
+
+    let payload: KavenegarResponse;
+
+    try {
+      payload = (await response.json()) as KavenegarResponse;
+    } catch {
+      throw new SmsDeliveryUnknownError('Kavenegar');
+    }
+
+    if (payload.return?.status !== 200) {
+      throw new ServiceUnavailableException('Kavenegar rejected the SMS template request.');
     }
   }
 

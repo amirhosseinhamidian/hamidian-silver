@@ -1,12 +1,14 @@
 import type { ConfigService } from '@nestjs/config';
 import { ErrorCode } from '../../common/errors/error-codes';
 import {
+  NotificationOutboxEventType,
   OrderStatus,
   PaymentStatus,
   PlatingType,
   ProductStatus,
 } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
+import type { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { OrdersService } from './orders.service';
 
 describe('OrdersService', () => {
@@ -291,6 +293,17 @@ describe('OrdersService', () => {
 
   it('releases reserved inventory when a pending order is cancelled', async () => {
     const orderId = '60000000-0000-4000-8000-000000000001';
+    const outbox = {
+      enqueueOrderEvent: jest.fn().mockResolvedValue({ count: 1 }),
+    };
+    service = new OrdersService(
+      prisma as unknown as PrismaService,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      outbox as unknown as NotificationOutboxService,
+    );
     const transaction = {
       order: {
         findUnique: jest.fn().mockResolvedValue({
@@ -362,6 +375,20 @@ describe('OrdersService', () => {
         status: OrderStatus.CANCELLED,
         cancelledAt: expect.any(Date),
       },
+    });
+    expect(transaction.orderStatusHistory.create).toHaveBeenCalledWith({
+      data: {
+        orderId,
+        actorUserId: userId,
+        fromStatus: OrderStatus.PENDING_PAYMENT,
+        toStatus: OrderStatus.CANCELLED,
+        reason: 'Manager cancellation',
+      },
+    });
+    expect(outbox.enqueueOrderEvent).toHaveBeenCalledWith(transaction, {
+      type: NotificationOutboxEventType.ORDER_CANCELLED,
+      orderId,
+      deduplicationKey: `order:${orderId}:cancelled`,
     });
   });
 

@@ -33,6 +33,7 @@ const order: CustomerOrderDetail = {
     receiptAvailable: false,
     receiptOriginalName: null,
     receiptUploadedAt: null,
+    rejectionReason: null,
   },
   shippingAddress: {
     recipientName: 'امیرحسین حمیدیان',
@@ -46,6 +47,7 @@ const order: CustomerOrderDetail = {
     { fromStatus: null, toStatus: 'PENDING_PAYMENT', createdAt: '2026-09-07T12:00:00.000Z' },
     { fromStatus: 'PENDING_PAYMENT', toStatus: 'PAID', createdAt: '2026-09-07T12:02:00.000Z' },
   ],
+  cancellationReason: null,
   items: [
     {
       id: 'item-1',
