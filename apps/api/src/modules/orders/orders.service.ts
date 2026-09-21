@@ -20,6 +20,7 @@ import { normalizeIranianMobile } from '../auth/phone-normalizer';
 import { attachHumanAuditEvent } from '../audit/audit-event';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
+import { AdminOrderNotificationOutboxService } from '../notifications/admin-order-notification-outbox.service';
 import { ShippingPricingService } from '../shipping/shipping-pricing.service';
 import { ShippingCarriersService } from '../shipping/shipping-carriers.service';
 import { CancelOrderDto } from './dto/cancel-order.dto';
@@ -341,6 +342,7 @@ export class OrdersService {
     @Optional() private readonly shippingPricing?: ShippingPricingService,
     @Optional() private readonly shippingCarriers?: ShippingCarriersService,
     @Optional() private readonly outbox?: NotificationOutboxService,
+    @Optional() private readonly adminOrderOutbox?: AdminOrderNotificationOutboxService,
   ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
@@ -509,6 +511,8 @@ export class OrdersService {
       });
 
       await this.reserveInventory(transaction, warehouse.id, order.id, preparedItems, userId);
+
+      await this.adminOrderOutbox?.enqueueOrderCreated(transaction, order.id);
 
       return transaction.order.findUniqueOrThrow({
         where: {

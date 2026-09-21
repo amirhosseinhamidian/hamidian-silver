@@ -23,6 +23,8 @@ ALLOWED_KEYS = frozenset(
         "KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE", "KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE",
         "KAVENEGAR_ORDER_SHIPPED_TEMPLATE", "KAVENEGAR_ORDER_DELIVERED_TEMPLATE",
         "KAVENEGAR_ORDER_CANCELLED_TEMPLATE",
+        "ADMIN_APP_ORIGIN", "TELEGRAM_BOT_TOKEN", "BALE_BOT_TOKEN",
+        "ADMIN_MESSAGING_REQUEST_TIMEOUT_MS",
         "PAYMENT_PROVIDER", "IRANDARGAH_API_TOKEN", "IRANDARGAH_SANDBOX",
         "IRANDARGAH_REQUEST_TIMEOUT_MS", "MELLAT_TERMINAL_ID", "MELLAT_USERNAME", "MELLAT_PASSWORD",
         "SHIPPING_PROVIDER", "MANUAL_SHIPPING_COST_TOMAN",
@@ -110,10 +112,18 @@ def validate(values: dict[str, str]) -> list[str]:
         "MEDIA_PUBLIC_BASE_URL": "https://media.hamidian.shop/media",
         "CORS_ORIGINS": "https://hamidian.shop,https://admin.hamidian.shop",
         "PAYMENT_CALLBACK_URL": "https://hamidian.shop/api/payment/callback",
+        "ADMIN_APP_ORIGIN": "https://admin.hamidian.shop",
     }
     for key, expected in fixed.items():
         if values.get(key) != expected:
             errors.append(f"{key} must match the production domain configuration")
+
+    for key in ("TELEGRAM_BOT_TOKEN", "BALE_BOT_TOKEN"):
+        if values.get(key) and len(values[key]) < 20:
+            errors.append(f"{key} must contain a valid bot token or remain empty")
+    messaging_timeout = values.get("ADMIN_MESSAGING_REQUEST_TIMEOUT_MS", "")
+    if not messaging_timeout.isdigit() or not 1000 <= int(messaging_timeout or "0") <= 60000:
+        errors.append("ADMIN_MESSAGING_REQUEST_TIMEOUT_MS must be between 1000 and 60000")
 
     if values.get("SHIPPING_PROVIDER") != "disabled":
         errors.append("SHIPPING_PROVIDER must be disabled while Postex is off")

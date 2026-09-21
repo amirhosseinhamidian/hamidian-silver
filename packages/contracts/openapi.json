@@ -3279,6 +3279,67 @@
         ]
       }
     },
+    "/api/v1/admin-order-notification-recipients": {
+      "get": {
+        "operationId": "AdminMessageRecipientsController_list_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMessageRecipientSnapshotDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AdminMessageRecipients"
+        ]
+      }
+    },
+    "/api/v1/admin-order-notification-recipients/{userId}": {
+      "put": {
+        "operationId": "AdminMessageRecipientsController_update_v1",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAdminMessageRecipientDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMessageRecipientSnapshotDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AdminMessageRecipients"
+        ]
+      }
+    },
     "/api/v1/notifications/recovery/unknown": {
       "get": {
         "operationId": "NotificationOutboxRecoveryController_listUnknown_v1",
@@ -9694,6 +9755,90 @@
           "variantId",
           "lowStockThreshold"
         ]
+      },
+      "AdminMessageRecipientDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "MANAGER",
+                "ADMIN"
+              ]
+            }
+          },
+          "telegramChatId": {
+            "type": "string",
+            "nullable": true
+          },
+          "baleChatId": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "firstName",
+          "lastName",
+          "roles",
+          "telegramChatId",
+          "baleChatId",
+          "phone"
+        ]
+      },
+      "AdminMessageRecipientSnapshotDto": {
+        "type": "object",
+        "properties": {
+          "recipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminMessageRecipientDto"
+            }
+          },
+          "telegramConfigured": {
+            "type": "boolean"
+          },
+          "baleConfigured": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "recipients",
+          "telegramConfigured",
+          "baleConfigured"
+        ]
+      },
+      "UpdateAdminMessageRecipientDto": {
+        "type": "object",
+        "properties": {
+          "telegramChatId": {
+            "type": "string",
+            "nullable": true,
+            "example": "123456789"
+          },
+          "baleChatId": {
+            "type": "string",
+            "nullable": true,
+            "example": "123456789"
+          }
+        }
       },
       "ResolveNotificationOutboxRecoveryDto": {
         "type": "object",

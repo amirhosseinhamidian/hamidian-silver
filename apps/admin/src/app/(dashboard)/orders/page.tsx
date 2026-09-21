@@ -6,9 +6,13 @@ import { formatAdminInteger } from '@/lib/presentation/formatters';
 
 export const dynamic = 'force-dynamic';
 
-export default async function OrdersPage() {
+type OrdersPageProps = Readonly<{
+  searchParams: Promise<{ orderId?: string }>;
+}>;
+
+export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   const user = await requireAdminSession({ permissions: ['orders.read'], returnTo: '/orders' });
-  const data = await loadOrderManagement();
+  const [data, query] = await Promise.all([loadOrderManagement(), searchParams]);
 
   return (
     <main className="admin-container py-6 sm:py-8 lg:py-10">
@@ -26,6 +30,7 @@ export default async function OrdersPage() {
         failed={data.failed}
         canUpdateStatus={user.permissions.includes('orders.status.write')}
         canCancel={user.permissions.includes('orders.cancel')}
+        initialOrderId={query.orderId}
       />
     </main>
   );

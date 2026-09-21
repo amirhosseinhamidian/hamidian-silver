@@ -77,6 +77,14 @@ export const envValidationSchema = Joi.object({
   KAVENEGAR_ORDER_SHIPPED_TEMPLATE: kavenegarTemplate,
   KAVENEGAR_ORDER_DELIVERED_TEMPLATE: kavenegarTemplate,
   KAVENEGAR_ORDER_CANCELLED_TEMPLATE: kavenegarTemplate,
+  ADMIN_APP_ORIGIN: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .default('http://localhost:3002'),
+  TELEGRAM_BOT_TOKEN: Joi.string().min(20).allow('').optional(),
+  BALE_BOT_TOKEN: Joi.string().min(20).allow('').optional(),
+  ADMIN_MESSAGING_REQUEST_TIMEOUT_MS: Joi.number().integer().min(1000).max(60000).default(8000),
+  ADMIN_MESSAGING_OUTBOX_BATCH_SIZE: Joi.number().integer().min(1).max(200).default(50),
+  ADMIN_MESSAGING_OUTBOX_STALE_MINUTES: Joi.number().integer().min(1).max(1440).default(10),
   PAYMENT_PROVIDER: Joi.string().valid('disabled', 'irandargah').default('disabled'),
   PAYMENT_CALLBACK_URL: Joi.string()
     .uri({ scheme: ['http', 'https'] })

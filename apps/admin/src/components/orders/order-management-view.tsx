@@ -40,6 +40,7 @@ type OrderManagementViewProps = Readonly<{
   failed: boolean;
   canUpdateStatus?: boolean;
   canCancel?: boolean;
+  initialOrderId?: string;
 }>;
 
 const orderStatusPresentation: Record<AdminOrderStatus, { label: string; tone: BadgeTone }> = {
@@ -403,14 +404,16 @@ function OrderDetailsSheet({
   canUpdateStatus,
   canCancel,
   triggerLabel = 'مشاهده',
+  defaultOpen = false,
 }: Readonly<{
   order: AdminOrder;
   canUpdateStatus: boolean;
   canCancel: boolean;
   triggerLabel?: string;
+  defaultOpen?: boolean;
 }>) {
   return (
-    <BottomSheet>
+    <BottomSheet defaultOpen={defaultOpen}>
       <BottomSheetTrigger asChild>
         <Button variant="outline" size="sm">
           {triggerLabel}
@@ -465,6 +468,7 @@ export function OrderManagementView({
   failed,
   canUpdateStatus = false,
   canCancel = false,
+  initialOrderId,
 }: OrderManagementViewProps) {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -560,7 +564,12 @@ export function OrderManagementView({
       header: 'عملیات',
       align: 'end',
       cell: (order) => (
-        <OrderDetailsSheet order={order} canUpdateStatus={canUpdateStatus} canCancel={canCancel} />
+        <OrderDetailsSheet
+          order={order}
+          canUpdateStatus={canUpdateStatus}
+          canCancel={canCancel}
+          defaultOpen={order.id === initialOrderId}
+        />
       ),
     },
   ];

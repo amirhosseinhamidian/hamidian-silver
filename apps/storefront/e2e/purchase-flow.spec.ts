@@ -40,6 +40,9 @@ test('OTP → product → cart → checkout → card-to-card receipt', async ({ 
     await expect(page.getByText('آدرس پیش‌فرض')).toBeVisible();
     await expect(page.getByText('پست پیشتاز')).toBeVisible();
     await expectNoHorizontalOverflow(page);
+    const cardToCardMethod = page.getByRole('radio', { name: /پرداخت کارت‌به‌کارت/ });
+    await expect(cardToCardMethod).toBeEnabled();
+    await cardToCardMethod.check();
     await page.getByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }).click();
     const cardDialog = page.getByRole('dialog', { name: 'اطلاعات کارت مقصد' });
     await expect(cardDialog).toBeVisible();
