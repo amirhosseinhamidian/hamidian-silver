@@ -161,7 +161,7 @@ export function CheckoutFlow({
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
   const [staleCart, setStaleCart] = useState(false);
   const [uncertainCheckout, setUncertainCheckout] = useState<'order' | 'payment' | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card_to_card');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('gateway');
   const [shippingCarrierId, setShippingCarrierId] = useState(shippingOptions[0]?.id ?? '');
   const [cardToCardSettings, setCardToCardSettings] = useState<CardToCardSettings | null>(null);
   const [bankGateway, setBankGateway] = useState<AvailablePaymentGateway | null>(null);
