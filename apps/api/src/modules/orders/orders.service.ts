@@ -20,7 +20,6 @@ import { normalizeIranianMobile } from '../auth/phone-normalizer';
 import { attachHumanAuditEvent } from '../audit/audit-event';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
-import { AdminOrderNotificationOutboxService } from '../notifications/admin-order-notification-outbox.service';
 import { ShippingPricingService } from '../shipping/shipping-pricing.service';
 import { ShippingCarriersService } from '../shipping/shipping-carriers.service';
 import { CancelOrderDto } from './dto/cancel-order.dto';
@@ -29,6 +28,28 @@ import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 const RESERVATION_TTL_MINUTES = 15;
+
+const LEGACY_CANCELLATION_REASON_TRANSLATIONS = new Map<string, string>([
+  ['cancelled by customer', 'لغو سفارش توسط مشتری'],
+  ['canceled by customer', 'لغو سفارش توسط مشتری'],
+  ['customer cancellation', 'لغو سفارش توسط مشتری'],
+  ['order cancelled by customer', 'لغو سفارش توسط مشتری'],
+  ['order canceled by customer', 'لغو سفارش توسط مشتری'],
+  ['manager cancellation', 'لغو سفارش توسط مدیریت'],
+  ['cancelled by manager', 'لغو سفارش توسط مدیریت'],
+  ['canceled by manager', 'لغو سفارش توسط مدیریت'],
+  ['cancelled by management', 'لغو سفارش توسط مدیریت'],
+  ['canceled by management', 'لغو سفارش توسط مدیریت'],
+]);
+
+function customerFacingCancellationReason(reason: string | null | undefined): string | null {
+  const normalizedReason = reason?.trim();
+  if (!normalizedReason) return null;
+
+  return (
+    LEGACY_CANCELLATION_REASON_TRANSLATIONS.get(normalizedReason.toLowerCase()) ?? normalizedReason
+  );
+}
 
 type ShippingCarrierPresentation = Readonly<{
   name: string | null;
@@ -342,7 +363,6 @@ export class OrdersService {
     @Optional() private readonly shippingPricing?: ShippingPricingService,
     @Optional() private readonly shippingCarriers?: ShippingCarriersService,
     @Optional() private readonly outbox?: NotificationOutboxService,
-    @Optional() private readonly adminOrderOutbox?: AdminOrderNotificationOutboxService,
   ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
@@ -512,8 +532,6 @@ export class OrdersService {
 
       await this.reserveInventory(transaction, warehouse.id, order.id, preparedItems, userId);
 
-      await this.adminOrderOutbox?.enqueueOrderCreated(transaction, order.id);
-
       return transaction.order.findUniqueOrThrow({
         where: {
           id: order.id,
@@ -619,11 +637,10 @@ export class OrdersService {
     const items = Array.isArray(selectedItems) ? selectedItems : [];
     const latestAttempt = payment?.attempts[0];
     const statusHistory = 'statusHistory' in order ? order.statusHistory : undefined;
-    const cancellationReason =
-      [...(statusHistory ?? [])]
-        .reverse()
-        .find((entry) => entry.toStatus === OrderStatus.CANCELLED)
-        ?.reason?.trim() || null;
+    const cancellationReason = customerFacingCancellationReason(
+      [...(statusHistory ?? [])].reverse().find((entry) => entry.toStatus === OrderStatus.CANCELLED)
+        ?.reason,
+    );
 
     return {
       ...summary,
@@ -869,8 +886,9 @@ export class OrdersService {
     actorUserId: string,
     ownerUserId?: string,
   ) {
-    const cancellationReason =
-      dto.reason?.trim() || (ownerUserId ? 'لغو سفارش توسط مشتری' : 'لغو سفارش توسط مدیریت');
+    const cancellationReason = ownerUserId
+      ? 'لغو سفارش توسط مشتری'
+      : dto.reason?.trim() || 'لغو سفارش توسط مدیریت';
 
     return this.prisma.$transaction(async (transaction) => {
       const order = await transaction.order.findUnique({

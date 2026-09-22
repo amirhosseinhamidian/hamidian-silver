@@ -8,9 +8,13 @@ type BotApiResponse = Readonly<{ ok?: boolean; description?: string }>;
 @Injectable()
 export class AdminMessageSender {
   private readonly timeoutMs: number;
+  private readonly telegramBaseUrl: string;
 
   constructor(private readonly config: ConfigService) {
     this.timeoutMs = this.config.get<number>('ADMIN_MESSAGING_REQUEST_TIMEOUT_MS', 8000);
+    this.telegramBaseUrl = (
+      this.config.get<string>('TELEGRAM_BOT_API_BASE_URL')?.trim() || 'https://api.telegram.org'
+    ).replace(/\/+$/, '');
   }
 
   async send(channel: AdminMessageChannel, chatId: string, message: string): Promise<void> {
@@ -20,15 +24,25 @@ export class AdminMessageSender {
     if (!token) throw new Error(`${tokenKey} is not configured.`);
 
     const baseUrl =
-      channel === AdminMessageChannel.TELEGRAM
-        ? 'https://api.telegram.org'
-        : 'https://tapi.bale.ai';
-    const response = await fetch(`${baseUrl}/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: message }),
-      signal: AbortSignal.timeout(this.timeoutMs),
-    });
+      channel === AdminMessageChannel.TELEGRAM ? this.telegramBaseUrl : 'https://tapi.bale.ai';
+    let response: Response;
+    try {
+      response = await fetch(`${baseUrl}/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: message }),
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+    } catch (error) {
+      const diagnostic = this.networkError(error);
+      const relayHint =
+        channel === AdminMessageChannel.TELEGRAM
+          ? ' Check outbound DNS/HTTPS or configure TELEGRAM_BOT_API_BASE_URL.'
+          : '';
+      throw new Error(
+        `${channel} request failed before an API response: ${diagnostic}.${relayHint}`,
+      );
+    }
 
     const payload = await this.readResponse(response);
     if (!response.ok || payload?.ok !== true) {
@@ -44,5 +58,18 @@ export class AdminMessageSender {
     } catch {
       return null;
     }
+  }
+
+  private networkError(error: unknown): string {
+    if (!(error instanceof Error)) return String(error);
+    const cause = error.cause;
+    if (!cause || typeof cause !== 'object') return error.message;
+    const source = cause as { code?: unknown; message?: unknown };
+    const code = typeof source.code === 'string' ? source.code : null;
+    const message = typeof source.message === 'string' ? source.message : null;
+    if (code && message) return `${error.message}; ${code}: ${message}`;
+    if (code) return `${error.message}; ${code}`;
+    if (message) return `${error.message}; ${message}`;
+    return error.message;
   }
 }

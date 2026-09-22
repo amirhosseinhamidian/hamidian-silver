@@ -431,6 +431,10 @@ export class OrderReturnsService {
     dto: CancelOrderReturnDto,
     ownerUserId?: string,
   ) {
+    const cancellationReason = ownerUserId
+      ? 'لغو درخواست مرجوعی توسط مشتری'
+      : dto.reason?.trim() || 'لغو درخواست مرجوعی توسط مدیریت';
+
     return this.prisma.$transaction(async (transaction) => {
       const orderReturn = await transaction.orderReturn.findUnique({
         where: {
@@ -480,7 +484,7 @@ export class OrderReturnsService {
           status: OrderReturnStatus.CANCELLED,
           cancelledByUserId: actorUserId,
           cancelledAt: new Date(),
-          cancelReason: dto.reason,
+          cancelReason: cancellationReason,
         },
       });
 

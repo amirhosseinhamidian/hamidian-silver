@@ -475,7 +475,20 @@ describe('OrderReturnsService', () => {
     const service = new OrderReturnsService(prisma as unknown as PrismaService);
 
     await service.cancel(returnId, actorUserId, {
-      reason: 'Customer kept the item.',
+      reason: 'مشتری کالا را نگه داشت.',
+    });
+
+    expect(transaction.orderReturn.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: returnId,
+        status: OrderReturnStatus.REQUESTED,
+      },
+      data: {
+        status: OrderReturnStatus.CANCELLED,
+        cancelledByUserId: actorUserId,
+        cancelledAt: expect.any(Date),
+        cancelReason: 'مشتری کالا را نگه داشت.',
+      },
     });
 
     expect(transaction.orderItem.updateMany).toHaveBeenCalledWith({
@@ -489,6 +502,60 @@ describe('OrderReturnsService', () => {
         returnAllocatedQuantity: {
           decrement: 2,
         },
+      },
+    });
+  });
+
+  it('stores a standardized Persian reason when a customer cancels their return request', async () => {
+    const now = new Date('2026-09-22T08:00:00.000Z');
+    const transaction = {
+      orderReturn: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: returnId,
+          requestedByUserId: actorUserId,
+          status: OrderReturnStatus.REQUESTED,
+          order: { userId: actorUserId },
+          items: [],
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          id: returnId,
+          orderId,
+          status: OrderReturnStatus.CANCELLED,
+          reason: 'کالا دیگر مورد نیاز نیست.',
+          receivedAt: null,
+          cancelledAt: now,
+          createdAt: now,
+          updatedAt: now,
+          items: [],
+        }),
+      },
+      orderItem: {
+        updateMany: jest.fn(),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
+    };
+    const service = new OrderReturnsService(prisma as unknown as PrismaService);
+
+    await service.cancelMyReturn(actorUserId, returnId, {
+      reason: 'Cancelled by customer',
+    });
+
+    expect(transaction.orderReturn.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: returnId,
+        status: OrderReturnStatus.REQUESTED,
+        requestedByUserId: actorUserId,
+      },
+      data: {
+        status: OrderReturnStatus.CANCELLED,
+        cancelledByUserId: actorUserId,
+        cancelledAt: expect.any(Date),
+        cancelReason: 'لغو درخواست مرجوعی توسط مشتری',
       },
     });
   });
@@ -518,7 +585,7 @@ describe('OrderReturnsService', () => {
     const service = new OrderReturnsService(prisma as unknown as PrismaService);
 
     await expect(
-      service.cancelMyReturn(actorUserId, returnId, { reason: 'Changed my mind' }),
+      service.cancelMyReturn(actorUserId, returnId, { reason: 'از مرجوع کردن منصرف شدم.' }),
     ).rejects.toMatchObject({ status: 404 });
 
     expect(transaction.orderReturn.updateMany).not.toHaveBeenCalled();

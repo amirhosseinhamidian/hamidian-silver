@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
-import { NotificationOutboxStatus } from '../../generated/prisma/enums';
+import { NotificationOutboxStatus, PaymentStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { formatAdminOrderMessage } from './admin-order-message.formatter';
 import { AdminMessageSender } from './admin-message.sender';
@@ -136,6 +136,7 @@ export class AdminOrderNotificationWorker {
           shippingTotalToman: true,
           taxTotalToman: true,
           grandTotalToman: true,
+          payment: { select: { status: true } },
           customerNote: true,
           shippingCarrierNameSnapshot: true,
           user: { select: { phone: true, firstName: true, lastName: true } },
@@ -154,6 +155,14 @@ export class AdminOrderNotificationWorker {
           },
         },
       });
+      if (
+        order.payment?.status !== PaymentStatus.PAID &&
+        order.payment?.status !== PaymentStatus.AWAITING_REVIEW
+      ) {
+        throw new Error(
+          `Admin order notification is not ready at ${order.payment?.status ?? 'NO_PAYMENT'}.`,
+        );
+      }
       await this.sender.send(channel, chatId, formatAdminOrderMessage(order, this.adminOrigin));
       await this.prisma.adminOrderNotificationDelivery.updateMany({
         where: { id: deliveryId, status: NotificationOutboxStatus.PROCESSING, claimedAt },

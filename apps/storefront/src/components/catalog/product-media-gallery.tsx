@@ -43,20 +43,24 @@ export function ProductMediaGallery({
       : [{ media: fallbackMedia, fallbackSrc }];
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [fullscreenImageLoading, setFullscreenImageLoading] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const activeItem = items[activeIndex] ?? items[0];
   const hasMultipleImages = items.length > 1;
 
   function openAt(index: number) {
     setActiveIndex(index);
+    setFullscreenImageLoading(true);
     setOpen(true);
   }
 
   function showPrevious() {
+    if (open) setFullscreenImageLoading(true);
     setActiveIndex((current) => (current - 1 + items.length) % items.length);
   }
 
   function showNext() {
+    if (open) setFullscreenImageLoading(true);
     setActiveIndex((current) => (current + 1) % items.length);
   }
 
@@ -293,8 +297,21 @@ export function ProductMediaGallery({
               key={`${activeItem.media?.url ?? activeItem.fallbackSrc ?? 'placeholder'}-${
                 activeIndex
               }`}
-              className="h-full w-full animate-[sf-overlay-open_240ms_ease-out] motion-reduce:animate-none"
+              className="relative h-full w-full animate-[sf-overlay-open_240ms_ease-out] motion-reduce:animate-none"
             >
+              {fullscreenImageLoading ? (
+                <div
+                  role="status"
+                  data-testid="fullscreen-image-loading"
+                  className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--sf-color-canvas)]"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="size-9 animate-spin rounded-full border-2 border-[var(--sf-color-border)] border-t-[var(--sf-color-ink)]"
+                  />
+                  <span className="sr-only">در حال بارگذاری تصویر محصول…</span>
+                </div>
+              ) : null}
               <CatalogMedia
                 media={activeItem.media}
                 fallbackSrc={activeItem.fallbackSrc}
@@ -304,6 +321,7 @@ export function ProductMediaGallery({
                 eager
                 sizes="100vw"
                 imageClassName="object-contain select-none"
+                onLoad={() => setFullscreenImageLoading(false)}
               />
             </div>
 

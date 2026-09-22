@@ -1,3 +1,5 @@
+import type { ReactEventHandler } from 'react';
+
 import { StorefrontImage } from '@/components/media/storefront-image';
 import type { PublicCatalogMedia } from '@/lib/catalog/public-catalog';
 
@@ -8,6 +10,7 @@ type CatalogMediaProps = Readonly<{
   fetchPriority?: 'auto' | 'high' | 'low';
   fallbackSrc?: string | null;
   imageClassName?: string;
+  onLoad?: ReactEventHandler<HTMLImageElement>;
   preload?: boolean;
   sizes?: string;
 }>;
@@ -25,6 +28,7 @@ export function CatalogMedia({
   fetchPriority,
   fallbackSrc = null,
   imageClassName = 'object-cover',
+  onLoad,
   preload = false,
   sizes = '100vw',
 }: CatalogMediaProps) {
@@ -56,6 +60,7 @@ export function CatalogMedia({
       fetchPriority={fetchPriority}
       loading={preload ? undefined : eager ? 'eager' : 'lazy'}
       decoding="async"
+      onLoad={onLoad}
       className={`h-full w-full ${imageClassName}`}
     />
   );

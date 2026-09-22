@@ -61,7 +61,7 @@ export async function cancelCustomerOrderReturn(returnId: string): Promise<Respo
     '/api/v1/orders/me/returns/{returnId}/cancel',
     {
       params: { path: { returnId } },
-      body: { reason: 'Cancelled by customer' },
+      body: { reason: 'لغو درخواست مرجوعی توسط مشتری' },
     },
   );
 

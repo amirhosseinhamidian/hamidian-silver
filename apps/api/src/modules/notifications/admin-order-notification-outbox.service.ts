@@ -6,7 +6,7 @@ import { ROLE_CODES } from '../authorization/rbac.constants';
 
 @Injectable()
 export class AdminOrderNotificationOutboxService {
-  async enqueueOrderCreated(transaction: Prisma.TransactionClient, orderId: string): Promise<void> {
+  async enqueueOrder(transaction: Prisma.TransactionClient, orderId: string): Promise<void> {
     const recipients = await transaction.adminMessageRecipient.findMany({
       where: {
         OR: [{ telegramChatId: { not: null } }, { baleChatId: { not: null } }],

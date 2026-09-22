@@ -182,7 +182,7 @@ describe('OrdersService customer projection security', () => {
         {
           fromStatus: 'PENDING_PAYMENT',
           toStatus: 'CANCELLED',
-          reason: 'کالا دیگر موجود نیست.',
+          reason: 'Cancelled by customer',
           createdAt: new Date('2026-09-21T10:05:00.000Z'),
         },
       ],
@@ -192,7 +192,7 @@ describe('OrdersService customer projection security', () => {
 
     expect(order.customerNote).toBe('لطفاً بسته به نگهبانی تحویل داده شود.');
 
-    expect(order.cancellationReason).toBe('کالا دیگر موجود نیست.');
+    expect(order.cancellationReason).toBe('لغو سفارش توسط مشتری');
     expect(order.payment?.rejectionReason).toBe('مبلغ واریزی صحیح نیست.');
     expect(order.statusHistory).toEqual([
       {

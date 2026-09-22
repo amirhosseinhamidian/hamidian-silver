@@ -1,0 +1,13 @@
+{
+  "name": "@hamidian/telegram-relay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.9.0 <25"
+  },
+  "scripts": {
+    "check": "node --check api/health.mjs && node --check api/telegram/send.mjs && node --check test/relay.test.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}
