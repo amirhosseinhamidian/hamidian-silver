@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { ProductMediaGallery } from '@/components/catalog/product-media-gallery';
@@ -67,5 +67,27 @@ describe('ProductMediaGallery', () => {
       screen.queryByRole('button', { name: 'تصویر بعدی گالری محصول' }),
     ).not.toBeInTheDocument();
     expect(screen.queryByTestId('product-gallery-indicators')).not.toBeInTheDocument();
+  });
+
+  it('covers a fullscreen image with a loader until that image has loaded', () => {
+    render(<ProductMediaGallery productName="انگشتر نقره" media={media} />);
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'نمایش تمام‌صفحه تصویر ۱ از ۲ محصول انگشتر نقره',
+      }),
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('status')).toHaveTextContent('در حال بارگذاری تصویر محصول…');
+
+    fireEvent.load(within(dialog).getByRole('img', { name: 'نمای روبه‌رو' }));
+    expect(within(dialog).queryByRole('status')).not.toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'تصویر بعدی' }));
+    expect(within(dialog).getByRole('status')).toBeInTheDocument();
+
+    fireEvent.load(within(dialog).getByRole('img', { name: 'نمای کنار' }));
+    expect(within(dialog).queryByRole('status')).not.toBeInTheDocument();
   });
 });

@@ -8,6 +8,7 @@ type OrderMessageSource = Readonly<{
   shippingTotalToman: number;
   taxTotalToman: number;
   grandTotalToman: number;
+  payment: Readonly<{ status: string }> | null;
   customerNote: string | null;
   shippingCarrierNameSnapshot: string | null;
   user: Readonly<{
@@ -51,6 +52,7 @@ const PLATING_LABELS: Record<
 };
 
 export function formatAdminOrderMessage(order: OrderMessageSource, adminOrigin: string): string {
+  const awaitingReceiptReview = order.payment?.status === 'AWAITING_REVIEW';
   const customerName = [order.user.firstName, order.user.lastName].filter(Boolean).join(' ');
   const itemLines = order.items.map((item, index) => {
     const details = [
@@ -63,11 +65,13 @@ export function formatAdminOrderMessage(order: OrderMessageSource, adminOrigin: 
   });
   const address = order.shippingAddress;
   const lines = [
-    '🛍 سفارش جدید در گالری حمیدیان',
+    awaitingReceiptReview
+      ? '🧾 رسید کارت‌به‌کارت جدید در گالری حمیدیان'
+      : '✅ پرداخت موفق سفارش در گالری حمیدیان',
     '',
     `شماره سفارش: ${order.orderNumber}`,
     `زمان ثبت: ${dateTime.format(order.createdAt)}`,
-    'وضعیت: در انتظار پرداخت',
+    `وضعیت: ${awaitingReceiptReview ? 'رسید کارت‌به‌کارت در انتظار تأیید' : 'پرداخت‌شده'}`,
     `مشتری: ${customerName || 'بدون نام'} — ${order.user.phone}`,
     ...(address
       ? [

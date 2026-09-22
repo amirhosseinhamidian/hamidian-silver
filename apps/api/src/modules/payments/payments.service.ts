@@ -25,6 +25,7 @@ import {
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { OrderCostsService } from '../finance/order-costs.service';
 import { OrderFinanceService } from '../finance/order-finance.service';
+import { AdminOrderNotificationOutboxService } from '../notifications/admin-order-notification-outbox.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PAYMENT_GATEWAY_CODES } from './payment-gateway.constants';
@@ -73,6 +74,9 @@ export class PaymentsService {
     @Optional()
     @Inject(OrderCostsService)
     private readonly orderCosts: OrderCostsService | undefined = undefined,
+    @Optional()
+    @Inject(AdminOrderNotificationOutboxService)
+    private readonly adminOrderOutbox: AdminOrderNotificationOutboxService | undefined = undefined,
   ) {
     this.callbackBaseUrl = this.config.get<string>(
       'PAYMENT_CALLBACK_URL',
@@ -611,6 +615,8 @@ export class PaymentsService {
           provider: CARD_TO_CARD_PROVIDER,
         },
       });
+
+      await this.adminOrderOutbox?.enqueueOrder(transaction, order.id);
 
       return {
         attemptId: attempt.id,
@@ -1220,6 +1226,10 @@ export class PaymentsService {
           providerReference: referenceId,
         },
       });
+
+      if (!isManualReceipt) {
+        await this.adminOrderOutbox?.enqueueOrder(transaction, order.id);
+      }
 
       return {
         success: true,

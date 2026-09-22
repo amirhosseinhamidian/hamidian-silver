@@ -85,7 +85,7 @@ export async function cancelCustomerOrder(orderId: string): Promise<Response> {
   const client = createCustomerOrdersClient(accessToken);
   const { data, error, response } = await client.POST('/api/v1/orders/me/{orderId}/cancel', {
     params: { path: { orderId } },
-    body: { reason: 'Cancelled by customer' },
+    body: { reason: 'لغو سفارش توسط مشتری' },
   });
 
   if (!response.ok || !data) {

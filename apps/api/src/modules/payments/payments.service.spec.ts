@@ -2,6 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import { ErrorCode } from '../../common/errors/error-codes';
 import { OrderStatus, PaymentAttemptStatus, PaymentStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
+import type { AdminOrderNotificationOutboxService } from '../notifications/admin-order-notification-outbox.service';
+import type { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import type { PaymentGateway } from './payment-gateway.port';
 import { PaymentsService } from './payments.service';
 
@@ -157,6 +159,18 @@ describe('PaymentsService', () => {
   });
 
   it('verifies payment once and converts reserved inventory into a sale', async () => {
+    const adminOrderOutbox = {
+      enqueueOrder: jest.fn().mockResolvedValue(undefined),
+    };
+    service = new PaymentsService(
+      prisma as unknown as PrismaService,
+      config as unknown as ConfigService,
+      gateway,
+      undefined,
+      undefined,
+      undefined,
+      adminOrderOutbox as unknown as AdminOrderNotificationOutboxService,
+    );
     prisma.paymentAttempt.findUnique.mockResolvedValue({
       id: attemptId,
       amountToman: 1_000_000,
@@ -289,6 +303,86 @@ describe('PaymentsService', () => {
         paidAt: expect.any(Date),
       },
     });
+    expect(adminOrderOutbox.enqueueOrder).toHaveBeenCalledWith(transaction, orderId);
+    expect(transaction.payment.updateMany.mock.invocationCallOrder[0]).toBeLessThan(
+      adminOrderOutbox.enqueueOrder.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('queues the admin message when a card-to-card receipt starts review', async () => {
+    const receipt = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: orderId }]),
+      order: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: orderId,
+          orderNumber: 'HS-TEST',
+          status: OrderStatus.PENDING_PAYMENT,
+          grandTotalToman: 1_000_000,
+          reservationExpiresAt: new Date(Date.now() + 60_000),
+        }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      payment: {
+        upsert: jest.fn().mockResolvedValue({
+          id: paymentId,
+          amountToman: 1_000_000,
+          status: PaymentStatus.PENDING,
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      paymentAttempt: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findUnique: jest.fn().mockResolvedValue(null),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        create: jest.fn().mockResolvedValue({
+          id: attemptId,
+          status: PaymentAttemptStatus.AWAITING_REVIEW,
+        }),
+      },
+      cardToCardAccount: {
+        findFirst: jest.fn().mockResolvedValue({ id: '70000000-0000-4000-8000-000000000001' }),
+      },
+    };
+    const outbox = {
+      enqueueOrderEvent: jest.fn().mockResolvedValue({ count: 1 }),
+    };
+    const adminOrderOutbox = {
+      enqueueOrder: jest.fn().mockResolvedValue(undefined),
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+    service = new PaymentsService(
+      prisma as unknown as PrismaService,
+      config as unknown as ConfigService,
+      gateway,
+      outbox as unknown as NotificationOutboxService,
+      undefined,
+      undefined,
+      adminOrderOutbox as unknown as AdminOrderNotificationOutboxService,
+    );
+
+    await expect(
+      service.submitCardToCardReceipt(userId, orderId, 'receipt-upload-12345678', {
+        buffer: receipt,
+        mimetype: 'image/png',
+        originalname: 'receipt.png',
+        size: receipt.length,
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        orderId,
+        attemptId,
+        status: PaymentAttemptStatus.AWAITING_REVIEW,
+        alreadySubmitted: false,
+      }),
+    );
+
+    expect(adminOrderOutbox.enqueueOrder).toHaveBeenCalledWith(transaction, orderId);
+    expect(transaction.payment.updateMany.mock.invocationCallOrder[0]).toBeLessThan(
+      adminOrderOutbox.enqueueOrder.mock.invocationCallOrder[0],
+    );
   });
 
   it('does not sell inventory again when a verified callback is repeated', async () => {

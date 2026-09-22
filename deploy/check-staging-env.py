@@ -74,6 +74,9 @@ def validate(values: dict[str, str], production: dict[str, str] | None = None) -
     for name in ('TELEGRAM_BOT_TOKEN', 'BALE_BOT_TOKEN'):
         if values.get(name) and len(values[name]) < 20:
             errors.append(f'{name} must contain a valid bot token or remain empty')
+    telegram_base_url = values.get('TELEGRAM_BOT_API_BASE_URL', 'https://api.telegram.org')
+    if not shared.is_https_base_url(telegram_base_url):
+        errors.append('TELEGRAM_BOT_API_BASE_URL must be a safe HTTPS base URL')
     messaging_timeout = values.get('ADMIN_MESSAGING_REQUEST_TIMEOUT_MS', '')
     if not messaging_timeout.isdigit() or not 1000 <= int(messaging_timeout or '0') <= 60000:
         errors.append('ADMIN_MESSAGING_REQUEST_TIMEOUT_MS must be between 1000 and 60000')

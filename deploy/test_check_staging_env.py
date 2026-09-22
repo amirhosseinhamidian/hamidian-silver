@@ -26,6 +26,7 @@ def fixture():
         'PAYMENT_CALLBACK_URL': 'https://staging.hamidian.shop/api/payment/callback',
         'ADMIN_APP_ORIGIN': 'https://admin.staging.hamidian.shop',
         'TELEGRAM_BOT_TOKEN': '',
+        'TELEGRAM_BOT_API_BASE_URL': 'https://api.telegram.org',
         'BALE_BOT_TOKEN': '',
         'ADMIN_MESSAGING_REQUEST_TIMEOUT_MS': '8000',
         'SMS_PROVIDER': 'disabled',

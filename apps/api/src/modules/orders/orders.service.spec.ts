@@ -348,7 +348,7 @@ describe('OrdersService', () => {
     await service.cancelOrder(
       orderId,
       {
-        reason: 'Manager cancellation',
+        reason: 'لغو سفارش توسط مدیریت',
       },
       userId,
     );
@@ -384,7 +384,7 @@ describe('OrdersService', () => {
         actorUserId: userId,
         fromStatus: OrderStatus.PENDING_PAYMENT,
         toStatus: OrderStatus.CANCELLED,
-        reason: 'Manager cancellation',
+        reason: 'لغو سفارش توسط مدیریت',
       },
     });
     expect(outbox.enqueueOrderEvent).toHaveBeenCalledWith(transaction, {
@@ -449,6 +449,16 @@ describe('OrdersService', () => {
         cancelledAt: expect.any(Date),
       },
     });
+    expect(transaction.inventoryMovement.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        reason: 'لغو سفارش توسط مشتری',
+      }),
+    });
+    expect(transaction.orderStatusHistory.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        reason: 'لغو سفارش توسط مشتری',
+      }),
+    });
     expect(getMyOrder).toHaveBeenCalledWith(userId, orderId);
   });
 
@@ -483,7 +493,7 @@ describe('OrdersService', () => {
     );
 
     await expect(
-      service.cancelMyOrder(userId, orderId, { reason: 'Cancelled by customer' }),
+      service.cancelMyOrder(userId, orderId, { reason: 'لغو سفارش توسط مشتری' }),
     ).rejects.toMatchObject({
       name: 'DomainException',
       code: ErrorCode.ORDER_NOT_FOUND,
@@ -553,7 +563,7 @@ describe('OrdersService', () => {
       service.cancelOrder(
         orderId,
         {
-          reason: 'Manager cancellation',
+          reason: 'لغو سفارش توسط مدیریت',
         },
         userId,
       ),

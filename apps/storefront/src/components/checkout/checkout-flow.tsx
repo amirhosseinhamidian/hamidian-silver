@@ -8,6 +8,7 @@ import {
   CardToCardPaymentModal,
   type CardToCardSettings,
 } from '@/components/checkout/card-to-card-payment-modal';
+import { GatewayVpnWarning } from '@/components/checkout/gateway-vpn-warning';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input, Textarea } from '@/components/ui/form-control';
@@ -1020,6 +1021,7 @@ export function CheckoutFlow({
             </p>
           </div>
         ) : null}
+        <GatewayVpnWarning visible={paymentMethod === 'gateway' && Boolean(bankGateway)} />
         <div className="flex items-center gap-4 mt-3 lg:block">
           <div className="min-w-0 flex-1 lg:flex lg:items-center lg:justify-between lg:gap-4">
             <span className="block text-xs text-[var(--sf-color-muted)] lg:text-sm">
