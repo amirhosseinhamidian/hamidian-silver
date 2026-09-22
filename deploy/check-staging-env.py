@@ -74,9 +74,14 @@ def validate(values: dict[str, str], production: dict[str, str] | None = None) -
     for name in ('TELEGRAM_BOT_TOKEN', 'BALE_BOT_TOKEN'):
         if values.get(name) and len(values[name]) < 20:
             errors.append(f'{name} must contain a valid bot token or remain empty')
-    telegram_base_url = values.get('TELEGRAM_BOT_API_BASE_URL', 'https://api.telegram.org')
-    if not shared.is_https_base_url(telegram_base_url):
-        errors.append('TELEGRAM_BOT_API_BASE_URL must be a safe HTTPS base URL')
+    telegram_relay_url = values.get('TELEGRAM_RELAY_URL', '')
+    telegram_relay_secret = values.get('TELEGRAM_RELAY_SECRET', '')
+    if bool(telegram_relay_url) != bool(telegram_relay_secret):
+        errors.append('TELEGRAM_RELAY_URL and TELEGRAM_RELAY_SECRET must be configured together')
+    if telegram_relay_url and not shared.is_safe_https_url(telegram_relay_url):
+        errors.append('TELEGRAM_RELAY_URL must be a safe HTTPS URL')
+    if telegram_relay_secret and len(telegram_relay_secret) < 32:
+        errors.append('TELEGRAM_RELAY_SECRET must contain at least 32 characters')
     messaging_timeout = values.get('ADMIN_MESSAGING_REQUEST_TIMEOUT_MS', '')
     if not messaging_timeout.isdigit() or not 1000 <= int(messaging_timeout or '0') <= 60000:
         errors.append('ADMIN_MESSAGING_REQUEST_TIMEOUT_MS must be between 1000 and 60000')

@@ -26,7 +26,8 @@ def fixture():
         'PAYMENT_CALLBACK_URL': 'https://staging.hamidian.shop/api/payment/callback',
         'ADMIN_APP_ORIGIN': 'https://admin.staging.hamidian.shop',
         'TELEGRAM_BOT_TOKEN': '',
-        'TELEGRAM_BOT_API_BASE_URL': 'https://api.telegram.org',
+        'TELEGRAM_RELAY_URL': '',
+        'TELEGRAM_RELAY_SECRET': '',
         'BALE_BOT_TOKEN': '',
         'ADMIN_MESSAGING_REQUEST_TIMEOUT_MS': '8000',
         'SMS_PROVIDER': 'disabled',
@@ -67,6 +68,14 @@ class StagingEnvTests(unittest.TestCase):
         values = fixture()
         values['SMS_PROVIDER'] = 'console'
         self.assertIn('SMS_PROVIDER', ' '.join(checker.validate(values)))
+
+    def test_telegram_relay_requires_a_safe_url_and_matching_secret(self):
+        values = fixture()
+        values['TELEGRAM_RELAY_URL'] = 'https://hamidian-telegram-relay.vercel.app/api/telegram/send'
+        self.assertIn('TELEGRAM_RELAY_SECRET', ' '.join(checker.validate(values)))
+
+        values['TELEGRAM_RELAY_SECRET'] = 'r' * 64
+        self.assertEqual(checker.validate(values), [])
 
     def test_kavenegar_requires_all_order_templates(self):
         values = fixture()

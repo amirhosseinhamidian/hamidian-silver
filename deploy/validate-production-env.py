@@ -23,7 +23,8 @@ ALLOWED_KEYS = frozenset(
         "KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE", "KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE",
         "KAVENEGAR_ORDER_SHIPPED_TEMPLATE", "KAVENEGAR_ORDER_DELIVERED_TEMPLATE",
         "KAVENEGAR_ORDER_CANCELLED_TEMPLATE",
-        "ADMIN_APP_ORIGIN", "TELEGRAM_BOT_TOKEN", "TELEGRAM_BOT_API_BASE_URL", "BALE_BOT_TOKEN",
+        "ADMIN_APP_ORIGIN", "TELEGRAM_BOT_TOKEN", "TELEGRAM_RELAY_URL",
+        "TELEGRAM_RELAY_SECRET", "BALE_BOT_TOKEN",
         "ADMIN_MESSAGING_REQUEST_TIMEOUT_MS",
         "PAYMENT_PROVIDER", "IRANDARGAH_API_TOKEN", "IRANDARGAH_SANDBOX",
         "IRANDARGAH_REQUEST_TIMEOUT_MS", "MELLAT_TERMINAL_ID", "MELLAT_USERNAME", "MELLAT_PASSWORD",
@@ -72,7 +73,7 @@ def parse_env(contents: str) -> tuple[dict[str, str], list[str]]:
     return values, errors
 
 
-def is_https_base_url(value: str) -> bool:
+def is_safe_https_url(value: str) -> bool:
     try:
         url = urlsplit(value)
         return bool(
@@ -136,9 +137,14 @@ def validate(values: dict[str, str]) -> list[str]:
     for key in ("TELEGRAM_BOT_TOKEN", "BALE_BOT_TOKEN"):
         if values.get(key) and len(values[key]) < 20:
             errors.append(f"{key} must contain a valid bot token or remain empty")
-    telegram_base_url = values.get("TELEGRAM_BOT_API_BASE_URL", "https://api.telegram.org")
-    if not is_https_base_url(telegram_base_url):
-        errors.append("TELEGRAM_BOT_API_BASE_URL must be a safe HTTPS base URL")
+    telegram_relay_url = values.get("TELEGRAM_RELAY_URL", "")
+    telegram_relay_secret = values.get("TELEGRAM_RELAY_SECRET", "")
+    if bool(telegram_relay_url) != bool(telegram_relay_secret):
+        errors.append("TELEGRAM_RELAY_URL and TELEGRAM_RELAY_SECRET must be configured together")
+    if telegram_relay_url and not is_safe_https_url(telegram_relay_url):
+        errors.append("TELEGRAM_RELAY_URL must be a safe HTTPS URL")
+    if telegram_relay_secret and len(telegram_relay_secret) < 32:
+        errors.append("TELEGRAM_RELAY_SECRET must contain at least 32 characters")
     messaging_timeout = values.get("ADMIN_MESSAGING_REQUEST_TIMEOUT_MS", "")
     if not messaging_timeout.isdigit() or not 1000 <= int(messaging_timeout or "0") <= 60000:
         errors.append("ADMIN_MESSAGING_REQUEST_TIMEOUT_MS must be between 1000 and 60000")
