@@ -10,27 +10,31 @@
 ```env
 ADMIN_APP_ORIGIN=https://admin.hamidian.shop
 TELEGRAM_BOT_TOKEN=
-TELEGRAM_BOT_API_BASE_URL=https://api.telegram.org
+TELEGRAM_RELAY_URL=https://hamidian-telegram-relay.vercel.app/api/telegram/send
+TELEGRAM_RELAY_SECRET=replace-with-the-same-secret-configured-in-vercel
 BALE_BOT_TOKEN=
-ADMIN_MESSAGING_REQUEST_TIMEOUT_MS=8000
+ADMIN_MESSAGING_REQUEST_TIMEOUT_MS=15000
 ```
 
-توکن‌ها محرمانه‌اند و فقط باید در `/etc/hamidian-silver/production.env` قرار بگیرند. آن‌ها را در
-پنل، Git، لاگ یا پیام پشتیبانی وارد نکنید.
+توکن بله و secret رله محرمانه‌اند و فقط باید در `/etc/hamidian-silver/production.env` قرار
+بگیرند. آن‌ها را در پنل، Git، لاگ یا پیام پشتیبانی وارد نکنید. توکن Telegram Bot فقط در
+Environment Variables پروژه Vercel ذخیره می‌شود و لازم نیست روی VPS قرار بگیرد.
 
 ## راه‌اندازی تلگرام
 
-1. در گفت‌وگو با `@BotFather` یک Bot بسازید و توکن آن را در `TELEGRAM_BOT_TOKEN` قرار دهید.
+1. در گفت‌وگو با `@BotFather` یک Bot بسازید و توکن آن را فقط در `TELEGRAM_BOT_TOKEN` پروژه
+   `apps/telegram-relay` روی Vercel قرار دهید.
 2. هر ادمین یا مدیر باید گفت‌وگوی خصوصی Bot را باز کند و Start را بزند.
-3. پس از ارسال یک پیام به Bot، با متد `getUpdates` مقدار عددی `message.chat.id` را بخوانید.
+3. شناسه عددی حساب مدیر را دریافت کنید.
 4. در پنل مدیریت به «مدیریت سامانه ← اعلان سفارش مدیران» بروید و Chat ID را ثبت کنید.
+5. مقدار `TELEGRAM_RELAY_SECRET` روی VPS باید دقیقاً با secret تنظیم‌شده در Vercel برابر باشد.
 
 مستندات رسمی: <https://core.telegram.org/bots/api>
 
-اگر سرور به‌دلیل محدودیت DNS یا شبکه به `api.telegram.org:443` دسترسی ندارد، مقدار
-`TELEGRAM_BOT_API_BASE_URL` را به نشانی HTTPS یک Telegram Bot API relay یا reverse proxy
-تحت کنترل خودتان تغییر دهید. relay باید همان مسیر استاندارد `/bot<TOKEN>/METHOD_NAME` را بپذیرد.
-توکن Bot را از relay عمومی یا ناشناس عبور ندهید.
+API فروشگاه درخواست احرازهویت‌شده را به `TELEGRAM_RELAY_URL` می‌فرستد. Vercel Function پیام را
+به Telegram Bot API تحویل می‌دهد و نتیجه موفقیت یا شکست را به Outbox روی VPS برمی‌گرداند. اگر
+relay تنظیم نشده باشد، `TELEGRAM_BOT_TOKEN` فقط برای محیط‌های توسعه‌ای که دسترسی مستقیم دارند
+به‌عنوان fallback قابل استفاده است.
 
 ## راه‌اندازی بله
 
@@ -51,7 +55,7 @@ API معمولی بازوی بله از آدرس `https://tapi.bale.ai/bot<TOKEN
 - پیام شامل مشخصات مشتری و تحویل‌گیرنده، آدرس، اقلام، مبالغ، روش ارسال، یادداشت مشتری و لینک
   مستقیم جزئیات سفارش در پنل مدیریت است.
 - ارسال‌های ناموفق با فاصله افزایشی حداکثر ۸ بار تلاش می‌شوند.
-- خطاهای اتصال تلگرام، کد شبکه داخلی مانند `ENETUNREACH` یا `ETIMEDOUT` را در `lastError`
-  ثبت می‌کنند تا مشکل شبکه از رد پیام توسط Telegram API قابل تفکیک باشد.
+- خطاهای اتصال relay و خطاهای بازگشتی Telegram در `lastError` ثبت می‌شوند تا retry و عیب‌یابی
+  Outbox بدون افشای Bot Token یا relay secret انجام شود.
 - حذف یک Chat ID فقط ارسال سفارش‌های بعدی را متوقف می‌کند؛ رکوردهای Outbox قبلی برای ردیابی
   عملیاتی حفظ می‌شوند.

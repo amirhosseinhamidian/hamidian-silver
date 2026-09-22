@@ -63,4 +63,4 @@ unset TELEGRAM_RELAY_SECRET
 
 پاسخ موفق باید `ok: true` و HTTP `200` داشته باشد.
 
-اتصال API فروشگاه به endpoint ارسال در patch مرحله دوم انجام می‌شود.
+API فروشگاه با `TELEGRAM_RELAY_URL` و `TELEGRAM_RELAY_SECRET` به این endpoint متصل می‌شود.

@@ -51,8 +51,14 @@ export class AdminMessageRecipientsService {
       },
     });
 
+    const telegramRelayConfigured = Boolean(
+      this.config.get<string>('TELEGRAM_RELAY_URL')?.trim() &&
+      this.config.get<string>('TELEGRAM_RELAY_SECRET')?.trim(),
+    );
+
     return {
-      telegramConfigured: Boolean(this.config.get<string>('TELEGRAM_BOT_TOKEN')?.trim()),
+      telegramConfigured:
+        telegramRelayConfigured || Boolean(this.config.get<string>('TELEGRAM_BOT_TOKEN')?.trim()),
       baleConfigured: Boolean(this.config.get<string>('BALE_BOT_TOKEN')?.trim()),
       recipients: users.map((user) => ({
         userId: user.id,

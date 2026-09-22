@@ -25,7 +25,8 @@ class ProductionEnvValidationTests(unittest.TestCase):
             "PAYMENT_CALLBACK_URL": "https://hamidian.shop/api/payment/callback",
             "ADMIN_APP_ORIGIN": "https://admin.hamidian.shop",
             "TELEGRAM_BOT_TOKEN": "",
-            "TELEGRAM_BOT_API_BASE_URL": "https://api.telegram.org",
+            "TELEGRAM_RELAY_URL": "",
+            "TELEGRAM_RELAY_SECRET": "",
             "BALE_BOT_TOKEN": "",
             "ADMIN_MESSAGING_REQUEST_TIMEOUT_MS": "8000",
             "SHIPPING_PROVIDER": "disabled",
@@ -88,13 +89,20 @@ class ProductionEnvValidationTests(unittest.TestCase):
         self.assertIn("one payment gateway", result)
         self.assertIn("SHIPPING_PROVIDER", result)
 
-    def test_accepts_https_telegram_relay_and_rejects_unsafe_base_url(self):
+    def test_accepts_complete_telegram_relay_and_rejects_unsafe_or_partial_configuration(self):
         env = self.fixture()
-        env["TELEGRAM_BOT_API_BASE_URL"] = "https://telegram-relay.example.com/bot-api"
+        env["TELEGRAM_RELAY_URL"] = "https://hamidian-telegram-relay.vercel.app/api/telegram/send"
+        env["TELEGRAM_RELAY_SECRET"] = "r" * 64
         self.assertEqual(checker.validate(env), [])
 
-        env["TELEGRAM_BOT_API_BASE_URL"] = "http://127.0.0.1:8081"
-        self.assertIn("TELEGRAM_BOT_API_BASE_URL", " ".join(checker.validate(env)))
+        env["TELEGRAM_RELAY_URL"] = "http://127.0.0.1:8081/api/telegram/send"
+        self.assertIn("TELEGRAM_RELAY_URL", " ".join(checker.validate(env)))
+
+        env["TELEGRAM_RELAY_URL"] = "https://hamidian-telegram-relay.vercel.app/api/telegram/send"
+        env["TELEGRAM_RELAY_SECRET"] = ""
+        result = " ".join(checker.validate(env))
+        self.assertIn("TELEGRAM_RELAY_URL", result)
+        self.assertIn("TELEGRAM_RELAY_SECRET", result)
 
     def test_refuses_compose_interpolation_duplicate_and_unknown_keys(self):
         values, errors = checker.parse_env(

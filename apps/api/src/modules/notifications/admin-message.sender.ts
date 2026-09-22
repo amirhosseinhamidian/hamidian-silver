@@ -3,28 +3,92 @@ import { ConfigService } from '@nestjs/config';
 
 import { AdminMessageChannel } from '../../generated/prisma/enums';
 
-type BotApiResponse = Readonly<{ ok?: boolean; description?: string }>;
+type BotApiResponse = Readonly<{
+  ok?: boolean;
+  code?: string;
+  description?: string;
+  retryAfterSeconds?: number;
+}>;
 
 @Injectable()
 export class AdminMessageSender {
   private readonly timeoutMs: number;
-  private readonly telegramBaseUrl: string;
+  private readonly telegramRelayUrl: string | undefined;
+  private readonly telegramRelaySecret: string | undefined;
 
   constructor(private readonly config: ConfigService) {
     this.timeoutMs = this.config.get<number>('ADMIN_MESSAGING_REQUEST_TIMEOUT_MS', 8000);
-    this.telegramBaseUrl = (
-      this.config.get<string>('TELEGRAM_BOT_API_BASE_URL')?.trim() || 'https://api.telegram.org'
-    ).replace(/\/+$/, '');
+    this.telegramRelayUrl = this.config.get<string>('TELEGRAM_RELAY_URL')?.trim() || undefined;
+    this.telegramRelaySecret =
+      this.config.get<string>('TELEGRAM_RELAY_SECRET')?.trim() || undefined;
   }
 
   async send(channel: AdminMessageChannel, chatId: string, message: string): Promise<void> {
-    const tokenKey =
-      channel === AdminMessageChannel.TELEGRAM ? 'TELEGRAM_BOT_TOKEN' : 'BALE_BOT_TOKEN';
+    if (channel === AdminMessageChannel.TELEGRAM) {
+      if (this.telegramRelayUrl || this.telegramRelaySecret) {
+        await this.sendTelegramThroughRelay(chatId, message);
+        return;
+      }
+
+      await this.sendDirectBotMessage(
+        channel,
+        'TELEGRAM_BOT_TOKEN',
+        'https://api.telegram.org',
+        chatId,
+        message,
+      );
+      return;
+    }
+
+    await this.sendDirectBotMessage(
+      channel,
+      'BALE_BOT_TOKEN',
+      'https://tapi.bale.ai',
+      chatId,
+      message,
+    );
+  }
+
+  private async sendTelegramThroughRelay(chatId: string, message: string): Promise<void> {
+    if (!this.telegramRelayUrl || !this.telegramRelaySecret) {
+      throw new Error('TELEGRAM_RELAY_URL and TELEGRAM_RELAY_SECRET must be configured together.');
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(this.telegramRelayUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.telegramRelaySecret}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ chatId, message }),
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+    } catch (error) {
+      throw new Error(
+        `TELEGRAM relay request failed before a response: ${this.networkError(error)}.`,
+      );
+    }
+
+    const payload = await this.readResponse(response);
+    if (!response.ok || payload?.ok !== true) {
+      throw new Error(
+        `TELEGRAM relay rejected the message: ${this.failureDescription(payload, response)}.`,
+      );
+    }
+  }
+
+  private async sendDirectBotMessage(
+    channel: AdminMessageChannel,
+    tokenKey: 'TELEGRAM_BOT_TOKEN' | 'BALE_BOT_TOKEN',
+    baseUrl: string,
+    chatId: string,
+    message: string,
+  ): Promise<void> {
     const token = this.config.get<string>(tokenKey)?.trim();
     if (!token) throw new Error(`${tokenKey} is not configured.`);
 
-    const baseUrl =
-      channel === AdminMessageChannel.TELEGRAM ? this.telegramBaseUrl : 'https://tapi.bale.ai';
     let response: Response;
     try {
       response = await fetch(`${baseUrl}/bot${token}/sendMessage`, {
@@ -37,7 +101,7 @@ export class AdminMessageSender {
       const diagnostic = this.networkError(error);
       const relayHint =
         channel === AdminMessageChannel.TELEGRAM
-          ? ' Check outbound DNS/HTTPS or configure TELEGRAM_BOT_API_BASE_URL.'
+          ? ' Configure TELEGRAM_RELAY_URL and TELEGRAM_RELAY_SECRET when direct access is blocked.'
           : '';
       throw new Error(
         `${channel} request failed before an API response: ${diagnostic}.${relayHint}`,
@@ -46,9 +110,22 @@ export class AdminMessageSender {
 
     const payload = await this.readResponse(response);
     if (!response.ok || payload?.ok !== true) {
-      const description = payload?.description?.slice(0, 300) || `HTTP ${response.status}`;
-      throw new Error(`${channel} rejected the message: ${description}`);
+      throw new Error(
+        `${channel} rejected the message: ${this.failureDescription(payload, response)}`,
+      );
     }
+  }
+
+  private failureDescription(payload: BotApiResponse | null, response: Response): string {
+    const code = payload?.code?.slice(0, 100);
+    const description = payload?.description?.slice(0, 300);
+    const retryAfter = Number.isSafeInteger(payload?.retryAfterSeconds)
+      ? `; retry after ${payload?.retryAfterSeconds} seconds`
+      : '';
+    if (code && description) return `${code}: ${description}${retryAfter}`;
+    if (code) return `${code}${retryAfter}`;
+    if (description) return `${description}${retryAfter}`;
+    return `HTTP ${response.status}`;
   }
 
   private async readResponse(response: Response): Promise<BotApiResponse | null> {

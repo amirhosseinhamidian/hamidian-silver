@@ -81,9 +81,11 @@ export const envValidationSchema = Joi.object({
     .uri({ scheme: ['http', 'https'] })
     .default('http://localhost:3002'),
   TELEGRAM_BOT_TOKEN: Joi.string().min(20).allow('').optional(),
-  TELEGRAM_BOT_API_BASE_URL: Joi.string()
-    .uri({ scheme: ['http', 'https'] })
-    .default('https://api.telegram.org'),
+  TELEGRAM_RELAY_URL: Joi.string()
+    .uri({ scheme: ['https'] })
+    .allow('')
+    .optional(),
+  TELEGRAM_RELAY_SECRET: Joi.string().min(32).allow('').optional(),
   BALE_BOT_TOKEN: Joi.string().min(20).allow('').optional(),
   ADMIN_MESSAGING_REQUEST_TIMEOUT_MS: Joi.number().integer().min(1000).max(60000).default(8000),
   ADMIN_MESSAGING_OUTBOX_BATCH_SIZE: Joi.number().integer().min(1).max(200).default(50),
