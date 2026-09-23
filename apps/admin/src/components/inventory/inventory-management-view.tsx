@@ -82,6 +82,15 @@ function localizedInteger(value: string): string {
   );
 }
 
+const STOCK_REASON_SUGGESTIONS = [
+  'موجودی اولیه',
+  'افزایش موجودی',
+  'کاهش موجودی از طرف تأمین‌کننده',
+  'اتمام موجودی',
+  'اصلاح شمارش انبار',
+  'کالای آسیب‌دیده یا غیرقابل فروش',
+] as const;
+
 function stockBadge(item: AdminInventoryItem) {
   if (!item.variantActive || item.productStatus === 'ARCHIVED') {
     return <Badge tone="neutral">غیرفعال</Badge>;
@@ -253,6 +262,7 @@ function WarehouseSheet({
 function StockOperations({ item }: Readonly<{ item: AdminInventoryItem }>) {
   const router = useRouter();
   const [delta, setDelta] = useState('');
+  const [reason, setReason] = useState('');
   const [threshold, setThreshold] = useState(toPersianDigits(item.lowStockThreshold));
   const [adjustPending, setAdjustPending] = useState(false);
   const [thresholdPending, setThresholdPending] = useState(false);
@@ -264,14 +274,13 @@ function StockOperations({ item }: Readonly<{ item: AdminInventoryItem }>) {
     event.preventDefault();
     const form = event.currentTarget;
     const parsedDelta = parseInteger(delta);
-    const formData = new FormData(form);
-    const reason = String(formData.get('reason') ?? '').trim();
+    const cleanReason = reason.trim();
     if (parsedDelta === null || parsedDelta === 0)
       return setAdjustError('مقدار تغییر باید عددی غیر از صفر باشد.');
     if (item.onHand + parsedDelta < item.reserved) {
       return setAdjustError('موجودی نهایی نمی‌تواند از تعداد رزروشده کمتر باشد.');
     }
-    if (!reason) return setAdjustError('ثبت دلیل اصلاح موجودی الزامی است.');
+    if (!cleanReason) return setAdjustError('ثبت دلیل اصلاح موجودی الزامی است.');
     setAdjustError(null);
     setAdjustPending(true);
     try {
@@ -279,9 +288,10 @@ function StockOperations({ item }: Readonly<{ item: AdminInventoryItem }>) {
         warehouseId: item.warehouseId,
         variantId: item.variantId,
         onHandDelta: parsedDelta,
-        reason,
+        reason: cleanReason,
       });
       setDelta('');
+      setReason('');
       form.reset();
       router.refresh();
     } catch (caught) {
@@ -356,12 +366,34 @@ function StockOperations({ item }: Readonly<{ item: AdminInventoryItem }>) {
               <Textarea
                 {...props}
                 name="reason"
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
                 placeholder="مثلاً دریافت از تأمین‌کننده یا اصلاح شمارش"
                 maxLength={500}
                 required
               />
             )}
           </FormField>
+          <div aria-label="دلایل پیشنهادی اصلاح موجودی">
+            <p className="mb-2 text-xs font-semibold text-[var(--admin-color-muted)]">
+              پیشنهادهای سریع
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {STOCK_REASON_SUGGESTIONS.map((suggestion) => (
+                <Button
+                  key={suggestion}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={adjustPending}
+                  aria-pressed={reason === suggestion}
+                  onClick={() => setReason(suggestion)}
+                >
+                  {suggestion}
+                </Button>
+              ))}
+            </div>
+          </div>
           <Button type="submit" loading={adjustPending} className="w-full">
             ثبت اصلاح موجودی
           </Button>

@@ -113,6 +113,72 @@ describe('ProductForm', () => {
     expect(router.push).toHaveBeenCalledWith('/variants/product-1');
   });
 
+  it('searches related products with thumbnails and submits selected relations', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 'product-1' }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ relatedProductIds: ['related-1'] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <ProductForm
+        data={{
+          ...data,
+          products: [
+            {
+              id: 'related-1',
+              name: 'گردنبند ماه',
+              slug: 'moon-necklace',
+              skus: ['NECK-001'],
+              thumbnailUrl: 'https://media.hamidian.shop/moon-necklace.webp',
+              thumbnailAlt: 'گردنبند ماه',
+            },
+            {
+              id: 'related-2',
+              name: 'دستبند خورشید',
+              slug: 'sun-bracelet',
+              skus: ['BRACE-002'],
+              thumbnailUrl: null,
+              thumbnailAlt: null,
+            },
+          ],
+          relatedProductIds: [],
+        }}
+        mode="create"
+      />,
+    );
+
+    expect(screen.queryByText('گردنبند ماه')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('جست‌وجوی محصولات'), {
+      target: { value: 'ماه' },
+    });
+    expect(screen.getByRole('img', { name: 'گردنبند ماه' })).toBeInTheDocument();
+    expect(screen.getByText('NECK-001', { exact: false })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن گردنبند ماه به محصولات مرتبط' }));
+
+    fireEvent.change(screen.getByLabelText(/نام محصول/), { target: { value: 'انگشتر نقره' } });
+    fireEvent.change(screen.getByLabelText(/اسلاگ محصول/), { target: { value: 'silver-ring' } });
+    fireEvent.change(screen.getByLabelText('قیمت فروش پیش‌فرض'), {
+      target: { value: '۴٬۵۰۰٬۰۰۰' },
+    });
+    fireEvent.change(screen.getByLabelText(/SKU تنوع ۱/), { target: { value: 'RING-001' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ساخت محصول' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const [relationPath, relationInit] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(relationPath).toBe('/api/catalog/products/product-1/relations');
+    expect(JSON.parse(String(relationInit.body))).toEqual({ relatedProductIds: ['related-1'] });
+  });
+
   it('creates all product variants in one request', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ id: 'product-1' }), {
