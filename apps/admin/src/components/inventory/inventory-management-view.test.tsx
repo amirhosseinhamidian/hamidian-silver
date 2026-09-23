@@ -75,9 +75,8 @@ describe('InventoryManagementView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'مشاهده جزئیات و عملیات' }));
     const dialog = await screen.findByRole('dialog', { name: 'انگشتر آذر' });
     fireEvent.change(within(dialog).getByLabelText(/مقدار تغییر/), { target: { value: '۵' } });
-    fireEvent.change(within(dialog).getByLabelText(/دلیل اصلاح/), {
-      target: { value: 'دریافت از تأمین‌کننده' },
-    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'افزایش موجودی' }));
+    expect(within(dialog).getByLabelText(/دلیل اصلاح/)).toHaveValue('افزایش موجودی');
     fireEvent.click(within(dialog).getByRole('button', { name: 'ثبت اصلاح موجودی' }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -87,6 +86,10 @@ describe('InventoryManagementView', () => {
         method: 'POST',
         body: expect.stringContaining('"onHandDelta":5'),
       }),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/inventory/stock/adjust',
+      expect.objectContaining({ body: expect.stringContaining('"reason":"افزایش موجودی"') }),
     );
     expect(router.refresh).toHaveBeenCalled();
   });

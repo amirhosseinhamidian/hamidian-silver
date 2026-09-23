@@ -39,8 +39,17 @@ export type ProductFormData = Readonly<{
   categories: readonly CatalogLookup[];
   sizes: readonly CatalogSize[];
   sizeGroups: readonly CatalogSizeGroup[];
-  products?: readonly CatalogLookup[];
+  products?: readonly ProductRelationCandidate[];
   relatedProductIds?: readonly string[];
+}>;
+
+export type ProductRelationCandidate = Readonly<{
+  id: string;
+  name: string;
+  slug: string;
+  skus: readonly string[];
+  thumbnailUrl: string | null;
+  thumbnailAlt: string | null;
 }>;
 
 export type VariantManagementData = Readonly<{
@@ -78,7 +87,7 @@ async function accessToken(): Promise<string> {
 
 async function loadProductRelationCandidates(
   token: string,
-): Promise<CatalogResource<readonly CatalogLookup[]>> {
+): Promise<CatalogResource<readonly ProductRelationCandidate[]>> {
   try {
     const limit = 100;
     const firstResponse = await requestAdminCatalog(
@@ -103,7 +112,21 @@ async function loadProductRelationCandidates(
     }
 
     return {
-      data: products.map(({ id, name }) => ({ id, name })),
+      data: products.map((product) => {
+        const thumbnail =
+          product.media.find((media) => media.isPrimary && media.url) ??
+          product.media.find((media) => media.url) ??
+          null;
+
+        return {
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          skus: product.variants.map(({ sku }) => sku),
+          thumbnailUrl: thumbnail?.url ?? null,
+          thumbnailAlt: thumbnail?.altText ?? product.name,
+        };
+      }),
       failed: false,
     };
   } catch {

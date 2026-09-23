@@ -3,13 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { type ChangeEvent, type FormEvent, useId, useState } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import {
   createSeoEditorValue,
   isValidSeoCanonicalPath,
   SeoEditor,
   seoEditorPayload,
 } from '@/components/seo/seo-editor';
+import { RelatedProductPicker } from '@/components/products/related-product-picker';
+import { Alert } from '@/components/ui/alert';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -593,21 +594,14 @@ export function ProductForm({ data, mode }: ProductFormProps) {
 
       <Card
         title="محصولات مرتبط"
-        description="ارتباط‌ها دوطرفه هستند؛ انتخاب این محصول برای هر طرف، در صفحه هر دو محصول اعمال می‌شود."
+        description="با جست‌وجوی نام، اسلاگ یا SKU محصول موردنظر را پیدا کنید. ارتباط‌ها دوطرفه هستند و در صفحه هر دو محصول اعمال می‌شوند."
       >
         {(data.products ?? []).length ? (
-          <div className="grid max-h-72 gap-3 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
-            {(data.products ?? []).map((relatedProduct) => (
-              <Checkbox
-                key={relatedProduct.id}
-                id={`related-product-${relatedProduct.id}`}
-                name="relatedProductIds"
-                value={relatedProduct.id}
-                label={relatedProduct.name}
-                defaultChecked={(data.relatedProductIds ?? []).includes(relatedProduct.id)}
-              />
-            ))}
-          </div>
+          <RelatedProductPicker
+            products={data.products ?? []}
+            initialSelectedIds={data.relatedProductIds ?? []}
+            disabled={pending}
+          />
         ) : (
           <p className="text-sm text-[var(--admin-color-muted)]">
             محصول دیگری برای ارتباط‌سازی وجود ندارد.
