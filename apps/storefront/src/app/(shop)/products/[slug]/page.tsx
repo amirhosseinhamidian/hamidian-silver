@@ -7,14 +7,15 @@ import { ProductPurchasePanel } from '@/components/cart/product-purchase-panel';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { ProductMediaGallery } from '@/components/catalog/product-media-gallery';
+import { RelatedProductsSection } from '@/components/catalog/related-products-section';
 import { JsonLd } from '@/components/seo/json-ld';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { getCatalogDevProductImageSrc } from '@/lib/catalog/dev-media.server';
 import {
   getPublicCatalogProduct,
+  getPublicRelatedProducts,
   type CatalogSearchParams,
-  type PublicCatalogProductDetail,
 } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
@@ -22,6 +23,7 @@ import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSeoRedirect } from '@/lib/seo/redirects';
 import { buildProductStructuredData } from '@/lib/seo/structured-data';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
+import { platingPresentation } from '@/lib/plating/presentation';
 
 type ProductDetailPageProps = Readonly<{
   params: Promise<{
@@ -62,17 +64,6 @@ export async function generateMetadata({
   });
 }
 
-function getSizeModeLabel(sizeMode: PublicCatalogProductDetail['sizeMode']): string {
-  switch (sizeMode) {
-    case 'SIZED':
-      return 'دارای انتخاب سایز';
-    case 'FREE_SIZE':
-      return 'فری‌سایز';
-    default:
-      return 'بدون انتخاب سایز';
-  }
-}
-
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
   const { slug } = await params;
   const [product, settings] = await Promise.all([
@@ -85,6 +76,8 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     if (destinationPath) permanentRedirect(destinationPath);
     notFound();
   }
+
+  const relatedProducts = await getPublicRelatedProducts(slug, 1, 8);
 
   const devImageSrc = getCatalogDevProductImageSrc(product.slug);
   const publicImages = product.media.filter(
@@ -100,14 +93,38 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
       : uniqueWeights.length > 1
         ? 'وابسته به سایز یا مدل انتخابی'
         : null;
+  const variantSizes = product.variants
+    .map((variant) => variant.size)
+    .filter((size) => size !== null);
+  const sizeLabels = [...new Set(variantSizes.map(({ label }) => label.trim()).filter(Boolean))];
+  const sizeGroup = variantSizes[0]?.group ?? null;
+  const sizeFeature =
+    product.variants.length > 1 && sizeLabels.length > 1
+      ? [sizeGroup?.cartLabel?.includes('طول') ? 'طول' : 'سایزبندی', sizeLabels.join(' / ')]
+      : null;
+  const generatedFeatureKeys = new Set([
+    'برند',
+    'کشور سازنده',
+    'سایزبندی',
+    'طول',
+    'وزن تقریبی',
+    ...(product.defaultPlatingType ? ['نوع آبکاری'] : []),
+  ]);
   const features = [
     product.brand ? ['برند', product.brand.name] : null,
     product.country ? ['کشور سازنده', product.country.name] : null,
-    ['سایزبندی', getSizeModeLabel(product.sizeMode)],
+    sizeFeature,
+    product.defaultPlatingType
+      ? ['نوع آبکاری', platingPresentation(product.defaultPlatingType).label]
+      : null,
     weightLabel ? ['وزن تقریبی', weightLabel] : null,
   ]
     .filter((feature): feature is [string, string] => feature !== null)
-    .concat(product.attributes.map(({ key, value }) => [key, value] as [string, string]));
+    .concat(
+      product.attributes
+        .filter(({ key }) => !generatedFeatureKeys.has(key.trim()))
+        .map(({ key, value }) => [key, value] as [string, string]),
+    );
 
   return (
     <>
@@ -257,6 +274,23 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             ) : null}
           </section>
         </div>
+
+        {product.categories[0] ? (
+          <aside className="mt-16 border border-[var(--sf-color-border)] bg-[var(--sf-color-surface)] p-7 text-center sm:mt-20 sm:p-10">
+            <p className="text-sm text-[var(--sf-color-muted)]">
+              محصولات بیشتری از این مجموعه ببینید
+            </p>
+            <h2 className="mt-2 text-2xl font-medium">{product.categories[0].name}</h2>
+            <Link
+              href={`/categories/${product.categories[0].slug}`}
+              className="mt-5 inline-flex min-h-11 items-center justify-center bg-[var(--sf-color-ink)] px-6 text-sm text-white"
+            >
+              مشاهده همه محصولات این دسته
+            </Link>
+          </aside>
+        ) : null}
+
+        <RelatedProductsSection productSlug={product.slug} initial={relatedProducts} />
       </main>
     </>
   );

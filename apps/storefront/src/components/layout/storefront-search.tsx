@@ -3,47 +3,83 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import Link from 'next/link';
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
-import { FiSearch, FiX } from 'react-icons/fi';
+import { FiGrid, FiSearch, FiTag, FiX } from 'react-icons/fi';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-control';
 import { trackSearch } from '@/lib/analytics/commerce-events';
-import type { PublicCatalogProductSuggestion } from '@/lib/catalog/public-catalog';
+import type {
+  PublicCatalogNamedSuggestion,
+  PublicCatalogProductSuggestion,
+  PublicCatalogProductSuggestions,
+} from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { normalizeCatalogSearchText } from '@/lib/catalog/search-normalization';
 
 type SuggestionStatus = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
-function parseSuggestions(value: unknown): PublicCatalogProductSuggestion[] | null {
-  if (!value || typeof value !== 'object' || !('items' in value) || !Array.isArray(value.items)) {
-    return null;
-  }
+const EMPTY_SUGGESTIONS: PublicCatalogProductSuggestions = {
+  items: [],
+  categories: [],
+  brands: [],
+};
 
-  const items = value.items.filter((item): item is PublicCatalogProductSuggestion => {
+function parseNamedSuggestions(value: unknown): PublicCatalogNamedSuggestion[] | null {
+  if (!Array.isArray(value)) return null;
+
+  const suggestions = value.filter((item): item is PublicCatalogNamedSuggestion => {
     if (!item || typeof item !== 'object') return false;
     const candidate = item as Record<string, unknown>;
     return (
       typeof candidate.id === 'string' &&
       typeof candidate.name === 'string' &&
-      typeof candidate.slug === 'string' &&
-      (typeof candidate.salePriceToman === 'number' || candidate.salePriceToman === null)
+      typeof candidate.slug === 'string'
     );
   });
 
-  return items.length === value.items.length ? items.slice(0, 8) : null;
+  return suggestions.length === value.length ? suggestions.slice(0, 4) : null;
+}
+
+function parseSuggestions(value: unknown): PublicCatalogProductSuggestions | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (!Array.isArray(candidate.items)) return null;
+
+  const items = candidate.items.filter((item): item is PublicCatalogProductSuggestion => {
+    if (!item || typeof item !== 'object') return false;
+    const product = item as Record<string, unknown>;
+    return (
+      typeof product.id === 'string' &&
+      typeof product.name === 'string' &&
+      typeof product.slug === 'string' &&
+      (typeof product.salePriceToman === 'number' || product.salePriceToman === null)
+    );
+  });
+  const categories = parseNamedSuggestions(candidate.categories);
+  const brands = parseNamedSuggestions(candidate.brands);
+
+  if (items.length !== candidate.items.length || !categories || !brands) return null;
+
+  return { items: items.slice(0, 8), categories, brands };
 }
 
 export function StorefrontSearch() {
   const listboxId = useId();
   const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<PublicCatalogProductSuggestion[]>([]);
+  const [suggestions, setSuggestions] =
+    useState<PublicCatalogProductSuggestions>(EMPTY_SUGGESTIONS);
   const [status, setStatus] = useState<SuggestionStatus>('idle');
   const [activeIndex, setActiveIndex] = useState(-1);
   const optionRefs = useRef<Array<HTMLAnchorElement | null>>([]);
 
   const normalizedQuery = normalizeCatalogSearchText(query);
   const showSuggestions = normalizedQuery.length >= 2;
+  const suggestionCount =
+    suggestions.categories.length + suggestions.brands.length + suggestions.items.length;
 
   useEffect(() => {
     const search = normalizeCatalogSearchText(query);
@@ -62,13 +98,14 @@ export function StorefrontSearch() {
           );
           const payload = (await response.json().catch(() => null)) as unknown;
           if (!response.ok) throw new Error('Suggestion request failed.');
-          const items = parseSuggestions(payload);
-          if (!items) throw new Error('Suggestion response was invalid.');
-          setSuggestions(items);
-          setStatus(items.length > 0 ? 'success' : 'empty');
+          const result = parseSuggestions(payload);
+          if (!result) throw new Error('Suggestion response was invalid.');
+          setSuggestions(result);
+          const resultCount = result.categories.length + result.brands.length + result.items.length;
+          setStatus(resultCount > 0 ? 'success' : 'empty');
         } catch {
           if (controller.signal.aborted) return;
-          setSuggestions([]);
+          setSuggestions(EMPTY_SUGGESTIONS);
           setStatus('error');
         }
       })();
@@ -81,17 +118,17 @@ export function StorefrontSearch() {
   }, [query]);
 
   function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (suggestions.length === 0) return;
+    if (suggestionCount === 0) return;
 
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setActiveIndex((current) => (current >= suggestions.length - 1 ? 0 : current + 1));
+      setActiveIndex((current) => (current >= suggestionCount - 1 ? 0 : current + 1));
       return;
     }
 
     if (event.key === 'ArrowUp') {
       event.preventDefault();
-      setActiveIndex((current) => (current <= 0 ? suggestions.length - 1 : current - 1));
+      setActiveIndex((current) => (current <= 0 ? suggestionCount - 1 : current - 1));
       return;
     }
 
@@ -177,7 +214,7 @@ export function StorefrontSearch() {
                     const nextSearch = normalizeCatalogSearchText(nextQuery);
 
                     setQuery(nextQuery);
-                    setSuggestions([]);
+                    setSuggestions(EMPTY_SUGGESTIONS);
                     setActiveIndex(-1);
                     setStatus(nextSearch.length >= 2 ? 'loading' : 'idle');
                   }}
@@ -198,6 +235,8 @@ export function StorefrontSearch() {
                 {showSuggestions ? (
                   <div
                     id={listboxId}
+                    role="listbox"
+                    aria-label="پیشنهادهای جست‌وجو"
                     className="
                       absolute inset-x-0 top-[calc(100%+0.5rem)] z-10 max-h-[65vh] overflow-y-auto
                       rounded-[var(--sf-radius-lg)] border border-[var(--sf-color-border)]
@@ -211,7 +250,7 @@ export function StorefrontSearch() {
                     ) : null}
                     {status === 'empty' ? (
                       <p className="px-4 py-5 text-sm text-[var(--sf-color-muted)]" role="status">
-                        محصولی برای این عبارت پیدا نشد.
+                        نتیجه‌ای برای این عبارت پیدا نشد.
                       </p>
                     ) : null}
                     {status === 'error' ? (
@@ -223,45 +262,163 @@ export function StorefrontSearch() {
                       </p>
                     ) : null}
                     {status === 'success' ? (
-                      <ul role="listbox" aria-label="پیشنهادهای جست‌وجو">
-                        {suggestions.map((suggestion, index) => (
-                          <li key={suggestion.id}>
-                            <DialogPrimitive.Close asChild>
-                              <Link
-                                ref={(element) => {
-                                  optionRefs.current[index] = element;
-                                }}
-                                id={`${listboxId}-option-${index}`}
-                                role="option"
-                                aria-selected={activeIndex === index}
-                                href={`/products/${suggestion.slug}`}
-                                onClick={() => trackSearch(normalizedQuery, suggestions.length)}
-                                className="
-                                  grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-3 px-3 py-2.5
-                                  transition-colors hover:bg-[var(--sf-color-surface)]
-                                  aria-selected:bg-[var(--sf-color-surface)]
-                                "
-                              >
-                                <span className="h-14 overflow-hidden rounded-[var(--sf-radius-md)] bg-[var(--sf-color-surface)]">
-                                  <CatalogMedia
-                                    media={suggestion.primaryMedia}
-                                    alt={suggestion.name}
-                                    sizes="56px"
-                                  />
-                                </span>
-                                <span className="min-w-0">
-                                  <span className="block truncate text-sm font-medium">
-                                    {suggestion.name}
-                                  </span>
-                                  <span className="mt-1 block text-xs text-[var(--sf-color-muted)]">
-                                    {formatTomanPrice(suggestion.salePriceToman)}
-                                  </span>
-                                </span>
-                              </Link>
-                            </DialogPrimitive.Close>
-                          </li>
-                        ))}
-                      </ul>
+                      <div>
+                        {suggestions.categories.length > 0 ? (
+                          <section
+                            role="group"
+                            aria-labelledby={`${listboxId}-categories-title`}
+                            className="px-3 py-3"
+                          >
+                            <p
+                              id={`${listboxId}-categories-title`}
+                              className="mb-2 text-xs font-medium text-[var(--sf-color-muted)]"
+                            >
+                              دسته‌بندی‌ها
+                            </p>
+                            <ul role="presentation" className="flex gap-2 overflow-x-auto pb-1">
+                              {suggestions.categories.map((suggestion, index) => (
+                                <li role="presentation" key={suggestion.id}>
+                                  <DialogPrimitive.Close asChild>
+                                    <Link
+                                      ref={(element) => {
+                                        optionRefs.current[index] = element;
+                                      }}
+                                      id={`${listboxId}-option-${index}`}
+                                      role="option"
+                                      aria-selected={activeIndex === index}
+                                      href={`/categories/${suggestion.slug}`}
+                                      onClick={() => trackSearch(normalizedQuery, suggestionCount)}
+                                      className="
+                                        inline-flex shrink-0 items-center gap-2 rounded-full border
+                                        border-[var(--sf-color-border)] px-3 py-2 text-sm
+                                        transition-colors hover:border-[var(--sf-color-ink)]
+                                        hover:bg-[var(--sf-color-surface)]
+                                        aria-selected:border-[var(--sf-color-ink)]
+                                        aria-selected:bg-[var(--sf-color-surface)]
+                                      "
+                                    >
+                                      <FiGrid aria-hidden="true" size={15} />
+                                      {suggestion.name}
+                                    </Link>
+                                  </DialogPrimitive.Close>
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        ) : null}
+
+                        {suggestions.brands.length > 0 ? (
+                          <section
+                            role="group"
+                            aria-labelledby={`${listboxId}-brands-title`}
+                            className="border-t border-[var(--sf-color-border)] px-3 py-3"
+                          >
+                            <p
+                              id={`${listboxId}-brands-title`}
+                              className="mb-2 text-xs font-medium text-[var(--sf-color-muted)]"
+                            >
+                              برندها
+                            </p>
+                            <ul role="presentation" className="flex gap-2 overflow-x-auto pb-1">
+                              {suggestions.brands.map((suggestion, index) => {
+                                const optionIndex = suggestions.categories.length + index;
+
+                                return (
+                                  <li role="presentation" key={suggestion.id}>
+                                    <DialogPrimitive.Close asChild>
+                                      <Link
+                                        ref={(element) => {
+                                          optionRefs.current[optionIndex] = element;
+                                        }}
+                                        id={`${listboxId}-option-${optionIndex}`}
+                                        role="option"
+                                        aria-selected={activeIndex === optionIndex}
+                                        href={`/brands/${suggestion.slug}`}
+                                        onClick={() =>
+                                          trackSearch(normalizedQuery, suggestionCount)
+                                        }
+                                        className="
+                                          inline-flex shrink-0 items-center gap-2 rounded-full border
+                                          border-[var(--sf-color-border)] px-3 py-2 text-sm
+                                          transition-colors hover:border-[var(--sf-color-ink)]
+                                          hover:bg-[var(--sf-color-surface)]
+                                          aria-selected:border-[var(--sf-color-ink)]
+                                          aria-selected:bg-[var(--sf-color-surface)]
+                                        "
+                                      >
+                                        <FiTag aria-hidden="true" size={15} />
+                                        {suggestion.name}
+                                      </Link>
+                                    </DialogPrimitive.Close>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </section>
+                        ) : null}
+
+                        {suggestions.items.length > 0 ? (
+                          <section
+                            role="group"
+                            aria-labelledby={`${listboxId}-products-title`}
+                            className="border-t border-[var(--sf-color-border)]"
+                          >
+                            <p
+                              id={`${listboxId}-products-title`}
+                              className="px-3 pb-1 pt-3 text-xs font-medium text-[var(--sf-color-muted)]"
+                            >
+                              محصولات
+                            </p>
+                            <ul role="presentation">
+                              {suggestions.items.map((suggestion, index) => {
+                                const optionIndex =
+                                  suggestions.categories.length + suggestions.brands.length + index;
+
+                                return (
+                                  <li role="presentation" key={suggestion.id}>
+                                    <DialogPrimitive.Close asChild>
+                                      <Link
+                                        ref={(element) => {
+                                          optionRefs.current[optionIndex] = element;
+                                        }}
+                                        id={`${listboxId}-option-${optionIndex}`}
+                                        role="option"
+                                        aria-selected={activeIndex === optionIndex}
+                                        href={`/products/${suggestion.slug}`}
+                                        onClick={() =>
+                                          trackSearch(normalizedQuery, suggestionCount)
+                                        }
+                                        className="
+                                          grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-3
+                                          px-3 py-2.5 transition-colors
+                                          hover:bg-[var(--sf-color-surface)]
+                                          aria-selected:bg-[var(--sf-color-surface)]
+                                        "
+                                      >
+                                        <span className="h-14 overflow-hidden rounded-[var(--sf-radius-md)] bg-[var(--sf-color-surface)]">
+                                          <CatalogMedia
+                                            media={suggestion.primaryMedia}
+                                            alt={suggestion.name}
+                                            sizes="56px"
+                                          />
+                                        </span>
+                                        <span className="min-w-0">
+                                          <span className="block truncate text-sm font-medium">
+                                            {suggestion.name}
+                                          </span>
+                                          <span className="mt-1 block text-xs text-[var(--sf-color-muted)]">
+                                            {formatTomanPrice(suggestion.salePriceToman)}
+                                          </span>
+                                        </span>
+                                      </Link>
+                                    </DialogPrimitive.Close>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </section>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                 ) : null}

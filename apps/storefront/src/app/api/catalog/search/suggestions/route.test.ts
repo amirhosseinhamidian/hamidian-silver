@@ -14,7 +14,11 @@ describe('catalog search suggestions BFF', () => {
   beforeEach(() => getPublicCatalogProductSuggestions.mockReset());
 
   it('normalizes the query and proxies a bounded suggestion request', async () => {
-    getPublicCatalogProductSuggestions.mockResolvedValue({ items: [] });
+    getPublicCatalogProductSuggestions.mockResolvedValue({
+      items: [],
+      categories: [],
+      brands: [],
+    });
 
     const response = await GET(
       new Request('http://storefront.local/api/catalog/search/suggestions?q=انگشتر‌%20كيان'),
@@ -22,7 +26,7 @@ describe('catalog search suggestions BFF', () => {
 
     expect(response.status).toBe(200);
     expect(getPublicCatalogProductSuggestions).toHaveBeenCalledWith('انگشتر کیان', 8);
-    await expect(response.json()).resolves.toEqual({ items: [] });
+    await expect(response.json()).resolves.toEqual({ items: [], categories: [], brands: [] });
   });
 
   it('returns an empty result for short queries without calling the API', async () => {
@@ -32,7 +36,7 @@ describe('catalog search suggestions BFF', () => {
 
     expect(response.status).toBe(200);
     expect(getPublicCatalogProductSuggestions).not.toHaveBeenCalled();
-    await expect(response.json()).resolves.toEqual({ items: [] });
+    await expect(response.json()).resolves.toEqual({ items: [], categories: [], brands: [] });
   });
 
   it('maps upstream failures to a stable error response', async () => {

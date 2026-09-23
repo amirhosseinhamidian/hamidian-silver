@@ -166,6 +166,35 @@ describe('ProductPurchasePanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows the product default plating as included without charging its configured rate', () => {
+    const defaultRhodiumProduct: PublicCatalogProductDetail = {
+      ...product,
+      defaultPlatingType: 'RHODIUM',
+      variants: [
+        {
+          ...product.variants[0]!,
+          platingOptions: [
+            ...product.variants[0]!.platingOptions,
+            { type: 'RHODIUM', unitPriceToman: 40_000, leadTimeDays: 1 },
+          ],
+        },
+      ],
+    };
+
+    render(<ProductPurchasePanel product={defaultRhodiumProduct} />);
+
+    expect(screen.getByRole('radio', { name: /آبکاری رودیوم.*بدون هزینه/ })).toBeChecked();
+    expect(screen.getAllByText('آبکاری رودیوم')).toHaveLength(1);
+    fireEvent.click(screen.getAllByRole('button', { name: 'افزودن به سبد خرید' })[0]);
+    expect(cartStoreMock.addItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        platingType: null,
+        unitPlatingPriceToman: 0,
+        platingLeadTimeDays: 0,
+      }),
+    );
+  });
+
   it('uses the current cart quantity when the product page is revisited', () => {
     const singleVariantProduct: PublicCatalogProductDetail = {
       ...product,

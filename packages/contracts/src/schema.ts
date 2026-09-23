@@ -180,6 +180,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/public/products/{slug}/related": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_listPublicRelatedProducts_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/media": {
         parameters: {
             query?: never;
@@ -498,6 +514,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["CatalogController_updateProduct_v1"];
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/relations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_listProductRelations_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogController_updateProductRelations_v1"];
         trace?: never;
     };
     "/api/v1/catalog/products/{productId}/variants": {
@@ -3232,8 +3264,15 @@ export interface components {
             name: string;
             slug: string;
         };
+        PublicCatalogNamedSuggestionDto: {
+            id: string;
+            name: string;
+            slug: string;
+        };
         PublicCatalogProductSuggestionsDto: {
             items: components["schemas"]["PublicCatalogProductSuggestionDto"][];
+            categories: components["schemas"]["PublicCatalogNamedSuggestionDto"][];
+            brands: components["schemas"]["PublicCatalogNamedSuggestionDto"][];
         };
         PublicCatalogSizeGroupDto: {
             id: string;
@@ -3281,6 +3320,8 @@ export interface components {
             brand: components["schemas"]["PublicCatalogBrandDto"] | null;
             categories: components["schemas"]["PublicCatalogCategoryDto"][];
             primaryMedia: components["schemas"]["PublicCatalogMediaDto"] | null;
+            /** @enum {string|null} */
+            defaultPlatingType?: "GOLD" | "ROSE_GOLD" | "RHODIUM" | null;
             description: string | null;
             seoTitle?: string | null;
             seoDescription?: string | null;
@@ -3454,6 +3495,9 @@ export interface components {
             status?: "DRAFT" | "ACTIVE" | "ARCHIVED";
             /** @enum {string} */
             sizeMode: "NONE" | "FREE_SIZE" | "SIZED";
+            /** @enum {string} */
+            defaultPlatingType?: "GOLD" | "ROSE_GOLD" | "RHODIUM";
+            platingTypes?: ("GOLD" | "ROSE_GOLD" | "RHODIUM")[];
             /** Format: uuid */
             brandId?: string;
             /** Format: uuid */
@@ -3464,6 +3508,9 @@ export interface components {
             variants: components["schemas"]["CreateProductVariantDto"][];
             media?: components["schemas"]["CreateProductMediaDto"][];
             attributes?: components["schemas"]["ProductAttributeInputDto"][];
+        };
+        UpdateProductRelationsDto: {
+            relatedProductIds: string[];
         };
         UpdateProductVariantDto: {
             sku?: string;
@@ -3476,6 +3523,9 @@ export interface components {
             isActive?: boolean;
         };
         UpdateProductDto: {
+            /** @enum {string|null} */
+            defaultPlatingType?: "GOLD" | "ROSE_GOLD" | "RHODIUM" | null;
+            platingTypes?: ("GOLD" | "ROSE_GOLD" | "RHODIUM")[];
             name?: string;
             slug?: string;
             shortDescription?: string | null;
@@ -4894,6 +4944,30 @@ export interface operations {
             };
         };
     };
+    CatalogController_listPublicRelatedProducts_v1: {
+        parameters: {
+            query?: {
+                page?: string;
+                pageSize?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCatalogProductListDto"];
+                };
+            };
+        };
+    };
     CatalogController_uploadMedia_v1: {
         parameters: {
             query?: never;
@@ -5701,6 +5775,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    CatalogController_listProductRelations_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_updateProductRelations_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductRelationsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
         };

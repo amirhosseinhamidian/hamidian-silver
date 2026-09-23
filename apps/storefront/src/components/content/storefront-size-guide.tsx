@@ -18,18 +18,31 @@ function toPersianDigits(value: string | number): string {
 }
 
 const ringSizes = [
-  { size: 48, circumference: 48, diameter: '15.3' },
-  { size: 50, circumference: 50, diameter: '15.9' },
-  { size: 52, circumference: 52, diameter: '16.6' },
-  { size: 54, circumference: 54, diameter: '17.2' },
-  { size: 56, circumference: 56, diameter: '17.8' },
-  { size: 58, circumference: 58, diameter: '18.5' },
-  { size: 60, circumference: 60, diameter: '19.1' },
-  { size: 62, circumference: 62, diameter: '19.7' },
-  { size: 64, circumference: 64, diameter: '20.4' },
-  { size: 66, circumference: 66, diameter: '21.0' },
-  { size: 68, circumference: 68, diameter: '21.6' },
+  { size: '3', diameter: '14.0' },
+  { size: '3.5', diameter: '14.4' },
+  { size: '4', diameter: '14.8' },
+  { size: '4.5', diameter: '15.2' },
+  { size: '5', diameter: '15.6' },
+  { size: '5.5', diameter: '16.0' },
+  { size: '6', diameter: '16.45' },
+  { size: '6.5', diameter: '16.9' },
+  { size: '7', diameter: '17.3' },
+  { size: '7.5', diameter: '17.7' },
+  { size: '8', diameter: '18.2' },
+  { size: '8.5', diameter: '18.6' },
+  { size: '9', diameter: '19.0' },
+  { size: '9.5', diameter: '19.4' },
+  { size: '10', diameter: '19.8' },
+  { size: '10.5', diameter: '20.2' },
+  { size: '11', diameter: '20.6' },
+  { size: '11.5', diameter: '21.0' },
+  { size: '12', diameter: '21.4' },
+  { size: '12.5', diameter: '21.8' },
+  { size: '13', diameter: '22.2' },
+  { size: '13.5', diameter: '22.6' },
 ] as const;
+
+const rulerMarks = Array.from({ length: 31 }, (_, index) => index);
 
 const braceletFits = [
   { fit: 'جذب', extra: '۰٫۵ تا ۱ سانتی‌متر', description: 'نزدیک به مچ و با حرکت کمتر' },
@@ -119,37 +132,107 @@ function SectionHeading({
   );
 }
 
+function RingDiameterRuler() {
+  return (
+    <figure className="bg-[var(--sf-color-surface)] p-5 sm:p-8">
+      <figcaption>
+        <p className="text-xs tracking-[0.12em] text-[var(--sf-color-subtle)]">
+          روش اندازه‌گیری با خط‌کش
+        </p>
+        <h3 className="mt-3 text-xl font-normal">قطر داخلی، نه قطر بیرونی</h3>
+      </figcaption>
+
+      <div
+        role="img"
+        aria-label="انگشتر روی خط‌کش با خط اندازه‌گیری از یک لبه داخلی تا لبه داخلی مقابل"
+        dir="ltr"
+        className="relative mx-auto mt-7 h-72 w-full max-w-lg overflow-hidden bg-white"
+      >
+        <div className="absolute inset-x-4 top-1/2 h-16 border-y border-black/35 bg-white/90 sm:inset-x-8">
+          {rulerMarks.map((mark) => {
+            const major = mark % 10 === 0;
+            const middle = mark % 5 === 0;
+
+            return (
+              <span
+                key={mark}
+                aria-hidden="true"
+                className="absolute top-0 w-px bg-black/70"
+                style={{
+                  left: `${(mark / 30) * 100}%`,
+                  height: major ? '1.8rem' : middle ? '1.3rem' : '0.75rem',
+                }}
+              >
+                {major ? (
+                  <span className="absolute top-8 left-1/2 -translate-x-1/2 text-[0.65rem] text-black/65">
+                    {toPersianDigits(mark)}
+                  </span>
+                ) : null}
+              </span>
+            );
+          })}
+          <span className="absolute right-1 bottom-0.5 text-[0.6rem] text-black/55">میلی‌متر</span>
+        </div>
+
+        <div className="absolute top-1/2 left-1/2 z-10 aspect-square w-52 -translate-x-1/2 -translate-y-1/2 rounded-full border-[14px] border-[#ad9147] shadow-[0_18px_36px_rgb(0_0_0/0.14)] sm:w-64 sm:border-[16px]">
+          <span
+            aria-hidden="true"
+            className="absolute -top-10 left-1/2 h-10 w-14 -translate-x-1/2 bg-[#ad9147] [clip-path:polygon(20%_100%,0_35%,20%_0,80%_0,100%_35%,80%_100%)]"
+          />
+          <span className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 bg-[#a52a2a]">
+            <span className="absolute top-1/2 left-0 h-4 w-px -translate-y-1/2 bg-[#a52a2a]" />
+            <span className="absolute top-1/2 right-0 h-4 w-px -translate-y-1/2 bg-[#a52a2a]" />
+            <span
+              dir="rtl"
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white/90 px-2 py-1 text-xs font-medium text-[#842020]"
+            >
+              لبه داخلی تا لبه داخلی
+            </span>
+          </span>
+        </div>
+      </div>
+
+      <ol className="mt-6 space-y-3 text-sm leading-7 text-[var(--sf-color-muted)]">
+        <li>
+          <strong className="font-medium text-[var(--sf-color-ink)]">۱.</strong> انگشتر مناسب را
+          کاملاً صاف روی یک خط‌کش واقعی قرار دهید.
+        </li>
+        <li>
+          <strong className="font-medium text-[var(--sf-color-ink)]">۲.</strong> صفر خط‌کش را با لبه
+          داخلی حلقه هم‌راستا کنید.
+        </li>
+        <li>
+          <strong className="font-medium text-[var(--sf-color-ink)]">۳.</strong> عدد لبه داخلی مقابل
+          را به میلی‌متر بخوانید و در جدول پیدا کنید.
+        </li>
+      </ol>
+      <p className="mt-5 border-t border-[var(--sf-color-border)] pt-4 text-xs leading-6 text-[var(--sf-color-subtle)]">
+        این تصویر فقط روش اندازه‌گیری را نشان می‌دهد؛ برای تعیین اندازه از خط‌کش فیزیکی استفاده
+        کنید.
+      </p>
+    </figure>
+  );
+}
+
 function RingGuide() {
   return (
     <section id="rings" className="scroll-mt-28 py-16 sm:py-24">
       <SectionHeading
         number="۰۱"
         title="اندازه انگشتر"
-        description="یک انگشتر مناسب را روی خط‌کش بگذارید و قطر داخلی آن را اندازه بگیرید؛ یا نوار کاغذی باریکی را بدون فشار دور انگشت بپیچید و طول آن را بر حسب میلی‌متر ثبت کنید."
+        description="انگشتری را انتخاب کنید که روی همان انگشت به‌خوبی می‌نشیند. آن را صاف روی خط‌کش بگذارید و فاصله میان دو لبه داخلی حلقه را به میلی‌متر بخوانید؛ سپس نزدیک‌ترین اندازه را در جدول پیدا کنید."
       />
-      <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] lg:gap-16">
-        <div className="flex min-h-80 items-center justify-center bg-[var(--sf-color-surface)] p-8">
-          <div
-            aria-hidden="true"
-            className="relative flex size-52 items-center justify-center rounded-full border border-[var(--sf-color-ink)] sm:size-64"
-          >
-            <div className="size-32 rounded-full border border-[var(--sf-color-border-strong)] sm:size-40" />
-            <div className="absolute inset-x-10 top-1/2 border-t border-dashed border-[var(--sf-color-muted)] sm:inset-x-12" />
-            <span className="absolute -bottom-10 text-xs text-[var(--sf-color-muted)]">
-              قطر داخلی
-            </span>
-          </div>
-        </div>
+      <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16">
+        <RingDiameterRuler />
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[31rem] border-collapse text-right text-sm">
-            <caption className="sr-only">جدول تبدیل اندازه انگشتر</caption>
+          <table className="w-full min-w-80 border-collapse text-right text-sm">
+            <caption className="pb-5 text-right text-xs leading-6 text-[var(--sf-color-muted)]">
+              جدول تبدیل قطر داخلی به سایز استاندارد انگشتر
+            </caption>
             <thead>
               <tr className="border-b border-[var(--sf-color-ink)] text-xs text-[var(--sf-color-muted)]">
                 <th scope="col" className="px-3 py-4 font-normal">
                   سایز انگشتر
-                </th>
-                <th scope="col" className="px-3 py-4 font-normal">
-                  محیط انگشت (میلی‌متر)
                 </th>
                 <th scope="col" className="px-3 py-4 font-normal">
                   قطر داخلی (میلی‌متر)
@@ -160,9 +243,6 @@ function RingGuide() {
               {ringSizes.map((row) => (
                 <tr key={row.size} className="border-b border-[var(--sf-color-border)]">
                   <td className="px-3 py-4 font-medium">{toPersianDigits(row.size)}</td>
-                  <td className="px-3 py-4 text-[var(--sf-color-muted)]">
-                    {toPersianDigits(row.circumference)}
-                  </td>
                   <td className="px-3 py-4 text-[var(--sf-color-muted)]">
                     {toPersianDigits(row.diameter)}
                   </td>

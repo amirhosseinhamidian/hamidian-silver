@@ -192,6 +192,9 @@ export class PublicCatalogProductAttributeDto {
 }
 
 export class PublicCatalogProductDetailDto extends PublicCatalogProductSummaryDto {
+  @ApiPropertyOptional({ enum: PlatingType, nullable: true })
+  defaultPlatingType?: PlatingType | null;
+
   @ApiProperty({ type: String, nullable: true })
   description!: string | null;
 
@@ -242,7 +245,19 @@ export class PublicCatalogProductSuggestionDto {
   primaryMedia!: PublicCatalogMediaDto | null;
 }
 
+export class PublicCatalogNamedSuggestionDto {
+  id!: string;
+  name!: string;
+  slug!: string;
+}
+
 export class PublicCatalogProductSuggestionsDto {
   @ApiProperty({ type: () => PublicCatalogProductSuggestionDto, isArray: true })
   items!: PublicCatalogProductSuggestionDto[];
+
+  @ApiProperty({ type: () => PublicCatalogNamedSuggestionDto, isArray: true })
+  categories!: PublicCatalogNamedSuggestionDto[];
+
+  @ApiProperty({ type: () => PublicCatalogNamedSuggestionDto, isArray: true })
+  brands!: PublicCatalogNamedSuggestionDto[];
 }

@@ -1,7 +1,6 @@
 'use client';
 
-import { FiHeart } from 'react-icons/fi';
-
+import { WishlistHeartIcon } from '@/components/wishlist/wishlist-heart-icon';
 import { trackWishlistChange } from '@/lib/analytics/commerce-events';
 import type { WishlistItem } from '@/lib/wishlist/wishlist-state';
 import { useWishlist } from '@/lib/wishlist/wishlist-store';
@@ -46,11 +45,7 @@ export function CatalogWishlistButton({ item }: CatalogWishlistButtonProps) {
         sm:bg-[var(--sf-color-canvas)] sm:shadow-sm
       "
     >
-      <FiHeart
-        aria-hidden="true"
-        className="size-4 sm:size-[21px]"
-        fill={active ? 'currentColor' : 'none'}
-      />
+      <WishlistHeartIcon active={active} className="size-4 sm:size-[21px]" />
     </button>
   );
 }

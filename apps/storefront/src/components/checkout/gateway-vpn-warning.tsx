@@ -1,5 +1,34 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+
+type NetworkLocation = 'checking' | 'iran' | 'outside' | 'unknown';
+
 export function GatewayVpnWarning({ visible }: Readonly<{ visible: boolean }>) {
-  if (!visible) return null;
+  const [networkLocation, setNetworkLocation] = useState<NetworkLocation>('checking');
+
+  useEffect(() => {
+    if (!visible) return;
+    let active = true;
+
+    void fetch('/api/checkout/network-location', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!active) return;
+        if (!response.ok) return setNetworkLocation('unknown');
+
+        const payload = (await response.json()) as { isIranian?: unknown };
+        if (payload.isIranian === true) return setNetworkLocation('iran');
+        if (payload.isIranian === false) return setNetworkLocation('outside');
+        setNetworkLocation('unknown');
+      })
+      .catch(() => active && setNetworkLocation('unknown'));
+
+    return () => {
+      active = false;
+    };
+  }, [visible]);
+
+  if (!visible || networkLocation === 'checking' || networkLocation === 'iran') return null;
 
   return (
     <p

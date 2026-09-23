@@ -834,7 +834,10 @@ describe('CatalogService', () => {
   it('returns at most eight lightweight ordered product suggestions', async () => {
     const firstId = '10000000-0000-4000-8000-000000000031';
     const secondId = '10000000-0000-4000-8000-000000000032';
-    prisma.$queryRaw.mockResolvedValue([{ id: firstId }, { id: secondId }]);
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ id: firstId }, { id: secondId }])
+      .mockResolvedValueOnce([{ id: 'category-1', name: 'انگشتر', slug: 'rings' }])
+      .mockResolvedValueOnce([{ id: 'brand-1', name: 'حمیدیان', slug: 'hamidian' }]);
     prisma.product.findMany.mockResolvedValue([
       {
         id: secondId,
@@ -877,14 +880,32 @@ describe('CatalogService', () => {
         }),
         expect.objectContaining({ id: secondId, primaryMedia: null }),
       ],
+      categories: [{ id: 'category-1', name: 'انگشتر', slug: 'rings' }],
+      brands: [{ id: 'brand-1', name: 'حمیدیان', slug: 'hamidian' }],
     });
 
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(3);
     expect(prisma.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ id: { in: [firstId, secondId] } }),
         select: expect.not.objectContaining({ variants: expect.anything() }),
       }),
     );
+  });
+
+  it('returns matching categories and brands when no product matches', async () => {
+    prisma.$queryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'category-1', name: 'گردنبند', slug: 'necklaces' }])
+      .mockResolvedValueOnce([{ id: 'brand-1', name: 'مارکو', slug: 'marco' }]);
+
+    await expect(service.listPublicProductSuggestions('مارکو')).resolves.toEqual({
+      items: [],
+      categories: [{ id: 'category-1', name: 'گردنبند', slug: 'necklaces' }],
+      brands: [{ id: 'brand-1', name: 'مارکو', slug: 'marco' }],
+    });
+
+    expect(prisma.product.findMany).not.toHaveBeenCalled();
   });
 
   it('does not expose a non-active product through its public slug', async () => {

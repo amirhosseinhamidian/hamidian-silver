@@ -17,7 +17,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { ProductStatus, SizeMode } from '../../../generated/prisma/enums';
+import { PlatingType, ProductStatus, SizeMode } from '../../../generated/prisma/enums';
 
 export class CreateProductVariantDto {
   @IsString()
@@ -132,6 +132,17 @@ export class CreateProductDto {
 
   @IsEnum(SizeMode)
   sizeMode!: SizeMode;
+
+  @IsOptional()
+  @IsEnum(PlatingType)
+  defaultPlatingType?: PlatingType;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  @ArrayUnique()
+  @IsEnum(PlatingType, { each: true })
+  platingTypes?: PlatingType[];
 
   @IsOptional()
   @IsUUID('4')

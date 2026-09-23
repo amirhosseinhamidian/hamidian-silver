@@ -14,6 +14,7 @@ export type PublicCatalogProductDetail = components['schemas']['PublicCatalogPro
 export type PublicCatalogProductList = components['schemas']['PublicCatalogProductListDto'];
 export type PublicCatalogProductSuggestion =
   components['schemas']['PublicCatalogProductSuggestionDto'];
+export type PublicCatalogNamedSuggestion = components['schemas']['PublicCatalogNamedSuggestionDto'];
 export type PublicCatalogProductSuggestions =
   components['schemas']['PublicCatalogProductSuggestionsDto'];
 
@@ -256,3 +257,16 @@ export const getPublicCatalogProduct = cache(
     return result.data;
   },
 );
+
+export async function getPublicRelatedProducts(
+  slug: string,
+  page = 1,
+  pageSize = 8,
+): Promise<PublicCatalogProductList> {
+  const client = createPublicCatalogClient();
+  const result = await client.GET('/api/v1/catalog/public/products/{slug}/related', {
+    params: { path: { slug }, query: { page: String(page), pageSize: String(pageSize) } },
+  });
+  assertSuccessfulResponse(result.response, result.data, 'related products');
+  return result.data;
+}
