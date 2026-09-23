@@ -286,6 +286,22 @@ async function handler(request, response) {
     return json(response, 200, product);
   }
 
+  if (
+    request.method === 'GET' &&
+    url.pathname === '/api/v1/catalog/public/products/silver-ring/related'
+  ) {
+    const page = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
+    const pageSize = Number.parseInt(url.searchParams.get('pageSize') ?? '8', 10);
+
+    return json(response, 200, {
+      items: [],
+      page,
+      pageSize,
+      total: 0,
+      totalPages: 0,
+    });
+  }
+
   if (request.method === 'POST' && url.pathname === '/api/v1/auth/otp/request') {
     const payload = await body(request);
     if (payload.phone !== PHONE) return json(response, 400, { message: 'Invalid test phone.' });

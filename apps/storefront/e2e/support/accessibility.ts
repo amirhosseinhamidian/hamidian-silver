@@ -25,3 +25,22 @@ export async function expectNoHorizontalOverflow(page: Page) {
 
   expect(overflow).toBeLessThanOrEqual(1);
 }
+
+export async function waitForClientHydration(page: Page) {
+  await page.waitForLoadState('load');
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        const finish = () => {
+          window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+        };
+
+        if (typeof window.requestIdleCallback === 'function') {
+          window.requestIdleCallback(finish, { timeout: 1_000 });
+          return;
+        }
+
+        window.setTimeout(finish, 0);
+      }),
+  );
+}
