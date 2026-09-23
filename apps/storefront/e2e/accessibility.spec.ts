@@ -1,11 +1,16 @@
 import { expect, test } from '@playwright/test';
 
-import { expectNoHorizontalOverflow, expectNoWcagViolations } from './support/accessibility';
+import {
+  expectNoHorizontalOverflow,
+  expectNoWcagViolations,
+  waitForClientHydration,
+} from './support/accessibility';
 
 test.describe('storefront responsive accessibility', () => {
   test('supports skip navigation and restores dialog focus', async ({ page }, testInfo) => {
     await page.goto('/products/silver-ring');
     await expect(page.getByRole('heading', { name: 'انگشتر نقره حمیدیان' })).toBeVisible();
+    await waitForClientHydration(page);
     await expectNoHorizontalOverflow(page);
     await expectNoWcagViolations(page, testInfo);
 
@@ -40,6 +45,8 @@ test.describe('storefront responsive accessibility', () => {
     test.skip(testInfo.project.name !== 'Mobile Chrome', 'Mobile navigation is hidden here.');
 
     await page.goto('/products/silver-ring');
+    await expect(page.getByRole('heading', { name: 'انگشتر نقره حمیدیان' })).toBeVisible();
+    await waitForClientHydration(page);
     const menuTrigger = page.getByRole('button', { name: 'باز کردن منوی موبایل' });
     await menuTrigger.click();
 

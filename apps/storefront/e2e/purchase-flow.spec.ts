@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { expectNoHorizontalOverflow } from './support/accessibility';
+import { expectNoHorizontalOverflow, waitForClientHydration } from './support/accessibility';
 
 test.beforeEach(async ({ request }) => {
   const response = await request.post('http://127.0.0.1:4311/__e2e/reset');
@@ -11,6 +11,7 @@ test('OTP → product → cart → checkout → card-to-card receipt', async ({ 
   await test.step('sign in with OTP', async () => {
     await page.goto('/products/silver-ring');
     await expect(page.getByRole('heading', { name: 'انگشتر نقره حمیدیان' })).toBeVisible();
+    await waitForClientHydration(page);
     await expectNoHorizontalOverflow(page);
 
     await page.getByRole('button', { name: 'ورود یا ثبت‌نام' }).first().click();
@@ -22,6 +23,7 @@ test('OTP → product → cart → checkout → card-to-card receipt', async ({ 
     await page.getByLabel('رقم ۱ از ۵').fill('12345');
     await expect(page.getByText('با موفقیت وارد شدید')).toBeVisible();
     await expect(page.getByRole('link', { name: 'حساب کاربری' }).first()).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'ورود موفق' })).toBeHidden({ timeout: 5_000 });
   });
 
   await test.step('add the product and review the cart', async () => {
