@@ -39,6 +39,8 @@ export type ProductFormData = Readonly<{
   categories: readonly CatalogLookup[];
   sizes: readonly CatalogSize[];
   sizeGroups: readonly CatalogSizeGroup[];
+  products?: readonly CatalogLookup[];
+  relatedProductIds?: readonly string[];
 }>;
 
 export type VariantManagementData = Readonly<{
@@ -72,6 +74,41 @@ async function accessToken(): Promise<string> {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token) throw new Error('Authenticated admin session is required.');
   return token;
+}
+
+async function loadProductRelationCandidates(
+  token: string,
+): Promise<CatalogResource<readonly CatalogLookup[]>> {
+  try {
+    const limit = 100;
+    const firstResponse = await requestAdminCatalog(
+      `/api/v1/catalog/products?page=1&limit=${limit}`,
+      token,
+    );
+    if (!firstResponse.ok) return { data: null, failed: true };
+    const firstPage = parseProductList(await readJsonResponse(firstResponse));
+    if (!firstPage) return { data: null, failed: true };
+
+    const products = [...firstPage.items];
+    const totalPages = Math.ceil(firstPage.total / limit);
+    for (let page = 2; page <= totalPages; page += 1) {
+      const response = await requestAdminCatalog(
+        `/api/v1/catalog/products?page=${page}&limit=${limit}`,
+        token,
+      );
+      if (!response.ok) return { data: null, failed: true };
+      const result = parseProductList(await readJsonResponse(response));
+      if (!result) return { data: null, failed: true };
+      products.push(...result.items);
+    }
+
+    return {
+      data: products.map(({ id, name }) => ({ id, name })),
+      failed: false,
+    };
+  } catch {
+    return { data: null, failed: true };
+  }
 }
 
 export async function loadProductManagement(
@@ -129,14 +166,25 @@ export async function loadProductForm(productId?: string): Promise<ProductFormDa
         parseAdminProduct,
       )
     : Promise.resolve({ data: null, failed: false } as CatalogResource<AdminProduct>);
-  const [product, brands, countries, categories, sizes, sizeGroups] = await Promise.all([
-    productRequest,
-    load(requestAdminCatalog('/api/v1/catalog/brands', token), parseCatalogLookups),
-    load(requestAdminCatalog('/api/v1/catalog/countries', token), parseCatalogLookups),
-    load(requestAdminCatalog('/api/v1/catalog/categories', token), parseCatalogLookups),
-    load(requestAdminCatalog('/api/v1/catalog/sizes', token), parseCatalogSizes),
-    load(requestAdminCatalog('/api/v1/catalog/size-groups', token), parseCatalogSizeGroups),
-  ]);
+  const [product, brands, countries, categories, sizes, sizeGroups, products, relations] =
+    await Promise.all([
+      productRequest,
+      load(requestAdminCatalog('/api/v1/catalog/brands', token), parseCatalogLookups),
+      load(requestAdminCatalog('/api/v1/catalog/countries', token), parseCatalogLookups),
+      load(requestAdminCatalog('/api/v1/catalog/categories', token), parseCatalogLookups),
+      load(requestAdminCatalog('/api/v1/catalog/sizes', token), parseCatalogSizes),
+      load(requestAdminCatalog('/api/v1/catalog/size-groups', token), parseCatalogSizeGroups),
+      loadProductRelationCandidates(token),
+      productId
+        ? load(
+            requestAdminCatalog(
+              `/api/v1/catalog/products/${encodeURIComponent(productId)}/relations`,
+              token,
+            ),
+            (value) => parseCatalogLookups(value),
+          )
+        : Promise.resolve({ data: [], failed: false } as CatalogResource<readonly CatalogLookup[]>),
+    ]);
 
   if (
     product.failed ||
@@ -145,11 +193,15 @@ export async function loadProductForm(productId?: string): Promise<ProductFormDa
     categories.failed ||
     sizes.failed ||
     sizeGroups.failed ||
+    products.failed ||
+    relations.failed ||
     !brands.data ||
     !countries.data ||
     !categories.data ||
     !sizes.data ||
-    !sizeGroups.data
+    !sizeGroups.data ||
+    !products.data ||
+    !relations.data
   ) {
     return null;
   }
@@ -161,6 +213,8 @@ export async function loadProductForm(productId?: string): Promise<ProductFormDa
     categories: categories.data,
     sizes: sizes.data,
     sizeGroups: sizeGroups.data,
+    products: products.data.filter(({ id }) => id !== productId),
+    relatedProductIds: relations.data.map(({ id }) => id),
   };
 }
 

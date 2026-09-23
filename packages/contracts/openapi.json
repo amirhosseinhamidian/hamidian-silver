@@ -453,6 +453,52 @@
         ]
       }
     },
+    "/api/v1/catalog/public/products/{slug}/related": {
+      "get": {
+        "operationId": "CatalogController_listPublicRelatedProducts_v1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCatalogProductListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/api/v1/catalog/media": {
       "post": {
         "operationId": "CatalogController_uploadMedia_v1",
@@ -1621,6 +1667,70 @@
               "application/json": {
                 "schema": {
                   "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{productId}/relations": {
+      "get": {
+        "operationId": "CatalogController_listProductRelations_v1",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "patch": {
+        "operationId": "CatalogController_updateProductRelations_v1",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductRelationsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -8298,6 +8408,25 @@
           "slug"
         ]
       },
+      "PublicCatalogNamedSuggestionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
       "PublicCatalogProductSuggestionsDto": {
         "type": "object",
         "properties": {
@@ -8306,10 +8435,24 @@
             "items": {
               "$ref": "#/components/schemas/PublicCatalogProductSuggestionDto"
             }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogNamedSuggestionDto"
+            }
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogNamedSuggestionDto"
+            }
           }
         },
         "required": [
-          "items"
+          "items",
+          "categories",
+          "brands"
         ]
       },
       "PublicCatalogSizeGroupDto": {
@@ -8514,6 +8657,15 @@
                 "$ref": "#/components/schemas/PublicCatalogMediaDto"
               }
             ]
+          },
+          "defaultPlatingType": {
+            "nullable": true,
+            "enum": [
+              "GOLD",
+              "ROSE_GOLD",
+              "RHODIUM"
+            ],
+            "type": "string"
           },
           "description": {
             "type": "string",
@@ -9179,6 +9331,27 @@
               "SIZED"
             ]
           },
+          "defaultPlatingType": {
+            "type": "string",
+            "enum": [
+              "GOLD",
+              "ROSE_GOLD",
+              "RHODIUM"
+            ]
+          },
+          "platingTypes": {
+            "type": "array",
+            "uniqueItems": true,
+            "maxItems": 3,
+            "items": {
+              "type": "string",
+              "enum": [
+                "GOLD",
+                "ROSE_GOLD",
+                "RHODIUM"
+              ]
+            }
+          },
           "brandId": {
             "type": "string",
             "format": "uuid"
@@ -9232,6 +9405,23 @@
           "variants"
         ]
       },
+      "UpdateProductRelationsDto": {
+        "type": "object",
+        "properties": {
+          "relatedProductIds": {
+            "uniqueItems": true,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "relatedProductIds"
+        ]
+      },
       "UpdateProductVariantDto": {
         "type": "object",
         "properties": {
@@ -9274,6 +9464,28 @@
       "UpdateProductDto": {
         "type": "object",
         "properties": {
+          "defaultPlatingType": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "GOLD",
+              "ROSE_GOLD",
+              "RHODIUM"
+            ]
+          },
+          "platingTypes": {
+            "type": "array",
+            "uniqueItems": true,
+            "maxItems": 3,
+            "items": {
+              "type": "string",
+              "enum": [
+                "GOLD",
+                "ROSE_GOLD",
+                "RHODIUM"
+              ]
+            }
+          },
           "name": {
             "type": "string",
             "minLength": 1,

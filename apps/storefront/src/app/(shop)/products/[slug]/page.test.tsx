@@ -5,8 +5,16 @@ import ProductDetailPage from '@/app/(shop)/products/[slug]/page';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import type { PublicCatalogProductDetail } from '@/lib/catalog/public-catalog';
 
-const { getPublicCatalogProduct, getPublicSeoRedirect, permanentRedirect } = vi.hoisted(() => ({
+const {
+  getPublicCatalogProduct,
+  getPublicRelatedProducts,
+  getPublicSeoRedirect,
+  permanentRedirect,
+} = vi.hoisted(() => ({
   getPublicCatalogProduct: vi.fn(),
+  getPublicRelatedProducts: vi.fn(() =>
+    Promise.resolve({ items: [], page: 1, pageSize: 8, total: 0, totalPages: 0 }),
+  ),
   getPublicSeoRedirect: vi.fn(),
   permanentRedirect: vi.fn((destinationPath: string) => {
     throw new Error(`NEXT_REDIRECT:${destinationPath}`);
@@ -15,6 +23,7 @@ const { getPublicCatalogProduct, getPublicSeoRedirect, permanentRedirect } = vi.
 
 vi.mock('@/lib/catalog/public-catalog', () => ({
   getPublicCatalogProduct,
+  getPublicRelatedProducts,
 }));
 
 vi.mock('@/lib/seo/redirects', () => ({
@@ -143,15 +152,41 @@ describe('ProductDetailPage', () => {
     );
 
     const labels = screen.getAllByRole('term').map((term) => term.textContent);
-    expect(labels).toEqual([
-      'برند',
-      'کشور سازنده',
-      'سایزبندی',
-      'وزن تقریبی',
-      'جنس نگین',
-      'نوع آبکاری',
-    ]);
+    expect(labels).toEqual(['برند', 'کشور سازنده', 'وزن تقریبی', 'جنس نگین', 'نوع آبکاری']);
     expect(screen.getByText('زیرکونیا')).toBeInTheDocument();
     expect(screen.getByText('رودیوم')).toBeInTheDocument();
+  });
+
+  it('lists multiple necklace lengths and the included default plating as generated features', async () => {
+    const lengthGroup = {
+      id: 'length-group',
+      code: 'NECKLACE_LENGTH',
+      name: 'طول گردنبند',
+      selectionLabel: 'انتخاب طول',
+      cartLabel: 'طول',
+    };
+    getPublicCatalogProduct.mockResolvedValue({
+      ...product,
+      defaultPlatingType: 'RHODIUM',
+      variants: ['40', '45', '50'].map((label, index) => ({
+        id: `variant-${index}`,
+        name: null,
+        weightGrams: 4 + index,
+        salePriceToman: 800_000,
+        compareAtPriceToman: null,
+        size: { id: `size-${index}`, code: label, label, group: lengthGroup },
+        platingOptions: [],
+        availableQuantity: 1,
+        isAvailable: true,
+      })),
+      attributes: [{ key: 'نوع آبکاری', value: 'مقدار قدیمی', sortOrder: 1 }],
+    });
+
+    render(await ProductDetailPage({ params: Promise.resolve({ slug: product.slug }) }));
+
+    expect(screen.getByText('طول')).toBeInTheDocument();
+    expect(screen.getByText('40 / 45 / 50')).toBeInTheDocument();
+    expect(screen.getByText('آبکاری رودیوم')).toBeInTheDocument();
+    expect(screen.queryByText('مقدار قدیمی')).not.toBeInTheDocument();
   });
 });

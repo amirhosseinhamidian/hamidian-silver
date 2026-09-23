@@ -65,8 +65,12 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
     [product.variants, variantId],
   );
   const selectedPlating = selectedVariant?.platingOptions.find(
-    (option) => option.type === platingType,
+    (option) => option.type === platingType && option.type !== product.defaultPlatingType,
   );
+  const paidPlatingOptions =
+    selectedVariant?.platingOptions.filter(
+      (option) => option.type !== product.defaultPlatingType,
+    ) ?? [];
   const selectedCartItem = selectedVariant
     ? (items.find((item) => item.key === cartItemKey(selectedVariant.id, platingType)) ?? null)
     : null;
@@ -251,7 +255,8 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         </p>
       ) : null}
 
-      {selectedVariant?.isAvailable && selectedVariant.platingOptions.length > 0 ? (
+      {selectedVariant?.isAvailable &&
+      (product.defaultPlatingType || paidPlatingOptions.length > 0) ? (
         <fieldset className="mt-6">
           <legend className="text-xs text-[var(--sf-color-muted)]">نوع آبکاری</legend>
           <div className="mt-3 grid gap-2">
@@ -270,12 +275,16 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
                   transition-colors peer-checked:border-[var(--sf-color-ink)]
                 "
               >
-                <span>بدون آبکاری</span>
-                <span className="text-xs text-[var(--sf-color-muted)]">بدون هزینه اضافه</span>
+                {product.defaultPlatingType ? (
+                  <PlatingTypeIndicator type={product.defaultPlatingType} />
+                ) : (
+                  <span>بدون آبکاری</span>
+                )}
+                <span className="text-xs text-[var(--sf-color-muted)]">بدون هزینه</span>
               </span>
             </label>
 
-            {selectedVariant.platingOptions.map((option) => (
+            {paidPlatingOptions.map((option) => (
               <label key={option.type} className="cursor-pointer">
                 <input
                   type="radio"

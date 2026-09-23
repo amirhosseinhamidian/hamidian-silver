@@ -50,6 +50,7 @@ import { UploadMediaDto } from './dto/upload-media.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateProductMediaDto } from './dto/update-product-media.dto';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
+import { UpdateProductRelationsDto } from './dto/update-product-relations.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { UpdateBrandDto } from './dto/update-brand.dto';
 import { UpdateCountryDto } from './dto/update-country.dto';
@@ -104,6 +105,17 @@ export class CatalogController {
   @ApiNotFoundResponse()
   getPublicProduct(@Param('slug') slug: string) {
     return this.catalogService.getPublicProduct(slug);
+  }
+
+  @Public()
+  @Get('public/products/:slug/related')
+  @ApiOkResponse({ type: PublicCatalogProductListDto })
+  listPublicRelatedProducts(
+    @Param('slug') slug: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.catalogService.listPublicRelatedProducts(slug, Number(page), Number(pageSize));
   }
 
   @Post('media')
@@ -502,6 +514,21 @@ export class CatalogController {
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
   getProduct(@Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string) {
     return this.catalogService.getProduct(productId);
+  }
+
+  @Get('products/:productId/relations')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
+  listProductRelations(@Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string) {
+    return this.catalogService.listProductRelations(productId);
+  }
+
+  @Patch('products/:productId/relations')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  updateProductRelations(
+    @Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string,
+    @Body() dto: UpdateProductRelationsDto,
+  ) {
+    return this.catalogService.updateProductRelations(productId, dto.relatedProductIds);
   }
 
   @Post('products/:productId/variants')

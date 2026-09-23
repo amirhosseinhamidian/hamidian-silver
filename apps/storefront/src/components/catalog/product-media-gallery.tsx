@@ -21,6 +21,14 @@ type GalleryItem = Readonly<{
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
 const swipeThreshold = 48;
+const maxZoom = 4;
+
+function touchDistance(touches: TouchEvent<HTMLElement>['touches']): number | null {
+  const first = touches[0];
+  const second = touches[1];
+  if (!first || !second) return null;
+  return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+}
 
 function isImage(media: PublicCatalogMedia | null | undefined): media is PublicCatalogMedia {
   return Boolean(media?.url && media.mimeType.startsWith('image/'));
@@ -44,7 +52,11 @@ export function ProductMediaGallery({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [fullscreenImageLoading, setFullscreenImageLoading] = useState(false);
+  const [zoom, setZoom] = useState(1);
   const touchStartX = useRef<number | null>(null);
+  const pinchStartDistance = useRef<number | null>(null);
+  const pinchStartZoom = useRef(1);
+  const didSwipe = useRef(false);
   const activeItem = items[activeIndex] ?? items[0];
   const hasMultipleImages = items.length > 1;
 
@@ -52,19 +64,23 @@ export function ProductMediaGallery({
     setActiveIndex(index);
     setFullscreenImageLoading(true);
     setOpen(true);
+    setZoom(1);
   }
 
   function showPrevious() {
+    setZoom(1);
     if (open) setFullscreenImageLoading(true);
     setActiveIndex((current) => (current - 1 + items.length) % items.length);
   }
 
   function showNext() {
+    setZoom(1);
     if (open) setFullscreenImageLoading(true);
     setActiveIndex((current) => (current + 1) % items.length);
   }
 
   function handleTouchStart(event: TouchEvent<HTMLElement>) {
+    didSwipe.current = false;
     touchStartX.current = event.changedTouches[0]?.clientX ?? null;
   }
 
@@ -84,10 +100,30 @@ export function ProductMediaGallery({
     const distance = startX - endX;
 
     if (distance > swipeThreshold) {
+      didSwipe.current = true;
       showNext();
     } else if (distance < -swipeThreshold) {
+      didSwipe.current = true;
       showPrevious();
     }
+  }
+
+  function handleZoomTouchStart(event: TouchEvent<HTMLElement>) {
+    if (event.touches.length !== 2) return;
+    pinchStartDistance.current = touchDistance(event.touches);
+    pinchStartZoom.current = zoom;
+  }
+
+  function handleZoomTouchMove(event: TouchEvent<HTMLElement>) {
+    const distance = touchDistance(event.touches);
+    if (distance === null || pinchStartDistance.current === null) return;
+    event.preventDefault();
+    const nextZoom = pinchStartZoom.current * (distance / pinchStartDistance.current);
+    setZoom(Math.min(maxZoom, Math.max(1, nextZoom)));
+  }
+
+  function handleZoomTouchEnd(event: TouchEvent<HTMLElement>) {
+    if (event.touches.length < 2) pinchStartDistance.current = null;
   }
 
   return (
@@ -115,9 +151,16 @@ export function ProductMediaGallery({
         "
       >
         {items.map((item, index) => (
-          <div
+          <button
+            type="button"
             key={`mobile-${item.media?.url ?? item.fallbackSrc ?? 'placeholder'}-${index}`}
             aria-hidden={index !== activeIndex}
+            aria-label={`بزرگ‌نمایی تصویر ${persianNumber.format(index + 1)} محصول ${productName}`}
+            tabIndex={index === activeIndex ? 0 : -1}
+            onClick={() => {
+              if (!didSwipe.current && canOpenItem(item)) openAt(index);
+              didSwipe.current = false;
+            }}
             className={`absolute inset-0 transition-opacity duration-700 ${
               index === activeIndex ? 'opacity-100' : 'pointer-events-none opacity-0'
             }`}
@@ -133,7 +176,7 @@ export function ProductMediaGallery({
               sizes="(min-width: 1024px) 50vw, 100vw"
               imageClassName="object-cover select-none"
             />
-          </div>
+          </button>
         ))}
 
         {hasMultipleImages ? (
@@ -242,11 +285,10 @@ export function ProductMediaGallery({
             }
           }}
           className="
-            fixed inset-0 z-[110] hidden h-[100dvh] grid-rows-[auto_minmax(0,1fr)]
+            fixed inset-0 z-[110] grid h-[100dvh] grid-rows-[auto_minmax(0,1fr)]
             overflow-hidden bg-[var(--sf-color-canvas)]
             data-[state=closed]:animate-[sf-overlay-close_240ms_ease-in_forwards]
             data-[state=open]:animate-[sf-overlay-open_300ms_ease-out]
-            lg:grid
           "
         >
           <header
@@ -288,16 +330,26 @@ export function ProductMediaGallery({
             role="group"
             aria-label="تصاویر تمام‌صفحه محصول"
             aria-roledescription="carousel"
-            onTouchStart={handleTouchStart}
+            onTouchStart={(event) => {
+              handleTouchStart(event);
+              handleZoomTouchStart(event);
+            }}
+            onTouchMove={handleZoomTouchMove}
             onTouchCancel={handleTouchCancel}
-            onTouchEnd={handleTouchEnd}
-            className="relative min-h-0 touch-pan-y overflow-hidden p-4 sm:p-8 lg:px-24 lg:py-10"
+            onTouchEnd={(event) => {
+              handleZoomTouchEnd(event);
+              if (zoom === 1) handleTouchEnd(event);
+            }}
+            className="relative min-h-0 touch-none overflow-hidden p-4 sm:p-8 lg:px-24 lg:py-10"
           >
             <div
               key={`${activeItem.media?.url ?? activeItem.fallbackSrc ?? 'placeholder'}-${
                 activeIndex
               }`}
-              className="relative h-full w-full animate-[sf-overlay-open_240ms_ease-out] motion-reduce:animate-none"
+              data-testid="fullscreen-zoom-surface"
+              data-zoom={zoom.toFixed(2)}
+              style={{ transform: `scale(${zoom})` }}
+              className="relative h-full w-full origin-center animate-[sf-overlay-open_240ms_ease-out] transition-transform duration-75 motion-reduce:animate-none"
             >
               {fullscreenImageLoading ? (
                 <div
@@ -325,7 +377,11 @@ export function ProductMediaGallery({
               />
             </div>
 
-            {hasMultipleImages ? (
+            <p className="pointer-events-none absolute inset-x-0 bottom-3 z-20 text-center text-xs text-[var(--sf-color-muted)] lg:hidden">
+              برای بزرگ‌نمایی از دو انگشت استفاده کنید
+            </p>
+
+            {hasMultipleImages && zoom === 1 ? (
               <>
                 <button
                   type="button"

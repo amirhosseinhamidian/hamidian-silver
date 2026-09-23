@@ -39,10 +39,10 @@ describe('StorefrontHeader', () => {
       '/products',
     );
     expect(screen.getByRole('img', { name: 'لوگوی نقره حمیدیان' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'علاقه‌مندی‌ها' })).toHaveAttribute(
-      'href',
-      '/wishlist',
-    );
+    expect(screen.getAllByRole('link', { name: 'علاقه‌مندی‌ها' })).toHaveLength(2);
+    for (const link of screen.getAllByRole('link', { name: 'علاقه‌مندی‌ها' })) {
+      expect(link).toHaveAttribute('href', '/wishlist');
+    }
     expect(screen.getAllByRole('button', { name: 'ورود یا ثبت‌نام' })).toHaveLength(2);
     expect(screen.getAllByRole('link', { name: 'سبد خرید' })).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'جستجو در محصولات' })).toBeInTheDocument();
@@ -54,6 +54,15 @@ describe('StorefrontHeader', () => {
     );
 
     expect(screen.getByRole('banner')).toHaveClass('sticky', 'top-0');
+
+    const mobileHeader = screen.getByRole('banner');
+    expect(within(mobileHeader).getByRole('link', { name: 'علاقه‌مندی‌ها' })).toHaveAttribute(
+      'href',
+      '/wishlist',
+    );
+    expect(
+      within(mobileHeader).queryByRole('link', { name: 'نشانی گالری' }),
+    ).not.toBeInTheDocument();
 
     const navigation = screen.getByRole('navigation', { name: 'پیمایش اصلی' });
     expect(navigation).toHaveClass('lg:col-start-2', 'lg:justify-self-center');

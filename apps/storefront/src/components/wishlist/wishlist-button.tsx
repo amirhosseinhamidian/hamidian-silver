@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { FiHeart, FiShare2 } from 'react-icons/fi';
+import { FiShare2 } from 'react-icons/fi';
 
 import { Button } from '@/components/ui/button';
+import { WishlistHeartIcon } from '@/components/wishlist/wishlist-heart-icon';
 import { trackWishlistChange } from '@/lib/analytics/commerce-events';
 import type { WishlistItem } from '@/lib/wishlist/wishlist-state';
 import { useWishlist } from '@/lib/wishlist/wishlist-store';
@@ -98,7 +99,7 @@ export function WishlistButton({ item }: WishlistButtonProps) {
   return (
     <div role="group" className="flex items-center gap-2" aria-label="اقدامات محصول">
       <IconAction label={wishlistLabel} pressed={active} onClick={handleWishlistToggle}>
-        <FiHeart aria-hidden="true" size={20} fill={active ? 'currentColor' : 'none'} />
+        <WishlistHeartIcon active={active} className="size-5" />
       </IconAction>
       <IconAction label={shareLabel} onClick={handleShare}>
         <FiShare2 aria-hidden="true" size={19} />

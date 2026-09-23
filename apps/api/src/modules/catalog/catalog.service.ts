@@ -23,6 +23,12 @@ type PublicProductSuggestionRow = {
   id: string;
 };
 
+type PublicNamedSuggestionRow = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
 @Injectable()
 export class CatalogService {
   constructor(
@@ -218,6 +224,7 @@ export class CatalogService {
           seoOgMediaId: dto.seoOgMediaId,
           status: dto.status ?? ProductStatus.DRAFT,
           sizeMode: dto.sizeMode,
+          defaultPlatingType: dto.defaultPlatingType,
           brandId: dto.brandId,
           countryId: dto.countryId,
         },
@@ -247,6 +254,10 @@ export class CatalogService {
           isActive: variant.isActive ?? true,
         })),
       });
+
+      if (dto.platingTypes !== undefined) {
+        await this.syncProductPlatingOptions(transaction, product.id, dto.platingTypes);
+      }
 
       if (productMedia.length > 0) {
         await transaction.productMedia.createMany({
@@ -288,6 +299,7 @@ export class CatalogService {
           variants: {
             include: {
               size: { include: { group: true } },
+              platingOptions: { where: { isActive: true }, include: { platingRate: true } },
             },
           },
           media: {
@@ -425,7 +437,10 @@ export class CatalogService {
         categories: { include: { category: true } },
         variants: {
           where: { deletedAt: null },
-          include: { size: { include: { group: true } } },
+          include: {
+            size: { include: { group: true } },
+            platingOptions: { where: { isActive: true }, include: { platingRate: true } },
+          },
         },
         media: {
           orderBy: { sortOrder: 'asc' },
@@ -516,6 +531,7 @@ export class CatalogService {
           countryId: dto.countryId,
           salePriceToman: dto.salePriceToman,
           compareAtPriceToman: dto.compareAtPriceToman,
+          defaultPlatingType: dto.defaultPlatingType,
         },
       });
 
@@ -547,6 +563,10 @@ export class CatalogService {
         }
       }
 
+      if (dto.platingTypes !== undefined) {
+        await this.syncProductPlatingOptions(transaction, productId, dto.platingTypes);
+      }
+
       return transaction.product.findUniqueOrThrow({
         where: { id: productId },
         include: {
@@ -555,7 +575,10 @@ export class CatalogService {
           categories: { include: { category: true } },
           variants: {
             where: { deletedAt: null },
-            include: { size: { include: { group: true } } },
+            include: {
+              size: { include: { group: true } },
+              platingOptions: { where: { isActive: true }, include: { platingRate: true } },
+            },
           },
           media: { orderBy: { sortOrder: 'asc' }, include: { media: true } },
           attributes: { orderBy: { sortOrder: 'asc' } },
@@ -1164,57 +1187,110 @@ export class CatalogService {
 
   async listPublicProductSuggestions(query: string, limit = 8) {
     const search = normalizeCatalogSearch(query);
-    if (search.length < 2) return { items: [] };
+    if (search.length < 2) return { items: [], categories: [], brands: [] };
 
-    const rows = await this.prisma.$queryRaw<PublicProductSuggestionRow[]>(Prisma.sql`
-      WITH ${this.publicSearchMatchesSql(search)},
-      ranked_search AS (
-        SELECT "productId", MAX(score) AS score
-        FROM search_matches
-        GROUP BY "productId"
-      )
-      SELECT product.id
-      FROM ranked_search
-      JOIN "products" AS product ON product.id = ranked_search."productId"
-      WHERE product."status" = 'ACTIVE'
-        AND product."deletedAt" IS NULL
-      ORDER BY ranked_search.score DESC, product."createdAt" DESC, product.id ASC
-      LIMIT ${Math.min(Math.max(limit, 1), 8)}
-    `);
+    const [rows, categories, brands] = await Promise.all([
+      this.prisma.$queryRaw<PublicProductSuggestionRow[]>(Prisma.sql`
+        WITH ${this.publicSearchMatchesSql(search)},
+        ranked_search AS (
+          SELECT "productId", MAX(score) AS score
+          FROM search_matches
+          GROUP BY "productId"
+        )
+        SELECT product.id
+        FROM ranked_search
+        JOIN "products" AS product ON product.id = ranked_search."productId"
+        WHERE product."status" = 'ACTIVE'
+          AND product."deletedAt" IS NULL
+        ORDER BY ranked_search.score DESC, product."createdAt" DESC, product.id ASC
+        LIMIT ${Math.min(Math.max(limit, 1), 8)}
+      `),
+      this.prisma.$queryRaw<PublicNamedSuggestionRow[]>(Prisma.sql`
+        WITH search_query AS (
+          SELECT normalize_fa_search(${search}) AS value
+        )
+        SELECT category.id, category.name, category.slug
+        FROM "categories" AS category
+        CROSS JOIN search_query
+        WHERE category."isActive" = TRUE
+          AND category."deletedAt" IS NULL
+          AND (
+            normalize_fa_search(category.name) % search_query.value
+            OR normalize_fa_search(category.name) LIKE '%' || search_query.value || '%'
+          )
+        ORDER BY
+          CASE
+            WHEN normalize_fa_search(category.name) = search_query.value THEN 0
+            WHEN normalize_fa_search(category.name) LIKE search_query.value || '%' THEN 1
+            ELSE 2
+          END,
+          similarity(normalize_fa_search(category.name), search_query.value) DESC,
+          category."sortOrder" ASC,
+          category.name ASC,
+          category.id ASC
+        LIMIT 4
+      `),
+      this.prisma.$queryRaw<PublicNamedSuggestionRow[]>(Prisma.sql`
+        WITH search_query AS (
+          SELECT normalize_fa_search(${search}) AS value
+        )
+        SELECT brand.id, brand.name, brand.slug
+        FROM "brands" AS brand
+        CROSS JOIN search_query
+        WHERE brand."isActive" = TRUE
+          AND brand."deletedAt" IS NULL
+          AND (
+            normalize_fa_search(brand.name) % search_query.value
+            OR normalize_fa_search(brand.name) LIKE '%' || search_query.value || '%'
+          )
+        ORDER BY
+          CASE
+            WHEN normalize_fa_search(brand.name) = search_query.value THEN 0
+            WHEN normalize_fa_search(brand.name) LIKE search_query.value || '%' THEN 1
+            ELSE 2
+          END,
+          similarity(normalize_fa_search(brand.name), search_query.value) DESC,
+          brand.name ASC,
+          brand.id ASC
+        LIMIT 4
+      `),
+    ]);
     const productIds = rows.map(({ id }) => id);
-    if (productIds.length === 0) return { items: [] };
 
-    const products = await this.prisma.product.findMany({
-      where: {
-        id: { in: productIds },
-        status: ProductStatus.ACTIVE,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        salePriceToman: true,
-        compareAtPriceToman: true,
-        media: {
-          orderBy: { sortOrder: 'asc' },
-          select: {
-            isPrimary: true,
-            altText: true,
-            media: {
-              select: {
-                storageKey: true,
-                mimeType: true,
-                altText: true,
-                width: true,
-                height: true,
-                deletedAt: true,
+    const products =
+      productIds.length > 0
+        ? await this.prisma.product.findMany({
+            where: {
+              id: { in: productIds },
+              status: ProductStatus.ACTIVE,
+              deletedAt: null,
+            },
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              salePriceToman: true,
+              compareAtPriceToman: true,
+              media: {
+                orderBy: { sortOrder: 'asc' },
+                select: {
+                  isPrimary: true,
+                  altText: true,
+                  media: {
+                    select: {
+                      storageKey: true,
+                      mimeType: true,
+                      altText: true,
+                      width: true,
+                      height: true,
+                      deletedAt: true,
+                    },
+                  },
+                },
               },
             },
-          },
-        },
-      },
-    });
+          })
+        : [];
     const productById = new Map(products.map((product) => [product.id, product] as const));
 
     return {
@@ -1244,6 +1320,8 @@ export class CatalogService {
           },
         ];
       }),
+      categories,
+      brands,
     };
   }
 
@@ -1267,6 +1345,7 @@ export class CatalogService {
         salePriceToman: true,
         compareAtPriceToman: true,
         sizeMode: true,
+        defaultPlatingType: true,
         brand: {
           select: {
             id: true,
@@ -1537,6 +1616,7 @@ export class CatalogService {
       salePriceToman: product.salePriceToman,
       compareAtPriceToman: product.compareAtPriceToman,
       sizeMode: product.sizeMode,
+      defaultPlatingType: product.defaultPlatingType,
       brand:
         product.brand?.isActive && !product.brand.deletedAt
           ? {
@@ -1609,6 +1689,243 @@ export class CatalogService {
       media,
       attributes: product.attributes,
     };
+  }
+
+  async listProductRelations(productId: string) {
+    await this.requireProduct(productId);
+    const relations = await this.prisma.productRelation.findMany({
+      where: { OR: [{ sourceProductId: productId }, { targetProductId: productId }] },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        sourceProduct: { select: { id: true, name: true, slug: true, status: true } },
+        targetProduct: { select: { id: true, name: true, slug: true, status: true } },
+      },
+    });
+
+    return relations.map((relation) =>
+      relation.sourceProductId === productId ? relation.targetProduct : relation.sourceProduct,
+    );
+  }
+
+  async updateProductRelations(productId: string, relatedProductIds: string[]) {
+    if (relatedProductIds.includes(productId)) {
+      throw new BadRequestException('A product cannot be related to itself.');
+    }
+
+    return this.prisma.$transaction(async (transaction) => {
+      const products = await transaction.product.findMany({
+        where: { id: { in: [productId, ...relatedProductIds] }, deletedAt: null },
+        select: { id: true },
+      });
+      if (products.length !== relatedProductIds.length + 1) {
+        throw new NotFoundException('One or more products were not found.');
+      }
+
+      await transaction.productRelation.deleteMany({
+        where: { OR: [{ sourceProductId: productId }, { targetProductId: productId }] },
+      });
+      if (relatedProductIds.length > 0) {
+        await transaction.productRelation.createMany({
+          data: relatedProductIds.map((relatedProductId) => {
+            const [sourceProductId, targetProductId] = [productId, relatedProductId].sort();
+            return { sourceProductId: sourceProductId!, targetProductId: targetProductId! };
+          }),
+          skipDuplicates: true,
+        });
+      }
+
+      return relatedProductIds;
+    });
+  }
+
+  async listPublicRelatedProducts(slug: string, requestedPage: number, requestedPageSize: number) {
+    const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const pageSize =
+      Number.isSafeInteger(requestedPageSize) && requestedPageSize > 0
+        ? Math.min(requestedPageSize, 24)
+        : 8;
+    const product = await this.prisma.product.findFirst({
+      where: { slug, status: ProductStatus.ACTIVE, deletedAt: null },
+      select: { id: true, categories: { select: { categoryId: true } } },
+    });
+    if (!product) throw new NotFoundException('Product was not found.');
+
+    const relations = await this.prisma.productRelation.findMany({
+      where: { OR: [{ sourceProductId: product.id }, { targetProductId: product.id }] },
+      orderBy: { createdAt: 'asc' },
+      select: { sourceProductId: true, targetProductId: true },
+    });
+    const relationIds = relations.map((relation) =>
+      relation.sourceProductId === product.id ? relation.targetProductId : relation.sourceProductId,
+    );
+    const activeExplicitProducts = await this.prisma.product.findMany({
+      where: { id: { in: relationIds }, status: ProductStatus.ACTIVE, deletedAt: null },
+      select: { id: true },
+    });
+    const activeExplicitIdSet = new Set(activeExplicitProducts.map(({ id }) => id));
+    const explicitIds = relationIds.filter((id) => activeExplicitIdSet.has(id));
+    const categoryIds = product.categories.map(({ categoryId }) => categoryId);
+    const fallback =
+      categoryIds.length > 0
+        ? await this.prisma.product.findMany({
+            where: {
+              id: { notIn: [product.id, ...explicitIds] },
+              status: ProductStatus.ACTIVE,
+              deletedAt: null,
+              categories: { some: { categoryId: { in: categoryIds } } },
+            },
+            orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+            select: { id: true },
+          })
+        : [];
+    const orderedIds = [...explicitIds, ...fallback.map(({ id }) => id)];
+    const pageIds = orderedIds.slice((page - 1) * pageSize, page * pageSize);
+    const summaries = await this.publicProductSummariesByIds(pageIds);
+    const byId = new Map(summaries.map((summary) => [summary.id, summary]));
+
+    return {
+      items: pageIds.map((id) => byId.get(id)).filter(Boolean),
+      page,
+      pageSize,
+      total: orderedIds.length,
+      totalPages: Math.ceil(orderedIds.length / pageSize),
+    };
+  }
+
+  private async publicProductSummariesByIds(productIds: string[]) {
+    if (productIds.length === 0) return [];
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds }, status: ProductStatus.ACTIVE, deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        shortDescription: true,
+        seoCanonicalPath: true,
+        seoNoIndex: true,
+        salePriceToman: true,
+        compareAtPriceToman: true,
+        sizeMode: true,
+        brand: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            isActive: true,
+            deletedAt: true,
+          },
+        },
+        categories: {
+          select: {
+            category: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                description: true,
+                parentId: true,
+                sortOrder: true,
+                isActive: true,
+                deletedAt: true,
+              },
+            },
+          },
+        },
+        variants: {
+          where: { isActive: true, deletedAt: null },
+          select: {
+            salePriceToman: true,
+            compareAtPriceToman: true,
+            inventories: {
+              select: {
+                onHand: true,
+                reserved: true,
+                warehouse: { select: { isActive: true, deletedAt: true } },
+              },
+            },
+          },
+        },
+        media: {
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            isPrimary: true,
+            altText: true,
+            media: {
+              select: {
+                storageKey: true,
+                mimeType: true,
+                altText: true,
+                width: true,
+                height: true,
+                deletedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return products.map((product) => {
+      const availableQuantity = product.variants.reduce(
+        (productTotal, variant) =>
+          productTotal +
+          variant.inventories.reduce(
+            (total, inventory) =>
+              inventory.warehouse.isActive && !inventory.warehouse.deletedAt
+                ? total + Math.max(0, inventory.onHand - inventory.reserved)
+                : total,
+            0,
+          ),
+        0,
+      );
+      const prices = product.variants
+        .map((variant) => ({
+          sale: variant.salePriceToman ?? product.salePriceToman,
+          compare: variant.compareAtPriceToman ?? product.compareAtPriceToman,
+        }))
+        .filter((price): price is { sale: number; compare: number | null } => price.sale !== null)
+        .sort((left, right) => left.sale - right.sale);
+      const primary =
+        product.media.find((item) => item.isPrimary && !item.media.deletedAt) ??
+        product.media.find((item) => !item.media.deletedAt);
+      return {
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        shortDescription: product.shortDescription,
+        seoCanonicalPath: product.seoCanonicalPath,
+        seoNoIndex: product.seoNoIndex,
+        salePriceToman: prices[0]?.sale ?? product.salePriceToman,
+        compareAtPriceToman: prices[0]?.compare ?? product.compareAtPriceToman,
+        sizeMode: product.sizeMode,
+        brand:
+          product.brand?.isActive && !product.brand.deletedAt
+            ? {
+                id: product.brand.id,
+                name: product.brand.name,
+                slug: product.brand.slug,
+                description: product.brand.description,
+                image: null,
+                originCountry: null,
+              }
+            : null,
+        categories: product.categories
+          .filter(({ category }) => category.isActive && !category.deletedAt)
+          .map(({ category }) => ({ ...category, image: null })),
+        primaryMedia: primary
+          ? {
+              url: this.publicMediaUrl.resolve(primary.media.storageKey),
+              mimeType: primary.media.mimeType,
+              altText: primary.altText ?? primary.media.altText,
+              width: primary.media.width,
+              height: primary.media.height,
+            }
+          : null,
+        availableQuantity,
+        isAvailable: availableQuantity > 0,
+      };
+    });
   }
 
   private async searchPublicProductIds(input: {
@@ -1862,6 +2179,49 @@ export class CatalogService {
 
     if (!media) {
       throw new NotFoundException('Media was not found.');
+    }
+  }
+
+  private async requireProduct(productId: string): Promise<void> {
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!product) throw new NotFoundException('Product was not found.');
+  }
+
+  private async syncProductPlatingOptions(
+    transaction: Prisma.TransactionClient,
+    productId: string,
+    types: readonly import('../../generated/prisma/enums').PlatingType[],
+  ): Promise<void> {
+    const rates = await transaction.platingRate.findMany({
+      where: { type: { in: [...types] }, isActive: true },
+      select: { id: true, type: true },
+    });
+    if (rates.length !== types.length) {
+      throw new BadRequestException('Every selected plating type must have an active rate.');
+    }
+    const variants = await transaction.productVariant.findMany({
+      where: { productId, deletedAt: null },
+      select: { id: true },
+    });
+    await transaction.productVariant.updateMany({
+      where: { productId, deletedAt: null },
+      data: { platingEligible: types.length > 0 },
+    });
+    await transaction.productPlatingOption.updateMany({
+      where: { variant: { productId }, isActive: true },
+      data: { isActive: false },
+    });
+    for (const variant of variants) {
+      for (const rate of rates) {
+        await transaction.productPlatingOption.upsert({
+          where: { variantId_platingRateId: { variantId: variant.id, platingRateId: rate.id } },
+          create: { variantId: variant.id, platingRateId: rate.id, isActive: true },
+          update: { isActive: true },
+        });
+      }
     }
   }
 

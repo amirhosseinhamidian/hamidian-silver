@@ -592,6 +592,7 @@ model Product {
   seoOgMediaId     String?               @db.Uuid
   status           ProductStatus         @default(DRAFT)
   sizeMode         SizeMode              @default(NONE)
+  defaultPlatingType PlatingType?
   brandId          String?               @db.Uuid
   countryId        String?               @db.Uuid
   salePriceToman               Int?
@@ -610,6 +611,8 @@ model Product {
   priceHistory     ProductPriceHistory[]
   stockNotificationSubscriptions StockNotificationSubscription[]
   homepagePopularFeature HomepagePopularProduct?
+  relatedProductsAsSource ProductRelation[] @relation("ProductRelationSource")
+  relatedProductsAsTarget ProductRelation[] @relation("ProductRelationTarget")
 
   @@index([brandId])
   @@index([countryId])
@@ -617,6 +620,18 @@ model Product {
   @@index([status])
   @@index([deletedAt])
   @@map("products")
+}
+
+model ProductRelation {
+  sourceProductId String   @db.Uuid
+  targetProductId String   @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  sourceProduct   Product  @relation("ProductRelationSource", fields: [sourceProductId], references: [id], onDelete: Cascade)
+  targetProduct   Product  @relation("ProductRelationTarget", fields: [targetProductId], references: [id], onDelete: Cascade)
+
+  @@id([sourceProductId, targetProductId])
+  @@index([targetProductId])
+  @@map("product_relations")
 }
 
 model ProductAttribute {

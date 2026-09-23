@@ -8,15 +8,27 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  IsEnum,
   Length,
   Matches,
   MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
+import { PlatingType } from '../../../generated/prisma/enums';
 import { ProductAttributeInputDto } from './create-product.dto';
 
 export class UpdateProductDto {
+  @IsOptional()
+  @IsEnum(PlatingType)
+  defaultPlatingType?: PlatingType | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  @ArrayUnique()
+  @IsEnum(PlatingType, { each: true })
+  platingTypes?: PlatingType[];
   @IsOptional()
   @IsString()
   @Length(1, 200)

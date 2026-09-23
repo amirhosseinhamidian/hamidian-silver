@@ -10,7 +10,9 @@ import { StorefrontSearch } from '@/components/layout/storefront-search';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { FiHeart, FiMapPin } from 'react-icons/fi';
+import { FiMapPin } from 'react-icons/fi';
+
+import { WishlistHeaderLink } from '@/components/wishlist/wishlist-header-link';
 
 export type StorefrontNavigationCategory = Readonly<{
   id: string;
@@ -94,9 +96,7 @@ export function StorefrontHeader({
           </Link>
 
           <div className="flex items-center justify-end gap-1">
-            <IconLink href="/wishlist" label="علاقه‌مندی‌ها">
-              <FiHeart aria-hidden="true" size={21} />
-            </IconLink>
+            <WishlistHeaderLink />
             <AccountHeaderAction authenticated={authenticated} />
             <span className="hidden sm:inline-flex">
               <IconLink href="/contact" label="نشانی گالری">
@@ -173,9 +173,7 @@ export function StorefrontHeader({
 
           <div className="flex items-center justify-end gap-1 lg:hidden">
             <AccountHeaderAction authenticated={authenticated} />
-            <IconLink href="/contact" label="نشانی گالری">
-              <FiMapPin aria-hidden="true" size={21} />
-            </IconLink>
+            <WishlistHeaderLink />
             <CartHeaderLink />
           </div>
         </div>

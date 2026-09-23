@@ -227,6 +227,9 @@ export function ProductForm({ data, mode }: ProductFormProps) {
 
     const brandId = String(formData.get('brandId') ?? 'none');
     const countryId = String(formData.get('countryId') ?? 'none');
+    const defaultPlatingType = String(formData.get('defaultPlatingType') ?? 'none');
+    const platingTypes = formData.getAll('platingTypes').map(String);
+    const relatedProductIds = formData.getAll('relatedProductIds').map(String);
     const payload: Record<string, unknown> = {
       name,
       slug,
@@ -238,6 +241,8 @@ export function ProductForm({ data, mode }: ProductFormProps) {
       compareAtPriceToman: compareAtPriceToman ?? null,
       categoryIds: formData.getAll('categoryIds').map(String),
       attributes: normalizedAttributes,
+      defaultPlatingType: defaultPlatingType === 'none' ? null : defaultPlatingType,
+      platingTypes,
       ...seoEditorPayload(seo),
     };
 
@@ -363,6 +368,17 @@ export function ProductForm({ data, mode }: ProductFormProps) {
         typeof (responsePayload as { id?: unknown }).id === 'string'
           ? (responsePayload as { id: string }).id
           : null;
+      const savedProductId = createdProductId ?? product?.id;
+      if (savedProductId && (mode === 'edit' || relatedProductIds.length > 0)) {
+        const relationResponse = await fetch(`/api/catalog/products/${savedProductId}/relations`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ relatedProductIds }),
+        });
+        if (!relationResponse.ok) {
+          throw new Error(apiError(await relationResponse.json().catch(() => null)));
+        }
+      }
       router.push(createdProductId ? `/variants/${createdProductId}` : '/products');
       router.refresh();
     } catch (caught) {
@@ -507,6 +523,53 @@ export function ProductForm({ data, mode }: ProductFormProps) {
         </Card>
       </div>
 
+      <Card
+        title="آبکاری پیش‌فرض محصول"
+        description="آبکاری انتخاب‌شده همراه خود محصول است و برای مشتری هزینه اضافه ندارد. سایر گزینه‌های آبکاری همچنان با نرخ تنظیم‌شده محاسبه می‌شوند."
+      >
+        <div className="space-y-5">
+          <FormField id="product-default-plating" label="نوع آبکاری پیش‌فرض">
+            {(props) => (
+              <Select
+                {...props}
+                name="defaultPlatingType"
+                defaultValue={product?.defaultPlatingType ?? 'none'}
+                options={[
+                  { value: 'none', label: 'بدون آبکاری پیش‌فرض' },
+                  { value: 'RHODIUM', label: 'آبکاری رودیوم' },
+                  { value: 'GOLD', label: 'آبکاری طلایی' },
+                  { value: 'ROSE_GOLD', label: 'آبکاری رزگلد' },
+                ]}
+              />
+            )}
+          </FormField>
+          <fieldset>
+            <legend className="text-sm font-bold">آبکاری‌های سفارشی قابل انتخاب مشتری</legend>
+            <p className="mt-1 text-xs leading-6 text-[var(--admin-color-muted)]">
+              هزینه این گزینه‌ها بر اساس وزن تنوع و نرخ فعال تنظیمات آبکاری محاسبه می‌شود.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              {[
+                ['RHODIUM', 'رودیوم'],
+                ['GOLD', 'طلایی'],
+                ['ROSE_GOLD', 'رزگلد'],
+              ].map(([value, label]) => (
+                <Checkbox
+                  key={value}
+                  id={`product-plating-${value}`}
+                  name="platingTypes"
+                  value={value}
+                  label={label}
+                  defaultChecked={product?.platingTypes?.includes(
+                    value as 'GOLD' | 'ROSE_GOLD' | 'RHODIUM',
+                  )}
+                />
+              ))}
+            </div>
+          </fieldset>
+        </div>
+      </Card>
+
       <Card title="دسته‌بندی‌ها" description="محصول می‌تواند در چند دسته نمایش داده شود">
         {data.categories.length ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -524,6 +587,30 @@ export function ProductForm({ data, mode }: ProductFormProps) {
         ) : (
           <p className="text-sm text-[var(--admin-color-muted)]">
             هنوز دسته‌بندی فعالی ثبت نشده است.
+          </p>
+        )}
+      </Card>
+
+      <Card
+        title="محصولات مرتبط"
+        description="ارتباط‌ها دوطرفه هستند؛ انتخاب این محصول برای هر طرف، در صفحه هر دو محصول اعمال می‌شود."
+      >
+        {(data.products ?? []).length ? (
+          <div className="grid max-h-72 gap-3 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
+            {(data.products ?? []).map((relatedProduct) => (
+              <Checkbox
+                key={relatedProduct.id}
+                id={`related-product-${relatedProduct.id}`}
+                name="relatedProductIds"
+                value={relatedProduct.id}
+                label={relatedProduct.name}
+                defaultChecked={(data.relatedProductIds ?? []).includes(relatedProduct.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--admin-color-muted)]">
+            محصول دیگری برای ارتباط‌سازی وجود ندارد.
           </p>
         )}
       </Card>

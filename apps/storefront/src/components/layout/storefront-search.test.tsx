@@ -21,6 +21,8 @@ describe('StorefrontSearch', () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({
+        categories: [],
+        brands: [],
         items: [
           {
             id: 'product-1',
@@ -61,6 +63,54 @@ describe('StorefrontSearch', () => {
     expect(clickSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('shows matching categories and brands before product suggestions', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        categories: [{ id: 'category-1', name: 'انگشتر', slug: 'rings' }],
+        brands: [{ id: 'brand-1', name: 'حمیدیان', slug: 'hamidian' }],
+        items: [
+          {
+            id: 'product-1',
+            name: 'انگشتر حمیدیان',
+            slug: 'hamidian-ring',
+            salePriceToman: 850_000,
+            compareAtPriceToman: null,
+            primaryMedia: null,
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const input = openSearch();
+
+    fireEvent.change(input, { target: { value: 'انگشتر حمیدیان' } });
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(screen.getByText('دسته‌بندی‌ها')).toBeInTheDocument();
+    expect(screen.getByText('برندها')).toBeInTheDocument();
+    expect(screen.getByText('محصولات')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'انگشتر' })).toHaveAttribute(
+      'href',
+      '/categories/rings',
+    );
+    expect(screen.getByRole('option', { name: 'حمیدیان' })).toHaveAttribute(
+      'href',
+      '/brands/hamidian',
+    );
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(screen.getByRole('option', { name: 'انگشتر' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(screen.getByRole('option', { name: 'حمیدیان' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
   it('aborts an in-flight suggestion request when the query changes', async () => {
     vi.useFakeTimers();
     let firstSignal: AbortSignal | undefined;
@@ -85,7 +135,10 @@ describe('StorefrontSearch', () => {
     vi.useFakeTimers();
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue({ items: [] }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue({ items: [], categories: [], brands: [] }),
+      })
       .mockResolvedValueOnce({ ok: false, json: vi.fn().mockResolvedValue({}) });
     vi.stubGlobal('fetch', fetchMock);
     const input = openSearch();
@@ -94,7 +147,7 @@ describe('StorefrontSearch', () => {
     await act(async () => {
       vi.advanceTimersByTime(300);
     });
-    expect(screen.getByText('محصولی برای این عبارت پیدا نشد.')).toBeInTheDocument();
+    expect(screen.getByText('نتیجه‌ای برای این عبارت پیدا نشد.')).toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: 'خطای جستجو' } });
     await act(async () => {

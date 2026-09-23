@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { StorefrontSizeGuide } from '@/components/content/storefront-size-guide';
@@ -28,8 +28,18 @@ describe('StorefrontSizeGuide', () => {
     expect(screen.getByRole('heading', { name: 'اندازه انگشتر' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'اندازه دستبند' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'طول گردنبند' })).toBeInTheDocument();
-    expect(screen.getAllByText('۵۲')).toHaveLength(2);
-    expect(screen.getByText('۱۶.۶')).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: /انگشتر روی خط‌کش با خط اندازه‌گیری/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('لبه داخلی تا لبه داخلی')).toBeInTheDocument();
+    const ringTable = screen.getByRole('table', {
+      name: 'جدول تبدیل قطر داخلی به سایز استاندارد انگشتر',
+    });
+    expect(within(ringTable).getByText('۳.۵')).toBeInTheDocument();
+    expect(within(ringTable).getByText('۱۴.۴')).toBeInTheDocument();
+    expect(within(ringTable).getByText('۱۳.۵')).toBeInTheDocument();
+    expect(within(ringTable).getByText('۲۲.۶')).toBeInTheDocument();
+    expect(within(ringTable).queryByText('محیط انگشت (میلی‌متر)')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'دریافت مشاوره' })).toHaveAttribute('href', '/contact');
     expect(screen.getByRole('heading', { name: 'نکته اختصاصی' })).toBeInTheDocument();
   });

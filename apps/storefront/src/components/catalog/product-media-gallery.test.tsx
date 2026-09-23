@@ -55,6 +55,30 @@ describe('ProductMediaGallery', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('opens the mobile image and supports two-finger pinch zoom', () => {
+    render(<ProductMediaGallery productName="انگشتر نقره" media={media} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'بزرگ‌نمایی تصویر ۱ محصول انگشتر نقره' }));
+    const dialog = screen.getByRole('dialog');
+    const zoomSurface = within(dialog).getByTestId('fullscreen-zoom-surface');
+    const zoomArea = zoomSurface.parentElement!;
+
+    fireEvent.touchStart(zoomArea, {
+      touches: [
+        { clientX: 100, clientY: 100 },
+        { clientX: 200, clientY: 100 },
+      ],
+    });
+    fireEvent.touchMove(zoomArea, {
+      touches: [
+        { clientX: 50, clientY: 100 },
+        { clientX: 250, clientY: 100 },
+      ],
+    });
+
+    expect(zoomSurface).toHaveAttribute('data-zoom', '2.00');
+  });
+
   it('disables carousel behavior when only one image exists', () => {
     render(<ProductMediaGallery productName="انگشتر نقره" media={[media[0]!]} />);
 

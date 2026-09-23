@@ -7,7 +7,7 @@ export async function GET(request: Request): Promise<Response> {
   const query = normalizeCatalogSearchText(new URL(request.url).searchParams.get('q') ?? '');
 
   if (query.length < 2 || query.length > 100) {
-    return Response.json({ items: [] });
+    return Response.json({ items: [], categories: [], brands: [] });
   }
 
   try {

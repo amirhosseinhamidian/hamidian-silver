@@ -2,6 +2,7 @@ import { toAsciiDigits } from '@/lib/presentation/formatters';
 
 export type ProductStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
 export type ProductSizeMode = 'NONE' | 'FREE_SIZE' | 'SIZED';
+export type ProductPlatingType = 'GOLD' | 'ROSE_GOLD' | 'RHODIUM';
 
 export type CatalogLookup = Readonly<{
   id: string;
@@ -106,6 +107,7 @@ export type AdminProductVariant = Readonly<{
   compareAtPriceToman: number | null;
   active: boolean;
   size: VariantSize | null;
+  platingTypes?: readonly ProductPlatingType[];
 }>;
 
 export type AdminProductMedia = Readonly<{
@@ -136,6 +138,8 @@ export type AdminProduct = Readonly<{
   description: string | null;
   status: ProductStatus;
   sizeMode: ProductSizeMode;
+  defaultPlatingType?: ProductPlatingType | null;
+  platingTypes?: readonly ProductPlatingType[];
   sizeGroup: CatalogSizeGroup | null;
   salePriceToman: number | null;
   compareAtPriceToman: number | null;
@@ -209,6 +213,12 @@ function parseVariant(value: unknown): AdminProductVariant | null {
   const sizeId = text(size?.id);
   const sizeLabel = text(size?.label);
   const sizeGroup = parseSizeGroup(size?.group);
+  const platingTypes = (Array.isArray(item?.platingOptions) ? item.platingOptions : [])
+    .map((option) => text(record(record(option)?.platingRate)?.type))
+    .filter(
+      (type): type is ProductPlatingType =>
+        type === 'GOLD' || type === 'ROSE_GOLD' || type === 'RHODIUM',
+    );
   return {
     id,
     sku,
@@ -219,6 +229,7 @@ function parseVariant(value: unknown): AdminProductVariant | null {
     active: item?.isActive !== false,
     size:
       sizeId && sizeLabel && sizeGroup ? { id: sizeId, label: sizeLabel, group: sizeGroup } : null,
+    platingTypes,
   };
 }
 
@@ -333,6 +344,13 @@ export function parseAdminProduct(value: unknown): AdminProduct | null {
     description: text(item?.description),
     status,
     sizeMode,
+    defaultPlatingType:
+      item?.defaultPlatingType === 'GOLD' ||
+      item?.defaultPlatingType === 'ROSE_GOLD' ||
+      item?.defaultPlatingType === 'RHODIUM'
+        ? item.defaultPlatingType
+        : null,
+    platingTypes: [...new Set(variants.flatMap((variant) => variant.platingTypes ?? []))],
     sizeGroup: variants.find((variant) => variant.size)?.size?.group ?? null,
     salePriceToman: number(item?.salePriceToman),
     compareAtPriceToman: number(item?.compareAtPriceToman),
