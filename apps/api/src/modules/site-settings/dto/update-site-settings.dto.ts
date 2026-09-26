@@ -19,6 +19,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { SEO_TITLE_TEMPLATE_PATTERN } from '../../seo/seo-validation';
+
 export class UpdateSiteAnnouncementDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -160,6 +162,9 @@ export class UpdateSiteSettingsDto {
   @IsString()
   @MinLength(1)
   @MaxLength(200)
+  @Matches(SEO_TITLE_TEMPLATE_PATTERN, {
+    message: 'seoTitleTemplate must contain exactly one %s token.',
+  })
   seoTitleTemplate?: string;
 
   @IsOptional()
