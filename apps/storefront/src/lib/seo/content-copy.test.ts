@@ -11,7 +11,6 @@ import {
 import type {
   PublicCatalogBrandPage,
   PublicCatalogCategoryPage,
-  PublicCatalogProductDetail,
 } from '@/lib/catalog/public-catalog';
 
 const category = (overrides: Partial<PublicCatalogCategoryPage> = {}): PublicCatalogCategoryPage => ({
@@ -58,7 +57,7 @@ describe('SEO content fallbacks', () => {
       name: 'دستبند نقره ماری',
       shortDescription: 'طراحی لوکس و مینیمال',
       description: 'توضیح کامل',
-    } as PublicCatalogProductDetail;
+    };
 
     expect(productSeoDescription(product)).toBe('طراحی لوکس و مینیمال');
     expect(
