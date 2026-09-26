@@ -66,6 +66,27 @@ describe('ProductMediaManager', () => {
     expect(router.refresh).toHaveBeenCalled();
   });
 
+  it('warns about missing alt text and does not allow saving an empty alt', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse());
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <ProductMediaManager
+        productId="product-1"
+        productName="انگشتر نقره"
+        media={[{ ...media[0], altText: null }]}
+      />,
+    );
+
+    expect(screen.getByText(/۱ تصویر متن جایگزین اختصاصی ندارد/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'جزئیات و ویرایش' }));
+    const altInput = await screen.findByLabelText('متن جایگزین');
+    fireEvent.change(altInput, { target: { value: '   ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره متن جایگزین' }));
+
+    expect(screen.getByText('برای تصاویر محصول متن جایگزین توصیفی الزامی است.')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('uploads selected local files through the same-origin admin BFF', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: 'media-1' }));
     vi.stubGlobal('fetch', fetchMock);
