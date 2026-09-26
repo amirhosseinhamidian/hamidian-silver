@@ -17,8 +17,8 @@ import {
   getPublicCatalogCategories,
   getPublicCatalogProduct,
   getPublicRelatedProducts,
+  selectPrimaryCatalogCategory,
   type CatalogSearchParams,
-  type PublicCatalogCategoryPage,
 } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
@@ -28,24 +28,6 @@ import { getPublicSeoRedirect } from '@/lib/seo/redirects';
 import { buildProductStructuredData } from '@/lib/seo/structured-data';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 import { platingPresentation } from '@/lib/plating/presentation';
-
-function categoryDepth(
-  categories: Awaited<ReturnType<typeof getPublicCatalogCategories>>,
-  category: Awaited<ReturnType<typeof getPublicCatalogCategories>>[number],
-): number {
-  const byId = new Map(categories.map((item) => [item.id, item] as const));
-  let depth = 0;
-  let current = category;
-  const visited = new Set<string>();
-  while (current.parentId && !visited.has(current.parentId)) {
-    visited.add(current.parentId);
-    const parent = byId.get(current.parentId);
-    if (!parent) break;
-    depth += 1;
-    current = parent;
-  }
-  return depth;
-}
 
 type ProductDetailPageProps = Readonly<{
   params: Promise<{
@@ -101,10 +83,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   }
 
   const relatedProducts = await getPublicRelatedProducts(slug, 1, 8);
-  const primaryAssignedCategory = product.categories
-    .map((assigned) => categories.find((candidate) => candidate.id === assigned.id))
-    .filter((candidate): candidate is PublicCatalogCategoryPage => candidate !== undefined)
-    .sort((left, right) => categoryDepth(categories, right) - categoryDepth(categories, left))[0];
+  const primaryAssignedCategory = selectPrimaryCatalogCategory(categories, product.categories);
   const productBreadcrumbs = primaryAssignedCategory
     ? [
         ...buildCategoryBreadcrumbItems(categories, primaryAssignedCategory),
