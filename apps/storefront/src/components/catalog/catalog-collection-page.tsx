@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 import { CatalogProductGrid } from '@/components/catalog/catalog-product-grid';
 import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
@@ -9,7 +7,6 @@ import { FormField } from '@/components/ui/form-field';
 import { Select } from '@/components/ui/select';
 import { getCatalogDevProductImageSources } from '@/lib/catalog/dev-media.server';
 import {
-  buildCatalogCollectionHref,
   type CatalogFilters,
   type PublicCatalogMedia,
   type PublicCatalogProductList,
@@ -138,20 +135,8 @@ export function CatalogCollectionPage({
               initialFallbackSources={getCatalogDevProductImageSources(products.items)}
               imageSizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
               className="py-10 md:grid-cols-3 lg:grid-cols-4"
+              paginationPath={path}
             />
-            {products.page < products.totalPages ? (
-              <noscript>
-                <div className="border-t border-[var(--sf-color-border)] pt-6 text-center text-sm">
-                  <Link
-                    href={buildCatalogCollectionHref(path, filters, {
-                      page: products.page + 1,
-                    })}
-                  >
-                    مشاهده محصولات بیشتر
-                  </Link>
-                </div>
-              </noscript>
-            ) : null}
           </>
         ) : (
           <EmptyState

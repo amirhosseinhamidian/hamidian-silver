@@ -167,15 +167,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   imageSizes="(min-width: 1536px) 20vw, (min-width: 1280px) 27vw, (min-width: 1024px) 40vw, 50vw"
                   className="xl:grid-cols-3 2xl:grid-cols-4"
                 />
-                {products.page < products.totalPages ? (
-                  <noscript>
-                    <div className="mt-10 border-t border-[var(--sf-color-border)] pt-6 text-center text-sm">
-                      <Link href={buildCatalogHref(filters, { page: products.page + 1 })}>
-                        مشاهده محصولات بیشتر
-                      </Link>
-                    </div>
-                  </noscript>
-                ) : null}
               </>
             ) : (
               <EmptyState

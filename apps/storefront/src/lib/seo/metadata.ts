@@ -3,10 +3,10 @@ import type { Metadata } from 'next';
 import { resolveStorefrontSeoRoutePolicy } from '@/lib/seo/route-policy';
 import type { PublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
-const DEFAULT_SITE_NAME = 'نقره حمیدیان';
-const DEFAULT_TITLE = 'نقره حمیدیان';
-const DEFAULT_TITLE_TEMPLATE = '%s | گالری حمدیان';
-const DEFAULT_DESCRIPTION = 'فروشگاه آنلاین و گالری نقره حمیدیان';
+const DEFAULT_SITE_NAME = 'گالری حمیدیان';
+const DEFAULT_TITLE = 'گالری حمیدیان';
+const DEFAULT_TITLE_TEMPLATE = '%s | گالری حمیدیان';
+const DEFAULT_DESCRIPTION = 'فروشگاه آنلاین نقره گالری حمیدیان';
 const DEVELOPMENT_ORIGIN = 'http://localhost:3000';
 
 export type StorefrontSeoMedia = Readonly<{
