@@ -29,6 +29,7 @@ describe('SEO editor helpers', () => {
     expect(isValidSeoCanonicalPath('/brands/hamidian?ref=home')).toBe(false);
     expect(isValidSeoCanonicalPath('/brands\\evil.example')).toBe(false);
     expect(isValidSeoCanonicalPath('/brands/../products/ring')).toBe(false);
+    expect(isValidSeoCanonicalPath('/brands/%2e%2e/products/ring')).toBe(false);
     expect(isValidSeoCanonicalPath('/account/orders')).toBe(false);
   });
 });
