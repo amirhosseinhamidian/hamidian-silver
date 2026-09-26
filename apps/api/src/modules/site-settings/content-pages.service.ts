@@ -407,7 +407,7 @@ export class ContentPagesService {
       seoCanonicalPath: page.seoCanonicalPath,
       seoNoIndex: page.seoNoIndex,
       seoOgMedia: this.projectMedia(page.seoOgMedia),
-      updatedAt: page.updatedAt.toISOString(),
+      ...(page.updatedAt ? { updatedAt: page.updatedAt.toISOString() } : {}),
     };
   }
 
