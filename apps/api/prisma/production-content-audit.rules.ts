@@ -166,7 +166,12 @@ function duplicateTextGroups(
 }
 
 function hasGenericMediaFilename(storageKey: string): boolean {
-  const filename = storageKey.split('/').pop()?.replace(/\.[^.]+$/, '').toLocaleLowerCase('en') ?? '';
+  const filename =
+    storageKey
+      .split('/')
+      .pop()
+      ?.replace(/\.[^.]+$/, '')
+      .toLocaleLowerCase('en') ?? '';
   const withoutUuid = filename.replace(
     /-?[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     '',
@@ -255,7 +260,13 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
       12,
     );
     requireRealText(issues, product.description, 'PRODUCT_DESCRIPTION', subject, 'توضیحات', 30);
-    validateOptionalSeoText(issues, product.seoTitle, 'PRODUCT_SEO_TITLE_PLACEHOLDER', subject, 'عنوان SEO');
+    validateOptionalSeoText(
+      issues,
+      product.seoTitle,
+      'PRODUCT_SEO_TITLE_PLACEHOLDER',
+      subject,
+      'عنوان SEO',
+    );
     validateOptionalSeoText(
       issues,
       product.seoDescription,
@@ -417,7 +428,13 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
     const subject = `دسته‌بندی ${category.name || category.slug}`;
     requireRealText(issues, category.name, 'CATEGORY_NAME', subject, 'نام دسته‌بندی');
     requireRealText(issues, category.description, 'CATEGORY_DESCRIPTION', subject, 'توضیحات', 12);
-    validateOptionalSeoText(issues, category.seoTitle, 'CATEGORY_SEO_TITLE_PLACEHOLDER', subject, 'عنوان SEO');
+    validateOptionalSeoText(
+      issues,
+      category.seoTitle,
+      'CATEGORY_SEO_TITLE_PLACEHOLDER',
+      subject,
+      'عنوان SEO',
+    );
     validateOptionalSeoText(
       issues,
       category.seoDescription,
@@ -479,7 +496,13 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
     const subject = `برند ${brand.name || brand.slug}`;
     requireRealText(issues, brand.name, 'BRAND_NAME', subject, 'نام برند');
     requireRealText(issues, brand.description, 'BRAND_DESCRIPTION', subject, 'توضیحات', 12);
-    validateOptionalSeoText(issues, brand.seoTitle, 'BRAND_SEO_TITLE_PLACEHOLDER', subject, 'عنوان SEO');
+    validateOptionalSeoText(
+      issues,
+      brand.seoTitle,
+      'BRAND_SEO_TITLE_PLACEHOLDER',
+      subject,
+      'عنوان SEO',
+    );
     validateOptionalSeoText(
       issues,
       brand.seoDescription,

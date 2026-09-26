@@ -22,9 +22,7 @@ describe('PublicMediaUrlService', () => {
     const service = createService('https://media.hamidian.shop/media');
 
     expect(
-      service.resolve(
-        'catalog/2026/09/انگشتر-نقره-ماری-a1b2c3d4-1234-4abc-8def-a1b2c3d4e5f6.webp',
-      ),
+      service.resolve('catalog/2026/09/انگشتر-نقره-ماری-a1b2c3d4-1234-4abc-8def-a1b2c3d4e5f6.webp'),
     ).toBe(
       'https://media.hamidian.shop/media/catalog/2026/09/%D8%A7%D9%86%DA%AF%D8%B4%D8%AA%D8%B1-%D9%86%D9%82%D8%B1%D9%87-%D9%85%D8%A7%D8%B1%DB%8C-a1b2c3d4-1234-4abc-8def-a1b2c3d4e5f6.webp',
     );

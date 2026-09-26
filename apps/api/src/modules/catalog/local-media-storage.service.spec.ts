@@ -38,9 +38,7 @@ describe('LocalMediaStorageService', () => {
       'انگشتر نقره ماری',
     );
 
-    expect(stored.storageKey).toMatch(
-      /^catalog\/\d{4}\/\d{2}\/انگشتر-نقره-ماری-[\da-f-]+\.png$/,
-    );
+    expect(stored.storageKey).toMatch(/^catalog\/\d{4}\/\d{2}\/انگشتر-نقره-ماری-[\da-f-]+\.png$/);
     expect(stored.mimeType).toBe('image/png');
     expect(stored.sizeBytes).toBe(PNG_BYTES.byteLength);
 
@@ -55,9 +53,7 @@ describe('LocalMediaStorageService', () => {
       size: PNG_BYTES.byteLength,
     });
 
-    expect(stored.storageKey).toMatch(
-      /^catalog\/\d{4}\/\d{2}\/front-view-ring-[\da-f-]+\.png$/,
-    );
+    expect(stored.storageKey).toMatch(/^catalog\/\d{4}\/\d{2}\/front-view-ring-[\da-f-]+\.png$/);
   });
 
   it('rejects a claimed image whose bytes do not match the MIME type', async () => {

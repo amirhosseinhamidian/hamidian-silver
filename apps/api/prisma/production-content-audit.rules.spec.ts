@@ -164,10 +164,7 @@ describe('production content audit rules', () => {
     });
 
     expect(issues.map(({ code }) => code)).toEqual(
-      expect.arrayContaining([
-        'PRODUCT_SHORT_DESCRIPTION_WORDS',
-        'PRODUCT_MEDIA_ALT_DUPLICATE',
-      ]),
+      expect.arrayContaining(['PRODUCT_SHORT_DESCRIPTION_WORDS', 'PRODUCT_MEDIA_ALT_DUPLICATE']),
     );
   });
 
@@ -221,7 +218,8 @@ describe('production content audit rules', () => {
           name: 'انگشتر دوم',
           slug: 'second-ring',
           seoTitle: 'خرید انگشتر نقره',
-          description: 'توضیح متفاوت و کامل برای محصول دوم که جزئیات واقعی و کاربرد آن را بیان می‌کند.',
+          description:
+            'توضیح متفاوت و کامل برای محصول دوم که جزئیات واقعی و کاربرد آن را بیان می‌کند.',
         },
       ],
       media: [

@@ -44,7 +44,6 @@ function sitemapEntries(xml: string): SitemapEntry[] {
   });
 }
 
-
 function htmlAttribute(tag: string, name: string): string | null {
   const match = tag.match(new RegExp(`\\b${name}\\s*=\\s*["']([^"']+)["']`, 'i'));
   return match?.[1] ?? null;
@@ -163,8 +162,7 @@ async function run(): Promise<void> {
       'X-Content-Type-Options: nosniff is missing.',
     );
     assert(
-      response.headers.get('referrer-policy')?.toLowerCase() ===
-        'strict-origin-when-cross-origin',
+      response.headers.get('referrer-policy')?.toLowerCase() === 'strict-origin-when-cross-origin',
       'Referrer-Policy is missing or unexpected.',
     );
     assert(
@@ -218,7 +216,10 @@ async function run(): Promise<void> {
 
   await check('out-of-range pagination', async () => {
     const { response } = await fetchText(origin, '/products?page=999999');
-    assert(response.status === 404, `Out-of-range catalog returned ${response.status}, expected 404.`);
+    assert(
+      response.status === 404,
+      `Out-of-range catalog returned ${response.status}, expected 404.`,
+    );
   });
 
   await check('product structured data', async () => {
