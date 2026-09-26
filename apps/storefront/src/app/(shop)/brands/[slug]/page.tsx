@@ -102,6 +102,24 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
       mobileImage={brand.heroMobileImage ?? null}
       filters={filters}
       products={products}
+      contextLinkGroups={[
+        {
+          label: 'دسته‌بندی‌های این برند',
+          links: [
+            ...new Map(
+              products.items
+                .flatMap((product) => product.categories)
+                .map((category) => [
+                  category.id,
+                  {
+                    label: category.name,
+                    href: `/categories/${category.slug}`,
+                  },
+                ]),
+            ).values(),
+          ].slice(0, 8),
+        },
+      ]}
     />
   );
 }
