@@ -187,7 +187,7 @@ function CategoryForm({
     const sortOrder = normalizeInteger(formData.get('sortOrder'));
     if (!name || !slug) return setError('نام و اسلاگ دسته‌بندی الزامی هستند.');
     if (sortOrder === null) return setError('ترتیب نمایش باید عدد صحیح صفر یا بزرگ‌تر باشد.');
-    if (!isValidSeoCanonicalPath(seo.canonicalPath.trim()))
+    if (!isValidSeoCanonicalPath(seo.canonicalPath.trim(), '/categories/'))
       return setError('مسیر canonical باید یک مسیر داخلی بدون query یا fragment باشد.');
     if (file && (!ACCEPTED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
       return setError('تصویر Hero دسکتاپ باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
@@ -487,6 +487,7 @@ function CategoryForm({
         defaultTitle={category?.name ?? 'نام دسته‌بندی'}
         uploadUrl="/api/catalog/media"
         idPrefix={`${formId}-seo`}
+        canonicalPrefix="/categories/"
       />
 
       <Checkbox
