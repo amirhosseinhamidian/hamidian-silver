@@ -16,7 +16,10 @@ function silverLabel(name: string): string {
 
 type CategorySeoSource = Pick<PublicCatalogCategoryPage, 'name' | 'description'>;
 type BrandSeoSource = Pick<PublicCatalogBrandPage, 'name' | 'description'>;
-type ProductSeoSource = Pick<PublicCatalogProductDetail, 'name' | 'shortDescription' | 'description'>;
+type ProductSeoSource = Pick<
+  PublicCatalogProductDetail,
+  'name' | 'shortDescription' | 'description' | 'brand' | 'country' | 'categories'
+>;
 
 export function categorySeoTitle(category: CategorySeoSource): string {
   return `خرید ${silverLabel(category.name)}`;
@@ -41,11 +44,20 @@ export function brandSeoDescription(brand: BrandSeoSource): string {
 }
 
 export function productSeoDescription(product: ProductSeoSource): string {
-  return (
-    compact(product.shortDescription) ??
-    compact(product.description) ??
-    `مشاهده ${product.name.trim()} در گالری حمیدیان؛ بررسی قیمت، تصاویر، مشخصات، سایزبندی و موجودی محصول.`
-  );
+  const productName = product.name.trim();
+  const facts = [
+    product.brand?.name?.trim() ? `برند ${product.brand.name.trim()}` : null,
+    product.country?.name?.trim() ? `ساخت ${product.country.name.trim()}` : null,
+    product.categories[0]?.name?.trim() ? `دسته ${product.categories[0].name.trim()}` : null,
+  ].filter((value): value is string => Boolean(value));
+
+  const longDescription = compact(product.description);
+  if (longDescription && longDescription.length >= 70 && longDescription.length <= 220) {
+    return longDescription;
+  }
+
+  const factsText = facts.length ? `؛ ${facts.join('، ')}` : '';
+  return `خرید و مشاهده ${productName} در گالری حمیدیان${factsText}؛ بررسی قیمت، تصاویر، مشخصات، سایزبندی و موجودی محصول.`;
 }
 
 export const HOME_SEO = {
