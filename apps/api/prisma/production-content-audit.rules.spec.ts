@@ -21,7 +21,7 @@ function validSnapshot(): ContentAuditSnapshot {
       {
         name: 'انگشتر نقره ماه',
         slug: 'silver-ring-mah',
-        shortDescription: 'انگشتر نقره با پرداخت دستی و طراحی مینیمال.',
+        shortDescription: 'انگشتر نقره با طراحی مینیمال و ظریف.',
         description:
           'این انگشتر از نقره ساخته شده و مشخصات، وزن و شرایط نگهداری آن پیش از خرید بررسی می‌شود.',
         salePriceToman: 4_800_000,
