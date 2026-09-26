@@ -188,7 +188,7 @@ function CategoryForm({
     if (!name || !slug) return setError('نام و اسلاگ دسته‌بندی الزامی هستند.');
     if (sortOrder === null) return setError('ترتیب نمایش باید عدد صحیح صفر یا بزرگ‌تر باشد.');
     if (!isValidSeoCanonicalPath(seo.canonicalPath.trim(), '/categories/'))
-      return setError('مسیر canonical باید یک مسیر داخلی بدون query یا fragment باشد.');
+      return setError('canonical دسته‌بندی باید یک مسیر امن زیر /categories/ و بدون query یا fragment باشد.');
     if (file && (!ACCEPTED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
       return setError('تصویر Hero دسکتاپ باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
     }
