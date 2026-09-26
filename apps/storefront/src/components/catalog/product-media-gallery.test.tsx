@@ -41,6 +41,16 @@ describe('ProductMediaGallery', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('marks only one inline product image as high priority', () => {
+    render(<ProductMediaGallery productName="انگشتر نقره" media={media} />);
+
+    const highPriorityImages = screen
+      .getAllByRole('img')
+      .filter((image) => image.getAttribute('fetchpriority') === 'high');
+
+    expect(highPriorityImages).toHaveLength(1);
+  });
+
   it('supports touch swiping without opening the desktop zoom dialog', () => {
     render(<ProductMediaGallery productName="انگشتر نقره" media={media} />);
 
