@@ -2,9 +2,13 @@
 
 ## Required production configuration
 
+The production Compose file pins `STOREFRONT_PUBLIC_ORIGIN=https://hamidian.shop`.
+For non-production environments, set the public origin explicitly. The optional
+Search Console HTML token remains in the private production env file:
+
 ```env
-STOREFRONT_PUBLIC_ORIGIN=https://example.com
 GOOGLE_SITE_VERIFICATION=verification-token-from-search-console
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-...
 ```
 
 Prefer DNS verification for a Google Search Console Domain property. The HTML verification token is supported as a secondary verification method and is rendered only when `GOOGLE_SITE_VERIFICATION` is configured.
