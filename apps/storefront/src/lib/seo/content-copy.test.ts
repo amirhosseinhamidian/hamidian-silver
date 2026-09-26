@@ -6,6 +6,7 @@ import {
   categorySeoDescription,
   categorySeoTitle,
   productSeoDescription,
+  HOME_SEO,
   ROOT_CATALOG_SEO,
 } from '@/lib/seo/content-copy';
 import type {
@@ -36,7 +37,7 @@ const brand = (overrides: Partial<PublicCatalogBrandPage> = {}): PublicCatalogBr
 
 describe('SEO content fallbacks', () => {
   it('builds natural category intent without duplicating silver', () => {
-    expect(categorySeoTitle(category())).toBe('خرید دستبند');
+    expect(categorySeoTitle(category())).toBe('خرید دستبند نقره');
     expect(
       categorySeoDescription(category({ name: 'گردنبند نقره', slug: 'silver-necklaces' })),
     ).toContain('مدل‌های گردنبند نقره در گالری حمیدیان');
@@ -69,7 +70,8 @@ describe('SEO content fallbacks', () => {
     ).toContain('قیمت، تصاویر، مشخصات، سایزبندی و موجودی');
   });
 
-  it('defines the root catalog purchase intent', () => {
+  it('defines home and root catalog purchase intents', () => {
+    expect(HOME_SEO.title).toContain('خرید زیورآلات نقره');
     expect(ROOT_CATALOG_SEO.title).toBe('خرید محصولات نقره');
   });
 });
