@@ -1,6 +1,7 @@
 import {
   buildCatalogCollectionHref,
   buildCatalogHref,
+  buildCategoryBreadcrumbItems,
   parseCatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
 import { describe, expect, it } from 'vitest';
@@ -108,5 +109,48 @@ describe('buildCatalogCollectionHref', () => {
         page: 1,
       }),
     ).toBe('/brands/hamidian');
+  });
+});
+
+
+describe('buildCategoryBreadcrumbItems', () => {
+  it('includes the categories hub and active parent hierarchy', () => {
+    const categories = [
+      {
+        id: 'jewelry',
+        name: 'زیورآلات',
+        slug: 'jewelry',
+        description: null,
+        parentId: null,
+        sortOrder: 1,
+        image: null,
+      },
+      {
+        id: 'rings',
+        name: 'انگشتر',
+        slug: 'rings',
+        description: null,
+        parentId: 'jewelry',
+        sortOrder: 2,
+        image: null,
+      },
+      {
+        id: 'women-rings',
+        name: 'انگشتر زنانه',
+        slug: 'women-rings',
+        description: null,
+        parentId: 'rings',
+        sortOrder: 3,
+        image: null,
+      },
+    ];
+
+    expect(buildCategoryBreadcrumbItems(categories, categories[2]!)).toEqual([
+      { label: 'خانه', href: '/' },
+      { label: 'دسته‌بندی‌ها', href: '/categories' },
+      { label: 'زیورآلات', href: '/categories/jewelry' },
+      { label: 'انگشتر', href: '/categories/rings' },
+      { label: 'انگشتر زنانه', href: '/categories/women-rings' },
+    ]);
   });
 });
