@@ -1,4 +1,6 @@
 import type { components } from '@hamidian/contracts';
+import { unstable_cache } from 'next/cache';
+
 import { createServerApiClient } from '@/lib/api/server-client';
 
 export type PublicShippingPricing = components['schemas']['ShippingPricingSettingsDto'];
@@ -44,9 +46,9 @@ export function shippingOptionSupportsDestination(
   );
 }
 
-export async function getPublicShippingOptions(): Promise<readonly PublicShippingOption[]> {
-  const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;
-  if (!apiOrigin) return [];
+async function loadPublicShippingOptions(
+  apiOrigin: string,
+): Promise<readonly PublicShippingOption[]> {
   try {
     const response = await fetch(`${apiOrigin.replace(/\/$/, '')}/api/v1/shipping/options/public`, {
       cache: 'no-store',
@@ -58,6 +60,24 @@ export async function getPublicShippingOptions(): Promise<readonly PublicShippin
   } catch {
     return [];
   }
+}
+
+const getCachedPublicShippingOptionsForSeo = unstable_cache(
+  loadPublicShippingOptions,
+  ['storefront-public-shipping-options-seo'],
+  { revalidate: 300 },
+);
+
+export async function getPublicShippingOptions(): Promise<readonly PublicShippingOption[]> {
+  const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;
+  return apiOrigin ? loadPublicShippingOptions(apiOrigin) : [];
+}
+
+export async function getPublicShippingOptionsForSeo(): Promise<
+  readonly PublicShippingOption[]
+> {
+  const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;
+  return apiOrigin ? getCachedPublicShippingOptionsForSeo(apiOrigin) : [];
 }
 
 export async function getPublicShippingPricing(): Promise<PublicShippingPricing | null> {
