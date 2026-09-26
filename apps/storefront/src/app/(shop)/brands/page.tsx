@@ -8,10 +8,7 @@ import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const [settings, brands] = await Promise.all([
-    getPublicSiteSettings(),
-    getPublicCatalogBrands(),
-  ]);
+  const [settings, brands] = await Promise.all([getPublicSiteSettings(), getPublicCatalogBrands()]);
   return buildStorefrontPageMetadata(settings, {
     pathname: '/brands',
     title: 'برندهای نقره و جواهر',

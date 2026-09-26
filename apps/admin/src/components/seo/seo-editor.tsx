@@ -41,9 +41,7 @@ const PRIVATE_SEO_PREFIXES = ['/account', '/api', '/cart', '/checkout', '/paymen
 
 export function isValidSeoCanonicalPath(value: string, requiredPrefix?: string): boolean {
   if (value === '') return true;
-  if (
-    !/^\/(?!\/)(?!\.{1,2}(?:\/|$))(?!.*\/\.{1,2}(?:\/|$))[^%\\\s?#]*$/.test(value)
-  ) {
+  if (!/^\/(?!\/)(?!\.{1,2}(?:\/|$))(?!.*\/\.{1,2}(?:\/|$))[^%\\\s?#]*$/.test(value)) {
     return false;
   }
   if (PRIVATE_SEO_PREFIXES.some((prefix) => value === prefix || value.startsWith(`${prefix}/`))) {
@@ -125,9 +123,11 @@ export function SeoEditor({
           <FormField
             id={`${idPrefix}-canonical-path`}
             label="مسیر canonical"
-            hint={canonicalPrefix
-              ? `اختیاری؛ فقط مسیر داخلی زیر ${canonicalPrefix} و بدون query یا fragment`
-              : 'اختیاری؛ فقط مسیر داخلی عمومی، بدون دامنه، query یا fragment'}
+            hint={
+              canonicalPrefix
+                ? `اختیاری؛ فقط مسیر داخلی زیر ${canonicalPrefix} و بدون query یا fragment`
+                : 'اختیاری؛ فقط مسیر داخلی عمومی، بدون دامنه، query یا fragment'
+            }
           >
             {(props) => (
               <Input

@@ -220,9 +220,7 @@ export function parseAdminSiteSettings(value: unknown): AdminSiteSettings | null
       ? 'خرید آنلاین زیورآلات نقره از گالری حمیدیان'
       : text(source?.seoDefaultDescription);
   const seoOrganizationName =
-    source?.seoOrganizationName === undefined
-      ? 'گالری حمیدیان'
-      : text(source?.seoOrganizationName);
+    source?.seoOrganizationName === undefined ? 'گالری حمیدیان' : text(source?.seoOrganizationName);
 
   if (
     !source ||

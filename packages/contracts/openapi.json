@@ -8017,6 +8017,10 @@
               }
             ]
           },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
           "id": {
             "type": "string"
           },
@@ -8028,10 +8032,6 @@
           },
           "sortOrder": {
             "type": "number"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
           }
         },
         "required": [
@@ -8134,6 +8134,10 @@
               }
             ]
           },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
           "id": {
             "type": "string"
           },
@@ -8142,10 +8146,6 @@
           },
           "slug": {
             "type": "string"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
           }
         },
         "required": [
@@ -8276,6 +8276,10 @@
           "seoNoIndex": {
             "type": "boolean"
           },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
           "salePriceToman": {
             "type": "number",
             "nullable": true
@@ -8330,10 +8334,6 @@
           },
           "isAvailable": {
             "type": "boolean"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
           }
         },
         "required": [
@@ -8544,9 +8544,6 @@
       "PublicCatalogVariantDto": {
         "type": "object",
         "properties": {
-          "sku": {
-            "type": "string"
-          },
           "name": {
             "type": "string",
             "nullable": true
@@ -8581,6 +8578,9 @@
           "id": {
             "type": "string"
           },
+          "sku": {
+            "type": "string"
+          },
           "availableQuantity": {
             "type": "number"
           },
@@ -8589,7 +8589,6 @@
           }
         },
         "required": [
-          "sku",
           "name",
           "weightGrams",
           "salePriceToman",
@@ -8597,6 +8596,7 @@
           "size",
           "platingOptions",
           "id",
+          "sku",
           "availableQuantity",
           "isAvailable"
         ]
@@ -8633,6 +8633,10 @@
           },
           "seoNoIndex": {
             "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           },
           "salePriceToman": {
             "type": "number",
@@ -8820,8 +8824,7 @@
           },
           "seoCanonicalPath": {
             "type": "string",
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"
@@ -8881,8 +8884,7 @@
           "seoCanonicalPath": {
             "type": "string",
             "nullable": true,
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"
@@ -8937,8 +8939,7 @@
           },
           "seoCanonicalPath": {
             "type": "string",
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"
@@ -8994,8 +8995,7 @@
           "seoCanonicalPath": {
             "type": "string",
             "nullable": true,
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"
@@ -9321,8 +9321,7 @@
           },
           "seoCanonicalPath": {
             "type": "string",
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"
@@ -9533,8 +9532,7 @@
           "seoCanonicalPath": {
             "type": "string",
             "nullable": true,
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"
@@ -13282,8 +13280,7 @@
           "seoCanonicalPath": {
             "type": "string",
             "nullable": true,
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"

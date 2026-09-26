@@ -113,7 +113,6 @@ describe('buildCatalogCollectionHref', () => {
   });
 });
 
-
 describe('buildCategoryBreadcrumbItems', () => {
   it('includes the categories hub and active parent hierarchy', () => {
     const categories = [

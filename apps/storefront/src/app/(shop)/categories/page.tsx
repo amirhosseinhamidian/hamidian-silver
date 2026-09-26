@@ -26,9 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function CategoriesPage() {
   const categories = await getPublicCatalogCategories();
   const byId = new Map(categories.map((category) => [category.id, category] as const));
-  const roots = categories.filter(
-    (category) => !category.parentId || !byId.has(category.parentId),
-  );
+  const roots = categories.filter((category) => !category.parentId || !byId.has(category.parentId));
   const childrenByParent = new Map<string, typeof categories>();
 
   for (const category of categories) {
@@ -54,7 +52,10 @@ export default async function CategoriesPage() {
         </p>
       </header>
 
-      <section aria-label="دسته‌بندی‌های محصولات" className="grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-3 sm:py-14">
+      <section
+        aria-label="دسته‌بندی‌های محصولات"
+        className="grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-3 sm:py-14"
+      >
         {roots.map((category) => {
           const children = childrenByParent.get(category.id) ?? [];
 

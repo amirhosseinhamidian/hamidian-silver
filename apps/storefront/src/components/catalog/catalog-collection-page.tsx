@@ -57,8 +57,11 @@ function CollectionHero({
   const parent = path.startsWith('/brands/')
     ? { label: 'برندها', href: '/brands' }
     : { label: 'محصولات', href: '/products' };
-  const breadcrumbItems =
-    breadcrumbs ?? [{ label: 'خانه', href: '/' }, parent, { label: title, href: path }];
+  const breadcrumbItems = breadcrumbs ?? [
+    { label: 'خانه', href: '/' },
+    parent,
+    { label: title, href: path },
+  ];
   const copy = (
     <div className="max-w-2xl">
       <StorefrontBreadcrumbs items={breadcrumbItems} className="opacity-80" />

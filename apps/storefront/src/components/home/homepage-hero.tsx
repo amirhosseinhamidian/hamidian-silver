@@ -83,9 +83,7 @@ export function HomepageHero({
 
   const headingText = activeSlide.title?.trim() || fallbackTitle?.trim() || null;
   const showCopy = Boolean(
-    headingText ||
-    activeSlide.subtitle ||
-    (activeSlide.actionLabel && activeSlide.actionHref),
+    headingText || activeSlide.subtitle || (activeSlide.actionLabel && activeSlide.actionHref),
   );
 
   return (

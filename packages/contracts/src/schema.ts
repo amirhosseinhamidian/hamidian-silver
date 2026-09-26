@@ -3300,7 +3300,6 @@ export interface components {
             leadTimeDays: number;
         };
         PublicCatalogVariantDto: {
-            sku: string;
             name: string | null;
             weightGrams: number | null;
             salePriceToman: number | null;
@@ -3308,6 +3307,7 @@ export interface components {
             size: components["schemas"]["PublicCatalogSizeDto"] | null;
             platingOptions: components["schemas"]["PublicCatalogPlatingOptionDto"][];
             id: string;
+            sku: string;
             availableQuantity: number;
             isAvailable: boolean;
         };
@@ -3320,6 +3320,8 @@ export interface components {
             shortDescription: string | null;
             seoCanonicalPath?: string | null;
             seoNoIndex?: boolean;
+            /** Format: date-time */
+            updatedAt?: string;
             salePriceToman: number | null;
             compareAtPriceToman: number | null;
             /** @enum {string} */

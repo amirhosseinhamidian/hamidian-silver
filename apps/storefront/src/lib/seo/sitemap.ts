@@ -80,7 +80,9 @@ export function buildStorefrontSitemap(
   };
 
   const categoryIdsWithProducts = populatedCategoryIds(sources.products, sources.categories);
-  const categoryById = new Map(sources.categories.map((category) => [category.id, category] as const));
+  const categoryById = new Map(
+    sources.categories.map((category) => [category.id, category] as const),
+  );
   const categoryProductUpdates = new Map<string, string[]>();
   const brandProductUpdates = new Map<string, string[]>();
 
@@ -154,10 +156,7 @@ export function buildStorefrontSitemap(
         category.seoCanonicalPath?.trim() || `/categories/${category.slug}`,
         metadataBase,
       ),
-      ...lastModifiedFields(
-        category.updatedAt,
-        ...(categoryProductUpdates.get(category.id) ?? []),
-      ),
+      ...lastModifiedFields(category.updatedAt, ...(categoryProductUpdates.get(category.id) ?? [])),
       ...(imageUrl ? { images: [sitemapUrl(imageUrl, metadataBase)] } : {}),
     });
   }

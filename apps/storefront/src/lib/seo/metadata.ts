@@ -114,14 +114,19 @@ function resolveMedia(
   return candidates.find((candidate) => Boolean(candidate?.url)) ?? null;
 }
 
-const PRIVATE_CANONICAL_PREFIXES = ['/account', '/api', '/cart', '/checkout', '/payment', '/wishlist'];
+const PRIVATE_CANONICAL_PREFIXES = [
+  '/account',
+  '/api',
+  '/cart',
+  '/checkout',
+  '/payment',
+  '/wishlist',
+];
 
 function safeCanonicalPath(value: string | null | undefined, fallback: string): string {
   const candidate = value?.trim();
   if (!candidate) return fallback;
-  if (
-    !/^\/(?!\/)(?!\.{1,2}(?:\/|$))(?!.*\/\.{1,2}(?:\/|$))[^%\\\s?#]*$/.test(candidate)
-  ) {
+  if (!/^\/(?!\/)(?!\.{1,2}(?:\/|$))(?!.*\/\.{1,2}(?:\/|$))[^%\\\s?#]*$/.test(candidate)) {
     return fallback;
   }
   if (

@@ -57,13 +57,7 @@ describe('HomepageHero', () => {
   it('uses a stable fallback H1 when the primary slide has no title', () => {
     const untitled = { ...slide('temporary'), title: null };
 
-    render(
-      <HomepageHero
-        slides={[untitled]}
-        label="هیرو"
-        fallbackTitle="گالری حمیدیان"
-      />,
-    );
+    render(<HomepageHero slides={[untitled]} label="هیرو" fallbackTitle="گالری حمیدیان" />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'گالری حمیدیان' })).toBeInTheDocument();
   });
