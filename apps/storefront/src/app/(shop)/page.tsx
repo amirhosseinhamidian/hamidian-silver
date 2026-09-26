@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 
 import { StorefrontHome } from '@/components/home/storefront-home';
+import { JsonLd } from '@/components/seo/json-ld';
 import { getPublicHomepage } from '@/lib/home/public-homepage';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
+import { buildOrganizationStructuredData } from '@/lib/seo/structured-data';
+import { getPublicShippingOptions } from '@/lib/shipping/public-shipping-pricing';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +22,16 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function StorefrontHomePage() {
-  const homepage = await getPublicHomepage();
+  const [homepage, settings, shippingOptions] = await Promise.all([
+    getPublicHomepage(),
+    getPublicSiteSettings(),
+    getPublicShippingOptions(),
+  ]);
 
-  return <StorefrontHome homepage={homepage} />;
+  return (
+    <>
+      <JsonLd data={buildOrganizationStructuredData(settings, shippingOptions)} />
+      <StorefrontHome homepage={homepage} />
+    </>
+  );
 }
