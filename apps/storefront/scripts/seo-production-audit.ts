@@ -44,9 +44,6 @@ function sitemapEntries(xml: string): SitemapEntry[] {
   });
 }
 
-function sitemapLocations(xml: string): string[] {
-  return sitemapEntries(xml).map(({ location }) => location);
-}
 
 function htmlAttribute(tag: string, name: string): string | null {
   const match = tag.match(new RegExp(`\\b${name}\\s*=\\s*["']([^"']+)["']`, 'i'));
@@ -179,9 +176,14 @@ async function run(): Promise<void> {
       'CSP frame-ancestors protection is missing.',
     );
     assert(
+      response.headers.get('permissions-policy')?.includes('camera=()'),
+      'Permissions-Policy is missing or unexpected.',
+    );
+    assert(
       response.headers.get('strict-transport-security')?.includes('max-age='),
       'Strict-Transport-Security is missing.',
     );
+    assert(!response.headers.has('x-powered-by'), 'X-Powered-By should not be exposed.');
   });
 
   await check('public canonicals', async () => {
