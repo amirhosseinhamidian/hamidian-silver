@@ -65,6 +65,23 @@ describe('storefront metadata engine', () => {
     });
   });
 
+  it('falls back to the safe title template when legacy settings contain multiple tokens', () => {
+    const invalidSettings = { ...settings, seoTitleTemplate: '%s | %s | گالری حمیدیان' };
+
+    expect(
+      buildStorefrontPageMetadata(
+        invalidSettings,
+        {
+          pathname: '/products/silver-ring',
+          title: 'انگشتر نقره',
+        },
+        origin,
+      ).openGraph,
+    ).toMatchObject({
+      title: 'انگشتر نقره | گالری حمیدیان',
+    });
+  });
+
   it('uses entity SEO overrides and its Open Graph image', () => {
     expect(
       buildStorefrontPageMetadata(
@@ -128,6 +145,7 @@ describe('storefront metadata engine', () => {
       '/products/../account',
       '/cart',
       '/brands\\evil.example',
+      '/brands/wrong-family',
     ]) {
       expect(
         buildStorefrontPageMetadata(
