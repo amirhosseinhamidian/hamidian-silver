@@ -1,6 +1,5 @@
-# syntax=docker/dockerfile:1
 # Build with the repository root as context: docker build -f apps/api/Dockerfile .
-FROM node:24-bookworm-slim AS base
+FROM public.ecr.aws/docker/library/node:24-bookworm-slim AS base
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates openssl \
     && rm -rf /var/lib/apt/lists/* \
     && npm install --global pnpm@11.9.0
@@ -42,7 +41,7 @@ RUN test -x /workspace/node_modules/.bin/tsx
 USER node
 CMD ["./node_modules/.bin/prisma", "db", "seed"]
 
-FROM node:24-bookworm-slim AS runtime
+FROM public.ecr.aws/docker/library/node:24-bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates openssl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
