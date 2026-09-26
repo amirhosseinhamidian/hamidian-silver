@@ -10,6 +10,7 @@
   "scripts": {
     "api:dev": "pnpm --filter api start:dev",
     "api:test": "pnpm --filter api test",
+    "api:typecheck": "pnpm --filter api typecheck",
     "api:test:critical": "pnpm --filter api test:critical",
     "api:test:e2e": "pnpm --filter api test:e2e",
     "api:build": "pnpm --filter api build",
@@ -47,7 +48,7 @@
     "format:check": "prettier --check .",
     "verify:contracts": "pnpm contracts:typecheck",
     "verify:frontend": "pnpm frontend:format:check && pnpm frontend:lint && pnpm frontend:typecheck && pnpm frontend:test && pnpm frontend:build",
-    "verify:api": "pnpm db:generate && pnpm api:test && pnpm api:test:e2e && pnpm api:build && pnpm api:lint",
+    "verify:api": "pnpm db:generate && pnpm api:typecheck && pnpm api:test && pnpm api:test:e2e && pnpm api:build && pnpm api:lint",
     "verify": "pnpm format:check && pnpm verify:contracts && pnpm verify:frontend && pnpm verify:api",
     "infra:config": "docker compose config --quiet",
     "infra:up": "docker compose up -d --wait",
