@@ -22,9 +22,13 @@ describe('SEO editor helpers', () => {
       seoOgMediaId: null,
     });
   });
-  it('accepts only internal canonical paths without query or fragment', () => {
-    expect(isValidSeoCanonicalPath('/brands/hamidian')).toBe(true);
+  it('accepts only safe public canonical paths and optional resource prefixes', () => {
+    expect(isValidSeoCanonicalPath('/brands/hamidian', '/brands/')).toBe(true);
+    expect(isValidSeoCanonicalPath('/products/ring', '/brands/')).toBe(false);
     expect(isValidSeoCanonicalPath('https://example.com/brands/hamidian')).toBe(false);
     expect(isValidSeoCanonicalPath('/brands/hamidian?ref=home')).toBe(false);
+    expect(isValidSeoCanonicalPath('/brands\\evil.example')).toBe(false);
+    expect(isValidSeoCanonicalPath('/brands/../products/ring')).toBe(false);
+    expect(isValidSeoCanonicalPath('/account/orders')).toBe(false);
   });
 });
