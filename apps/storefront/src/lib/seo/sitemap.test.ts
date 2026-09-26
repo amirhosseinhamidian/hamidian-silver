@@ -79,7 +79,7 @@ describe('buildStorefrontSitemap', () => {
         name: 'انگشتر',
         slug: 'rings',
         description: null,
-        parentId: null,
+        parentId: 'category-parent',
         sortOrder: 1,
         image: null,
         seoNoIndex: false,
