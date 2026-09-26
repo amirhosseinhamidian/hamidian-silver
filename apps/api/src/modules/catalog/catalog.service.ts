@@ -619,6 +619,7 @@ export class CatalogService {
         seoDescription: true,
         seoCanonicalPath: true,
         seoNoIndex: true,
+        updatedAt: true,
         parentId: true,
         sortOrder: true,
         image: {
@@ -663,6 +664,7 @@ export class CatalogService {
       seoDescription: category.seoDescription,
       seoCanonicalPath: category.seoCanonicalPath,
       seoNoIndex: category.seoNoIndex,
+      updatedAt: category.updatedAt.toISOString(),
       parentId: category.parentId,
       sortOrder: category.sortOrder,
       image:
@@ -716,6 +718,7 @@ export class CatalogService {
         seoDescription: true,
         seoCanonicalPath: true,
         seoNoIndex: true,
+        updatedAt: true,
         originCountry: {
           select: {
             id: true,
@@ -778,6 +781,7 @@ export class CatalogService {
       seoDescription: brand.seoDescription,
       seoCanonicalPath: brand.seoCanonicalPath,
       seoNoIndex: brand.seoNoIndex,
+      updatedAt: brand.updatedAt.toISOString(),
       originCountry:
         brand.originCountry?.isActive && !brand.originCountry.deletedAt
           ? {
@@ -994,6 +998,7 @@ export class CatalogService {
               shortDescription: true,
               seoCanonicalPath: true,
               seoNoIndex: true,
+              updatedAt: true,
               salePriceToman: true,
               compareAtPriceToman: true,
               sizeMode: true,
@@ -1140,6 +1145,7 @@ export class CatalogService {
           shortDescription: product.shortDescription,
           seoCanonicalPath: product.seoCanonicalPath,
           seoNoIndex: product.seoNoIndex,
+          updatedAt: product.updatedAt.toISOString(),
           salePriceToman: lowestPricedVariant?.salePriceToman ?? product.salePriceToman,
           compareAtPriceToman:
             lowestPricedVariant?.compareAtPriceToman ?? product.compareAtPriceToman,
@@ -1342,6 +1348,7 @@ export class CatalogService {
         seoDescription: true,
         seoCanonicalPath: true,
         seoNoIndex: true,
+        updatedAt: true,
         salePriceToman: true,
         compareAtPriceToman: true,
         sizeMode: true,
@@ -1898,6 +1905,7 @@ export class CatalogService {
         shortDescription: product.shortDescription,
         seoCanonicalPath: product.seoCanonicalPath,
         seoNoIndex: product.seoNoIndex,
+        updatedAt: product.updatedAt.toISOString(),
         salePriceToman: prices[0]?.sale ?? product.salePriceToman,
         compareAtPriceToman: prices[0]?.compare ?? product.compareAtPriceToman,
         sizeMode: product.sizeMode,
