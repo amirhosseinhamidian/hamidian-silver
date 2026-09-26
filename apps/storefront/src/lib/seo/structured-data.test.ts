@@ -156,6 +156,8 @@ describe('storefront structured data', () => {
           '@type': 'Product',
           productID: 'variant-1',
           sku: 'RING-50',
+          description: 'انگشتر نقره خاص',
+          image: ['https://silver.example/media/ring.webp'],
           size: '50',
           offers: {
             priceCurrency: 'IRR',
@@ -167,6 +169,8 @@ describe('storefront structured data', () => {
           '@type': 'Product',
           productID: 'variant-2',
           sku: 'RING-52',
+          description: 'انگشتر نقره خاص',
+          image: ['https://silver.example/media/ring.webp'],
           size: '52',
           offers: {
             priceCurrency: 'IRR',
