@@ -21,6 +21,7 @@ type CatalogCollectionPageProps = Readonly<{
   mobileImage: PublicCatalogMedia | null;
   filters: CatalogFilters;
   products: PublicCatalogProductList;
+  breadcrumbs?: readonly Readonly<{ label: string; href: string }>[];
 }>;
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
@@ -39,21 +40,21 @@ function CollectionHero({
   description,
   image,
   mobileImage,
+  breadcrumbs,
   total,
 }: Pick<
   CatalogCollectionPageProps,
-  'path' | 'eyebrow' | 'title' | 'description' | 'image' | 'mobileImage'
+  'path' | 'eyebrow' | 'title' | 'description' | 'image' | 'mobileImage' | 'breadcrumbs'
 > &
   Readonly<{ total: number }>) {
   const parent = path.startsWith('/brands/')
     ? { label: 'برندها', href: '/brands' }
     : { label: 'محصولات', href: '/products' };
+  const breadcrumbItems =
+    breadcrumbs ?? [{ label: 'خانه', href: '/' }, parent, { label: title, href: path }];
   const copy = (
     <div className="max-w-2xl">
-      <StorefrontBreadcrumbs
-        items={[{ label: 'خانه', href: '/' }, parent, { label: title, href: path }]}
-        className="opacity-80"
-      />
+      <StorefrontBreadcrumbs items={breadcrumbItems} className="opacity-80" />
       <p className="mt-6 text-sm opacity-75">{eyebrow}</p>
       <h1 className="mt-3 text-4xl font-normal sm:text-5xl lg:text-6xl">{title}</h1>
       {description ? <p className="mt-5 text-sm leading-8 opacity-80">{description}</p> : null}
@@ -93,6 +94,7 @@ export function CatalogCollectionPage({
   mobileImage,
   filters,
   products,
+  breadcrumbs,
 }: CatalogCollectionPageProps) {
   return (
     <main id="main-content">
@@ -103,6 +105,7 @@ export function CatalogCollectionPage({
         description={description}
         image={image}
         mobileImage={mobileImage}
+        breadcrumbs={breadcrumbs}
         total={products.total}
       />
 
