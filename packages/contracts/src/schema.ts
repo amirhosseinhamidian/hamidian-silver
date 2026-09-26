@@ -3294,6 +3294,7 @@ export interface components {
             leadTimeDays: number;
         };
         PublicCatalogVariantDto: {
+            sku: string;
             name: string | null;
             weightGrams: number | null;
             salePriceToman: number | null;
