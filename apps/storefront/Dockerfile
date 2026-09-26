@@ -1,6 +1,5 @@
-# syntax=docker/dockerfile:1
 # Build with the repository root as context: docker build -f apps/storefront/Dockerfile .
-FROM node:24-bookworm-slim AS deps
+FROM public.ecr.aws/docker/library/node:24-bookworm-slim AS deps
 RUN npm install --global pnpm@11.9.0
 WORKDIR /workspace
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -23,7 +22,7 @@ RUN test -n "$MEDIA_PUBLIC_BASE_URL" \
        NEXT_PUBLIC_GA_MEASUREMENT_ID="$NEXT_PUBLIC_GA_MEASUREMENT_ID" \
        pnpm --filter @hamidian/storefront build
 
-FROM node:24-bookworm-slim AS runtime
+FROM public.ecr.aws/docker/library/node:24-bookworm-slim AS runtime
 RUN mkdir -p /app/apps/storefront/.next/cache && chown -R node:node /app
 WORKDIR /app/apps/storefront
 ARG MEDIA_PUBLIC_BASE_URL
