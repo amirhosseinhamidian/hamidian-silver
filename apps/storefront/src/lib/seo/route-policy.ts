@@ -9,6 +9,7 @@ const PUBLIC_STATIC_ROUTES = new Set([
   '/',
   '/about',
   '/brands',
+  '/categories',
   '/contact',
   '/faq',
   '/privacy',
