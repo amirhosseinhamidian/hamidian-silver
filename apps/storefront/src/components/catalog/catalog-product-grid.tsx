@@ -4,10 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
 import { Button } from '@/components/ui/button';
-import type {
-  CatalogFilters,
-  PublicCatalogProductList,
-  PublicCatalogProductSummary,
+import {
+  buildCatalogCollectionHref,
+  buildCatalogHref,
+  type CatalogFilters,
+  type PublicCatalogProductList,
+  type PublicCatalogProductSummary,
 } from '@/lib/catalog/public-catalog';
 import { cn } from '@/lib/ui/cn';
 
@@ -17,6 +19,7 @@ type CatalogProductGridProps = Readonly<{
   initialFallbackSources?: Readonly<Record<string, string>>;
   imageSizes?: string;
   className?: string;
+  paginationPath?: string;
 }>;
 
 function buildProductsRequestHref(filters: CatalogFilters, page: number): string {
@@ -44,6 +47,8 @@ function isProductPage(value: unknown): value is PublicCatalogProductList {
   );
 }
 
+const persianNumber = new Intl.NumberFormat('fa-IR');
+
 function appendUniqueProducts(
   current: PublicCatalogProductSummary[],
   incoming: PublicCatalogProductSummary[],
@@ -59,6 +64,7 @@ export function CatalogProductGrid({
   initialFallbackSources = {},
   imageSizes,
   className,
+  paginationPath = '/products',
 }: CatalogProductGridProps) {
   const [products, setProducts] = useState<PublicCatalogProductSummary[]>(initialProducts.items);
   const [nextPage, setNextPage] = useState(initialProducts.page + 1);
@@ -70,6 +76,10 @@ export function CatalogProductGrid({
   const nextPageRef = useRef(initialProducts.page + 1);
   const totalPagesRef = useRef(initialProducts.totalPages);
   const hasMore = nextPage <= totalPages;
+  const nextPageHref =
+    paginationPath === '/products'
+      ? buildCatalogHref(filters, { page: nextPage })
+      : buildCatalogCollectionHref(paginationPath, filters, { page: nextPage });
 
   const loadNextPage = useCallback(async () => {
     const pageToLoad = nextPageRef.current;
@@ -161,9 +171,17 @@ export function CatalogProductGrid({
               </Button>
             </div>
           ) : (
-            <Button variant="text" size="sm" onClick={loadNextPage}>
-              نمایش محصولات بیشتر
-            </Button>
+            <div className="flex flex-col items-center gap-3">
+              <Button variant="text" size="sm" onClick={loadNextPage}>
+                نمایش محصولات بیشتر
+              </Button>
+              <a
+                href={nextPageHref}
+                className="text-xs text-[var(--sf-color-muted)] underline underline-offset-4"
+              >
+                رفتن به صفحه {persianNumber.format(nextPage)}
+              </a>
+            </div>
           )}
         </div>
       ) : null}
