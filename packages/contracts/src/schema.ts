@@ -3187,6 +3187,8 @@ export interface components {
             seoCanonicalPath?: string | null;
             seoNoIndex?: boolean;
             seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            /** Format: date-time */
+            updatedAt?: string;
             id: string;
             name: string;
             slug: string;
@@ -3209,6 +3211,8 @@ export interface components {
             seoCanonicalPath?: string | null;
             seoNoIndex?: boolean;
             seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            /** Format: date-time */
+            updatedAt?: string;
             id: string;
             name: string;
             slug: string;
@@ -3236,6 +3240,8 @@ export interface components {
             shortDescription: string | null;
             seoCanonicalPath?: string | null;
             seoNoIndex?: boolean;
+            /** Format: date-time */
+            updatedAt?: string;
             salePriceToman: number | null;
             compareAtPriceToman: number | null;
             /** @enum {string} */
@@ -4415,6 +4421,8 @@ export interface components {
             seoCanonicalPath?: string | null;
             seoNoIndex?: boolean;
             seoOgMedia?: components["schemas"]["PublicContentPageMediaDto"] | null;
+            /** Format: date-time */
+            updatedAt?: string;
         };
         AdminContentPageDto: {
             key: components["schemas"]["StorefrontContentPageKey"];
