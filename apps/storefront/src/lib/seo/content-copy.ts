@@ -1,7 +1,6 @@
 import type {
   PublicCatalogBrandPage,
   PublicCatalogCategoryPage,
-  PublicCatalogProductDetail,
 } from '@/lib/catalog/public-catalog';
 
 function compact(value: string | null | undefined): string | null {
@@ -16,10 +15,14 @@ function silverLabel(name: string): string {
 
 type CategorySeoSource = Pick<PublicCatalogCategoryPage, 'name' | 'description'>;
 type BrandSeoSource = Pick<PublicCatalogBrandPage, 'name' | 'description'>;
-type ProductSeoSource = Pick<
-  PublicCatalogProductDetail,
-  'name' | 'shortDescription' | 'description' | 'brand' | 'country' | 'categories'
->;
+type ProductSeoSource = Readonly<{
+  name: string;
+  shortDescription: string | null;
+  description: string | null;
+  brand: Readonly<{ name: string }> | null;
+  country: Readonly<{ name: string }> | null;
+  categories: readonly Readonly<{ name: string }>[];
+}>;
 
 export function categorySeoTitle(category: CategorySeoSource): string {
   return `خرید ${silverLabel(category.name)}`;
