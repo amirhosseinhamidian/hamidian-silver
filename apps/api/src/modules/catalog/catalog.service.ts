@@ -1432,6 +1432,7 @@ export class CatalogService {
           },
           select: {
             id: true,
+            sku: true,
             name: true,
             weightGrams: true,
             salePriceToman: true,
@@ -1549,6 +1550,7 @@ export class CatalogService {
 
       return {
         id: variant.id,
+        sku: variant.sku,
         name: variant.name,
         weightGrams: variant.weightGrams === null ? null : Number(variant.weightGrams),
         salePriceToman: variant.salePriceToman ?? product.salePriceToman,
