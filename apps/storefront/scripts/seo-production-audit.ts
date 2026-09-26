@@ -124,8 +124,14 @@ async function run(): Promise<void> {
       body.includes(`Sitemap: ${new URL('/sitemap.xml', origin).href}`),
       'Sitemap directive is missing.',
     );
-    for (const pathname of ['/api/', '/account/', '/cart', '/checkout', '/payment/', '/wishlist']) {
+    for (const pathname of ['/api/', '/payment/']) {
       assert(body.includes(`Disallow: ${pathname}`), `robots.txt does not disallow ${pathname}.`);
+    }
+    for (const pathname of ['/account/', '/cart', '/checkout', '/wishlist']) {
+      assert(
+        !body.includes(`Disallow: ${pathname}`),
+        `robots.txt blocks ${pathname}, preventing crawlers from seeing noindex.`,
+      );
     }
   });
 
@@ -187,6 +193,14 @@ async function run(): Promise<void> {
         canonicalUrl(body) === new URL(pathname, origin).href,
         `${pathname} canonical is invalid.`,
       );
+    }
+  });
+
+  await check('utility pages expose noindex', async () => {
+    for (const pathname of ['/cart', '/wishlist']) {
+      const { response, body } = await fetchText(origin, pathname);
+      assert(response.ok, `${pathname} returned ${response.status}.`);
+      assert(hasNoIndex(body), `${pathname} does not expose noindex.`);
     }
   });
 
