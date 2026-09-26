@@ -39,6 +39,17 @@ function validLastModified(value: string | null | undefined): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
+function latestDate(values: Array<Date | undefined>): Date | undefined {
+  return values
+    .filter((value): value is Date => Boolean(value))
+    .sort((left, right) => right.getTime() - left.getTime())[0];
+}
+
+function lastModifiedFields(...values: Array<string | null | undefined>) {
+  const lastModified = latestDate(values.map(validLastModified));
+  return lastModified ? { lastModified } : {};
+}
+
 function populatedCategoryIds(
   products: readonly PublicCatalogProductSummary[],
   categories: readonly PublicCatalogCategoryPage[],
@@ -68,15 +79,53 @@ export function buildStorefrontSitemap(
     if (!entries.has(entry.url)) entries.set(entry.url, entry);
   };
 
-  add({ url: sitemapUrl('/', metadataBase), changeFrequency: 'weekly', priority: 1 });
-  add({ url: sitemapUrl('/products', metadataBase), changeFrequency: 'daily', priority: 0.9 });
-  add({ url: sitemapUrl('/categories', metadataBase), changeFrequency: 'weekly', priority: 0.7 });
-  add({ url: sitemapUrl('/brands', metadataBase), changeFrequency: 'weekly', priority: 0.7 });
-
   const categoryIdsWithProducts = populatedCategoryIds(sources.products, sources.categories);
+  const categoryById = new Map(sources.categories.map((category) => [category.id, category] as const));
+  const categoryProductUpdates = new Map<string, string[]>();
+  const brandProductUpdates = new Map<string, string[]>();
+
+  for (const product of sources.products) {
+    if (product.updatedAt && product.brand) {
+      const updates = brandProductUpdates.get(product.brand.id) ?? [];
+      updates.push(product.updatedAt);
+      brandProductUpdates.set(product.brand.id, updates);
+    }
+
+    for (const assignedCategory of product.categories) {
+      let current = categoryById.get(assignedCategory.id);
+      const visited = new Set<string>();
+      while (current && !visited.has(current.id)) {
+        visited.add(current.id);
+        if (product.updatedAt) {
+          const updates = categoryProductUpdates.get(current.id) ?? [];
+          updates.push(product.updatedAt);
+          categoryProductUpdates.set(current.id, updates);
+        }
+        current = current.parentId ? categoryById.get(current.parentId) : undefined;
+      }
+    }
+  }
+
   const brandIdsWithProducts = new Set(
     sources.products.flatMap((product) => (product.brand ? [product.brand.id] : [])),
   );
+  const productUpdatedAt = sources.products.map((product) => product.updatedAt);
+  const categoryUpdatedAt = sources.categories.map((category) => category.updatedAt);
+  const brandUpdatedAt = sources.brands.map((brand) => brand.updatedAt);
+
+  add({ url: sitemapUrl('/', metadataBase) });
+  add({
+    url: sitemapUrl('/products', metadataBase),
+    ...lastModifiedFields(...productUpdatedAt),
+  });
+  add({
+    url: sitemapUrl('/categories', metadataBase),
+    ...lastModifiedFields(...categoryUpdatedAt, ...productUpdatedAt),
+  });
+  add({
+    url: sitemapUrl('/brands', metadataBase),
+    ...lastModifiedFields(...brandUpdatedAt, ...productUpdatedAt),
+  });
 
   for (const page of sources.contentPages) {
     if (page.seoNoIndex) continue;
@@ -86,11 +135,7 @@ export function buildStorefrontSitemap(
         page.seoCanonicalPath?.trim() || PUBLIC_CONTENT_PAGE_ROUTES[page.key],
         metadataBase,
       ),
-      changeFrequency: 'monthly',
-      priority: page.key === 'ABOUT' || page.key === 'SERVICES' ? 0.6 : 0.5,
-      ...(validLastModified(page.updatedAt)
-        ? { lastModified: validLastModified(page.updatedAt) }
-        : {}),
+      ...lastModifiedFields(page.updatedAt),
       ...(imageUrl ? { images: [sitemapUrl(imageUrl, metadataBase)] } : {}),
     });
   }
@@ -103,11 +148,10 @@ export function buildStorefrontSitemap(
         category.seoCanonicalPath?.trim() || `/categories/${category.slug}`,
         metadataBase,
       ),
-      changeFrequency: 'weekly',
-      priority: 0.7,
-      ...(validLastModified(category.updatedAt)
-        ? { lastModified: validLastModified(category.updatedAt) }
-        : {}),
+      ...lastModifiedFields(
+        category.updatedAt,
+        ...(categoryProductUpdates.get(category.id) ?? []),
+      ),
       ...(imageUrl ? { images: [sitemapUrl(imageUrl, metadataBase)] } : {}),
     });
   }
@@ -121,11 +165,7 @@ export function buildStorefrontSitemap(
     );
     add({
       url: sitemapUrl(brand.seoCanonicalPath?.trim() || `/brands/${brand.slug}`, metadataBase),
-      changeFrequency: 'weekly',
-      priority: 0.7,
-      ...(validLastModified(brand.updatedAt)
-        ? { lastModified: validLastModified(brand.updatedAt) }
-        : {}),
+      ...lastModifiedFields(brand.updatedAt, ...(brandProductUpdates.get(brand.id) ?? [])),
       ...(imageUrl ? { images: [sitemapUrl(imageUrl, metadataBase)] } : {}),
     });
   }
@@ -137,11 +177,7 @@ export function buildStorefrontSitemap(
         product.seoCanonicalPath?.trim() || `/products/${product.slug}`,
         metadataBase,
       ),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-      ...(validLastModified(product.updatedAt)
-        ? { lastModified: validLastModified(product.updatedAt) }
-        : {}),
+      ...lastModifiedFields(product.updatedAt),
       ...(product.primaryMedia?.url
         ? { images: [sitemapUrl(product.primaryMedia.url, metadataBase)] }
         : {}),
