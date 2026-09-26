@@ -371,7 +371,11 @@ function CategoryForm({
         </FormField>
       </div>
 
-      <FormField id={`${formId}-description`} label="توضیحات">
+      <FormField
+        id={`${formId}-description`}
+        label="توضیحات"
+        hint="متن منحصربه‌فرد درباره نوع محصولات، سبک‌ها و انتخاب این دسته؛ این متن در صفحه دسته نمایش داده می‌شود."
+      >
         {(props) => (
           <Textarea
             {...props}
