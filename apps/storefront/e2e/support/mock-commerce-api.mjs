@@ -282,6 +282,10 @@ async function handler(request, response) {
     ]);
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/categories') {
+    return json(response, 200, []);
+  }
+
   if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/products/silver-ring') {
     return json(response, 200, product);
   }
