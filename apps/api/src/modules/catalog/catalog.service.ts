@@ -1813,6 +1813,7 @@ export class CatalogService {
         shortDescription: true,
         seoCanonicalPath: true,
         seoNoIndex: true,
+        updatedAt: true,
         salePriceToman: true,
         compareAtPriceToman: true,
         sizeMode: true,
