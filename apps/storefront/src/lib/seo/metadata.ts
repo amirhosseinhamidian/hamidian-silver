@@ -113,12 +113,32 @@ function resolveMedia(
   return candidates.find((candidate) => Boolean(candidate?.url)) ?? null;
 }
 
-function openGraphImage(media: StorefrontSeoMedia | null) {
+const PRIVATE_CANONICAL_PREFIXES = ['/account', '/api', '/cart', '/checkout', '/payment', '/wishlist'];
+
+function safeCanonicalPath(value: string | null | undefined, fallback: string): string {
+  const candidate = value?.trim();
+  if (!candidate) return fallback;
+  if (
+    !/^\/(?!\/)(?!\.{1,2}(?:\/|$))(?!.*\/\.{1,2}(?:\/|$))[^\\\s?#]*$/.test(candidate)
+  ) {
+    return fallback;
+  }
+  if (
+    PRIVATE_CANONICAL_PREFIXES.some(
+      (prefix) => candidate === prefix || candidate.startsWith(`${prefix}/`),
+    )
+  ) {
+    return fallback;
+  }
+  return candidate;
+}
+
+function openGraphImage(media: StorefrontSeoMedia | null, fallbackAlt: string) {
   if (!media?.url) return undefined;
   return [
     {
       url: media.url,
-      ...(media.altText ? { alt: media.altText } : {}),
+      alt: media.altText?.trim() || fallbackAlt,
       ...(media.width ? { width: media.width } : {}),
       ...(media.height ? { height: media.height } : {}),
     },
@@ -132,7 +152,10 @@ export function buildStorefrontRootMetadata(
 ): Metadata {
   const title = defaultTitle(settings);
   const description = defaultDescription(settings);
-  const image = openGraphImage(resolveMedia(settings, settings.seoDefaultOgMedia, null));
+  const image = openGraphImage(
+    resolveMedia(settings, settings.seoDefaultOgMedia, null),
+    siteName(settings),
+  );
 
   return {
     metadataBase,
@@ -174,10 +197,13 @@ export function buildStorefrontPageMetadata(
     input.seoDescription,
     input.description?.trim() || defaultDescription(settings),
   );
-  const canonicalPath = input.seoCanonicalPath?.trim() || policy.canonicalPath;
+  const canonicalPath = safeCanonicalPath(input.seoCanonicalPath, policy.canonicalPath);
   const canonical = new URL(canonicalPath, metadataBase);
   const index = policy.index && !input.seoNoIndex;
-  const image = openGraphImage(resolveMedia(settings, input.seoOgMedia, input.fallbackMedia));
+  const image = openGraphImage(
+    resolveMedia(settings, input.seoOgMedia, input.fallbackMedia),
+    pageTitle,
+  );
   const documentTitle = resolveDocumentTitle(settings, pageTitle, Boolean(input.absoluteTitle));
 
   return {
