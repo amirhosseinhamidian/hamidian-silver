@@ -2,6 +2,7 @@ import {
   buildCatalogCollectionHref,
   buildCatalogHref,
   buildCategoryBreadcrumbItems,
+  selectPrimaryCatalogCategory,
   parseCatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
 import { describe, expect, it } from 'vitest';
@@ -152,5 +153,44 @@ describe('buildCategoryBreadcrumbItems', () => {
       { label: 'انگشتر', href: '/categories/rings' },
       { label: 'انگشتر زنانه', href: '/categories/women-rings' },
     ]);
+  });
+});
+
+
+describe('selectPrimaryCatalogCategory', () => {
+  it('prefers the deepest assigned category for product breadcrumbs', () => {
+    const categories = [
+      {
+        id: 'root',
+        name: 'زیورآلات',
+        slug: 'jewelry',
+        description: null,
+        parentId: null,
+        sortOrder: 1,
+        image: null,
+      },
+      {
+        id: 'rings',
+        name: 'انگشتر',
+        slug: 'rings',
+        description: null,
+        parentId: 'root',
+        sortOrder: 1,
+        image: null,
+      },
+      {
+        id: 'women-rings',
+        name: 'انگشتر زنانه',
+        slug: 'women-rings',
+        description: null,
+        parentId: 'rings',
+        sortOrder: 1,
+        image: null,
+      },
+    ];
+
+    expect(
+      selectPrimaryCatalogCategory(categories, [{ id: 'rings' }, { id: 'women-rings' }])?.id,
+    ).toBe('women-rings');
   });
 });
