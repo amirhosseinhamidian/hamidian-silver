@@ -20,11 +20,22 @@ describe('buildStorefrontSitemap', () => {
         shortDescription: null,
         seoCanonicalPath: '/products/ring-canonical',
         seoNoIndex: false,
+        updatedAt: '2026-09-25T10:00:00.000Z',
         salePriceToman: 1_000_000,
         compareAtPriceToman: null,
         sizeMode: 'NONE',
         brand: null,
-        categories: [],
+        categories: [
+          {
+            id: 'category-1',
+            name: 'انگشتر',
+            slug: 'rings',
+            description: null,
+            parentId: 'category-parent',
+            sortOrder: 1,
+            image: null,
+          },
+        ],
         primaryMedia: {
           url: '/media/ring.webp',
           mimeType: 'image/webp',
@@ -53,14 +64,37 @@ describe('buildStorefrontSitemap', () => {
     ] satisfies PublicCatalogProductSummary[];
     const categories = [
       {
+        id: 'category-parent',
+        name: 'زیورآلات',
+        slug: 'jewelry',
+        description: null,
+        parentId: null,
+        sortOrder: 0,
+        image: null,
+        seoNoIndex: false,
+        updatedAt: '2026-09-20T08:00:00.000Z',
+      },
+      {
         id: 'category-1',
         name: 'انگشتر',
         slug: 'rings',
         description: null,
-        parentId: null,
+        parentId: 'category-parent',
         sortOrder: 1,
         image: null,
         seoNoIndex: false,
+        updatedAt: '2026-09-24T08:00:00.000Z',
+      },
+      {
+        id: 'category-empty',
+        name: 'دسته خالی',
+        slug: 'empty-category',
+        description: null,
+        parentId: null,
+        sortOrder: 2,
+        image: null,
+        seoNoIndex: false,
+        updatedAt: '2026-09-24T08:00:00.000Z',
       },
     ] satisfies PublicCatalogCategoryPage[];
     const brands = [
@@ -89,6 +123,7 @@ describe('buildStorefrontSitemap', () => {
         seoCanonicalPath: '/story',
         seoNoIndex: false,
         seoOgMedia: null,
+        updatedAt: '2026-09-23T09:30:00.000Z',
       },
     ] satisfies PublicContentPage[];
 
@@ -97,14 +132,48 @@ describe('buildStorefrontSitemap', () => {
     expect(sitemap).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ url: 'https://silver.example/' }),
-        expect.objectContaining({ url: 'https://silver.example/story' }),
-        expect.objectContaining({ url: 'https://silver.example/categories/rings' }),
+        expect.objectContaining({
+          url: 'https://silver.example/story',
+          lastModified: new Date('2026-09-23T09:30:00.000Z'),
+        }),
+        expect.objectContaining({
+          url: 'https://silver.example/products',
+          lastModified: new Date('2026-09-25T10:00:00.000Z'),
+        }),
+        expect.objectContaining({
+          url: 'https://silver.example/categories',
+          lastModified: new Date('2026-09-25T10:00:00.000Z'),
+        }),
+        expect.objectContaining({
+          url: 'https://silver.example/categories/jewelry',
+          lastModified: new Date('2026-09-25T10:00:00.000Z'),
+        }),
+        expect.objectContaining({
+          url: 'https://silver.example/categories/rings',
+          lastModified: new Date('2026-09-25T10:00:00.000Z'),
+        }),
         expect.objectContaining({
           url: 'https://silver.example/products/ring-canonical',
+          lastModified: new Date('2026-09-25T10:00:00.000Z'),
           images: ['https://silver.example/media/ring.webp'],
         }),
       ]),
     );
     expect(sitemap.some((entry) => entry.url.includes('hidden'))).toBe(false);
+    expect(sitemap.some((entry) => entry.url.includes('empty-category'))).toBe(false);
+  });
+
+  it('omits empty catalog hubs from the sitemap', () => {
+    const sitemap = buildStorefrontSitemap(
+      {
+        products: [],
+        categories: [],
+        brands: [],
+        contentPages: [],
+      },
+      origin,
+    );
+
+    expect(sitemap).toEqual([{ url: 'https://silver.example/' }]);
   });
 });

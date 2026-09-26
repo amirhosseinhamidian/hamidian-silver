@@ -2,9 +2,13 @@
 
 ## Required production configuration
 
+The production Compose file pins `STOREFRONT_PUBLIC_ORIGIN=https://hamidian.shop`.
+For non-production environments, set the public origin explicitly. The optional
+Search Console HTML token remains in the private production env file:
+
 ```env
-STOREFRONT_PUBLIC_ORIGIN=https://example.com
 GOOGLE_SITE_VERIFICATION=verification-token-from-search-console
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-...
 ```
 
 Prefer DNS verification for a Google Search Console Domain property. The HTML verification token is supported as a secondary verification method and is rendered only when `GOOGLE_SITE_VERIFICATION` is configured.
@@ -49,13 +53,16 @@ SEO_AUDIT_REDIRECT_DESTINATION=/products/new-slug \
 pnpm seo:audit
 ```
 
-The audit checks `robots.txt`, sitemap ownership and duplicates, private-route exclusion, canonical URLs, indexability, Product/Breadcrumb JSON-LD and optional `308` redirects.
+The audit checks `robots.txt`, sitemap ownership/HTTPS/duplicates, product `lastmod`,
+security headers, public canonicals, crawlable `noindex` utility pages, filtered-catalog
+`noindex`, out-of-range pagination, Product or ProductGroup/Breadcrumb JSON-LD and optional
+single-hop `308` redirects.
 
 ## Search Console checklist
 
 1. Verify the Domain property and keep the DNS record in place.
 2. Submit `https://example.com/sitemap.xml` once; do not submit filtered catalog URLs.
-3. Inspect the homepage, product list, one product, one category and one brand with URL Inspection.
+3. Inspect the homepage, product list, categories hub, one product, one category and one brand with URL Inspection.
 4. Confirm the selected canonical matches the production URL and request indexing for the initial representative pages.
 5. Review Page indexing, Product snippets, Breadcrumbs and Core Web Vitals after Google processes the deployment.
 6. After any slug change, inspect both URLs: the old URL must return one `308` hop and the new URL must be indexable and self-canonical.
@@ -64,6 +71,8 @@ The audit checks `robots.txt`, sitemap ownership and duplicates, private-route e
 ## Acceptance rules
 
 - No account, API, cart, checkout, payment or wishlist URL may appear in the sitemap.
+- HTML utility pages such as cart/wishlist remain crawlable but must expose `noindex`; robots.txt must not hide that directive.
+- API and payment-result paths remain disallowed crawl targets.
 - Search/filter variants remain `noindex,follow` and canonicalize to the clean catalog URL.
 - Archived or inactive entities do not resolve through historical redirects.
 - A current canonical path always wins over a stale redirect record.

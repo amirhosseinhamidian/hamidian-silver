@@ -71,6 +71,7 @@ describe('CatalogMediaService', () => {
 
     await service.upload(file, { altText: '  انگشتر نقره  ' });
 
+    expect(localMediaStorage.storeImage).toHaveBeenCalledWith(file, '  انگشتر نقره  ');
     expect(prisma.media.create).toHaveBeenCalledWith({
       data: {
         storageKey: 'catalog/2026/09/image.png',
@@ -99,7 +100,7 @@ describe('CatalogMediaService', () => {
   it('stores and attaches an uploaded product image with a public VPS URL', async () => {
     const productId = '10000000-0000-4000-8000-000000000001';
     const mediaId = '10000000-0000-4000-8000-000000000002';
-    prisma.product.findFirst.mockResolvedValue({ id: productId });
+    prisma.product.findFirst.mockResolvedValue({ id: productId, name: 'انگشتر نقره ماه' });
     prisma.productMedia.count.mockResolvedValue(0);
     localMediaStorage.storeImage.mockResolvedValue({
       storageKey: 'catalog/2026/09/product.png',
@@ -138,6 +139,10 @@ describe('CatalogMediaService', () => {
       url: 'https://media.example/catalog/2026/09/product.png',
       isPrimary: true,
     });
+    expect(localMediaStorage.storeImage).toHaveBeenCalledWith(
+      file,
+      'انگشتر نقره ماه - نمای روبه‌رو',
+    );
     expect(transaction.productMedia.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ productId, mediaId, isPrimary: true, sortOrder: 0 }),

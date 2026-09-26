@@ -9,9 +9,13 @@ import type {
 } from '@/lib/catalog/public-catalog';
 
 vi.mock('@/components/catalog/catalog-product-card', () => ({
-  CatalogProductCard: ({ product }: { product: PublicCatalogProductSummary }) => (
-    <li>{product.name}</li>
-  ),
+  CatalogProductCard: ({
+    product,
+    preloadImage,
+  }: {
+    product: PublicCatalogProductSummary;
+    preloadImage?: boolean;
+  }) => <li data-preload-image={preloadImage ? 'true' : 'false'}>{product.name}</li>,
 }));
 
 const filters: CatalogFilters = {
@@ -99,6 +103,19 @@ describe('CatalogProductGrid', () => {
       '/api/catalog/products?page=2&category=rings&sort=price-asc',
       { cache: 'no-store' },
     );
+  });
+
+  it('prioritizes only the first initial product image when requested', () => {
+    render(
+      <CatalogProductGrid
+        filters={filters}
+        initialProducts={productPage([firstProduct, secondProduct], 1, 1)}
+        prioritizeFirstImage
+      />,
+    );
+
+    expect(screen.getByText('انگشتر اول')).toHaveAttribute('data-preload-image', 'true');
+    expect(screen.getByText('انگشتر دوم')).toHaveAttribute('data-preload-image', 'false');
   });
 
   it('builds crawlable pagination links for collection routes', () => {

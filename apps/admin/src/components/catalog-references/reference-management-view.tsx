@@ -167,8 +167,10 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
     if (kind === 'country' && !/^[A-Z]{2}$/.test(isoCode)) {
       return setError('کد کشور باید دقیقاً دو حرف انگلیسی باشد.');
     }
-    if (kind === 'brand' && !isValidSeoCanonicalPath(seo.canonicalPath.trim()))
-      return setError('مسیر canonical باید یک مسیر داخلی بدون query یا fragment باشد.');
+    if (kind === 'brand' && !isValidSeoCanonicalPath(seo.canonicalPath.trim(), '/brands/'))
+      return setError(
+        'canonical برند باید یک مسیر امن زیر /brands/ و بدون query یا fragment باشد.',
+      );
     if (file && (!ACCEPTED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
       return setError(
         `${kind === 'brand' ? 'لوگو' : 'تصویر'} باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.`,
@@ -367,7 +369,15 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
         ) : null}
       </div>
 
-      <FormField id={`${formId}-description`} label="توضیحات">
+      <FormField
+        id={`${formId}-description`}
+        label="توضیحات"
+        hint={
+          kind === 'brand'
+            ? 'توضیح منحصربه‌فرد درباره کالکشن و سبک محصولات؛ از ادعای نمایندگی، اصالت یا رسمی‌بودن بدون مستندات خودداری کنید.'
+            : undefined
+        }
+      >
         {(props) => (
           <Textarea
             {...props}
@@ -557,6 +567,7 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
           defaultTitle={brandReference?.name ?? 'نام برند'}
           uploadUrl="/api/catalog/media"
           idPrefix={`${formId}-seo`}
+          canonicalPrefix="/brands/"
         />
       ) : null}
 

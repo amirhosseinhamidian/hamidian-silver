@@ -252,6 +252,23 @@ describe('ProductForm', () => {
     ]);
   });
 
+  it('rejects product short descriptions longer than seven words', () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ProductForm data={data} mode="create" />);
+
+    fireEvent.change(screen.getByLabelText(/نام محصول/), { target: { value: 'انگشتر نقره' } });
+    fireEvent.change(screen.getByLabelText(/اسلاگ محصول/), { target: { value: 'silver-ring' } });
+    fireEvent.change(screen.getByLabelText('توضیح کوتاه'), {
+      target: { value: 'طراحی ظریف نقره با فرم مدرن برای استایل روزمره' },
+    });
+    fireEvent.change(screen.getByLabelText(/SKU تنوع ۱/), { target: { value: 'RING-001' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ساخت محصول' }));
+
+    expect(screen.getByText('توضیح کوتاه محصول حداکثر باید ۷ واژه باشد.')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('rejects duplicate custom attribute keys before calling the API', () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

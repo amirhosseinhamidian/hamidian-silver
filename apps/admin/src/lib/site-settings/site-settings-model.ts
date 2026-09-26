@@ -210,19 +210,17 @@ export function parseAdminSiteSettings(value: unknown): AdminSiteSettings | null
   const seoHomeDescription =
     source?.seoHomeDescription === undefined ? null : nullableText(source?.seoHomeDescription);
   const seoSiteName =
-    source?.seoSiteName === undefined ? 'نقره حمیدیان' : text(source?.seoSiteName);
+    source?.seoSiteName === undefined ? 'گالری حمیدیان' : text(source?.seoSiteName);
   const seoDefaultTitle =
-    source?.seoDefaultTitle === undefined ? 'فروشگاه نقره حمیدیان' : text(source?.seoDefaultTitle);
+    source?.seoDefaultTitle === undefined ? 'گالری حمیدیان' : text(source?.seoDefaultTitle);
   const seoTitleTemplate =
-    source?.seoTitleTemplate === undefined ? '%s | گالری حمدیان' : text(source?.seoTitleTemplate);
+    source?.seoTitleTemplate === undefined ? '%s | گالری حمیدیان' : text(source?.seoTitleTemplate);
   const seoDefaultDescription =
     source?.seoDefaultDescription === undefined
       ? 'خرید آنلاین زیورآلات نقره از گالری حمیدیان'
       : text(source?.seoDefaultDescription);
   const seoOrganizationName =
-    source?.seoOrganizationName === undefined
-      ? 'گالری نقره حمیدیان'
-      : text(source?.seoOrganizationName);
+    source?.seoOrganizationName === undefined ? 'گالری حمیدیان' : text(source?.seoOrganizationName);
 
   if (
     !source ||

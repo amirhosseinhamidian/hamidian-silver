@@ -12,10 +12,10 @@ import {
 import { UpdateSiteSettingsDto } from './dto/update-site-settings.dto';
 
 const SITE_SETTINGS_ID = 'site';
-const DEFAULT_SEO_SITE_NAME = 'نقره حمیدیان';
-const DEFAULT_SEO_TITLE = 'نقره حمیدیان';
-const DEFAULT_SEO_TITLE_TEMPLATE = '%s | گالری حمدیان';
-const DEFAULT_SEO_DESCRIPTION = 'فروشگاه آنلاین و گالری نقره حمیدیان';
+const DEFAULT_SEO_SITE_NAME = 'گالری حمیدیان';
+const DEFAULT_SEO_TITLE = 'گالری حمیدیان';
+const DEFAULT_SEO_TITLE_TEMPLATE = '%s | گالری حمیدیان';
+const DEFAULT_SEO_DESCRIPTION = 'فروشگاه آنلاین نقره گالری حمیدیان';
 
 type SiteSettingsMedia = Readonly<{
   storageKey: string;

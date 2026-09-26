@@ -330,12 +330,12 @@ model SiteSettings {
   instagramUrl        String?  @db.VarChar(1000)
   telegramUrl         String?  @db.VarChar(1000)
   baleUrl             String?  @db.VarChar(1000)
-  seoSiteName                 String   @default("نقره حمیدیان") @db.VarChar(120)
-  seoDefaultTitle             String   @default("نقره حمیدیان") @db.VarChar(200)
-  seoTitleTemplate            String   @default("%s | گالری حمدیان") @db.VarChar(200)
-  seoDefaultDescription       String   @default("فروشگاه آنلاین و گالری نقره حمیدیان") @db.VarChar(500)
+  seoSiteName                 String   @default("گالری حمیدیان") @db.VarChar(120)
+  seoDefaultTitle             String   @default("گالری حمیدیان") @db.VarChar(200)
+  seoTitleTemplate            String   @default("%s | گالری حمیدیان") @db.VarChar(200)
+  seoDefaultDescription       String   @default("فروشگاه آنلاین نقره گالری حمیدیان") @db.VarChar(500)
   seoDefaultOgMediaId         String?  @db.Uuid
-  seoOrganizationName         String   @default("نقره حمیدیان") @db.VarChar(200)
+  seoOrganizationName         String   @default("گالری حمیدیان") @db.VarChar(200)
   seoOrganizationLogoMediaId String?  @db.Uuid
   seoSocialProfileUrls        String[] @default([]) @db.VarChar(1000)
   seoHomeTitle                String?  @db.VarChar(200)

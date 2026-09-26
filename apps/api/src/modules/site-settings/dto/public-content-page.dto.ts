@@ -63,4 +63,7 @@ export class PublicContentPageDto {
 
   @ApiPropertyOptional({ nullable: true, type: () => PublicContentPageMediaDto })
   seoOgMedia?: PublicContentPageMediaDto | null;
+
+  @ApiPropertyOptional({ format: 'date-time' })
+  updatedAt?: string;
 }

@@ -8,6 +8,8 @@ import {
   MaxLength,
 } from 'class-validator';
 
+import { BRAND_SEO_CANONICAL_PATH_PATTERN } from '../../seo/seo-validation';
+
 export class UpdateBrandDto {
   @IsOptional()
   @IsString()
@@ -36,7 +38,7 @@ export class UpdateBrandDto {
   @IsOptional()
   @IsString()
   @MaxLength(1000)
-  @Matches(/^\/(?!\/)[^\s?#]*$/)
+  @Matches(BRAND_SEO_CANONICAL_PATH_PATTERN)
   seoCanonicalPath?: string | null;
 
   @IsOptional()

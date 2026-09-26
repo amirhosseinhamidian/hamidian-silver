@@ -20,3 +20,24 @@ window.gtag('config', '${measurementId}', {
 });
 `;
 }
+
+export type WebVitalMetric = Readonly<{
+  id: string;
+  name: string;
+  value: number;
+  delta: number;
+  rating?: string;
+}>;
+
+export function webVitalAnalyticsParameters(metric: WebVitalMetric) {
+  const scale = metric.name === 'CLS' ? 1_000 : 1;
+
+  return {
+    metric_name: metric.name,
+    metric_value: Math.round(metric.value * scale),
+    metric_delta: Math.round(metric.delta * scale),
+    metric_id: metric.id,
+    metric_rating: metric.rating,
+    non_interaction: true,
+  } as const;
+}

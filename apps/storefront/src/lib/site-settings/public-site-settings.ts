@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { cache } from 'react';
 
 import { createServerApiClient } from '@/lib/api/server-client';
@@ -181,16 +182,22 @@ function parsePublicSettings(value: unknown): PublicSiteSettings | null {
   };
 }
 
+const getCachedPublicSiteSettings = unstable_cache(
+  async (apiOrigin: string): Promise<PublicSiteSettings> => {
+    try {
+      const client = createServerApiClient({ apiOrigin });
+      const result = await client.GET('/api/v1/site-settings/public');
+      if (!result.response.ok || !result.data) return DEFAULT_PUBLIC_SITE_SETTINGS;
+      return parsePublicSettings(result.data) ?? DEFAULT_PUBLIC_SITE_SETTINGS;
+    } catch {
+      return DEFAULT_PUBLIC_SITE_SETTINGS;
+    }
+  },
+  ['storefront-public-site-settings'],
+  { revalidate: 60 },
+);
+
 export const getPublicSiteSettings = cache(async (): Promise<PublicSiteSettings> => {
   const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;
-  if (!apiOrigin) return DEFAULT_PUBLIC_SITE_SETTINGS;
-
-  try {
-    const client = createServerApiClient({ apiOrigin });
-    const result = await client.GET('/api/v1/site-settings/public', { cache: 'no-store' });
-    if (!result.response.ok || !result.data) return DEFAULT_PUBLIC_SITE_SETTINGS;
-    return parsePublicSettings(result.data) ?? DEFAULT_PUBLIC_SITE_SETTINGS;
-  } catch {
-    return DEFAULT_PUBLIC_SITE_SETTINGS;
-  }
+  return apiOrigin ? getCachedPublicSiteSettings(apiOrigin) : DEFAULT_PUBLIC_SITE_SETTINGS;
 });

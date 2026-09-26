@@ -41,6 +41,7 @@ describe('StorefrontFaq', () => {
       name: /آیا امکان مرجوع کردن محصول وجود دارد؟/,
     });
     expect(returnQuestion).toHaveAttribute('aria-expanded', 'false');
+    expect(returnQuestion.closest('article')).toHaveAttribute('id', 'return-policy');
     fireEvent.click(returnQuestion);
     expect(returnQuestion).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText(/تأیید ادمین/)).toBeInTheDocument();

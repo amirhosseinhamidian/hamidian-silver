@@ -63,6 +63,36 @@ describe('site settings model', () => {
     });
   });
 
+  it('uses final gallery branding when optional SEO fields are absent', () => {
+    const result = parseAdminSiteSettings({
+      headerCategoryIds: [],
+      announcement,
+      catalogHeroEnabled: false,
+      catalogHeroTitle: null,
+      catalogHeroSubtitle: null,
+      catalogHeroMediaId: null,
+      catalogHeroMedia: null,
+      catalogHeroMobileMediaId: null,
+      catalogHeroMobileMedia: null,
+      galleryName: null,
+      footerAbout: null,
+      contactAddress: null,
+      contactPhoneNumbers: [],
+      contactEmail: null,
+      instagramUrl: null,
+      telegramUrl: null,
+      baleUrl: null,
+      updatedAt: null,
+    });
+
+    expect(result).toMatchObject({
+      seoSiteName: 'گالری حمیدیان',
+      seoDefaultTitle: 'گالری حمیدیان',
+      seoTitleTemplate: '%s | گالری حمیدیان',
+      seoOrganizationName: 'گالری حمیدیان',
+    });
+  });
+
   it('rejects malformed announcement data', () => {
     expect(
       parseAdminSiteSettings({

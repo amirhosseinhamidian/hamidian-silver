@@ -37,8 +37,19 @@ export function createSeoEditorValue(source?: SeoSource | null): SeoEditorValue 
   };
 }
 
-export function isValidSeoCanonicalPath(value: string): boolean {
-  return value === '' || /^\/(?!\/)[^\s?#]*$/.test(value);
+const PRIVATE_SEO_PREFIXES = ['/account', '/api', '/cart', '/checkout', '/payment', '/wishlist'];
+
+export function isValidSeoCanonicalPath(value: string, requiredPrefix?: string): boolean {
+  if (value === '') return true;
+  if (!/^\/(?!\/)(?!\.{1,2}(?:\/|$))(?!.*\/\.{1,2}(?:\/|$))[^%\\\s?#]*$/.test(value)) {
+    return false;
+  }
+  if (PRIVATE_SEO_PREFIXES.some((prefix) => value === prefix || value.startsWith(`${prefix}/`))) {
+    return false;
+  }
+  return requiredPrefix
+    ? value.startsWith(requiredPrefix) && value.length > requiredPrefix.length
+    : true;
 }
 
 export function seoEditorPayload(value: SeoEditorValue) {
@@ -58,6 +69,7 @@ export function SeoEditor({
   defaultTitle,
   uploadUrl,
   idPrefix = 'seo',
+  canonicalPrefix,
   disabled = false,
 }: Readonly<{
   value: SeoEditorValue;
@@ -66,6 +78,7 @@ export function SeoEditor({
   defaultTitle: string;
   uploadUrl: string;
   idPrefix?: string;
+  canonicalPrefix?: string;
   disabled?: boolean;
 }>) {
   return (
@@ -78,7 +91,7 @@ export function SeoEditor({
           <FormField
             id={`${idPrefix}-title`}
             label="عنوان SEO"
-            hint={`${toPersianDigits(String(value.title.length))} از ۲۰۰ نویسه`}
+            hint={`${toPersianDigits(String(value.title.length))} نویسه؛ پسوند نام سایت خودکار اضافه می‌شود`}
           >
             {(props) => (
               <Input
@@ -94,7 +107,7 @@ export function SeoEditor({
           <FormField
             id={`${idPrefix}-description`}
             label="توضیح SEO"
-            hint={`${toPersianDigits(String(value.description.length))} از ۵۰۰ نویسه`}
+            hint={`${toPersianDigits(String(value.description.length))} نویسه؛ توضیح طبیعی و منحصربه‌فرد بنویسید`}
           >
             {(props) => (
               <Textarea
@@ -110,7 +123,11 @@ export function SeoEditor({
           <FormField
             id={`${idPrefix}-canonical-path`}
             label="مسیر canonical"
-            hint="اختیاری؛ فقط مسیر داخلی، بدون دامنه، query یا fragment"
+            hint={
+              canonicalPrefix
+                ? `اختیاری؛ فقط مسیر داخلی زیر ${canonicalPrefix} و بدون query یا fragment`
+                : 'اختیاری؛ فقط مسیر داخلی عمومی، بدون دامنه، query یا fragment'
+            }
           >
             {(props) => (
               <Input
@@ -118,7 +135,7 @@ export function SeoEditor({
                 dir="ltr"
                 value={value.canonicalPath}
                 maxLength={1000}
-                aria-invalid={!isValidSeoCanonicalPath(value.canonicalPath.trim())}
+                aria-invalid={!isValidSeoCanonicalPath(value.canonicalPath.trim(), canonicalPrefix)}
                 placeholder={canonicalPlaceholder}
                 disabled={disabled}
                 onChange={(event) =>
@@ -138,6 +155,7 @@ export function SeoEditor({
         </div>
         <SiteMediaField
           label="تصویر Open Graph"
+          hint="برای نمایش بهتر در اشتراک‌گذاری و نتایج تصویری، تصویر باکیفیت و ترجیحاً افقی انتخاب کنید (مثلاً ۱۲۰۰×۶۳۰)."
           media={value.ogMedia}
           altText={value.title.trim() || defaultTitle}
           uploadUrl={uploadUrl}

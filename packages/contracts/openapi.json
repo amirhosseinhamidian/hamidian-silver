@@ -8017,6 +8017,10 @@
               }
             ]
           },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
           "id": {
             "type": "string"
           },
@@ -8129,6 +8133,10 @@
                 "$ref": "#/components/schemas/PublicCatalogMediaDto"
               }
             ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           },
           "id": {
             "type": "string"
@@ -8267,6 +8275,10 @@
           },
           "seoNoIndex": {
             "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           },
           "salePriceToman": {
             "type": "number",
@@ -8566,6 +8578,9 @@
           "id": {
             "type": "string"
           },
+          "sku": {
+            "type": "string"
+          },
           "availableQuantity": {
             "type": "number"
           },
@@ -8581,6 +8596,7 @@
           "size",
           "platingOptions",
           "id",
+          "sku",
           "availableQuantity",
           "isAvailable"
         ]
@@ -8617,6 +8633,10 @@
           },
           "seoNoIndex": {
             "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           },
           "salePriceToman": {
             "type": "number",
@@ -8804,8 +8824,7 @@
           },
           "seoCanonicalPath": {
             "type": "string",
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"
@@ -8865,8 +8884,7 @@
           "seoCanonicalPath": {
             "type": "string",
             "nullable": true,
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"
@@ -8921,8 +8939,7 @@
           },
           "seoCanonicalPath": {
             "type": "string",
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"
@@ -8978,8 +8995,7 @@
           "seoCanonicalPath": {
             "type": "string",
             "nullable": true,
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"
@@ -9305,8 +9321,7 @@
           },
           "seoCanonicalPath": {
             "type": "string",
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"
@@ -9517,8 +9532,7 @@
           "seoCanonicalPath": {
             "type": "string",
             "nullable": true,
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"
@@ -13067,6 +13081,10 @@
                 "$ref": "#/components/schemas/PublicContentPageMediaDto"
               }
             ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -13262,8 +13280,7 @@
           "seoCanonicalPath": {
             "type": "string",
             "nullable": true,
-            "maxLength": 1000,
-            "pattern": "^\\/(?!\\/)[^\\s?#]*$"
+            "maxLength": 1000
           },
           "seoNoIndex": {
             "type": "boolean"

@@ -28,18 +28,32 @@ describe('LocalMediaStorageService', () => {
   });
 
   it('stores an image under a generated catalog path on local disk', async () => {
-    const stored = await service.storeImage({
-      buffer: PNG_BYTES,
-      mimetype: 'image/png',
-      originalname: 'ring.png',
-      size: PNG_BYTES.byteLength,
-    });
+    const stored = await service.storeImage(
+      {
+        buffer: PNG_BYTES,
+        mimetype: 'image/png',
+        originalname: 'IMG_1001.png',
+        size: PNG_BYTES.byteLength,
+      },
+      'انگشتر نقره ماری',
+    );
 
-    expect(stored.storageKey).toMatch(/^catalog\/\d{4}\/\d{2}\/[\da-f-]+\.png$/);
+    expect(stored.storageKey).toMatch(/^catalog\/\d{4}\/\d{2}\/انگشتر-نقره-ماری-[\da-f-]+\.png$/);
     expect(stored.mimeType).toBe('image/png');
     expect(stored.sizeBytes).toBe(PNG_BYTES.byteLength);
 
     await expect(readFile(join(rootPath, stored.storageKey))).resolves.toEqual(PNG_BYTES);
+  });
+
+  it('falls back to a sanitized original filename when no preferred image name exists', async () => {
+    const stored = await service.storeImage({
+      buffer: PNG_BYTES,
+      mimetype: 'image/png',
+      originalname: 'Front View Ring.png',
+      size: PNG_BYTES.byteLength,
+    });
+
+    expect(stored.storageKey).toMatch(/^catalog\/\d{4}\/\d{2}\/front-view-ring-[\da-f-]+\.png$/);
   });
 
   it('rejects a claimed image whose bytes do not match the MIME type', async () => {

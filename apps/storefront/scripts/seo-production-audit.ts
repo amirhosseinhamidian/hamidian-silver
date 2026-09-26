@@ -32,8 +32,16 @@ function decodeXml(value: string): string {
     .replaceAll('&apos;', "'");
 }
 
-function sitemapLocations(xml: string): string[] {
-  return [...xml.matchAll(/<loc>([^<]+)<\/loc>/gi)].map((match) => decodeXml(match[1].trim()));
+type SitemapEntry = Readonly<{ location: string; lastModified: string | null }>;
+
+function sitemapEntries(xml: string): SitemapEntry[] {
+  return [...xml.matchAll(/<url>([\s\S]*?)<\/url>/gi)].flatMap((match) => {
+    const block = match[1];
+    const location = block.match(/<loc>([^<]+)<\/loc>/i)?.[1];
+    if (!location) return [];
+    const lastModified = block.match(/<lastmod>([^<]+)<\/lastmod>/i)?.[1]?.trim() ?? null;
+    return [{ location: decodeXml(location.trim()), lastModified }];
+  });
 }
 
 function htmlAttribute(tag: string, name: string): string | null {
@@ -92,6 +100,7 @@ async function run(): Promise<void> {
   const origin = requiredOrigin();
   const failures: string[] = [];
   let locations: string[] = [];
+  let sitemap: SitemapEntry[] = [];
 
   const check = async (label: string, task: () => Promise<void>) => {
     try {
@@ -111,20 +120,29 @@ async function run(): Promise<void> {
       body.includes(`Sitemap: ${new URL('/sitemap.xml', origin).href}`),
       'Sitemap directive is missing.',
     );
-    for (const pathname of ['/api/', '/account/', '/cart', '/checkout', '/payment/', '/wishlist']) {
+    for (const pathname of ['/api/', '/payment/']) {
       assert(body.includes(`Disallow: ${pathname}`), `robots.txt does not disallow ${pathname}.`);
+    }
+    for (const pathname of ['/account/', '/cart', '/checkout', '/wishlist']) {
+      assert(
+        !body.includes(`Disallow: ${pathname}`),
+        `robots.txt blocks ${pathname}, preventing crawlers from seeing noindex.`,
+      );
     }
   });
 
   await check('sitemap.xml', async () => {
     const { response, body } = await fetchText(origin, '/sitemap.xml');
     assert(response.ok, `sitemap.xml returned ${response.status}.`);
-    locations = sitemapLocations(body);
+    sitemap = sitemapEntries(body);
+    locations = sitemap.map(({ location }) => location);
     assert(locations.length > 0, 'The sitemap has no URL entries.');
     assert(new Set(locations).size === locations.length, 'The sitemap contains duplicate URLs.');
     for (const location of locations) {
       const url = new URL(location);
       assert(url.origin === origin.origin, `Cross-origin sitemap URL: ${location}`);
+      assert(url.protocol === 'https:', `Non-HTTPS sitemap URL: ${location}`);
+      assert(!url.search && !url.hash, `Sitemap URL has query or fragment: ${location}`);
       assert(
         !PRIVATE_PATH_PREFIXES.some(
           (prefix) => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`),
@@ -132,13 +150,42 @@ async function run(): Promise<void> {
         `Private URL exists in sitemap: ${location}`,
       );
     }
-    for (const pathname of ['/', '/products', '/brands']) {
+    for (const pathname of ['/', '/products', '/categories', '/brands']) {
       assert(locations.includes(new URL(pathname, origin).href), `Sitemap is missing ${pathname}.`);
     }
   });
 
+  await check('security headers', async () => {
+    const { response } = await fetchText(origin, '/');
+    assert(
+      response.headers.get('x-content-type-options')?.toLowerCase() === 'nosniff',
+      'X-Content-Type-Options: nosniff is missing.',
+    );
+    assert(
+      response.headers.get('referrer-policy')?.toLowerCase() === 'strict-origin-when-cross-origin',
+      'Referrer-Policy is missing or unexpected.',
+    );
+    assert(
+      response.headers.get('x-frame-options')?.toUpperCase() === 'SAMEORIGIN',
+      'X-Frame-Options: SAMEORIGIN is missing.',
+    );
+    assert(
+      response.headers.get('content-security-policy')?.includes("frame-ancestors 'self'"),
+      'CSP frame-ancestors protection is missing.',
+    );
+    assert(
+      response.headers.get('permissions-policy')?.includes('camera=()'),
+      'Permissions-Policy is missing or unexpected.',
+    );
+    assert(
+      response.headers.get('strict-transport-security')?.includes('max-age='),
+      'Strict-Transport-Security is missing.',
+    );
+    assert(!response.headers.has('x-powered-by'), 'X-Powered-By should not be exposed.');
+  });
+
   await check('public canonicals', async () => {
-    for (const pathname of ['/', '/products', '/brands']) {
+    for (const pathname of ['/', '/products', '/categories', '/brands']) {
       const { response, body } = await fetchText(origin, pathname);
       assert(response.ok, `${pathname} returned ${response.status}.`);
       assert(!hasNoIndex(body), `${pathname} unexpectedly contains noindex.`);
@@ -147,6 +194,32 @@ async function run(): Promise<void> {
         `${pathname} canonical is invalid.`,
       );
     }
+  });
+
+  await check('utility pages expose noindex', async () => {
+    for (const pathname of ['/cart', '/wishlist']) {
+      const { response, body } = await fetchText(origin, pathname);
+      assert(response.ok, `${pathname} returned ${response.status}.`);
+      assert(hasNoIndex(body), `${pathname} does not expose noindex.`);
+    }
+  });
+
+  await check('catalog variants are not indexable', async () => {
+    const { response, body } = await fetchText(origin, '/products?q=seo-audit-nonexistent');
+    assert(response.ok, `Filtered catalog returned ${response.status}.`);
+    assert(hasNoIndex(body), 'Filtered catalog does not contain noindex.');
+    assert(
+      canonicalUrl(body) === new URL('/products', origin).href,
+      'Filtered catalog canonical is not the clean products URL.',
+    );
+  });
+
+  await check('out-of-range pagination', async () => {
+    const { response } = await fetchText(origin, '/products?page=999999');
+    assert(
+      response.status === 404,
+      `Out-of-range catalog returned ${response.status}, expected 404.`,
+    );
   });
 
   await check('product structured data', async () => {
@@ -172,8 +245,17 @@ async function run(): Promise<void> {
     assert(response.ok, `Sample product returned ${response.status}.`);
     assert(canonicalUrl(body) === productUrl, 'Sample product canonical does not match sitemap.');
     const types = jsonLdTypes(body);
-    assert(types.has('Product'), 'Sample product has no Product JSON-LD.');
+    assert(
+      types.has('Product') || types.has('ProductGroup'),
+      'Sample product has neither Product nor ProductGroup JSON-LD.',
+    );
     assert(types.has('BreadcrumbList'), 'Sample product has no BreadcrumbList JSON-LD.');
+    const entry = sitemap.find(({ location }) => location === productUrl);
+    assert(entry?.lastModified, 'Sample product sitemap entry has no lastmod.');
+    assert(
+      !Number.isNaN(Date.parse(entry.lastModified)),
+      'Sample product sitemap lastmod is not a valid date.',
+    );
   });
 
   const redirectPath = process.env.SEO_AUDIT_REDIRECT_PATH?.trim();

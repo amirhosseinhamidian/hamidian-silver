@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveStorefrontSeoRoutePolicy } from '@/lib/seo/route-policy';
 
 describe('resolveStorefrontSeoRoutePolicy', () => {
-  it.each(['/', '/products', '/brands', '/about', '/faq'])(
+  it.each(['/', '/products', '/brands', '/categories', '/about', '/faq'])(
     'indexes the public route %s',
     (pathname) => {
       expect(resolveStorefrontSeoRoutePolicy(pathname)).toMatchObject({
@@ -33,6 +33,17 @@ describe('resolveStorefrontSeoRoutePolicy', () => {
       canonicalPath: '/products?page=3',
       index: true,
       follow: true,
+    });
+  });
+
+  it('does not index malformed pagination variants', () => {
+    expect(
+      resolveStorefrontSeoRoutePolicy('/products', new URLSearchParams({ page: 'abc' })),
+    ).toMatchObject({
+      canonicalPath: '/products',
+      index: false,
+      follow: true,
+      reason: 'catalog-variant',
     });
   });
 

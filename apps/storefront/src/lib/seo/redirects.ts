@@ -2,7 +2,7 @@ import { cache } from 'react';
 
 import { createServerApiClient } from '@/lib/api/server-client';
 
-const PUBLIC_CATALOG_PATH_PATTERN = /^\/(?:products|categories|brands)\/[^/?#\s]+$/;
+const PUBLIC_CATALOG_PATH_PATTERN = /^\/(?:products|categories|brands)\/(?!\.{1,2}$)[^%\\/?#\s]+$/;
 
 export function validPublicCatalogRedirectPath(value: unknown): string | null {
   return typeof value === 'string' && PUBLIC_CATALOG_PATH_PATTERN.test(value) ? value : null;

@@ -20,7 +20,8 @@ SEO_AUDIT_ORIGIN=https://hamidian.shop pnpm seo:audit
 ```
 
 این ممیزی `/robots.txt`، `/sitemap.xml`، canonical صفحهٔ اصلی/محصولات/
-برندها، یک محصول واقعی در sitemap، JSON-LD و خروج‌نکردن مسیرهای خصوصی را
+دسته‌بندی‌ها/برندها، یک محصول واقعی در sitemap، `lastmod`، JSON-LD،
+هدرهای امنیتی، noindex فیلترها و صفحات utility و pagination خارج از محدوده را
 بررسی می‌کند. در صورت خطا ابتدا همان مشکل را برطرف کنید؛ صرف ارسال sitemap
 آن را حل نمی‌کند. آدرس `https://hamidian.shop/sitemap.xml` باید عمومی و
 HTTPS باشد؛ staging و دامنهٔ `admin` نباید در sitemap تولید باشند. نمونهٔ
@@ -71,7 +72,9 @@ Git. این متغیر **build-time** است: طبق گردش VPS-009 پس از 
 نسخهٔ جدید Storefront build/deploy کنید؛ صرف restart API آن را فعال نمی‌کند.
 اگر VPS-011 هنوز کامل نیست، مقدار env را خالی نگه دارید.
 
-بعد از فعال‌سازی، در مرورگر با ابزار Network و پنل GA4 DebugView/Realtime
+بعد از فعال‌سازی، eventهای `web_vital` برای LCP/INP/CLS/TTFB را نیز در
+DebugView/Realtime بررسی کنید؛ `page_path` باید بدون query باشد. سپس در مرورگر
+با ابزار Network و پنل GA4 DebugView/Realtime
 با دادهٔ ساختگیِ غیرشخصی یک بار جستجو، محصول، wishlist، سبد و checkout
 آزمایش کنید. برای purchase فقط همان پرداخت واقعی **که در VPS-011 با اجازهٔ
 مالک انجام می‌شود** را مشاهده کنید؛ این مرحله پرداخت دوم ایجاد نمی‌کند.

@@ -13,12 +13,16 @@ import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { getCatalogDevProductImageSrc } from '@/lib/catalog/dev-media.server';
 import {
+  buildCategoryBreadcrumbItems,
+  getPublicCatalogCategories,
   getPublicCatalogProduct,
   getPublicRelatedProducts,
+  selectPrimaryCatalogCategory,
   type CatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
+import { productSeoDescription } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSeoRedirect } from '@/lib/seo/redirects';
 import { buildProductStructuredData } from '@/lib/seo/structured-data';
@@ -54,7 +58,7 @@ export async function generateMetadata({
     pathname: `/products/${product.slug}`,
     searchParams: rawSearchParams,
     title: product.name,
-    description: product.shortDescription ?? product.description,
+    description: productSeoDescription(product),
     seoTitle: product.seoTitle,
     seoDescription: product.seoDescription,
     seoCanonicalPath: product.seoCanonicalPath,
@@ -66,9 +70,10 @@ export async function generateMetadata({
 
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
   const { slug } = await params;
-  const [product, settings] = await Promise.all([
+  const [product, settings, categories] = await Promise.all([
     getPublicCatalogProduct(slug),
     getPublicSiteSettings(),
+    getPublicCatalogCategories(),
   ]);
 
   if (!product) {
@@ -78,6 +83,17 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   }
 
   const relatedProducts = await getPublicRelatedProducts(slug, 1, 8);
+  const primaryAssignedCategory = selectPrimaryCatalogCategory(categories, product.categories);
+  const productBreadcrumbs = primaryAssignedCategory
+    ? [
+        ...buildCategoryBreadcrumbItems(categories, primaryAssignedCategory),
+        { label: product.name, href: `/products/${product.slug}` },
+      ]
+    : [
+        { label: 'خانه', href: '/' },
+        { label: 'محصولات', href: '/products' },
+        { label: product.name, href: `/products/${product.slug}` },
+      ];
 
   const devImageSrc = getCatalogDevProductImageSrc(product.slug);
   const publicImages = product.media.filter(
@@ -135,11 +151,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         className="sf-container pb-36 pt-8 sm:pt-10 lg:pb-[var(--sf-section-space)]"
       >
         <StorefrontBreadcrumbs
-          items={[
-            { label: 'خانه', href: '/' },
-            { label: 'محصولات', href: '/products' },
-            { label: product.name, href: `/products/${product.slug}` },
-          ]}
+          items={productBreadcrumbs}
           className="mb-5 text-[var(--sf-color-muted)] sm:mb-7"
         />
 
@@ -275,14 +287,14 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           </section>
         </div>
 
-        {product.categories[0] ? (
+        {primaryAssignedCategory ? (
           <aside className="mt-16 border border-[var(--sf-color-border)] bg-[var(--sf-color-surface)] p-7 text-center sm:mt-20 sm:p-10">
             <p className="text-sm text-[var(--sf-color-muted)]">
               محصولات بیشتری از این مجموعه ببینید
             </p>
-            <h2 className="mt-2 text-2xl font-medium">{product.categories[0].name}</h2>
+            <h2 className="mt-2 text-2xl font-medium">{primaryAssignedCategory.name}</h2>
             <Link
-              href={`/categories/${product.categories[0].slug}`}
+              href={`/categories/${primaryAssignedCategory.slug}`}
               className="mt-5 inline-flex min-h-11 items-center justify-center bg-[var(--sf-color-ink)] px-6 text-sm text-white"
             >
               مشاهده همه محصولات این دسته

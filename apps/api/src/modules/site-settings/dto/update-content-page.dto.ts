@@ -11,6 +11,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { SEO_CANONICAL_PATH_PATTERN } from '../../seo/seo-validation';
+
 export class UpdateContentPageSectionDto {
   @IsString()
   @MinLength(1)
@@ -65,7 +67,7 @@ export class UpdateContentPageDto {
   @IsOptional()
   @IsString()
   @MaxLength(1000)
-  @Matches(/^\/(?!\/)[^\s?#]*$/)
+  @Matches(SEO_CANONICAL_PATH_PATTERN)
   seoCanonicalPath?: string | null;
 
   @IsOptional()

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 
 import { SearchResultsAnalytics } from '@/components/analytics/conversion-trackers';
 import { CatalogFilterForm } from '@/components/catalog/catalog-filter-form';
@@ -17,9 +18,11 @@ import {
 import {
   buildCatalogHref,
   getPublicCatalogIndex,
+  getPublicCatalogProducts,
   parseCatalogSearchParams,
   type CatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
+import { ROOT_CATALOG_SEO } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
@@ -32,14 +35,25 @@ const persianNumber = new Intl.NumberFormat('fa-IR');
 export async function generateMetadata({ searchParams }: ProductsPageProps): Promise<Metadata> {
   const rawSearchParams = await searchParams;
   const filters = parseCatalogSearchParams(rawSearchParams);
-  const settings = await getPublicSiteSettings();
+  const isRootCatalog =
+    filters.page === 1 &&
+    filters.sort === 'newest' &&
+    !filters.q &&
+    !filters.category &&
+    !filters.brand &&
+    !filters.country;
+  const [settings, rootProducts] = await Promise.all([
+    getPublicSiteSettings(),
+    isRootCatalog ? getPublicCatalogProducts(filters) : Promise.resolve(null),
+  ]);
 
   return buildStorefrontPageMetadata(settings, {
     pathname: '/products',
     searchParams: rawSearchParams,
-    title: filters.q ? `نتایج جستجوی «${filters.q}»` : 'محصولات نقره',
-    description: settings.catalogHeroSubtitle ?? 'مجموعه محصولات نقره گالری حمیدیان را مرور کنید.',
+    title: filters.q ? `نتایج جستجوی «${filters.q}»` : ROOT_CATALOG_SEO.title,
+    description: settings.catalogHeroSubtitle ?? ROOT_CATALOG_SEO.description,
     fallbackMedia: settings.catalogHeroMedia,
+    seoNoIndex: Boolean(isRootCatalog && rootProducts?.total === 0),
   });
 }
 
@@ -54,6 +68,10 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     Boolean,
   ).length;
   const hasActiveFilters = Boolean(activeFilterCount > 0 || filters.sort !== 'newest');
+  const isIndexablePagination = !hasActiveFilters;
+  if (isIndexablePagination && filters.page > 1 && filters.page > products.totalPages) {
+    notFound();
+  }
 
   return (
     <main id="main-content" className="pb-[var(--sf-section-space)]">
@@ -166,6 +184,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   initialFallbackSources={getCatalogDevProductImageSources(products.items)}
                   imageSizes="(min-width: 1536px) 20vw, (min-width: 1280px) 27vw, (min-width: 1024px) 40vw, 50vw"
                   className="xl:grid-cols-3 2xl:grid-cols-4"
+                  prioritizeFirstImage={
+                    !siteSettings.catalogHeroEnabled || !siteSettings.catalogHeroMedia?.url
+                  }
                 />
               </>
             ) : (

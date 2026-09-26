@@ -9,6 +9,7 @@ import {
   type CatalogFilters,
   type CatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
+import { brandSeoDescription, brandSeoTitle } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSeoRedirect } from '@/lib/seo/redirects';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
@@ -28,6 +29,7 @@ export async function generateMetadata({
     getPublicCatalogBrands(),
     getPublicSiteSettings(),
   ]);
+  const parsedFilters = parseCatalogSearchParams(rawSearchParams);
   const brand = brands.find((candidate) => candidate.slug === slug);
 
   if (!brand) {
@@ -37,15 +39,26 @@ export async function generateMetadata({
     };
   }
 
+  const shouldCheckEmpty = parsedFilters.page === 1 && parsedFilters.sort === 'newest';
+  const products = shouldCheckEmpty
+    ? await getPublicCatalogProducts({
+        page: 1,
+        pageSize: parsedFilters.pageSize,
+        sort: 'newest',
+        brand: brand.slug,
+      })
+    : null;
+  const emptyCollection = Boolean(shouldCheckEmpty && products?.total === 0);
+
   return buildStorefrontPageMetadata(settings, {
     pathname: `/brands/${brand.slug}`,
     searchParams: rawSearchParams,
-    title: brand.name,
-    description: brand.description,
+    title: brandSeoTitle(brand),
+    description: brandSeoDescription(brand),
     seoTitle: brand.seoTitle,
     seoDescription: brand.seoDescription,
     seoCanonicalPath: brand.seoCanonicalPath,
-    seoNoIndex: brand.seoNoIndex,
+    seoNoIndex: Boolean(brand.seoNoIndex || emptyCollection),
     seoOgMedia: brand.seoOgMedia,
     fallbackMedia: brand.heroImage ?? brand.image,
   });
@@ -75,16 +88,41 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
     notFound();
   }
 
+  if (filters.sort === 'newest' && filters.page > 1 && filters.page > products.totalPages) {
+    notFound();
+  }
+
   return (
     <CatalogCollectionPage
       path={`/brands/${brand.slug}`}
       eyebrow="برند"
       title={brand.name}
-      description={brand.description}
+      description={brandSeoDescription(brand)}
       image={brand.heroImage ?? null}
       mobileImage={brand.heroMobileImage ?? null}
       filters={filters}
       products={products}
+      contextLinkGroups={[
+        {
+          label: 'دسته‌بندی‌های این برند',
+          links: [
+            ...new Map(
+              products.items
+                .flatMap((product) => product.categories)
+                .map(
+                  (category) =>
+                    [
+                      category.id,
+                      {
+                        label: category.name,
+                        href: `/categories/${category.slug}`,
+                      },
+                    ] as const,
+                ),
+            ).values(),
+          ].slice(0, 8),
+        },
+      ]}
     />
   );
 }

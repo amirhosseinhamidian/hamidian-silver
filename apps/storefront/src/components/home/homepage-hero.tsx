@@ -12,6 +12,8 @@ type HomepageHeroProps = Readonly<{
   label: string;
   compact?: boolean;
   preload?: boolean;
+  headingLevel?: 1 | 2;
+  fallbackTitle?: string;
 }>;
 
 function HeroAction({ href, label }: Readonly<{ href: string; label: string }>) {
@@ -34,11 +36,14 @@ export function HomepageHero({
   label,
   compact = false,
   preload = false,
+  headingLevel = 1,
+  fallbackTitle,
 }: HomepageHeroProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const hasSlider = slides.length > 1;
   const activeSlide = slides[activeIndex] ?? slides[0];
+  const Heading = headingLevel === 1 ? 'h1' : 'h2';
 
   useEffect(() => {
     if (!hasSlider || paused || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
@@ -62,7 +67,9 @@ export function HomepageHero({
           <p className="text-xs tracking-[0.24em] text-[var(--sf-color-muted)]" dir="ltr">
             HAMIDIAN SILVER
           </p>
-          <h1 className="mt-5 text-[clamp(2.5rem,6vw,5.5rem)] font-normal">نقره حمیدیان</h1>
+          <Heading className="mt-5 text-[clamp(2.5rem,6vw,5.5rem)] font-normal">
+            {fallbackTitle?.trim() || 'گالری حمیدیان'}
+          </Heading>
           <Link
             href="/products"
             className="mt-8 inline-flex min-h-11 items-center border border-[var(--sf-color-ink)] px-7 text-sm"
@@ -74,10 +81,9 @@ export function HomepageHero({
     );
   }
 
+  const headingText = activeSlide.title?.trim() || fallbackTitle?.trim() || null;
   const showCopy = Boolean(
-    activeSlide.title ||
-    activeSlide.subtitle ||
-    (activeSlide.actionLabel && activeSlide.actionHref),
+    headingText || activeSlide.subtitle || (activeSlide.actionLabel && activeSlide.actionHref),
   );
 
   return (
@@ -108,10 +114,10 @@ export function HomepageHero({
 
       {showCopy ? (
         <div className="absolute inset-x-0 bottom-[10%] z-10 mx-auto flex max-w-3xl flex-col items-center px-6 text-center">
-          {activeSlide.title ? (
-            <h1 className="text-[clamp(2rem,5vw,4.75rem)] leading-tight font-normal drop-shadow-sm">
-              {activeSlide.title}
-            </h1>
+          {headingText ? (
+            <Heading className="text-[clamp(2rem,5vw,4.75rem)] leading-tight font-normal drop-shadow-sm">
+              {headingText}
+            </Heading>
           ) : null}
           {activeSlide.subtitle ? (
             <p className="mt-4 max-w-2xl text-sm leading-7 opacity-90 sm:text-lg">

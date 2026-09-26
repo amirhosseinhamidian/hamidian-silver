@@ -21,9 +21,11 @@ function validSnapshot(): ContentAuditSnapshot {
       {
         name: 'انگشتر نقره ماه',
         slug: 'silver-ring-mah',
-        shortDescription: 'انگشتر نقره با پرداخت دستی و طراحی مینیمال.',
+        shortDescription: 'انگشتر نقره با طراحی مینیمال و ظریف.',
         description:
           'این انگشتر از نقره ساخته شده و مشخصات، وزن و شرایط نگهداری آن پیش از خرید بررسی می‌شود.',
+        seoTitle: null,
+        seoDescription: null,
         salePriceToman: 4_800_000,
         compareAtPriceToman: 5_200_000,
         sizeMode: 'SIZED',
@@ -32,6 +34,7 @@ function validSnapshot(): ContentAuditSnapshot {
         categoryNames: ['انگشتر'],
         mediaCount: 1,
         primaryMediaCount: 1,
+        mediaAltTexts: ['انگشتر نقره ماه - نمای روبه‌رو'],
         variants: [
           {
             sku: 'HS-RING-MAH-54',
@@ -53,6 +56,8 @@ function validSnapshot(): ContentAuditSnapshot {
         name: 'انگشتر',
         slug: 'rings',
         description: 'مجموعه انگشترهای نقره با مشخصات کامل.',
+        seoTitle: null,
+        seoDescription: null,
         hasImage: true,
       },
     ],
@@ -61,6 +66,8 @@ function validSnapshot(): ContentAuditSnapshot {
         name: 'نقره حمیدیان',
         slug: 'hamidian-silver',
         description: 'طراحی و عرضه زیورآلات نقره با اصالت مشخص.',
+        seoTitle: null,
+        seoDescription: null,
         countryName: 'ایران',
         hasImage: true,
       },
@@ -88,7 +95,7 @@ function validSnapshot(): ContentAuditSnapshot {
       {
         id: 'media-1',
         subject: 'تصویر محصول انگشتر نقره ماه',
-        storageKey: 'catalog/2026/09/ring.webp',
+        storageKey: 'catalog/2026/09/انگشتر-نقره-ماه-a1b2c3d4-1234-4abc-8def-a1b2c3d4e5f6.webp',
         mimeType: 'image/webp',
         sizeBytes: 48_000,
         width: 1200,
@@ -138,6 +145,113 @@ describe('production content audit rules', () => {
         'VARIANT_DEMO_SKU',
         'VARIANT_INVENTORY_INVALID',
         'PRODUCT_OUT_OF_STOCK',
+      ]),
+    );
+  });
+
+  it('enforces short product copy and warns on duplicated image alt text', () => {
+    const snapshot = validSnapshot();
+    const issues = validateProductionContent({
+      ...snapshot,
+      products: [
+        {
+          ...snapshot.products[0],
+          shortDescription: 'این توضیح کوتاه محصول بیش از هفت واژه دارد و باید کوتاه شود',
+          mediaCount: 2,
+          mediaAltTexts: ['انگشتر نقره ماه', 'انگشتر نقره ماه'],
+        },
+      ],
+    });
+
+    expect(issues.map(({ code }) => code)).toEqual(
+      expect.arrayContaining(['PRODUCT_SHORT_DESCRIPTION_WORDS', 'PRODUCT_MEDIA_ALT_DUPLICATE']),
+    );
+  });
+
+  it('warns when product and collection descriptions are duplicated', () => {
+    const snapshot = validSnapshot();
+    const issues = validateProductionContent({
+      ...snapshot,
+      products: [
+        snapshot.products[0],
+        {
+          ...snapshot.products[0],
+          name: 'انگشتر نقره ستاره',
+          slug: 'silver-ring-star',
+        },
+      ],
+      categories: [
+        snapshot.categories[0],
+        {
+          ...snapshot.categories[0],
+          name: 'دستبند',
+          slug: 'bracelets',
+        },
+      ],
+      brands: [
+        snapshot.brands[0],
+        {
+          ...snapshot.brands[0],
+          name: 'برند دوم',
+          slug: 'second-brand',
+        },
+      ],
+    });
+
+    expect(issues.map(({ code }) => code)).toEqual(
+      expect.arrayContaining([
+        'PRODUCT_DESCRIPTION_DUPLICATE',
+        'CATEGORY_DESCRIPTION_DUPLICATE',
+        'BRAND_DESCRIPTION_DUPLICATE',
+      ]),
+    );
+  });
+
+  it('warns on duplicated SEO titles and generic media filenames', () => {
+    const snapshot = validSnapshot();
+    const issues = validateProductionContent({
+      ...snapshot,
+      products: [
+        { ...snapshot.products[0], seoTitle: 'خرید انگشتر نقره' },
+        {
+          ...snapshot.products[0],
+          name: 'انگشتر دوم',
+          slug: 'second-ring',
+          seoTitle: 'خرید انگشتر نقره',
+          description:
+            'توضیح متفاوت و کامل برای محصول دوم که جزئیات واقعی و کاربرد آن را بیان می‌کند.',
+        },
+      ],
+      media: [
+        {
+          ...snapshot.media[0],
+          storageKey: 'catalog/2026/09/image-1234.webp',
+        },
+      ],
+    });
+
+    expect(issues.map(({ code }) => code)).toEqual(
+      expect.arrayContaining(['PRODUCT_SEO_TITLE_DUPLICATE', 'MEDIA_FILENAME_GENERIC']),
+    );
+  });
+
+  it('rejects placeholder SEO overrides without requiring custom overrides', () => {
+    const snapshot = validSnapshot();
+    const issues = validateProductionContent({
+      ...snapshot,
+      products: [
+        {
+          ...snapshot.products[0],
+          seoTitle: 'demo product title',
+          seoDescription: 'placeholder product description',
+        },
+      ],
+    });
+
+    expect(issues.map(({ code }) => code)).toEqual(
+      expect.arrayContaining([
+        'PRODUCT_SEO_TITLE_PLACEHOLDER',
+        'PRODUCT_SEO_DESCRIPTION_PLACEHOLDER',
       ]),
     );
   });

@@ -324,12 +324,18 @@ async function run(): Promise<void> {
         prisma.category.findMany({
           where: { isActive: true, deletedAt: null },
           orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-          include: { image: true, seoOgMedia: true },
+          include: { image: true, heroMobileImage: true, seoOgMedia: true },
         }),
         prisma.brand.findMany({
           where: { isActive: true, deletedAt: null },
           orderBy: { name: 'asc' },
-          include: { image: true, heroImage: true, seoOgMedia: true, originCountry: true },
+          include: {
+            image: true,
+            heroImage: true,
+            heroMobileImage: true,
+            seoOgMedia: true,
+            originCountry: true,
+          },
         }),
         prisma.country.findMany({
           where: { isActive: true, deletedAt: null },
@@ -377,11 +383,13 @@ async function run(): Promise<void> {
     }
     for (const category of categories) {
       addMedia(category.image, `تصویر دسته‌بندی ${category.name}`);
+      addMedia(category.heroMobileImage, `تصویر Hero موبایل دسته‌بندی ${category.name}`);
       addMedia(category.seoOgMedia, `تصویر SEO دسته‌بندی ${category.name}`);
     }
     for (const brand of brands) {
       addMedia(brand.image, `تصویر برند ${brand.name}`);
       addMedia(brand.heroImage, `تصویر Hero برند ${brand.name}`);
+      addMedia(brand.heroMobileImage, `تصویر Hero موبایل برند ${brand.name}`);
       addMedia(brand.seoOgMedia, `تصویر SEO برند ${brand.name}`);
     }
     for (const country of countries) {
@@ -403,6 +411,8 @@ async function run(): Promise<void> {
         slug: product.slug,
         shortDescription: product.shortDescription,
         description: product.description,
+        seoTitle: product.seoTitle,
+        seoDescription: product.seoDescription,
         salePriceToman: product.salePriceToman,
         compareAtPriceToman: product.compareAtPriceToman,
         sizeMode: product.sizeMode,
@@ -416,6 +426,9 @@ async function run(): Promise<void> {
         primaryMediaCount: product.media.filter(
           ({ isPrimary, media: item }) => isPrimary && !item.deletedAt,
         ).length,
+        mediaAltTexts: product.media
+          .filter(({ media: item }) => !item.deletedAt)
+          .map(({ altText, media: item }) => altText?.trim() || item.altText?.trim() || ''),
         variants: product.variants.map((variant) => ({
           sku: variant.sku,
           label: variant.size?.label ?? variant.name,
@@ -431,12 +444,16 @@ async function run(): Promise<void> {
         name: category.name,
         slug: category.slug,
         description: category.description,
+        seoTitle: category.seoTitle,
+        seoDescription: category.seoDescription,
         hasImage: Boolean(category.image && !category.image.deletedAt),
       })),
       brands: brands.map((brand) => ({
         name: brand.name,
         slug: brand.slug,
         description: brand.description,
+        seoTitle: brand.seoTitle,
+        seoDescription: brand.seoDescription,
         countryName:
           brand.originCountry?.isActive && !brand.originCountry.deletedAt
             ? brand.originCountry.name
@@ -472,6 +489,7 @@ async function run(): Promise<void> {
     const storefrontPaths = [
       '/',
       '/products',
+      '/categories',
       '/brands',
       ...Object.values(CONTENT_ROUTES),
       ...products.map((product) => `/products/${encodeURIComponent(product.slug)}`),

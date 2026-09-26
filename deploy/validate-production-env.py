@@ -36,6 +36,8 @@ NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 DB_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 IRANDARGAH_LIVE_TOKEN_RE = re.compile(r"^idg_live_[A-Za-z0-9_-]{16,}$")
 KAVENEGAR_TEMPLATE_RE = re.compile(r"^[A-Za-z0-9-]+$")
+GA_MEASUREMENT_ID_RE = re.compile(r"^G-[A-Z0-9]+$")
+GOOGLE_SITE_VERIFICATION_RE = re.compile(r"^[A-Za-z0-9._=-]{6,512}$")
 KAVENEGAR_ORDER_TEMPLATE_KEYS = (
     "KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE",
     "KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE",
@@ -148,6 +150,14 @@ def validate(values: dict[str, str]) -> list[str]:
     messaging_timeout = values.get("ADMIN_MESSAGING_REQUEST_TIMEOUT_MS", "")
     if not messaging_timeout.isdigit() or not 1000 <= int(messaging_timeout or "0") <= 60000:
         errors.append("ADMIN_MESSAGING_REQUEST_TIMEOUT_MS must be between 1000 and 60000")
+
+    ga_measurement_id = values.get("NEXT_PUBLIC_GA_MEASUREMENT_ID", "")
+    if ga_measurement_id and not GA_MEASUREMENT_ID_RE.fullmatch(ga_measurement_id.upper()):
+        errors.append("NEXT_PUBLIC_GA_MEASUREMENT_ID must be a GA4 G-... measurement ID or remain empty")
+
+    google_verification = values.get("GOOGLE_SITE_VERIFICATION", "")
+    if google_verification and not GOOGLE_SITE_VERIFICATION_RE.fullmatch(google_verification):
+        errors.append("GOOGLE_SITE_VERIFICATION contains unsupported characters")
 
     if values.get("SHIPPING_PROVIDER") != "disabled":
         errors.append("SHIPPING_PROVIDER must be disabled while Postex is off")

@@ -8,11 +8,12 @@ import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getPublicSiteSettings();
+  const [settings, brands] = await Promise.all([getPublicSiteSettings(), getPublicCatalogBrands()]);
   return buildStorefrontPageMetadata(settings, {
     pathname: '/brands',
     title: 'برندهای نقره و جواهر',
-    description: 'مجموعه برندهای فعال گالری نقره حمیدیان را مرور کنید.',
+    description: 'مجموعه برندهای فعال گالری حمیدیان را مرور کنید.',
+    seoNoIndex: brands.length === 0,
   });
 }
 

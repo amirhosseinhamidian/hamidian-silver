@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { CatalogProductGrid } from '@/components/catalog/catalog-product-grid';
 import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
@@ -21,6 +23,12 @@ type CatalogCollectionPageProps = Readonly<{
   mobileImage: PublicCatalogMedia | null;
   filters: CatalogFilters;
   products: PublicCatalogProductList;
+  breadcrumbs?: readonly Readonly<{ label: string; href: string }>[];
+  collectionLinks?: readonly Readonly<{ label: string; href: string }>[];
+  contextLinkGroups?: readonly Readonly<{
+    label: string;
+    links: readonly Readonly<{ label: string; href: string }>[];
+  }>[];
 }>;
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
@@ -39,21 +47,24 @@ function CollectionHero({
   description,
   image,
   mobileImage,
+  breadcrumbs,
   total,
 }: Pick<
   CatalogCollectionPageProps,
-  'path' | 'eyebrow' | 'title' | 'description' | 'image' | 'mobileImage'
+  'path' | 'eyebrow' | 'title' | 'description' | 'image' | 'mobileImage' | 'breadcrumbs'
 > &
   Readonly<{ total: number }>) {
   const parent = path.startsWith('/brands/')
     ? { label: 'برندها', href: '/brands' }
     : { label: 'محصولات', href: '/products' };
+  const breadcrumbItems = breadcrumbs ?? [
+    { label: 'خانه', href: '/' },
+    parent,
+    { label: title, href: path },
+  ];
   const copy = (
     <div className="max-w-2xl">
-      <StorefrontBreadcrumbs
-        items={[{ label: 'خانه', href: '/' }, parent, { label: title, href: path }]}
-        className="opacity-80"
-      />
+      <StorefrontBreadcrumbs items={breadcrumbItems} className="opacity-80" />
       <p className="mt-6 text-sm opacity-75">{eyebrow}</p>
       <h1 className="mt-3 text-4xl font-normal sm:text-5xl lg:text-6xl">{title}</h1>
       {description ? <p className="mt-5 text-sm leading-8 opacity-80">{description}</p> : null}
@@ -93,6 +104,9 @@ export function CatalogCollectionPage({
   mobileImage,
   filters,
   products,
+  breadcrumbs,
+  collectionLinks = [],
+  contextLinkGroups = [],
 }: CatalogCollectionPageProps) {
   return (
     <main id="main-content">
@@ -103,10 +117,54 @@ export function CatalogCollectionPage({
         description={description}
         image={image}
         mobileImage={mobileImage}
+        breadcrumbs={breadcrumbs}
         total={products.total}
       />
 
       <div className="sf-container">
+        {collectionLinks.length ? (
+          <nav
+            aria-label={`زیرمجموعه‌های ${title}`}
+            className="flex flex-wrap gap-2 border-b border-[var(--sf-color-border)] py-6"
+          >
+            {collectionLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="border border-[var(--sf-color-border)] px-4 py-2 text-sm text-[var(--sf-color-muted)] transition-colors hover:border-[var(--sf-color-ink)] hover:text-[var(--sf-color-ink)]"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
+
+        {contextLinkGroups.map((group) =>
+          group.links.length ? (
+            <nav
+              key={group.label}
+              aria-label={group.label}
+              className="border-b border-[var(--sf-color-border)] py-5"
+            >
+              <p className="mb-3 text-xs font-medium text-[var(--sf-color-subtle)]">
+                {group.label}
+              </p>
+              <ul className="flex flex-wrap gap-x-5 gap-y-2">
+                {group.links.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="text-sm text-[var(--sf-color-muted)] underline-offset-4 hover:text-[var(--sf-color-ink)] hover:underline"
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ) : null,
+        )}
+
         <form
           action={path}
           method="get"
@@ -136,6 +194,7 @@ export function CatalogCollectionPage({
               imageSizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
               className="py-10 md:grid-cols-3 lg:grid-cols-4"
               paginationPath={path}
+              prioritizeFirstImage={!image?.url}
             />
           </>
         ) : (

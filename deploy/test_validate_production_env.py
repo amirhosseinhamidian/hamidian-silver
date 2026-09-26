@@ -79,6 +79,18 @@ class ProductionEnvValidationTests(unittest.TestCase):
         result = " ".join(checker.validate(env))
         self.assertIn("KAVENEGAR_ORDER_SHIPPED_TEMPLATE", result)
 
+    def test_validates_optional_search_console_and_ga4_values(self):
+        env = self.fixture()
+        env["NEXT_PUBLIC_GA_MEASUREMENT_ID"] = "G-ABC123XYZ"
+        env["GOOGLE_SITE_VERIFICATION"] = "abc_DEF-123.example="
+        self.assertEqual(checker.validate(env), [])
+
+        env["NEXT_PUBLIC_GA_MEASUREMENT_ID"] = "UA-12345-1"
+        env["GOOGLE_SITE_VERIFICATION"] = "<script>"
+        result = " ".join(checker.validate(env))
+        self.assertIn("NEXT_PUBLIC_GA_MEASUREMENT_ID", result)
+        self.assertIn("GOOGLE_SITE_VERIFICATION", result)
+
     def test_rejects_multiple_gateway_credentials_and_postex(self):
         env = self.fixture()
         env["MELLAT_TERMINAL_ID"] = "123"

@@ -66,6 +66,7 @@ export function ProductMediaManager({ productId, productName, media }: ProductMe
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const remainingSlots = Math.max(0, MAX_PRODUCT_IMAGES - media.length);
+  const missingAltCount = media.filter((item) => !item.altText?.trim()).length;
 
   async function jsonMutation(path: string, method: 'PATCH' | 'DELETE', body?: unknown) {
     const response = await fetch(path, {
@@ -138,7 +139,11 @@ export function ProductMediaManager({ productId, productName, media }: ProductMe
   async function saveAltText(event: FormEvent<HTMLFormElement>, mediaId: string) {
     event.preventDefault();
     const altText = String(new FormData(event.currentTarget).get('altText') ?? '').trim();
-    await updateMedia(mediaId, { altText: altText || null }, `alt-${mediaId}`);
+    if (!altText) {
+      setError('برای تصاویر محصول متن جایگزین توصیفی الزامی است.');
+      return;
+    }
+    await updateMedia(mediaId, { altText }, `alt-${mediaId}`);
   }
 
   async function move(mediaId: string, offset: -1 | 1) {
@@ -216,7 +221,7 @@ export function ProductMediaManager({ productId, productName, media }: ProductMe
                 <FormField
                   id={`${inputId}-alt`}
                   label="متن جایگزین اولیه"
-                  hint="بعداً برای هر تصویر جداگانه قابل ویرایش است."
+                  hint="اگر چند تصویر بارگذاری می‌کنید، بعداً برای هر تصویر متن متفاوت و توصیفی ثبت کنید؛ مثل «نمای روبه‌رو» یا «روی دست مدل»."
                 >
                   {(props) => (
                     <Input
@@ -241,6 +246,12 @@ export function ProductMediaManager({ productId, productName, media }: ProductMe
       {error ? (
         <Alert tone="danger" className="mb-4">
           {error}
+        </Alert>
+      ) : null}
+      {missingAltCount > 0 ? (
+        <Alert tone="warning" className="mb-4">
+          {formatAdminInteger(missingAltCount)} تصویر متن جایگزین اختصاصی ندارد. برای درک بهتر تصویر
+          توسط موتور جستجو و دسترس‌پذیری، alt توصیفی ثبت کنید.
         </Alert>
       ) : null}
 
@@ -333,7 +344,9 @@ export function ProductMediaManager({ productId, productName, media }: ProductMe
                             {...props}
                             name="altText"
                             defaultValue={item.altText ?? ''}
-                            placeholder={`تصویر ${productName}`}
+                            placeholder={`${productName} - نمای روبه‌رو`}
+                            maxLength={255}
+                            required
                           />
                         )}
                       </FormField>

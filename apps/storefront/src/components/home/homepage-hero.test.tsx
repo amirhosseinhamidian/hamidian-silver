@@ -54,6 +54,21 @@ describe('HomepageHero', () => {
     expect(screen.getByRole('heading', { name: 'اسلاید دوم' })).toBeInTheDocument();
   });
 
+  it('uses a stable fallback H1 when the primary slide has no title', () => {
+    const untitled = { ...slide('temporary'), title: null };
+
+    render(<HomepageHero slides={[untitled]} label="هیرو" fallbackTitle="گالری حمیدیان" />);
+
+    expect(screen.getByRole('heading', { level: 1, name: 'گالری حمیدیان' })).toBeInTheDocument();
+  });
+
+  it('can render a secondary hero title as H2 instead of another H1', () => {
+    render(<HomepageHero slides={[slide('کالکشن ویژه')]} label="هیرو دوم" headingLevel={2} />);
+
+    expect(screen.getByRole('heading', { level: 2, name: 'کالکشن ویژه' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
+  });
+
   it('opens external actions safely in a new tab', () => {
     render(
       <HomepageHero

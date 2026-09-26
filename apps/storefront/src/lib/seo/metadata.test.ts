@@ -59,9 +59,26 @@ describe('storefront metadata engine', () => {
       openGraph: {
         locale: 'fa_IR',
         siteName: 'گالری حمیدیان',
-        images: [{ url: 'https://media.example/default.webp' }],
+        images: [{ url: 'https://media.example/default.webp', alt: 'نقره حمیدیان' }],
       },
       twitter: { card: 'summary_large_image' },
+    });
+  });
+
+  it('falls back to the safe title template when legacy settings contain multiple tokens', () => {
+    const invalidSettings = { ...settings, seoTitleTemplate: '%s | %s | گالری حمیدیان' };
+
+    expect(
+      buildStorefrontPageMetadata(
+        invalidSettings,
+        {
+          pathname: '/products/silver-ring',
+          title: 'انگشتر نقره',
+        },
+        origin,
+      ).openGraph,
+    ).toMatchObject({
+      title: 'انگشتر نقره | گالری حمیدیان',
     });
   });
 
@@ -118,6 +135,49 @@ describe('storefront metadata engine', () => {
     ).toMatchObject({
       alternates: { canonical: new URL('https://silver.example/products') },
       robots: { index: false, follow: true },
+    });
+  });
+
+  it('rejects unsafe or private canonical overrides at render time', () => {
+    for (const seoCanonicalPath of [
+      'https://evil.example/product',
+      '//evil.example/product',
+      '/products/../account',
+      '/products/%2e%2e/account',
+      '/cart',
+      '/brands\\evil.example',
+      '/brands/wrong-family',
+    ]) {
+      expect(
+        buildStorefrontPageMetadata(
+          settings,
+          {
+            pathname: '/products/silver-ring',
+            title: 'انگشتر نقره',
+            seoCanonicalPath,
+          },
+          origin,
+        ).alternates,
+      ).toEqual({ canonical: new URL('https://silver.example/products/silver-ring') });
+    }
+  });
+
+  it('uses the page title as Open Graph alt text when media alt is missing', () => {
+    expect(
+      buildStorefrontPageMetadata(
+        settings,
+        {
+          pathname: '/products/silver-ring',
+          title: 'انگشتر نقره',
+          seoOgMedia: {
+            url: 'https://media.example/ring.webp',
+            altText: null,
+          },
+        },
+        origin,
+      ).openGraph,
+    ).toMatchObject({
+      images: [{ url: 'https://media.example/ring.webp', alt: 'انگشتر نقره' }],
     });
   });
 

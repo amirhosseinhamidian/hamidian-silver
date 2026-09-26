@@ -619,6 +619,7 @@ export class CatalogService {
         seoDescription: true,
         seoCanonicalPath: true,
         seoNoIndex: true,
+        updatedAt: true,
         parentId: true,
         sortOrder: true,
         image: {
@@ -663,6 +664,7 @@ export class CatalogService {
       seoDescription: category.seoDescription,
       seoCanonicalPath: category.seoCanonicalPath,
       seoNoIndex: category.seoNoIndex,
+      ...(category.updatedAt ? { updatedAt: category.updatedAt.toISOString() } : {}),
       parentId: category.parentId,
       sortOrder: category.sortOrder,
       image:
@@ -716,6 +718,7 @@ export class CatalogService {
         seoDescription: true,
         seoCanonicalPath: true,
         seoNoIndex: true,
+        updatedAt: true,
         originCountry: {
           select: {
             id: true,
@@ -778,6 +781,7 @@ export class CatalogService {
       seoDescription: brand.seoDescription,
       seoCanonicalPath: brand.seoCanonicalPath,
       seoNoIndex: brand.seoNoIndex,
+      ...(brand.updatedAt ? { updatedAt: brand.updatedAt.toISOString() } : {}),
       originCountry:
         brand.originCountry?.isActive && !brand.originCountry.deletedAt
           ? {
@@ -994,6 +998,7 @@ export class CatalogService {
               shortDescription: true,
               seoCanonicalPath: true,
               seoNoIndex: true,
+              updatedAt: true,
               salePriceToman: true,
               compareAtPriceToman: true,
               sizeMode: true,
@@ -1140,6 +1145,7 @@ export class CatalogService {
           shortDescription: product.shortDescription,
           seoCanonicalPath: product.seoCanonicalPath,
           seoNoIndex: product.seoNoIndex,
+          ...(product.updatedAt ? { updatedAt: product.updatedAt.toISOString() } : {}),
           salePriceToman: lowestPricedVariant?.salePriceToman ?? product.salePriceToman,
           compareAtPriceToman:
             lowestPricedVariant?.compareAtPriceToman ?? product.compareAtPriceToman,
@@ -1342,6 +1348,7 @@ export class CatalogService {
         seoDescription: true,
         seoCanonicalPath: true,
         seoNoIndex: true,
+        updatedAt: true,
         salePriceToman: true,
         compareAtPriceToman: true,
         sizeMode: true,
@@ -1432,6 +1439,7 @@ export class CatalogService {
           },
           select: {
             id: true,
+            sku: true,
             name: true,
             weightGrams: true,
             salePriceToman: true,
@@ -1549,6 +1557,7 @@ export class CatalogService {
 
       return {
         id: variant.id,
+        sku: variant.sku,
         name: variant.name,
         weightGrams: variant.weightGrams === null ? null : Number(variant.weightGrams),
         salePriceToman: variant.salePriceToman ?? product.salePriceToman,
@@ -1603,6 +1612,7 @@ export class CatalogService {
       seoDescription: product.seoDescription,
       seoCanonicalPath: product.seoCanonicalPath,
       seoNoIndex: product.seoNoIndex,
+      ...(product.updatedAt ? { updatedAt: product.updatedAt.toISOString() } : {}),
       seoOgMedia:
         product.seoOgMedia && !product.seoOgMedia.deletedAt
           ? {
@@ -1803,6 +1813,7 @@ export class CatalogService {
         shortDescription: true,
         seoCanonicalPath: true,
         seoNoIndex: true,
+        updatedAt: true,
         salePriceToman: true,
         compareAtPriceToman: true,
         sizeMode: true,
@@ -1896,6 +1907,7 @@ export class CatalogService {
         shortDescription: product.shortDescription,
         seoCanonicalPath: product.seoCanonicalPath,
         seoNoIndex: product.seoNoIndex,
+        ...(product.updatedAt ? { updatedAt: product.updatedAt.toISOString() } : {}),
         salePriceToman: prices[0]?.sale ?? product.salePriceToman,
         compareAtPriceToman: prices[0]?.compare ?? product.compareAtPriceToman,
         sizeMode: product.sizeMode,

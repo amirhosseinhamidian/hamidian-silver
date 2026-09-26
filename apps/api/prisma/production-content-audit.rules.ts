@@ -24,6 +24,8 @@ export type ContentAuditSnapshot = Readonly<{
       slug: string;
       shortDescription: string | null;
       description: string | null;
+      seoTitle: string | null;
+      seoDescription: string | null;
       salePriceToman: number | null;
       compareAtPriceToman: number | null;
       sizeMode: string;
@@ -32,6 +34,7 @@ export type ContentAuditSnapshot = Readonly<{
       categoryNames: readonly string[];
       mediaCount: number;
       primaryMediaCount: number;
+      mediaAltTexts: readonly string[];
       variants: ReadonlyArray<
         Readonly<{
           sku: string;
@@ -53,6 +56,8 @@ export type ContentAuditSnapshot = Readonly<{
       name: string;
       slug: string;
       description: string | null;
+      seoTitle: string | null;
+      seoDescription: string | null;
       hasImage: boolean;
     }>
   >;
@@ -61,6 +66,8 @@ export type ContentAuditSnapshot = Readonly<{
       name: string;
       slug: string;
       description: string | null;
+      seoTitle: string | null;
+      seoDescription: string | null;
       countryName: string | null;
       hasImage: boolean;
     }>
@@ -109,6 +116,11 @@ function normalizedText(value: string | null | undefined): string {
   return value?.trim() ?? '';
 }
 
+function wordCount(value: string | null | undefined): number {
+  const normalized = normalizedText(value);
+  return normalized ? normalized.split(/\s+/u).length : 0;
+}
+
 export function containsPlaceholder(value: string | null | undefined): boolean {
   const normalized = normalizedText(value);
   return (
@@ -139,6 +151,37 @@ function normalizePhoneDigits(value: string): string {
   return digits.startsWith('98') && digits.length >= 11 ? `0${digits.slice(2)}` : digits;
 }
 
+function duplicateTextGroups(
+  values: ReadonlyArray<Readonly<{ subject: string; value: string | null | undefined }>>,
+): string[][] {
+  const groups = new Map<string, string[]>();
+  for (const { subject, value } of values) {
+    const normalized = normalizedText(value).replace(/\s+/g, ' ').toLocaleLowerCase('fa');
+    if (!normalized) continue;
+    const subjects = groups.get(normalized) ?? [];
+    subjects.push(subject);
+    groups.set(normalized, subjects);
+  }
+  return [...groups.values()].filter((subjects) => subjects.length > 1);
+}
+
+function hasGenericMediaFilename(storageKey: string): boolean {
+  const filename =
+    storageKey
+      .split('/')
+      .pop()
+      ?.replace(/\.[^.]+$/, '')
+      .toLocaleLowerCase('en') ?? '';
+  const withoutUuid = filename.replace(
+    /-?[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    '',
+  );
+  return (
+    !withoutUuid ||
+    /^(?:img|image|photo|picture|pic|dsc|screenshot|untitled|file)[-_ ]*\d*$/i.test(withoutUuid)
+  );
+}
+
 function addIssue(
   issues: ContentAuditIssue[],
   severity: ContentAuditIssue['severity'],
@@ -147,6 +190,20 @@ function addIssue(
   message: string,
 ) {
   issues.push({ severity, code, subject, message });
+}
+
+function validateOptionalSeoText(
+  issues: ContentAuditIssue[],
+  value: string | null | undefined,
+  code: string,
+  subject: string,
+  label: string,
+) {
+  const normalized = normalizedText(value);
+  if (!normalized) return;
+  if (containsPlaceholder(normalized)) {
+    addIssue(issues, 'failure', code, subject, `${label} شامل داده دمو یا placeholder است.`);
+  }
 }
 
 function requireRealText(
@@ -203,6 +260,41 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
       12,
     );
     requireRealText(issues, product.description, 'PRODUCT_DESCRIPTION', subject, 'توضیحات', 30);
+    validateOptionalSeoText(
+      issues,
+      product.seoTitle,
+      'PRODUCT_SEO_TITLE_PLACEHOLDER',
+      subject,
+      'عنوان SEO',
+    );
+    validateOptionalSeoText(
+      issues,
+      product.seoDescription,
+      'PRODUCT_SEO_DESCRIPTION_PLACEHOLDER',
+      subject,
+      'توضیح SEO',
+    );
+    if (wordCount(product.shortDescription) > 7) {
+      addIssue(
+        issues,
+        'failure',
+        'PRODUCT_SHORT_DESCRIPTION_WORDS',
+        subject,
+        'توضیح کوتاه باید حداکثر ۷ واژه باشد.',
+      );
+    }
+    const normalizedAltTexts = product.mediaAltTexts
+      .map((alt) => alt.trim().replace(/\s+/g, ' '))
+      .filter(Boolean);
+    if (new Set(normalizedAltTexts).size < normalizedAltTexts.length) {
+      addIssue(
+        issues,
+        'warning',
+        'PRODUCT_MEDIA_ALT_DUPLICATE',
+        subject,
+        'چند تصویر محصول متن جایگزین یکسان دارند؛ برای نماهای متفاوت alt توصیفی جدا ثبت کنید.',
+      );
+    }
 
     if (!Number.isSafeInteger(product.salePriceToman) || (product.salePriceToman ?? 0) <= 0) {
       addIssue(issues, 'failure', 'PRODUCT_PRICE', subject, 'قیمت فروش معتبر و مثبت نیست.');
@@ -302,25 +394,188 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
     }
   }
 
+  for (const subjects of duplicateTextGroups(
+    snapshot.products.map((product) => ({
+      subject: `محصول ${product.name || product.slug}`,
+      value: product.seoTitle,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'PRODUCT_SEO_TITLE_DUPLICATE',
+      subjects.join(' / '),
+      'عنوان SEO اختصاصی چند محصول یکسان است؛ در صورت استفاده از override، عنوان هر محصول منحصربه‌فرد باشد.',
+    );
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.products.map((product) => ({
+      subject: `محصول ${product.name || product.slug}`,
+      value: product.description,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'PRODUCT_DESCRIPTION_DUPLICATE',
+      subjects.join(' / '),
+      'توضیحات کامل چند محصول یکسان است؛ برای هر محصول متن منحصربه‌فرد نوشته شود.',
+    );
+  }
+
   for (const category of snapshot.categories) {
     const subject = `دسته‌بندی ${category.name || category.slug}`;
     requireRealText(issues, category.name, 'CATEGORY_NAME', subject, 'نام دسته‌بندی');
     requireRealText(issues, category.description, 'CATEGORY_DESCRIPTION', subject, 'توضیحات', 12);
+    validateOptionalSeoText(
+      issues,
+      category.seoTitle,
+      'CATEGORY_SEO_TITLE_PLACEHOLDER',
+      subject,
+      'عنوان SEO',
+    );
+    validateOptionalSeoText(
+      issues,
+      category.seoDescription,
+      'CATEGORY_SEO_DESCRIPTION_PLACEHOLDER',
+      subject,
+      'توضیح SEO',
+    );
     if (!category.hasImage) {
       addIssue(issues, 'failure', 'CATEGORY_IMAGE', subject, 'تصویر دسته‌بندی ثبت نشده است.');
     }
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.products.map((product) => ({
+      subject: `محصول ${product.name || product.slug}`,
+      value: product.seoDescription,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'PRODUCT_SEO_DESCRIPTION_DUPLICATE',
+      subjects.join(' / '),
+      'توضیح SEO اختصاصی چند محصول یکسان است؛ overrideها باید منحصربه‌فرد باشند.',
+    );
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.categories.map((category) => ({
+      subject: `دسته‌بندی ${category.name || category.slug}`,
+      value: category.seoTitle,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'CATEGORY_SEO_TITLE_DUPLICATE',
+      subjects.join(' / '),
+      'عنوان SEO اختصاصی چند دسته‌بندی یکسان است.',
+    );
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.categories.map((category) => ({
+      subject: `دسته‌بندی ${category.name || category.slug}`,
+      value: category.description,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'CATEGORY_DESCRIPTION_DUPLICATE',
+      subjects.join(' / '),
+      'توضیحات چند دسته‌بندی یکسان است؛ هر صفحه باید متن منحصربه‌فرد داشته باشد.',
+    );
   }
 
   for (const brand of snapshot.brands) {
     const subject = `برند ${brand.name || brand.slug}`;
     requireRealText(issues, brand.name, 'BRAND_NAME', subject, 'نام برند');
     requireRealText(issues, brand.description, 'BRAND_DESCRIPTION', subject, 'توضیحات', 12);
+    validateOptionalSeoText(
+      issues,
+      brand.seoTitle,
+      'BRAND_SEO_TITLE_PLACEHOLDER',
+      subject,
+      'عنوان SEO',
+    );
+    validateOptionalSeoText(
+      issues,
+      brand.seoDescription,
+      'BRAND_SEO_DESCRIPTION_PLACEHOLDER',
+      subject,
+      'توضیح SEO',
+    );
     if (!brand.countryName) {
       addIssue(issues, 'failure', 'BRAND_COUNTRY', subject, 'کشور مبدأ برند ثبت نشده است.');
     }
     if (!brand.hasImage) {
       addIssue(issues, 'failure', 'BRAND_IMAGE', subject, 'تصویر برند ثبت نشده است.');
     }
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.categories.map((category) => ({
+      subject: `دسته‌بندی ${category.name || category.slug}`,
+      value: category.seoDescription,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'CATEGORY_SEO_DESCRIPTION_DUPLICATE',
+      subjects.join(' / '),
+      'توضیح SEO اختصاصی چند دسته یکسان است.',
+    );
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.brands.map((brand) => ({
+      subject: `برند ${brand.name || brand.slug}`,
+      value: brand.seoTitle,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'BRAND_SEO_TITLE_DUPLICATE',
+      subjects.join(' / '),
+      'عنوان SEO اختصاصی چند برند یکسان است.',
+    );
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.brands.map((brand) => ({
+      subject: `برند ${brand.name || brand.slug}`,
+      value: brand.description,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'BRAND_DESCRIPTION_DUPLICATE',
+      subjects.join(' / '),
+      'توضیحات چند برند یکسان است؛ برای هر کالکشن متن منحصربه‌فرد نوشته شود.',
+    );
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.brands.map((brand) => ({
+      subject: `برند ${brand.name || brand.slug}`,
+      value: brand.seoDescription,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'BRAND_SEO_DESCRIPTION_DUPLICATE',
+      subjects.join(' / '),
+      'توضیح SEO اختصاصی چند برند یکسان است.',
+    );
   }
 
   const settings = snapshot.settings;
@@ -424,6 +679,15 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
   for (const media of snapshot.media) {
     requireRealText(issues, media.storageKey, 'MEDIA_STORAGE_KEY', media.subject, 'کلید فایل');
     requireRealText(issues, media.altText, 'MEDIA_ALT', media.subject, 'متن جایگزین', 3);
+    if (hasGenericMediaFilename(media.storageKey)) {
+      addIssue(
+        issues,
+        'warning',
+        'MEDIA_FILENAME_GENERIC',
+        media.subject,
+        'نام فایل تصویر عمومی یا فقط شناسه است؛ برای تصاویر جدید نام توصیفی استفاده شود.',
+      );
+    }
     if (media.deleted) {
       addIssue(
         issues,

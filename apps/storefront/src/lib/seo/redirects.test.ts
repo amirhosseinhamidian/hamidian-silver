@@ -16,6 +16,9 @@ describe('validPublicCatalogRedirectPath', () => {
     '/account/orders/1',
     '/products/ring?next=/checkout',
     '/products/ring/extra',
+    '/products/%2e%2e',
+    '/products/ring\\attacker.example',
+    '/products/..',
   ])('rejects an unsafe redirect destination %s', (pathname) => {
     expect(validPublicCatalogRedirectPath(pathname)).toBeNull();
   });
