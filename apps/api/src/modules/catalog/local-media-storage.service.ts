@@ -25,6 +25,20 @@ type DetectedImageType = Readonly<{
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
+function descriptiveImageStem(value: string | null | undefined): string {
+  const normalized = value
+    ?.normalize('NFKC')
+    .trim()
+    .toLocaleLowerCase('fa')
+    .replace(/\.[^.]+$/, '')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80)
+    .replace(/-+$/g, '');
+
+  return normalized || 'image';
+}
+
 function detectImageType(buffer: Buffer): DetectedImageType | null {
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
     return { mimeType: 'image/jpeg', extension: 'jpg' };
@@ -61,7 +75,10 @@ export class LocalMediaStorageService {
     this.rootPath = resolveMediaStorageRoot(config);
   }
 
-  async storeImage(file: CatalogUploadFile): Promise<StoredCatalogImage> {
+  async storeImage(
+    file: CatalogUploadFile,
+    preferredName?: string | null,
+  ): Promise<StoredCatalogImage> {
     const sizeBytes = file.buffer.byteLength;
 
     if (sizeBytes === 0) {
@@ -85,7 +102,8 @@ export class LocalMediaStorageService {
     const now = new Date();
     const year = String(now.getUTCFullYear());
     const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const storageKey = `catalog/${year}/${month}/${randomUUID()}.${detectedType.extension}`;
+    const stem = descriptiveImageStem(preferredName || file.originalname);
+    const storageKey = `catalog/${year}/${month}/${stem}-${randomUUID()}.${detectedType.extension}`;
     const targetPath = resolve(this.rootPath, ...storageKey.split('/'));
 
     await mkdir(dirname(targetPath), { recursive: true });
