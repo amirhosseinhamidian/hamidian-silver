@@ -101,6 +101,12 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       filters={filters}
       products={products}
       breadcrumbs={buildCategoryBreadcrumbItems(categories, category)}
+      collectionLinks={categories
+        .filter((candidate) => candidate.parentId === category.id)
+        .map((candidate) => ({
+          label: candidate.name,
+          href: `/categories/${candidate.slug}`,
+        }))}
     />
   );
 }
