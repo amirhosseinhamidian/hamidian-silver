@@ -1,4 +1,5 @@
 import type { components } from '@hamidian/contracts';
+import { unstable_cache } from 'next/cache';
 import { cache } from 'react';
 
 import { createServerApiClient } from '@/lib/api/server-client';
@@ -204,13 +205,15 @@ export function buildCatalogCollectionHref(
   return query ? `${pathname}?${query}` : pathname;
 }
 
-function createPublicCatalogClient() {
+function publicCatalogApiOrigin(): string {
   const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;
-
   if (!apiOrigin) {
     throw new Error('HAMIDIAN_API_ORIGIN is required for the storefront catalog.');
   }
+  return apiOrigin;
+}
 
+function createPublicCatalogClient(apiOrigin = publicCatalogApiOrigin()) {
   return createServerApiClient({ apiOrigin });
 }
 
@@ -224,27 +227,49 @@ function assertSuccessfulResponse(
   }
 }
 
-export async function getPublicCatalogProducts(
+const getPublicCatalogProductsForRequest = cache(
+  async (
+    page: number,
+    pageSize: number,
+    q: string | undefined,
+    category: string | undefined,
+    brand: string | undefined,
+    country: string | undefined,
+    sort: CatalogSort,
+  ): Promise<PublicCatalogProductList> => {
+    const client = createPublicCatalogClient();
+    const result = await client.GET('/api/v1/catalog/public/products', {
+      params: {
+        query: {
+          page,
+          pageSize,
+          q,
+          category,
+          brand,
+          country,
+          sort,
+        },
+      },
+    });
+
+    assertSuccessfulResponse(result.response, result.data, 'storefront products');
+
+    return result.data;
+  },
+);
+
+export function getPublicCatalogProducts(
   filters: CatalogFilters,
 ): Promise<PublicCatalogProductList> {
-  const client = createPublicCatalogClient();
-  const result = await client.GET('/api/v1/catalog/public/products', {
-    params: {
-      query: {
-        page: filters.page,
-        pageSize: filters.pageSize,
-        q: filters.q,
-        category: filters.category,
-        brand: filters.brand,
-        country: filters.country,
-        sort: filters.sort,
-      },
-    },
-  });
-
-  assertSuccessfulResponse(result.response, result.data, 'storefront products');
-
-  return result.data;
+  return getPublicCatalogProductsForRequest(
+    filters.page,
+    filters.pageSize,
+    filters.q,
+    filters.category,
+    filters.brand,
+    filters.country,
+    filters.sort,
+  );
 }
 
 export async function getPublicCatalogProductSuggestions(
@@ -266,23 +291,41 @@ export async function getPublicCatalogProductSuggestions(
   return result.data;
 }
 
-export const getPublicCatalogCategories = cache(async (): Promise<PublicCatalogCategoryPage[]> => {
-  const client = createPublicCatalogClient();
-  const result = await client.GET('/api/v1/catalog/public/categories');
+const getCachedPublicCatalogCategories = unstable_cache(
+  async (apiOrigin: string): Promise<PublicCatalogCategoryPage[]> => {
+    const client = createPublicCatalogClient(apiOrigin);
+    const result = await client.GET('/api/v1/catalog/public/categories');
 
-  assertSuccessfulResponse(result.response, result.data, 'storefront categories');
+    assertSuccessfulResponse(result.response, result.data, 'storefront categories');
 
-  return result.data;
-});
+    return result.data;
+  },
+  ['storefront-public-catalog-categories'],
+  { revalidate: 60 },
+);
 
-export const getPublicCatalogBrands = cache(async (): Promise<PublicCatalogBrandPage[]> => {
-  const client = createPublicCatalogClient();
-  const result = await client.GET('/api/v1/catalog/public/brands');
+const getCachedPublicCatalogBrands = unstable_cache(
+  async (apiOrigin: string): Promise<PublicCatalogBrandPage[]> => {
+    const client = createPublicCatalogClient(apiOrigin);
+    const result = await client.GET('/api/v1/catalog/public/brands');
 
-  assertSuccessfulResponse(result.response, result.data, 'storefront brands');
+    assertSuccessfulResponse(result.response, result.data, 'storefront brands');
 
-  return result.data;
-});
+    return result.data;
+  },
+  ['storefront-public-catalog-brands'],
+  { revalidate: 60 },
+);
+
+export const getPublicCatalogCategories = cache(
+  async (): Promise<PublicCatalogCategoryPage[]> =>
+    getCachedPublicCatalogCategories(publicCatalogApiOrigin()),
+);
+
+export const getPublicCatalogBrands = cache(
+  async (): Promise<PublicCatalogBrandPage[]> =>
+    getCachedPublicCatalogBrands(publicCatalogApiOrigin()),
+);
 
 export async function getPublicCatalogIndex(filters: CatalogFilters): Promise<{
   products: PublicCatalogProductList;
