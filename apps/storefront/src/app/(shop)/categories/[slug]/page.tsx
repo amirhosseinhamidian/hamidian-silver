@@ -113,6 +113,24 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
           label: candidate.name,
           href: `/categories/${candidate.slug}`,
         }))}
+      contextLinkGroups={[
+        {
+          label: 'برندهای این دسته',
+          links: [
+            ...new Map(
+              products.items
+                .filter((product) => product.brand)
+                .map((product) => [
+                  product.brand!.id,
+                  {
+                    label: product.brand!.name,
+                    href: `/brands/${product.brand!.slug}`,
+                  },
+                ]),
+            ).values(),
+          ].slice(0, 8),
+        },
+      ]}
     />
   );
 }
