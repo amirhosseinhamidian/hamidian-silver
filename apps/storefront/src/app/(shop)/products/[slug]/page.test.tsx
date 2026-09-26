@@ -7,11 +7,13 @@ import type { PublicCatalogProductDetail } from '@/lib/catalog/public-catalog';
 
 const {
   getPublicCatalogProduct,
+  getPublicCatalogCategories,
   getPublicRelatedProducts,
   getPublicSeoRedirect,
   permanentRedirect,
 } = vi.hoisted(() => ({
   getPublicCatalogProduct: vi.fn(),
+  getPublicCatalogCategories: vi.fn(() => Promise.resolve([])),
   getPublicRelatedProducts: vi.fn(() =>
     Promise.resolve({ items: [], page: 1, pageSize: 8, total: 0, totalPages: 0 }),
   ),
@@ -21,10 +23,16 @@ const {
   }),
 }));
 
-vi.mock('@/lib/catalog/public-catalog', () => ({
-  getPublicCatalogProduct,
-  getPublicRelatedProducts,
-}));
+vi.mock('@/lib/catalog/public-catalog', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/catalog/public-catalog')>();
+
+  return {
+    ...actual,
+    getPublicCatalogProduct,
+    getPublicCatalogCategories,
+    getPublicRelatedProducts,
+  };
+});
 
 vi.mock('@/lib/seo/redirects', () => ({
   getPublicSeoRedirect,
