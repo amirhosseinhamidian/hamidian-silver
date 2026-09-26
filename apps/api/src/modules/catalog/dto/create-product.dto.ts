@@ -18,6 +18,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PlatingType, ProductStatus, SizeMode } from '../../../generated/prisma/enums';
+import { PRODUCT_SEO_CANONICAL_PATH_PATTERN } from '../../seo/seo-validation';
 
 export class CreateProductVariantDto {
   @IsString()
@@ -115,7 +116,7 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   @MaxLength(1000)
-  @Matches(/^\/(?!\/)[^\s?#]*$/)
+  @Matches(PRODUCT_SEO_CANONICAL_PATH_PATTERN)
   seoCanonicalPath?: string;
 
   @IsOptional()
