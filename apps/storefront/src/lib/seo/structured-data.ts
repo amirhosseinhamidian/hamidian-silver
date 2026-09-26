@@ -173,7 +173,7 @@ export function buildOrganizationStructuredData(
       : {}),
     hasMerchantReturnPolicy: {
       '@type': 'MerchantReturnPolicy',
-      merchantReturnLink: getStorefrontAbsoluteUrl('/faq', metadataBase),
+      merchantReturnLink: getStorefrontAbsoluteUrl('/faq#return-policy', metadataBase),
     },
     ...(shippingServices.length ? { hasShippingService: shippingServices } : {}),
   } as const;
