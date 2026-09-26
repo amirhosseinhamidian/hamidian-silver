@@ -19,7 +19,7 @@ type BrandSeoSource = Pick<PublicCatalogBrandPage, 'name' | 'description'>;
 type ProductSeoSource = Pick<PublicCatalogProductDetail, 'name' | 'shortDescription' | 'description'>;
 
 export function categorySeoTitle(category: CategorySeoSource): string {
-  return `خرید ${category.name.trim()}`;
+  return `خرید ${silverLabel(category.name)}`;
 }
 
 export function categorySeoDescription(category: CategorySeoSource): string {
@@ -47,6 +47,12 @@ export function productSeoDescription(product: ProductSeoSource): string {
     `مشاهده ${product.name.trim()} در گالری حمیدیان؛ بررسی قیمت، تصاویر، مشخصات، سایزبندی و موجودی محصول.`
   );
 }
+
+export const HOME_SEO = {
+  title: 'گالری حمیدیان | خرید زیورآلات نقره',
+  description:
+    'خرید زیورآلات نقره از گالری حمیدیان؛ مشاهده کالکشن‌های دستبند، گردنبند، انگشتر و سایر محصولات همراه با قیمت و مشخصات.',
+} as const;
 
 export const ROOT_CATALOG_SEO = {
   title: 'خرید محصولات نقره',
