@@ -10,12 +10,16 @@ import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings'
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getPublicSiteSettings();
+  const [settings, categories] = await Promise.all([
+    getPublicSiteSettings(),
+    getPublicCatalogCategories(),
+  ]);
 
   return buildStorefrontPageMetadata(settings, {
     pathname: '/categories',
     title: 'دسته‌بندی‌های نقره',
     description: 'دسته‌بندی‌های محصولات نقره گالری حمیدیان را بر اساس نوع زیورآلات مرور کنید.',
+    seoNoIndex: categories.length === 0,
   });
 }
 
