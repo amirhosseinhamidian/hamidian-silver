@@ -20,6 +20,7 @@ type CatalogProductGridProps = Readonly<{
   imageSizes?: string;
   className?: string;
   paginationPath?: string;
+  prioritizeFirstImage?: boolean;
 }>;
 
 function buildProductsRequestHref(filters: CatalogFilters, page: number): string {
@@ -66,6 +67,7 @@ export function CatalogProductGrid({
   imageSizes,
   className,
   paginationPath = '/products',
+  prioritizeFirstImage = false,
 }: CatalogProductGridProps) {
   const [products, setProducts] = useState<PublicCatalogProductSummary[]>(initialProducts.items);
   const [nextPage, setNextPage] = useState(initialProducts.page + 1);
@@ -138,12 +140,13 @@ export function CatalogProductGrid({
   return (
     <>
       <ul className={cn('grid grid-cols-2 gap-x-3 gap-y-10 sm:gap-x-5', className)}>
-        {products.map((product) => (
+        {products.map((product, index) => (
           <CatalogProductCard
             key={product.id}
             product={product}
             fallbackSrc={initialFallbackSources[product.id]}
             imageSizes={imageSizes}
+            preloadImage={prioritizeFirstImage && index === 0}
           />
         ))}
       </ul>
