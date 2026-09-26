@@ -411,6 +411,8 @@ async function run(): Promise<void> {
         slug: product.slug,
         shortDescription: product.shortDescription,
         description: product.description,
+        seoTitle: product.seoTitle,
+        seoDescription: product.seoDescription,
         salePriceToman: product.salePriceToman,
         compareAtPriceToman: product.compareAtPriceToman,
         sizeMode: product.sizeMode,
@@ -442,12 +444,16 @@ async function run(): Promise<void> {
         name: category.name,
         slug: category.slug,
         description: category.description,
+        seoTitle: category.seoTitle,
+        seoDescription: category.seoDescription,
         hasImage: Boolean(category.image && !category.image.deletedAt),
       })),
       brands: brands.map((brand) => ({
         name: brand.name,
         slug: brand.slug,
         description: brand.description,
+        seoTitle: brand.seoTitle,
+        seoDescription: brand.seoDescription,
         countryName:
           brand.originCountry?.isActive && !brand.originCountry.deletedAt
             ? brand.originCountry.name
