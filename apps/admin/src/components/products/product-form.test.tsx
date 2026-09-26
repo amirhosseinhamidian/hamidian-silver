@@ -262,6 +262,7 @@ describe('ProductForm', () => {
     fireEvent.change(screen.getByLabelText('توضیح کوتاه'), {
       target: { value: 'طراحی ظریف نقره با فرم مدرن برای استایل روزمره' },
     });
+    fireEvent.change(screen.getByLabelText(/SKU تنوع ۱/), { target: { value: 'RING-001' } });
     fireEvent.click(screen.getByRole('button', { name: 'ساخت محصول' }));
 
     expect(screen.getByText('توضیح کوتاه محصول حداکثر باید ۷ واژه باشد.')).toBeInTheDocument();
