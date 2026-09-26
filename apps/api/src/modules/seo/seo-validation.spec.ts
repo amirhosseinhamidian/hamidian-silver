@@ -12,6 +12,7 @@ describe('SEO validation patterns', () => {
     expect(SEO_CANONICAL_PATH_PATTERN.test('//evil.example/path')).toBe(false);
     expect(SEO_CANONICAL_PATH_PATTERN.test('/brands\\evil.example')).toBe(false);
     expect(SEO_CANONICAL_PATH_PATTERN.test('/products/../account')).toBe(false);
+    expect(SEO_CANONICAL_PATH_PATTERN.test('/products/%2e%2e/account')).toBe(false);
     expect(SEO_CANONICAL_PATH_PATTERN.test('/account/orders')).toBe(false);
   });
 
