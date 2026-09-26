@@ -124,7 +124,7 @@ function validateDraft(key: ContentPageKey, draft: Draft): string | null {
   if (draft.seoTitle.trim().length > 200) return 'عنوان SEO حداکثر ۲۰۰ نویسه است.';
   if (draft.seoDescription.trim().length > 500) return 'توضیح SEO حداکثر ۵۰۰ نویسه است.';
   if (!isValidSeoCanonicalPath(draft.seoCanonicalPath.trim()))
-    return 'مسیر canonical باید یک مسیر داخلی بدون query یا fragment باشد.';
+    return 'مسیر canonical باید داخلی، عمومی و بدون query، fragment یا مسیرهای خصوصی باشد.';
   if (IMAGE_REQUIRED.has(key) && (!draft.heroMediaId || !draft.heroMobileMediaId)) {
     return 'هر دو تصویر Hero دسکتاپ و موبایل/تبلت برای این صفحه الزامی هستند.';
   }
