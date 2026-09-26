@@ -71,6 +71,7 @@ describe('CatalogMediaService', () => {
 
     await service.upload(file, { altText: '  انگشتر نقره  ' });
 
+    expect(localMediaStorage.storeImage).toHaveBeenCalledWith(file, '  انگشتر نقره  ');
     expect(prisma.media.create).toHaveBeenCalledWith({
       data: {
         storageKey: 'catalog/2026/09/image.png',
@@ -138,6 +139,7 @@ describe('CatalogMediaService', () => {
       url: 'https://media.example/catalog/2026/09/product.png',
       isPrimary: true,
     });
+    expect(localMediaStorage.storeImage).toHaveBeenCalledWith(file, 'نمای روبه‌رو');
     expect(transaction.productMedia.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ productId, mediaId, isPrimary: true, sortOrder: 0 }),
