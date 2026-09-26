@@ -367,7 +367,15 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
         ) : null}
       </div>
 
-      <FormField id={`${formId}-description`} label="توضیحات">
+      <FormField
+        id={`${formId}-description`}
+        label="توضیحات"
+        hint={
+          kind === 'brand'
+            ? 'توضیح منحصربه‌فرد درباره کالکشن و سبک محصولات؛ از ادعای نمایندگی، اصالت یا رسمی‌بودن بدون مستندات خودداری کنید.'
+            : undefined
+        }
+      >
         {(props) => (
           <Textarea
             {...props}
