@@ -24,6 +24,8 @@ export type ContentAuditSnapshot = Readonly<{
       slug: string;
       shortDescription: string | null;
       description: string | null;
+      seoTitle: string | null;
+      seoDescription: string | null;
       salePriceToman: number | null;
       compareAtPriceToman: number | null;
       sizeMode: string;
@@ -54,6 +56,8 @@ export type ContentAuditSnapshot = Readonly<{
       name: string;
       slug: string;
       description: string | null;
+      seoTitle: string | null;
+      seoDescription: string | null;
       hasImage: boolean;
     }>
   >;
@@ -62,6 +66,8 @@ export type ContentAuditSnapshot = Readonly<{
       name: string;
       slug: string;
       description: string | null;
+      seoTitle: string | null;
+      seoDescription: string | null;
       countryName: string | null;
       hasImage: boolean;
     }>
@@ -169,6 +175,20 @@ function addIssue(
   issues.push({ severity, code, subject, message });
 }
 
+function validateOptionalSeoText(
+  issues: ContentAuditIssue[],
+  value: string | null | undefined,
+  code: string,
+  subject: string,
+  label: string,
+) {
+  const normalized = normalizedText(value);
+  if (!normalized) return;
+  if (containsPlaceholder(normalized)) {
+    addIssue(issues, 'failure', code, subject, `${label} شامل داده دمو یا placeholder است.`);
+  }
+}
+
 function requireRealText(
   issues: ContentAuditIssue[],
   value: string | null | undefined,
@@ -223,6 +243,14 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
       12,
     );
     requireRealText(issues, product.description, 'PRODUCT_DESCRIPTION', subject, 'توضیحات', 30);
+    validateOptionalSeoText(issues, product.seoTitle, 'PRODUCT_SEO_TITLE_PLACEHOLDER', subject, 'عنوان SEO');
+    validateOptionalSeoText(
+      issues,
+      product.seoDescription,
+      'PRODUCT_SEO_DESCRIPTION_PLACEHOLDER',
+      subject,
+      'توضیح SEO',
+    );
     if (wordCount(product.shortDescription) > 7) {
       addIssue(
         issues,
@@ -362,9 +390,32 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
     const subject = `دسته‌بندی ${category.name || category.slug}`;
     requireRealText(issues, category.name, 'CATEGORY_NAME', subject, 'نام دسته‌بندی');
     requireRealText(issues, category.description, 'CATEGORY_DESCRIPTION', subject, 'توضیحات', 12);
+    validateOptionalSeoText(issues, category.seoTitle, 'CATEGORY_SEO_TITLE_PLACEHOLDER', subject, 'عنوان SEO');
+    validateOptionalSeoText(
+      issues,
+      category.seoDescription,
+      'CATEGORY_SEO_DESCRIPTION_PLACEHOLDER',
+      subject,
+      'توضیح SEO',
+    );
     if (!category.hasImage) {
       addIssue(issues, 'failure', 'CATEGORY_IMAGE', subject, 'تصویر دسته‌بندی ثبت نشده است.');
     }
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.products.map((product) => ({
+      subject: `محصول ${product.name || product.slug}`,
+      value: product.seoDescription,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'PRODUCT_SEO_DESCRIPTION_DUPLICATE',
+      subjects.join(' / '),
+      'توضیح SEO اختصاصی چند محصول یکسان است؛ overrideها باید منحصربه‌فرد باشند.',
+    );
   }
 
   for (const subjects of duplicateTextGroups(
@@ -386,12 +437,35 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
     const subject = `برند ${brand.name || brand.slug}`;
     requireRealText(issues, brand.name, 'BRAND_NAME', subject, 'نام برند');
     requireRealText(issues, brand.description, 'BRAND_DESCRIPTION', subject, 'توضیحات', 12);
+    validateOptionalSeoText(issues, brand.seoTitle, 'BRAND_SEO_TITLE_PLACEHOLDER', subject, 'عنوان SEO');
+    validateOptionalSeoText(
+      issues,
+      brand.seoDescription,
+      'BRAND_SEO_DESCRIPTION_PLACEHOLDER',
+      subject,
+      'توضیح SEO',
+    );
     if (!brand.countryName) {
       addIssue(issues, 'failure', 'BRAND_COUNTRY', subject, 'کشور مبدأ برند ثبت نشده است.');
     }
     if (!brand.hasImage) {
       addIssue(issues, 'failure', 'BRAND_IMAGE', subject, 'تصویر برند ثبت نشده است.');
     }
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.categories.map((category) => ({
+      subject: `دسته‌بندی ${category.name || category.slug}`,
+      value: category.seoDescription,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'CATEGORY_SEO_DESCRIPTION_DUPLICATE',
+      subjects.join(' / '),
+      'توضیح SEO اختصاصی چند دسته یکسان است.',
+    );
   }
 
   for (const subjects of duplicateTextGroups(
@@ -406,6 +480,21 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
       'BRAND_DESCRIPTION_DUPLICATE',
       subjects.join(' / '),
       'توضیحات چند برند یکسان است؛ برای هر کالکشن متن منحصربه‌فرد نوشته شود.',
+    );
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.brands.map((brand) => ({
+      subject: `برند ${brand.name || brand.slug}`,
+      value: brand.seoDescription,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'BRAND_SEO_DESCRIPTION_DUPLICATE',
+      subjects.join(' / '),
+      'توضیح SEO اختصاصی چند برند یکسان است.',
     );
   }
 
