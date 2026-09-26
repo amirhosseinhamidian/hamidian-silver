@@ -24,6 +24,8 @@ function validSnapshot(): ContentAuditSnapshot {
         shortDescription: 'انگشتر نقره با طراحی مینیمال و ظریف.',
         description:
           'این انگشتر از نقره ساخته شده و مشخصات، وزن و شرایط نگهداری آن پیش از خرید بررسی می‌شود.',
+        seoTitle: null,
+        seoDescription: null,
         salePriceToman: 4_800_000,
         compareAtPriceToman: 5_200_000,
         sizeMode: 'SIZED',
@@ -54,6 +56,8 @@ function validSnapshot(): ContentAuditSnapshot {
         name: 'انگشتر',
         slug: 'rings',
         description: 'مجموعه انگشترهای نقره با مشخصات کامل.',
+        seoTitle: null,
+        seoDescription: null,
         hasImage: true,
       },
     ],
@@ -62,6 +66,8 @@ function validSnapshot(): ContentAuditSnapshot {
         name: 'نقره حمیدیان',
         slug: 'hamidian-silver',
         description: 'طراحی و عرضه زیورآلات نقره با اصالت مشخص.',
+        seoTitle: null,
+        seoDescription: null,
         countryName: 'ایران',
         hasImage: true,
       },
@@ -200,6 +206,27 @@ describe('production content audit rules', () => {
         'PRODUCT_DESCRIPTION_DUPLICATE',
         'CATEGORY_DESCRIPTION_DUPLICATE',
         'BRAND_DESCRIPTION_DUPLICATE',
+      ]),
+    );
+  });
+
+  it('rejects placeholder SEO overrides without requiring custom overrides', () => {
+    const snapshot = validSnapshot();
+    const issues = validateProductionContent({
+      ...snapshot,
+      products: [
+        {
+          ...snapshot.products[0],
+          seoTitle: 'demo product title',
+          seoDescription: 'placeholder product description',
+        },
+      ],
+    });
+
+    expect(issues.map(({ code }) => code)).toEqual(
+      expect.arrayContaining([
+        'PRODUCT_SEO_TITLE_PLACEHOLDER',
+        'PRODUCT_SEO_DESCRIPTION_PLACEHOLDER',
       ]),
     );
   });
