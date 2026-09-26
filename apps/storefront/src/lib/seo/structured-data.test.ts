@@ -237,7 +237,7 @@ describe('storefront structured data', () => {
       },
       hasMerchantReturnPolicy: {
         '@type': 'MerchantReturnPolicy',
-        merchantReturnLink: 'https://silver.example/faq',
+        merchantReturnLink: 'https://silver.example/faq#return-policy',
       },
       hasShippingService: [
         {
