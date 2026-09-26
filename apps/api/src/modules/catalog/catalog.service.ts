@@ -1612,6 +1612,7 @@ export class CatalogService {
       seoDescription: product.seoDescription,
       seoCanonicalPath: product.seoCanonicalPath,
       seoNoIndex: product.seoNoIndex,
+      updatedAt: product.updatedAt.toISOString(),
       seoOgMedia:
         product.seoOgMedia && !product.seoOgMedia.deletedAt
           ? {
