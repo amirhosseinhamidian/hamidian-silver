@@ -28,6 +28,7 @@ export async function generateMetadata({
     getPublicCatalogBrands(),
     getPublicSiteSettings(),
   ]);
+  const parsedFilters = parseCatalogSearchParams(rawSearchParams);
   const brand = brands.find((candidate) => candidate.slug === slug);
 
   if (!brand) {
@@ -37,6 +38,15 @@ export async function generateMetadata({
     };
   }
 
+  const products = await getPublicCatalogProducts({
+    page: parsedFilters.page,
+    pageSize: parsedFilters.pageSize,
+    sort: parsedFilters.sort,
+    brand: brand.slug,
+  });
+  const emptyCollection =
+    parsedFilters.page === 1 && parsedFilters.sort === 'newest' && products.total === 0;
+
   return buildStorefrontPageMetadata(settings, {
     pathname: `/brands/${brand.slug}`,
     searchParams: rawSearchParams,
@@ -45,7 +55,7 @@ export async function generateMetadata({
     seoTitle: brand.seoTitle,
     seoDescription: brand.seoDescription,
     seoCanonicalPath: brand.seoCanonicalPath,
-    seoNoIndex: brand.seoNoIndex,
+    seoNoIndex: Boolean(brand.seoNoIndex || emptyCollection),
     seoOgMedia: brand.seoOgMedia,
     fallbackMedia: brand.heroImage ?? brand.image,
   });
@@ -72,6 +82,10 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
   if (!brand) {
     const destinationPath = await getPublicSeoRedirect(`/brands/${slug}`);
     if (destinationPath) permanentRedirect(destinationPath);
+    notFound();
+  }
+
+  if (filters.sort === 'newest' && filters.page > 1 && filters.page > products.totalPages) {
     notFound();
   }
 
