@@ -20,7 +20,11 @@ describe('robots metadata route', () => {
     try {
       expect(robots().sitemap).toBe('https://silver.example/sitemap.xml');
     } finally {
-      process.env.STOREFRONT_PUBLIC_ORIGIN = previous;
+      if (previous === undefined) {
+        delete process.env.STOREFRONT_PUBLIC_ORIGIN;
+      } else {
+        process.env.STOREFRONT_PUBLIC_ORIGIN = previous;
+      }
     }
   });
 });
