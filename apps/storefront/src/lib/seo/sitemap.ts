@@ -114,18 +114,24 @@ export function buildStorefrontSitemap(
   const brandUpdatedAt = sources.brands.map((brand) => brand.updatedAt);
 
   add({ url: sitemapUrl('/', metadataBase) });
-  add({
-    url: sitemapUrl('/products', metadataBase),
-    ...lastModifiedFields(...productUpdatedAt),
-  });
-  add({
-    url: sitemapUrl('/categories', metadataBase),
-    ...lastModifiedFields(...categoryUpdatedAt, ...productUpdatedAt),
-  });
-  add({
-    url: sitemapUrl('/brands', metadataBase),
-    ...lastModifiedFields(...brandUpdatedAt, ...productUpdatedAt),
-  });
+  if (sources.products.length > 0) {
+    add({
+      url: sitemapUrl('/products', metadataBase),
+      ...lastModifiedFields(...productUpdatedAt),
+    });
+  }
+  if (categoryIdsWithProducts.size > 0) {
+    add({
+      url: sitemapUrl('/categories', metadataBase),
+      ...lastModifiedFields(...categoryUpdatedAt, ...productUpdatedAt),
+    });
+  }
+  if (brandIdsWithProducts.size > 0) {
+    add({
+      url: sitemapUrl('/brands', metadataBase),
+      ...lastModifiedFields(...brandUpdatedAt, ...productUpdatedAt),
+    });
+  }
 
   for (const page of sources.contentPages) {
     if (page.seoNoIndex) continue;
