@@ -103,6 +103,11 @@ trap recover EXIT
 prune_safe_cache
 free_space
 
+# Fail before taking a backup or starting any build if the public base-image
+# registry is unavailable. Production Dockerfiles intentionally avoid Docker Hub.
+docker pull --quiet public.ecr.aws/docker/library/node:24-bookworm-slim >/dev/null ||
+    fail 'cannot pull the production Node base image from public.ecr.aws'
+
 # Fail closed if verification or backup restore test fails; preserve the previous app.
 # The VPS-007 script keeps the two newest verified backups, never prunes media.
 "$libexec/backup-production.sh" "$old"
