@@ -81,6 +81,11 @@ describe('CatalogProductGrid', () => {
       <CatalogProductGrid filters={filters} initialProducts={productPage([firstProduct], 1, 2)} />,
     );
 
+    expect(screen.getByRole('link', { name: 'رفتن به صفحه ۲' })).toHaveAttribute(
+      'href',
+      '/products?category=rings&sort=price-asc&page=2',
+    );
+
     act(() => {
       intersectionCallback(
         [{ isIntersecting: true } as IntersectionObserverEntry],
@@ -93,6 +98,21 @@ describe('CatalogProductGrid', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/catalog/products?page=2&category=rings&sort=price-asc',
       { cache: 'no-store' },
+    );
+  });
+
+  it('builds crawlable pagination links for collection routes', () => {
+    render(
+      <CatalogProductGrid
+        filters={{ ...filters, category: 'rings', page: 2 }}
+        initialProducts={productPage([firstProduct], 2, 3)}
+        paginationPath="/categories/rings"
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'رفتن به صفحه ۳' })).toHaveAttribute(
+      'href',
+      '/categories/rings?sort=price-asc&page=3',
     );
   });
 
