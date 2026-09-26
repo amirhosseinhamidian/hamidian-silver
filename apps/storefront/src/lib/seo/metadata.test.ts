@@ -59,7 +59,7 @@ describe('storefront metadata engine', () => {
       openGraph: {
         locale: 'fa_IR',
         siteName: 'گالری حمیدیان',
-        images: [{ url: 'https://media.example/default.webp' }],
+        images: [{ url: 'https://media.example/default.webp', alt: 'نقره حمیدیان' }],
       },
       twitter: { card: 'summary_large_image' },
     });
@@ -118,6 +118,47 @@ describe('storefront metadata engine', () => {
     ).toMatchObject({
       alternates: { canonical: new URL('https://silver.example/products') },
       robots: { index: false, follow: true },
+    });
+  });
+
+  it('rejects unsafe or private canonical overrides at render time', () => {
+    for (const seoCanonicalPath of [
+      'https://evil.example/product',
+      '//evil.example/product',
+      '/products/../account',
+      '/cart',
+      '/brands\\evil.example',
+    ]) {
+      expect(
+        buildStorefrontPageMetadata(
+          settings,
+          {
+            pathname: '/products/silver-ring',
+            title: 'انگشتر نقره',
+            seoCanonicalPath,
+          },
+          origin,
+        ).alternates,
+      ).toEqual({ canonical: new URL('https://silver.example/products/silver-ring') });
+    }
+  });
+
+  it('uses the page title as Open Graph alt text when media alt is missing', () => {
+    expect(
+      buildStorefrontPageMetadata(
+        settings,
+        {
+          pathname: '/products/silver-ring',
+          title: 'انگشتر نقره',
+          seoOgMedia: {
+            url: 'https://media.example/ring.webp',
+            altText: null,
+          },
+        },
+        origin,
+      ).openGraph,
+    ).toMatchObject({
+      images: [{ url: 'https://media.example/ring.webp', alt: 'انگشتر نقره' }],
     });
   });
 
