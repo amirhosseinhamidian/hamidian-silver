@@ -143,6 +143,7 @@ describe('storefront metadata engine', () => {
       'https://evil.example/product',
       '//evil.example/product',
       '/products/../account',
+      '/products/%2e%2e/account',
       '/cart',
       '/brands\\evil.example',
       '/brands/wrong-family',
