@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveStorefrontSeoRoutePolicy } from '@/lib/seo/route-policy';
 
 describe('resolveStorefrontSeoRoutePolicy', () => {
-  it.each(['/', '/products', '/brands', '/about', '/faq'])(
+  it.each(['/', '/products', '/brands', '/categories', '/about', '/faq'])(
     'indexes the public route %s',
     (pathname) => {
       expect(resolveStorefrontSeoRoutePolicy(pathname)).toMatchObject({
