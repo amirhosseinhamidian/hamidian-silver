@@ -13,6 +13,7 @@ type CatalogProductCardProps = Readonly<{
   fallbackSrc?: string | null;
   badge?: string | null;
   imageSizes?: string;
+  preloadImage?: boolean;
 }>;
 
 export function CatalogProductCard({
@@ -20,6 +21,7 @@ export function CatalogProductCard({
   fallbackSrc = null,
   badge = null,
   imageSizes = '(min-width: 1024px) 25vw, 50vw',
+  preloadImage = false,
 }: CatalogProductCardProps) {
   const wishlistItem = {
     productId: product.id,
@@ -46,6 +48,8 @@ export function CatalogProductCard({
             fallbackSrc={fallbackSrc}
             alt={product.name}
             sizes={imageSizes}
+            preload={preloadImage}
+            fetchPriority={preloadImage ? 'high' : undefined}
           />
           {badge ? (
             <span className="absolute left-2 top-2 bg-[var(--sf-color-ink)] px-1.5 py-0.5 text-[0.625rem] text-white sm:left-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-xs">
