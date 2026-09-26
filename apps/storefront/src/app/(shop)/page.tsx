@@ -6,7 +6,7 @@ import { getPublicHomepage } from '@/lib/home/public-homepage';
 import { HOME_SEO } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { buildOrganizationStructuredData } from '@/lib/seo/structured-data';
-import { getPublicShippingOptions } from '@/lib/shipping/public-shipping-pricing';
+import { getPublicShippingOptionsForSeo } from '@/lib/shipping/public-shipping-pricing';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +26,7 @@ export default async function StorefrontHomePage() {
   const [homepage, settings, shippingOptions] = await Promise.all([
     getPublicHomepage(),
     getPublicSiteSettings(),
-    getPublicShippingOptions(),
+    getPublicShippingOptionsForSeo(),
   ]);
 
   return (
