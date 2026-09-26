@@ -317,14 +317,12 @@ const getCachedPublicCatalogBrands = unstable_cache(
   { revalidate: 60 },
 );
 
-export const getPublicCatalogCategories = cache(
-  async (): Promise<PublicCatalogCategoryPage[]> =>
-    getCachedPublicCatalogCategories(publicCatalogApiOrigin()),
+export const getPublicCatalogCategories = cache(async (): Promise<PublicCatalogCategoryPage[]> =>
+  getCachedPublicCatalogCategories(publicCatalogApiOrigin()),
 );
 
-export const getPublicCatalogBrands = cache(
-  async (): Promise<PublicCatalogBrandPage[]> =>
-    getCachedPublicCatalogBrands(publicCatalogApiOrigin()),
+export const getPublicCatalogBrands = cache(async (): Promise<PublicCatalogBrandPage[]> =>
+  getCachedPublicCatalogBrands(publicCatalogApiOrigin()),
 );
 
 export async function getPublicCatalogIndex(filters: CatalogFilters): Promise<{

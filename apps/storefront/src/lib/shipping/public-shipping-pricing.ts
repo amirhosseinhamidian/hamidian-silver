@@ -74,9 +74,7 @@ export async function getPublicShippingOptions(): Promise<readonly PublicShippin
   return apiOrigin ? loadPublicShippingOptions(apiOrigin, 'no-store') : [];
 }
 
-export async function getPublicShippingOptionsForSeo(): Promise<
-  readonly PublicShippingOption[]
-> {
+export async function getPublicShippingOptionsForSeo(): Promise<readonly PublicShippingOption[]> {
   const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;
   return apiOrigin ? getCachedPublicShippingOptionsForSeo(apiOrigin) : [];
 }

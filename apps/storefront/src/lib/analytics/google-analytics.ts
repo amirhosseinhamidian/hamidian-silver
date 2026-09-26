@@ -21,7 +21,6 @@ window.gtag('config', '${measurementId}', {
 `;
 }
 
-
 export type WebVitalMetric = Readonly<{
   id: string;
   name: string;
