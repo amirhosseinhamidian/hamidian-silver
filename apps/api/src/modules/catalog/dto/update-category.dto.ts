@@ -10,6 +10,8 @@ import {
   Min,
 } from 'class-validator';
 
+import { CATEGORY_SEO_CANONICAL_PATH_PATTERN } from '../../seo/seo-validation';
+
 export class UpdateCategoryDto {
   @IsOptional()
   @IsString()
@@ -38,7 +40,7 @@ export class UpdateCategoryDto {
   @IsOptional()
   @IsString()
   @MaxLength(1000)
-  @Matches(/^\/(?!\/)[^\s?#]*$/)
+  @Matches(CATEGORY_SEO_CANONICAL_PATH_PATTERN)
   seoCanonicalPath?: string | null;
 
   @IsOptional()
