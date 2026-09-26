@@ -36,6 +36,17 @@ describe('resolveStorefrontSeoRoutePolicy', () => {
     });
   });
 
+  it('does not index malformed pagination variants', () => {
+    expect(
+      resolveStorefrontSeoRoutePolicy('/products', new URLSearchParams({ page: 'abc' })),
+    ).toMatchObject({
+      canonicalPath: '/products',
+      index: false,
+      follow: true,
+      reason: 'catalog-variant',
+    });
+  });
+
   it.each([
     new URLSearchParams({ q: 'انگشتر' }),
     new URLSearchParams({ sort: 'price-desc' }),
