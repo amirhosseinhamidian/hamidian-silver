@@ -51,7 +51,7 @@ export function buildProductStructuredData(
     product.shortDescription?.trim() ||
     product.description?.trim();
   const organizationName =
-    settings.seoOrganizationName?.trim() || settings.seoSiteName?.trim() || 'نقره حمیدیان';
+    settings.seoOrganizationName?.trim() || settings.seoSiteName?.trim() || 'گالری حمیدیان';
   const priceRial = product.salePriceToman === null ? null : product.salePriceToman * 10;
 
   return {
