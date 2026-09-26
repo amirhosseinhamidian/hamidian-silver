@@ -13,6 +13,7 @@ type StorefrontFaqProps = Readonly<{
 }>;
 
 const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+const RETURN_POLICY_SECTION_PATTERN = /(مرجوع|بازگشت کالا|تعویض)/;
 
 function toPersianDigits(value: string): string {
   return value.replace(/\d/g, (digit) => persianDigits[Number(digit)] ?? digit);
@@ -165,8 +166,14 @@ export function StorefrontFaq({ page, breadcrumbs }: StorefrontFaqProps) {
                 const panelId = `faq-answer-${page.sections.indexOf(section)}`;
                 const buttonId = `faq-question-${page.sections.indexOf(section)}`;
 
+                const isReturnPolicySection = RETURN_POLICY_SECTION_PATTERN.test(section.title);
+
                 return (
-                  <article key={questionKey} className="border-b border-[var(--sf-color-border)]">
+                  <article
+                    key={questionKey}
+                    id={isReturnPolicySection ? 'return-policy' : undefined}
+                    className="scroll-mt-24 border-b border-[var(--sf-color-border)]"
+                  >
                     <h3>
                       <button
                         id={buttonId}
