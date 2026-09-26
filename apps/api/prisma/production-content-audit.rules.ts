@@ -145,6 +145,20 @@ function normalizePhoneDigits(value: string): string {
   return digits.startsWith('98') && digits.length >= 11 ? `0${digits.slice(2)}` : digits;
 }
 
+function duplicateTextGroups(
+  values: ReadonlyArray<Readonly<{ subject: string; value: string | null | undefined }>>,
+): string[][] {
+  const groups = new Map<string, string[]>();
+  for (const { subject, value } of values) {
+    const normalized = normalizedText(value).replace(/\s+/g, ' ').toLocaleLowerCase('fa');
+    if (!normalized) continue;
+    const subjects = groups.get(normalized) ?? [];
+    subjects.push(subject);
+    groups.set(normalized, subjects);
+  }
+  return [...groups.values()].filter((subjects) => subjects.length > 1);
+}
+
 function addIssue(
   issues: ContentAuditIssue[],
   severity: ContentAuditIssue['severity'],
@@ -329,6 +343,21 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
     }
   }
 
+  for (const subjects of duplicateTextGroups(
+    snapshot.products.map((product) => ({
+      subject: `محصول ${product.name || product.slug}`,
+      value: product.description,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'PRODUCT_DESCRIPTION_DUPLICATE',
+      subjects.join(' / '),
+      'توضیحات کامل چند محصول یکسان است؛ برای هر محصول متن منحصربه‌فرد نوشته شود.',
+    );
+  }
+
   for (const category of snapshot.categories) {
     const subject = `دسته‌بندی ${category.name || category.slug}`;
     requireRealText(issues, category.name, 'CATEGORY_NAME', subject, 'نام دسته‌بندی');
@@ -336,6 +365,21 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
     if (!category.hasImage) {
       addIssue(issues, 'failure', 'CATEGORY_IMAGE', subject, 'تصویر دسته‌بندی ثبت نشده است.');
     }
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.categories.map((category) => ({
+      subject: `دسته‌بندی ${category.name || category.slug}`,
+      value: category.description,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'CATEGORY_DESCRIPTION_DUPLICATE',
+      subjects.join(' / '),
+      'توضیحات چند دسته‌بندی یکسان است؛ هر صفحه باید متن منحصربه‌فرد داشته باشد.',
+    );
   }
 
   for (const brand of snapshot.brands) {
@@ -348,6 +392,21 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
     if (!brand.hasImage) {
       addIssue(issues, 'failure', 'BRAND_IMAGE', subject, 'تصویر برند ثبت نشده است.');
     }
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.brands.map((brand) => ({
+      subject: `برند ${brand.name || brand.slug}`,
+      value: brand.description,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'BRAND_DESCRIPTION_DUPLICATE',
+      subjects.join(' / '),
+      'توضیحات چند برند یکسان است؛ برای هر کالکشن متن منحصربه‌فرد نوشته شود.',
+    );
   }
 
   const settings = snapshot.settings;
