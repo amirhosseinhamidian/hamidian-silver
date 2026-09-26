@@ -31,7 +31,7 @@ describe('buildStorefrontSitemap', () => {
             name: 'انگشتر',
             slug: 'rings',
             description: null,
-            parentId: null,
+            parentId: 'category-parent',
             sortOrder: 1,
             image: null,
           },
@@ -63,6 +63,17 @@ describe('buildStorefrontSitemap', () => {
       },
     ] satisfies PublicCatalogProductSummary[];
     const categories = [
+      {
+        id: 'category-parent',
+        name: 'زیورآلات',
+        slug: 'jewelry',
+        description: null,
+        parentId: null,
+        sortOrder: 0,
+        image: null,
+        seoNoIndex: false,
+        updatedAt: '2026-09-20T08:00:00.000Z',
+      },
       {
         id: 'category-1',
         name: 'انگشتر',
@@ -126,11 +137,20 @@ describe('buildStorefrontSitemap', () => {
           lastModified: new Date('2026-09-23T09:30:00.000Z'),
         }),
         expect.objectContaining({
+          url: 'https://silver.example/products',
+          lastModified: new Date('2026-09-25T10:00:00.000Z'),
+        }),
+        expect.objectContaining({
           url: 'https://silver.example/categories',
+          lastModified: new Date('2026-09-25T10:00:00.000Z'),
+        }),
+        expect.objectContaining({
+          url: 'https://silver.example/categories/jewelry',
+          lastModified: new Date('2026-09-25T10:00:00.000Z'),
         }),
         expect.objectContaining({
           url: 'https://silver.example/categories/rings',
-          lastModified: new Date('2026-09-24T08:00:00.000Z'),
+          lastModified: new Date('2026-09-25T10:00:00.000Z'),
         }),
         expect.objectContaining({
           url: 'https://silver.example/products/ring-canonical',
