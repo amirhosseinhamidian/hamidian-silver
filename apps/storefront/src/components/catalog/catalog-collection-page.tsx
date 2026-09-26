@@ -192,6 +192,7 @@ export function CatalogCollectionPage({
               imageSizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
               className="py-10 md:grid-cols-3 lg:grid-cols-4"
               paginationPath={path}
+              prioritizeFirstImage={!image?.url}
             />
           </>
         ) : (
