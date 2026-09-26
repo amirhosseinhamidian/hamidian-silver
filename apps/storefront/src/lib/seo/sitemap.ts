@@ -33,6 +33,32 @@ function preferredMediaUrl(...candidates: Array<string | null | undefined>): str
   return candidates.find((candidate): candidate is string => Boolean(candidate)) ?? null;
 }
 
+function validLastModified(value: string | null | undefined): Date | undefined {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function populatedCategoryIds(
+  products: readonly PublicCatalogProductSummary[],
+  categories: readonly PublicCatalogCategoryPage[],
+): Set<string> {
+  const populated = new Set(products.flatMap((product) => product.categories.map(({ id }) => id)));
+  const byId = new Map(categories.map((category) => [category.id, category] as const));
+
+  for (const categoryId of [...populated]) {
+    let current = byId.get(categoryId);
+    const visited = new Set<string>();
+    while (current?.parentId && !visited.has(current.parentId)) {
+      visited.add(current.parentId);
+      populated.add(current.parentId);
+      current = byId.get(current.parentId);
+    }
+  }
+
+  return populated;
+}
+
 export function buildStorefrontSitemap(
   sources: SitemapSources,
   metadataBase: URL = getStorefrontMetadataBase(),
@@ -44,7 +70,13 @@ export function buildStorefrontSitemap(
 
   add({ url: sitemapUrl('/', metadataBase), changeFrequency: 'weekly', priority: 1 });
   add({ url: sitemapUrl('/products', metadataBase), changeFrequency: 'daily', priority: 0.9 });
+  add({ url: sitemapUrl('/categories', metadataBase), changeFrequency: 'weekly', priority: 0.7 });
   add({ url: sitemapUrl('/brands', metadataBase), changeFrequency: 'weekly', priority: 0.7 });
+
+  const categoryIdsWithProducts = populatedCategoryIds(sources.products, sources.categories);
+  const brandIdsWithProducts = new Set(
+    sources.products.flatMap((product) => (product.brand ? [product.brand.id] : [])),
+  );
 
   for (const page of sources.contentPages) {
     if (page.seoNoIndex) continue;
@@ -56,12 +88,15 @@ export function buildStorefrontSitemap(
       ),
       changeFrequency: 'monthly',
       priority: page.key === 'ABOUT' || page.key === 'SERVICES' ? 0.6 : 0.5,
+      ...(validLastModified(page.updatedAt)
+        ? { lastModified: validLastModified(page.updatedAt) }
+        : {}),
       ...(imageUrl ? { images: [sitemapUrl(imageUrl, metadataBase)] } : {}),
     });
   }
 
   for (const category of sources.categories) {
-    if (category.seoNoIndex) continue;
+    if (category.seoNoIndex || !categoryIdsWithProducts.has(category.id)) continue;
     const imageUrl = preferredMediaUrl(category.seoOgMedia?.url, category.image?.url);
     add({
       url: sitemapUrl(
@@ -70,12 +105,15 @@ export function buildStorefrontSitemap(
       ),
       changeFrequency: 'weekly',
       priority: 0.7,
+      ...(validLastModified(category.updatedAt)
+        ? { lastModified: validLastModified(category.updatedAt) }
+        : {}),
       ...(imageUrl ? { images: [sitemapUrl(imageUrl, metadataBase)] } : {}),
     });
   }
 
   for (const brand of sources.brands) {
-    if (brand.seoNoIndex) continue;
+    if (brand.seoNoIndex || !brandIdsWithProducts.has(brand.id)) continue;
     const imageUrl = preferredMediaUrl(
       brand.seoOgMedia?.url,
       brand.heroImage?.url,
@@ -85,6 +123,9 @@ export function buildStorefrontSitemap(
       url: sitemapUrl(brand.seoCanonicalPath?.trim() || `/brands/${brand.slug}`, metadataBase),
       changeFrequency: 'weekly',
       priority: 0.7,
+      ...(validLastModified(brand.updatedAt)
+        ? { lastModified: validLastModified(brand.updatedAt) }
+        : {}),
       ...(imageUrl ? { images: [sitemapUrl(imageUrl, metadataBase)] } : {}),
     });
   }
@@ -98,6 +139,9 @@ export function buildStorefrontSitemap(
       ),
       changeFrequency: 'weekly',
       priority: 0.8,
+      ...(validLastModified(product.updatedAt)
+        ? { lastModified: validLastModified(product.updatedAt) }
+        : {}),
       ...(product.primaryMedia?.url
         ? { images: [sitemapUrl(product.primaryMedia.url, metadataBase)] }
         : {}),
