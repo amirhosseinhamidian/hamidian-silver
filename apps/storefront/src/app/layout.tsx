@@ -3,6 +3,7 @@ import Script from 'next/script';
 import { Suspense, type ReactNode } from 'react';
 
 import { AnalyticsPageView } from '@/components/analytics/analytics-page-view';
+import { WebVitalsReporter } from '@/components/analytics/web-vitals-reporter';
 import {
   googleAnalyticsBootstrap,
   validGoogleMeasurementId,
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             <Suspense fallback={null}>
               <AnalyticsPageView />
             </Suspense>
+            <WebVitalsReporter />
           </>
         ) : null}
       </body>
