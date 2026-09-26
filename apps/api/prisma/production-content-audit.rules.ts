@@ -165,6 +165,18 @@ function duplicateTextGroups(
   return [...groups.values()].filter((subjects) => subjects.length > 1);
 }
 
+function hasGenericMediaFilename(storageKey: string): boolean {
+  const filename = storageKey.split('/').pop()?.replace(/\.[^.]+$/, '').toLocaleLowerCase('en') ?? '';
+  const withoutUuid = filename.replace(
+    /-?[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    '',
+  );
+  return (
+    !withoutUuid ||
+    /^(?:img|image|photo|picture|pic|dsc|screenshot|untitled|file)[-_ ]*\d*$/i.test(withoutUuid)
+  );
+}
+
 function addIssue(
   issues: ContentAuditIssue[],
   severity: ContentAuditIssue['severity'],
@@ -374,6 +386,21 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
   for (const subjects of duplicateTextGroups(
     snapshot.products.map((product) => ({
       subject: `محصول ${product.name || product.slug}`,
+      value: product.seoTitle,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'PRODUCT_SEO_TITLE_DUPLICATE',
+      subjects.join(' / '),
+      'عنوان SEO اختصاصی چند محصول یکسان است؛ در صورت استفاده از override، عنوان هر محصول منحصربه‌فرد باشد.',
+    );
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.products.map((product) => ({
+      subject: `محصول ${product.name || product.slug}`,
       value: product.description,
     })),
   )) {
@@ -415,6 +442,21 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
       'PRODUCT_SEO_DESCRIPTION_DUPLICATE',
       subjects.join(' / '),
       'توضیح SEO اختصاصی چند محصول یکسان است؛ overrideها باید منحصربه‌فرد باشند.',
+    );
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.categories.map((category) => ({
+      subject: `دسته‌بندی ${category.name || category.slug}`,
+      value: category.seoTitle,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'CATEGORY_SEO_TITLE_DUPLICATE',
+      subjects.join(' / '),
+      'عنوان SEO اختصاصی چند دسته‌بندی یکسان است.',
     );
   }
 
@@ -465,6 +507,21 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
       'CATEGORY_SEO_DESCRIPTION_DUPLICATE',
       subjects.join(' / '),
       'توضیح SEO اختصاصی چند دسته یکسان است.',
+    );
+  }
+
+  for (const subjects of duplicateTextGroups(
+    snapshot.brands.map((brand) => ({
+      subject: `برند ${brand.name || brand.slug}`,
+      value: brand.seoTitle,
+    })),
+  )) {
+    addIssue(
+      issues,
+      'warning',
+      'BRAND_SEO_TITLE_DUPLICATE',
+      subjects.join(' / '),
+      'عنوان SEO اختصاصی چند برند یکسان است.',
     );
   }
 
@@ -599,6 +656,15 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
   for (const media of snapshot.media) {
     requireRealText(issues, media.storageKey, 'MEDIA_STORAGE_KEY', media.subject, 'کلید فایل');
     requireRealText(issues, media.altText, 'MEDIA_ALT', media.subject, 'متن جایگزین', 3);
+    if (hasGenericMediaFilename(media.storageKey)) {
+      addIssue(
+        issues,
+        'warning',
+        'MEDIA_FILENAME_GENERIC',
+        media.subject,
+        'نام فایل تصویر عمومی یا فقط شناسه است؛ برای تصاویر جدید نام توصیفی استفاده شود.',
+      );
+    }
     if (media.deleted) {
       addIssue(
         issues,
