@@ -32,6 +32,7 @@ function validSnapshot(): ContentAuditSnapshot {
         categoryNames: ['انگشتر'],
         mediaCount: 1,
         primaryMediaCount: 1,
+        mediaAltTexts: ['انگشتر نقره ماه - نمای روبه‌رو'],
         variants: [
           {
             sku: 'HS-RING-MAH-54',
@@ -138,6 +139,28 @@ describe('production content audit rules', () => {
         'VARIANT_DEMO_SKU',
         'VARIANT_INVENTORY_INVALID',
         'PRODUCT_OUT_OF_STOCK',
+      ]),
+    );
+  });
+
+  it('enforces short product copy and warns on duplicated image alt text', () => {
+    const snapshot = validSnapshot();
+    const issues = validateProductionContent({
+      ...snapshot,
+      products: [
+        {
+          ...snapshot.products[0],
+          shortDescription: 'این توضیح کوتاه محصول بیش از هفت واژه دارد و باید کوتاه شود',
+          mediaCount: 2,
+          mediaAltTexts: ['انگشتر نقره ماه', 'انگشتر نقره ماه'],
+        },
+      ],
+    });
+
+    expect(issues.map(({ code }) => code)).toEqual(
+      expect.arrayContaining([
+        'PRODUCT_SHORT_DESCRIPTION_WORDS',
+        'PRODUCT_MEDIA_ALT_DUPLICATE',
       ]),
     );
   });
