@@ -32,8 +32,25 @@ const mediaPublicBaseUrl =
   process.env.MEDIA_PUBLIC_BASE_URL?.trim() || DEFAULT_MEDIA_PUBLIC_BASE_URL;
 const e2eMode = process.env.STOREFRONT_E2E === 'true';
 
+const SECURITY_HEADERS = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'Content-Security-Policy', value: "frame-ancestors 'self';" },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+] as const;
+
 const nextConfig: NextConfig = {
   experimental: { globalNotFound: true },
+  poweredByHeader: false,
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [...SECURITY_HEADERS],
+      },
+    ];
+  },
   ...(e2eMode ? { distDir: '.next-e2e' } : {}),
   output: 'standalone',
   outputFileTracingRoot: resolve(process.cwd(), '../..'),
