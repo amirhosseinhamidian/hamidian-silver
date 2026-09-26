@@ -38,14 +38,16 @@ export async function generateMetadata({
     };
   }
 
-  const products = await getPublicCatalogProducts({
-    page: parsedFilters.page,
-    pageSize: parsedFilters.pageSize,
-    sort: parsedFilters.sort,
-    brand: brand.slug,
-  });
-  const emptyCollection =
-    parsedFilters.page === 1 && parsedFilters.sort === 'newest' && products.total === 0;
+  const shouldCheckEmpty = parsedFilters.page === 1 && parsedFilters.sort === 'newest';
+  const products = shouldCheckEmpty
+    ? await getPublicCatalogProducts({
+        page: 1,
+        pageSize: parsedFilters.pageSize,
+        sort: 'newest',
+        brand: brand.slug,
+      })
+    : null;
+  const emptyCollection = Boolean(shouldCheckEmpty && products?.total === 0);
 
   return buildStorefrontPageMetadata(settings, {
     pathname: `/brands/${brand.slug}`,
