@@ -162,4 +162,18 @@ describe('buildStorefrontSitemap', () => {
     expect(sitemap.some((entry) => entry.url.includes('hidden'))).toBe(false);
     expect(sitemap.some((entry) => entry.url.includes('empty-category'))).toBe(false);
   });
+
+  it('omits empty catalog hubs from the sitemap', () => {
+    const sitemap = buildStorefrontSitemap(
+      {
+        products: [],
+        categories: [],
+        brands: [],
+        contentPages: [],
+      },
+      origin,
+    );
+
+    expect(sitemap).toEqual([{ url: 'https://silver.example/' }]);
+  });
 });
