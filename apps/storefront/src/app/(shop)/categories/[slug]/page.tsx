@@ -10,6 +10,10 @@ import {
   type CatalogFilters,
   type CatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
+import {
+  categorySeoDescription,
+  categorySeoTitle,
+} from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSeoRedirect } from '@/lib/seo/redirects';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
@@ -53,8 +57,8 @@ export async function generateMetadata({
   return buildStorefrontPageMetadata(settings, {
     pathname: `/categories/${category.slug}`,
     searchParams: rawSearchParams,
-    title: category.name,
-    description: category.description,
+    title: categorySeoTitle(category),
+    description: categorySeoDescription(category),
     seoTitle: category.seoTitle,
     seoDescription: category.seoDescription,
     seoCanonicalPath: category.seoCanonicalPath,
@@ -97,7 +101,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       path={`/categories/${category.slug}`}
       eyebrow="دسته‌بندی"
       title={category.name}
-      description={category.description}
+      description={categorySeoDescription(category)}
       image={category.image}
       mobileImage={category.heroMobileImage ?? null}
       filters={filters}
