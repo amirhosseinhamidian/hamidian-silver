@@ -664,7 +664,7 @@ export class CatalogService {
       seoDescription: category.seoDescription,
       seoCanonicalPath: category.seoCanonicalPath,
       seoNoIndex: category.seoNoIndex,
-      updatedAt: category.updatedAt.toISOString(),
+      ...(category.updatedAt ? { updatedAt: category.updatedAt.toISOString() } : {}),
       parentId: category.parentId,
       sortOrder: category.sortOrder,
       image:
@@ -781,7 +781,7 @@ export class CatalogService {
       seoDescription: brand.seoDescription,
       seoCanonicalPath: brand.seoCanonicalPath,
       seoNoIndex: brand.seoNoIndex,
-      updatedAt: brand.updatedAt.toISOString(),
+      ...(brand.updatedAt ? { updatedAt: brand.updatedAt.toISOString() } : {}),
       originCountry:
         brand.originCountry?.isActive && !brand.originCountry.deletedAt
           ? {
@@ -1145,7 +1145,7 @@ export class CatalogService {
           shortDescription: product.shortDescription,
           seoCanonicalPath: product.seoCanonicalPath,
           seoNoIndex: product.seoNoIndex,
-          updatedAt: product.updatedAt.toISOString(),
+          ...(product.updatedAt ? { updatedAt: product.updatedAt.toISOString() } : {}),
           salePriceToman: lowestPricedVariant?.salePriceToman ?? product.salePriceToman,
           compareAtPriceToman:
             lowestPricedVariant?.compareAtPriceToman ?? product.compareAtPriceToman,
@@ -1612,7 +1612,7 @@ export class CatalogService {
       seoDescription: product.seoDescription,
       seoCanonicalPath: product.seoCanonicalPath,
       seoNoIndex: product.seoNoIndex,
-      updatedAt: product.updatedAt.toISOString(),
+      ...(product.updatedAt ? { updatedAt: product.updatedAt.toISOString() } : {}),
       seoOgMedia:
         product.seoOgMedia && !product.seoOgMedia.deletedAt
           ? {
@@ -1906,7 +1906,7 @@ export class CatalogService {
         shortDescription: product.shortDescription,
         seoCanonicalPath: product.seoCanonicalPath,
         seoNoIndex: product.seoNoIndex,
-        updatedAt: product.updatedAt.toISOString(),
+        ...(product.updatedAt ? { updatedAt: product.updatedAt.toISOString() } : {}),
         salePriceToman: prices[0]?.sale ?? product.salePriceToman,
         compareAtPriceToman: prices[0]?.compare ?? product.compareAtPriceToman,
         sizeMode: product.sizeMode,
