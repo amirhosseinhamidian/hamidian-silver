@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { CatalogProductGrid } from '@/components/catalog/catalog-product-grid';
 import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
@@ -22,6 +24,7 @@ type CatalogCollectionPageProps = Readonly<{
   filters: CatalogFilters;
   products: PublicCatalogProductList;
   breadcrumbs?: readonly Readonly<{ label: string; href: string }>[];
+  collectionLinks?: readonly Readonly<{ label: string; href: string }>[];
 }>;
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
@@ -95,6 +98,7 @@ export function CatalogCollectionPage({
   filters,
   products,
   breadcrumbs,
+  collectionLinks = [],
 }: CatalogCollectionPageProps) {
   return (
     <main id="main-content">
@@ -110,6 +114,23 @@ export function CatalogCollectionPage({
       />
 
       <div className="sf-container">
+        {collectionLinks.length ? (
+          <nav
+            aria-label={`زیرمجموعه‌های ${title}`}
+            className="flex flex-wrap gap-2 border-b border-[var(--sf-color-border)] py-6"
+          >
+            {collectionLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="border border-[var(--sf-color-border)] px-4 py-2 text-sm text-[var(--sf-color-muted)] transition-colors hover:border-[var(--sf-color-ink)] hover:text-[var(--sf-color-ink)]"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
+
         <form
           action={path}
           method="get"
