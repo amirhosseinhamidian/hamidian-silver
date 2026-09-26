@@ -168,7 +168,7 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
       return setError('کد کشور باید دقیقاً دو حرف انگلیسی باشد.');
     }
     if (kind === 'brand' && !isValidSeoCanonicalPath(seo.canonicalPath.trim(), '/brands/'))
-      return setError('مسیر canonical باید یک مسیر داخلی بدون query یا fragment باشد.');
+      return setError('canonical برند باید یک مسیر امن زیر /brands/ و بدون query یا fragment باشد.');
     if (file && (!ACCEPTED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
       return setError(
         `${kind === 'brand' ? 'لوگو' : 'تصویر'} باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.`,
