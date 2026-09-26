@@ -109,13 +109,16 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
             ...new Map(
               products.items
                 .flatMap((product) => product.categories)
-                .map((category) => [
-                  category.id,
-                  {
-                    label: category.name,
-                    href: `/categories/${category.slug}`,
-                  },
-                ]),
+                .map(
+                  (category) =>
+                    [
+                      category.id,
+                      {
+                        label: category.name,
+                        href: `/categories/${category.slug}`,
+                      },
+                    ] as const,
+                ),
             ).values(),
           ].slice(0, 8),
         },
