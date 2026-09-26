@@ -53,21 +53,35 @@ describe('SEO content fallbacks', () => {
     );
   });
 
-  it('prefers product short copy and otherwise creates a useful fallback', () => {
+  it('avoids using the intentionally short product card copy as the meta description', () => {
     const product = {
       name: 'دستبند نقره ماری',
       shortDescription: 'طراحی لوکس و مینیمال',
-      description: 'توضیح کامل',
+      description: null,
+      brand: { name: 'کارتیر' },
+      country: { name: 'ایتالیا' },
+      categories: [{ name: 'دستبند' }],
     };
 
-    expect(productSeoDescription(product)).toBe('طراحی لوکس و مینیمال');
+    expect(productSeoDescription(product)).toBe(
+      'خرید و مشاهده دستبند نقره ماری در گالری حمیدیان؛ برند کارتیر، ساخت ایتالیا، دسته دستبند؛ بررسی قیمت، تصاویر، مشخصات، سایزبندی و موجودی محصول.',
+    );
+  });
+
+  it('uses a concise useful long description when it is suitable for a snippet', () => {
+    const description =
+      'دستبند نقره با طراحی ظریف، آبکاری رادیوم و ساخت دقیق که برای استفاده روزمره و استایل مینیمال انتخاب مناسبی است.';
+
     expect(
       productSeoDescription({
-        ...product,
-        shortDescription: null,
-        description: null,
+        name: 'دستبند نقره',
+        shortDescription: 'طراحی ظریف و مینیمال',
+        description,
+        brand: null,
+        country: null,
+        categories: [],
       }),
-    ).toContain('قیمت، تصاویر، مشخصات، سایزبندی و موجودی');
+    ).toBe(description);
   });
 
   it('defines home and root catalog purchase intents', () => {
