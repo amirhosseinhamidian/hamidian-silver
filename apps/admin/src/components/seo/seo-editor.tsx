@@ -42,7 +42,7 @@ const PRIVATE_SEO_PREFIXES = ['/account', '/api', '/cart', '/checkout', '/paymen
 export function isValidSeoCanonicalPath(value: string, requiredPrefix?: string): boolean {
   if (value === '') return true;
   if (
-    !/^\/(?!\/)(?!\.{1,2}(?:\/|$))(?!.*\/\.{1,2}(?:\/|$))[^\\\s?#]*$/.test(value)
+    !/^\/(?!\/)(?!\.{1,2}(?:\/|$))(?!.*\/\.{1,2}(?:\/|$))[^%\\\s?#]*$/.test(value)
   ) {
     return false;
   }
