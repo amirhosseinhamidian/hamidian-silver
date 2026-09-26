@@ -46,7 +46,8 @@ function defaultTitle(settings: PublicSiteSettings): string {
 
 function titleTemplate(settings: PublicSiteSettings): string {
   const template = configuredText(settings.seoTitleTemplate, DEFAULT_TITLE_TEMPLATE);
-  return template.includes('%s') ? template : DEFAULT_TITLE_TEMPLATE;
+  const tokens = template.match(/%s/g)?.length ?? 0;
+  return tokens === 1 ? template : DEFAULT_TITLE_TEMPLATE;
 }
 
 function defaultDescription(settings: PublicSiteSettings): string {
@@ -130,6 +131,12 @@ function safeCanonicalPath(value: string | null | undefined, fallback: string): 
   ) {
     return fallback;
   }
+
+  const resourcePrefix = ['/products/', '/categories/', '/brands/'].find((prefix) =>
+    fallback.startsWith(prefix),
+  );
+  if (resourcePrefix && !candidate.startsWith(resourcePrefix)) return fallback;
+
   return candidate;
 }
 
