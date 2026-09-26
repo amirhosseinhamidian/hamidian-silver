@@ -196,7 +196,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
       setError('قیمت قبل از تخفیف باید بیشتر از قیمت فروش باشد.');
       return;
     }
-    if (!isValidSeoCanonicalPath(seo.canonicalPath.trim())) {
+    if (!isValidSeoCanonicalPath(seo.canonicalPath.trim(), '/products/')) {
       setError('مسیر canonical باید یک مسیر داخلی بدون دامنه، query یا fragment باشد.');
       return;
     }
@@ -822,6 +822,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
         defaultTitle={product?.name ?? 'نام محصول'}
         uploadUrl="/api/catalog/media"
         idPrefix="product-seo"
+        canonicalPrefix="/products/"
         disabled={pending}
       />
 
