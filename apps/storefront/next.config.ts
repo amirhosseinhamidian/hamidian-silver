@@ -39,7 +39,9 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: resolve(process.cwd(), '../..'),
   images: {
     formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 86_400,
+    // Media URLs are immutable (replacement creates a new UUID-backed URL), so
+    // optimized variants can stay cached for a month without serving stale images.
+    minimumCacheTTL: 2_592_000,
     remotePatterns: [mediaRemotePattern(mediaPublicBaseUrl)],
     dangerouslyAllowLocalIP: process.env.STOREFRONT_E2E_ALLOW_LOCAL_MEDIA === 'true',
   },
