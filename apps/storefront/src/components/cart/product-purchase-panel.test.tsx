@@ -50,6 +50,7 @@ const product: PublicCatalogProductDetail = {
   variants: [
     {
       id: '10000000-0000-4000-8000-000000000011',
+      sku: 'RING-52',
       name: null,
       weightGrams: 4.25,
       salePriceToman: 800_000,
@@ -77,6 +78,7 @@ const product: PublicCatalogProductDetail = {
     },
     {
       id: '10000000-0000-4000-8000-000000000013',
+      sku: 'RING-54',
       name: null,
       weightGrams: 4.5,
       salePriceToman: 850_000,
