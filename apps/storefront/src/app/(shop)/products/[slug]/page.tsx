@@ -18,6 +18,7 @@ import {
   getPublicCatalogProduct,
   getPublicRelatedProducts,
   type CatalogSearchParams,
+  type PublicCatalogCategoryPage,
 } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
@@ -102,7 +103,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   const relatedProducts = await getPublicRelatedProducts(slug, 1, 8);
   const primaryAssignedCategory = product.categories
     .map((assigned) => categories.find((candidate) => candidate.id === assigned.id))
-    .filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== undefined)
+    .filter((candidate): candidate is PublicCatalogCategoryPage => candidate !== undefined)
     .sort((left, right) => categoryDepth(categories, right) - categoryDepth(categories, left))[0];
   const productBreadcrumbs = primaryAssignedCategory
     ? [
@@ -307,14 +308,14 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           </section>
         </div>
 
-        {product.categories[0] ? (
+        {primaryAssignedCategory ? (
           <aside className="mt-16 border border-[var(--sf-color-border)] bg-[var(--sf-color-surface)] p-7 text-center sm:mt-20 sm:p-10">
             <p className="text-sm text-[var(--sf-color-muted)]">
               محصولات بیشتری از این مجموعه ببینید
             </p>
-            <h2 className="mt-2 text-2xl font-medium">{product.categories[0].name}</h2>
+            <h2 className="mt-2 text-2xl font-medium">{primaryAssignedCategory.name}</h2>
             <Link
-              href={`/categories/${product.categories[0].slug}`}
+              href={`/categories/${primaryAssignedCategory.slug}`}
               className="mt-5 inline-flex min-h-11 items-center justify-center bg-[var(--sf-color-ink)] px-6 text-sm text-white"
             >
               مشاهده همه محصولات این دسته
