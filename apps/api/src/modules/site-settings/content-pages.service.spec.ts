@@ -39,7 +39,7 @@ describe('ContentPagesService', () => {
     expect(page).toEqual(
       expect.objectContaining({
         key: StorefrontContentPageKey.ABOUT,
-        title: 'روایت نقره حمیدیان',
+        title: 'روایت گالری حمیدیان',
         heroMedia: null,
       }),
     );
