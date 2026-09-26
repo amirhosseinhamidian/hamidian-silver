@@ -120,13 +120,16 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
             ...new Map(
               products.items
                 .filter((product) => product.brand)
-                .map((product) => [
-                  product.brand!.id,
-                  {
-                    label: product.brand!.name,
-                    href: `/brands/${product.brand!.slug}`,
-                  },
-                ]),
+                .map(
+                  (product) =>
+                    [
+                      product.brand!.id,
+                      {
+                        label: product.brand!.name,
+                        href: `/brands/${product.brand!.slug}`,
+                      },
+                    ] as const,
+                ),
             ).values(),
           ].slice(0, 8),
         },
