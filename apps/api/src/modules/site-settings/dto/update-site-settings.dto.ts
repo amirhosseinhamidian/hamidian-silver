@@ -13,6 +13,7 @@ import {
   IsUrl,
   IsUUID,
   Max,
+  Matches,
   MaxLength,
   Min,
   MinLength,
