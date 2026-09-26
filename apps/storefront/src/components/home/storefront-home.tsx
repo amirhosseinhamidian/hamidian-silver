@@ -8,10 +8,16 @@ import type { PublicHomepage, PublicHomepageFeaturedCategory } from '@/lib/home/
 
 type StorefrontHomeProps = Readonly<{ homepage: PublicHomepage }>;
 
-function SectionHeading({ title, href }: Readonly<{ title: string; href?: string }>) {
+function SectionHeading({
+  id,
+  title,
+  href,
+}: Readonly<{ id?: string; title: string; href?: string }>) {
   return (
     <div className="mb-8 flex items-end justify-between gap-4 sm:mb-10">
-      <h2 className="text-lg font-medium sm:text-3xl">{title}</h2>
+      <h2 id={id} className="text-lg font-medium sm:text-3xl">
+        {title}
+      </h2>
       {href ? (
         <Link
           href={href}
@@ -76,13 +82,18 @@ export function StorefrontHome({ homepage }: StorefrontHomeProps) {
 
   return (
     <main id="main-content">
-      <HomepageHero slides={homepage.primaryHeroSlides} label="اسلایدهای اصلی فروشگاه" preload />
+      <HomepageHero
+        slides={homepage.primaryHeroSlides}
+        label="اسلایدهای اصلی فروشگاه"
+        fallbackTitle="گالری حمیدیان"
+        preload
+      />
 
       <section
         aria-labelledby="new-products-title"
         className="sf-container py-[var(--sf-section-space)]"
       >
-        <SectionHeading title="جدیدترین محصولات" href="/products" />
+        <SectionHeading id="new-products-title" title="جدیدترین محصولات" href="/products" />
         <ul className="grid grid-cols-2 gap-x-2 gap-y-8 lg:grid-cols-4 lg:gap-4">
           {homepage.newProducts.map((product) => (
             <CatalogProductCard key={product.id} product={product} badge="جدید" />
@@ -97,7 +108,7 @@ export function StorefrontHome({ homepage }: StorefrontHomeProps) {
           aria-labelledby="popular-products-title"
           className="sf-container py-[var(--sf-section-space)]"
         >
-          <SectionHeading title="محبوب‌ترین محصولات" href="/products" />
+          <SectionHeading id="popular-products-title" title="محبوب‌ترین محصولات" href="/products" />
           <ul className="grid grid-cols-2 gap-x-2 gap-y-8 lg:grid-cols-4 lg:gap-4">
             {homepage.popularProducts.map((product) => (
               <CatalogProductCard key={product.id} product={product} />
@@ -111,7 +122,7 @@ export function StorefrontHome({ homepage }: StorefrontHomeProps) {
           aria-labelledby="brands-title"
           className="sf-container py-[var(--sf-section-space)]"
         >
-          <SectionHeading title="برندها" href="/brands" />
+          <SectionHeading id="brands-title" title="برندها" href="/brands" />
           <ul className="grid grid-cols-4 gap-x-2 gap-y-6 sm:gap-x-4 sm:gap-y-10">
             {featuredBrands.map((brand) => (
               <li key={brand.id}>
@@ -167,7 +178,12 @@ export function StorefrontHome({ homepage }: StorefrontHomeProps) {
       ) : null}
 
       {homepage.secondaryHero ? (
-        <HomepageHero slides={[homepage.secondaryHero]} label="تصویر ویژه فروشگاه" compact />
+        <HomepageHero
+          slides={[homepage.secondaryHero]}
+          label="تصویر ویژه فروشگاه"
+          headingLevel={2}
+          compact
+        />
       ) : null}
 
       <CategoryPair categories={lastCategories} />
