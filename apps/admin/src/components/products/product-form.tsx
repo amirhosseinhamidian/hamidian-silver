@@ -86,6 +86,10 @@ function optionalNumberValue(input: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
+function wordCount(value: string): number {
+  return value.trim() ? value.trim().split(/\s+/u).length : 0;
+}
+
 function isValidOptionalWeight(input: string): boolean {
   const normalized = toAsciiDigits(input.trim()).replace('٫', '.');
   return !normalized || /^\d+(?:\.\d{1,3})?$/.test(normalized);
@@ -179,9 +183,15 @@ export function ProductForm({ data, mode }: ProductFormProps) {
     const slug = String(formData.get('slug') ?? '').trim();
     const salePriceToman = optionalNumber(formData, 'salePriceToman');
     const compareAtPriceToman = optionalNumber(formData, 'compareAtPriceToman');
+    const shortDescription = optionalText(formData, 'shortDescription');
+    const description = optionalText(formData, 'description');
 
     if (!name || !slug) {
       setError('نام و اسلاگ محصول الزامی هستند.');
+      return;
+    }
+    if (shortDescription && wordCount(shortDescription) > 7) {
+      setError('توضیح کوتاه محصول حداکثر باید ۷ واژه باشد.');
       return;
     }
     if (Number.isNaN(salePriceToman) || Number.isNaN(compareAtPriceToman)) {
@@ -234,8 +244,8 @@ export function ProductForm({ data, mode }: ProductFormProps) {
     const payload: Record<string, unknown> = {
       name,
       slug,
-      shortDescription: optionalText(formData, 'shortDescription') ?? null,
-      description: optionalText(formData, 'description') ?? null,
+      shortDescription: shortDescription ?? null,
+      description: description ?? null,
       brandId: brandId === 'none' ? null : brandId,
       countryId: countryId === 'none' ? null : countryId,
       salePriceToman: salePriceToman ?? null,
@@ -431,17 +441,28 @@ export function ProductForm({ data, mode }: ProductFormProps) {
               />
             )}
           </FormField>
-          <FormField id="product-short-description" label="توضیح کوتاه" className="md:col-span-2">
+          <FormField
+            id="product-short-description"
+            label="توضیح کوتاه"
+            hint="حداکثر ۷ واژه؛ کوتاه، توصیفی و بدون تکرار نام محصول"
+            className="md:col-span-2"
+          >
             {(props) => (
               <Input
                 {...props}
                 name="shortDescription"
                 defaultValue={product?.shortDescription ?? ''}
-                placeholder="یک توضیح کوتاه برای کارت محصول"
+                placeholder="مثلاً طراحی مینیمال با درخشش ظریف"
+                maxLength={120}
               />
             )}
           </FormField>
-          <FormField id="product-description" label="توضیحات کامل" className="md:col-span-2">
+          <FormField
+            id="product-description"
+            label="توضیحات کامل"
+            hint="ویژگی واقعی محصول، فرم طراحی، جنس، آبکاری، کاربرد و نکات نگهداری را طبیعی توضیح دهید؛ از تکرار مصنوعی کلمات کلیدی خودداری کنید."
+            className="md:col-span-2"
+          >
             {(props) => (
               <Textarea
                 {...props}
