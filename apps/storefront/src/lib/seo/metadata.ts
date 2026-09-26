@@ -120,7 +120,7 @@ function safeCanonicalPath(value: string | null | undefined, fallback: string): 
   const candidate = value?.trim();
   if (!candidate) return fallback;
   if (
-    !/^\/(?!\/)(?!\.{1,2}(?:\/|$))(?!.*\/\.{1,2}(?:\/|$))[^\\\s?#]*$/.test(candidate)
+    !/^\/(?!\/)(?!\.{1,2}(?:\/|$))(?!.*\/\.{1,2}(?:\/|$))[^%\\\s?#]*$/.test(candidate)
   ) {
     return fallback;
   }
