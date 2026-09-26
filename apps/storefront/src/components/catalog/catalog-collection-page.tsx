@@ -25,6 +25,10 @@ type CatalogCollectionPageProps = Readonly<{
   products: PublicCatalogProductList;
   breadcrumbs?: readonly Readonly<{ label: string; href: string }>[];
   collectionLinks?: readonly Readonly<{ label: string; href: string }>[];
+  contextLinkGroups?: readonly Readonly<{
+    label: string;
+    links: readonly Readonly<{ label: string; href: string }>[];
+  }>[];
 }>;
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
@@ -99,6 +103,7 @@ export function CatalogCollectionPage({
   products,
   breadcrumbs,
   collectionLinks = [],
+  contextLinkGroups = [],
 }: CatalogCollectionPageProps) {
   return (
     <main id="main-content">
@@ -130,6 +135,30 @@ export function CatalogCollectionPage({
             ))}
           </nav>
         ) : null}
+
+        {contextLinkGroups.map((group) =>
+          group.links.length ? (
+            <nav
+              key={group.label}
+              aria-label={group.label}
+              className="border-b border-[var(--sf-color-border)] py-5"
+            >
+              <p className="mb-3 text-xs font-medium text-[var(--sf-color-subtle)]">{group.label}</p>
+              <ul className="flex flex-wrap gap-x-5 gap-y-2">
+                {group.links.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="text-sm text-[var(--sf-color-muted)] underline-offset-4 hover:text-[var(--sf-color-ink)] hover:underline"
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ) : null,
+        )}
 
         <form
           action={path}
