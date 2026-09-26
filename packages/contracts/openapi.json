@@ -8532,6 +8532,9 @@
       "PublicCatalogVariantDto": {
         "type": "object",
         "properties": {
+          "sku": {
+            "type": "string"
+          },
           "name": {
             "type": "string",
             "nullable": true
@@ -8574,6 +8577,7 @@
           }
         },
         "required": [
+          "sku",
           "name",
           "weightGrams",
           "salePriceToman",
