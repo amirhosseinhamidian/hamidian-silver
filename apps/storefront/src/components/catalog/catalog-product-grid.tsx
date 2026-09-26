@@ -28,6 +28,7 @@ function buildProductsRequestHref(filters: CatalogFilters, page: number): string
   if (filters.q) searchParams.set('q', filters.q);
   if (filters.category) searchParams.set('category', filters.category);
   if (filters.brand) searchParams.set('brand', filters.brand);
+  if (filters.country) searchParams.set('country', filters.country);
   if (filters.sort !== 'newest') searchParams.set('sort', filters.sort);
 
   return `/api/catalog/products?${searchParams.toString()}`;
