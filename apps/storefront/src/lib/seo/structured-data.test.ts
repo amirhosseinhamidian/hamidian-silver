@@ -183,20 +183,45 @@ describe('storefront structured data', () => {
   });
 
   it('builds OnlineStore policy markup from real public settings', () => {
-    const organizationSettings = {
-      seoOrganizationName: 'گالری حمیدیان',
+    const organizationSettings: PublicSiteSettings = {
+      headerCategories: [],
+      announcement: {
+        enabled: false,
+        message: null,
+        countdownMode: 'NONE',
+        durationSeconds: null,
+        endsAt: null,
+        ctaLabel: null,
+        ctaHref: null,
+      },
+      catalogHeroEnabled: false,
+      catalogHeroTitle: null,
+      catalogHeroSubtitle: null,
+      catalogHeroMedia: null,
+      catalogHeroMobileMedia: null,
+      galleryName: 'گالری حمیدیان',
+      footerAbout: null,
+      contactAddress: null,
+      contactPhoneNumbers: ['+982112345678'],
+      contactEmail: 'support@hamidian.test',
+      instagramUrl: 'https://instagram.com/hamidian',
+      telegramUrl: null,
+      baleUrl: null,
+      seoSiteName: 'گالری حمیدیان',
+      seoDefaultTitle: 'گالری حمیدیان',
+      seoTitleTemplate: '%s | گالری حمیدیان',
       seoDefaultDescription: 'فروشگاه آنلاین نقره گالری حمیدیان',
+      seoDefaultOgMedia: null,
+      seoOrganizationName: 'گالری حمیدیان',
       seoOrganizationLogoMedia: {
         url: '/media/logo.webp',
         altText: 'گالری حمیدیان',
       },
       seoSocialProfileUrls: ['https://instagram.com/hamidian'],
-      instagramUrl: 'https://instagram.com/hamidian',
-      telegramUrl: null,
-      baleUrl: null,
-      contactEmail: 'support@hamidian.test',
-      contactPhoneNumbers: ['+982112345678'],
-    } as PublicSiteSettings;
+      seoHomeTitle: null,
+      seoHomeDescription: null,
+      seoHomeOgMedia: null,
+    };
 
     expect(
       buildOrganizationStructuredData(
