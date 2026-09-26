@@ -197,7 +197,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
       return;
     }
     if (!isValidSeoCanonicalPath(seo.canonicalPath.trim(), '/products/')) {
-      setError('مسیر canonical باید یک مسیر داخلی بدون دامنه، query یا fragment باشد.');
+      setError('canonical محصول باید یک مسیر امن زیر /products/ و بدون query یا fragment باشد.');
       return;
     }
 
