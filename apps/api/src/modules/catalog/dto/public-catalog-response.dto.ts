@@ -126,6 +126,7 @@ export class PublicCatalogPlatingOptionDto {
 
 export class PublicCatalogVariantDto {
   id!: string;
+  sku!: string;
 
   @ApiProperty({ type: String, nullable: true })
   name!: string | null;
