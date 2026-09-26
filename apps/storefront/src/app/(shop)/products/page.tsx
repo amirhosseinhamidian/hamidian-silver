@@ -22,6 +22,7 @@ import {
   parseCatalogSearchParams,
   type CatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
+import { ROOT_CATALOG_SEO } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
@@ -49,8 +50,8 @@ export async function generateMetadata({ searchParams }: ProductsPageProps): Pro
   return buildStorefrontPageMetadata(settings, {
     pathname: '/products',
     searchParams: rawSearchParams,
-    title: filters.q ? `نتایج جستجوی «${filters.q}»` : 'محصولات نقره',
-    description: settings.catalogHeroSubtitle ?? 'مجموعه محصولات نقره گالری حمیدیان را مرور کنید.',
+    title: filters.q ? `نتایج جستجوی «${filters.q}»` : ROOT_CATALOG_SEO.title,
+    description: settings.catalogHeroSubtitle ?? ROOT_CATALOG_SEO.description,
     fallbackMedia: settings.catalogHeroMedia,
     seoNoIndex: Boolean(isRootCatalog && rootProducts?.total === 0),
   });
