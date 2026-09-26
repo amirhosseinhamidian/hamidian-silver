@@ -117,6 +117,34 @@ export function buildCatalogHref(
   return query ? `/products?${query}` : '/products';
 }
 
+export function buildCategoryBreadcrumbItems(
+  categories: readonly PublicCatalogCategoryPage[],
+  category: PublicCatalogCategoryPage,
+): ReadonlyArray<Readonly<{ label: string; href: string }>> {
+  const byId = new Map(categories.map((item) => [item.id, item] as const));
+  const ancestors: PublicCatalogCategoryPage[] = [];
+  const visited = new Set<string>();
+  let current = category;
+
+  while (current.parentId && !visited.has(current.parentId)) {
+    visited.add(current.parentId);
+    const parent = byId.get(current.parentId);
+    if (!parent) break;
+    ancestors.push(parent);
+    current = parent;
+  }
+
+  return [
+    { label: 'خانه', href: '/' },
+    { label: 'دسته‌بندی‌ها', href: '/categories' },
+    ...ancestors.reverse().map((item) => ({
+      label: item.name,
+      href: `/categories/${item.slug}`,
+    })),
+    { label: category.name, href: `/categories/${category.slug}` },
+  ];
+}
+
 export function buildCatalogCollectionHref(
   pathname: string,
   filters: CatalogFilters,
