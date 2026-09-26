@@ -52,6 +52,12 @@ describe('CatalogCollectionPage', () => {
           { label: 'کارتیر', href: '/brands/cartier' },
         ]}
         collectionLinks={[{ label: 'انگشتر زنانه', href: '/categories/women-rings' }]}
+        contextLinkGroups={[
+          {
+            label: 'برندهای این دسته',
+            links: [{ label: 'کارتیر', href: '/brands/cartier' }],
+          },
+        ]}
       />,
     );
 
@@ -68,6 +74,11 @@ describe('CatalogCollectionPage', () => {
     expect(screen.getByRole('link', { name: 'انگشتر زنانه' })).toHaveAttribute(
       'href',
       '/categories/women-rings',
+    );
+    expect(screen.getByRole('navigation', { name: 'برندهای این دسته' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'کارتیر' })).toHaveAttribute(
+      'href',
+      '/brands/cartier',
     );
   });
 });
