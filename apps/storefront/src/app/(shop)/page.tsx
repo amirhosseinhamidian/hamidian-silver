@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPublicSiteSettings();
   return buildStorefrontPageMetadata(settings, {
     pathname: '/',
-    title: settings.seoHomeTitle ?? settings.seoDefaultTitle ?? 'نقره حمیدیان',
+    title: settings.seoHomeTitle ?? settings.seoDefaultTitle ?? 'گالری حمیدیان',
     description: settings.seoHomeDescription ?? settings.seoDefaultDescription,
     seoOgMedia: settings.seoHomeOgMedia,
     absoluteTitle: true,
