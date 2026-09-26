@@ -32,6 +32,7 @@ export type ContentAuditSnapshot = Readonly<{
       categoryNames: readonly string[];
       mediaCount: number;
       primaryMediaCount: number;
+      mediaAltTexts: readonly string[];
       variants: ReadonlyArray<
         Readonly<{
           sku: string;
@@ -107,6 +108,11 @@ const DEMO_PHONE_DIGITS = new Set(['09123456789', '09121234567', '02112345678'])
 
 function normalizedText(value: string | null | undefined): string {
   return value?.trim() ?? '';
+}
+
+function wordCount(value: string | null | undefined): number {
+  const normalized = normalizedText(value);
+  return normalized ? normalized.split(/\s+/u).length : 0;
 }
 
 export function containsPlaceholder(value: string | null | undefined): boolean {
@@ -203,6 +209,27 @@ export function validateProductionContent(snapshot: ContentAuditSnapshot): Conte
       12,
     );
     requireRealText(issues, product.description, 'PRODUCT_DESCRIPTION', subject, 'توضیحات', 30);
+    if (wordCount(product.shortDescription) > 7) {
+      addIssue(
+        issues,
+        'failure',
+        'PRODUCT_SHORT_DESCRIPTION_WORDS',
+        subject,
+        'توضیح کوتاه باید حداکثر ۷ واژه باشد.',
+      );
+    }
+    const normalizedAltTexts = product.mediaAltTexts
+      .map((alt) => alt.trim().replace(/\s+/g, ' '))
+      .filter(Boolean);
+    if (new Set(normalizedAltTexts).size < normalizedAltTexts.length) {
+      addIssue(
+        issues,
+        'warning',
+        'PRODUCT_MEDIA_ALT_DUPLICATE',
+        subject,
+        'چند تصویر محصول متن جایگزین یکسان دارند؛ برای نماهای متفاوت alt توصیفی جدا ثبت کنید.',
+      );
+    }
 
     if (!Number.isSafeInteger(product.salePriceToman) || (product.salePriceToman ?? 0) <= 0) {
       addIssue(issues, 'failure', 'PRODUCT_PRICE', subject, 'قیمت فروش معتبر و مثبت نیست.');
