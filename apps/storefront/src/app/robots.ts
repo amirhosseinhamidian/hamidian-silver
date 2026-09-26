@@ -9,7 +9,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/api/', '/account/', '/cart', '/checkout', '/payment/', '/wishlist'],
+      // Public HTML utility pages stay crawlable so their noindex directives can
+      // be observed. API endpoints and payment-result paths are not crawl targets.
+      disallow: ['/api/', '/payment/'],
     },
     sitemap: getStorefrontAbsoluteUrl('/sitemap.xml', metadataBase),
     host: metadataBase.origin,
