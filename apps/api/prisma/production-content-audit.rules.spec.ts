@@ -95,7 +95,7 @@ function validSnapshot(): ContentAuditSnapshot {
       {
         id: 'media-1',
         subject: 'تصویر محصول انگشتر نقره ماه',
-        storageKey: 'catalog/2026/09/ring.webp',
+        storageKey: 'catalog/2026/09/انگشتر-نقره-ماه-a1b2c3d4-1234-4abc-8def-a1b2c3d4e5f6.webp',
         mimeType: 'image/webp',
         sizeBytes: 48_000,
         width: 1200,
@@ -207,6 +207,33 @@ describe('production content audit rules', () => {
         'CATEGORY_DESCRIPTION_DUPLICATE',
         'BRAND_DESCRIPTION_DUPLICATE',
       ]),
+    );
+  });
+
+  it('warns on duplicated SEO titles and generic media filenames', () => {
+    const snapshot = validSnapshot();
+    const issues = validateProductionContent({
+      ...snapshot,
+      products: [
+        { ...snapshot.products[0], seoTitle: 'خرید انگشتر نقره' },
+        {
+          ...snapshot.products[0],
+          name: 'انگشتر دوم',
+          slug: 'second-ring',
+          seoTitle: 'خرید انگشتر نقره',
+          description: 'توضیح متفاوت و کامل برای محصول دوم که جزئیات واقعی و کاربرد آن را بیان می‌کند.',
+        },
+      ],
+      media: [
+        {
+          ...snapshot.media[0],
+          storageKey: 'catalog/2026/09/image-1234.webp',
+        },
+      ],
+    });
+
+    expect(issues.map(({ code }) => code)).toEqual(
+      expect.arrayContaining(['PRODUCT_SEO_TITLE_DUPLICATE', 'MEDIA_FILENAME_GENERIC']),
     );
   });
 
