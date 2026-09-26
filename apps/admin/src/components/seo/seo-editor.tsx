@@ -49,7 +49,9 @@ export function isValidSeoCanonicalPath(value: string, requiredPrefix?: string):
   if (PRIVATE_SEO_PREFIXES.some((prefix) => value === prefix || value.startsWith(`${prefix}/`))) {
     return false;
   }
-  return requiredPrefix ? value.startsWith(requiredPrefix) && value.length > requiredPrefix.length : true;
+  return requiredPrefix
+    ? value.startsWith(requiredPrefix) && value.length > requiredPrefix.length
+    : true;
 }
 
 export function seoEditorPayload(value: SeoEditorValue) {
@@ -153,6 +155,7 @@ export function SeoEditor({
         </div>
         <SiteMediaField
           label="تصویر Open Graph"
+          hint="برای نمایش بهتر در اشتراک‌گذاری و نتایج تصویری، تصویر باکیفیت و ترجیحاً افقی انتخاب کنید (مثلاً ۱۲۰۰×۶۳۰)."
           media={value.ogMedia}
           altText={value.title.trim() || defaultTitle}
           uploadUrl={uploadUrl}
