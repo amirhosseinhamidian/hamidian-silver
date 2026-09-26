@@ -56,7 +56,7 @@ export default async function CategoriesPage() {
         aria-label="دسته‌بندی‌های محصولات"
         className="grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-3 sm:py-14"
       >
-        {roots.map((category) => {
+        {roots.map((category, index) => {
           const children = childrenByParent.get(category.id) ?? [];
 
           return (
@@ -71,6 +71,8 @@ export default async function CategoriesPage() {
                       media={category.image}
                       alt={category.image.altText?.trim() || category.name}
                       sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                      preload={index === 0}
+                      fetchPriority={index === 0 ? 'high' : undefined}
                       imageClassName="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                     />
                   </div>
