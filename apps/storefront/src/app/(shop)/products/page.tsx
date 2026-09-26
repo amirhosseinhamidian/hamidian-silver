@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 
 import { SearchResultsAnalytics } from '@/components/analytics/conversion-trackers';
 import { CatalogFilterForm } from '@/components/catalog/catalog-filter-form';
@@ -54,6 +55,10 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     Boolean,
   ).length;
   const hasActiveFilters = Boolean(activeFilterCount > 0 || filters.sort !== 'newest');
+  const isIndexablePagination = !hasActiveFilters;
+  if (isIndexablePagination && filters.page > 1 && filters.page > products.totalPages) {
+    notFound();
+  }
 
   return (
     <main id="main-content" className="pb-[var(--sf-section-space)]">
