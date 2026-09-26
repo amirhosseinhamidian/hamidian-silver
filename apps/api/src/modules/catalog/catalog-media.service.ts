@@ -29,7 +29,7 @@ export class CatalogMediaService {
       throw new BadRequestException('Image file is required.');
     }
 
-    const stored = await this.localMediaStorage.storeImage(file);
+    const stored = await this.localMediaStorage.storeImage(file, dto.altText);
 
     try {
       return await this.prisma.media.create({
@@ -66,7 +66,7 @@ export class CatalogMediaService {
       throw new BadRequestException(`A product can have at most ${PRODUCT_MEDIA_LIMIT} images.`);
     }
 
-    const stored = await this.localMediaStorage.storeImage(file);
+    const stored = await this.localMediaStorage.storeImage(file, dto.altText);
 
     try {
       const productMedia = await this.prisma.$transaction(async (transaction) => {
@@ -122,7 +122,7 @@ export class CatalogMediaService {
     });
     if (!category) throw new NotFoundException('Category was not found.');
 
-    const stored = await this.localMediaStorage.storeImage(file);
+    const stored = await this.localMediaStorage.storeImage(file, dto.altText);
     try {
       const result = await this.prisma.$transaction(async (transaction) => {
         const current = await transaction.category.findFirst({
@@ -203,7 +203,7 @@ export class CatalogMediaService {
     });
     if (!category) throw new NotFoundException('Category was not found.');
 
-    const stored = await this.localMediaStorage.storeImage(file);
+    const stored = await this.localMediaStorage.storeImage(file, dto.altText);
     try {
       const result = await this.prisma.$transaction(async (transaction) => {
         const current = await transaction.category.findFirst({
@@ -279,7 +279,7 @@ export class CatalogMediaService {
     });
     if (!brand) throw new NotFoundException('Brand was not found.');
 
-    const stored = await this.localMediaStorage.storeImage(file);
+    const stored = await this.localMediaStorage.storeImage(file, dto.altText);
     try {
       const result = await this.prisma.$transaction(async (transaction) => {
         const current = await transaction.brand.findFirst({
@@ -354,7 +354,7 @@ export class CatalogMediaService {
     });
     if (!brand) throw new NotFoundException('Brand was not found.');
 
-    const stored = await this.localMediaStorage.storeImage(file);
+    const stored = await this.localMediaStorage.storeImage(file, dto.altText);
     try {
       const result = await this.prisma.$transaction(async (transaction) => {
         const current = await transaction.brand.findFirst({
@@ -429,7 +429,7 @@ export class CatalogMediaService {
     });
     if (!brand) throw new NotFoundException('Brand was not found.');
 
-    const stored = await this.localMediaStorage.storeImage(file);
+    const stored = await this.localMediaStorage.storeImage(file, dto.altText);
     try {
       const result = await this.prisma.$transaction(async (transaction) => {
         const current = await transaction.brand.findFirst({
@@ -509,7 +509,7 @@ export class CatalogMediaService {
     });
     if (!country) throw new NotFoundException('Country was not found.');
 
-    const stored = await this.localMediaStorage.storeImage(file);
+    const stored = await this.localMediaStorage.storeImage(file, dto.altText);
     try {
       const result = await this.prisma.$transaction(async (transaction) => {
         const current = await transaction.country.findFirst({
