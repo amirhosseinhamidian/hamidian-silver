@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from 'next/navigation';
 
 import { CatalogCollectionPage } from '@/components/catalog/catalog-collection-page';
 import {
+  buildCategoryBreadcrumbItems,
   getPublicCatalogCategories,
   getPublicCatalogProducts,
   parseCatalogSearchParams,
@@ -28,6 +29,7 @@ export async function generateMetadata({
     getPublicCatalogCategories(),
     getPublicSiteSettings(),
   ]);
+  const parsedFilters = parseCatalogSearchParams(rawSearchParams);
   const category = categories.find((candidate) => candidate.slug === slug);
 
   if (!category) {
@@ -37,6 +39,15 @@ export async function generateMetadata({
     };
   }
 
+  const products = await getPublicCatalogProducts({
+    page: parsedFilters.page,
+    pageSize: parsedFilters.pageSize,
+    sort: parsedFilters.sort,
+    category: category.slug,
+  });
+  const emptyCollection =
+    parsedFilters.page === 1 && parsedFilters.sort === 'newest' && products.total === 0;
+
   return buildStorefrontPageMetadata(settings, {
     pathname: `/categories/${category.slug}`,
     searchParams: rawSearchParams,
@@ -45,7 +56,7 @@ export async function generateMetadata({
     seoTitle: category.seoTitle,
     seoDescription: category.seoDescription,
     seoCanonicalPath: category.seoCanonicalPath,
-    seoNoIndex: category.seoNoIndex,
+    seoNoIndex: Boolean(category.seoNoIndex || emptyCollection),
     seoOgMedia: category.seoOgMedia,
     fallbackMedia: category.image,
   });
@@ -75,6 +86,10 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     notFound();
   }
 
+  if (filters.sort === 'newest' && filters.page > 1 && filters.page > products.totalPages) {
+    notFound();
+  }
+
   return (
     <CatalogCollectionPage
       path={`/categories/${category.slug}`}
@@ -85,6 +100,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       mobileImage={category.heroMobileImage ?? null}
       filters={filters}
       products={products}
+      breadcrumbs={buildCategoryBreadcrumbItems(categories, category)}
     />
   );
 }
