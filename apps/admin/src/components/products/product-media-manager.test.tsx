@@ -83,7 +83,9 @@ describe('ProductMediaManager', () => {
     fireEvent.change(altInput, { target: { value: '   ' } });
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره متن جایگزین' }));
 
-    expect(screen.getByText('برای تصاویر محصول متن جایگزین توصیفی الزامی است.')).toBeInTheDocument();
+    expect(
+      screen.getByText('برای تصاویر محصول متن جایگزین توصیفی الزامی است.'),
+    ).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

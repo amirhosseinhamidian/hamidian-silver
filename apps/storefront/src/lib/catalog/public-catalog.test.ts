@@ -155,7 +155,6 @@ describe('buildCategoryBreadcrumbItems', () => {
   });
 });
 
-
 describe('selectPrimaryCatalogCategory', () => {
   it('prefers the deepest assigned category for product breadcrumbs', () => {
     const categories = [

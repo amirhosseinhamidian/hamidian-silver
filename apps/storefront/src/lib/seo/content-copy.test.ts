@@ -14,7 +14,9 @@ import type {
   PublicCatalogCategoryPage,
 } from '@/lib/catalog/public-catalog';
 
-const category = (overrides: Partial<PublicCatalogCategoryPage> = {}): PublicCatalogCategoryPage => ({
+const category = (
+  overrides: Partial<PublicCatalogCategoryPage> = {},
+): PublicCatalogCategoryPage => ({
   id: 'category-1',
   name: 'دستبند',
   slug: 'bracelets',

@@ -76,9 +76,6 @@ describe('CatalogCollectionPage', () => {
       '/categories/women-rings',
     );
     expect(screen.getByRole('navigation', { name: 'برندهای این دسته' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'کارتیر' })).toHaveAttribute(
-      'href',
-      '/brands/cartier',
-    );
+    expect(screen.getByRole('link', { name: 'کارتیر' })).toHaveAttribute('href', '/brands/cartier');
   });
 });

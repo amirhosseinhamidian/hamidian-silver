@@ -146,7 +146,9 @@ export function CatalogCollectionPage({
               aria-label={group.label}
               className="border-b border-[var(--sf-color-border)] py-5"
             >
-              <p className="mb-3 text-xs font-medium text-[var(--sf-color-subtle)]">{group.label}</p>
+              <p className="mb-3 text-xs font-medium text-[var(--sf-color-subtle)]">
+                {group.label}
+              </p>
               <ul className="flex flex-wrap gap-x-5 gap-y-2">
                 {group.links.map((item) => (
                   <li key={item.href}>

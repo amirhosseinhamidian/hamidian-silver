@@ -10,10 +10,7 @@ import {
   type CatalogFilters,
   type CatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
-import {
-  categorySeoDescription,
-  categorySeoTitle,
-} from '@/lib/seo/content-copy';
+import { categorySeoDescription, categorySeoTitle } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSeoRedirect } from '@/lib/seo/redirects';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
