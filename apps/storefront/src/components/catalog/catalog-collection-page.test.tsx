@@ -46,6 +46,11 @@ describe('CatalogCollectionPage', () => {
         }}
         filters={filters}
         products={products}
+        breadcrumbs={[
+          { label: 'خانه', href: '/' },
+          { label: 'برندها', href: '/brands' },
+          { label: 'کارتیر', href: '/brands/cartier' },
+        ]}
       />,
     );
 
@@ -58,5 +63,6 @@ describe('CatalogCollectionPage', () => {
     expect(heroImage.parentElement?.parentElement).toHaveClass('lg:aspect-[1942/809]');
     expect(screen.getByRole('heading', { name: 'کارتیر' })).toBeInTheDocument();
     expect(screen.getByText('۰ محصول')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'برندها' })).toHaveAttribute('href', '/brands');
   });
 });
