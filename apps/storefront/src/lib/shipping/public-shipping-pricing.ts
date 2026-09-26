@@ -48,10 +48,11 @@ export function shippingOptionSupportsDestination(
 
 async function loadPublicShippingOptions(
   apiOrigin: string,
+  cacheMode?: RequestCache,
 ): Promise<readonly PublicShippingOption[]> {
   try {
     const response = await fetch(`${apiOrigin.replace(/\/$/, '')}/api/v1/shipping/options/public`, {
-      cache: 'no-store',
+      ...(cacheMode ? { cache: cacheMode } : {}),
       headers: { Accept: 'application/json' },
     });
     if (!response.ok) return [];
@@ -63,14 +64,14 @@ async function loadPublicShippingOptions(
 }
 
 const getCachedPublicShippingOptionsForSeo = unstable_cache(
-  loadPublicShippingOptions,
+  async (apiOrigin: string) => loadPublicShippingOptions(apiOrigin),
   ['storefront-public-shipping-options-seo'],
   { revalidate: 300 },
 );
 
 export async function getPublicShippingOptions(): Promise<readonly PublicShippingOption[]> {
   const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;
-  return apiOrigin ? loadPublicShippingOptions(apiOrigin) : [];
+  return apiOrigin ? loadPublicShippingOptions(apiOrigin, 'no-store') : [];
 }
 
 export async function getPublicShippingOptionsForSeo(): Promise<
