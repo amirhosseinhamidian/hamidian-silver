@@ -8028,6 +8028,10 @@
           },
           "sortOrder": {
             "type": "number"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -8138,6 +8142,10 @@
           },
           "slug": {
             "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -8322,6 +8330,10 @@
           },
           "isAvailable": {
             "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -13071,6 +13083,10 @@
                 "$ref": "#/components/schemas/PublicContentPageMediaDto"
               }
             ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
