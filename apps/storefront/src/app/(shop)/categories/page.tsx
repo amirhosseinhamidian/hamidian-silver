@@ -7,7 +7,7 @@ import { getPublicCatalogCategories } from '@/lib/catalog/public-catalog';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
   const [settings, categories] = await Promise.all([
