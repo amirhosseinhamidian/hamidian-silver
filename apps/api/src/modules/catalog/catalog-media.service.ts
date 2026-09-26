@@ -57,7 +57,7 @@ export class CatalogMediaService {
     const [product, mediaCount] = await Promise.all([
       this.prisma.product.findFirst({
         where: { id: productId, deletedAt: null },
-        select: { id: true },
+        select: { id: true, name: true },
       }),
       this.prisma.productMedia.count({ where: { productId } }),
     ]);
@@ -66,7 +66,11 @@ export class CatalogMediaService {
       throw new BadRequestException(`A product can have at most ${PRODUCT_MEDIA_LIMIT} images.`);
     }
 
-    const stored = await this.localMediaStorage.storeImage(file, dto.altText);
+    const productStorageName = [product.name, dto.altText]
+      .map((value) => value?.trim())
+      .filter(Boolean)
+      .join(' - ');
+    const stored = await this.localMediaStorage.storeImage(file, productStorageName);
 
     try {
       const productMedia = await this.prisma.$transaction(async (transaction) => {
