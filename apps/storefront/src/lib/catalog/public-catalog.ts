@@ -117,6 +117,43 @@ export function buildCatalogHref(
   return query ? `/products?${query}` : '/products';
 }
 
+function categoryDepth(
+  categoriesById: ReadonlyMap<string, PublicCatalogCategoryPage>,
+  category: PublicCatalogCategoryPage,
+): number {
+  let depth = 0;
+  let current = category;
+  const visited = new Set<string>();
+  while (current.parentId && !visited.has(current.parentId)) {
+    visited.add(current.parentId);
+    const parent = categoriesById.get(current.parentId);
+    if (!parent) break;
+    depth += 1;
+    current = parent;
+  }
+  return depth;
+}
+
+export function selectPrimaryCatalogCategory(
+  categories: readonly PublicCatalogCategoryPage[],
+  assignedCategories: readonly Readonly<{ id: string }>[],
+): PublicCatalogCategoryPage | null {
+  const byId = new Map(categories.map((category) => [category.id, category] as const));
+  return (
+    assignedCategories
+      .flatMap(({ id }) => {
+        const category = byId.get(id);
+        return category ? [category] : [];
+      })
+      .sort(
+        (left, right) =>
+          categoryDepth(byId, right) - categoryDepth(byId, left) ||
+          left.sortOrder - right.sortOrder ||
+          left.name.localeCompare(right.name, 'fa'),
+      )[0] ?? null
+  );
+}
+
 export function buildCategoryBreadcrumbItems(
   categories: readonly PublicCatalogCategoryPage[],
   category: PublicCatalogCategoryPage,
