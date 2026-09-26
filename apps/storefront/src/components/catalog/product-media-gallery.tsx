@@ -171,7 +171,7 @@ export function ProductMediaGallery({
               alt={`${productName}، تصویر ${persianNumber.format(
                 index + 1,
               )} از ${persianNumber.format(items.length)}`}
-              eager={index === 0}
+              preload={index === 0}
               fetchPriority={index === 0 ? 'high' : undefined}
               sizes="(min-width: 1024px) 50vw, 100vw"
               imageClassName="object-cover select-none"
@@ -238,8 +238,6 @@ export function ProductMediaGallery({
               media={item.media}
               fallbackSrc={item.fallbackSrc}
               alt={productName}
-              eager={index === 0}
-              fetchPriority={index === 0 ? 'high' : undefined}
               sizes="(min-width: 1024px) 50vw, 100vw"
               imageClassName="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
             />
