@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { StorefrontHome } from '@/components/home/storefront-home';
 import { JsonLd } from '@/components/seo/json-ld';
 import { getPublicHomepage } from '@/lib/home/public-homepage';
+import { HOME_SEO } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { buildOrganizationStructuredData } from '@/lib/seo/structured-data';
 import { getPublicShippingOptions } from '@/lib/shipping/public-shipping-pricing';
@@ -14,8 +15,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPublicSiteSettings();
   return buildStorefrontPageMetadata(settings, {
     pathname: '/',
-    title: settings.seoHomeTitle ?? settings.seoDefaultTitle ?? 'گالری حمیدیان',
-    description: settings.seoHomeDescription ?? settings.seoDefaultDescription,
+    title: settings.seoHomeTitle?.trim() || HOME_SEO.title,
+    description: settings.seoHomeDescription?.trim() || HOME_SEO.description,
     seoOgMedia: settings.seoHomeOgMedia,
     absoluteTitle: true,
   });
