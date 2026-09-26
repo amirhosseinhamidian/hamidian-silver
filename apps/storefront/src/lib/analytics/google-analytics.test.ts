@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   googleAnalyticsBootstrap,
   validGoogleMeasurementId,
+  webVitalAnalyticsParameters,
 } from '@/lib/analytics/google-analytics';
 
 describe('Google Analytics configuration', () => {
@@ -11,6 +12,25 @@ describe('Google Analytics configuration', () => {
     expect(validGoogleMeasurementId('UA-12345-1')).toBeNull();
     expect(validGoogleMeasurementId("G-ABC';alert(1)//")).toBeNull();
     expect(validGoogleMeasurementId()).toBeNull();
+  });
+
+  it('maps Web Vitals to integer GA parameters without URL data', () => {
+    expect(
+      webVitalAnalyticsParameters({
+        id: 'v4-123',
+        name: 'CLS',
+        value: 0.084,
+        delta: 0.021,
+        rating: 'good',
+      }),
+    ).toEqual({
+      metric_name: 'CLS',
+      metric_value: 84,
+      metric_delta: 21,
+      metric_id: 'v4-123',
+      metric_rating: 'good',
+      non_interaction: true,
+    });
   });
 
   it('disables automatic page views so App Router navigation can track them once', () => {
