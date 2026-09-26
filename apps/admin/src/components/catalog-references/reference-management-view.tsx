@@ -167,7 +167,7 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
     if (kind === 'country' && !/^[A-Z]{2}$/.test(isoCode)) {
       return setError('کد کشور باید دقیقاً دو حرف انگلیسی باشد.');
     }
-    if (kind === 'brand' && !isValidSeoCanonicalPath(seo.canonicalPath.trim()))
+    if (kind === 'brand' && !isValidSeoCanonicalPath(seo.canonicalPath.trim(), '/brands/'))
       return setError('مسیر canonical باید یک مسیر داخلی بدون query یا fragment باشد.');
     if (file && (!ACCEPTED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
       return setError(
@@ -557,6 +557,7 @@ function ReferenceForm({ formId, kind, reference, onSaved, onPendingChange }: Re
           defaultTitle={brandReference?.name ?? 'نام برند'}
           uploadUrl="/api/catalog/media"
           idPrefix={`${formId}-seo`}
+          canonicalPrefix="/brands/"
         />
       ) : null}
 
