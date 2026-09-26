@@ -303,6 +303,8 @@ export function buildProductStructuredData(
           name: variantLabel ? `${product.name} - ${variantLabel}` : product.name,
           productID: variant.id,
           sku: variant.sku,
+          ...(description ? { description } : {}),
+          ...(images.length ? { image: images } : {}),
           ...(variant.size?.label?.trim() ? { size: variant.size.label.trim() } : {}),
           ...(offer ? { offers: offer } : {}),
         };
