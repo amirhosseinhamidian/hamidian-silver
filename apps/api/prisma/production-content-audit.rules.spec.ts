@@ -165,6 +165,45 @@ describe('production content audit rules', () => {
     );
   });
 
+  it('warns when product and collection descriptions are duplicated', () => {
+    const snapshot = validSnapshot();
+    const issues = validateProductionContent({
+      ...snapshot,
+      products: [
+        snapshot.products[0],
+        {
+          ...snapshot.products[0],
+          name: 'انگشتر نقره ستاره',
+          slug: 'silver-ring-star',
+        },
+      ],
+      categories: [
+        snapshot.categories[0],
+        {
+          ...snapshot.categories[0],
+          name: 'دستبند',
+          slug: 'bracelets',
+        },
+      ],
+      brands: [
+        snapshot.brands[0],
+        {
+          ...snapshot.brands[0],
+          name: 'برند دوم',
+          slug: 'second-brand',
+        },
+      ],
+    });
+
+    expect(issues.map(({ code }) => code)).toEqual(
+      expect.arrayContaining([
+        'PRODUCT_DESCRIPTION_DUPLICATE',
+        'CATEGORY_DESCRIPTION_DUPLICATE',
+        'BRAND_DESCRIPTION_DUPLICATE',
+      ]),
+    );
+  });
+
   it('rejects placeholder contact data and missing reviewed content', () => {
     const snapshot = validSnapshot();
     const issues = validateProductionContent({
