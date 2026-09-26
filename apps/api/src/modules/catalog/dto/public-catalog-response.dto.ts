@@ -52,6 +52,9 @@ export class PublicCatalogCategoryPageDto extends PublicCatalogCategoryDto {
 
   @ApiPropertyOptional({ type: () => PublicCatalogMediaDto, nullable: true })
   seoOgMedia?: PublicCatalogMediaDto | null;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time' })
+  updatedAt?: string;
 }
 
 export class PublicCatalogCountryDto {
@@ -97,6 +100,9 @@ export class PublicCatalogBrandPageDto extends PublicCatalogBrandDto {
 
   @ApiPropertyOptional({ type: () => PublicCatalogMediaDto, nullable: true })
   seoOgMedia?: PublicCatalogMediaDto | null;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time' })
+  updatedAt?: string;
 }
 
 export class PublicCatalogSizeGroupDto {
@@ -163,6 +169,9 @@ export class PublicCatalogProductSummaryDto {
 
   @ApiPropertyOptional()
   seoNoIndex?: boolean;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time' })
+  updatedAt?: string;
 
   @ApiProperty({ type: Number, nullable: true })
   salePriceToman!: number | null;
