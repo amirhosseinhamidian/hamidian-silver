@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { DataTableColumn } from '@/components/ui/data-table';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { FilterBar, SearchField } from '@/components/ui/filter-bar';
@@ -41,8 +42,8 @@ type ShippingAction =
 
 const STATUS: Record<AdminShipmentStatus, { label: string; tone: BadgeTone }> = {
   PENDING: { label: 'در انتظار آماده‌سازی', tone: 'warning' },
-  READY: { label: 'آماده تحویل به پست', tone: 'info' },
-  HANDED_OVER: { label: 'تحویل به پست', tone: 'info' },
+  READY: { label: 'آماده ارسال', tone: 'info' },
+  HANDED_OVER: { label: 'تحویل به ارسال‌کننده', tone: 'info' },
   IN_TRANSIT: { label: 'در مسیر', tone: 'warning' },
   DELIVERED: { label: 'تحویل‌شده', tone: 'success' },
   FAILED: { label: 'ارسال ناموفق', tone: 'danger' },
@@ -182,7 +183,12 @@ function ShipmentDetails({ order }: Readonly<{ order: AdminOrder }>) {
                   ? `${formatAdminInteger(shipment.estimatedDeliveryDays)} روز`
                   : 'ثبت نشده',
               ],
-              ['کد رهگیری', shipment.trackingCode ?? 'هنوز ثبت نشده'],
+              [
+                'کد رهگیری',
+                shipment.deliveryType === 'COURIER'
+                  ? 'برای ارسال با پیک نیاز نیست'
+                  : (shipment.trackingCode ?? 'هنوز ثبت نشده'),
+              ],
               [
                 'زمان ارسال',
                 shipment.shippedAt ? formatAdminDateTime(shipment.shippedAt) : 'ثبت نشده',
@@ -260,6 +266,7 @@ export function ShippingManagementView({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [sendCustomerSms, setSendCustomerSms] = useState(true);
   const candidates = useMemo(() => orders.filter(shippingOrder), [orders]);
   const needle = toAsciiDigits(search).trim().toLocaleLowerCase('fa');
   const filtered = useMemo(
@@ -303,6 +310,7 @@ export function ShippingManagementView({
     setReason('');
     setError('');
     setSuccess('');
+    setSendCustomerSms(true);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -312,7 +320,7 @@ export function ShippingManagementView({
     if (cleanReason.length < 3) return setError('دلیل عملیات باید حداقل ۳ نویسه باشد.');
     let endpoint: string;
     let method: 'POST' | 'PATCH';
-    let payload: Record<string, string | number>;
+    let payload: Record<string, string | number | boolean>;
     if (action.kind === 'create') {
       const days = Number(toAsciiDigits(estimatedDays));
       const orderCarrierId = action.order.shippingSelection?.carrierId;
@@ -339,13 +347,18 @@ export function ShippingManagementView({
       };
     } else {
       const tracking = toAsciiDigits(trackingCode).trim();
-      if (action.status === 'HANDED_OVER' && !tracking)
+      const isCourier =
+        (action.order.shipment?.deliveryType ??
+          action.order.shippingSelection?.deliveryType ??
+          'POST') === 'COURIER';
+      if (action.status === 'HANDED_OVER' && !isCourier && !tracking)
         return setError('ثبت کد رهگیری پیش از تحویل مرسوله به پست الزامی است.');
       endpoint = `/api/shipping/orders/${encodeURIComponent(action.order.id)}/status`;
       method = 'PATCH';
       payload = {
         status: action.status,
         reason: cleanReason,
+        sendCustomerSms,
         ...(tracking ? { trackingCode: tracking } : {}),
       };
     }
@@ -421,7 +434,10 @@ export function ShippingManagementView({
     {
       id: 'tracking',
       header: 'کد رهگیری',
-      cell: (order) => toPersianDigits(order.shipment?.trackingCode ?? 'ثبت نشده'),
+      cell: (order) =>
+        order.shipment?.deliveryType === 'COURIER'
+          ? 'نیاز ندارد'
+          : toPersianDigits(order.shipment?.trackingCode ?? 'ثبت نشده'),
     },
     {
       id: 'updated',
@@ -534,7 +550,10 @@ export function ShippingManagementView({
               },
               {
                 label: 'کد رهگیری',
-                value: toPersianDigits(order.shipment?.trackingCode ?? 'ثبت نشده'),
+                value:
+                  order.shipment?.deliveryType === 'COURIER'
+                    ? 'نیاز ندارد'
+                    : toPersianDigits(order.shipment?.trackingCode ?? 'ثبت نشده'),
               },
               {
                 label: 'آخرین تغییر',
@@ -598,6 +617,15 @@ export function ShippingManagementView({
           }
         >
           <form id="shipping-operation-form" onSubmit={submit} className="space-y-4">
+            {action?.kind === 'status' && ['HANDED_OVER', 'DELIVERED'].includes(action.status) ? (
+              <Checkbox
+                id="shipping-send-customer-sms"
+                checked={sendCustomerSms}
+                disabled={pending}
+                label="ارسال پیامک این مرحله به مشتری"
+                onChange={(event) => setSendCustomerSms(event.target.checked)}
+              />
+            ) : null}
             {action?.kind === 'create' ? (
               <>
                 {action.order.shippingSelection ? (
@@ -660,7 +688,11 @@ export function ShippingManagementView({
                 </FormField>
               </>
             ) : null}
-            {action?.kind === 'status' && action.status === 'HANDED_OVER' ? (
+            {action?.kind === 'status' &&
+            action.status === 'HANDED_OVER' &&
+            (action.order.shipment?.deliveryType ??
+              action.order.shippingSelection?.deliveryType ??
+              'POST') !== 'COURIER' ? (
               <FormField
                 id="manual-tracking-code"
                 label="کد رهگیری"

@@ -190,6 +190,7 @@ describe('ShippingService manual fulfillment', () => {
           provider: 'manual',
           status: ShipmentStatus.READY,
           trackingCode: null,
+          deliveryTypeSnapshot: 'POST',
           providerCreationState: ShipmentProviderCreationState.CREATED,
           providerShipmentId: `manual:${orderId}`,
           providerCreateError: null,
@@ -216,5 +217,54 @@ describe('ShippingService manual fulfillment', () => {
         actorUserId,
       ),
     ).rejects.toMatchObject({ code: ErrorCode.SHIPMENT_NOT_READY });
+  });
+
+  it('hands a courier shipment over without requiring a postal tracking code', async () => {
+    const current = {
+      id: shipmentId,
+      orderId,
+      provider: 'manual',
+      status: ShipmentStatus.READY,
+      trackingCode: null,
+      deliveryTypeSnapshot: 'COURIER',
+      providerCreationState: ShipmentProviderCreationState.CREATED,
+      providerShipmentId: `manual:${orderId}`,
+      providerCreateError: null,
+      creationAttemptedAt: new Date(),
+      shippedAt: null,
+      deliveredAt: null,
+      order: {
+        id: orderId,
+        orderNumber: 'HS-COURIER-1',
+        status: OrderStatus.PROCESSING,
+        paidAt: new Date(),
+        deliveredAt: null,
+        platingTotalToman: 0,
+        payment: { status: PaymentStatus.PAID },
+        platingFulfillment: null,
+      },
+    };
+    const updated = { ...current, status: ShipmentStatus.HANDED_OVER };
+    const tx = {
+      shipment: {
+        findUnique: jest.fn().mockResolvedValue(current),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(updated),
+      },
+      shipmentStatusHistory: { create: jest.fn().mockResolvedValue({}) },
+      order: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      orderStatusHistory: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma = { $transaction: jest.fn((callback) => callback(tx)) };
+    const service = new ShippingService(prisma as unknown as PrismaService, provider);
+
+    await expect(
+      service.updateStatus(
+        orderId,
+        { status: ShipmentStatus.HANDED_OVER, reason: 'تحویل به پیک' },
+        actorUserId,
+      ),
+    ).resolves.toEqual(updated);
+    expect(tx.shipment.updateMany).toHaveBeenCalled();
   });
 });

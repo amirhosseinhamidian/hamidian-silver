@@ -117,6 +117,7 @@ describe('admin orders model', () => {
           carrierName: 'پست پیشتاز',
           pricingMode: 'FIXED',
           serviceArea: 'NATIONWIDE',
+          deliveryType: 'POST',
         },
         returnAuthorization: {
           authorizedAt: '2026-09-07T15:00:00.000Z',

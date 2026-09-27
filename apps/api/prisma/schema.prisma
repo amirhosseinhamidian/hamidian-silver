@@ -392,6 +392,7 @@ model ShippingCarrier {
   thresholdToman  Int?
   discountedCostToman Int?
   serviceArea     String   @default("NATIONWIDE") @db.VarChar(16)
+  deliveryType    String   @default("POST") @db.VarChar(16)
   isActive        Boolean  @default(true)
   updatedByUserId String?  @db.Uuid
   createdAt       DateTime @default(now()) @db.Timestamptz(3)
@@ -1003,6 +1004,7 @@ model Order {
   shippingCarrierLogoMediaIdSnapshot String?          @db.Uuid
   shippingPricingModeSnapshot String?                 @db.VarChar(16)
   shippingServiceAreaSnapshot String?                 @db.VarChar(16)
+  shippingDeliveryTypeSnapshot String                  @default("POST") @db.VarChar(16)
   taxTotalToman         Int                           @default(0)
   grandTotalToman       Int
   customerNote          String?                       @db.VarChar(1000)
@@ -1208,6 +1210,7 @@ enum NotificationOutboxEventType {
   PAYMENT_RECEIPT_SUBMITTED
   PAYMENT_RECEIPT_REJECTED
   SHIPMENT_TRACKING_AVAILABLE
+  ORDER_PROCESSING
   ORDER_SHIPPED
   ORDER_DELIVERED
   ORDER_CANCELLED
@@ -1835,6 +1838,7 @@ model Shipment {
   estimatedDeliveryDays   Int?
   providerShipmentId      String?                       @db.VarChar(255)
   trackingCode            String?                       @db.VarChar(255)
+  deliveryTypeSnapshot    String                        @default("POST") @db.VarChar(16)
   carrierNameSnapshot     String?                       @db.VarChar(200)
   carrierTrackingUrlSnapshot String?                    @db.VarChar(1000)
   carrierLogoMediaIdSnapshot String?                    @db.Uuid

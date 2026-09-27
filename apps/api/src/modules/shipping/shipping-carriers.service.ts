@@ -57,6 +57,7 @@ export class ShippingCarriersService {
         thresholdToman: projected.thresholdToman,
         discountedCostToman: projected.discountedCostToman,
         serviceArea: projected.serviceArea,
+        deliveryType: projected.deliveryType,
       };
     });
   }
@@ -72,6 +73,7 @@ export class ShippingCarriersService {
       thresholdToman: dto.thresholdToman ?? null,
       discountedCostToman: dto.discountedCostToman ?? null,
       serviceArea: dto.serviceArea ?? 'NATIONWIDE',
+      deliveryType: dto.deliveryType ?? 'POST',
     });
     try {
       const carrier = await this.prisma.shippingCarrier.create({
@@ -118,6 +120,7 @@ export class ShippingCarriersService {
           ? current.discountedCostToman
           : dto.discountedCostToman,
       serviceArea: dto.serviceArea ?? (current.serviceArea as 'NATIONWIDE' | 'TEHRAN_ONLY'),
+      deliveryType: dto.deliveryType ?? (current.deliveryType as 'POST' | 'COURIER'),
     });
     try {
       const carrier = await this.prisma.shippingCarrier.update({
@@ -167,7 +170,7 @@ export class ShippingCarriersService {
   async snapshotActive(carrierId: string, reader: CarrierReader = this.prisma) {
     const carrier = await reader.shippingCarrier.findFirst({
       where: { id: carrierId, isActive: true },
-      select: { name: true, trackingUrl: true, logoMediaId: true },
+      select: { name: true, trackingUrl: true, logoMediaId: true, deliveryType: true },
     });
     if (!carrier) throw new BadRequestException('Selected shipping carrier is not active.');
     return {
@@ -176,6 +179,7 @@ export class ShippingCarriersService {
         carrierNameSnapshot: carrier.name,
         carrierTrackingUrlSnapshot: carrier.trackingUrl,
         carrierLogoMediaIdSnapshot: carrier.logoMediaId,
+        deliveryTypeSnapshot: carrier.deliveryType,
         carrierPresentationSnapshottedAt: new Date(),
       },
     };
@@ -202,6 +206,7 @@ export class ShippingCarriersService {
         thresholdToman: true,
         discountedCostToman: true,
         serviceArea: true,
+        deliveryType: true,
       },
     });
     if (!carrier) throw new BadRequestException('Selected shipping carrier is not active.');
@@ -226,6 +231,7 @@ export class ShippingCarriersService {
         shippingCarrierLogoMediaIdSnapshot: carrier.logoMediaId,
         shippingPricingModeSnapshot: carrier.pricingMode,
         shippingServiceAreaSnapshot: carrier.serviceArea,
+        shippingDeliveryTypeSnapshot: carrier.deliveryType,
       },
     };
   }
@@ -266,6 +272,7 @@ export class ShippingCarriersService {
     }
     const pricingMode = dto.pricingMode ?? 'FREE';
     const serviceArea = dto.serviceArea ?? 'NATIONWIDE';
+    const deliveryType = dto.deliveryType ?? 'POST';
     const baseCostToman = dto.baseCostToman ?? 0;
     const thresholdToman = dto.thresholdToman ?? null;
     const discountedCostToman = dto.discountedCostToman ?? null;
@@ -299,13 +306,14 @@ export class ShippingCarriersService {
     return {
       name: name!,
       subtitle,
-      trackingUrl: trackingUrl ?? null,
+      trackingUrl: deliveryType === 'COURIER' ? null : (trackingUrl ?? null),
       logoMediaId: logoMediaId ?? null,
       pricingMode,
       baseCostToman,
       thresholdToman,
       discountedCostToman,
       serviceArea,
+      deliveryType,
     };
   }
 
@@ -329,6 +337,7 @@ export class ShippingCarriersService {
       thresholdToman: carrier.thresholdToman,
       discountedCostToman: carrier.discountedCostToman,
       serviceArea: carrier.serviceArea as 'NATIONWIDE' | 'TEHRAN_ONLY',
+      deliveryType: carrier.deliveryType as 'POST' | 'COURIER',
       isActive: carrier.isActive,
       createdAt: carrier.createdAt.toISOString(),
       updatedAt: carrier.updatedAt.toISOString(),

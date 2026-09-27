@@ -52,6 +52,16 @@
 نقره حمیدیان
 ```
 
+### آماده‌سازی سفارش
+
+- نام: `hamidianprocessing`
+- متغیر: `KAVENEGAR_ORDER_PROCESSING_TEMPLATE`
+
+```text
+آماده‌سازی سفارش %token آغاز شد.
+گالری حمیدیان
+```
+
 ### ارسال سفارش
 
 - نام: `hamidianshipped`
@@ -99,6 +109,7 @@ KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE=hamidianpayment
 KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE=hamidianreceipt
 KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE=hamidianreceiptrejected
 KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE=hamidiantracking
+KAVENEGAR_ORDER_PROCESSING_TEMPLATE=hamidianprocessing
 KAVENEGAR_ORDER_SHIPPED_TEMPLATE=hamidianshipped
 KAVENEGAR_ORDER_DELIVERED_TEMPLATE=hamidiandelivered
 KAVENEGAR_ORDER_CANCELLED_TEMPLATE=hamidiancancelled

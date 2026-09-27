@@ -70,7 +70,11 @@ describe('OrderOperations', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/orders/order-1/status', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'PROCESSING', reason: 'پرداخت بررسی شد' }),
+      body: JSON.stringify({
+        status: 'PROCESSING',
+        sendCustomerSms: true,
+        reason: 'پرداخت بررسی شد',
+      }),
     });
     expect(refreshMock).toHaveBeenCalledOnce();
   });
@@ -81,6 +85,23 @@ describe('OrderOperations', () => {
     );
 
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('lets the operator suppress the customer SMS for a status change', async () => {
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(new Response('{}', { status: 200 }));
+    render(<OrderOperations order={makeOrder()} canUpdateStatus canCancel={false} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'شروع پردازش سفارش' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'ارسال پیامک این مرحله به مشتری' }));
+    fireEvent.click(screen.getByRole('button', { name: 'تأیید تغییر وضعیت' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/orders/order-1/status',
+      expect.objectContaining({
+        body: JSON.stringify({ status: 'PROCESSING', sendCustomerSms: false }),
+      }),
+    );
   });
 
   it('requires a reason before privileged cancellation', async () => {
@@ -127,6 +148,7 @@ describe('OrderOperations', () => {
         estimatedDeliveryDays: 3,
         providerShipmentId: 'provider-shipment-1',
         trackingCode: 'TRACK-123',
+        deliveryType: 'POST',
         shippedAt: '2026-09-07T15:00:00.000Z',
         deliveredAt: '2026-09-08T12:00:00.000Z',
         createdAt: '2026-09-07T14:00:00.000Z',

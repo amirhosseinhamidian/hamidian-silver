@@ -28,8 +28,27 @@ describe('CustomerOrderDetailView', () => {
   });
 
   it('hides shipment tracking after the order is delivered', () => {
-    expect(canShowCustomerTracking({ status: 'DELIVERED', trackingCode: 'POST-123' })).toBe(false);
-    expect(canShowCustomerTracking({ status: 'SHIPPED', trackingCode: 'POST-123' })).toBe(true);
+    expect(
+      canShowCustomerTracking({
+        status: 'DELIVERED',
+        trackingCode: 'POST-123',
+        shippingDeliveryType: 'POST',
+      }),
+    ).toBe(false);
+    expect(
+      canShowCustomerTracking({
+        status: 'SHIPPED',
+        trackingCode: 'POST-123',
+        shippingDeliveryType: 'POST',
+      }),
+    ).toBe(true);
+    expect(
+      canShowCustomerTracking({
+        status: 'SHIPPED',
+        trackingCode: null,
+        shippingDeliveryType: 'COURIER',
+      }),
+    ).toBe(false);
   });
 
   it('renders the customer order items, timeline, address, totals, and tracking code', async () => {
@@ -52,6 +71,7 @@ describe('CustomerOrderDetailView', () => {
         shippingTrackingUrl: 'https://tracking.post.ir/',
         shippingCarrierLogoUrl: 'https://media.example/post-logo.webp',
         shippingPayOnDelivery: false,
+        shippingDeliveryType: 'POST',
         reservationExpiresAt: '2026-09-05T13:00:00.000Z',
         paidAt: '2026-09-05T12:10:00.000Z',
         cancelledAt: null,

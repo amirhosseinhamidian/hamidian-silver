@@ -10934,6 +10934,13 @@
             "nullable": true,
             "format": "uri"
           },
+          "shippingDeliveryType": {
+            "enum": [
+              "POST",
+              "COURIER"
+            ],
+            "type": "string"
+          },
           "paidAt": {
             "format": "date-time",
             "type": "string",
@@ -11022,6 +11029,7 @@
           "shippingMethodName",
           "shippingTrackingUrl",
           "shippingCarrierLogoUrl",
+          "shippingDeliveryType",
           "paidAt",
           "cancelledAt",
           "deliveredAt",
@@ -11086,6 +11094,13 @@
             "type": "string",
             "nullable": true,
             "format": "uri"
+          },
+          "shippingDeliveryType": {
+            "enum": [
+              "POST",
+              "COURIER"
+            ],
+            "type": "string"
           },
           "paidAt": {
             "format": "date-time",
@@ -11158,6 +11173,7 @@
           "shippingMethodName",
           "shippingTrackingUrl",
           "shippingCarrierLogoUrl",
+          "shippingDeliveryType",
           "paidAt",
           "cancelledAt",
           "deliveredAt",
@@ -11217,6 +11233,9 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
+          },
+          "sendCustomerSms": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -12080,6 +12099,13 @@
             ],
             "type": "string"
           },
+          "deliveryType": {
+            "enum": [
+              "POST",
+              "COURIER"
+            ],
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },
@@ -12095,6 +12121,7 @@
           "thresholdToman",
           "discountedCostToman",
           "serviceArea",
+          "deliveryType",
           "name",
           "baseCostToman"
         ]
@@ -12154,6 +12181,13 @@
             ],
             "type": "string"
           },
+          "deliveryType": {
+            "enum": [
+              "POST",
+              "COURIER"
+            ],
+            "type": "string"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -12182,6 +12216,7 @@
           "thresholdToman",
           "discountedCostToman",
           "serviceArea",
+          "deliveryType",
           "createdAt",
           "updatedAt",
           "name",
@@ -12244,6 +12279,14 @@
             ],
             "type": "string",
             "default": "NATIONWIDE"
+          },
+          "deliveryType": {
+            "enum": [
+              "POST",
+              "COURIER"
+            ],
+            "type": "string",
+            "default": "POST"
           },
           "isActive": {
             "type": "boolean",
@@ -12310,6 +12353,14 @@
             ],
             "type": "string",
             "default": "NATIONWIDE"
+          },
+          "deliveryType": {
+            "enum": [
+              "POST",
+              "COURIER"
+            ],
+            "type": "string",
+            "default": "POST"
           },
           "isActive": {
             "type": "boolean",
@@ -12515,6 +12566,9 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
+          },
+          "sendCustomerSms": {
+            "type": "boolean"
           }
         },
         "required": [

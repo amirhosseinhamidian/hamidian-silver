@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, Length } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, Length } from 'class-validator';
 import { OrderStatus } from '../../../generated/prisma/enums';
 
 export class UpdateOrderStatusDto {
@@ -9,4 +9,8 @@ export class UpdateOrderStatusDto {
   @IsString()
   @Length(1, 500)
   reason?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  sendCustomerSms?: boolean;
 }

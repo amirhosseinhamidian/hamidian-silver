@@ -31,6 +31,7 @@ export class NotificationOutboxWorker {
   private readonly paymentReceiptSubmittedTemplate: string;
   private readonly paymentReceiptRejectedTemplate: string;
   private readonly shipmentTrackingTemplate: string;
+  private readonly orderProcessingTemplate: string;
   private readonly orderShippedTemplate: string;
   private readonly orderDeliveredTemplate: string;
   private readonly orderCancelledTemplate: string;
@@ -65,6 +66,7 @@ export class NotificationOutboxWorker {
       '',
     );
     this.shipmentTrackingTemplate = config.get<string>('KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE', '');
+    this.orderProcessingTemplate = config.get<string>('KAVENEGAR_ORDER_PROCESSING_TEMPLATE', '');
     this.orderShippedTemplate = config.get<string>('KAVENEGAR_ORDER_SHIPPED_TEMPLATE', '');
     this.orderDeliveredTemplate = config.get<string>('KAVENEGAR_ORDER_DELIVERED_TEMPLATE', '');
     this.orderCancelledTemplate = config.get<string>('KAVENEGAR_ORDER_CANCELLED_TEMPLATE', '');
@@ -528,6 +530,13 @@ export class NotificationOutboxWorker {
           order.user.phone,
           this.orderShippedTemplate,
           'KAVENEGAR_ORDER_SHIPPED_TEMPLATE',
+          order.orderNumber,
+        );
+      case NotificationOutboxEventType.ORDER_PROCESSING:
+        return this.templateMessage(
+          order.user.phone,
+          this.orderProcessingTemplate,
+          'KAVENEGAR_ORDER_PROCESSING_TEMPLATE',
           order.orderNumber,
         );
       case NotificationOutboxEventType.ORDER_DELIVERED:
