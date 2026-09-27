@@ -6,10 +6,12 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { attachHumanAuditEvent } from '../audit/audit-event';
+import { CreateSupplierSourceDto } from './dto/create-supplier-source.dto';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { SetProductSupplierDto } from './dto/set-product-supplier.dto';
 import { SetSalePriceDto } from './dto/set-sale-price.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
+import { UpdateSupplierSourceDto } from './dto/update-supplier-source.dto';
 
 @Injectable()
 export class PricingService {
@@ -53,6 +55,18 @@ export class PricingService {
       this.prisma.supplier.findMany({
         where: { deletedAt: null },
         orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+        include: {
+          sources: {
+            where: { deletedAt: null },
+            orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+            include: {
+              crawlRuns: {
+                take: 1,
+                orderBy: { createdAt: 'desc' },
+              },
+            },
+          },
+        },
       }),
       this.prisma.product.findMany({
         where: { deletedAt: null },
@@ -142,10 +156,16 @@ export class PricingService {
       if (!supplier) throw new NotFoundException('Supplier was not found.');
 
       if (dto.isActive === false) {
-        await transaction.productSupplier.updateMany({
-          where: { supplierId, OR: [{ isActive: true }, { isPreferred: true }] },
-          data: { isActive: false, isPreferred: false },
-        });
+        await Promise.all([
+          transaction.productSupplier.updateMany({
+            where: { supplierId, OR: [{ isActive: true }, { isPreferred: true }] },
+            data: { isActive: false, isPreferred: false },
+          }),
+          transaction.supplierSource.updateMany({
+            where: { supplierId, isActive: true, deletedAt: null },
+            data: { isActive: false },
+          }),
+        ]);
       }
 
       try {
@@ -166,6 +186,112 @@ export class PricingService {
         throw error;
       }
     });
+  }
+
+  async listSupplierSources(supplierId: string) {
+    const supplier = await this.prisma.supplier.findFirst({
+      where: { id: supplierId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!supplier) throw new NotFoundException('Supplier was not found.');
+
+    return this.prisma.supplierSource.findMany({
+      where: { supplierId, deletedAt: null },
+      orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+      include: {
+        crawlRuns: {
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+  }
+
+  async createSupplierSource(supplierId: string, dto: CreateSupplierSourceDto) {
+    const supplier = await this.prisma.supplier.findFirst({
+      where: { id: supplierId, deletedAt: null },
+      select: { id: true, isActive: true },
+    });
+    if (!supplier) throw new NotFoundException('Supplier was not found.');
+
+    const name = dto.name.trim();
+    if (!name) throw new BadRequestException('Supplier source name is required.');
+    const location = this.normalizeSupplierSourceUrl(dto.baseUrl);
+    const adapterKey = dto.adapterKey?.trim() || null;
+    this.assertCrawlerConfiguration(dto.crawlerType, adapterKey);
+
+    try {
+      return await this.prisma.supplierSource.create({
+        data: {
+          supplierId,
+          name,
+          baseUrl: location.baseUrl,
+          hostname: location.hostname,
+          crawlerType: dto.crawlerType,
+          adapterKey,
+          crawlDelayMs: dto.crawlDelayMs ?? 2000,
+          maxConcurrency: dto.maxConcurrency ?? 1,
+          isActive: supplier.isActive && (dto.isActive ?? true),
+        },
+        include: { crawlRuns: true },
+      });
+    } catch (error) {
+      if (this.isUniqueConstraintError(error)) {
+        throw new ConflictException('This supplier already has a source for the same hostname.');
+      }
+      throw error;
+    }
+  }
+
+  async updateSupplierSource(supplierId: string, sourceId: string, dto: UpdateSupplierSourceDto) {
+    const source = await this.prisma.supplierSource.findFirst({
+      where: { id: sourceId, supplierId, deletedAt: null },
+      select: {
+        id: true,
+        crawlerType: true,
+        adapterKey: true,
+        supplier: { select: { isActive: true, deletedAt: true } },
+      },
+    });
+    if (!source || source.supplier.deletedAt) {
+      throw new NotFoundException('Supplier source was not found.');
+    }
+
+    const name = dto.name?.trim();
+    if (name === '') throw new BadRequestException('Supplier source name is required.');
+    const location = dto.baseUrl ? this.normalizeSupplierSourceUrl(dto.baseUrl) : null;
+    const adapterKey = dto.adapterKey === null ? null : dto.adapterKey?.trim();
+    const effectiveAdapterKey = adapterKey === undefined ? source.adapterKey : adapterKey || null;
+    const effectiveCrawlerType = dto.crawlerType ?? source.crawlerType;
+    this.assertCrawlerConfiguration(effectiveCrawlerType, effectiveAdapterKey);
+
+    try {
+      return await this.prisma.supplierSource.update({
+        where: { id: source.id },
+        data: {
+          ...(name !== undefined ? { name } : {}),
+          ...(location ? { baseUrl: location.baseUrl, hostname: location.hostname } : {}),
+          ...(dto.crawlerType !== undefined ? { crawlerType: dto.crawlerType } : {}),
+          ...(adapterKey !== undefined ? { adapterKey: adapterKey || null } : {}),
+          ...(dto.crawlDelayMs !== undefined ? { crawlDelayMs: dto.crawlDelayMs } : {}),
+          ...(dto.maxConcurrency !== undefined ? { maxConcurrency: dto.maxConcurrency } : {}),
+          ...(dto.isActive !== undefined
+            ? { isActive: source.supplier.isActive && dto.isActive }
+            : {}),
+        },
+        include: {
+          crawlRuns: {
+            take: 1,
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+    } catch (error) {
+      if (this.isUniqueConstraintError(error)) {
+        throw new ConflictException('This supplier already has a source for the same hostname.');
+      }
+      throw error;
+    }
   }
 
   async setProductSupplier(productId: string, supplierId: string, dto: SetProductSupplierDto) {
@@ -425,5 +551,43 @@ export class PricingService {
 
   private isUniqueConstraintError(error: unknown): boolean {
     return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002';
+  }
+
+  private normalizeSupplierSourceUrl(value: string): Readonly<{
+    baseUrl: string;
+    hostname: string;
+  }> {
+    let url: URL;
+    try {
+      url = new URL(value.trim());
+    } catch {
+      throw new BadRequestException('Supplier source URL is invalid.');
+    }
+    if (
+      !['http:', 'https:'].includes(url.protocol) ||
+      url.username ||
+      url.password ||
+      !url.hostname.includes('.') ||
+      url.hostname === 'localhost' ||
+      /^\d{1,3}(?:\.\d{1,3}){3}$/.test(url.hostname) ||
+      url.hostname.includes(':') ||
+      url.hostname.endsWith('.local')
+    ) {
+      throw new BadRequestException('Supplier source must use a public HTTP or HTTPS hostname.');
+    }
+
+    url.search = '';
+    url.hash = '';
+    url.pathname = url.pathname === '/' ? '/' : url.pathname.replace(/\/+$/, '');
+    return {
+      baseUrl: url.toString(),
+      hostname: url.hostname.toLowerCase(),
+    };
+  }
+
+  private assertCrawlerConfiguration(crawlerType: string, adapterKey: string | null): void {
+    if (crawlerType === 'CUSTOM_ADAPTER' && !adapterKey) {
+      throw new BadRequestException('Custom crawler sources require an adapter key.');
+    }
   }
 }

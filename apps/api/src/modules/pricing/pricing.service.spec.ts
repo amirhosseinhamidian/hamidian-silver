@@ -7,11 +7,19 @@ describe('PricingService', () => {
   const productId = '10000000-0000-4000-8000-000000000001';
   const supplierId = '20000000-0000-4000-8000-000000000001';
   const actorUserId = '30000000-0000-4000-8000-000000000001';
+  const supplierSourceId = '40000000-0000-4000-8000-000000000001';
 
   const prisma = {
     supplier: {
       create: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
+    },
+    supplierSource: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
     },
     product: {
       findFirst: jest.fn(),
@@ -126,6 +134,9 @@ describe('PricingService', () => {
       productSupplier: {
         updateMany: jest.fn().mockResolvedValue({ count: 2 }),
       },
+      supplierSource: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
     };
     prisma.$transaction.mockImplementation(
       async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
@@ -137,10 +148,57 @@ describe('PricingService', () => {
       where: { supplierId, OR: [{ isActive: true }, { isPreferred: true }] },
       data: { isActive: false, isPreferred: false },
     });
+    expect(transaction.supplierSource.updateMany).toHaveBeenCalledWith({
+      where: { supplierId, isActive: true, deletedAt: null },
+      data: { isActive: false },
+    });
     expect(transaction.supplier.update).toHaveBeenCalledWith({
       where: { id: supplierId },
       data: { isActive: false },
     });
+  });
+
+  it('normalizes and stores a dynamic supplier website', async () => {
+    prisma.supplier.findFirst.mockResolvedValue({ id: supplierId, isActive: true });
+    prisma.supplierSource.create.mockResolvedValue({ id: supplierSourceId });
+
+    await service.createSupplierSource(supplierId, {
+      name: ' فروشگاه اصلی ',
+      baseUrl: 'https://BSJSilver.com/?campaign=test#products',
+      crawlerType: 'CUSTOM_ADAPTER',
+      adapterKey: 'bsj-silver',
+      crawlDelayMs: 2500,
+      maxConcurrency: 1,
+    });
+
+    expect(prisma.supplierSource.create).toHaveBeenCalledWith({
+      data: {
+        supplierId,
+        name: 'فروشگاه اصلی',
+        baseUrl: 'https://bsjsilver.com/',
+        hostname: 'bsjsilver.com',
+        crawlerType: 'CUSTOM_ADAPTER',
+        adapterKey: 'bsj-silver',
+        crawlDelayMs: 2500,
+        maxConcurrency: 1,
+        isActive: true,
+      },
+      include: { crawlRuns: true },
+    });
+  });
+
+  it('requires an adapter key for custom supplier crawlers', async () => {
+    prisma.supplier.findFirst.mockResolvedValue({ id: supplierId, isActive: true });
+
+    await expect(
+      service.createSupplierSource(supplierId, {
+        name: 'فروشگاه اصلی',
+        baseUrl: 'https://bsjsilver.com',
+        crawlerType: 'CUSTOM_ADAPTER',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.supplierSource.create).not.toHaveBeenCalled();
   });
 
   it('returns the supplier directory and product sourcing catalog together', async () => {
