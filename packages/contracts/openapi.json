@@ -7388,6 +7388,166 @@
         ]
       }
     },
+    "/api/v1/supplier-imports/sources": {
+      "get": {
+        "operationId": "SupplierImportsController_listSources_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/drafts": {
+      "get": {
+        "operationId": "SupplierImportsController_listDrafts_v1",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING_REVIEW",
+                "REVIEWED",
+                "REJECTED"
+              ]
+            }
+          },
+          {
+            "name": "supplierSourceId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/crawl": {
+      "post": {
+        "operationId": "SupplierImportsController_crawlProduct_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartSupplierCrawlDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/drafts/{draftId}": {
+      "patch": {
+        "operationId": "SupplierImportsController_updateDraft_v1",
+        "parameters": [
+          {
+            "name": "draftId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSupplierImportDraftDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/drafts/{draftId}/images/{imageIndex}/download": {
+      "get": {
+        "operationId": "SupplierImportsController_downloadDraftImage_v1",
+        "parameters": [
+          {
+            "name": "draftId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "imageIndex",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
     "/api/v1/admin-users": {
       "get": {
         "operationId": "UserManagementController_list_v1",
@@ -14253,6 +14413,90 @@
           "destinationPath",
           "permanent"
         ]
+      },
+      "StartSupplierCrawlDto": {
+        "type": "object",
+        "properties": {
+          "supplierSourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetUrl": {
+            "type": "string",
+            "format": "uri",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "supplierSourceId",
+          "targetUrl"
+        ]
+      },
+      "SupplierImportAttributeDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "UpdateSupplierImportDraftDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceCategory": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "supplierRetailPriceToman": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "weightGrams": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "attributes": {
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierImportAttributeDto"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_REVIEW",
+              "REVIEWED",
+              "REJECTED"
+            ]
+          }
+        }
       },
       "AdminManagedUserRoleDto": {
         "type": "object",

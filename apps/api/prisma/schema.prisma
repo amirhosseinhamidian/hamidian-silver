@@ -66,6 +66,7 @@ model User {
   adminMessageRecipient               AdminMessageRecipient?            @relation("AdminMessageRecipientUser")
   adminMessageRecipientsUpdated       AdminMessageRecipient[]            @relation("AdminMessageRecipientUpdater")
   adminOrderNotificationDeliveries    AdminOrderNotificationDelivery[]   @relation("AdminOrderNotificationRecipient")
+  supplierProductImportsReviewed      SupplierProductImportDraft[]       @relation("SupplierProductImportReviewer")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -860,6 +861,12 @@ enum SupplierCrawlScope {
   SCHEDULED
 }
 
+enum SupplierProductImportStatus {
+  PENDING_REVIEW
+  REVIEWED
+  REJECTED
+}
+
 model Supplier {
   id          String            @id @default(uuid()) @db.Uuid
   code        String            @unique @db.VarChar(64)
@@ -894,6 +901,7 @@ model SupplierSource {
   deletedAt      DateTime?           @db.Timestamptz(3)
   supplier       Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   crawlRuns      SupplierCrawlRun[]
+  importDrafts   SupplierProductImportDraft[]
 
   @@unique([supplierId, hostname])
   @@index([supplierId, isActive])
@@ -916,10 +924,44 @@ model SupplierCrawlRun {
   finishedAt       DateTime?              @db.Timestamptz(3)
   createdAt        DateTime               @default(now()) @db.Timestamptz(3)
   supplierSource   SupplierSource         @relation(fields: [supplierSourceId], references: [id], onDelete: Restrict)
+  importDrafts     SupplierProductImportDraft[]
 
   @@index([supplierSourceId, createdAt])
   @@index([status, createdAt])
   @@map("supplier_crawl_runs")
+}
+
+model SupplierProductImportDraft {
+  id                         String                      @id @default(uuid()) @db.Uuid
+  supplierSourceId           String                      @db.Uuid
+  crawlRunId                 String                      @db.Uuid
+  sourceProductKey           String                      @db.VarChar(120)
+  sourceUrl                  String                      @db.VarChar(2000)
+  sourceSku                  String?                     @db.VarChar(120)
+  title                      String                      @db.VarChar(300)
+  description                String?
+  sourceCategory             String?                     @db.VarChar(300)
+  supplierRetailPriceToman   Int?
+  weightGrams                Decimal?                    @db.Decimal(10, 3)
+  attributes                 Json
+  imageUrls                  String[]                    @db.VarChar(2000)
+  rawPayload                 Json
+  status                     SupplierProductImportStatus @default(PENDING_REVIEW)
+  reviewedAt                 DateTime?                   @db.Timestamptz(3)
+  reviewedByUserId           String?                     @db.Uuid
+  lastCrawledAt              DateTime                    @db.Timestamptz(3)
+  createdAt                  DateTime                    @default(now()) @db.Timestamptz(3)
+  updatedAt                  DateTime                    @updatedAt @db.Timestamptz(3)
+  supplierSource             SupplierSource              @relation(fields: [supplierSourceId], references: [id], onDelete: Restrict)
+  crawlRun                   SupplierCrawlRun             @relation(fields: [crawlRunId], references: [id], onDelete: Restrict)
+  reviewedBy                 User?                        @relation("SupplierProductImportReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([supplierSourceId, sourceProductKey])
+  @@index([status, updatedAt])
+  @@index([supplierSourceId, updatedAt])
+  @@index([crawlRunId])
+  @@index([reviewedByUserId])
+  @@map("supplier_product_import_drafts")
 }
 
 model ProductSupplier {

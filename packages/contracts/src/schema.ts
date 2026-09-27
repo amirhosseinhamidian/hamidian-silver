@@ -3012,6 +3012,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/supplier-imports/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_listSources_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_listDrafts_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/crawl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_crawlProduct_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/drafts/{draftId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SupplierImportsController_updateDraft_v1"];
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/drafts/{draftId}/images/{imageIndex}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_downloadDraftImage_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin-users": {
         parameters: {
             query?: never;
@@ -4701,6 +4781,26 @@ export interface components {
         SeoRedirectResponseDto: {
             destinationPath: string;
             permanent: boolean;
+        };
+        StartSupplierCrawlDto: {
+            /** Format: uuid */
+            supplierSourceId: string;
+            /** Format: uri */
+            targetUrl: string;
+        };
+        SupplierImportAttributeDto: {
+            key: string;
+            value: string;
+        };
+        UpdateSupplierImportDraftDto: {
+            title?: string;
+            description?: string | null;
+            sourceCategory?: string | null;
+            supplierRetailPriceToman?: number | null;
+            weightGrams?: number | null;
+            attributes?: components["schemas"]["SupplierImportAttributeDto"][];
+            /** @enum {string} */
+            status?: "PENDING_REVIEW" | "REVIEWED" | "REJECTED";
         };
         AdminManagedUserRoleDto: {
             /** @enum {string} */
@@ -9687,6 +9787,113 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_listSources_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_listDrafts_v1: {
+        parameters: {
+            query?: {
+                status?: "PENDING_REVIEW" | "REVIEWED" | "REJECTED";
+                supplierSourceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_crawlProduct_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartSupplierCrawlDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_updateDraft_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSupplierImportDraftDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_downloadDraftImage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: string;
+                imageIndex: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
