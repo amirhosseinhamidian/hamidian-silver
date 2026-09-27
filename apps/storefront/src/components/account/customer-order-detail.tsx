@@ -146,9 +146,13 @@ export function canShowCustomerReturns(
 }
 
 export function canShowCustomerTracking(
-  order: Pick<CustomerOrderDetail, 'status' | 'trackingCode'>,
+  order: Pick<CustomerOrderDetail, 'status' | 'trackingCode' | 'shippingDeliveryType'>,
 ): boolean {
-  return order.status !== 'DELIVERED' && Boolean(order.trackingCode);
+  return (
+    order.shippingDeliveryType !== 'COURIER' &&
+    order.status !== 'DELIVERED' &&
+    Boolean(order.trackingCode)
+  );
 }
 
 export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string }>) {
@@ -242,6 +246,7 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
   const { order } = state;
   const address = order.shippingAddress;
   const trackingCode = order.status !== 'DELIVERED' ? order.trackingCode : null;
+  const courierInTransit = order.status === 'SHIPPED' && order.shippingDeliveryType === 'COURIER';
 
   return (
     <main id="main-content" className="sf-container pb-[var(--sf-section-space)] pt-8 sm:pt-10">
@@ -467,7 +472,19 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
             </p>
           </section>
 
-          {trackingCode ? (
+          {courierInTransit ? (
+            <section
+              aria-labelledby="order-courier-heading"
+              className="border border-[var(--sf-color-border)] p-5"
+            >
+              <h2 id="order-courier-heading" className="text-xl font-medium">
+                وضعیت ارسال
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-[var(--sf-color-muted)]">
+                سفارش شما از طریق پیک ارسال شده است.
+              </p>
+            </section>
+          ) : trackingCode && order.shippingDeliveryType !== 'COURIER' ? (
             <section
               aria-labelledby="order-tracking-heading"
               className="border border-[var(--sf-color-border)] p-5"

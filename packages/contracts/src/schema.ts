@@ -3890,6 +3890,8 @@ export interface components {
             shippingTrackingUrl: string | null;
             /** Format: uri */
             shippingCarrierLogoUrl: string | null;
+            /** @enum {string} */
+            shippingDeliveryType: "POST" | "COURIER";
             /** Format: date-time */
             paidAt: string | null;
             /** Format: date-time */
@@ -3928,6 +3930,8 @@ export interface components {
             shippingTrackingUrl: string | null;
             /** Format: uri */
             shippingCarrierLogoUrl: string | null;
+            /** @enum {string} */
+            shippingDeliveryType: "POST" | "COURIER";
             /** Format: date-time */
             paidAt: string | null;
             /** Format: date-time */
@@ -3962,6 +3966,7 @@ export interface components {
             /** @enum {string} */
             status: "CANCELLED" | "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "EXPIRED";
             reason?: string;
+            sendCustomerSms?: boolean;
         };
         AuthorizeOrderReturnDto: {
             reason: string;
@@ -4184,6 +4189,8 @@ export interface components {
             discountedCostToman: number | null;
             /** @enum {string} */
             serviceArea: "NATIONWIDE" | "TEHRAN_ONLY";
+            /** @enum {string} */
+            deliveryType: "POST" | "COURIER";
             name: string;
             baseCostToman: number;
         };
@@ -4202,6 +4209,8 @@ export interface components {
             discountedCostToman: number | null;
             /** @enum {string} */
             serviceArea: "NATIONWIDE" | "TEHRAN_ONLY";
+            /** @enum {string} */
+            deliveryType: "POST" | "COURIER";
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -4231,6 +4240,11 @@ export interface components {
              * @enum {string}
              */
             serviceArea: "NATIONWIDE" | "TEHRAN_ONLY";
+            /**
+             * @default POST
+             * @enum {string}
+             */
+            deliveryType: "POST" | "COURIER";
             /** @default true */
             isActive: boolean;
         };
@@ -4255,6 +4269,11 @@ export interface components {
              * @enum {string}
              */
             serviceArea: "NATIONWIDE" | "TEHRAN_ONLY";
+            /**
+             * @default POST
+             * @enum {string}
+             */
+            deliveryType: "POST" | "COURIER";
             /** @default true */
             isActive: boolean;
         };
@@ -4304,6 +4323,7 @@ export interface components {
             trackingCode?: string;
             providerShipmentId?: string;
             reason?: string;
+            sendCustomerSms?: boolean;
         };
         PublicSiteSettingsHeaderCategoryDto: {
             /** Format: uuid */

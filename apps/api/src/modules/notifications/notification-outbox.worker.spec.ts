@@ -67,6 +67,7 @@ describe('NotificationOutboxWorker', () => {
       KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE: 'payment-receipt-submitted',
       KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE: 'payment-receipt-rejected',
       KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE: 'shipment-tracking',
+      KAVENEGAR_ORDER_PROCESSING_TEMPLATE: 'order-processing',
       KAVENEGAR_ORDER_SHIPPED_TEMPLATE: 'order-shipped',
       KAVENEGAR_ORDER_DELIVERED_TEMPLATE: 'order-delivered',
       KAVENEGAR_ORDER_CANCELLED_TEMPLATE: 'order-cancelled',

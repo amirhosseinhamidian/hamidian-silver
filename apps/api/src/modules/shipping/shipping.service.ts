@@ -569,6 +569,7 @@ export class ShippingService {
                 carrierNameSnapshot: order.shippingCarrierNameSnapshot,
                 carrierTrackingUrlSnapshot: order.shippingCarrierTrackingUrlSnapshot,
                 carrierLogoMediaIdSnapshot: order.shippingCarrierLogoMediaIdSnapshot,
+                deliveryTypeSnapshot: order.shippingDeliveryTypeSnapshot,
                 carrierPresentationSnapshottedAt: new Date(),
               },
             }
@@ -582,6 +583,7 @@ export class ShippingService {
         carrierNameSnapshot: null,
         carrierTrackingUrlSnapshot: null,
         carrierLogoMediaIdSnapshot: null,
+        deliveryTypeSnapshot: 'POST',
         carrierPresentationSnapshottedAt: new Date(),
       };
       const serviceName = selectedCarrier?.serviceName ?? dto.serviceName?.trim();
@@ -793,6 +795,7 @@ export class ShippingService {
             nextStatus,
             null,
             'Shipment status synchronized from provider',
+            true,
           );
         }
 
@@ -996,6 +999,7 @@ export class ShippingService {
       ) {
         if (
           shipment.provider === MANUAL_SHIPPING_PROVIDER &&
+          shipment.deliveryTypeSnapshot !== 'COURIER' &&
           !shipment.trackingCode &&
           !dto.trackingCode?.trim()
         ) {
@@ -1112,7 +1116,7 @@ export class ShippingService {
         },
       });
 
-      if (!shipment.trackingCode && dto.trackingCode) {
+      if (dto.sendCustomerSms !== false && !shipment.trackingCode && dto.trackingCode) {
         await this.outbox?.enqueueOrderEvent(transaction, {
           type: NotificationOutboxEventType.SHIPMENT_TRACKING_AVAILABLE,
           orderId: shipment.orderId,
@@ -1130,6 +1134,7 @@ export class ShippingService {
         dto.status,
         actorUserId,
         dto.reason ?? 'Shipment status updated',
+        dto.sendCustomerSms !== false,
       );
 
       return updated;
@@ -1146,6 +1151,7 @@ export class ShippingService {
     shipmentStatus: ShipmentStatus,
     actorUserId: string | null,
     reason: string,
+    sendCustomerSms: boolean,
   ): Promise<void> {
     const target =
       shipmentStatus === ShipmentStatus.DELIVERED
@@ -1221,7 +1227,7 @@ export class ShippingService {
         },
       });
 
-      if (nextStatus === OrderStatus.SHIPPED) {
+      if (sendCustomerSms && nextStatus === OrderStatus.SHIPPED) {
         await this.outbox?.enqueueOrderEvent(transaction, {
           type: NotificationOutboxEventType.ORDER_SHIPPED,
           orderId: order.id,
@@ -1230,7 +1236,7 @@ export class ShippingService {
         });
       }
 
-      if (nextStatus === OrderStatus.DELIVERED) {
+      if (sendCustomerSms && nextStatus === OrderStatus.DELIVERED) {
         await this.outbox?.enqueueOrderEvent(transaction, {
           type: NotificationOutboxEventType.ORDER_DELIVERED,
           orderId: order.id,

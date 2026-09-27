@@ -62,6 +62,7 @@ const readyShipment: NonNullable<AdminOrder['shipment']> = {
   estimatedDeliveryDays: 3,
   providerShipmentId: 'manual:order-1',
   trackingCode: null,
+  deliveryType: 'POST',
   shippedAt: null,
   deliveredAt: null,
   createdAt: '2026-09-07T13:00:00.000Z',
@@ -133,6 +134,7 @@ describe('ShippingManagementView', () => {
             thresholdToman: null,
             discountedCostToman: null,
             serviceArea: 'NATIONWIDE',
+            deliveryType: 'POST',
             isActive: true,
             createdAt: '2026-09-15T00:00:00.000Z',
             updatedAt: '2026-09-15T00:00:00.000Z',
@@ -168,6 +170,7 @@ describe('ShippingManagementView', () => {
         carrierName: 'پیک تهران',
         pricingMode: 'COLLECT' as const,
         serviceArea: 'TEHRAN_ONLY' as const,
+        deliveryType: 'COURIER' as const,
       },
     };
     render(
@@ -212,7 +215,7 @@ describe('ShippingManagementView', () => {
         canUpdateStatus
       />,
     );
-    fireEvent.click(screen.getAllByRole('button', { name: 'تحویل به پست' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'تحویل به ارسال‌کننده' })[0]);
     fireEvent.change(screen.getByLabelText(/یادداشت عملیات/), {
       target: { value: 'تحویل به باجه پست' },
     });
@@ -227,6 +230,7 @@ describe('ShippingManagementView', () => {
         body: JSON.stringify({
           status: 'HANDED_OVER',
           reason: 'تحویل به باجه پست',
+          sendCustomerSms: true,
           trackingCode: '123456',
         }),
       }),

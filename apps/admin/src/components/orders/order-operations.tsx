@@ -6,6 +6,7 @@ import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
@@ -78,6 +79,7 @@ export function OrderOperations({ order, canUpdateStatus, canCancel }: OrderOper
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [sendCustomerSms, setSendCustomerSms] = useState(true);
   const nextStatus = nextOrderStatuses[order.status];
   const transitionBlocker = nextStatus ? statusTransitionBlocker(order, nextStatus) : null;
   const returnEligible = order.status === 'SHIPPED' || order.status === 'DELIVERED';
@@ -95,6 +97,7 @@ export function OrderOperations({ order, canUpdateStatus, canCancel }: OrderOper
     setReason('');
     setError('');
     setSuccess('');
+    setSendCustomerSms(true);
   }
 
   function closeAction() {
@@ -120,7 +123,11 @@ export function OrderOperations({ order, canUpdateStatus, canCancel }: OrderOper
     const method = action === 'status' ? 'PATCH' : 'POST';
     const payload =
       action === 'status'
-        ? { status: nextStatus, ...(normalizedReason ? { reason: normalizedReason } : {}) }
+        ? {
+            status: nextStatus,
+            sendCustomerSms,
+            ...(normalizedReason ? { reason: normalizedReason } : {}),
+          }
         : { reason: normalizedReason };
 
     setPending(true);
@@ -282,6 +289,15 @@ export function OrderOperations({ order, canUpdateStatus, canCancel }: OrderOper
           }
         >
           <form id={formId} onSubmit={submitAction} className="space-y-4">
+            {action === 'status' ? (
+              <Checkbox
+                id={`${formId}-send-sms`}
+                checked={sendCustomerSms}
+                disabled={pending}
+                label="ارسال پیامک این مرحله به مشتری"
+                onChange={(event) => setSendCustomerSms(event.target.checked)}
+              />
+            ) : null}
             {action === 'cancel' ? (
               <Alert tone="danger" title="این عملیات برگشت‌پذیر نیست">
                 سفارش لغو و رزرو موجودی آن آزاد می‌شود.
