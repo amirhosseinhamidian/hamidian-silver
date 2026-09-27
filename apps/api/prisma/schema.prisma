@@ -836,6 +836,30 @@ model InventoryMovement {
   @@map("inventory_movements")
 }
 
+enum SupplierCrawlerType {
+  GENERIC_HTML
+  JSON_LD
+  CUSTOM_ADAPTER
+  API
+  CSV
+  XML
+}
+
+enum SupplierCrawlRunStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+  CANCELLED
+}
+
+enum SupplierCrawlScope {
+  PRODUCT_URL
+  CATEGORY_URL
+  SCHEDULED
+}
+
 model Supplier {
   id          String            @id @default(uuid()) @db.Uuid
   code        String            @unique @db.VarChar(64)
@@ -847,10 +871,55 @@ model Supplier {
   updatedAt   DateTime          @updatedAt @db.Timestamptz(3)
   deletedAt   DateTime?         @db.Timestamptz(3)
   products    ProductSupplier[]
+  sources     SupplierSource[]
 
   @@index([isActive])
   @@index([deletedAt])
   @@map("suppliers")
+}
+
+model SupplierSource {
+  id             String              @id @default(uuid()) @db.Uuid
+  supplierId     String              @db.Uuid
+  name           String              @db.VarChar(150)
+  baseUrl        String              @db.VarChar(1000)
+  hostname       String              @db.VarChar(253)
+  crawlerType    SupplierCrawlerType
+  adapterKey     String?             @db.VarChar(100)
+  crawlDelayMs   Int                 @default(2000)
+  maxConcurrency Int                 @default(1)
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime?           @db.Timestamptz(3)
+  supplier       Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  crawlRuns      SupplierCrawlRun[]
+
+  @@unique([supplierId, hostname])
+  @@index([supplierId, isActive])
+  @@index([crawlerType, isActive])
+  @@index([deletedAt])
+  @@map("supplier_sources")
+}
+
+model SupplierCrawlRun {
+  id               String                 @id @default(uuid()) @db.Uuid
+  supplierSourceId String                 @db.Uuid
+  scope            SupplierCrawlScope
+  targetUrl        String                 @db.VarChar(2000)
+  status           SupplierCrawlRunStatus @default(QUEUED)
+  discoveredCount  Int                    @default(0)
+  succeededCount   Int                    @default(0)
+  failedCount      Int                    @default(0)
+  errorMessage     String?                @db.VarChar(1000)
+  startedAt        DateTime?              @db.Timestamptz(3)
+  finishedAt       DateTime?              @db.Timestamptz(3)
+  createdAt        DateTime               @default(now()) @db.Timestamptz(3)
+  supplierSource   SupplierSource         @relation(fields: [supplierSourceId], references: [id], onDelete: Restrict)
+
+  @@index([supplierSourceId, createdAt])
+  @@index([status, createdAt])
+  @@map("supplier_crawl_runs")
 }
 
 model ProductSupplier {

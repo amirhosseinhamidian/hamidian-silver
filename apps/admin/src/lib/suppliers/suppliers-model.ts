@@ -1,3 +1,33 @@
+export type AdminSupplierCrawlerType =
+  'GENERIC_HTML' | 'JSON_LD' | 'CUSTOM_ADAPTER' | 'API' | 'CSV' | 'XML';
+
+export type AdminSupplierCrawlRun = Readonly<{
+  id: string;
+  status: 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'PARTIAL' | 'FAILED' | 'CANCELLED';
+  discoveredCount: number;
+  succeededCount: number;
+  failedCount: number;
+  errorMessage: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+}>;
+
+export type AdminSupplierSource = Readonly<{
+  id: string;
+  name: string;
+  baseUrl: string;
+  hostname: string;
+  crawlerType: AdminSupplierCrawlerType;
+  adapterKey: string | null;
+  crawlDelayMs: number;
+  maxConcurrency: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastRun: AdminSupplierCrawlRun | null;
+}>;
+
 export type AdminSupplier = Readonly<{
   id: string;
   code: string;
@@ -5,6 +35,7 @@ export type AdminSupplier = Readonly<{
   contactName: string | null;
   phone: string | null;
   active: boolean;
+  sources: readonly AdminSupplierSource[];
   createdAt: string;
   updatedAt: string;
 }>;
@@ -36,6 +67,22 @@ export type AdminSupplierCatalog = Readonly<{
 }>;
 
 const PRODUCT_STATUSES = new Set<AdminSupplierProduct['status']>(['DRAFT', 'ACTIVE', 'ARCHIVED']);
+const CRAWLER_TYPES = new Set<AdminSupplierCrawlerType>([
+  'GENERIC_HTML',
+  'JSON_LD',
+  'CUSTOM_ADAPTER',
+  'API',
+  'CSV',
+  'XML',
+]);
+const CRAWL_STATUSES = new Set<AdminSupplierCrawlRun['status']>([
+  'QUEUED',
+  'RUNNING',
+  'SUCCEEDED',
+  'PARTIAL',
+  'FAILED',
+  'CANCELLED',
+]);
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
@@ -54,6 +101,82 @@ function number(value: unknown): number | null {
   return null;
 }
 
+function parseCrawlRun(value: unknown): AdminSupplierCrawlRun | null {
+  const item = record(value);
+  const id = text(item?.id);
+  const status = text(item?.status) as AdminSupplierCrawlRun['status'] | null;
+  const createdAt = text(item?.createdAt);
+  const discoveredCount = number(item?.discoveredCount);
+  const succeededCount = number(item?.succeededCount);
+  const failedCount = number(item?.failedCount);
+  if (
+    !id ||
+    !status ||
+    !CRAWL_STATUSES.has(status) ||
+    !createdAt ||
+    discoveredCount === null ||
+    succeededCount === null ||
+    failedCount === null
+  ) {
+    return null;
+  }
+  return {
+    id,
+    status,
+    discoveredCount,
+    succeededCount,
+    failedCount,
+    errorMessage: text(item?.errorMessage),
+    startedAt: text(item?.startedAt),
+    finishedAt: text(item?.finishedAt),
+    createdAt,
+  };
+}
+
+function parseSupplierSource(value: unknown): AdminSupplierSource | null {
+  const item = record(value);
+  const id = text(item?.id);
+  const name = text(item?.name);
+  const baseUrl = text(item?.baseUrl);
+  const hostname = text(item?.hostname);
+  const crawlerType = text(item?.crawlerType) as AdminSupplierCrawlerType | null;
+  const crawlDelayMs = number(item?.crawlDelayMs);
+  const maxConcurrency = number(item?.maxConcurrency);
+  const createdAt = text(item?.createdAt);
+  const updatedAt = text(item?.updatedAt);
+  const rawRuns = Array.isArray(item?.crawlRuns) ? item.crawlRuns : [];
+  const lastRun = rawRuns.length ? parseCrawlRun(rawRuns[0]) : null;
+  if (
+    !id ||
+    !name ||
+    !baseUrl ||
+    !hostname ||
+    !crawlerType ||
+    !CRAWLER_TYPES.has(crawlerType) ||
+    crawlDelayMs === null ||
+    maxConcurrency === null ||
+    !createdAt ||
+    !updatedAt ||
+    (rawRuns.length > 0 && lastRun === null)
+  ) {
+    return null;
+  }
+  return {
+    id,
+    name,
+    baseUrl,
+    hostname,
+    crawlerType,
+    adapterKey: text(item?.adapterKey),
+    crawlDelayMs,
+    maxConcurrency,
+    active: item?.isActive !== false,
+    createdAt,
+    updatedAt,
+    lastRun,
+  };
+}
+
 function parseSupplier(value: unknown): AdminSupplier | null {
   const item = record(value);
   const id = text(item?.id);
@@ -61,7 +184,12 @@ function parseSupplier(value: unknown): AdminSupplier | null {
   const name = text(item?.name);
   const createdAt = text(item?.createdAt);
   const updatedAt = text(item?.updatedAt);
+  const rawSources = Array.isArray(item?.sources) ? item.sources : [];
+  const sources = rawSources
+    .map(parseSupplierSource)
+    .filter((source): source is AdminSupplierSource => source !== null);
   if (!id || !code || !name || !createdAt || !updatedAt) return null;
+  if (sources.length !== rawSources.length) return null;
   return {
     id,
     code,
@@ -69,6 +197,7 @@ function parseSupplier(value: unknown): AdminSupplier | null {
     contactName: text(item?.contactName),
     phone: text(item?.phone),
     active: item?.isActive !== false,
+    sources,
     createdAt,
     updatedAt,
   };

@@ -2469,9 +2469,9 @@
             "schema": {
               "type": "string",
               "enum": [
-                "PENDING",
-                "CANCELLED",
                 "FAILED",
+                "CANCELLED",
+                "PENDING",
                 "CONFIRMED"
               ]
             }
@@ -3635,11 +3635,11 @@
             "schema": {
               "type": "string",
               "enum": [
+                "FAILED",
                 "PENDING",
                 "PROCESSING",
                 "DISPATCHING",
                 "SENT",
-                "FAILED",
                 "UNKNOWN"
               ]
             }
@@ -3826,6 +3826,125 @@
         "responses": {
           "200": {
             "description": ""
+          }
+        },
+        "tags": [
+          "Pricing"
+        ]
+      }
+    },
+    "/api/v1/pricing/suppliers/{supplierId}/sources": {
+      "get": {
+        "operationId": "PricingController_listSupplierSources_v1",
+        "parameters": [
+          {
+            "name": "supplierId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Pricing"
+        ]
+      },
+      "post": {
+        "operationId": "PricingController_createSupplierSource_v1",
+        "parameters": [
+          {
+            "name": "supplierId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSupplierSourceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Pricing"
+        ]
+      }
+    },
+    "/api/v1/pricing/suppliers/{supplierId}/sources/{sourceId}": {
+      "patch": {
+        "operationId": "PricingController_updateSupplierSource_v1",
+        "parameters": [
+          {
+            "name": "supplierId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sourceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSupplierSourceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -4244,10 +4363,10 @@
             "schema": {
               "type": "string",
               "enum": [
+                "CANCELLED",
                 "PENDING",
                 "IN_PROGRESS",
-                "COMPLETED",
-                "CANCELLED"
+                "COMPLETED"
               ]
             }
           },
@@ -10399,6 +10518,104 @@
           }
         }
       },
+      "CreateSupplierSourceDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "baseUrl": {
+            "type": "string",
+            "format": "uri",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "crawlerType": {
+            "type": "string",
+            "enum": [
+              "GENERIC_HTML",
+              "JSON_LD",
+              "CUSTOM_ADAPTER",
+              "API",
+              "CSV",
+              "XML"
+            ]
+          },
+          "adapterKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "crawlDelayMs": {
+            "type": "number",
+            "minimum": 500,
+            "maximum": 60000
+          },
+          "maxConcurrency": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "baseUrl",
+          "crawlerType"
+        ]
+      },
+      "UpdateSupplierSourceDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "baseUrl": {
+            "type": "string",
+            "format": "uri",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "crawlerType": {
+            "type": "string",
+            "enum": [
+              "GENERIC_HTML",
+              "JSON_LD",
+              "CUSTOM_ADAPTER",
+              "API",
+              "CSV",
+              "XML"
+            ]
+          },
+          "adapterKey": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "crawlDelayMs": {
+            "type": "number",
+            "minimum": 500,
+            "maximum": 60000
+          },
+          "maxConcurrency": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
       "SetProductSupplierDto": {
         "type": "object",
         "properties": {
@@ -12543,10 +12760,10 @@
           "status": {
             "type": "string",
             "enum": [
-              "PENDING",
-              "CANCELLED",
-              "DELIVERED",
               "FAILED",
+              "CANCELLED",
+              "PENDING",
+              "DELIVERED",
               "READY",
               "HANDED_OVER",
               "IN_TRANSIT"

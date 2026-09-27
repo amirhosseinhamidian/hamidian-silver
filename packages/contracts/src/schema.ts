@@ -1476,6 +1476,38 @@ export interface paths {
         patch: operations["PricingController_updateSupplier_v1"];
         trace?: never;
     };
+    "/api/v1/pricing/suppliers/{supplierId}/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PricingController_listSupplierSources_v1"];
+        put?: never;
+        post: operations["PricingController_createSupplierSource_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pricing/suppliers/{supplierId}/sources/{sourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PricingController_updateSupplierSource_v1"];
+        trace?: never;
+    };
     "/api/v1/pricing/products/{productId}/suppliers/{supplierId}": {
         parameters: {
             query?: never;
@@ -3764,6 +3796,28 @@ export interface components {
             phone?: string | null;
             isActive?: boolean;
         };
+        CreateSupplierSourceDto: {
+            name: string;
+            /** Format: uri */
+            baseUrl: string;
+            /** @enum {string} */
+            crawlerType: "GENERIC_HTML" | "JSON_LD" | "CUSTOM_ADAPTER" | "API" | "CSV" | "XML";
+            adapterKey?: string;
+            crawlDelayMs?: number;
+            maxConcurrency?: number;
+            isActive?: boolean;
+        };
+        UpdateSupplierSourceDto: {
+            name?: string;
+            /** Format: uri */
+            baseUrl?: string;
+            /** @enum {string} */
+            crawlerType?: "GENERIC_HTML" | "JSON_LD" | "CUSTOM_ADAPTER" | "API" | "CSV" | "XML";
+            adapterKey?: string | null;
+            crawlDelayMs?: number;
+            maxConcurrency?: number;
+            isActive?: boolean;
+        };
         SetProductSupplierDto: {
             supplierPriceToman: number;
             markupPercent?: number | null;
@@ -4319,7 +4373,7 @@ export interface components {
         };
         UpdateShipmentStatusDto: {
             /** @enum {string} */
-            status: "PENDING" | "CANCELLED" | "DELIVERED" | "FAILED" | "READY" | "HANDED_OVER" | "IN_TRANSIT";
+            status: "FAILED" | "CANCELLED" | "PENDING" | "DELIVERED" | "READY" | "HANDED_OVER" | "IN_TRANSIT";
             trackingCode?: string;
             providerShipmentId?: string;
             reason?: string;
@@ -6308,7 +6362,7 @@ export interface operations {
     PaymentRefundsController_list_v1: {
         parameters: {
             query?: {
-                status?: "PENDING" | "CANCELLED" | "FAILED" | "CONFIRMED";
+                status?: "FAILED" | "CANCELLED" | "PENDING" | "CONFIRMED";
                 orderId?: string;
                 from?: string;
                 to?: string;
@@ -7095,7 +7149,7 @@ export interface operations {
     NotificationOutboxRecoveryController_list_v1: {
         parameters: {
             query?: {
-                status?: "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT" | "FAILED" | "UNKNOWN";
+                status?: "FAILED" | "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT" | "UNKNOWN";
                 source?: "CUSTOMER" | "OPERATIONAL";
                 limit?: number;
             };
@@ -7249,6 +7303,78 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    PricingController_listSupplierSources_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+        };
+    };
+    PricingController_createSupplierSource_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSupplierSourceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    PricingController_updateSupplierSource_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierId: string;
+                sourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSupplierSourceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
             };
         };
     };
@@ -7514,7 +7640,7 @@ export interface operations {
     PlatingFulfillmentController_list_v1: {
         parameters: {
             query?: {
-                status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+                status?: "CANCELLED" | "PENDING" | "IN_PROGRESS" | "COMPLETED";
                 limit?: number;
             };
             header?: never;
