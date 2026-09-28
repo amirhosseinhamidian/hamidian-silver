@@ -24,6 +24,7 @@ import { StartSupplierCrawlDto } from './dto/start-supplier-crawl.dto';
 import { SyncSupplierCategoriesDto } from './dto/sync-supplier-categories.dto';
 import { UpdateSupplierImportDraftDto } from './dto/update-supplier-import-draft.dto';
 import { UpdateSupplierCrawlScheduleDto } from './dto/update-supplier-crawl-schedule.dto';
+import { UpdateSupplierCategoryMappingDto } from './dto/update-supplier-category-mapping.dto';
 import { SupplierImportsService } from './supplier-imports.service';
 
 @Controller('supplier-imports')
@@ -52,6 +53,30 @@ export class SupplierImportsController {
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
   listCategories(@Query() query: ListSupplierCategoriesQueryDto) {
     return this.supplierImportsService.listCategories(query);
+  }
+
+  @Patch('categories/:categoryId/mapping')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  updateCategoryMapping(
+    @Param('categoryId', new ParseUUIDPipe({ version: '4' })) categoryId: string,
+    @Body() dto: UpdateSupplierCategoryMappingDto,
+  ) {
+    return this.supplierImportsService.updateCategoryMapping(categoryId, dto);
+  }
+
+  @Get('changes')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
+  listSourceChanges() {
+    return this.supplierImportsService.listSourceChanges();
+  }
+
+  @Post('changes/:changeId/acknowledge')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  acknowledgeSourceChange(
+    @Param('changeId', new ParseUUIDPipe({ version: '4' })) changeId: string,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ) {
+    return this.supplierImportsService.acknowledgeSourceChange(changeId, principal.userId);
   }
 
   @Post('categories/sync')
@@ -105,6 +130,12 @@ export class SupplierImportsController {
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
   resumeRun(@Param('runId', new ParseUUIDPipe({ version: '4' })) runId: string) {
     return this.supplierImportsService.resumeRun(runId);
+  }
+
+  @Post('runs/:runId/retry')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  retryRun(@Param('runId', new ParseUUIDPipe({ version: '4' })) runId: string) {
+    return this.supplierImportsService.retryRun(runId);
   }
 
   @Post('runs/:runId/archive')

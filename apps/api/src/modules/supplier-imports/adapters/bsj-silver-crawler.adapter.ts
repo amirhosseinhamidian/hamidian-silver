@@ -106,6 +106,18 @@ function structuredProduct(html: string): Record<string, unknown> | null {
   return null;
 }
 
+function structuredAvailability(product: Record<string, unknown> | null) {
+  const offers = Array.isArray(product?.offers) ? product.offers[0] : product?.offers;
+  const offer =
+    typeof offers === 'object' && offers !== null ? (offers as Record<string, unknown>) : null;
+  const value = typeof offer?.availability === 'string' ? offer.availability.toLowerCase() : '';
+  if (value.includes('outofstock') || value.includes('soldout')) return 'OUT_OF_STOCK' as const;
+  if (value.includes('instock') || value.includes('limitedavailability')) {
+    return 'IN_STOCK' as const;
+  }
+  return 'UNKNOWN' as const;
+}
+
 function extractAttributes(html: string): readonly CrawledSupplierAttribute[] {
   const attributes: CrawledSupplierAttribute[] = [];
   const items = html.matchAll(/<li\b[^>]*>[\s\S]*?<\/li>/gi);
@@ -308,6 +320,7 @@ export class BsjSilverCrawlerAdapter implements SupplierCrawlerAdapter {
                 structuredCurrency.toUpperCase() === 'IRR' ? structuredPrice / 10 : structuredPrice,
               )
           : Math.round(visiblePriceToman),
+      availability: structuredAvailability(product),
       weightGrams: parseNumber(approximateWeight?.value ?? null),
       attributes,
       imageUrls,

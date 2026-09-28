@@ -56,6 +56,8 @@ export default async function ProductImportsPage({ searchParams }: ProductImport
         runs={result.data?.runs ?? emptyRunPage}
         archivedRuns={result.data?.archivedRuns ?? emptyRunPage}
         schedules={result.data?.schedules ?? []}
+        catalogCategories={result.data?.catalogCategories ?? []}
+        sourceChanges={result.data?.sourceChanges ?? []}
         filters={filters}
         failed={result.failed}
         canWrite={user.permissions.includes('catalog.write')}

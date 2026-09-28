@@ -9,6 +9,8 @@ import {
   parseSupplierImportSources,
   parseSupplierCrawlRunPage,
   parseSupplierCrawlSchedules,
+  parseSupplierCatalogCategories,
+  parseSupplierSourceChanges,
   parseSupplierSourceCategories,
   type AdminSupplierImportFilters,
   type AdminSupplierImportsData,
@@ -51,26 +53,55 @@ export async function loadSupplierImports(filters: AdminSupplierImportFilters): 
       page: String(filters.historyPage),
       pageSize: String(filters.historyPageSize),
     });
-    const [sourcesResponse, draftsResponse, runsResponse, archivedRunsResponse, schedulesResponse] = await Promise.all(
-      [
-        requestAdminCatalog('/api/v1/supplier-imports/sources', token),
-        requestAdminCatalog(`/api/v1/supplier-imports/drafts?${draftQuery}`, token),
-        requestAdminCatalog(
-          `/api/v1/supplier-imports/runs?view=ACTIVE&page=${filters.runPage}&pageSize=${filters.runPageSize}`,
-          token,
-        ),
-        requestAdminCatalog(`/api/v1/supplier-imports/runs?${historyQuery}`, token),
-        requestAdminCatalog('/api/v1/supplier-imports/schedules', token),
-      ],
-    );
-    if (!sourcesResponse.ok || !draftsResponse.ok || !runsResponse.ok || !archivedRunsResponse.ok || !schedulesResponse.ok)
+    const [
+      sourcesResponse,
+      draftsResponse,
+      runsResponse,
+      archivedRunsResponse,
+      schedulesResponse,
+      catalogCategoriesResponse,
+      sourceChangesResponse,
+    ] = await Promise.all([
+      requestAdminCatalog('/api/v1/supplier-imports/sources', token),
+      requestAdminCatalog(`/api/v1/supplier-imports/drafts?${draftQuery}`, token),
+      requestAdminCatalog(
+        `/api/v1/supplier-imports/runs?view=ACTIVE&page=${filters.runPage}&pageSize=${filters.runPageSize}`,
+        token,
+      ),
+      requestAdminCatalog(`/api/v1/supplier-imports/runs?${historyQuery}`, token),
+      requestAdminCatalog('/api/v1/supplier-imports/schedules', token),
+      requestAdminCatalog('/api/v1/catalog/categories', token),
+      requestAdminCatalog('/api/v1/supplier-imports/changes', token),
+    ]);
+    if (
+      !sourcesResponse.ok ||
+      !draftsResponse.ok ||
+      !runsResponse.ok ||
+      !archivedRunsResponse.ok ||
+      !schedulesResponse.ok ||
+      !catalogCategoriesResponse.ok ||
+      !sourceChangesResponse.ok
+    )
       return { data: null, failed: true };
     const sources = parseSupplierImportSources(await readJsonResponse(sourcesResponse));
     const drafts = parseSupplierImportDraftPage(await readJsonResponse(draftsResponse));
     const runs = parseSupplierCrawlRunPage(await readJsonResponse(runsResponse));
     const archivedRuns = parseSupplierCrawlRunPage(await readJsonResponse(archivedRunsResponse));
     const schedules = parseSupplierCrawlSchedules(await readJsonResponse(schedulesResponse));
-    if (!sources || !drafts || !runs || !archivedRuns || !schedules) return { data: null, failed: true };
+    const catalogCategories = parseSupplierCatalogCategories(
+      await readJsonResponse(catalogCategoriesResponse),
+    );
+    const sourceChanges = parseSupplierSourceChanges(await readJsonResponse(sourceChangesResponse));
+    if (
+      !sources ||
+      !drafts ||
+      !runs ||
+      !archivedRuns ||
+      !schedules ||
+      !catalogCategories ||
+      !sourceChanges
+    )
+      return { data: null, failed: true };
     const categoryResponses = await Promise.all(
       sources
         .filter((source) => source.supported)
@@ -95,6 +126,8 @@ export async function loadSupplierImports(filters: AdminSupplierImportFilters): 
         runs,
         archivedRuns,
         schedules,
+        catalogCategories,
+        sourceChanges,
         categories: categoryGroups.flatMap((group) => group!),
       },
       failed: false,

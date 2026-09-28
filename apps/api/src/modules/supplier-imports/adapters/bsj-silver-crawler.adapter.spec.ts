@@ -6,7 +6,7 @@ describe('BsjSilverCrawlerAdapter', () => {
   it('extracts reviewable product data from a BSJ product page', () => {
     const html = `
       <script type="application/ld+json">
-        {"@type":"Product","name":"عنوان ساختاریافته","sku":"10611820","description":"دستبند &amp; نقره","image":["https://bsjsilver.com/images/structured.webp"],"price":"246380000","priceCurrency":"IRR"}
+        {"@type":"Product","name":"عنوان ساختاریافته","sku":"10611820","description":"دستبند &amp; نقره","image":["https://bsjsilver.com/images/structured.webp"],"price":"246380000","priceCurrency":"IRR","offers":{"availability":"https://schema.org/InStock"}}
       </script>
       <div id="frmSecProductMain"><h1>دستبند نقره ونکلیف رادیوم مدل ۷</h1></div>
       <a class="cro-category-name">دستبند نقره</a>
@@ -34,6 +34,7 @@ describe('BsjSilverCrawlerAdapter', () => {
         description: 'دستبند & نقره',
         sourceCategory: 'دستبند نقره',
         supplierRetailPriceToman: 24_638_000,
+        availability: 'IN_STOCK',
         weightGrams: 13.78,
         attributes: [
           { key: 'وزن تقریبی', value: '13.780 گرم' },

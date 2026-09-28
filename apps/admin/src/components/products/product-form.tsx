@@ -88,12 +88,14 @@ async function loadSupplierImage(draftId: string, imageIndex: number): Promise<F
     throw new Error('یکی از تصاویر تأمین‌کننده فرمت معتبر ندارد یا بزرگ‌تر از ۱۰ مگابایت است.');
   }
   const extension =
-    ({
-      'image/jpeg': 'jpg',
-      'image/png': 'png',
-      'image/webp': 'webp',
-      'image/avif': 'avif',
-    } as Record<string, string>)[blob.type] ?? 'jpg';
+    (
+      {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+        'image/avif': 'avif',
+      } as Record<string, string>
+    )[blob.type] ?? 'jpg';
   return new File([blob], `supplier-image-${imageIndex + 1}.${extension}`, { type: blob.type });
 }
 
@@ -458,8 +460,8 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
 
       {importDraft ? (
         <Alert tone="info" title="ساخت محصول از پیش‌نویس تأمین‌کننده">
-          عنوان، توضیحات، ویژگی‌ها، وزن و تصاویر دریافت‌شده به این فرم منتقل شده‌اند. قیمت
-          تک‌فروشی تأمین‌کننده فقط مرجع است و قیمت فروش باید توسط شما ثبت شود.
+          عنوان، توضیحات، ویژگی‌ها، وزن و تصاویر دریافت‌شده به این فرم منتقل شده‌اند. قیمت تک‌فروشی
+          تأمین‌کننده فقط مرجع است و قیمت فروش باید توسط شما ثبت شود.
           <a
             href={importDraft.sourceUrl}
             target="_blank"
@@ -498,7 +500,9 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
               <Input
                 {...props}
                 name="slug"
-                defaultValue={product?.slug ?? (importDraft ? importedProductSlug(importDraft) : '')}
+                defaultValue={
+                  product?.slug ?? (importDraft ? importedProductSlug(importDraft) : '')
+                }
                 placeholder="silver-stone-ring"
                 dir="ltr"
                 required
@@ -548,8 +552,8 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
           importDraft?.supplierRetailPriceToman !== undefined ? (
             <Alert tone="info" className="mb-4">
               قیمت تک‌فروشی ثبت‌شده در سایت تأمین‌کننده:{' '}
-              <strong>{toPersianDigits(importDraft.supplierRetailPriceToman)} تومان</strong>. این مبلغ
-              فقط برای مقایسه نمایش داده شده و در قیمت فروش کپی نمی‌شود.
+              <strong>{toPersianDigits(importDraft.supplierRetailPriceToman)} تومان</strong>. این
+              مبلغ فقط برای مقایسه نمایش داده شده و در قیمت فروش کپی نمی‌شود.
             </Alert>
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
@@ -674,7 +678,10 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
                 name="categoryIds"
                 value={category.id}
                 label={category.name}
-                defaultChecked={product?.categories.some(({ id }) => id === category.id)}
+                defaultChecked={
+                  product?.categories.some(({ id }) => id === category.id) ||
+                  (mode === 'create' && importDraft?.catalogCategoryId === category.id)
+                }
               />
             ))}
           </div>

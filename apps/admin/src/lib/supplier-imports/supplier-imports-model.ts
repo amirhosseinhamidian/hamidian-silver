@@ -26,6 +26,8 @@ export type AdminSupplierImportDraft = Readonly<{
   description: string | null;
   sourceCategory: string | null;
   supplierRetailPriceToman: number | null;
+  sourceAvailability: 'UNKNOWN' | 'IN_STOCK' | 'OUT_OF_STOCK';
+  catalogCategoryId: string | null;
   weightGrams: number | null;
   attributes: readonly AdminSupplierImportAttribute[];
   imageUrls: readonly string[];
@@ -51,6 +53,31 @@ export type AdminSupplierSourceCategory = Readonly<{
   externalKey: string;
   name: string;
   url: string;
+  catalogCategoryId: string | null;
+  catalogCategoryName: string | null;
+}>;
+
+export type AdminSupplierCatalogCategory = Readonly<{ id: string; name: string }>;
+
+export type AdminSupplierSourceChange = Readonly<{
+  id: string;
+  type: 'PRICE' | 'AVAILABILITY';
+  previousValue: string | null;
+  newValue: string | null;
+  createdAt: string;
+  draftId: string;
+  draftTitle: string;
+  sourceUrl: string;
+  supplierName: string;
+  productId: string | null;
+  productName: string | null;
+}>;
+
+export type AdminSupplierCrawlIssue = Readonly<{
+  id: string;
+  sourceUrl: string;
+  errorMessage: string;
+  createdAt: string;
 }>;
 
 export type AdminSupplierCrawlRun = Readonly<{
@@ -61,6 +88,7 @@ export type AdminSupplierCrawlRun = Readonly<{
   categoryName: string | null;
   isScheduled: boolean;
   scheduledCategoryIds: readonly string[];
+  issues: readonly AdminSupplierCrawlIssue[];
   status: AdminSupplierCrawlRunStatus;
   requestedLimit: number | null;
   currentPage: number;
@@ -69,6 +97,7 @@ export type AdminSupplierCrawlRun = Readonly<{
   failedCount: number;
   skippedCount: number;
   stopAtKnown: boolean;
+  monitorKnownProducts: boolean;
   errorMessage: string | null;
   archivedAt: string | null;
   archivedBy: string | null;
@@ -84,6 +113,7 @@ export type AdminSupplierCrawlSchedule = Readonly<{
   timezone: string;
   requestedLimit: number;
   stopAtKnown: boolean;
+  monitorKnownProducts: boolean;
   maxRetries: number;
   retryDelayMinutes: number;
   nextRunAt: string | null;
@@ -124,6 +154,8 @@ export type AdminSupplierImportsData = Readonly<{
   runs: AdminSupplierImportPage<AdminSupplierCrawlRun>;
   archivedRuns: AdminSupplierImportPage<AdminSupplierCrawlRun>;
   schedules: readonly AdminSupplierCrawlSchedule[];
+  catalogCategories: readonly AdminSupplierCatalogCategory[];
+  sourceChanges: readonly AdminSupplierSourceChange[];
 }>;
 
 const STATUSES = new Set<AdminSupplierImportStatus>([
@@ -205,6 +237,7 @@ export function parseSupplierImportDrafts(
     const reviewer = record(item?.reviewedBy);
     const importer = record(item?.importedBy);
     const product = record(item?.product);
+    const sourceCategoryRecord = record(item?.sourceCategoryRecord);
     const status = text(item?.status) as AdminSupplierImportStatus | null;
     const rawAttributes = Array.isArray(item?.attributes) ? item.attributes : [];
     const attributes = rawAttributes.map((attribute) => {
@@ -267,6 +300,11 @@ export function parseSupplierImportDrafts(
       description: text(item?.description),
       sourceCategory: text(item?.sourceCategory),
       supplierRetailPriceToman: number(item?.supplierRetailPriceToman),
+      sourceAvailability:
+        item?.sourceAvailability === 'IN_STOCK' || item?.sourceAvailability === 'OUT_OF_STOCK'
+          ? item.sourceAvailability
+          : 'UNKNOWN',
+      catalogCategoryId: text(sourceCategoryRecord?.catalogCategoryId),
       weightGrams: number(item?.weightGrams),
       attributes: attributes as readonly AdminSupplierImportAttribute[],
       imageUrls,
@@ -337,8 +375,17 @@ export function parseSupplierSourceCategories(
     const externalKey = text(item?.externalKey);
     const name = text(item?.name);
     const url = text(item?.url);
+    const catalogCategory = record(item?.catalogCategory);
     return id && supplierSourceId && externalKey && name && url
-      ? { id, supplierSourceId, externalKey, name, url }
+      ? {
+          id,
+          supplierSourceId,
+          externalKey,
+          name,
+          url,
+          catalogCategoryId: text(item?.catalogCategoryId),
+          catalogCategoryName: text(catalogCategory?.name),
+        }
       : null;
   });
   return parsed.some((item) => item === null)
@@ -365,6 +412,17 @@ export function parseSupplierCrawlRuns(value: unknown): readonly AdminSupplierCr
     const succeededCount = number(item?.succeededCount);
     const failedCount = number(item?.failedCount);
     const skippedCount = number(item?.skippedCount);
+    const rawIssues = Array.isArray(item?.issues) ? item.issues : [];
+    const issues = rawIssues.map((entry) => {
+      const issue = record(entry);
+      const issueId = text(issue?.id);
+      const sourceUrl = text(issue?.sourceUrl);
+      const errorMessage = text(issue?.errorMessage);
+      const issueCreatedAt = text(issue?.createdAt);
+      return issueId && sourceUrl && errorMessage && issueCreatedAt
+        ? { id: issueId, sourceUrl, errorMessage, createdAt: issueCreatedAt }
+        : null;
+    });
     if (
       !id ||
       !supplierSourceId ||
@@ -377,7 +435,8 @@ export function parseSupplierCrawlRuns(value: unknown): readonly AdminSupplierCr
       discoveredCount === null ||
       succeededCount === null ||
       failedCount === null ||
-      skippedCount === null
+      skippedCount === null ||
+      issues.some((issue) => issue === null)
     ) {
       return null;
     }
@@ -393,6 +452,7 @@ export function parseSupplierCrawlRuns(value: unknown): readonly AdminSupplierCr
             (categoryId): categoryId is string => typeof categoryId === 'string',
           )
         : [],
+      issues: issues as readonly AdminSupplierCrawlIssue[],
       status,
       requestedLimit: number(item?.requestedLimit),
       currentPage,
@@ -401,6 +461,7 @@ export function parseSupplierCrawlRuns(value: unknown): readonly AdminSupplierCr
       failedCount,
       skippedCount,
       stopAtKnown: item?.stopAtKnown === true,
+      monitorKnownProducts: item?.monitorKnownProducts === true,
       errorMessage: text(item?.errorMessage),
       archivedAt: text(item?.archivedAt),
       archivedBy:
@@ -411,6 +472,68 @@ export function parseSupplierCrawlRuns(value: unknown): readonly AdminSupplierCr
     } satisfies AdminSupplierCrawlRun;
   });
   return parsed.some((item) => item === null) ? null : (parsed as readonly AdminSupplierCrawlRun[]);
+}
+
+export function parseSupplierCatalogCategories(
+  value: unknown,
+): readonly AdminSupplierCatalogCategory[] | null {
+  if (!Array.isArray(value)) return null;
+  const parsed = value.map((entry) => {
+    const item = record(entry);
+    const id = text(item?.id);
+    const name = text(item?.name);
+    return id && name ? { id, name } : null;
+  });
+  return parsed.some((item) => item === null)
+    ? null
+    : (parsed as readonly AdminSupplierCatalogCategory[]);
+}
+
+export function parseSupplierSourceChanges(
+  value: unknown,
+): readonly AdminSupplierSourceChange[] | null {
+  if (!Array.isArray(value)) return null;
+  const parsed = value.map((entry) => {
+    const item = record(entry);
+    const draft = record(item?.draft);
+    const product = record(draft?.product);
+    const supplierSource = record(draft?.supplierSource);
+    const supplier = record(supplierSource?.supplier);
+    const id = text(item?.id);
+    const type = text(item?.type);
+    const createdAt = text(item?.createdAt);
+    const draftId = text(draft?.id);
+    const draftTitle = text(draft?.title);
+    const sourceUrl = text(draft?.sourceUrl);
+    const supplierName = text(supplier?.name);
+    if (
+      !id ||
+      !createdAt ||
+      !draftId ||
+      !draftTitle ||
+      !sourceUrl ||
+      !supplierName ||
+      (type !== 'PRICE' && type !== 'AVAILABILITY')
+    ) {
+      return null;
+    }
+    return {
+      id,
+      type,
+      previousValue: text(item?.previousValue),
+      newValue: text(item?.newValue),
+      createdAt,
+      draftId,
+      draftTitle,
+      sourceUrl,
+      supplierName,
+      productId: text(product?.id),
+      productName: text(product?.name),
+    } satisfies AdminSupplierSourceChange;
+  });
+  return parsed.some((item) => item === null)
+    ? null
+    : (parsed as readonly AdminSupplierSourceChange[]);
 }
 
 export function parseSupplierCrawlRunPage(
@@ -461,6 +584,7 @@ export function parseSupplierCrawlSchedules(
       timezone,
       requestedLimit,
       stopAtKnown: item?.stopAtKnown === true,
+      monitorKnownProducts: item?.monitorKnownProducts === true,
       maxRetries,
       retryDelayMinutes,
       nextRunAt: text(item?.nextRunAt),

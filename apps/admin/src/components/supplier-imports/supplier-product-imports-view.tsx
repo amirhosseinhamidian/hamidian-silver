@@ -7,6 +7,8 @@ import { type FormEvent, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { SupplierBulkCrawlCard } from './supplier-bulk-crawl-card';
 import { SupplierCrawlScheduleCard } from './supplier-crawl-schedule-card';
+import { SupplierCategoryMappingCard } from './supplier-category-mapping-card';
+import { SupplierSourceChangesCard } from './supplier-source-changes-card';
 import { Badge } from '@/components/ui/badge';
 import { BottomSheet, BottomSheetContent } from '@/components/ui/bottom-sheet';
 import { Button, ButtonLink } from '@/components/ui/button';
@@ -31,6 +33,8 @@ import {
   type AdminSupplierCrawlRun,
   type AdminSupplierCrawlSchedule,
   type AdminSupplierSourceCategory,
+  type AdminSupplierCatalogCategory,
+  type AdminSupplierSourceChange,
 } from '@/lib/supplier-imports/supplier-imports-model';
 
 type Props = Readonly<{
@@ -40,6 +44,8 @@ type Props = Readonly<{
   runs: AdminSupplierImportPage<AdminSupplierCrawlRun>;
   archivedRuns: AdminSupplierImportPage<AdminSupplierCrawlRun>;
   schedules?: readonly AdminSupplierCrawlSchedule[];
+  catalogCategories?: readonly AdminSupplierCatalogCategory[];
+  sourceChanges?: readonly AdminSupplierSourceChange[];
   filters: AdminSupplierImportFilters;
   failed: boolean;
   canWrite: boolean;
@@ -230,6 +236,8 @@ export function SupplierProductImportsView({
   runs,
   archivedRuns,
   schedules = [],
+  catalogCategories = [],
+  sourceChanges = [],
   filters,
   failed,
   canWrite,
@@ -280,6 +288,15 @@ export function SupplierProductImportsView({
         sources={sources}
         categories={categories}
         schedules={schedules}
+        canWrite={canWrite}
+      />
+
+      <SupplierSourceChangesCard changes={sourceChanges} canWrite={canWrite} />
+
+      <SupplierCategoryMappingCard
+        sources={sources}
+        categories={categories}
+        catalogCategories={catalogCategories}
         canWrite={canWrite}
       />
 
@@ -421,6 +438,16 @@ export function SupplierProductImportsView({
                         {draft.source.supplierName} ·{' '}
                         {draft.sourceCategory ?? 'بدون دسته‌بندی منبع'}
                       </p>
+                    </div>
+                    <div>
+                      <dt className="text-[var(--admin-color-muted)]">موجودی در منبع</dt>
+                      <dd className="mt-1 font-semibold">
+                        {draft.sourceAvailability === 'IN_STOCK'
+                          ? 'موجود'
+                          : draft.sourceAvailability === 'OUT_OF_STOCK'
+                            ? 'ناموجود'
+                            : 'نامشخص'}
+                      </dd>
                     </div>
                     {statusBadge(draft.status)}
                   </div>

@@ -28,6 +28,8 @@ const categories = [
     externalKey: '12',
     name: 'دستبند',
     url: 'https://bsjsilver.com/product/category/12-bracelet',
+    catalogCategoryId: null,
+    catalogCategoryName: null,
   },
 ] as const;
 
@@ -83,6 +85,7 @@ describe('SupplierCrawlScheduleCard', () => {
             timezone: 'Asia/Tehran',
             requestedLimit: 100,
             stopAtKnown: true,
+            monitorKnownProducts: true,
             maxRetries: 2,
             retryDelayMinutes: 15,
             nextRunAt: '2026-09-29T22:30:00.000Z',

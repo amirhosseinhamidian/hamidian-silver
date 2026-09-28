@@ -64,6 +64,8 @@ describe('SupplierBulkCrawlCard', () => {
             externalKey: '12',
             name: 'دستبند',
             url: 'https://bsjsilver.com/product/category/12-bracelet',
+            catalogCategoryId: null,
+            catalogCategoryName: null,
           },
         ]}
         runs={runPage()}
@@ -76,7 +78,7 @@ describe('SupplierBulkCrawlCard', () => {
     expect(screen.getByRole('combobox', { name: 'دسته‌بندی تأمین‌کننده' })).toHaveTextContent(
       'همه محصولات',
     );
-    fireEvent.change(screen.getByLabelText('حداکثر محصولات جدید'), {
+    fireEvent.change(screen.getByLabelText('حداکثر محصول در هر اجرا'), {
       target: { value: '۲۵' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'شروع دریافت' }));
@@ -89,6 +91,7 @@ describe('SupplierBulkCrawlCard', () => {
           supplierSourceId: source.id,
           limit: 25,
           stopAtKnown: false,
+          monitorKnownProducts: true,
         }),
       }),
     );
@@ -111,6 +114,7 @@ describe('SupplierBulkCrawlCard', () => {
               categoryName: 'گوشواره',
               isScheduled: false,
               scheduledCategoryIds: [],
+              issues: [],
               status: 'RUNNING',
               requestedLimit: 100,
               currentPage: 2,
@@ -119,6 +123,7 @@ describe('SupplierBulkCrawlCard', () => {
               failedCount: 0,
               skippedCount: 8,
               stopAtKnown: false,
+              monitorKnownProducts: true,
               errorMessage: null,
               archivedAt: null,
               archivedBy: null,
@@ -132,10 +137,10 @@ describe('SupplierBulkCrawlCard', () => {
       />,
     );
 
-    expect(screen.getByText(/پیشرفت: ۲۰٪/)).toBeInTheDocument();
+    expect(screen.getByText(/پیشرفت: ۲۸٪/)).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'پیشرفت دریافت گوشواره' })).toHaveAttribute(
       'aria-valuenow',
-      '20',
+      '28',
     );
   });
 
@@ -157,6 +162,8 @@ describe('SupplierBulkCrawlCard', () => {
             externalKey: '12',
             name: 'دستبند نقره',
             url: 'https://bsjsilver.com/product/category/12-bracelet',
+            catalogCategoryId: null,
+            catalogCategoryName: null,
           },
         ]}
         runs={{
@@ -171,6 +178,7 @@ describe('SupplierBulkCrawlCard', () => {
               categoryName: null,
               isScheduled: true,
               scheduledCategoryIds: ['category-1'],
+              issues: [],
               status: 'SUCCEEDED',
               requestedLimit: 25,
               currentPage: 2,
@@ -179,6 +187,7 @@ describe('SupplierBulkCrawlCard', () => {
               failedCount: 0,
               skippedCount: 0,
               stopAtKnown: false,
+              monitorKnownProducts: true,
               errorMessage: null,
               archivedAt: null,
               archivedBy: null,

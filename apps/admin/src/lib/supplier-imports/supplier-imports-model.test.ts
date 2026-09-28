@@ -9,6 +9,8 @@ import {
   parseSupplierCrawlRuns,
   parseSupplierCrawlRunPage,
   parseSupplierCrawlSchedules,
+  parseSupplierCatalogCategories,
+  parseSupplierSourceChanges,
   parseSupplierSourceCategories,
 } from '@/lib/supplier-imports/supplier-imports-model';
 
@@ -121,9 +123,16 @@ describe('supplier imports model', () => {
           externalKey: '12',
           name: 'دستبند',
           url: 'https://bsjsilver.com/product/category/12-bracelet',
+          catalogCategoryId: 'catalog-1',
+          catalogCategory: { id: 'catalog-1', name: 'دستبند نقره' },
         },
-      ]),
-    ).toHaveLength(1);
+      ])?.[0],
+    ).toEqual(
+      expect.objectContaining({
+        catalogCategoryId: 'catalog-1',
+        catalogCategoryName: 'دستبند نقره',
+      }),
+    );
     expect(
       parseSupplierCrawlRuns([
         {
@@ -142,6 +151,14 @@ describe('supplier imports model', () => {
           supplierSource: { name: 'سایت اصلی', supplier: { name: 'بی‌اس‌جی' } },
           category: { name: 'دستبند' },
           schedule: { categoryIds: ['category-1'] },
+          issues: [
+            {
+              id: 'issue-1',
+              sourceUrl: 'https://bsjsilver.com/product/broken',
+              errorMessage: 'دریافت محصول ناموفق بود.',
+              createdAt: '2026-09-27T10:05:00.000Z',
+            },
+          ],
         },
       ])?.[0],
     ).toEqual(
@@ -150,8 +167,40 @@ describe('supplier imports model', () => {
         succeededCount: 12,
         isScheduled: true,
         scheduledCategoryIds: ['category-1'],
+        issues: [expect.objectContaining({ id: 'issue-1' })],
       }),
     );
+  });
+
+  it('parses catalog categories and unacknowledged supplier changes', () => {
+    expect(parseSupplierCatalogCategories([{ id: 'catalog-1', name: 'دستبند نقره' }])).toEqual([
+      { id: 'catalog-1', name: 'دستبند نقره' },
+    ]);
+
+    expect(
+      parseSupplierSourceChanges([
+        {
+          id: 'change-1',
+          type: 'PRICE',
+          previousValue: '1000000',
+          newValue: '1200000',
+          createdAt: '2026-09-28T10:00:00.000Z',
+          draft: {
+            id: 'draft-1',
+            title: 'دستبند نقره',
+            sourceUrl: 'https://bsjsilver.com/product/10611820-item',
+            product: { id: 'product-1', name: 'دستبند سایت' },
+            supplierSource: { supplier: { name: 'بی‌اس‌جی' } },
+          },
+        },
+      ]),
+    ).toEqual([
+      expect.objectContaining({
+        id: 'change-1',
+        productId: 'product-1',
+        productName: 'دستبند سایت',
+      }),
+    ]);
   });
 
   it('parses server-side draft and crawl history pages', () => {
@@ -229,6 +278,7 @@ describe('supplier imports model', () => {
           timezone: 'Asia/Tehran',
           requestedLimit: 100,
           stopAtKnown: true,
+          monitorKnownProducts: true,
           maxRetries: 2,
           retryDelayMinutes: 15,
           nextRunAt: '2026-09-29T22:30:00.000Z',
@@ -247,6 +297,7 @@ describe('supplier imports model', () => {
         supplierSourceId: 'source-1',
         isEnabled: true,
         categoryIds: ['category-1'],
+        monitorKnownProducts: true,
         lastRun: expect.objectContaining({ status: 'SUCCEEDED' }),
       }),
     );

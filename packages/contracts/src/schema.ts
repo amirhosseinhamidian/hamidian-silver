@@ -3076,6 +3076,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/supplier-imports/categories/{categoryId}/mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SupplierImportsController_updateCategoryMapping_v1"];
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_listSourceChanges_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/changes/{changeId}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_acknowledgeSourceChange_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/supplier-imports/categories/sync": {
         parameters: {
             query?: never;
@@ -3198,6 +3246,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["SupplierImportsController_resumeRun_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/runs/{runId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_retryRun_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4945,6 +5009,10 @@ export interface components {
             permanent: boolean;
         };
         Object: Record<string, never>;
+        UpdateSupplierCategoryMappingDto: {
+            /** Format: uuid */
+            catalogCategoryId?: string | null;
+        };
         SyncSupplierCategoriesDto: {
             /** Format: uuid */
             supplierSourceId: string;
@@ -4955,6 +5023,7 @@ export interface components {
             categoryIds: string[];
             requestedLimit: number;
             stopAtKnown: boolean;
+            monitorKnownProducts: boolean;
             maxRetries: number;
             retryDelayMinutes: number;
         };
@@ -4965,6 +5034,7 @@ export interface components {
             categoryId?: string;
             limit: number;
             stopAtKnown: boolean;
+            monitorKnownProducts: boolean;
         };
         StartSupplierCrawlDto: {
             /** Format: uuid */
@@ -7433,7 +7503,7 @@ export interface operations {
     NotificationOutboxRecoveryController_list_v1: {
         parameters: {
             query?: {
-                status?: "FAILED" | "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT" | "UNKNOWN";
+                status?: "FAILED" | "UNKNOWN" | "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT";
                 source?: "CUSTOMER" | "OPERATIONAL";
                 limit?: number;
             };
@@ -10086,6 +10156,69 @@ export interface operations {
             };
         };
     };
+    SupplierImportsController_updateCategoryMapping_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSupplierCategoryMappingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_listSourceChanges_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_acknowledgeSourceChange_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     SupplierImportsController_syncCategories_v1: {
         parameters: {
             query?: never;
@@ -10230,6 +10363,25 @@ export interface operations {
         };
     };
     SupplierImportsController_resumeRun_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_retryRun_v1: {
         parameters: {
             query?: never;
             header?: never;

@@ -12,10 +12,19 @@ describe('SupplierImportsService', () => {
     supplierSource: { findFirst: jest.fn() },
     supplierSourceCategory: {
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       findMany: jest.fn(),
+      update: jest.fn(),
       updateMany: jest.fn(),
       upsert: jest.fn(),
     },
+    category: { findFirst: jest.fn() },
+    supplierProductSourceChange: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      updateMany: jest.fn(),
+    },
+    supplierCrawlIssue: { create: jest.fn() },
     supplierCrawlRun: {
       count: jest.fn(),
       findMany: jest.fn(),
@@ -62,6 +71,7 @@ describe('SupplierImportsService', () => {
     prisma.supplierCrawlSchedule.update.mockResolvedValue({ id: 'schedule-1' });
     prisma.supplierCrawlSchedule.updateMany.mockResolvedValue({ count: 1 });
     prisma.supplierProductImportDraft.upsert.mockResolvedValue(draft);
+    prisma.supplierProductSourceChange.create.mockResolvedValue({ id: 'change-1' });
     prisma.$transaction.mockImplementation(
       (operation: ((transaction: typeof prisma) => unknown) | readonly unknown[]) =>
         Array.isArray(operation) ? Promise.all(operation) : operation(prisma),
@@ -139,6 +149,7 @@ describe('SupplierImportsService', () => {
         categoryId: '10000000-0000-4000-8000-000000000004',
         limit: 100,
         stopAtKnown: true,
+        monitorKnownProducts: true,
       }),
     ).resolves.toEqual({ id: runId, status: 'QUEUED' });
     expect(prisma.supplierCrawlRun.create).toHaveBeenCalledWith({
@@ -146,6 +157,7 @@ describe('SupplierImportsService', () => {
         scope: 'CATEGORY_URL',
         requestedLimit: 100,
         stopAtKnown: true,
+        monitorKnownProducts: true,
       }),
     });
   });
@@ -160,6 +172,7 @@ describe('SupplierImportsService', () => {
         categoryIds: [],
         requestedLimit: 150,
         stopAtKnown: true,
+        monitorKnownProducts: true,
         maxRetries: 3,
         retryDelayMinutes: 20,
       }),
@@ -186,6 +199,7 @@ describe('SupplierImportsService', () => {
       categoryIds: [categoryId],
       requestedLimit: 200,
       stopAtKnown: true,
+      monitorKnownProducts: true,
       maxRetries: 2,
       retryDelayMinutes: 15,
       supplierSource: {},
@@ -206,7 +220,10 @@ describe('SupplierImportsService', () => {
     ]);
     prisma.supplierCrawlRun.create.mockResolvedValue({ id: runId, status: 'QUEUED' });
 
-    await expect(service.runScheduleNow(sourceId)).resolves.toEqual({ id: runId, status: 'QUEUED' });
+    await expect(service.runScheduleNow(sourceId)).resolves.toEqual({
+      id: runId,
+      status: 'QUEUED',
+    });
     expect(prisma.supplierCrawlRun.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         scheduleId: 'schedule-1',
@@ -229,6 +246,7 @@ describe('SupplierImportsService', () => {
         timezone: 'Asia/Tehran',
         requestedLimit: 100,
         stopAtKnown: true,
+        monitorKnownProducts: true,
         maxRetries: 2,
         retryDelayMinutes: 15,
         supplierSource: {},
@@ -250,7 +268,10 @@ describe('SupplierImportsService', () => {
     );
     expect(prisma.supplierCrawlSchedule.update).toHaveBeenCalledWith({
       where: { id: 'schedule-1' },
-      data: expect.objectContaining({ lastEnqueuedAt: expect.any(Date), nextRunAt: expect.any(Date) }),
+      data: expect.objectContaining({
+        lastEnqueuedAt: expect.any(Date),
+        nextRunAt: expect.any(Date),
+      }),
     });
   });
 
@@ -283,6 +304,76 @@ describe('SupplierImportsService', () => {
       expect.objectContaining({
         where: expect.objectContaining({ id: runId, archivedAt: null }),
         data: expect.objectContaining({ archivedByUserId: userId }),
+      }),
+    );
+  });
+
+  it('records supplier price and availability changes without changing catalog pricing', async () => {
+    prisma.supplierProductImportDraft.findUnique.mockResolvedValue({
+      id: draft.id,
+      productId: '10000000-0000-4000-8000-000000000006',
+      status: 'IMPORTED',
+      supplierRetailPriceToman: 1_000_000,
+      sourceAvailability: 'OUT_OF_STOCK',
+    });
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        `
+          <script type="application/ld+json">
+            {"@type":"Product","name":"دستبند نقره","sku":"10611820","price":"12000000","priceCurrency":"IRR","offers":{"availability":"https://schema.org/InStock"}}
+          </script>
+          <div id="frmSecProductMain"><h1>دستبند نقره</h1></div>
+        `,
+        { status: 200, headers: { 'Content-Type': 'text/html' } },
+      ),
+    );
+
+    await service.crawlProduct({
+      supplierSourceId: sourceId,
+      targetUrl: 'https://bsjsilver.com/product/10611820-item',
+    });
+
+    expect(prisma.supplierProductSourceChange.create).toHaveBeenCalledTimes(2);
+    expect(prisma.supplierProductSourceChange.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        type: 'PRICE',
+        previousValue: '1000000',
+        newValue: '1200000',
+      }),
+    });
+    expect(prisma.supplierProductSourceChange.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        type: 'AVAILABILITY',
+        previousValue: 'OUT_OF_STOCK',
+        newValue: 'IN_STOCK',
+      }),
+    });
+  });
+
+  it('validates and saves a supplier-to-catalog category mapping', async () => {
+    const categoryId = '10000000-0000-4000-8000-000000000004';
+    const catalogCategoryId = '10000000-0000-4000-8000-000000000007';
+    prisma.supplierSourceCategory.findUnique.mockResolvedValue({ id: categoryId });
+    prisma.category.findFirst.mockResolvedValue({ id: catalogCategoryId });
+    prisma.supplierSourceCategory.update.mockResolvedValue({
+      id: categoryId,
+      catalogCategoryId,
+    });
+
+    await expect(service.updateCategoryMapping(categoryId, { catalogCategoryId })).resolves.toEqual(
+      { id: categoryId, catalogCategoryId },
+    );
+    expect(prisma.supplierSourceCategory.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: categoryId }, data: { catalogCategoryId } }),
+    );
+  });
+
+  it('requeues a failed crawl for a manual retry', async () => {
+    await expect(service.retryRun(runId)).resolves.toEqual({ id: runId, status: 'QUEUED' });
+    expect(prisma.supplierCrawlRun.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: runId, status: 'FAILED' },
+        data: expect.objectContaining({ status: 'QUEUED', retryCount: 0 }),
       }),
     );
   });

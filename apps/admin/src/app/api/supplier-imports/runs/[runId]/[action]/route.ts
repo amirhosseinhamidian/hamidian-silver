@@ -5,7 +5,7 @@ type RouteContext = Readonly<{ params: Promise<{ runId: string; action: string }
 
 export async function POST(request: Request, context: RouteContext) {
   const { runId, action } = await context.params;
-  if (!['pause', 'resume', 'archive'].includes(action)) {
+  if (!['pause', 'resume', 'retry', 'archive'].includes(action)) {
     return NextResponse.json({ message: 'عملیات نامعتبر است.' }, { status: 404 });
   }
   return forwardSupplierImportMutation(

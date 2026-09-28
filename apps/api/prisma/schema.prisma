@@ -69,6 +69,7 @@ model User {
   supplierProductImportsReviewed      SupplierProductImportDraft[]       @relation("SupplierProductImportReviewer")
   supplierProductImportsImported      SupplierProductImportDraft[]       @relation("SupplierProductImportImporter")
   supplierCrawlRunsArchived           SupplierCrawlRun[]                  @relation("SupplierCrawlRunArchiver")
+  supplierSourceChangesAcknowledged   SupplierProductSourceChange[]       @relation("SupplierSourceChangeAcknowledger")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -477,6 +478,7 @@ model Category {
   seoOgMedia       Media?            @relation("CategorySeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   products    ProductCategory[]
   homepageFeature HomepageFeaturedCategory?
+  supplierSourceCategories SupplierSourceCategory[]
 
   @@index([parentId])
   @@index([imageId])
@@ -873,6 +875,17 @@ enum SupplierProductImportStatus {
   IMPORTED
 }
 
+enum SupplierSourceAvailability {
+  UNKNOWN
+  IN_STOCK
+  OUT_OF_STOCK
+}
+
+enum SupplierProductSourceChangeType {
+  PRICE
+  AVAILABILITY
+}
+
 model Supplier {
   id          String            @id @default(uuid()) @db.Uuid
   code        String            @unique @db.VarChar(64)
@@ -929,6 +942,7 @@ model SupplierCrawlRun {
   currentPage      Int                    @default(1)
   pendingCategoryUrls String[]             @default([]) @db.VarChar(2000)
   stopAtKnown      Boolean                @default(false)
+  monitorKnownProducts Boolean            @default(false)
   retryCount       Int                    @default(0)
   maxRetries       Int                    @default(0)
   retryDelayMinutes Int                   @default(15)
@@ -950,6 +964,8 @@ model SupplierCrawlRun {
   schedule         SupplierCrawlSchedule?  @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
   archivedBy       User?                   @relation("SupplierCrawlRunArchiver", fields: [archivedByUserId], references: [id], onDelete: SetNull)
   importDrafts     SupplierProductImportDraft[]
+  issues           SupplierCrawlIssue[]
+  sourceChanges    SupplierProductSourceChange[]
 
   @@index([supplierSourceId, createdAt])
   @@index([status, createdAt])
@@ -968,14 +984,18 @@ model SupplierSourceCategory {
   name             String             @db.VarChar(300)
   url              String             @db.VarChar(2000)
   isActive         Boolean            @default(true)
+  catalogCategoryId String?            @db.Uuid
   lastSeenAt       DateTime           @db.Timestamptz(3)
   createdAt        DateTime           @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime           @updatedAt @db.Timestamptz(3)
   supplierSource   SupplierSource     @relation(fields: [supplierSourceId], references: [id], onDelete: Restrict)
+  catalogCategory  Category?          @relation(fields: [catalogCategoryId], references: [id], onDelete: SetNull)
+  importDrafts     SupplierProductImportDraft[]
   crawlRuns        SupplierCrawlRun[]
 
   @@unique([supplierSourceId, externalKey])
   @@index([supplierSourceId, isActive, name])
+  @@index([catalogCategoryId])
   @@map("supplier_source_categories")
 }
 
@@ -988,6 +1008,7 @@ model SupplierCrawlSchedule {
   timezone          String         @default("Asia/Tehran") @db.VarChar(64)
   requestedLimit    Int            @default(100)
   stopAtKnown       Boolean        @default(true)
+  monitorKnownProducts Boolean      @default(true)
   maxRetries        Int            @default(3)
   retryDelayMinutes Int            @default(15)
   nextRunAt         DateTime?      @db.Timestamptz(3)
@@ -1012,7 +1033,9 @@ model SupplierProductImportDraft {
   title                      String                      @db.VarChar(300)
   description                String?
   sourceCategory             String?                     @db.VarChar(300)
+  sourceCategoryId           String?                     @db.Uuid
   supplierRetailPriceToman   Int?
+  sourceAvailability         SupplierSourceAvailability  @default(UNKNOWN)
   weightGrams                Decimal?                    @db.Decimal(10, 3)
   attributes                 Json
   imageUrls                  String[]                    @db.VarChar(2000)
@@ -1027,18 +1050,54 @@ model SupplierProductImportDraft {
   createdAt                  DateTime                    @default(now()) @db.Timestamptz(3)
   updatedAt                  DateTime                    @updatedAt @db.Timestamptz(3)
   supplierSource             SupplierSource              @relation(fields: [supplierSourceId], references: [id], onDelete: Restrict)
+  sourceCategoryRecord       SupplierSourceCategory?      @relation(fields: [sourceCategoryId], references: [id], onDelete: SetNull)
   crawlRun                   SupplierCrawlRun             @relation(fields: [crawlRunId], references: [id], onDelete: Restrict)
   reviewedBy                 User?                        @relation("SupplierProductImportReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
   product                    Product?                     @relation(fields: [productId], references: [id], onDelete: SetNull)
   importedBy                 User?                        @relation("SupplierProductImportImporter", fields: [importedByUserId], references: [id], onDelete: SetNull)
+  sourceChanges              SupplierProductSourceChange[]
 
   @@unique([supplierSourceId, sourceProductKey])
   @@index([status, updatedAt])
   @@index([supplierSourceId, updatedAt])
+  @@index([sourceCategoryId])
   @@index([crawlRunId])
   @@index([reviewedByUserId])
   @@index([importedByUserId])
   @@map("supplier_product_import_drafts")
+}
+
+model SupplierProductSourceChange {
+  id                   String                          @id @default(uuid()) @db.Uuid
+  draftId              String                          @db.Uuid
+  crawlRunId           String                          @db.Uuid
+  type                 SupplierProductSourceChangeType
+  previousValue        String?                         @db.VarChar(500)
+  newValue             String?                         @db.VarChar(500)
+  acknowledgedAt       DateTime?                       @db.Timestamptz(3)
+  acknowledgedByUserId String?                         @db.Uuid
+  createdAt            DateTime                        @default(now()) @db.Timestamptz(3)
+  draft                SupplierProductImportDraft      @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  crawlRun             SupplierCrawlRun                @relation(fields: [crawlRunId], references: [id], onDelete: Cascade)
+  acknowledgedBy       User?                           @relation("SupplierSourceChangeAcknowledger", fields: [acknowledgedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([acknowledgedAt, createdAt])
+  @@index([draftId, createdAt])
+  @@index([crawlRunId])
+  @@index([acknowledgedByUserId])
+  @@map("supplier_product_source_changes")
+}
+
+model SupplierCrawlIssue {
+  id           String           @id @default(uuid()) @db.Uuid
+  crawlRunId   String           @db.Uuid
+  sourceUrl    String           @db.VarChar(2000)
+  errorMessage String           @db.VarChar(1000)
+  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
+  crawlRun     SupplierCrawlRun @relation(fields: [crawlRunId], references: [id], onDelete: Cascade)
+
+  @@index([crawlRunId, createdAt])
+  @@map("supplier_crawl_issues")
 }
 
 model ProductSupplier {

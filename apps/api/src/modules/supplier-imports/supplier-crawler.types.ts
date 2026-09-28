@@ -11,6 +11,7 @@ export type CrawledSupplierProduct = Readonly<{
   description: string | null;
   sourceCategory: string | null;
   supplierRetailPriceToman: number | null;
+  availability: 'UNKNOWN' | 'IN_STOCK' | 'OUT_OF_STOCK';
   weightGrams: number | null;
   attributes: readonly CrawledSupplierAttribute[];
   imageUrls: readonly string[];

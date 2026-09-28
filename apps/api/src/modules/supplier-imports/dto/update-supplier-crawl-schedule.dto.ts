@@ -33,6 +33,9 @@ export class UpdateSupplierCrawlScheduleDto {
   @IsBoolean()
   stopAtKnown!: boolean;
 
+  @IsBoolean()
+  monitorKnownProducts!: boolean;
+
   @IsInt()
   @Min(0)
   @Max(5)

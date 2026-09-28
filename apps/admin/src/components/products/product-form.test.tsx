@@ -29,6 +29,8 @@ const importDraft: AdminSupplierImportDraft = {
   description: 'توضیحات دریافت‌شده',
   sourceCategory: 'دستبند',
   supplierRetailPriceToman: 24_638_000,
+  sourceAvailability: 'IN_STOCK',
+  catalogCategoryId: null,
   weightGrams: 13.78,
   attributes: [{ key: 'نوع آبکاری', value: 'رودیوم' }],
   imageUrls: ['https://bsjsilver.com/images/item.jpg'],
@@ -49,6 +51,18 @@ const importDraft: AdminSupplierImportDraft = {
 };
 
 describe('ProductForm', () => {
+  it('preselects the mapped internal category for a supplier draft', () => {
+    render(
+      <ProductForm
+        data={data}
+        mode="create"
+        importDraft={{ ...importDraft, catalogCategoryId: data.categories[0]!.id }}
+      />,
+    );
+
+    expect(screen.getByLabelText('انگشتر')).toBeChecked();
+  });
+
   it('prefills a supplier draft and links it when creating the catalog product', async () => {
     const fetchMock = vi
       .fn()

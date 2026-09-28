@@ -30,6 +30,7 @@ type ScheduleForm = Readonly<{
   timeOfDay: string;
   requestedLimit: number;
   stopAtKnown: boolean;
+  monitorKnownProducts: boolean;
   maxRetries: number;
   retryDelayMinutes: number;
   categoryIds: readonly string[];
@@ -40,6 +41,7 @@ const DEFAULT_SCHEDULE: ScheduleForm = {
   timeOfDay: '02:00',
   requestedLimit: 100,
   stopAtKnown: true,
+  monitorKnownProducts: true,
   maxRetries: 2,
   retryDelayMinutes: 15,
   categoryIds: [],
@@ -52,6 +54,7 @@ function formFor(schedule: AdminSupplierCrawlSchedule | undefined): ScheduleForm
         timeOfDay: schedule.timeOfDay,
         requestedLimit: schedule.requestedLimit,
         stopAtKnown: schedule.stopAtKnown,
+        monitorKnownProducts: schedule.monitorKnownProducts,
         maxRetries: schedule.maxRetries,
         retryDelayMinutes: schedule.retryDelayMinutes,
         categoryIds: schedule.categoryIds,
@@ -252,6 +255,14 @@ export function SupplierCrawlScheduleCard({ sources, categories, schedules, canW
               onChange={(event) => update({ isEnabled: event.target.checked })}
               disabled={!canWrite || pending}
             />
+            <Checkbox
+              id="crawl-schedule-monitor-known"
+              label="پایش محصولات قبلی"
+              description="قیمت و موجودی منبع را گزارش می‌کند؛ برای پایش کامل، محدوده را روی «ادامه آرشیو» بگذارید."
+              checked={form.monitorKnownProducts}
+              onChange={(event) => update({ monitorKnownProducts: event.target.checked })}
+              disabled={!canWrite || pending}
+            />
             <FormField id="crawl-schedule-retries" label="تعداد تلاش مجدد">
               {(props) => (
                 <Input
@@ -289,9 +300,13 @@ export function SupplierCrawlScheduleCard({ sources, categories, schedules, canW
               </span>
               <span>
                 آخرین ورود به صف:{' '}
-                {saved.lastEnqueuedAt ? formatAdminDateTime(saved.lastEnqueuedAt) : 'هنوز اجرا نشده'}
+                {saved.lastEnqueuedAt
+                  ? formatAdminDateTime(saved.lastEnqueuedAt)
+                  : 'هنوز اجرا نشده'}
               </span>
-              {saved.lastRun ? <Badge tone="info">آخرین وضعیت: {saved.lastRun.status}</Badge> : null}
+              {saved.lastRun ? (
+                <Badge tone="info">آخرین وضعیت: {saved.lastRun.status}</Badge>
+              ) : null}
             </div>
           ) : null}
 

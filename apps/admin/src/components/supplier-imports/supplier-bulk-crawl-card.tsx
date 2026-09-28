@@ -8,6 +8,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/form-control';
 import { Pagination } from '@/components/ui/pagination';
 import { Select } from '@/components/ui/select';
@@ -77,6 +78,7 @@ export function SupplierBulkCrawlCard({
   const [sourceId, setSourceId] = useState(supportedSources[0]?.id ?? '');
   const [categoryId, setCategoryId] = useState('ALL');
   const [mode, setMode] = useState('INITIAL');
+  const [monitorKnownProducts, setMonitorKnownProducts] = useState(true);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const visibleCategories = categories.filter((category) => category.supplierSourceId === sourceId);
@@ -115,6 +117,7 @@ export function SupplierBulkCrawlCard({
         ...(categoryId === 'ALL' ? {} : { categoryId }),
         limit,
         stopAtKnown: mode === 'SINCE_LAST',
+        monitorKnownProducts,
       });
       setMessage('عملیات دریافت گروهی در صف قرار گرفت.');
       router.refresh();
@@ -125,7 +128,7 @@ export function SupplierBulkCrawlCard({
     }
   }
 
-  async function changeRun(runId: string, action: 'pause' | 'resume' | 'archive') {
+  async function changeRun(runId: string, action: 'pause' | 'resume' | 'retry' | 'archive') {
     setPending(true);
     setMessage(null);
     try {
@@ -178,7 +181,7 @@ export function SupplierBulkCrawlCard({
           disabled={!canWrite || pending}
         />
         <Input
-          aria-label="حداکثر محصولات جدید"
+          aria-label="حداکثر محصول در هر اجرا"
           name="limit"
           inputMode="numeric"
           defaultValue="۱۰۰"
@@ -189,6 +192,16 @@ export function SupplierBulkCrawlCard({
           شروع دریافت
         </Button>
       </form>
+      <div className="mt-3">
+        <Checkbox
+          id="bulk-crawl-monitor-known"
+          label="پایش محصولات قبلی"
+          description="در صورت تغییر قیمت تک‌فروشی یا موجودی تأمین‌کننده گزارش ایجاد می‌شود؛ برای پایش کامل، حالت «دریافت اولیه / ادامه آرشیو» را انتخاب کنید."
+          checked={monitorKnownProducts}
+          onChange={(event) => setMonitorKnownProducts(event.target.checked)}
+          disabled={!canWrite || pending}
+        />
+      </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Button
           type="button"
@@ -256,7 +269,9 @@ export function SupplierBulkCrawlCard({
         {visibleRuns.length ? (
           <div className="space-y-3">
             {visibleRuns.map((run) => {
-              const processed = run.succeededCount + run.failedCount;
+              const processed = run.monitorKnownProducts
+                ? run.discoveredCount
+                : run.succeededCount + run.failedCount;
               const calculatedPercent = run.requestedLimit
                 ? Math.min(100, Math.round((processed / run.requestedLimit) * 100))
                 : 0;
@@ -298,6 +313,15 @@ export function SupplierBulkCrawlCard({
                         >
                           ادامه
                         </Button>
+                      ) : run.status === 'FAILED' && !filters.showHistory ? (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled={!canWrite || pending}
+                          onClick={() => void changeRun(run.id, 'retry')}
+                        >
+                          تلاش مجدد
+                        </Button>
                       ) : !filters.showHistory ? (
                         <Button
                           size="sm"
@@ -334,6 +358,19 @@ export function SupplierBulkCrawlCard({
                     <p className="mt-2 text-xs text-[var(--admin-color-danger)]">
                       {run.errorMessage}
                     </p>
+                  ) : null}
+                  {run.issues.length ? (
+                    <div className="mt-3 rounded-[var(--admin-radius-sm)] bg-[var(--admin-color-surface-subtle)] p-2 text-xs">
+                      <p className="font-bold">آخرین خطاهای محصول</p>
+                      {run.issues.map((issue) => (
+                        <p
+                          key={issue.id}
+                          className="mt-1 break-all text-[var(--admin-color-danger)]"
+                        >
+                          {issue.errorMessage} · {issue.sourceUrl}
+                        </p>
+                      ))}
+                    </div>
                   ) : null}
                   {filters.showHistory && run.archivedAt ? (
                     <p className="mt-2 text-xs text-[var(--admin-color-muted)]">

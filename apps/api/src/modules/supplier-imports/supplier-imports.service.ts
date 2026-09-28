@@ -12,6 +12,8 @@ import {
   SupplierCrawlRunStatus,
   SupplierCrawlScope,
   SupplierProductImportStatus,
+  SupplierProductSourceChangeType,
+  SupplierSourceAvailability,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { BsjSilverCrawlerAdapter } from './adapters/bsj-silver-crawler.adapter';
@@ -22,6 +24,7 @@ import { StartBulkSupplierCrawlDto } from './dto/start-bulk-supplier-crawl.dto';
 import { StartSupplierCrawlDto } from './dto/start-supplier-crawl.dto';
 import { SyncSupplierCategoriesDto } from './dto/sync-supplier-categories.dto';
 import { UpdateSupplierCrawlScheduleDto } from './dto/update-supplier-crawl-schedule.dto';
+import { UpdateSupplierCategoryMappingDto } from './dto/update-supplier-category-mapping.dto';
 import { UpdateSupplierImportDraftDto } from './dto/update-supplier-import-draft.dto';
 import type { SupplierCrawlerAdapter } from './supplier-crawler.types';
 
@@ -52,6 +55,7 @@ type CrawlScheduleConfig = Readonly<{
   stopAtKnown: boolean;
   maxRetries: number;
   retryDelayMinutes: number;
+  monitorKnownProducts: boolean;
 }>;
 
 @Injectable()
@@ -135,6 +139,7 @@ export class SupplierImportsService {
           importedBy: {
             select: { id: true, firstName: true, lastName: true, phone: true },
           },
+          sourceCategoryRecord: { select: { id: true, catalogCategoryId: true } },
         },
       }),
     ]);
@@ -163,6 +168,7 @@ export class SupplierImportsService {
         reviewedBy: { select: { id: true, firstName: true, lastName: true, phone: true } },
         product: { select: { id: true, name: true, slug: true, status: true } },
         importedBy: { select: { id: true, firstName: true, lastName: true, phone: true } },
+        sourceCategoryRecord: { select: { id: true, catalogCategoryId: true } },
       },
     });
     if (!draft) throw new NotFoundException('Supplier product import draft was not found.');
@@ -173,7 +179,59 @@ export class SupplierImportsService {
     return this.prisma.supplierSourceCategory.findMany({
       where: { supplierSourceId: query.supplierSourceId, isActive: true },
       orderBy: [{ name: 'asc' }, { externalKey: 'asc' }],
+      include: { catalogCategory: { select: { id: true, name: true } } },
     });
+  }
+
+  async updateCategoryMapping(categoryId: string, dto: UpdateSupplierCategoryMappingDto) {
+    const category = await this.prisma.supplierSourceCategory.findUnique({
+      where: { id: categoryId },
+      select: { id: true },
+    });
+    if (!category) throw new NotFoundException('Supplier category was not found.');
+    const catalogCategoryId = dto.catalogCategoryId ?? null;
+    if (catalogCategoryId) {
+      const catalogCategory = await this.prisma.category.findFirst({
+        where: { id: catalogCategoryId, isActive: true, deletedAt: null },
+        select: { id: true },
+      });
+      if (!catalogCategory) throw new NotFoundException('Active catalog category was not found.');
+    }
+    return this.prisma.supplierSourceCategory.update({
+      where: { id: categoryId },
+      data: { catalogCategoryId },
+      include: { catalogCategory: { select: { id: true, name: true } } },
+    });
+  }
+
+  listSourceChanges() {
+    return this.prisma.supplierProductSourceChange.findMany({
+      where: { acknowledgedAt: null },
+      take: 100,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      include: {
+        draft: {
+          select: {
+            id: true,
+            title: true,
+            sourceUrl: true,
+            product: { select: { id: true, name: true } },
+            supplierSource: { select: { name: true, supplier: { select: { name: true } } } },
+          },
+        },
+      },
+    });
+  }
+
+  async acknowledgeSourceChange(changeId: string, actorUserId: string) {
+    const result = await this.prisma.supplierProductSourceChange.updateMany({
+      where: { id: changeId, acknowledgedAt: null },
+      data: { acknowledgedAt: new Date(), acknowledgedByUserId: actorUserId },
+    });
+    if (!result.count) {
+      throw new ConflictException('Source change was already acknowledged or not found.');
+    }
+    return { id: changeId, acknowledged: true };
   }
 
   listSchedules() {
@@ -203,10 +261,7 @@ export class SupplierImportsService {
     });
   }
 
-  async updateSchedule(
-    supplierSourceId: string,
-    dto: UpdateSupplierCrawlScheduleDto,
-  ) {
+  async updateSchedule(supplierSourceId: string, dto: UpdateSupplierCrawlScheduleDto) {
     await this.activeSource(supplierSourceId);
     await this.validateScheduleCategories(supplierSourceId, dto.categoryIds);
     const now = new Date();
@@ -220,6 +275,7 @@ export class SupplierImportsService {
         timezone: SCHEDULE_TIMEZONE,
         requestedLimit: dto.requestedLimit,
         stopAtKnown: dto.stopAtKnown,
+        monitorKnownProducts: dto.monitorKnownProducts,
         maxRetries: dto.maxRetries,
         retryDelayMinutes: dto.retryDelayMinutes,
         nextRunAt: dto.isEnabled
@@ -233,6 +289,7 @@ export class SupplierImportsService {
         timezone: SCHEDULE_TIMEZONE,
         requestedLimit: dto.requestedLimit,
         stopAtKnown: dto.stopAtKnown,
+        monitorKnownProducts: dto.monitorKnownProducts,
         maxRetries: dto.maxRetries,
         retryDelayMinutes: dto.retryDelayMinutes,
         nextRunAt: dto.isEnabled
@@ -269,6 +326,11 @@ export class SupplierImportsService {
           },
           category: { select: { id: true, name: true } },
           schedule: { select: { categoryIds: true } },
+          issues: {
+            take: 5,
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, sourceUrl: true, errorMessage: true, createdAt: true },
+          },
           archivedBy: { select: { id: true, firstName: true, lastName: true, phone: true } },
         },
       }),
@@ -369,6 +431,7 @@ export class SupplierImportsService {
         targetUrl,
         requestedLimit: dto.limit,
         stopAtKnown: dto.stopAtKnown,
+        monitorKnownProducts: dto.monitorKnownProducts,
         status: SupplierCrawlRunStatus.QUEUED,
       },
     });
@@ -392,6 +455,22 @@ export class SupplierImportsService {
       data: { status: SupplierCrawlRunStatus.QUEUED, errorMessage: null },
     });
     if (!result.count) throw new ConflictException('Only a paused crawl can be resumed.');
+    return { id: runId, status: SupplierCrawlRunStatus.QUEUED };
+  }
+
+  async retryRun(runId: string) {
+    const result = await this.prisma.supplierCrawlRun.updateMany({
+      where: { id: runId, status: SupplierCrawlRunStatus.FAILED },
+      data: {
+        status: SupplierCrawlRunStatus.QUEUED,
+        retryCount: 0,
+        availableAt: new Date(),
+        errorMessage: null,
+        finishedAt: null,
+        lastHeartbeatAt: null,
+      },
+    });
+    if (!result.count) throw new ConflictException('Only a failed crawl can be retried.');
     return { id: runId, status: SupplierCrawlRunStatus.QUEUED };
   }
 
@@ -530,8 +609,24 @@ export class SupplierImportsService {
               sourceProductKey: product.sourceProductKey,
             },
           },
-          select: { productId: true, status: true },
+          select: {
+            id: true,
+            productId: true,
+            status: true,
+            supplierRetailPriceToman: true,
+            sourceAvailability: true,
+          },
         });
+        const sourceCategoryRecord = product.sourceCategory
+          ? await transaction.supplierSourceCategory.findFirst({
+              where: {
+                supplierSourceId: source.id,
+                isActive: true,
+                name: product.sourceCategory,
+              },
+              select: { id: true },
+            })
+          : null;
         const alreadyImported =
           Boolean(existing?.productId) || existing?.status === SupplierProductImportStatus.IMPORTED;
         const saved = await transaction.supplierProductImportDraft.upsert({
@@ -550,7 +645,9 @@ export class SupplierImportsService {
             title: product.title,
             description: product.description,
             sourceCategory: product.sourceCategory,
+            sourceCategoryId: sourceCategoryRecord?.id,
             supplierRetailPriceToman: product.supplierRetailPriceToman,
+            sourceAvailability: product.availability,
             weightGrams: product.weightGrams,
             attributes: this.jsonValue(product.attributes),
             imageUrls: [...product.imageUrls],
@@ -565,7 +662,11 @@ export class SupplierImportsService {
             title: product.title,
             description: product.description,
             sourceCategory: product.sourceCategory,
+            sourceCategoryId: sourceCategoryRecord?.id,
             supplierRetailPriceToman: product.supplierRetailPriceToman,
+            ...(product.availability === SupplierSourceAvailability.UNKNOWN
+              ? {}
+              : { sourceAvailability: product.availability }),
             weightGrams: product.weightGrams,
             attributes: this.jsonValue(product.attributes),
             imageUrls: [...product.imageUrls],
@@ -580,6 +681,32 @@ export class SupplierImportsService {
             lastCrawledAt: now,
           },
         });
+        if (existing && existing.supplierRetailPriceToman !== product.supplierRetailPriceToman) {
+          await transaction.supplierProductSourceChange.create({
+            data: {
+              draftId: existing.id,
+              crawlRunId: run.id,
+              type: SupplierProductSourceChangeType.PRICE,
+              previousValue: existing.supplierRetailPriceToman?.toString() ?? null,
+              newValue: product.supplierRetailPriceToman?.toString() ?? null,
+            },
+          });
+        }
+        if (
+          existing &&
+          product.availability !== SupplierSourceAvailability.UNKNOWN &&
+          existing.sourceAvailability !== product.availability
+        ) {
+          await transaction.supplierProductSourceChange.create({
+            data: {
+              draftId: existing.id,
+              crawlRunId: run.id,
+              type: SupplierProductSourceChangeType.AVAILABILITY,
+              previousValue: existing.sourceAvailability,
+              newValue: product.availability,
+            },
+          });
+        }
         await transaction.supplierCrawlRun.update({
           where: { id: run.id },
           data: {
@@ -795,12 +922,15 @@ export class SupplierImportsService {
           select: { status: true },
         });
         if (current?.status === SupplierCrawlRunStatus.PAUSED) return;
-        if (succeeded + failed >= (run.requestedLimit ?? 100)) {
+        if (
+          (run.monitorKnownProducts ? discovered : succeeded + failed) >=
+          (run.requestedLimit ?? 100)
+        ) {
           await this.finishRun(run.id, discovered, succeeded, failed, skipped);
           return;
         }
         const key = this.productKey(productUrl);
-        const exists = key
+        const existing = key
           ? await this.prisma.supplierProductImportDraft.findUnique({
               where: {
                 supplierSourceId_sourceProductKey: {
@@ -808,11 +938,23 @@ export class SupplierImportsService {
                   sourceProductKey: key,
                 },
               },
-              select: { id: true },
+              select: {
+                id: true,
+                supplierRetailPriceToman: true,
+                sourceAvailability: true,
+              },
             })
           : null;
         discovered += 1;
-        if (exists) {
+        if (existing) {
+          if (run.monitorKnownProducts) {
+            try {
+              await this.refreshKnownProduct(run.id, source, adapter, productUrl, existing);
+            } catch (error) {
+              failed += 1;
+              await this.recordCrawlIssue(run.id, productUrl, error);
+            }
+          }
           skipped += 1;
           consecutiveKnown += 1;
           await this.updateRunProgress(run.id, discovered, succeeded, failed, skipped);
@@ -824,10 +966,11 @@ export class SupplierImportsService {
         }
         consecutiveKnown = 0;
         try {
-          await this.importBulkProduct(run.id, source, adapter, productUrl);
+          await this.importBulkProduct(run.id, source, adapter, productUrl, run.categoryId);
           succeeded += 1;
         } catch (error) {
           failed += 1;
+          await this.recordCrawlIssue(run.id, productUrl, error);
           this.logger.warn(`Supplier product import failed: ${this.errorMessage(error)}`);
         }
         await this.updateRunProgress(run.id, discovered, succeeded, failed, skipped);
@@ -838,7 +981,9 @@ export class SupplierImportsService {
         select: { status: true },
       });
       if (latest?.status === SupplierCrawlRunStatus.PAUSED) return;
-      if (succeeded + failed >= (run.requestedLimit ?? 100)) {
+      if (
+        (run.monitorKnownProducts ? discovered : succeeded + failed) >= (run.requestedLimit ?? 100)
+      ) {
         await this.finishRun(run.id, discovered, succeeded, failed, skipped);
         return;
       }
@@ -877,6 +1022,7 @@ export class SupplierImportsService {
     source: ActiveSupplierSource,
     adapter: SupplierCrawlerAdapter,
     productUrl: string,
+    preferredCategoryId: string | null,
   ) {
     const targetUrl = this.validateSourceUrl(productUrl, source);
     const product = adapter.parseProduct(
@@ -884,6 +1030,11 @@ export class SupplierImportsService {
       targetUrl.toString(),
     );
     const now = new Date();
+    const sourceCategoryId = await this.resolveSourceCategoryId(
+      source.id,
+      product.sourceCategory,
+      preferredCategoryId,
+    );
     await this.prisma.supplierProductImportDraft.create({
       data: {
         supplierSourceId: source.id,
@@ -894,13 +1045,106 @@ export class SupplierImportsService {
         title: product.title,
         description: product.description,
         sourceCategory: product.sourceCategory,
+        sourceCategoryId,
         supplierRetailPriceToman: product.supplierRetailPriceToman,
+        sourceAvailability: product.availability,
         weightGrams: product.weightGrams,
         attributes: this.jsonValue(product.attributes),
         imageUrls: [...product.imageUrls],
         rawPayload: this.jsonValue(product.rawPayload),
         status: SupplierProductImportStatus.PENDING_REVIEW,
         lastCrawledAt: now,
+      },
+    });
+  }
+
+  private async refreshKnownProduct(
+    runId: string,
+    source: ActiveSupplierSource,
+    adapter: SupplierCrawlerAdapter,
+    productUrl: string,
+    existing: Readonly<{
+      id: string;
+      supplierRetailPriceToman: number | null;
+      sourceAvailability: SupplierSourceAvailability;
+    }>,
+  ) {
+    const targetUrl = this.validateSourceUrl(productUrl, source);
+    const product = adapter.parseProduct(
+      await this.fetchText(targetUrl, source),
+      targetUrl.toString(),
+    );
+    const sourceCategoryId = await this.resolveSourceCategoryId(
+      source.id,
+      product.sourceCategory,
+      null,
+    );
+    const priceChanged = existing.supplierRetailPriceToman !== product.supplierRetailPriceToman;
+    const availabilityChanged =
+      product.availability !== SupplierSourceAvailability.UNKNOWN &&
+      existing.sourceAvailability !== product.availability;
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.supplierProductImportDraft.update({
+        where: { id: existing.id },
+        data: {
+          crawlRunId: runId,
+          sourceUrl: product.sourceUrl,
+          sourceSku: product.sourceSku,
+          sourceCategory: product.sourceCategory,
+          sourceCategoryId,
+          supplierRetailPriceToman: product.supplierRetailPriceToman,
+          ...(product.availability === SupplierSourceAvailability.UNKNOWN
+            ? {}
+            : { sourceAvailability: product.availability }),
+          rawPayload: this.jsonValue(product.rawPayload),
+          lastCrawledAt: new Date(),
+        },
+      });
+      if (priceChanged) {
+        await transaction.supplierProductSourceChange.create({
+          data: {
+            draftId: existing.id,
+            crawlRunId: runId,
+            type: SupplierProductSourceChangeType.PRICE,
+            previousValue: existing.supplierRetailPriceToman?.toString() ?? null,
+            newValue: product.supplierRetailPriceToman?.toString() ?? null,
+          },
+        });
+      }
+      if (availabilityChanged) {
+        await transaction.supplierProductSourceChange.create({
+          data: {
+            draftId: existing.id,
+            crawlRunId: runId,
+            type: SupplierProductSourceChangeType.AVAILABILITY,
+            previousValue: existing.sourceAvailability,
+            newValue: product.availability,
+          },
+        });
+      }
+    });
+  }
+
+  private async resolveSourceCategoryId(
+    supplierSourceId: string,
+    sourceCategory: string | null,
+    preferredCategoryId: string | null,
+  ) {
+    if (preferredCategoryId) return preferredCategoryId;
+    if (!sourceCategory) return null;
+    const category = await this.prisma.supplierSourceCategory.findFirst({
+      where: { supplierSourceId, isActive: true, name: sourceCategory },
+      select: { id: true },
+    });
+    return category?.id ?? null;
+  }
+
+  private async recordCrawlIssue(runId: string, sourceUrl: string, error: unknown) {
+    await this.prisma.supplierCrawlIssue.create({
+      data: {
+        crawlRunId: runId,
+        sourceUrl: sourceUrl.slice(0, 2000),
+        errorMessage: this.errorMessage(error).slice(0, 1000),
       },
     });
   }
@@ -953,6 +1197,7 @@ export class SupplierImportsService {
           pendingCategoryUrls,
           requestedLimit: schedule.requestedLimit,
           stopAtKnown: schedule.stopAtKnown,
+          monitorKnownProducts: schedule.monitorKnownProducts,
           maxRetries: schedule.maxRetries,
           retryDelayMinutes: schedule.retryDelayMinutes,
           availableAt: now,

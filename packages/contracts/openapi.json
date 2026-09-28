@@ -3636,11 +3636,11 @@
               "type": "string",
               "enum": [
                 "FAILED",
+                "UNKNOWN",
                 "PENDING",
                 "PROCESSING",
                 "DISPATCHING",
-                "SENT",
-                "UNKNOWN"
+                "SENT"
               ]
             }
           },
@@ -7575,6 +7575,90 @@
         ]
       }
     },
+    "/api/v1/supplier-imports/categories/{categoryId}/mapping": {
+      "patch": {
+        "operationId": "SupplierImportsController_updateCategoryMapping_v1",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSupplierCategoryMappingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/changes": {
+      "get": {
+        "operationId": "SupplierImportsController_listSourceChanges_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/changes/{changeId}/acknowledge": {
+      "post": {
+        "operationId": "SupplierImportsController_acknowledgeSourceChange_v1",
+        "parameters": [
+          {
+            "name": "changeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
     "/api/v1/supplier-imports/categories/sync": {
       "post": {
         "operationId": "SupplierImportsController_syncCategories_v1",
@@ -7783,6 +7867,29 @@
     "/api/v1/supplier-imports/runs/{runId}/resume": {
       "post": {
         "operationId": "SupplierImportsController_resumeRun_v1",
+        "parameters": [
+          {
+            "name": "runId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/runs/{runId}/retry": {
+      "post": {
+        "operationId": "SupplierImportsController_retryRun_v1",
         "parameters": [
           {
             "name": "runId",
@@ -14755,6 +14862,16 @@
         "type": "object",
         "properties": {}
       },
+      "UpdateSupplierCategoryMappingDto": {
+        "type": "object",
+        "properties": {
+          "catalogCategoryId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        }
+      },
       "SyncSupplierCategoriesDto": {
         "type": "object",
         "properties": {
@@ -14794,6 +14911,9 @@
           "stopAtKnown": {
             "type": "boolean"
           },
+          "monitorKnownProducts": {
+            "type": "boolean"
+          },
           "maxRetries": {
             "type": "number",
             "minimum": 0,
@@ -14811,6 +14931,7 @@
           "categoryIds",
           "requestedLimit",
           "stopAtKnown",
+          "monitorKnownProducts",
           "maxRetries",
           "retryDelayMinutes"
         ]
@@ -14833,12 +14954,16 @@
           },
           "stopAtKnown": {
             "type": "boolean"
+          },
+          "monitorKnownProducts": {
+            "type": "boolean"
           }
         },
         "required": [
           "supplierSourceId",
           "limit",
-          "stopAtKnown"
+          "stopAtKnown",
+          "monitorKnownProducts"
         ]
       },
       "StartSupplierCrawlDto": {
