@@ -2,16 +2,17 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { SupplierBulkCrawlCard } from './supplier-bulk-crawl-card';
 import { Badge } from '@/components/ui/badge';
 import { BottomSheet, BottomSheetContent } from '@/components/ui/bottom-sheet';
-import { Button } from '@/components/ui/button';
+import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { Pagination } from '@/components/ui/pagination';
 import { Select } from '@/components/ui/select';
 import {
   formatAdminDateTime,
@@ -19,19 +20,24 @@ import {
   formatAdminToman,
   toAsciiDigits,
 } from '@/lib/presentation/formatters';
-import type {
-  AdminSupplierImportDraft,
-  AdminSupplierImportSource,
-  AdminSupplierImportStatus,
-  AdminSupplierCrawlRun,
-  AdminSupplierSourceCategory,
+import {
+  buildSupplierImportsHref,
+  type AdminSupplierImportDraft,
+  type AdminSupplierImportFilters,
+  type AdminSupplierImportPage,
+  type AdminSupplierImportSource,
+  type AdminSupplierImportStatus,
+  type AdminSupplierCrawlRun,
+  type AdminSupplierSourceCategory,
 } from '@/lib/supplier-imports/supplier-imports-model';
 
 type Props = Readonly<{
   sources: readonly AdminSupplierImportSource[];
-  drafts: readonly AdminSupplierImportDraft[];
+  drafts: AdminSupplierImportPage<AdminSupplierImportDraft>;
   categories: readonly AdminSupplierSourceCategory[];
-  runs: readonly AdminSupplierCrawlRun[];
+  runs: AdminSupplierImportPage<AdminSupplierCrawlRun>;
+  archivedRuns: AdminSupplierImportPage<AdminSupplierCrawlRun>;
+  filters: AdminSupplierImportFilters;
   failed: boolean;
   canWrite: boolean;
 }>;
@@ -41,9 +47,11 @@ const statusOptions = [
   { value: 'PENDING_REVIEW', label: 'نیازمند بازبینی' },
   { value: 'REVIEWED', label: 'بازبینی‌شده' },
   { value: 'REJECTED', label: 'ردشده' },
+  { value: 'IMPORTED', label: 'واردشده به کاتالوگ' },
 ] as const;
 
 function statusBadge(status: AdminSupplierImportStatus) {
+  if (status === 'IMPORTED') return <Badge tone="success">واردشده</Badge>;
   if (status === 'REVIEWED') return <Badge tone="success">بازبینی‌شده</Badge>;
   if (status === 'REJECTED') return <Badge tone="danger">ردشده</Badge>;
   return <Badge tone="warning">نیازمند بازبینی</Badge>;
@@ -179,7 +187,9 @@ function DraftEditor({
               {...props}
               value={status}
               onValueChange={(value) => setStatus(value as AdminSupplierImportStatus)}
-              options={statusOptions.filter((option) => option.value !== 'ALL')}
+              options={statusOptions.filter(
+                (option) => option.value !== 'ALL' && option.value !== 'IMPORTED',
+              )}
             />
           )}
         </FormField>
@@ -215,20 +225,18 @@ export function SupplierProductImportsView({
   drafts,
   categories,
   runs,
+  archivedRuns,
+  filters,
   failed,
   canWrite,
 }: Props) {
   const router = useRouter();
   const supportedSources = sources.filter((source) => source.supported);
   const [sourceId, setSourceId] = useState(supportedSources[0]?.id ?? '');
-  const [status, setStatus] = useState('ALL');
   const [selectedDraft, setSelectedDraft] = useState<AdminSupplierImportDraft | null>(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
-  const visibleDrafts = useMemo(
-    () => drafts.filter((draft) => status === 'ALL' || draft.status === status),
-    [drafts, status],
-  );
+  const visibleDrafts = drafts.items;
 
   async function crawl(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -268,6 +276,8 @@ export function SupplierProductImportsView({
         sources={sources}
         categories={categories}
         runs={runs}
+        archivedRuns={archivedRuns}
+        filters={filters}
         canWrite={canWrite}
       />
 
@@ -320,16 +330,50 @@ export function SupplierProductImportsView({
         <div>
           <h2 className="text-lg font-black">پیش‌نویس‌های دریافتی</h2>
           <p className="mt-1 text-xs text-[var(--admin-color-muted)]">
-            {formatAdminInteger(visibleDrafts.length)} مورد نمایش داده می‌شود.
+            {formatAdminInteger(drafts.total)} پیش‌نویس یافت شد؛{' '}
+            {formatAdminInteger(visibleDrafts.length)} مورد در این صفحه نمایش داده می‌شود.
           </p>
         </div>
-        <Select
-          aria-label="فیلتر وضعیت بازبینی"
-          value={status}
-          onValueChange={setStatus}
-          options={statusOptions}
-          className="sm:w-52"
-        />
+        <div className="grid gap-2 sm:grid-cols-3">
+          <Select
+            aria-label="فیلتر تأمین‌کننده پیش‌نویس‌ها"
+            value={filters.supplierSourceId}
+            onValueChange={(value) =>
+              router.push(buildSupplierImportsHref(filters, { supplierSourceId: value, page: 1 }))
+            }
+            options={[
+              { value: 'ALL', label: 'همه تأمین‌کنندگان' },
+              ...supportedSources.map((source) => ({
+                value: source.id,
+                label: source.supplierName,
+              })),
+            ]}
+          />
+          <Select
+            aria-label="فیلتر وضعیت بازبینی"
+            value={filters.status}
+            onValueChange={(value) =>
+              router.push(
+                buildSupplierImportsHref(filters, {
+                  status: value as AdminSupplierImportStatus | 'ALL',
+                  page: 1,
+                }),
+              )
+            }
+            options={statusOptions}
+          />
+          <Select
+            aria-label="تعداد پیش‌نویس در هر صفحه"
+            value={String(filters.pageSize)}
+            onValueChange={(value) =>
+              router.push(buildSupplierImportsHref(filters, { page: 1, pageSize: Number(value) }))
+            }
+            options={[12, 24, 48, 96].map((value) => ({
+              value: String(value),
+              label: `${formatAdminInteger(value)} مورد در صفحه`,
+            }))}
+          />
+        </div>
       </div>
 
       {visibleDrafts.length === 0 ? (
@@ -388,6 +432,12 @@ export function SupplierProductImportsView({
                   <p className="text-xs text-[var(--admin-color-muted)]">
                     آخرین دریافت: {formatAdminDateTime(draft.lastCrawledAt)}
                   </p>
+                  {draft.importedAt ? (
+                    <p className="text-xs text-[var(--admin-color-success)]">
+                      واردشده به کاتالوگ در {formatAdminDateTime(draft.importedAt)}
+                      {draft.importedBy ? ` · توسط ${draft.importedBy}` : ''}
+                    </p>
+                  ) : null}
                   <div className="flex flex-wrap gap-2">
                     <a
                       href={draft.sourceUrl}
@@ -407,20 +457,45 @@ export function SupplierProductImportsView({
                       </a>
                     ))}
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setSelectedDraft(draft)}
-                    disabled={!canWrite}
-                  >
-                    بازبینی و ویرایش
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    {draft.product ? (
+                      <ButtonLink href={`/products/${draft.product.id}/edit`} size="sm">
+                        ویرایش محصول ساخته‌شده
+                      </ButtonLink>
+                    ) : draft.status !== 'REJECTED' ? (
+                      <ButtonLink
+                        href={`/products/new?importDraftId=${encodeURIComponent(draft.id)}`}
+                        size="sm"
+                      >
+                        تکمیل و ساخت محصول
+                      </ButtonLink>
+                    ) : null}
+                    {draft.status !== 'IMPORTED' ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setSelectedDraft(draft)}
+                        disabled={!canWrite}
+                      >
+                        بازبینی و ویرایش
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </Card>
           ))}
         </div>
       )}
+
+      <Pagination
+        currentPage={drafts.page}
+        totalPages={drafts.totalPages}
+        totalItems={drafts.total}
+        pageSize={drafts.pageSize}
+        getPageHref={(page) => buildSupplierImportsHref(filters, { page })}
+        className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)]"
+      />
 
       <BottomSheet
         open={Boolean(selectedDraft)}

@@ -67,6 +67,8 @@ model User {
   adminMessageRecipientsUpdated       AdminMessageRecipient[]            @relation("AdminMessageRecipientUpdater")
   adminOrderNotificationDeliveries    AdminOrderNotificationDelivery[]   @relation("AdminOrderNotificationRecipient")
   supplierProductImportsReviewed      SupplierProductImportDraft[]       @relation("SupplierProductImportReviewer")
+  supplierProductImportsImported      SupplierProductImportDraft[]       @relation("SupplierProductImportImporter")
+  supplierCrawlRunsArchived           SupplierCrawlRun[]                  @relation("SupplierCrawlRunArchiver")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -615,6 +617,7 @@ model Product {
   homepagePopularFeature HomepagePopularProduct?
   relatedProductsAsSource ProductRelation[] @relation("ProductRelationSource")
   relatedProductsAsTarget ProductRelation[] @relation("ProductRelationTarget")
+  supplierImportDraft SupplierProductImportDraft?
 
   @@index([brandId])
   @@index([countryId])
@@ -867,6 +870,7 @@ enum SupplierProductImportStatus {
   PENDING_REVIEW
   REVIEWED
   REJECTED
+  IMPORTED
 }
 
 model Supplier {
@@ -932,14 +936,19 @@ model SupplierCrawlRun {
   startedAt        DateTime?              @db.Timestamptz(3)
   lastHeartbeatAt  DateTime?              @db.Timestamptz(3)
   finishedAt       DateTime?              @db.Timestamptz(3)
+  archivedAt       DateTime?              @db.Timestamptz(3)
+  archivedByUserId String?                @db.Uuid
   createdAt        DateTime               @default(now()) @db.Timestamptz(3)
   supplierSource   SupplierSource         @relation(fields: [supplierSourceId], references: [id], onDelete: Restrict)
   category         SupplierSourceCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  archivedBy       User?                   @relation("SupplierCrawlRunArchiver", fields: [archivedByUserId], references: [id], onDelete: SetNull)
   importDrafts     SupplierProductImportDraft[]
 
   @@index([supplierSourceId, createdAt])
   @@index([status, createdAt])
   @@index([categoryId])
+  @@index([archivedAt, createdAt])
+  @@index([archivedByUserId])
   @@map("supplier_crawl_runs")
 }
 
@@ -979,18 +988,24 @@ model SupplierProductImportDraft {
   status                     SupplierProductImportStatus @default(PENDING_REVIEW)
   reviewedAt                 DateTime?                   @db.Timestamptz(3)
   reviewedByUserId           String?                     @db.Uuid
+  productId                  String?                     @unique @db.Uuid
+  importedAt                 DateTime?                   @db.Timestamptz(3)
+  importedByUserId           String?                     @db.Uuid
   lastCrawledAt              DateTime                    @db.Timestamptz(3)
   createdAt                  DateTime                    @default(now()) @db.Timestamptz(3)
   updatedAt                  DateTime                    @updatedAt @db.Timestamptz(3)
   supplierSource             SupplierSource              @relation(fields: [supplierSourceId], references: [id], onDelete: Restrict)
   crawlRun                   SupplierCrawlRun             @relation(fields: [crawlRunId], references: [id], onDelete: Restrict)
   reviewedBy                 User?                        @relation("SupplierProductImportReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  product                    Product?                     @relation(fields: [productId], references: [id], onDelete: SetNull)
+  importedBy                 User?                        @relation("SupplierProductImportImporter", fields: [importedByUserId], references: [id], onDelete: SetNull)
 
   @@unique([supplierSourceId, sourceProductKey])
   @@index([status, updatedAt])
   @@index([supplierSourceId, updatedAt])
   @@index([crawlRunId])
   @@index([reviewedByUserId])
+  @@index([importedByUserId])
   @@map("supplier_product_import_drafts")
 }
 

@@ -21,10 +21,12 @@ import { Select } from '@/components/ui/select';
 import type { ProductFormData } from '@/lib/catalog/catalog-data';
 import type { ProductSizeMode, ProductStatus } from '@/lib/catalog/catalog-model';
 import { toAsciiDigits, toPersianDigits } from '@/lib/presentation/formatters';
+import type { AdminSupplierImportDraft } from '@/lib/supplier-imports/supplier-imports-model';
 
 type ProductFormProps = Readonly<{
   data: ProductFormData;
   mode: 'create' | 'edit';
+  importDraft?: AdminSupplierImportDraft | null;
 }>;
 
 type EditableProductAttribute = Readonly<{
@@ -56,16 +58,43 @@ function createAttributeId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `attribute-${Date.now()}-${Math.random()}`;
 }
 
-function createVariant(): EditableProductVariant {
+function createVariant(importDraft?: AdminSupplierImportDraft | null): EditableProductVariant {
   return {
     id: globalThis.crypto?.randomUUID?.() ?? `variant-${Date.now()}-${Math.random()}`,
-    sku: '',
+    sku: importDraft?.sourceSku ?? '',
     name: '',
     sizeId: 'none',
-    weightGrams: '',
+    weightGrams: importDraft?.weightGrams === null ? '' : String(importDraft?.weightGrams ?? ''),
     salePriceToman: '',
     compareAtPriceToman: '',
   };
+}
+
+function importedProductSlug(draft: AdminSupplierImportDraft): string {
+  return `${draft.source.supplierCode}-${draft.sourceProductKey}`
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+async function loadSupplierImage(draftId: string, imageIndex: number): Promise<File> {
+  const response = await fetch(
+    `/api/supplier-imports/drafts/${encodeURIComponent(draftId)}/images/${imageIndex}/download`,
+  );
+  if (!response.ok) throw new Error(apiError(await response.json().catch(() => null)));
+  const blob = await response.blob();
+  if (!ACCEPTED_PRODUCT_IMAGE_TYPES.has(blob.type) || blob.size > MAX_PRODUCT_IMAGE_BYTES) {
+    throw new Error('یکی از تصاویر تأمین‌کننده فرمت معتبر ندارد یا بزرگ‌تر از ۱۰ مگابایت است.');
+  }
+  const extension =
+    ({
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/avif': 'avif',
+    } as Record<string, string>)[blob.type] ?? 'jpg';
+  return new File([blob], `supplier-image-${imageIndex + 1}.${extension}`, { type: blob.type });
 }
 
 function optionalText(formData: FormData, name: string): string | undefined {
@@ -134,7 +163,7 @@ async function uploadProductImages(files: readonly File[], altText: string) {
   return uploaded;
 }
 
-export function ProductForm({ data, mode }: ProductFormProps) {
+export function ProductForm({ data, mode, importDraft = null }: ProductFormProps) {
   const router = useRouter();
   const productImagesInputId = useId();
   const product = data.product;
@@ -142,20 +171,34 @@ export function ProductForm({ data, mode }: ProductFormProps) {
   const [sizeGroupId, setSizeGroupId] = useState(product?.sizeGroup?.id ?? 'none');
   const [seo, setSeo] = useState(() => createSeoEditorValue(product));
   const [attributes, setAttributes] = useState<EditableProductAttribute[]>(() =>
-    (product?.attributes ?? []).map((attribute) => ({
-      id: attribute.id,
-      key: attribute.key,
-      value: attribute.value,
+    product
+      ? product.attributes.map((attribute) => ({
+          id: attribute.id,
+          key: attribute.key,
+          value: attribute.value,
+        }))
+      : (importDraft?.attributes ?? []).map((attribute) => ({
+          id: createAttributeId(),
+          key: attribute.key,
+          value: attribute.value,
+        })),
+  );
+  const [variants, setVariants] = useState<EditableProductVariant[]>(() => [
+    createVariant(importDraft),
+  ]);
+  const [productImages, setProductImages] = useState<readonly File[]>([]);
+  const [supplierImages, setSupplierImages] = useState(() =>
+    (importDraft?.imageUrls ?? []).slice(0, MAX_PRODUCT_IMAGES).map((url, index) => ({
+      index,
+      url,
     })),
   );
-  const [variants, setVariants] = useState<EditableProductVariant[]>(() => [createVariant()]);
-  const [productImages, setProductImages] = useState<readonly File[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function selectProductImages(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.currentTarget.files ?? []);
-    if (files.length > MAX_PRODUCT_IMAGES) {
+    if (files.length + supplierImages.length > MAX_PRODUCT_IMAGES) {
       event.currentTarget.value = '';
       setProductImages([]);
       setError('حداکثر ۱۲ تصویر برای هر محصول مجاز است.');
@@ -332,6 +375,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
       }
 
       payload.status = String(formData.get('status') ?? 'DRAFT') as ProductStatus;
+      if (importDraft) payload.supplierImportDraftId = importDraft.id;
       payload.sizeMode = sizeMode;
       payload.variants = normalizedVariants.map((variant) => ({
         sku: variant.sku,
@@ -359,8 +403,13 @@ export function ProductForm({ data, mode }: ProductFormProps) {
     setPending(true);
     setError(null);
     try {
-      if (mode === 'create' && productImages.length > 0) {
-        payload.media = await uploadProductImages(productImages, name);
+      if (mode === 'create' && (supplierImages.length > 0 || productImages.length > 0)) {
+        const importedImages = importDraft
+          ? await Promise.all(
+              supplierImages.map((image) => loadSupplierImage(importDraft.id, image.index)),
+            )
+          : [];
+        payload.media = await uploadProductImages([...importedImages, ...productImages], name);
       }
 
       const endpoint =
@@ -407,6 +456,21 @@ export function ProductForm({ data, mode }: ProductFormProps) {
         </Alert>
       ) : null}
 
+      {importDraft ? (
+        <Alert tone="info" title="ساخت محصول از پیش‌نویس تأمین‌کننده">
+          عنوان، توضیحات، ویژگی‌ها، وزن و تصاویر دریافت‌شده به این فرم منتقل شده‌اند. قیمت
+          تک‌فروشی تأمین‌کننده فقط مرجع است و قیمت فروش باید توسط شما ثبت شود.
+          <a
+            href={importDraft.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="me-2 font-bold underline"
+          >
+            مشاهده صفحه منبع
+          </a>
+        </Alert>
+      ) : null}
+
       <Card title="اطلاعات اصلی" description="نام، آدرس و توضیحاتی که در کاتالوگ استفاده می‌شوند">
         <div className="grid gap-4 md:grid-cols-2">
           <FormField id="product-name" label="نام محصول" required>
@@ -414,7 +478,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
               <Input
                 {...props}
                 name="name"
-                defaultValue={product?.name}
+                defaultValue={product?.name ?? importDraft?.title}
                 placeholder="مثلاً انگشتر نقره نگین‌دار"
                 required
               />
@@ -434,7 +498,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
               <Input
                 {...props}
                 name="slug"
-                defaultValue={product?.slug}
+                defaultValue={product?.slug ?? (importDraft ? importedProductSlug(importDraft) : '')}
                 placeholder="silver-stone-ring"
                 dir="ltr"
                 required
@@ -467,7 +531,7 @@ export function ProductForm({ data, mode }: ProductFormProps) {
               <Textarea
                 {...props}
                 name="description"
-                defaultValue={product?.description ?? ''}
+                defaultValue={product?.description ?? importDraft?.description ?? ''}
                 placeholder="ویژگی‌ها، جنس، نحوه نگهداری و اطلاعات تکمیلی محصول"
               />
             )}
@@ -480,6 +544,14 @@ export function ProductForm({ data, mode }: ProductFormProps) {
           title="قیمت‌گذاری"
           description="این مبالغ پیش‌فرض هستند؛ قیمت ثبت‌شده روی هر تنوع اولویت دارد."
         >
+          {importDraft?.supplierRetailPriceToman !== null &&
+          importDraft?.supplierRetailPriceToman !== undefined ? (
+            <Alert tone="info" className="mb-4">
+              قیمت تک‌فروشی ثبت‌شده در سایت تأمین‌کننده:{' '}
+              <strong>{toPersianDigits(importDraft.supplierRetailPriceToman)} تومان</strong>. این مبلغ
+              فقط برای مقایسه نمایش داده شده و در قیمت فروش کپی نمی‌شود.
+            </Alert>
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="product-sale-price" label="قیمت فروش پیش‌فرض">
               {(props) => (
@@ -777,8 +849,107 @@ export function ProductForm({ data, mode }: ProductFormProps) {
       {mode === 'create' ? (
         <Card
           title="تصاویر محصول"
-          description="تصاویر را همین‌جا انتخاب کنید؛ هنگام ساخت محصول بارگذاری و به‌ترتیب انتخاب ثبت می‌شوند."
+          description="تصاویر منبع و فایل‌های دستگاه به‌ترتیب نمایش، هنگام ساخت محصول بارگذاری می‌شوند."
         >
+          {importDraft && supplierImages.length > 0 ? (
+            <div className="mb-5">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-bold">تصاویر انتخاب‌شده از تأمین‌کننده</h3>
+                  <p className="mt-1 text-xs text-[var(--admin-color-muted)]">
+                    تصویر اول به‌عنوان تصویر اصلی محصول ثبت می‌شود.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={() => setSupplierImages([])}
+                >
+                  حذف همه
+                </Button>
+              </div>
+              <ol
+                className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                aria-label="تصاویر انتخاب‌شده تأمین‌کننده"
+              >
+                {supplierImages.map((image, index) => (
+                  <li
+                    key={image.index}
+                    className="overflow-hidden rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)]"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={image.url}
+                      alt={`${importDraft.title}، تصویر ${index + 1}`}
+                      className="aspect-square w-full bg-[var(--admin-color-surface-subtle)] object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="flex flex-wrap items-center gap-1 p-2">
+                      <span className="me-auto text-xs font-bold">
+                        ترتیب {toPersianDigits(index + 1)}
+                      </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        disabled={pending || index === 0}
+                        onClick={() =>
+                          setSupplierImages((current) => {
+                            const next = [...current];
+                            [next[index - 1], next[index]] = [next[index]!, next[index - 1]!];
+                            return next;
+                          })
+                        }
+                      >
+                        قبلی
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        disabled={pending || index === supplierImages.length - 1}
+                        onClick={() =>
+                          setSupplierImages((current) => {
+                            const next = [...current];
+                            [next[index], next[index + 1]] = [next[index + 1]!, next[index]!];
+                            return next;
+                          })
+                        }
+                      >
+                        بعدی
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        disabled={pending}
+                        onClick={() =>
+                          setSupplierImages((current) =>
+                            current.filter((item) => item.index !== image.index),
+                          )
+                        }
+                      >
+                        حذف
+                      </Button>
+                      <a
+                        href={`/api/supplier-imports/drafts/${importDraft.id}/images/${image.index}/download`}
+                        className="inline-flex min-h-8 items-center px-2 text-xs font-bold underline"
+                      >
+                        دانلود
+                      </a>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : importDraft ? (
+            <Alert tone="warning" className="mb-5">
+              هیچ تصویر تأمین‌کننده‌ای انتخاب نشده است؛ می‌توانید تصاویر ویرایش‌شده را از دستگاه
+              بارگذاری کنید.
+            </Alert>
+          ) : null}
           <label
             htmlFor={productImagesInputId}
             className="grid min-h-36 cursor-pointer place-items-center rounded-[var(--admin-radius-lg)] border border-dashed border-[var(--admin-color-border-strong)] bg-[var(--admin-color-surface-subtle)] p-5 text-center outline-none focus-within:shadow-[var(--admin-focus-ring)]"

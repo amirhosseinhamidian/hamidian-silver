@@ -40,7 +40,10 @@ const draft: AdminSupplierImportDraft = {
   weightGrams: 13.78,
   attributes: [{ key: 'نوع آبکاری', value: 'رادیوم' }],
   imageUrls: ['https://bsjsilver.com/images/item.jpg'],
-  status: 'PENDING_REVIEW',
+      status: 'PENDING_REVIEW',
+      product: null,
+      importedAt: null,
+      importedBy: null,
   lastCrawledAt: '2026-09-27T10:00:00.000Z',
   updatedAt: '2026-09-27T10:00:00.000Z',
   source: {
@@ -52,6 +55,27 @@ const draft: AdminSupplierImportDraft = {
   },
   reviewedBy: null,
 };
+
+const filters = {
+  status: 'ALL' as const,
+  supplierSourceId: 'ALL' as const,
+  page: 1,
+  pageSize: 24,
+  runPage: 1,
+  runPageSize: 10,
+  historyPage: 1,
+  historyPageSize: 10,
+  showHistory: false,
+};
+
+const runPage = { items: [], total: 0, page: 1, pageSize: 10, totalPages: 1 } as const;
+const draftPage = (items: readonly AdminSupplierImportDraft[]) => ({
+  items,
+  total: items.length,
+  page: 1,
+  pageSize: 24,
+  totalPages: 1,
+});
 
 describe('SupplierProductImportsView', () => {
   it('starts a manual crawl for the selected dynamic supplier source', async () => {
@@ -65,9 +89,11 @@ describe('SupplierProductImportsView', () => {
     render(
       <SupplierProductImportsView
         sources={[source]}
-        drafts={[]}
+        drafts={draftPage([])}
         categories={[]}
-        runs={[]}
+        runs={runPage}
+        archivedRuns={runPage}
+        filters={filters}
         failed={false}
         canWrite
       />,
@@ -101,9 +127,11 @@ describe('SupplierProductImportsView', () => {
     render(
       <SupplierProductImportsView
         sources={[source]}
-        drafts={[draft]}
+        drafts={draftPage([draft])}
         categories={[]}
-        runs={[]}
+        runs={runPage}
+        archivedRuns={runPage}
+        filters={filters}
         failed={false}
         canWrite
       />,

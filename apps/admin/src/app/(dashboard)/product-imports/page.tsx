@@ -2,15 +2,41 @@ import { SupplierProductImportsView } from '@/components/supplier-imports/suppli
 import { Badge } from '@/components/ui/badge';
 import { requireAdminSession } from '@/lib/auth/session';
 import { loadSupplierImports } from '@/lib/supplier-imports/supplier-imports-data';
+import {
+  parseSupplierImportFilters,
+  type AdminSupplierImportPage,
+  type AdminSupplierImportDraft,
+  type AdminSupplierCrawlRun,
+} from '@/lib/supplier-imports/supplier-imports-model';
+
+type ProductImportsPageProps = Readonly<{
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}>;
 
 export const dynamic = 'force-dynamic';
 
-export default async function ProductImportsPage() {
+const emptyDraftPage: AdminSupplierImportPage<AdminSupplierImportDraft> = {
+  items: [],
+  total: 0,
+  page: 1,
+  pageSize: 24,
+  totalPages: 1,
+};
+const emptyRunPage: AdminSupplierImportPage<AdminSupplierCrawlRun> = {
+  items: [],
+  total: 0,
+  page: 1,
+  pageSize: 10,
+  totalPages: 1,
+};
+
+export default async function ProductImportsPage({ searchParams }: ProductImportsPageProps) {
   const user = await requireAdminSession({
     permissions: ['catalog.read'],
     returnTo: '/product-imports',
   });
-  const result = await loadSupplierImports();
+  const filters = parseSupplierImportFilters(await searchParams);
+  const result = await loadSupplierImports(filters);
 
   return (
     <main className="admin-container py-6 sm:py-8 lg:py-10">
@@ -25,9 +51,11 @@ export default async function ProductImportsPage() {
 
       <SupplierProductImportsView
         sources={result.data?.sources ?? []}
-        drafts={result.data?.drafts ?? []}
+        drafts={result.data?.drafts ?? emptyDraftPage}
         categories={result.data?.categories ?? []}
-        runs={result.data?.runs ?? []}
+        runs={result.data?.runs ?? emptyRunPage}
+        archivedRuns={result.data?.archivedRuns ?? emptyRunPage}
+        filters={filters}
         failed={result.failed}
         canWrite={user.permissions.includes('catalog.write')}
       />

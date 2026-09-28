@@ -20,6 +20,26 @@ const source: AdminSupplierImportSource = {
   lastRunAt: null,
 };
 
+const filters = {
+  status: 'ALL' as const,
+  supplierSourceId: 'ALL' as const,
+  page: 1,
+  pageSize: 24,
+  runPage: 1,
+  runPageSize: 10,
+  historyPage: 1,
+  historyPageSize: 10,
+  showHistory: false,
+};
+
+const runPage = (items: readonly never[] = []) => ({
+  items,
+  total: items.length,
+  page: 1,
+  pageSize: 10,
+  totalPages: 1,
+});
+
 afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
@@ -46,7 +66,9 @@ describe('SupplierBulkCrawlCard', () => {
             url: 'https://bsjsilver.com/product/category/12-bracelet',
           },
         ]}
-        runs={[]}
+        runs={runPage()}
+        archivedRuns={runPage()}
+        filters={filters}
         canWrite
       />,
     );
@@ -77,25 +99,33 @@ describe('SupplierBulkCrawlCard', () => {
       <SupplierBulkCrawlCard
         sources={[source]}
         categories={[]}
-        runs={[
-          {
-            id: 'run-1',
-            supplierSourceId: source.id,
-            sourceName: source.name,
-            supplierName: source.supplierName,
-            categoryName: 'گوشواره',
-            status: 'RUNNING',
-            requestedLimit: 100,
-            currentPage: 2,
-            discoveredCount: 28,
-            succeededCount: 20,
-            failedCount: 0,
-            skippedCount: 8,
-            stopAtKnown: false,
-            errorMessage: null,
-            createdAt: '2026-09-27T18:00:00.000Z',
-          },
-        ]}
+        runs={{
+          ...runPage(),
+          total: 1,
+          items: [
+            {
+              id: 'run-1',
+              supplierSourceId: source.id,
+              sourceName: source.name,
+              supplierName: source.supplierName,
+              categoryName: 'گوشواره',
+              status: 'RUNNING',
+              requestedLimit: 100,
+              currentPage: 2,
+              discoveredCount: 28,
+              succeededCount: 20,
+              failedCount: 0,
+              skippedCount: 8,
+              stopAtKnown: false,
+              errorMessage: null,
+              archivedAt: null,
+              archivedBy: null,
+              createdAt: '2026-09-27T18:00:00.000Z',
+            },
+          ],
+        }}
+        archivedRuns={runPage()}
+        filters={filters}
         canWrite
       />,
     );
@@ -104,6 +134,57 @@ describe('SupplierBulkCrawlCard', () => {
     expect(screen.getByRole('progressbar', { name: 'پیشرفت دریافت گوشواره' })).toHaveAttribute(
       'aria-valuenow',
       '20',
+    );
+  });
+
+  it('archives a reviewed finished crawl without approving its products', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: 'run-1', archived: true }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <SupplierBulkCrawlCard
+        sources={[source]}
+        categories={[]}
+        runs={{
+          ...runPage(),
+          total: 1,
+          items: [
+            {
+              id: 'run-1',
+              supplierSourceId: source.id,
+              sourceName: source.name,
+              supplierName: source.supplierName,
+              categoryName: null,
+              status: 'SUCCEEDED',
+              requestedLimit: 25,
+              currentPage: 2,
+              discoveredCount: 25,
+              succeededCount: 25,
+              failedCount: 0,
+              skippedCount: 0,
+              stopAtKnown: false,
+              errorMessage: null,
+              archivedAt: null,
+              archivedBy: null,
+              createdAt: '2026-09-27T18:00:00.000Z',
+            },
+          ],
+        }}
+        archivedRuns={runPage()}
+        filters={filters}
+        canWrite
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'بررسی شد و انتقال به تاریخچه' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/supplier-imports/runs/run-1/archive',
+      expect.objectContaining({ method: 'POST' }),
     );
   });
 });

@@ -1,7 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { calculatePlatingPriceToman } from '../../common/plating-price';
 import { Prisma } from '../../generated/prisma/client';
-import { ProductStatus, SeoRedirectEntityType, SizeMode } from '../../generated/prisma/enums';
+import {
+  ProductStatus,
+  SeoRedirectEntityType,
+  SizeMode,
+  SupplierProductImportStatus,
+} from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
@@ -80,11 +85,29 @@ export class CatalogService {
     });
   }
 
-  async createProduct(dto: CreateProductDto) {
+  async createProduct(dto: CreateProductDto, actorUserId?: string) {
     this.validateProductShape(dto);
     const attributes = this.normalizeProductAttributes(dto.attributes);
 
     return this.prisma.$transaction(async (transaction) => {
+      if (dto.supplierImportDraftId) {
+        if (!actorUserId) {
+          throw new BadRequestException('Import actor is required.');
+        }
+        const importDraft = await transaction.supplierProductImportDraft.findUnique({
+          where: { id: dto.supplierImportDraftId },
+          select: { id: true, status: true, productId: true },
+        });
+        if (!importDraft) {
+          throw new NotFoundException('Supplier product import draft was not found.');
+        }
+        if (importDraft.productId || importDraft.status === SupplierProductImportStatus.IMPORTED) {
+          throw new BadRequestException('This supplier product draft was already imported.');
+        }
+        if (importDraft.status === SupplierProductImportStatus.REJECTED) {
+          throw new BadRequestException('A rejected supplier product draft cannot be imported.');
+        }
+      }
       if (dto.brandId) {
         const brand = await transaction.brand.findFirst({
           where: {
@@ -278,6 +301,23 @@ export class CatalogService {
             ...attribute,
           })),
         });
+      }
+
+      if (dto.supplierImportDraftId) {
+        const linked = await transaction.supplierProductImportDraft.updateMany({
+          where: { id: dto.supplierImportDraftId, productId: null },
+          data: {
+            productId: product.id,
+            status: SupplierProductImportStatus.IMPORTED,
+            reviewedAt: new Date(),
+            reviewedByUserId: actorUserId,
+            importedAt: new Date(),
+            importedByUserId: actorUserId,
+          },
+        });
+        if (linked.count !== 1) {
+          throw new BadRequestException('This supplier product draft was already imported.');
+        }
       }
 
       return transaction.product.findUniqueOrThrow({

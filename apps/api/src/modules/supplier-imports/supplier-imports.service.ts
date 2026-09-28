@@ -16,6 +16,7 @@ import {
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { BsjSilverCrawlerAdapter } from './adapters/bsj-silver-crawler.adapter';
 import { ListSupplierImportDraftsQueryDto } from './dto/list-supplier-import-drafts-query.dto';
+import { ListSupplierCrawlRunsQueryDto } from './dto/list-supplier-crawl-runs-query.dto';
 import { ListSupplierCategoriesQueryDto } from './dto/list-supplier-categories-query.dto';
 import { StartBulkSupplierCrawlDto } from './dto/start-bulk-supplier-crawl.dto';
 import { StartSupplierCrawlDto } from './dto/start-supplier-crawl.dto';
@@ -86,14 +87,52 @@ export class SupplierImportsService {
     });
   }
 
-  listDrafts(query: ListSupplierImportDraftsQueryDto) {
-    return this.prisma.supplierProductImportDraft.findMany({
-      where: {
-        ...(query.status ? { status: query.status } : {}),
-        ...(query.supplierSourceId ? { supplierSourceId: query.supplierSourceId } : {}),
-      },
-      take: 200,
-      orderBy: { updatedAt: 'desc' },
+  async listDrafts(query: ListSupplierImportDraftsQueryDto) {
+    const where: Prisma.SupplierProductImportDraftWhereInput = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.supplierSourceId ? { supplierSourceId: query.supplierSourceId } : {}),
+    };
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.supplierProductImportDraft.count({ where }),
+      this.prisma.supplierProductImportDraft.findMany({
+        where,
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+        include: {
+          supplierSource: {
+            select: {
+              id: true,
+              name: true,
+              hostname: true,
+              supplier: { select: { id: true, name: true, code: true } },
+            },
+          },
+          crawlRun: {
+            select: { id: true, status: true, createdAt: true, finishedAt: true },
+          },
+          reviewedBy: {
+            select: { id: true, firstName: true, lastName: true, phone: true },
+          },
+          product: { select: { id: true, name: true, slug: true, status: true } },
+          importedBy: {
+            select: { id: true, firstName: true, lastName: true, phone: true },
+          },
+        },
+      }),
+    ]);
+    return {
+      items,
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+      totalPages: Math.max(1, Math.ceil(total / query.pageSize)),
+    };
+  }
+
+  async getDraft(draftId: string) {
+    const draft = await this.prisma.supplierProductImportDraft.findUnique({
+      where: { id: draftId },
       include: {
         supplierSource: {
           select: {
@@ -103,14 +142,14 @@ export class SupplierImportsService {
             supplier: { select: { id: true, name: true, code: true } },
           },
         },
-        crawlRun: {
-          select: { id: true, status: true, createdAt: true, finishedAt: true },
-        },
-        reviewedBy: {
-          select: { id: true, firstName: true, lastName: true, phone: true },
-        },
+        crawlRun: { select: { id: true, status: true, createdAt: true, finishedAt: true } },
+        reviewedBy: { select: { id: true, firstName: true, lastName: true, phone: true } },
+        product: { select: { id: true, name: true, slug: true, status: true } },
+        importedBy: { select: { id: true, firstName: true, lastName: true, phone: true } },
       },
     });
+    if (!draft) throw new NotFoundException('Supplier product import draft was not found.');
+    return draft;
   }
 
   listCategories(query: ListSupplierCategoriesQueryDto) {
@@ -120,18 +159,57 @@ export class SupplierImportsService {
     });
   }
 
-  listRuns() {
-    return this.prisma.supplierCrawlRun.findMany({
-      where: { scope: { in: [SupplierCrawlScope.CATALOG, SupplierCrawlScope.CATEGORY_URL] } },
-      take: 50,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        supplierSource: {
-          select: { id: true, name: true, supplier: { select: { name: true } } },
+  async listRuns(query: ListSupplierCrawlRunsQueryDto) {
+    const where: Prisma.SupplierCrawlRunWhereInput = {
+      scope: { in: [SupplierCrawlScope.CATALOG, SupplierCrawlScope.CATEGORY_URL] },
+      archivedAt: query.view === 'ARCHIVED' ? { not: null } : null,
+    };
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.supplierCrawlRun.count({ where }),
+      this.prisma.supplierCrawlRun.findMany({
+        where,
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        include: {
+          supplierSource: {
+            select: { id: true, name: true, supplier: { select: { name: true } } },
+          },
+          category: { select: { id: true, name: true } },
+          archivedBy: { select: { id: true, firstName: true, lastName: true, phone: true } },
         },
-        category: { select: { id: true, name: true } },
+      }),
+    ]);
+    return {
+      items,
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+      totalPages: Math.max(1, Math.ceil(total / query.pageSize)),
+    };
+  }
+
+  async archiveRun(runId: string, userId: string) {
+    const result = await this.prisma.supplierCrawlRun.updateMany({
+      where: {
+        id: runId,
+        scope: { in: [SupplierCrawlScope.CATALOG, SupplierCrawlScope.CATEGORY_URL] },
+        archivedAt: null,
+        status: {
+          in: [
+            SupplierCrawlRunStatus.SUCCEEDED,
+            SupplierCrawlRunStatus.PARTIAL,
+            SupplierCrawlRunStatus.FAILED,
+            SupplierCrawlRunStatus.CANCELLED,
+          ],
+        },
       },
+      data: { archivedAt: new Date(), archivedByUserId: userId },
     });
+    if (!result.count) {
+      throw new ConflictException('Only a finished, unarchived crawl can be archived.');
+    }
+    return { id: runId, archived: true };
   }
 
   async syncCategories(dto: SyncSupplierCategoriesDto) {
@@ -313,6 +391,17 @@ export class SupplierImportsService {
       const product = adapter.parseProduct(html, targetUrl.toString());
       const now = new Date();
       const draft = await this.prisma.$transaction(async (transaction) => {
+        const existing = await transaction.supplierProductImportDraft.findUnique({
+          where: {
+            supplierSourceId_sourceProductKey: {
+              supplierSourceId: source.id,
+              sourceProductKey: product.sourceProductKey,
+            },
+          },
+          select: { productId: true, status: true },
+        });
+        const alreadyImported =
+          Boolean(existing?.productId) || existing?.status === SupplierProductImportStatus.IMPORTED;
         const saved = await transaction.supplierProductImportDraft.upsert({
           where: {
             supplierSourceId_sourceProductKey: {
@@ -349,9 +438,13 @@ export class SupplierImportsService {
             attributes: this.jsonValue(product.attributes),
             imageUrls: [...product.imageUrls],
             rawPayload: this.jsonValue(product.rawPayload),
-            status: SupplierProductImportStatus.PENDING_REVIEW,
-            reviewedAt: null,
-            reviewedByUserId: null,
+            ...(!alreadyImported
+              ? {
+                  status: SupplierProductImportStatus.PENDING_REVIEW,
+                  reviewedAt: null,
+                  reviewedByUserId: null,
+                }
+              : {}),
             lastCrawledAt: now,
           },
         });
@@ -389,9 +482,15 @@ export class SupplierImportsService {
   async updateDraft(draftId: string, dto: UpdateSupplierImportDraftDto, actorUserId: string) {
     const current = await this.prisma.supplierProductImportDraft.findUnique({
       where: { id: draftId },
-      select: { id: true },
+      select: { id: true, status: true, productId: true },
     });
     if (!current) throw new NotFoundException('Supplier product import draft was not found.');
+    if (current.productId || current.status === SupplierProductImportStatus.IMPORTED) {
+      throw new ConflictException('An imported draft cannot be edited.');
+    }
+    if (dto.status === SupplierProductImportStatus.IMPORTED) {
+      throw new BadRequestException('A draft becomes imported only when its product is created.');
+    }
 
     const title = dto.title?.trim();
     if (title === '') throw new BadRequestException('Draft title cannot be blank.');
@@ -445,6 +544,8 @@ export class SupplierImportsService {
         },
         crawlRun: { select: { id: true, status: true, createdAt: true, finishedAt: true } },
         reviewedBy: { select: { id: true, firstName: true, lastName: true, phone: true } },
+        product: { select: { id: true, name: true, slug: true, status: true } },
+        importedBy: { select: { id: true, firstName: true, lastName: true, phone: true } },
       },
     });
   }

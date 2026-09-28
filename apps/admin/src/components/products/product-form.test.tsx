@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ProductForm } from '@/components/products/product-form';
 import type { ProductFormData } from '@/lib/catalog/catalog-data';
+import type { AdminSupplierImportDraft } from '@/lib/supplier-imports/supplier-imports-model';
 
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 
@@ -19,7 +20,83 @@ const data: ProductFormData = {
   sizeGroups: [],
 };
 
+const importDraft: AdminSupplierImportDraft = {
+  id: '10000000-0000-4000-8000-000000000020',
+  sourceProductKey: '10611820',
+  sourceUrl: 'https://bsjsilver.com/product/10611820-item',
+  sourceSku: '10611820',
+  title: 'دستبند نقره رودیوم',
+  description: 'توضیحات دریافت‌شده',
+  sourceCategory: 'دستبند',
+  supplierRetailPriceToman: 24_638_000,
+  weightGrams: 13.78,
+  attributes: [{ key: 'نوع آبکاری', value: 'رودیوم' }],
+  imageUrls: ['https://bsjsilver.com/images/item.jpg'],
+  status: 'PENDING_REVIEW',
+  product: null,
+  importedAt: null,
+  importedBy: null,
+  lastCrawledAt: '2026-09-28T06:00:00.000Z',
+  updatedAt: '2026-09-28T06:00:00.000Z',
+  source: {
+    id: '10000000-0000-4000-8000-000000000021',
+    name: 'سایت اصلی',
+    hostname: 'bsjsilver.com',
+    supplierName: 'بی‌اس‌جی',
+    supplierCode: 'BSJ',
+  },
+  reviewedBy: null,
+};
+
 describe('ProductForm', () => {
+  it('prefills a supplier draft and links it when creating the catalog product', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(new Uint8Array([0xff, 0xd8, 0xff]), {
+          status: 200,
+          headers: { 'Content-Type': 'image/jpeg' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: '10000000-0000-4000-8000-000000000022' }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 'product-1' }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ProductForm data={data} mode="create" importDraft={importDraft} />);
+
+    expect(screen.getByLabelText(/نام محصول/)).toHaveValue('دستبند نقره رودیوم');
+    expect(screen.getByLabelText(/اسلاگ محصول/)).toHaveValue('bsj-10611820');
+    expect(screen.getByLabelText(/SKU تنوع ۱/)).toHaveValue('10611820');
+    expect(screen.getByLabelText(/وزن تنوع ۱/)).toHaveValue('13.78');
+    expect(screen.getByText(/۲۴۶۳۸۰۰۰ تومان/)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('قیمت فروش پیش‌فرض'), {
+      target: { value: '۳۰٬۰۰۰٬۰۰۰' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'ساخت محصول' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    expect(fetchMock.mock.calls[0]?.[0]).toContain(`/drafts/${importDraft.id}/images/0/download`);
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/catalog/media');
+    const [, init] = fetchMock.mock.calls[2] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      supplierImportDraftId: importDraft.id,
+      name: importDraft.title,
+      salePriceToman: 30_000_000,
+      attributes: [{ key: 'نوع آبکاری', value: 'رودیوم', sortOrder: 1 }],
+      media: [{ mediaId: '10000000-0000-4000-8000-000000000022', isPrimary: true }],
+    });
+  });
+
   it('uploads selected product images and includes them when creating the product', async () => {
     const fetchMock = vi
       .fn()

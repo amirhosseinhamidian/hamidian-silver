@@ -252,6 +252,62 @@ describe('CatalogService', () => {
     });
   });
 
+  it('atomically links an imported supplier draft to the created product', async () => {
+    const draftId = '10000000-0000-4000-8000-000000000020';
+    const productId = '10000000-0000-4000-8000-000000000021';
+    const actorUserId = '10000000-0000-4000-8000-000000000022';
+    const transaction = {
+      supplierProductImportDraft: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: draftId,
+          status: 'PENDING_REVIEW',
+          productId: null,
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      product: {
+        create: jest.fn().mockResolvedValue({ id: productId }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ id: productId, name: 'Silver Bracelet' }),
+      },
+      productVariant: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      productCategory: { createMany: jest.fn() },
+      productMedia: { createMany: jest.fn() },
+      productAttribute: { createMany: jest.fn() },
+      brand: { findFirst: jest.fn() },
+      country: { findFirst: jest.fn() },
+      category: { findMany: jest.fn() },
+      size: { findMany: jest.fn() },
+      media: { findMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(
+      service.createProduct(
+        {
+          supplierImportDraftId: draftId,
+          name: 'Silver Bracelet',
+          slug: 'silver-bracelet',
+          sizeMode: SizeMode.NONE,
+          salePriceToman: 30_000_000,
+          variants: [{ sku: 'BRACELET-1' }],
+        },
+        actorUserId,
+      ),
+    ).resolves.toEqual({ id: productId, name: 'Silver Bracelet' });
+
+    expect(transaction.supplierProductImportDraft.updateMany).toHaveBeenCalledWith({
+      where: { id: draftId, productId: null },
+      data: expect.objectContaining({
+        productId,
+        status: 'IMPORTED',
+        reviewedByUserId: actorUserId,
+        importedByUserId: actorUserId,
+      }),
+    });
+  });
+
   it('rejects more than one primary product media item', async () => {
     const dto: CreateProductDto = {
       name: 'Silver Necklace',

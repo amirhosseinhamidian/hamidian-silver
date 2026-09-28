@@ -3044,6 +3044,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/supplier-imports/drafts/{draftId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_getDraft_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SupplierImportsController_updateDraft_v1"];
+        trace?: never;
+    };
     "/api/v1/supplier-imports/categories": {
         parameters: {
             query?: never;
@@ -3140,6 +3156,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/supplier-imports/runs/{runId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_archiveRun_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/supplier-imports/crawl": {
         parameters: {
             query?: never;
@@ -3154,22 +3186,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/api/v1/supplier-imports/drafts/{draftId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["SupplierImportsController_updateDraft_v1"];
         trace?: never;
     };
     "/api/v1/supplier-imports/drafts/{draftId}/images/{imageIndex}/download": {
@@ -3698,6 +3714,8 @@ export interface components {
             sortOrder: number;
         };
         CreateProductDto: {
+            /** Format: uuid */
+            supplierImportDraftId?: string;
             name: string;
             slug: string;
             shortDescription?: string;
@@ -4878,6 +4896,7 @@ export interface components {
             destinationPath: string;
             permanent: boolean;
         };
+        Object: Record<string, never>;
         SyncSupplierCategoriesDto: {
             /** Format: uuid */
             supplierSourceId: string;
@@ -4908,7 +4927,7 @@ export interface components {
             weightGrams?: number | null;
             attributes?: components["schemas"]["SupplierImportAttributeDto"][];
             /** @enum {string} */
-            status?: "PENDING_REVIEW" | "REVIEWED" | "REJECTED";
+            status?: "PENDING_REVIEW" | "REVIEWED" | "REJECTED" | "IMPORTED";
         };
         AdminManagedUserRoleDto: {
             /** @enum {string} */
@@ -9923,8 +9942,10 @@ export interface operations {
     };
     SupplierImportsController_listDrafts_v1: {
         parameters: {
-            query?: {
-                status?: "PENDING_REVIEW" | "REVIEWED" | "REJECTED";
+            query: {
+                page: components["schemas"]["Object"];
+                pageSize: components["schemas"]["Object"];
+                status?: "PENDING_REVIEW" | "REVIEWED" | "REJECTED" | "IMPORTED";
                 supplierSourceId?: string;
             };
             header?: never;
@@ -9932,6 +9953,50 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_getDraft_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_updateDraft_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSupplierImportDraftDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -9987,7 +10052,11 @@ export interface operations {
     };
     SupplierImportsController_listRuns_v1: {
         parameters: {
-            query?: never;
+            query: {
+                view: "ACTIVE" | "ARCHIVED";
+                page: components["schemas"]["Object"];
+                pageSize: components["schemas"]["Object"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -9998,9 +10067,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": Record<string, never>;
-                };
+                content?: never;
             };
         };
     };
@@ -10063,6 +10130,25 @@ export interface operations {
             };
         };
     };
+    SupplierImportsController_archiveRun_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     SupplierImportsController_crawlProduct_v1: {
         parameters: {
             query?: never;
@@ -10081,31 +10167,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    SupplierImportsController_updateDraft_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                draftId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateSupplierImportDraftDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
             };
         };
     };

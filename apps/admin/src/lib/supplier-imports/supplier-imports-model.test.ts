@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildSupplierImportsHref,
+  parseSupplierImportDraftPage,
+  parseSupplierImportFilters,
   parseSupplierImportDrafts,
   parseSupplierImportSources,
   parseSupplierCrawlRuns,
+  parseSupplierCrawlRunPage,
   parseSupplierSourceCategories,
 } from '@/lib/supplier-imports/supplier-imports-model';
 
@@ -70,6 +74,43 @@ describe('supplier imports model', () => {
     expect(parseSupplierImportDrafts([{ id: 'draft-1' }])).toBeNull();
   });
 
+  it('parses the catalog product linked to an imported draft', () => {
+    const parsed = parseSupplierImportDrafts([
+      {
+        id: 'draft-1',
+        sourceProductKey: '10611820',
+        sourceUrl: 'https://bsjsilver.com/product/10611820-item',
+        title: 'دستبند نقره',
+        attributes: [],
+        imageUrls: [],
+        status: 'IMPORTED',
+        importedAt: '2026-09-28T06:30:00.000Z',
+        lastCrawledAt: '2026-09-28T06:00:00.000Z',
+        updatedAt: '2026-09-28T06:30:00.000Z',
+        supplierSource: {
+          id: 'source-1',
+          name: 'سایت اصلی',
+          hostname: 'bsjsilver.com',
+          supplier: { name: 'بی‌اس‌جی', code: 'BSJ' },
+        },
+        product: {
+          id: 'product-1',
+          name: 'دستبند نقره',
+          slug: 'silver-bracelet',
+          status: 'DRAFT',
+        },
+      },
+    ])?.[0];
+
+    expect(parsed).toEqual(
+      expect.objectContaining({
+        status: 'IMPORTED',
+        importedAt: '2026-09-28T06:30:00.000Z',
+        product: expect.objectContaining({ id: 'product-1', slug: 'silver-bracelet' }),
+      }),
+    );
+  });
+
   it('parses supplier categories and bulk crawl progress', () => {
     expect(
       parseSupplierSourceCategories([
@@ -101,5 +142,68 @@ describe('supplier imports model', () => {
         },
       ])?.[0],
     ).toEqual(expect.objectContaining({ status: 'RUNNING', succeededCount: 12 }));
+  });
+
+  it('parses server-side draft and crawl history pages', () => {
+    const draftPayload = {
+      items: [
+        {
+          id: 'draft-1',
+          sourceProductKey: '10611820',
+          sourceUrl: 'https://bsjsilver.com/product/10611820-item',
+          title: 'دستبند نقره',
+          attributes: [],
+          imageUrls: [],
+          status: 'PENDING_REVIEW',
+          lastCrawledAt: '2026-09-27T10:00:00.000Z',
+          updatedAt: '2026-09-27T10:00:00.000Z',
+          supplierSource: {
+            id: 'source-1',
+            name: 'سایت اصلی',
+            hostname: 'bsjsilver.com',
+            supplier: { name: 'بی‌اس‌جی', code: 'BSJ' },
+          },
+        },
+      ],
+      total: 30,
+      page: 2,
+      pageSize: 12,
+      totalPages: 3,
+    };
+    expect(parseSupplierImportDraftPage(draftPayload)).toEqual(
+      expect.objectContaining({ total: 30, page: 2, pageSize: 12 }),
+    );
+
+    expect(
+      parseSupplierCrawlRunPage({
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
+      }),
+    ).toEqual({ items: [], total: 0, page: 1, pageSize: 10, totalPages: 1 });
+  });
+
+  it('normalizes import filters and preserves them in pagination links', () => {
+    const filters = parseSupplierImportFilters({
+      status: 'REVIEWED',
+      page: '3',
+      pageSize: '48',
+      crawlView: 'history',
+      historyPage: '2',
+      historyPageSize: '25',
+    });
+    expect(filters).toEqual(
+      expect.objectContaining({
+        status: 'REVIEWED',
+        page: 3,
+        pageSize: 48,
+        showHistory: true,
+        historyPage: 2,
+      }),
+    );
+    expect(buildSupplierImportsHref(filters, { page: 4 })).toContain('page=4');
+    expect(buildSupplierImportsHref(filters, { page: 4 })).toContain('crawlView=history');
   });
 });

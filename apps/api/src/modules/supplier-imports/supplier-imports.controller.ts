@@ -17,6 +17,7 @@ import type { AuthenticatedPrincipal } from '../authorization/authorization.type
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { ListSupplierImportDraftsQueryDto } from './dto/list-supplier-import-drafts-query.dto';
+import { ListSupplierCrawlRunsQueryDto } from './dto/list-supplier-crawl-runs-query.dto';
 import { ListSupplierCategoriesQueryDto } from './dto/list-supplier-categories-query.dto';
 import { StartBulkSupplierCrawlDto } from './dto/start-bulk-supplier-crawl.dto';
 import { StartSupplierCrawlDto } from './dto/start-supplier-crawl.dto';
@@ -40,6 +41,12 @@ export class SupplierImportsController {
     return this.supplierImportsService.listDrafts(query);
   }
 
+  @Get('drafts/:draftId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
+  getDraft(@Param('draftId', new ParseUUIDPipe({ version: '4' })) draftId: string) {
+    return this.supplierImportsService.getDraft(draftId);
+  }
+
   @Get('categories')
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
   listCategories(@Query() query: ListSupplierCategoriesQueryDto) {
@@ -54,8 +61,8 @@ export class SupplierImportsController {
 
   @Get('runs')
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
-  listRuns() {
-    return this.supplierImportsService.listRuns();
+  listRuns(@Query() query: ListSupplierCrawlRunsQueryDto) {
+    return this.supplierImportsService.listRuns(query);
   }
 
   @Post('bulk-crawls')
@@ -74,6 +81,15 @@ export class SupplierImportsController {
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
   resumeRun(@Param('runId', new ParseUUIDPipe({ version: '4' })) runId: string) {
     return this.supplierImportsService.resumeRun(runId);
+  }
+
+  @Post('runs/:runId/archive')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  archiveRun(
+    @Param('runId', new ParseUUIDPipe({ version: '4' })) runId: string,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ) {
+    return this.supplierImportsService.archiveRun(runId, principal.userId);
   }
 
   @Post('crawl')

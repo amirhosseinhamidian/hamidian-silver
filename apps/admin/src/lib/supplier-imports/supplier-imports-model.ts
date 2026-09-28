@@ -1,4 +1,4 @@
-export type AdminSupplierImportStatus = 'PENDING_REVIEW' | 'REVIEWED' | 'REJECTED';
+export type AdminSupplierImportStatus = 'PENDING_REVIEW' | 'REVIEWED' | 'REJECTED' | 'IMPORTED';
 export type AdminSupplierCrawlRunStatus =
   'QUEUED' | 'RUNNING' | 'PAUSED' | 'SUCCEEDED' | 'PARTIAL' | 'FAILED' | 'CANCELLED';
 
@@ -30,6 +30,9 @@ export type AdminSupplierImportDraft = Readonly<{
   attributes: readonly AdminSupplierImportAttribute[];
   imageUrls: readonly string[];
   status: AdminSupplierImportStatus;
+  product: Readonly<{ id: string; name: string; slug: string; status: string }> | null;
+  importedAt: string | null;
+  importedBy: string | null;
   lastCrawledAt: string;
   updatedAt: string;
   source: Readonly<{
@@ -65,17 +68,45 @@ export type AdminSupplierCrawlRun = Readonly<{
   skippedCount: number;
   stopAtKnown: boolean;
   errorMessage: string | null;
+  archivedAt: string | null;
+  archivedBy: string | null;
   createdAt: string;
+}>;
+
+export type AdminSupplierImportPage<T> = Readonly<{
+  items: readonly T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}>;
+
+export type AdminSupplierImportFilters = Readonly<{
+  status: AdminSupplierImportStatus | 'ALL';
+  supplierSourceId: string | 'ALL';
+  page: number;
+  pageSize: number;
+  runPage: number;
+  runPageSize: number;
+  historyPage: number;
+  historyPageSize: number;
+  showHistory: boolean;
 }>;
 
 export type AdminSupplierImportsData = Readonly<{
   sources: readonly AdminSupplierImportSource[];
-  drafts: readonly AdminSupplierImportDraft[];
+  drafts: AdminSupplierImportPage<AdminSupplierImportDraft>;
   categories: readonly AdminSupplierSourceCategory[];
-  runs: readonly AdminSupplierCrawlRun[];
+  runs: AdminSupplierImportPage<AdminSupplierCrawlRun>;
+  archivedRuns: AdminSupplierImportPage<AdminSupplierCrawlRun>;
 }>;
 
-const STATUSES = new Set<AdminSupplierImportStatus>(['PENDING_REVIEW', 'REVIEWED', 'REJECTED']);
+const STATUSES = new Set<AdminSupplierImportStatus>([
+  'PENDING_REVIEW',
+  'REVIEWED',
+  'REJECTED',
+  'IMPORTED',
+]);
 const RUN_STATUSES = new Set<AdminSupplierCrawlRunStatus>([
   'QUEUED',
   'RUNNING',
@@ -147,6 +178,8 @@ export function parseSupplierImportDrafts(
     const source = record(item?.supplierSource);
     const supplier = record(source?.supplier);
     const reviewer = record(item?.reviewedBy);
+    const importer = record(item?.importedBy);
+    const product = record(item?.product);
     const status = text(item?.status) as AdminSupplierImportStatus | null;
     const rawAttributes = Array.isArray(item?.attributes) ? item.attributes : [];
     const attributes = rawAttributes.map((attribute) => {
@@ -193,6 +226,13 @@ export function parseSupplierImportDrafts(
     const reviewerName = [text(reviewer?.firstName), text(reviewer?.lastName)]
       .filter(Boolean)
       .join(' ');
+    const importerName = [text(importer?.firstName), text(importer?.lastName)]
+      .filter(Boolean)
+      .join(' ');
+    const productId = text(product?.id);
+    const productName = text(product?.name);
+    const productSlug = text(product?.slug);
+    const productStatus = text(product?.status);
     return {
       id,
       sourceProductKey,
@@ -206,6 +246,12 @@ export function parseSupplierImportDrafts(
       attributes: attributes as readonly AdminSupplierImportAttribute[],
       imageUrls,
       status,
+      product:
+        productId && productName && productSlug && productStatus
+          ? { id: productId, name: productName, slug: productSlug, status: productStatus }
+          : null,
+      importedAt: text(item?.importedAt),
+      importedBy: importerName || text(importer?.phone),
       lastCrawledAt,
       updatedAt,
       source: {
@@ -221,6 +267,38 @@ export function parseSupplierImportDrafts(
   return parsed.some((item) => item === null)
     ? null
     : (parsed as readonly AdminSupplierImportDraft[]);
+}
+
+function parsePage<T>(
+  value: unknown,
+  parseItems: (value: unknown) => readonly T[] | null,
+): AdminSupplierImportPage<T> | null {
+  const source = record(value);
+  const items = parseItems(source?.items);
+  const total = number(source?.total);
+  const page = number(source?.page);
+  const pageSize = number(source?.pageSize);
+  const totalPages = number(source?.totalPages);
+  if (
+    !items ||
+    total === null ||
+    page === null ||
+    pageSize === null ||
+    totalPages === null ||
+    total < 0 ||
+    page < 1 ||
+    pageSize < 1 ||
+    totalPages < 1
+  ) {
+    return null;
+  }
+  return { items, total, page, pageSize, totalPages };
+}
+
+export function parseSupplierImportDraftPage(
+  value: unknown,
+): AdminSupplierImportPage<AdminSupplierImportDraft> | null {
+  return parsePage(value, parseSupplierImportDrafts);
 }
 
 export function parseSupplierSourceCategories(
@@ -292,8 +370,73 @@ export function parseSupplierCrawlRuns(value: unknown): readonly AdminSupplierCr
       skippedCount,
       stopAtKnown: item?.stopAtKnown === true,
       errorMessage: text(item?.errorMessage),
+      archivedAt: text(item?.archivedAt),
+      archivedBy:
+        [text(record(item?.archivedBy)?.firstName), text(record(item?.archivedBy)?.lastName)]
+          .filter(Boolean)
+          .join(' ') || text(record(item?.archivedBy)?.phone),
       createdAt,
     } satisfies AdminSupplierCrawlRun;
   });
   return parsed.some((item) => item === null) ? null : (parsed as readonly AdminSupplierCrawlRun[]);
+}
+
+export function parseSupplierCrawlRunPage(
+  value: unknown,
+): AdminSupplierImportPage<AdminSupplierCrawlRun> | null {
+  return parsePage(value, parseSupplierCrawlRuns);
+}
+
+function queryText(value: string | string[] | undefined): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function positiveInteger(value: string | null, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export function parseSupplierImportFilters(
+  value: Record<string, string | string[] | undefined>,
+): AdminSupplierImportFilters {
+  const rawStatus = queryText(value.status);
+  const status = STATUSES.has(rawStatus as AdminSupplierImportStatus)
+    ? (rawStatus as AdminSupplierImportStatus)
+    : 'ALL';
+  const requestedPageSize = positiveInteger(queryText(value.pageSize), 24);
+  const requestedHistoryPageSize = positiveInteger(queryText(value.historyPageSize), 10);
+  return {
+    status,
+    supplierSourceId: queryText(value.supplierSourceId) ?? 'ALL',
+    page: positiveInteger(queryText(value.page), 1),
+    pageSize: [12, 24, 48, 96].includes(requestedPageSize) ? requestedPageSize : 24,
+    runPage: positiveInteger(queryText(value.runPage), 1),
+    runPageSize: 10,
+    historyPage: positiveInteger(queryText(value.historyPage), 1),
+    historyPageSize: [10, 25, 50].includes(requestedHistoryPageSize)
+      ? requestedHistoryPageSize
+      : 10,
+    showHistory: queryText(value.crawlView) === 'history',
+  };
+}
+
+export function buildSupplierImportsHref(
+  filters: AdminSupplierImportFilters,
+  overrides: Partial<AdminSupplierImportFilters> = {},
+  hash = '',
+): string {
+  const next = { ...filters, ...overrides };
+  const query = new URLSearchParams();
+  if (next.status !== 'ALL') query.set('status', next.status);
+  if (next.supplierSourceId !== 'ALL') query.set('supplierSourceId', next.supplierSourceId);
+  if (next.page > 1) query.set('page', String(next.page));
+  if (next.pageSize !== 24) query.set('pageSize', String(next.pageSize));
+  if (next.runPage > 1) query.set('runPage', String(next.runPage));
+  if (next.showHistory) query.set('crawlView', 'history');
+  if (next.historyPage > 1) query.set('historyPage', String(next.historyPage));
+  if (next.historyPageSize !== 10) {
+    query.set('historyPageSize', String(next.historyPageSize));
+  }
+  const suffix = query.toString();
+  return `/product-imports${suffix ? `?${suffix}` : ''}${hash}`;
 }

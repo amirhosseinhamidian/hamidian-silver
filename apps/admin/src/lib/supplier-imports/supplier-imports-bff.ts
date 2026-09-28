@@ -23,6 +23,17 @@ export async function forwardSupplierImportMutation(
   }
 }
 
+export async function forwardSupplierImportRead(apiPath: string): Promise<Response> {
+  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  if (!token) return Response.json({ message: 'Authentication required.' }, { status: 401 });
+  try {
+    const response = await requestAdminCatalog(apiPath, token);
+    return Response.json((await readJsonResponse(response)) ?? null, { status: response.status });
+  } catch {
+    return Response.json({ message: 'Supplier import service is unavailable.' }, { status: 502 });
+  }
+}
+
 export async function forwardSupplierImageDownload(apiPath: string): Promise<Response> {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token) return Response.json({ message: 'Authentication required.' }, { status: 401 });

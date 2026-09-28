@@ -17,6 +17,8 @@ describe('SupplierImportsService', () => {
       upsert: jest.fn(),
     },
     supplierCrawlRun: {
+      count: jest.fn(),
+      findMany: jest.fn(),
       findFirst: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
@@ -24,6 +26,7 @@ describe('SupplierImportsService', () => {
       updateMany: jest.fn(),
     },
     supplierProductImportDraft: {
+      count: jest.fn(),
       upsert: jest.fn(),
       create: jest.fn(),
       findUnique: jest.fn(),
@@ -49,8 +52,9 @@ describe('SupplierImportsService', () => {
     prisma.supplierCrawlRun.update.mockResolvedValue({ id: runId });
     prisma.supplierCrawlRun.updateMany.mockResolvedValue({ count: 1 });
     prisma.supplierProductImportDraft.upsert.mockResolvedValue(draft);
-    prisma.$transaction.mockImplementation((operation: (transaction: typeof prisma) => unknown) =>
-      operation(prisma),
+    prisma.$transaction.mockImplementation(
+      (operation: ((transaction: typeof prisma) => unknown) | readonly unknown[]) =>
+        Array.isArray(operation) ? Promise.all(operation) : operation(prisma),
     );
   });
 
@@ -134,6 +138,39 @@ describe('SupplierImportsService', () => {
         stopAtKnown: true,
       }),
     });
+  });
+
+  it('returns server-paginated import drafts', async () => {
+    prisma.supplierProductImportDraft.count.mockResolvedValue(31);
+    prisma.supplierProductImportDraft.findMany.mockResolvedValue([{ id: 'draft-page-2' }]);
+
+    await expect(
+      service.listDrafts({ page: 2, pageSize: 12, status: 'PENDING_REVIEW' }),
+    ).resolves.toEqual({
+      items: [{ id: 'draft-page-2' }],
+      total: 31,
+      page: 2,
+      pageSize: 12,
+      totalPages: 3,
+    });
+    expect(prisma.supplierProductImportDraft.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 12, take: 12 }),
+    );
+  });
+
+  it('archives only a finished crawl and records the admin user', async () => {
+    const userId = '10000000-0000-4000-8000-000000000005';
+
+    await expect(service.archiveRun(runId, userId)).resolves.toEqual({
+      id: runId,
+      archived: true,
+    });
+    expect(prisma.supplierCrawlRun.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: runId, archivedAt: null }),
+        data: expect.objectContaining({ archivedByUserId: userId }),
+      }),
+    );
   });
 
   it('uses the supplier session and queues child categories returned by a parent category', async () => {
