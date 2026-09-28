@@ -25,6 +25,13 @@ describe('SupplierImportsService', () => {
       update: jest.fn(),
       updateMany: jest.fn(),
     },
+    supplierCrawlSchedule: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      upsert: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+    },
     supplierProductImportDraft: {
       count: jest.fn(),
       upsert: jest.fn(),
@@ -51,6 +58,9 @@ describe('SupplierImportsService', () => {
     prisma.supplierCrawlRun.create.mockResolvedValue({ id: runId });
     prisma.supplierCrawlRun.update.mockResolvedValue({ id: runId });
     prisma.supplierCrawlRun.updateMany.mockResolvedValue({ count: 1 });
+    prisma.supplierCrawlSchedule.upsert.mockResolvedValue({ id: 'schedule-1' });
+    prisma.supplierCrawlSchedule.update.mockResolvedValue({ id: 'schedule-1' });
+    prisma.supplierCrawlSchedule.updateMany.mockResolvedValue({ count: 1 });
     prisma.supplierProductImportDraft.upsert.mockResolvedValue(draft);
     prisma.$transaction.mockImplementation(
       (operation: ((transaction: typeof prisma) => unknown) | readonly unknown[]) =>
@@ -137,6 +147,109 @@ describe('SupplierImportsService', () => {
         requestedLimit: 100,
         stopAtKnown: true,
       }),
+    });
+  });
+
+  it('stores a daily Tehran schedule with retry policy', async () => {
+    prisma.supplierSourceCategory.findMany.mockResolvedValue([]);
+
+    await expect(
+      service.updateSchedule(sourceId, {
+        isEnabled: true,
+        timeOfDay: '02:30',
+        categoryIds: [],
+        requestedLimit: 150,
+        stopAtKnown: true,
+        maxRetries: 3,
+        retryDelayMinutes: 20,
+      }),
+    ).resolves.toEqual({ id: 'schedule-1' });
+
+    expect(prisma.supplierCrawlSchedule.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { supplierSourceId: sourceId },
+        create: expect.objectContaining({
+          timezone: 'Asia/Tehran',
+          requestedLimit: 150,
+          maxRetries: 3,
+          nextRunAt: expect.any(Date),
+        }),
+      }),
+    );
+  });
+
+  it('queues an immediate scheduled crawl with its configured categories', async () => {
+    const categoryId = '10000000-0000-4000-8000-000000000004';
+    prisma.supplierCrawlSchedule.findUnique.mockResolvedValue({
+      id: 'schedule-1',
+      supplierSourceId: sourceId,
+      categoryIds: [categoryId],
+      requestedLimit: 200,
+      stopAtKnown: true,
+      maxRetries: 2,
+      retryDelayMinutes: 15,
+      supplierSource: {},
+    });
+    prisma.supplierSource.findFirst.mockResolvedValue({
+      id: sourceId,
+      hostname: 'bsjsilver.com',
+      adapterKey: 'bsj-silver',
+      baseUrl: 'https://bsjsilver.com/',
+      crawlDelayMs: 1000,
+    });
+    prisma.supplierSourceCategory.findMany.mockResolvedValue([
+      {
+        id: categoryId,
+        name: 'دستبند',
+        url: 'https://bsjsilver.com/product/category/12-bracelet',
+      },
+    ]);
+    prisma.supplierCrawlRun.create.mockResolvedValue({ id: runId, status: 'QUEUED' });
+
+    await expect(service.runScheduleNow(sourceId)).resolves.toEqual({ id: runId, status: 'QUEUED' });
+    expect(prisma.supplierCrawlRun.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        scheduleId: 'schedule-1',
+        scope: 'SCHEDULED',
+        requestedLimit: 200,
+        maxRetries: 2,
+      }),
+    });
+  });
+
+  it('leases a due schedule and advances it atomically with the queued run', async () => {
+    prisma.supplierCrawlSchedule.findMany.mockResolvedValue([
+      {
+        id: 'schedule-1',
+        supplierSourceId: sourceId,
+        categoryIds: [],
+        isEnabled: true,
+        timeOfDay: '02:00',
+        timezone: 'Asia/Tehran',
+        requestedLimit: 100,
+        stopAtKnown: true,
+        maxRetries: 2,
+        retryDelayMinutes: 15,
+        supplierSource: {},
+      },
+    ]);
+    prisma.supplierSource.findFirst.mockResolvedValue({
+      id: sourceId,
+      hostname: 'bsjsilver.com',
+      adapterKey: 'bsj-silver',
+      baseUrl: 'https://bsjsilver.com/',
+      crawlDelayMs: 1000,
+    });
+    prisma.supplierCrawlRun.create.mockResolvedValue({ id: runId, status: 'QUEUED' });
+
+    await service.processSchedules();
+
+    expect(prisma.supplierCrawlSchedule.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { nextRunAt: expect.any(Date) } }),
+    );
+    expect(prisma.supplierCrawlSchedule.update).toHaveBeenCalledWith({
+      where: { id: 'schedule-1' },
+      data: expect.objectContaining({ lastEnqueuedAt: expect.any(Date), nextRunAt: expect.any(Date) }),
     });
   });
 

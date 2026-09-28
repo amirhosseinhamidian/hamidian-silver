@@ -6,6 +6,7 @@ import { type FormEvent, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { SupplierBulkCrawlCard } from './supplier-bulk-crawl-card';
+import { SupplierCrawlScheduleCard } from './supplier-crawl-schedule-card';
 import { Badge } from '@/components/ui/badge';
 import { BottomSheet, BottomSheetContent } from '@/components/ui/bottom-sheet';
 import { Button, ButtonLink } from '@/components/ui/button';
@@ -28,6 +29,7 @@ import {
   type AdminSupplierImportSource,
   type AdminSupplierImportStatus,
   type AdminSupplierCrawlRun,
+  type AdminSupplierCrawlSchedule,
   type AdminSupplierSourceCategory,
 } from '@/lib/supplier-imports/supplier-imports-model';
 
@@ -37,6 +39,7 @@ type Props = Readonly<{
   categories: readonly AdminSupplierSourceCategory[];
   runs: AdminSupplierImportPage<AdminSupplierCrawlRun>;
   archivedRuns: AdminSupplierImportPage<AdminSupplierCrawlRun>;
+  schedules?: readonly AdminSupplierCrawlSchedule[];
   filters: AdminSupplierImportFilters;
   failed: boolean;
   canWrite: boolean;
@@ -226,6 +229,7 @@ export function SupplierProductImportsView({
   categories,
   runs,
   archivedRuns,
+  schedules = [],
   filters,
   failed,
   canWrite,
@@ -271,6 +275,13 @@ export function SupplierProductImportsView({
           ارتباط با سرویس ورود محصول برقرار نشد. صفحه را دوباره بارگذاری کنید.
         </Alert>
       ) : null}
+
+      <SupplierCrawlScheduleCard
+        sources={sources}
+        categories={categories}
+        schedules={schedules}
+        canWrite={canWrite}
+      />
 
       <SupplierBulkCrawlCard
         sources={sources}

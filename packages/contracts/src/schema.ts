@@ -3108,6 +3108,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/supplier-imports/schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_listSchedules_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/schedules/{supplierSourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SupplierImportsController_updateSchedule_v1"];
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/schedules/{supplierSourceId}/run-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_runScheduleNow_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/supplier-imports/bulk-crawls": {
         parameters: {
             query?: never;
@@ -4900,6 +4948,15 @@ export interface components {
         SyncSupplierCategoriesDto: {
             /** Format: uuid */
             supplierSourceId: string;
+        };
+        UpdateSupplierCrawlScheduleDto: {
+            isEnabled: boolean;
+            timeOfDay: string;
+            categoryIds: string[];
+            requestedLimit: number;
+            stopAtKnown: boolean;
+            maxRetries: number;
+            retryDelayMinutes: number;
         };
         StartBulkSupplierCrawlDto: {
             /** Format: uuid */
@@ -10064,6 +10121,67 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_listSchedules_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_updateSchedule_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierSourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSupplierCrawlScheduleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_runScheduleNow_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierSourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

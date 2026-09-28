@@ -8,6 +8,7 @@ import {
   parseSupplierImportDraftPage,
   parseSupplierImportSources,
   parseSupplierCrawlRunPage,
+  parseSupplierCrawlSchedules,
   parseSupplierSourceCategories,
   type AdminSupplierImportFilters,
   type AdminSupplierImportsData,
@@ -50,7 +51,7 @@ export async function loadSupplierImports(filters: AdminSupplierImportFilters): 
       page: String(filters.historyPage),
       pageSize: String(filters.historyPageSize),
     });
-    const [sourcesResponse, draftsResponse, runsResponse, archivedRunsResponse] = await Promise.all(
+    const [sourcesResponse, draftsResponse, runsResponse, archivedRunsResponse, schedulesResponse] = await Promise.all(
       [
         requestAdminCatalog('/api/v1/supplier-imports/sources', token),
         requestAdminCatalog(`/api/v1/supplier-imports/drafts?${draftQuery}`, token),
@@ -59,15 +60,17 @@ export async function loadSupplierImports(filters: AdminSupplierImportFilters): 
           token,
         ),
         requestAdminCatalog(`/api/v1/supplier-imports/runs?${historyQuery}`, token),
+        requestAdminCatalog('/api/v1/supplier-imports/schedules', token),
       ],
     );
-    if (!sourcesResponse.ok || !draftsResponse.ok || !runsResponse.ok || !archivedRunsResponse.ok)
+    if (!sourcesResponse.ok || !draftsResponse.ok || !runsResponse.ok || !archivedRunsResponse.ok || !schedulesResponse.ok)
       return { data: null, failed: true };
     const sources = parseSupplierImportSources(await readJsonResponse(sourcesResponse));
     const drafts = parseSupplierImportDraftPage(await readJsonResponse(draftsResponse));
     const runs = parseSupplierCrawlRunPage(await readJsonResponse(runsResponse));
     const archivedRuns = parseSupplierCrawlRunPage(await readJsonResponse(archivedRunsResponse));
-    if (!sources || !drafts || !runs || !archivedRuns) return { data: null, failed: true };
+    const schedules = parseSupplierCrawlSchedules(await readJsonResponse(schedulesResponse));
+    if (!sources || !drafts || !runs || !archivedRuns || !schedules) return { data: null, failed: true };
     const categoryResponses = await Promise.all(
       sources
         .filter((source) => source.supported)
@@ -91,6 +94,7 @@ export async function loadSupplierImports(filters: AdminSupplierImportFilters): 
         drafts,
         runs,
         archivedRuns,
+        schedules,
         categories: categoryGroups.flatMap((group) => group!),
       },
       failed: false,

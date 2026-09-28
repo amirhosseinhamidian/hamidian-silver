@@ -907,6 +907,7 @@ model SupplierSource {
   deletedAt      DateTime?           @db.Timestamptz(3)
   supplier       Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   crawlRuns      SupplierCrawlRun[]
+  crawlSchedule  SupplierCrawlSchedule?
   importDrafts   SupplierProductImportDraft[]
   categories     SupplierSourceCategory[]
 
@@ -923,10 +924,15 @@ model SupplierCrawlRun {
   scope            SupplierCrawlScope
   targetUrl        String                 @db.VarChar(2000)
   categoryId       String?                @db.Uuid
+  scheduleId       String?                @db.Uuid
   requestedLimit   Int?
   currentPage      Int                    @default(1)
   pendingCategoryUrls String[]             @default([]) @db.VarChar(2000)
   stopAtKnown      Boolean                @default(false)
+  retryCount       Int                    @default(0)
+  maxRetries       Int                    @default(0)
+  retryDelayMinutes Int                   @default(15)
+  availableAt      DateTime               @default(now()) @db.Timestamptz(3)
   status           SupplierCrawlRunStatus @default(QUEUED)
   discoveredCount  Int                    @default(0)
   succeededCount   Int                    @default(0)
@@ -941,12 +947,15 @@ model SupplierCrawlRun {
   createdAt        DateTime               @default(now()) @db.Timestamptz(3)
   supplierSource   SupplierSource         @relation(fields: [supplierSourceId], references: [id], onDelete: Restrict)
   category         SupplierSourceCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  schedule         SupplierCrawlSchedule?  @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
   archivedBy       User?                   @relation("SupplierCrawlRunArchiver", fields: [archivedByUserId], references: [id], onDelete: SetNull)
   importDrafts     SupplierProductImportDraft[]
 
   @@index([supplierSourceId, createdAt])
   @@index([status, createdAt])
+  @@index([status, availableAt, createdAt])
   @@index([categoryId])
+  @@index([scheduleId])
   @@index([archivedAt, createdAt])
   @@index([archivedByUserId])
   @@map("supplier_crawl_runs")
@@ -968,6 +977,29 @@ model SupplierSourceCategory {
   @@unique([supplierSourceId, externalKey])
   @@index([supplierSourceId, isActive, name])
   @@map("supplier_source_categories")
+}
+
+model SupplierCrawlSchedule {
+  id                String         @id @default(uuid()) @db.Uuid
+  supplierSourceId  String         @unique @db.Uuid
+  categoryIds       String[]       @default([]) @db.Uuid
+  isEnabled         Boolean        @default(false)
+  timeOfDay         String         @default("02:00") @db.VarChar(5)
+  timezone          String         @default("Asia/Tehran") @db.VarChar(64)
+  requestedLimit    Int            @default(100)
+  stopAtKnown       Boolean        @default(true)
+  maxRetries        Int            @default(3)
+  retryDelayMinutes Int            @default(15)
+  nextRunAt         DateTime?      @db.Timestamptz(3)
+  lastEnqueuedAt    DateTime?      @db.Timestamptz(3)
+  lastFinishedAt    DateTime?      @db.Timestamptz(3)
+  createdAt         DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime       @updatedAt @db.Timestamptz(3)
+  supplierSource    SupplierSource @relation(fields: [supplierSourceId], references: [id], onDelete: Cascade)
+  crawlRuns         SupplierCrawlRun[]
+
+  @@index([isEnabled, nextRunAt])
+  @@map("supplier_crawl_schedules")
 }
 
 model SupplierProductImportDraft {

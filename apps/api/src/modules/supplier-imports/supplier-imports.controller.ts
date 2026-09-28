@@ -23,6 +23,7 @@ import { StartBulkSupplierCrawlDto } from './dto/start-bulk-supplier-crawl.dto';
 import { StartSupplierCrawlDto } from './dto/start-supplier-crawl.dto';
 import { SyncSupplierCategoriesDto } from './dto/sync-supplier-categories.dto';
 import { UpdateSupplierImportDraftDto } from './dto/update-supplier-import-draft.dto';
+import { UpdateSupplierCrawlScheduleDto } from './dto/update-supplier-crawl-schedule.dto';
 import { SupplierImportsService } from './supplier-imports.service';
 
 @Controller('supplier-imports')
@@ -63,6 +64,29 @@ export class SupplierImportsController {
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
   listRuns(@Query() query: ListSupplierCrawlRunsQueryDto) {
     return this.supplierImportsService.listRuns(query);
+  }
+
+  @Get('schedules')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
+  listSchedules() {
+    return this.supplierImportsService.listSchedules();
+  }
+
+  @Patch('schedules/:supplierSourceId')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  updateSchedule(
+    @Param('supplierSourceId', new ParseUUIDPipe({ version: '4' })) supplierSourceId: string,
+    @Body() dto: UpdateSupplierCrawlScheduleDto,
+  ) {
+    return this.supplierImportsService.updateSchedule(supplierSourceId, dto);
+  }
+
+  @Post('schedules/:supplierSourceId/run-now')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  runScheduleNow(
+    @Param('supplierSourceId', new ParseUUIDPipe({ version: '4' })) supplierSourceId: string,
+  ) {
+    return this.supplierImportsService.runScheduleNow(supplierSourceId);
   }
 
   @Post('bulk-crawls')

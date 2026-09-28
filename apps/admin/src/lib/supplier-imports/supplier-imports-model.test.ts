@@ -8,6 +8,7 @@ import {
   parseSupplierImportSources,
   parseSupplierCrawlRuns,
   parseSupplierCrawlRunPage,
+  parseSupplierCrawlSchedules,
   parseSupplierSourceCategories,
 } from '@/lib/supplier-imports/supplier-imports-model';
 
@@ -205,5 +206,40 @@ describe('supplier imports model', () => {
     );
     expect(buildSupplierImportsHref(filters, { page: 4 })).toContain('page=4');
     expect(buildSupplierImportsHref(filters, { page: 4 })).toContain('crawlView=history');
+  });
+
+  it('parses crawl schedules and their latest run', () => {
+    expect(
+      parseSupplierCrawlSchedules([
+        {
+          id: 'schedule-1',
+          supplierSourceId: 'source-1',
+          categoryIds: ['category-1'],
+          isEnabled: true,
+          timeOfDay: '02:00',
+          timezone: 'Asia/Tehran',
+          requestedLimit: 100,
+          stopAtKnown: true,
+          maxRetries: 2,
+          retryDelayMinutes: 15,
+          nextRunAt: '2026-09-29T22:30:00.000Z',
+          crawlRuns: [
+            {
+              id: 'run-1',
+              status: 'SUCCEEDED',
+              createdAt: '2026-09-28T22:30:00.000Z',
+              finishedAt: '2026-09-28T22:40:00.000Z',
+            },
+          ],
+        },
+      ])?.[0],
+    ).toEqual(
+      expect.objectContaining({
+        supplierSourceId: 'source-1',
+        isEnabled: true,
+        categoryIds: ['category-1'],
+        lastRun: expect.objectContaining({ status: 'SUCCEEDED' }),
+      }),
+    );
   });
 });

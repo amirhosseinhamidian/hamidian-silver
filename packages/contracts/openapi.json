@@ -7656,6 +7656,83 @@
         ]
       }
     },
+    "/api/v1/supplier-imports/schedules": {
+      "get": {
+        "operationId": "SupplierImportsController_listSchedules_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/schedules/{supplierSourceId}": {
+      "patch": {
+        "operationId": "SupplierImportsController_updateSchedule_v1",
+        "parameters": [
+          {
+            "name": "supplierSourceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSupplierCrawlScheduleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/schedules/{supplierSourceId}/run-now": {
+      "post": {
+        "operationId": "SupplierImportsController_runScheduleNow_v1",
+        "parameters": [
+          {
+            "name": "supplierSourceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
     "/api/v1/supplier-imports/bulk-crawls": {
       "post": {
         "operationId": "SupplierImportsController_startBulkCrawl_v1",
@@ -14688,6 +14765,54 @@
         },
         "required": [
           "supplierSourceId"
+        ]
+      },
+      "UpdateSupplierCrawlScheduleDto": {
+        "type": "object",
+        "properties": {
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "timeOfDay": {
+            "type": "string",
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "categoryIds": {
+            "uniqueItems": true,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "requestedLimit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "stopAtKnown": {
+            "type": "boolean"
+          },
+          "maxRetries": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "retryDelayMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1440
+          }
+        },
+        "required": [
+          "isEnabled",
+          "timeOfDay",
+          "categoryIds",
+          "requestedLimit",
+          "stopAtKnown",
+          "maxRetries",
+          "retryDelayMinutes"
         ]
       },
       "StartBulkSupplierCrawlDto": {

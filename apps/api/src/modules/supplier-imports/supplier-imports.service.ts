@@ -21,6 +21,7 @@ import { ListSupplierCategoriesQueryDto } from './dto/list-supplier-categories-q
 import { StartBulkSupplierCrawlDto } from './dto/start-bulk-supplier-crawl.dto';
 import { StartSupplierCrawlDto } from './dto/start-supplier-crawl.dto';
 import { SyncSupplierCategoriesDto } from './dto/sync-supplier-categories.dto';
+import { UpdateSupplierCrawlScheduleDto } from './dto/update-supplier-crawl-schedule.dto';
 import { UpdateSupplierImportDraftDto } from './dto/update-supplier-import-draft.dto';
 import type { SupplierCrawlerAdapter } from './supplier-crawler.types';
 
@@ -28,6 +29,12 @@ const HTML_RESPONSE_LIMIT_BYTES = 5 * 1024 * 1024;
 const IMAGE_RESPONSE_LIMIT_BYTES = 10 * 1024 * 1024;
 const CRAWL_TIMEOUT_MS = 20_000;
 const MAX_REDIRECTS = 3;
+const BULK_CRAWL_SCOPES = [
+  SupplierCrawlScope.CATALOG,
+  SupplierCrawlScope.CATEGORY_URL,
+  SupplierCrawlScope.SCHEDULED,
+] as const;
+const SCHEDULE_TIMEZONE = 'Asia/Tehran';
 
 type ActiveSupplierSource = Readonly<{
   id: string;
@@ -35,6 +42,16 @@ type ActiveSupplierSource = Readonly<{
   adapterKey: string | null;
   baseUrl?: string;
   crawlDelayMs?: number;
+}>;
+
+type CrawlScheduleConfig = Readonly<{
+  id: string;
+  supplierSourceId: string;
+  categoryIds: string[];
+  requestedLimit: number;
+  stopAtKnown: boolean;
+  maxRetries: number;
+  retryDelayMinutes: number;
 }>;
 
 @Injectable()
@@ -159,9 +176,84 @@ export class SupplierImportsService {
     });
   }
 
+  listSchedules() {
+    return this.prisma.supplierCrawlSchedule.findMany({
+      where: {
+        supplierSource: {
+          isActive: true,
+          deletedAt: null,
+          supplier: { isActive: true, deletedAt: null },
+        },
+      },
+      orderBy: { supplierSource: { supplier: { name: 'asc' } } },
+      include: {
+        supplierSource: {
+          select: {
+            id: true,
+            name: true,
+            supplier: { select: { id: true, name: true, code: true } },
+          },
+        },
+        crawlRuns: {
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, status: true, createdAt: true, finishedAt: true },
+        },
+      },
+    });
+  }
+
+  async updateSchedule(
+    supplierSourceId: string,
+    dto: UpdateSupplierCrawlScheduleDto,
+  ) {
+    await this.activeSource(supplierSourceId);
+    await this.validateScheduleCategories(supplierSourceId, dto.categoryIds);
+    const now = new Date();
+    return this.prisma.supplierCrawlSchedule.upsert({
+      where: { supplierSourceId },
+      create: {
+        supplierSourceId,
+        categoryIds: dto.categoryIds,
+        isEnabled: dto.isEnabled,
+        timeOfDay: dto.timeOfDay,
+        timezone: SCHEDULE_TIMEZONE,
+        requestedLimit: dto.requestedLimit,
+        stopAtKnown: dto.stopAtKnown,
+        maxRetries: dto.maxRetries,
+        retryDelayMinutes: dto.retryDelayMinutes,
+        nextRunAt: dto.isEnabled
+          ? this.nextDailyOccurrence(now, dto.timeOfDay, SCHEDULE_TIMEZONE)
+          : null,
+      },
+      update: {
+        categoryIds: dto.categoryIds,
+        isEnabled: dto.isEnabled,
+        timeOfDay: dto.timeOfDay,
+        timezone: SCHEDULE_TIMEZONE,
+        requestedLimit: dto.requestedLimit,
+        stopAtKnown: dto.stopAtKnown,
+        maxRetries: dto.maxRetries,
+        retryDelayMinutes: dto.retryDelayMinutes,
+        nextRunAt: dto.isEnabled
+          ? this.nextDailyOccurrence(now, dto.timeOfDay, SCHEDULE_TIMEZONE)
+          : null,
+      },
+    });
+  }
+
+  async runScheduleNow(supplierSourceId: string) {
+    const schedule = await this.prisma.supplierCrawlSchedule.findUnique({
+      where: { supplierSourceId },
+      include: { supplierSource: true },
+    });
+    if (!schedule) throw new NotFoundException('Supplier crawl schedule was not found.');
+    return this.enqueueSchedule(schedule);
+  }
+
   async listRuns(query: ListSupplierCrawlRunsQueryDto) {
     const where: Prisma.SupplierCrawlRunWhereInput = {
-      scope: { in: [SupplierCrawlScope.CATALOG, SupplierCrawlScope.CATEGORY_URL] },
+      scope: { in: [...BULK_CRAWL_SCOPES] },
       archivedAt: query.view === 'ARCHIVED' ? { not: null } : null,
     };
     const [total, items] = await this.prisma.$transaction([
@@ -193,7 +285,7 @@ export class SupplierImportsService {
     const result = await this.prisma.supplierCrawlRun.updateMany({
       where: {
         id: runId,
-        scope: { in: [SupplierCrawlScope.CATALOG, SupplierCrawlScope.CATEGORY_URL] },
+        scope: { in: [...BULK_CRAWL_SCOPES] },
         archivedAt: null,
         status: {
           in: [
@@ -309,7 +401,7 @@ export class SupplierImportsService {
       await this.prisma.supplierCrawlRun.updateMany({
         where: {
           status: SupplierCrawlRunStatus.RUNNING,
-          scope: { in: [SupplierCrawlScope.CATALOG, SupplierCrawlScope.CATEGORY_URL] },
+          scope: { in: [...BULK_CRAWL_SCOPES] },
           OR: [{ lastHeartbeatAt: null }, { lastHeartbeatAt: { lt: staleBefore } }],
         },
         data: { status: SupplierCrawlRunStatus.QUEUED },
@@ -317,7 +409,8 @@ export class SupplierImportsService {
       const queued = await this.prisma.supplierCrawlRun.findFirst({
         where: {
           status: SupplierCrawlRunStatus.QUEUED,
-          scope: { in: [SupplierCrawlScope.CATALOG, SupplierCrawlScope.CATEGORY_URL] },
+          scope: { in: [...BULK_CRAWL_SCOPES] },
+          availableAt: { lte: new Date() },
         },
         orderBy: { createdAt: 'asc' },
         select: { id: true, startedAt: true },
@@ -335,6 +428,44 @@ export class SupplierImportsService {
       await this.processNextBulkPage(queued.id);
     } catch (error) {
       this.logger.error(`Supplier bulk crawl worker failed: ${this.errorMessage(error)}`);
+    }
+  }
+
+  @Interval('supplier-crawl-scheduler', 60_000)
+  async processSchedules() {
+    const now = new Date();
+    try {
+      const due = await this.prisma.supplierCrawlSchedule.findMany({
+        where: { isEnabled: true, nextRunAt: { lte: now } },
+        orderBy: { nextRunAt: 'asc' },
+        take: 20,
+        include: { supplierSource: true },
+      });
+      for (const schedule of due) {
+        const nextRunAt = this.nextDailyOccurrence(now, schedule.timeOfDay, schedule.timezone);
+        const leaseUntil = new Date(now.getTime() + 15 * 60_000);
+        const claimed = await this.prisma.supplierCrawlSchedule.updateMany({
+          where: { id: schedule.id, isEnabled: true, nextRunAt: { lte: now } },
+          data: { nextRunAt: leaseUntil },
+        });
+        if (!claimed.count) continue;
+        try {
+          await this.enqueueSchedule(schedule, nextRunAt);
+        } catch (error) {
+          if (error instanceof ConflictException) {
+            await this.prisma.supplierCrawlSchedule.update({
+              where: { id: schedule.id },
+              data: { nextRunAt: leaseUntil },
+            });
+          } else {
+            this.logger.error(
+              `Supplier crawl schedule ${schedule.id} failed: ${this.errorMessage(error)}`,
+            );
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Supplier crawl scheduler failed: ${this.errorMessage(error)}`);
     }
   }
 
@@ -773,6 +904,143 @@ export class SupplierImportsService {
     });
   }
 
+  private async validateScheduleCategories(supplierSourceId: string, categoryIds: string[]) {
+    if (categoryIds.length === 0) return [];
+    const categories = await this.prisma.supplierSourceCategory.findMany({
+      where: { id: { in: categoryIds }, supplierSourceId, isActive: true },
+      select: { id: true, name: true, url: true },
+    });
+    if (categories.length !== categoryIds.length) {
+      throw new BadRequestException(
+        'One or more selected supplier categories are inactive or invalid.',
+      );
+    }
+    const byId = new Map(categories.map((category) => [category.id, category]));
+    return categoryIds.map((categoryId) => byId.get(categoryId)!);
+  }
+
+  private async enqueueSchedule(schedule: CrawlScheduleConfig, nextRunAt?: Date) {
+    const source = await this.activeSource(schedule.supplierSourceId);
+    const adapter = this.adapterFor(source);
+    const active = await this.prisma.supplierCrawlRun.findFirst({
+      where: {
+        supplierSourceId: source.id,
+        status: {
+          in: [
+            SupplierCrawlRunStatus.QUEUED,
+            SupplierCrawlRunStatus.RUNNING,
+            SupplierCrawlRunStatus.PAUSED,
+          ],
+        },
+      },
+      select: { id: true },
+    });
+    if (active) throw new ConflictException('An unfinished crawl already exists for this source.');
+    const categories = await this.validateScheduleCategories(source.id, schedule.categoryIds);
+    const firstTarget = categories[0]?.url ?? source.baseUrl!;
+    const targetUrl = adapter.listingUrl(firstTarget, 1);
+    const pendingCategoryUrls = categories.slice(1).map(({ url }) => url);
+    const now = new Date();
+    return this.prisma.$transaction(async (transaction) => {
+      const run = await transaction.supplierCrawlRun.create({
+        data: {
+          supplierSourceId: source.id,
+          scheduleId: schedule.id,
+          scope: SupplierCrawlScope.SCHEDULED,
+          targetUrl,
+          pendingCategoryUrls,
+          requestedLimit: schedule.requestedLimit,
+          stopAtKnown: schedule.stopAtKnown,
+          maxRetries: schedule.maxRetries,
+          retryDelayMinutes: schedule.retryDelayMinutes,
+          availableAt: now,
+          status: SupplierCrawlRunStatus.QUEUED,
+        },
+      });
+      await transaction.supplierCrawlSchedule.update({
+        where: { id: schedule.id },
+        data: { lastEnqueuedAt: now, ...(nextRunAt ? { nextRunAt } : {}) },
+      });
+      return run;
+    });
+  }
+
+  private nextDailyOccurrence(now: Date, timeOfDay: string, timezone: string) {
+    const [hour, minute] = timeOfDay.split(':').map(Number);
+    const local = this.zonedParts(now, timezone);
+    let candidate = this.zonedDateTimeToUtc(
+      local.year,
+      local.month,
+      local.day,
+      hour!,
+      minute!,
+      timezone,
+    );
+    if (candidate.getTime() <= now.getTime()) {
+      const tomorrow = new Date(Date.UTC(local.year, local.month - 1, local.day) + 86_400_000);
+      candidate = this.zonedDateTimeToUtc(
+        tomorrow.getUTCFullYear(),
+        tomorrow.getUTCMonth() + 1,
+        tomorrow.getUTCDate(),
+        hour!,
+        minute!,
+        timezone,
+      );
+    }
+    return candidate;
+  }
+
+  private zonedDateTimeToUtc(
+    year: number,
+    month: number,
+    day: number,
+    hour: number,
+    minute: number,
+    timezone: string,
+  ) {
+    const desired = Date.UTC(year, month - 1, day, hour, minute);
+    const guess = new Date(desired);
+    const observed = this.zonedParts(guess, timezone);
+    const observedValue = Date.UTC(
+      observed.year,
+      observed.month - 1,
+      observed.day,
+      observed.hour,
+      observed.minute,
+    );
+    const first = new Date(desired - (observedValue - desired));
+    const corrected = this.zonedParts(first, timezone);
+    const correctedValue = Date.UTC(
+      corrected.year,
+      corrected.month - 1,
+      corrected.day,
+      corrected.hour,
+      corrected.minute,
+    );
+    return new Date(first.getTime() + (desired - correctedValue));
+  }
+
+  private zonedParts(value: Date, timezone: string) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(value);
+    const part = (type: Intl.DateTimeFormatPartTypes) =>
+      Number(parts.find((entry) => entry.type === type)?.value);
+    return {
+      year: part('year'),
+      month: part('month'),
+      day: part('day'),
+      hour: part('hour'),
+      minute: part('minute'),
+    };
+  }
+
   private async activeSource(sourceId: string) {
     const source = await this.prisma.supplierSource.findFirst({
       where: {
@@ -816,7 +1084,8 @@ export class SupplierImportsService {
     failedCount: number,
     skippedCount: number,
   ) {
-    await this.prisma.supplierCrawlRun.updateMany({
+    const finishedAt = new Date();
+    const result = await this.prisma.supplierCrawlRun.updateMany({
       where: { id: runId, status: SupplierCrawlRunStatus.RUNNING },
       data: {
         status: failedCount > 0 ? SupplierCrawlRunStatus.PARTIAL : SupplierCrawlRunStatus.SUCCEEDED,
@@ -824,21 +1093,54 @@ export class SupplierImportsService {
         succeededCount,
         failedCount,
         skippedCount,
-        finishedAt: new Date(),
-        lastHeartbeatAt: new Date(),
+        finishedAt,
+        lastHeartbeatAt: finishedAt,
       },
     });
+    if (result.count) await this.markScheduleFinished(runId, finishedAt);
   }
 
   private async failRun(runId: string, errorMessage: string) {
-    await this.prisma.supplierCrawlRun.updateMany({
+    const run = await this.prisma.supplierCrawlRun.findUnique({
+      where: { id: runId },
+      select: { retryCount: true, maxRetries: true, retryDelayMinutes: true },
+    });
+    if (!run) return;
+    const now = new Date();
+    if (run.retryCount < run.maxRetries) {
+      await this.prisma.supplierCrawlRun.updateMany({
+        where: { id: runId, status: SupplierCrawlRunStatus.RUNNING },
+        data: {
+          status: SupplierCrawlRunStatus.QUEUED,
+          retryCount: { increment: 1 },
+          availableAt: new Date(now.getTime() + run.retryDelayMinutes * 60_000),
+          errorMessage,
+          lastHeartbeatAt: now,
+        },
+      });
+      return;
+    }
+    const result = await this.prisma.supplierCrawlRun.updateMany({
       where: { id: runId, status: SupplierCrawlRunStatus.RUNNING },
       data: {
         status: SupplierCrawlRunStatus.FAILED,
         errorMessage,
-        finishedAt: new Date(),
-        lastHeartbeatAt: new Date(),
+        finishedAt: now,
+        lastHeartbeatAt: now,
       },
+    });
+    if (result.count) await this.markScheduleFinished(runId, now);
+  }
+
+  private async markScheduleFinished(runId: string, finishedAt: Date) {
+    const run = await this.prisma.supplierCrawlRun.findUnique({
+      where: { id: runId },
+      select: { scheduleId: true },
+    });
+    if (!run?.scheduleId) return;
+    await this.prisma.supplierCrawlSchedule.updateMany({
+      where: { id: run.scheduleId },
+      data: { lastFinishedAt: finishedAt },
     });
   }
 
@@ -863,6 +1165,7 @@ export class SupplierImportsService {
       data: {
         ...data,
         status: SupplierCrawlRunStatus.QUEUED,
+        availableAt: new Date(),
         lastHeartbeatAt: new Date(),
       },
     });

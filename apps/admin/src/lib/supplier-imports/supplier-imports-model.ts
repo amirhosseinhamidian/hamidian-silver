@@ -73,6 +73,28 @@ export type AdminSupplierCrawlRun = Readonly<{
   createdAt: string;
 }>;
 
+export type AdminSupplierCrawlSchedule = Readonly<{
+  id: string;
+  supplierSourceId: string;
+  categoryIds: readonly string[];
+  isEnabled: boolean;
+  timeOfDay: string;
+  timezone: string;
+  requestedLimit: number;
+  stopAtKnown: boolean;
+  maxRetries: number;
+  retryDelayMinutes: number;
+  nextRunAt: string | null;
+  lastEnqueuedAt: string | null;
+  lastFinishedAt: string | null;
+  lastRun: Readonly<{
+    id: string;
+    status: AdminSupplierCrawlRunStatus;
+    createdAt: string;
+    finishedAt: string | null;
+  }> | null;
+}>;
+
 export type AdminSupplierImportPage<T> = Readonly<{
   items: readonly T[];
   total: number;
@@ -99,6 +121,7 @@ export type AdminSupplierImportsData = Readonly<{
   categories: readonly AdminSupplierSourceCategory[];
   runs: AdminSupplierImportPage<AdminSupplierCrawlRun>;
   archivedRuns: AdminSupplierImportPage<AdminSupplierCrawlRun>;
+  schedules: readonly AdminSupplierCrawlSchedule[];
 }>;
 
 const STATUSES = new Set<AdminSupplierImportStatus>([
@@ -385,6 +408,69 @@ export function parseSupplierCrawlRunPage(
   value: unknown,
 ): AdminSupplierImportPage<AdminSupplierCrawlRun> | null {
   return parsePage(value, parseSupplierCrawlRuns);
+}
+
+export function parseSupplierCrawlSchedules(
+  value: unknown,
+): readonly AdminSupplierCrawlSchedule[] | null {
+  if (!Array.isArray(value)) return null;
+  const parsed = value.map((entry) => {
+    const item = record(entry);
+    const runs = Array.isArray(item?.crawlRuns) ? item.crawlRuns : [];
+    const rawLastRun = record(runs[0]);
+    const id = text(item?.id);
+    const supplierSourceId = text(item?.supplierSourceId);
+    const timeOfDay = text(item?.timeOfDay);
+    const timezone = text(item?.timezone);
+    const requestedLimit = number(item?.requestedLimit);
+    const maxRetries = number(item?.maxRetries);
+    const retryDelayMinutes = number(item?.retryDelayMinutes);
+    const categoryIds = Array.isArray(item?.categoryIds)
+      ? item.categoryIds.filter((categoryId): categoryId is string => Boolean(text(categoryId)))
+      : [];
+    if (
+      !id ||
+      !supplierSourceId ||
+      !timeOfDay ||
+      !timezone ||
+      requestedLimit === null ||
+      maxRetries === null ||
+      retryDelayMinutes === null ||
+      categoryIds.length !== (Array.isArray(item?.categoryIds) ? item.categoryIds.length : 0)
+    ) {
+      return null;
+    }
+    const lastRunStatus = text(rawLastRun?.status) as AdminSupplierCrawlRunStatus | null;
+    const lastRunId = text(rawLastRun?.id);
+    const lastRunCreatedAt = text(rawLastRun?.createdAt);
+    return {
+      id,
+      supplierSourceId,
+      categoryIds,
+      isEnabled: item?.isEnabled === true,
+      timeOfDay,
+      timezone,
+      requestedLimit,
+      stopAtKnown: item?.stopAtKnown === true,
+      maxRetries,
+      retryDelayMinutes,
+      nextRunAt: text(item?.nextRunAt),
+      lastEnqueuedAt: text(item?.lastEnqueuedAt),
+      lastFinishedAt: text(item?.lastFinishedAt),
+      lastRun:
+        lastRunId && lastRunStatus && RUN_STATUSES.has(lastRunStatus) && lastRunCreatedAt
+          ? {
+              id: lastRunId,
+              status: lastRunStatus,
+              createdAt: lastRunCreatedAt,
+              finishedAt: text(rawLastRun?.finishedAt),
+            }
+          : null,
+    } satisfies AdminSupplierCrawlSchedule;
+  });
+  return parsed.some((item) => item === null)
+    ? null
+    : (parsed as readonly AdminSupplierCrawlSchedule[]);
 }
 
 function queryText(value: string | string[] | undefined): string | null {
