@@ -1,0 +1,5 @@
+import { forwardSupplierImportMutation } from '@/lib/supplier-imports/supplier-imports-bff';
+
+export async function POST(request: Request) {
+  return forwardSupplierImportMutation(request, '/api/v1/supplier-imports/bulk-crawls', 'POST');
+}

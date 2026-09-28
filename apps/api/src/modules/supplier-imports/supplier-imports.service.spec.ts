@@ -10,13 +10,22 @@ describe('SupplierImportsService', () => {
   const draft = { id: '10000000-0000-4000-8000-000000000003' };
   const prisma = {
     supplierSource: { findFirst: jest.fn() },
+    supplierSourceCategory: {
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      updateMany: jest.fn(),
+      upsert: jest.fn(),
+    },
     supplierCrawlRun: {
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
     supplierProductImportDraft: {
       upsert: jest.fn(),
+      create: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
       findMany: jest.fn(),
@@ -38,6 +47,7 @@ describe('SupplierImportsService', () => {
     prisma.supplierCrawlRun.findFirst.mockResolvedValue(null);
     prisma.supplierCrawlRun.create.mockResolvedValue({ id: runId });
     prisma.supplierCrawlRun.update.mockResolvedValue({ id: runId });
+    prisma.supplierCrawlRun.updateMany.mockResolvedValue({ count: 1 });
     prisma.supplierProductImportDraft.upsert.mockResolvedValue(draft);
     prisma.$transaction.mockImplementation((operation: (transaction: typeof prisma) => unknown) =>
       operation(prisma),
@@ -93,5 +103,102 @@ describe('SupplierImportsService', () => {
         data: expect.objectContaining({ status: 'SUCCEEDED', succeededCount: 1 }),
       }),
     );
+  });
+
+  it('queues a category crawl with a new-product limit', async () => {
+    prisma.supplierSource.findFirst.mockResolvedValue({
+      id: sourceId,
+      hostname: 'bsjsilver.com',
+      adapterKey: 'bsj-silver',
+      baseUrl: 'https://bsjsilver.com/',
+      crawlDelayMs: 1000,
+    });
+    prisma.supplierSourceCategory.findFirst.mockResolvedValue({
+      id: '10000000-0000-4000-8000-000000000004',
+      url: 'https://bsjsilver.com/product/category/12-bracelet',
+    });
+    prisma.supplierCrawlRun.create.mockResolvedValue({ id: runId, status: 'QUEUED' });
+
+    await expect(
+      service.startBulkCrawl({
+        supplierSourceId: sourceId,
+        categoryId: '10000000-0000-4000-8000-000000000004',
+        limit: 100,
+        stopAtKnown: true,
+      }),
+    ).resolves.toEqual({ id: runId, status: 'QUEUED' });
+    expect(prisma.supplierCrawlRun.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        scope: 'CATEGORY_URL',
+        requestedLimit: 100,
+        stopAtKnown: true,
+      }),
+    });
+  });
+
+  it('uses the supplier session and queues child categories returned by a parent category', async () => {
+    const parentUrl = 'https://bsjsilver.com/product/category/64444-earrings';
+    const childUrl = 'https://bsjsilver.com/product/category/65785-stud-earrings';
+    prisma.supplierCrawlRun.findFirst.mockResolvedValueOnce({ id: runId, startedAt: null });
+    prisma.supplierCrawlRun.findUnique.mockResolvedValue({
+      id: runId,
+      status: 'RUNNING',
+      targetUrl: parentUrl,
+      currentPage: 1,
+      pendingCategoryUrls: [],
+      requestedLimit: 100,
+      stopAtKnown: false,
+      discoveredCount: 0,
+      succeededCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      category: null,
+      supplierSource: {
+        id: sourceId,
+        hostname: 'bsjsilver.com',
+        adapterKey: 'bsj-silver',
+        baseUrl: 'https://bsjsilver.com/',
+        crawlDelayMs: 1000,
+        isActive: true,
+        deletedAt: null,
+        supplier: { isActive: true, deletedAt: null },
+      },
+    });
+    const sessionHeaders = new Headers({ 'Content-Type': 'text/html' });
+    sessionHeaders.append('Set-Cookie', 'XSRF-TOKEN=token%3D; Path=/');
+    sessionHeaders.append('Set-Cookie', 'Farabin_session=session-value; Path=/');
+    const fetchSpy = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response('<html></html>', { status: 200, headers: sessionHeaders }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: 'OK', category: [{ share: childUrl }] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+    await service.processBulkQueue();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy.mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Cookie: expect.stringContaining('Farabin_session=session-value'),
+          'X-XSRF-TOKEN': 'token=',
+        }),
+      }),
+    );
+    expect(prisma.supplierCrawlRun.updateMany).toHaveBeenCalledWith({
+      where: { id: runId, status: 'RUNNING' },
+      data: expect.objectContaining({
+        status: 'QUEUED',
+        targetUrl: childUrl,
+        pendingCategoryUrls: [],
+        currentPage: 1,
+      }),
+    });
   });
 });

@@ -3,8 +3,10 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { Interval } from '@nestjs/schedule';
 import { Prisma } from '../../generated/prisma/client';
 import {
   SupplierCrawlRunStatus,
@@ -14,7 +16,10 @@ import {
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { BsjSilverCrawlerAdapter } from './adapters/bsj-silver-crawler.adapter';
 import { ListSupplierImportDraftsQueryDto } from './dto/list-supplier-import-drafts-query.dto';
+import { ListSupplierCategoriesQueryDto } from './dto/list-supplier-categories-query.dto';
+import { StartBulkSupplierCrawlDto } from './dto/start-bulk-supplier-crawl.dto';
 import { StartSupplierCrawlDto } from './dto/start-supplier-crawl.dto';
+import { SyncSupplierCategoriesDto } from './dto/sync-supplier-categories.dto';
 import { UpdateSupplierImportDraftDto } from './dto/update-supplier-import-draft.dto';
 import type { SupplierCrawlerAdapter } from './supplier-crawler.types';
 
@@ -27,10 +32,13 @@ type ActiveSupplierSource = Readonly<{
   id: string;
   hostname: string;
   adapterKey: string | null;
+  baseUrl?: string;
+  crawlDelayMs?: number;
 }>;
 
 @Injectable()
 export class SupplierImportsService {
+  private readonly logger = new Logger(SupplierImportsService.name);
   private readonly adapters: ReadonlyMap<string, SupplierCrawlerAdapter>;
 
   constructor(
@@ -105,6 +113,153 @@ export class SupplierImportsService {
     });
   }
 
+  listCategories(query: ListSupplierCategoriesQueryDto) {
+    return this.prisma.supplierSourceCategory.findMany({
+      where: { supplierSourceId: query.supplierSourceId, isActive: true },
+      orderBy: [{ name: 'asc' }, { externalKey: 'asc' }],
+    });
+  }
+
+  listRuns() {
+    return this.prisma.supplierCrawlRun.findMany({
+      where: { scope: { in: [SupplierCrawlScope.CATALOG, SupplierCrawlScope.CATEGORY_URL] } },
+      take: 50,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        supplierSource: {
+          select: { id: true, name: true, supplier: { select: { name: true } } },
+        },
+        category: { select: { id: true, name: true } },
+      },
+    });
+  }
+
+  async syncCategories(dto: SyncSupplierCategoriesDto) {
+    const source = await this.activeSource(dto.supplierSourceId);
+    const adapter = this.adapterFor(source);
+    const listingUrl = new URL(adapter.listingUrl(source.baseUrl!, 1));
+    const categories = adapter.parseCategories(
+      await this.fetchText(listingUrl, source),
+      listingUrl.toString(),
+    );
+    const now = new Date();
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.supplierSourceCategory.updateMany({
+        where: { supplierSourceId: source.id },
+        data: { isActive: false },
+      });
+      for (const category of categories) {
+        await transaction.supplierSourceCategory.upsert({
+          where: {
+            supplierSourceId_externalKey: {
+              supplierSourceId: source.id,
+              externalKey: category.externalKey,
+            },
+          },
+          create: { supplierSourceId: source.id, ...category, lastSeenAt: now },
+          update: { name: category.name, url: category.url, isActive: true, lastSeenAt: now },
+        });
+      }
+    });
+    return { count: categories.length };
+  }
+
+  async startBulkCrawl(dto: StartBulkSupplierCrawlDto) {
+    const source = await this.activeSource(dto.supplierSourceId);
+    const adapter = this.adapterFor(source);
+    const active = await this.prisma.supplierCrawlRun.findFirst({
+      where: {
+        supplierSourceId: source.id,
+        status: {
+          in: [
+            SupplierCrawlRunStatus.QUEUED,
+            SupplierCrawlRunStatus.RUNNING,
+            SupplierCrawlRunStatus.PAUSED,
+          ],
+        },
+      },
+      select: { id: true },
+    });
+    if (active) throw new ConflictException('An unfinished crawl already exists for this source.');
+    const category = dto.categoryId
+      ? await this.prisma.supplierSourceCategory.findFirst({
+          where: { id: dto.categoryId, supplierSourceId: source.id, isActive: true },
+        })
+      : null;
+    if (dto.categoryId && !category) {
+      throw new NotFoundException('Active supplier category was not found.');
+    }
+    const targetUrl = adapter.listingUrl(category?.url ?? source.baseUrl!, 1);
+    return this.prisma.supplierCrawlRun.create({
+      data: {
+        supplierSourceId: source.id,
+        categoryId: category?.id,
+        scope: category ? SupplierCrawlScope.CATEGORY_URL : SupplierCrawlScope.CATALOG,
+        targetUrl,
+        requestedLimit: dto.limit,
+        stopAtKnown: dto.stopAtKnown,
+        status: SupplierCrawlRunStatus.QUEUED,
+      },
+    });
+  }
+
+  async pauseRun(runId: string) {
+    const result = await this.prisma.supplierCrawlRun.updateMany({
+      where: {
+        id: runId,
+        status: { in: [SupplierCrawlRunStatus.QUEUED, SupplierCrawlRunStatus.RUNNING] },
+      },
+      data: { status: SupplierCrawlRunStatus.PAUSED },
+    });
+    if (!result.count) throw new ConflictException('Only an active crawl can be paused.');
+    return { id: runId, status: SupplierCrawlRunStatus.PAUSED };
+  }
+
+  async resumeRun(runId: string) {
+    const result = await this.prisma.supplierCrawlRun.updateMany({
+      where: { id: runId, status: SupplierCrawlRunStatus.PAUSED },
+      data: { status: SupplierCrawlRunStatus.QUEUED, errorMessage: null },
+    });
+    if (!result.count) throw new ConflictException('Only a paused crawl can be resumed.');
+    return { id: runId, status: SupplierCrawlRunStatus.QUEUED };
+  }
+
+  @Interval('supplier-bulk-crawl-queue', 10_000)
+  async processBulkQueue() {
+    try {
+      const staleBefore = new Date(Date.now() - 5 * 60_000);
+      await this.prisma.supplierCrawlRun.updateMany({
+        where: {
+          status: SupplierCrawlRunStatus.RUNNING,
+          scope: { in: [SupplierCrawlScope.CATALOG, SupplierCrawlScope.CATEGORY_URL] },
+          OR: [{ lastHeartbeatAt: null }, { lastHeartbeatAt: { lt: staleBefore } }],
+        },
+        data: { status: SupplierCrawlRunStatus.QUEUED },
+      });
+      const queued = await this.prisma.supplierCrawlRun.findFirst({
+        where: {
+          status: SupplierCrawlRunStatus.QUEUED,
+          scope: { in: [SupplierCrawlScope.CATALOG, SupplierCrawlScope.CATEGORY_URL] },
+        },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, startedAt: true },
+      });
+      if (!queued) return;
+      const claimed = await this.prisma.supplierCrawlRun.updateMany({
+        where: { id: queued.id, status: SupplierCrawlRunStatus.QUEUED },
+        data: {
+          status: SupplierCrawlRunStatus.RUNNING,
+          ...(queued.startedAt ? {} : { startedAt: new Date() }),
+          lastHeartbeatAt: new Date(),
+        },
+      });
+      if (!claimed.count) return;
+      await this.processNextBulkPage(queued.id);
+    } catch (error) {
+      this.logger.error(`Supplier bulk crawl worker failed: ${this.errorMessage(error)}`);
+    }
+  }
+
   async crawlProduct(dto: StartSupplierCrawlDto) {
     const source = await this.prisma.supplierSource.findFirst({
       where: {
@@ -127,7 +282,16 @@ export class SupplierImportsService {
     }
 
     const running = await this.prisma.supplierCrawlRun.findFirst({
-      where: { supplierSourceId: source.id, status: SupplierCrawlRunStatus.RUNNING },
+      where: {
+        supplierSourceId: source.id,
+        status: {
+          in: [
+            SupplierCrawlRunStatus.QUEUED,
+            SupplierCrawlRunStatus.RUNNING,
+            SupplierCrawlRunStatus.PAUSED,
+          ],
+        },
+      },
       select: { id: true },
     });
     if (running)
@@ -324,6 +488,347 @@ export class SupplierImportsService {
     };
   }
 
+  private async processNextBulkPage(runId: string) {
+    const run = await this.prisma.supplierCrawlRun.findUnique({
+      where: { id: runId },
+      include: {
+        supplierSource: {
+          include: { supplier: { select: { isActive: true, deletedAt: true } } },
+        },
+        category: true,
+      },
+    });
+    if (!run || run.status !== SupplierCrawlRunStatus.RUNNING) return;
+    if (
+      !run.supplierSource.isActive ||
+      run.supplierSource.deletedAt ||
+      !run.supplierSource.supplier.isActive ||
+      run.supplierSource.supplier.deletedAt
+    ) {
+      await this.failRun(run.id, 'Supplier source is no longer active.');
+      return;
+    }
+    const source: ActiveSupplierSource = run.supplierSource;
+    const adapter = this.adapterFor(source);
+    let consecutiveKnown = 0;
+    try {
+      const listingUrl = new URL(adapter.listingUrl(run.targetUrl, run.currentPage));
+      const listingRequest = adapter.listingRequest(run.targetUrl, run.currentPage);
+      const listing = adapter.parseListing(
+        await this.fetchListingPayload(listingRequest, source),
+        listingUrl.toString(),
+      );
+      const pendingCategoryUrls = [
+        ...new Set([
+          ...run.pendingCategoryUrls,
+          ...listing.childCategoryUrls.map((value) =>
+            this.validateSourceUrl(value, source).toString(),
+          ),
+        ]),
+      ].filter((value) => value !== run.targetUrl);
+      let discovered = run.discoveredCount;
+      let succeeded = run.succeededCount;
+      let failed = run.failedCount;
+      let skipped = run.skippedCount;
+      if (listing.productUrls.length === 0 && pendingCategoryUrls.length > 0) {
+        await this.queueNextBulkPage(run.id, {
+          targetUrl: pendingCategoryUrls[0]!,
+          pendingCategoryUrls: pendingCategoryUrls.slice(1),
+          currentPage: 1,
+          discoveredCount: discovered,
+          succeededCount: succeeded,
+          failedCount: failed,
+          skippedCount: skipped,
+        });
+        return;
+      }
+      if (
+        listing.productUrls.length === 0 &&
+        run.currentPage === 1 &&
+        discovered === 0 &&
+        succeeded === 0 &&
+        failed === 0 &&
+        skipped === 0
+      ) {
+        await this.failRun(
+          run.id,
+          'Supplier listing returned no product links; the crawl was not marked as completed.',
+        );
+        return;
+      }
+      for (const productUrl of listing.productUrls) {
+        const current = await this.prisma.supplierCrawlRun.findUnique({
+          where: { id: run.id },
+          select: { status: true },
+        });
+        if (current?.status === SupplierCrawlRunStatus.PAUSED) return;
+        if (succeeded + failed >= (run.requestedLimit ?? 100)) {
+          await this.finishRun(run.id, discovered, succeeded, failed, skipped);
+          return;
+        }
+        const key = this.productKey(productUrl);
+        const exists = key
+          ? await this.prisma.supplierProductImportDraft.findUnique({
+              where: {
+                supplierSourceId_sourceProductKey: {
+                  supplierSourceId: source.id,
+                  sourceProductKey: key,
+                },
+              },
+              select: { id: true },
+            })
+          : null;
+        discovered += 1;
+        if (exists) {
+          skipped += 1;
+          consecutiveKnown += 1;
+          await this.updateRunProgress(run.id, discovered, succeeded, failed, skipped);
+          if (run.stopAtKnown && consecutiveKnown >= 3) {
+            await this.finishRun(run.id, discovered, succeeded, failed, skipped);
+            return;
+          }
+          continue;
+        }
+        consecutiveKnown = 0;
+        try {
+          await this.importBulkProduct(run.id, source, adapter, productUrl);
+          succeeded += 1;
+        } catch (error) {
+          failed += 1;
+          this.logger.warn(`Supplier product import failed: ${this.errorMessage(error)}`);
+        }
+        await this.updateRunProgress(run.id, discovered, succeeded, failed, skipped);
+        await this.delay(source.crawlDelayMs ?? 2000);
+      }
+      const latest = await this.prisma.supplierCrawlRun.findUnique({
+        where: { id: run.id },
+        select: { status: true },
+      });
+      if (latest?.status === SupplierCrawlRunStatus.PAUSED) return;
+      if (succeeded + failed >= (run.requestedLimit ?? 100)) {
+        await this.finishRun(run.id, discovered, succeeded, failed, skipped);
+        return;
+      }
+      if (listing.hasNextPage) {
+        await this.queueNextBulkPage(run.id, {
+          targetUrl: run.targetUrl,
+          pendingCategoryUrls,
+          currentPage: run.currentPage + 1,
+          discoveredCount: discovered,
+          succeededCount: succeeded,
+          failedCount: failed,
+          skippedCount: skipped,
+        });
+        return;
+      }
+      if (pendingCategoryUrls.length > 0) {
+        await this.queueNextBulkPage(run.id, {
+          targetUrl: pendingCategoryUrls[0]!,
+          pendingCategoryUrls: pendingCategoryUrls.slice(1),
+          currentPage: 1,
+          discoveredCount: discovered,
+          succeededCount: succeeded,
+          failedCount: failed,
+          skippedCount: skipped,
+        });
+        return;
+      }
+      await this.finishRun(run.id, discovered, succeeded, failed, skipped);
+    } catch (error) {
+      await this.failRun(run.id, this.errorMessage(error));
+    }
+  }
+
+  private async importBulkProduct(
+    runId: string,
+    source: ActiveSupplierSource,
+    adapter: SupplierCrawlerAdapter,
+    productUrl: string,
+  ) {
+    const targetUrl = this.validateSourceUrl(productUrl, source);
+    const product = adapter.parseProduct(
+      await this.fetchText(targetUrl, source),
+      targetUrl.toString(),
+    );
+    const now = new Date();
+    await this.prisma.supplierProductImportDraft.create({
+      data: {
+        supplierSourceId: source.id,
+        crawlRunId: runId,
+        sourceProductKey: product.sourceProductKey,
+        sourceUrl: product.sourceUrl,
+        sourceSku: product.sourceSku,
+        title: product.title,
+        description: product.description,
+        sourceCategory: product.sourceCategory,
+        supplierRetailPriceToman: product.supplierRetailPriceToman,
+        weightGrams: product.weightGrams,
+        attributes: this.jsonValue(product.attributes),
+        imageUrls: [...product.imageUrls],
+        rawPayload: this.jsonValue(product.rawPayload),
+        status: SupplierProductImportStatus.PENDING_REVIEW,
+        lastCrawledAt: now,
+      },
+    });
+  }
+
+  private async activeSource(sourceId: string) {
+    const source = await this.prisma.supplierSource.findFirst({
+      where: {
+        id: sourceId,
+        isActive: true,
+        deletedAt: null,
+        supplier: { isActive: true, deletedAt: null },
+      },
+      select: {
+        id: true,
+        hostname: true,
+        adapterKey: true,
+        baseUrl: true,
+        crawlDelayMs: true,
+      },
+    });
+    if (!source) throw new NotFoundException('Active supplier source was not found.');
+    return source;
+  }
+
+  private adapterFor(source: ActiveSupplierSource) {
+    const adapter = source.adapterKey ? this.adapters.get(source.adapterKey) : undefined;
+    if (!adapter) {
+      throw new BadRequestException('This supplier source does not have a supported crawler.');
+    }
+    return adapter;
+  }
+
+  private productKey(productUrl: string): string | null {
+    try {
+      return new URL(productUrl).pathname.match(/^\/product\/(\d+)(?:-|\/|$)/)?.[1] ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async finishRun(
+    runId: string,
+    discoveredCount: number,
+    succeededCount: number,
+    failedCount: number,
+    skippedCount: number,
+  ) {
+    await this.prisma.supplierCrawlRun.updateMany({
+      where: { id: runId, status: SupplierCrawlRunStatus.RUNNING },
+      data: {
+        status: failedCount > 0 ? SupplierCrawlRunStatus.PARTIAL : SupplierCrawlRunStatus.SUCCEEDED,
+        discoveredCount,
+        succeededCount,
+        failedCount,
+        skippedCount,
+        finishedAt: new Date(),
+        lastHeartbeatAt: new Date(),
+      },
+    });
+  }
+
+  private async failRun(runId: string, errorMessage: string) {
+    await this.prisma.supplierCrawlRun.updateMany({
+      where: { id: runId, status: SupplierCrawlRunStatus.RUNNING },
+      data: {
+        status: SupplierCrawlRunStatus.FAILED,
+        errorMessage,
+        finishedAt: new Date(),
+        lastHeartbeatAt: new Date(),
+      },
+    });
+  }
+
+  private delay(milliseconds: number) {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+  }
+
+  private queueNextBulkPage(
+    runId: string,
+    data: Readonly<{
+      targetUrl: string;
+      pendingCategoryUrls: string[];
+      currentPage: number;
+      discoveredCount: number;
+      succeededCount: number;
+      failedCount: number;
+      skippedCount: number;
+    }>,
+  ) {
+    return this.prisma.supplierCrawlRun.updateMany({
+      where: { id: runId, status: SupplierCrawlRunStatus.RUNNING },
+      data: {
+        ...data,
+        status: SupplierCrawlRunStatus.QUEUED,
+        lastHeartbeatAt: new Date(),
+      },
+    });
+  }
+
+  private updateRunProgress(
+    runId: string,
+    discoveredCount: number,
+    succeededCount: number,
+    failedCount: number,
+    skippedCount: number,
+  ) {
+    return this.prisma.supplierCrawlRun.updateMany({
+      where: { id: runId, status: SupplierCrawlRunStatus.RUNNING },
+      data: {
+        discoveredCount,
+        succeededCount,
+        failedCount,
+        skippedCount,
+        lastHeartbeatAt: new Date(),
+      },
+    });
+  }
+
+  private async fetchListingPayload(
+    request: ReturnType<SupplierCrawlerAdapter['listingRequest']>,
+    source: ActiveSupplierSource,
+  ): Promise<string> {
+    const url = this.validateSourceUrl(request.url, source);
+    const referer = this.validateSourceUrl(request.referer, source);
+    const sessionResponse = await this.fetchResponse(referer, source, 'document');
+    await this.readLimitedBody(sessionResponse, HTML_RESPONSE_LIMIT_BYTES);
+    const setCookies = sessionResponse.headers.getSetCookie();
+    const cookies = setCookies
+      .map((value) => value.split(';', 1)[0]?.trim())
+      .filter((value): value is string => Boolean(value));
+    const xsrfCookie = cookies.find((value) => value.startsWith('XSRF-TOKEN='));
+    if (!xsrfCookie) {
+      throw new BadGatewayException('Supplier listing session did not provide an XSRF token.');
+    }
+    let xsrfToken: string;
+    try {
+      xsrfToken = decodeURIComponent(xsrfCookie.slice('XSRF-TOKEN='.length));
+    } catch {
+      throw new BadGatewayException('Supplier listing session returned an invalid XSRF token.');
+    }
+    const response = await this.fetchResponse(
+      url,
+      source,
+      'document',
+      {
+        method: request.method,
+        body: request.body,
+        headers: {
+          Accept: 'application/json, text/javascript, */*; q=0.01',
+          ...(request.contentType ? { 'Content-Type': request.contentType } : {}),
+          Cookie: cookies.join('; '),
+          'X-XSRF-TOKEN': xsrfToken,
+          'X-Requested-With': 'XMLHttpRequest',
+          Referer: referer.toString(),
+        },
+      },
+      false,
+    );
+    return (await this.readLimitedBody(response, HTML_RESPONSE_LIMIT_BYTES)).toString('utf8');
+  }
+
   private validateSourceUrl(value: string, source: ActiveSupplierSource): URL {
     let url: URL;
     try {
@@ -358,12 +863,15 @@ export class SupplierImportsService {
     initialUrl: URL,
     source: ActiveSupplierSource,
     destination: 'document' | 'image',
+    init: RequestInit = {},
+    followRedirects = true,
   ): Promise<Response> {
     let url = initialUrl;
     for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
       let response: Response;
       try {
         response = await fetch(url, {
+          ...init,
           redirect: 'manual',
           signal: AbortSignal.timeout(CRAWL_TIMEOUT_MS),
           headers: {
@@ -371,13 +879,18 @@ export class SupplierImportsService {
               destination === 'image'
                 ? 'image/avif,image/webp,image/png,image/jpeg'
                 : 'text/html,application/xhtml+xml',
-            'User-Agent': 'HamidianSilverSupplierImporter/1.0',
+            'User-Agent':
+              'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 HamidianSilverSupplierImporter/1.0',
+            ...init.headers,
           },
         });
       } catch {
         throw new BadGatewayException('Supplier website did not respond in time.');
       }
       if ([301, 302, 303, 307, 308].includes(response.status)) {
+        if (!followRedirects) {
+          throw new BadGatewayException('Supplier listing request was redirected unexpectedly.');
+        }
         const location = response.headers.get('location');
         if (!location || redirect === MAX_REDIRECTS) {
           throw new BadGatewayException('Supplier website returned too many redirects.');

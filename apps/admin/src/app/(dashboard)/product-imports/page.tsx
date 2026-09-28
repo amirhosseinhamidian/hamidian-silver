@@ -26,6 +26,8 @@ export default async function ProductImportsPage() {
       <SupplierProductImportsView
         sources={result.data?.sources ?? []}
         drafts={result.data?.drafts ?? []}
+        categories={result.data?.categories ?? []}
+        runs={result.data?.runs ?? []}
         failed={result.failed}
         canWrite={user.permissions.includes('catalog.write')}
       />

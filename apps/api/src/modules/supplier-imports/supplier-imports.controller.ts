@@ -17,7 +17,10 @@ import type { AuthenticatedPrincipal } from '../authorization/authorization.type
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { ListSupplierImportDraftsQueryDto } from './dto/list-supplier-import-drafts-query.dto';
+import { ListSupplierCategoriesQueryDto } from './dto/list-supplier-categories-query.dto';
+import { StartBulkSupplierCrawlDto } from './dto/start-bulk-supplier-crawl.dto';
 import { StartSupplierCrawlDto } from './dto/start-supplier-crawl.dto';
+import { SyncSupplierCategoriesDto } from './dto/sync-supplier-categories.dto';
 import { UpdateSupplierImportDraftDto } from './dto/update-supplier-import-draft.dto';
 import { SupplierImportsService } from './supplier-imports.service';
 
@@ -35,6 +38,42 @@ export class SupplierImportsController {
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
   listDrafts(@Query() query: ListSupplierImportDraftsQueryDto) {
     return this.supplierImportsService.listDrafts(query);
+  }
+
+  @Get('categories')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
+  listCategories(@Query() query: ListSupplierCategoriesQueryDto) {
+    return this.supplierImportsService.listCategories(query);
+  }
+
+  @Post('categories/sync')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  syncCategories(@Body() dto: SyncSupplierCategoriesDto) {
+    return this.supplierImportsService.syncCategories(dto);
+  }
+
+  @Get('runs')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
+  listRuns() {
+    return this.supplierImportsService.listRuns();
+  }
+
+  @Post('bulk-crawls')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  startBulkCrawl(@Body() dto: StartBulkSupplierCrawlDto) {
+    return this.supplierImportsService.startBulkCrawl(dto);
+  }
+
+  @Post('runs/:runId/pause')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  pauseRun(@Param('runId', new ParseUUIDPipe({ version: '4' })) runId: string) {
+    return this.supplierImportsService.pauseRun(runId);
+  }
+
+  @Post('runs/:runId/resume')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  resumeRun(@Param('runId', new ParseUUIDPipe({ version: '4' })) runId: string) {
+    return this.supplierImportsService.resumeRun(runId);
   }
 
   @Post('crawl')

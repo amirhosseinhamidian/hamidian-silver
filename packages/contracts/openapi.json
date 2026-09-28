@@ -7453,6 +7453,152 @@
         ]
       }
     },
+    "/api/v1/supplier-imports/categories": {
+      "get": {
+        "operationId": "SupplierImportsController_listCategories_v1",
+        "parameters": [
+          {
+            "name": "supplierSourceId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/categories/sync": {
+      "post": {
+        "operationId": "SupplierImportsController_syncCategories_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncSupplierCategoriesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/runs": {
+      "get": {
+        "operationId": "SupplierImportsController_listRuns_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/bulk-crawls": {
+      "post": {
+        "operationId": "SupplierImportsController_startBulkCrawl_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartBulkSupplierCrawlDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/runs/{runId}/pause": {
+      "post": {
+        "operationId": "SupplierImportsController_pauseRun_v1",
+        "parameters": [
+          {
+            "name": "runId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
+    "/api/v1/supplier-imports/runs/{runId}/resume": {
+      "post": {
+        "operationId": "SupplierImportsController_resumeRun_v1",
+        "parameters": [
+          {
+            "name": "runId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SupplierImports"
+        ]
+      }
+    },
     "/api/v1/supplier-imports/crawl": {
       "post": {
         "operationId": "SupplierImportsController_crawlProduct_v1",
@@ -14412,6 +14558,44 @@
         "required": [
           "destinationPath",
           "permanent"
+        ]
+      },
+      "SyncSupplierCategoriesDto": {
+        "type": "object",
+        "properties": {
+          "supplierSourceId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "supplierSourceId"
+        ]
+      },
+      "StartBulkSupplierCrawlDto": {
+        "type": "object",
+        "properties": {
+          "supplierSourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "stopAtKnown": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "supplierSourceId",
+          "limit",
+          "stopAtKnown"
         ]
       },
       "StartSupplierCrawlDto": {

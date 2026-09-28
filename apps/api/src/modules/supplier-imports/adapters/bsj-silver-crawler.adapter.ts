@@ -1,12 +1,45 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
 import type {
   CrawledSupplierAttribute,
+  CrawledSupplierCategory,
+  CrawledSupplierListing,
   CrawledSupplierProduct,
   SupplierCrawlerAdapter,
+  SupplierListingRequest,
 } from '../supplier-crawler.types';
 
 const MAX_ATTRIBUTES = 30;
 const MAX_IMAGES = 12;
+
+function hrefs(html: string, sourceUrl: string): readonly URL[] {
+  const urls: URL[] = [];
+  for (const match of html.matchAll(/\b(?:href|data-href)=["']([^"']+)["']/gi)) {
+    try {
+      const url = new URL(decodeHtml(match[1] ?? ''), sourceUrl);
+      if (url.hostname === new URL(sourceUrl).hostname) urls.push(url);
+    } catch {
+      // Ignore invalid links from third-party markup.
+    }
+  }
+  return urls;
+}
+
+function listingValues(value: unknown): readonly string[] {
+  const values: string[] = [];
+  const visit = (item: unknown) => {
+    if (typeof item === 'string') {
+      values.push(item);
+      return;
+    }
+    if (Array.isArray(item)) {
+      item.forEach(visit);
+      return;
+    }
+    if (typeof item === 'object' && item !== null) Object.values(item).forEach(visit);
+  };
+  visit(value);
+  return values;
+}
 
 function decodeHtml(value: string): string {
   const named: Record<string, string> = {
@@ -116,6 +149,107 @@ function extractImages(html: string, sourceUrl: string): readonly string[] {
 @Injectable()
 export class BsjSilverCrawlerAdapter implements SupplierCrawlerAdapter {
   readonly key = 'bsj-silver';
+
+  parseCategories(html: string, sourceUrl: string): readonly CrawledSupplierCategory[] {
+    const categories = new Map<string, CrawledSupplierCategory>();
+    for (const url of hrefs(html, sourceUrl)) {
+      const match = url.pathname.match(/^\/product\/category\/(\d+)(?:-([^/]+))?\/?$/);
+      if (!match?.[1]) continue;
+      const anchorPattern = new RegExp(
+        `<a\\b[^>]*href=["'][^"']*\\/product\\/category\\/${match[1]}[^"']*["'][^>]*>([\\s\\S]*?)<\\/a>`,
+        'i',
+      );
+      const name = firstMatch(html, anchorPattern) ?? decodeURIComponent(match[2] ?? match[1]);
+      categories.set(match[1], {
+        externalKey: match[1],
+        name: name.slice(0, 300),
+        url: url.toString(),
+      });
+    }
+    return [...categories.values()];
+  }
+
+  parseListing(payload: string, sourceUrl: string): CrawledSupplierListing {
+    const products = new Map<string, string>();
+    const childCategories = new Map<string, string>();
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(payload) as unknown;
+    } catch {
+      // Some BSJ deployments can still return server-rendered listing markup.
+    }
+    const candidates = parsed
+      ? listingValues(parsed).flatMap((value) => hrefs(`href="${value}"`, sourceUrl))
+      : hrefs(payload, sourceUrl);
+    for (const url of candidates) {
+      const match = url.pathname.match(/^\/product\/(\d+)(?:-|\/|$)/);
+      if (match?.[1]) {
+        url.searchParams.delete('quick');
+        products.set(match[1], url.toString());
+      }
+      const categoryMatch = url.pathname.match(/^\/product\/category\/(\d+)(?:-|\/|$)/);
+      if (categoryMatch?.[1]) childCategories.set(categoryMatch[1], url.toString());
+    }
+    const currentPage = Number(new URL(sourceUrl).searchParams.get('page') ?? '1');
+    const response =
+      typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : null;
+    const total = Number(response?.total ?? Number.NaN);
+    const to = Number(response?.to ?? Number.NaN);
+    const hasNextPageByCount = Number.isFinite(total) && Number.isFinite(to) && to < total;
+    const hasNextPageByLink = hrefs(listingValues(parsed ?? payload).join(' '), sourceUrl).some(
+      (url) => {
+        const page = Number(url.searchParams.get('page') ?? '0');
+        return Number.isFinite(page) && page > currentPage;
+      },
+    );
+    return {
+      productUrls: [...products.values()],
+      childCategoryUrls: [...childCategories.values()],
+      hasNextPage: hasNextPageByCount || hasNextPageByLink,
+    };
+  }
+
+  listingUrl(baseUrl: string, page: number): string {
+    const url = new URL(baseUrl);
+    if (!url.pathname.startsWith('/product/category/')) url.pathname = '/product';
+    url.searchParams.set('like', '0');
+    url.searchParams.set('campain', '0');
+    url.searchParams.set('pagination', '1');
+    url.searchParams.set('quick', 'attr');
+    url.searchParams.set('order', 'new');
+    if (page > 1) url.searchParams.set('page', String(page));
+    else url.searchParams.delete('page');
+    url.hash = '';
+    return url.toString();
+  }
+
+  listingRequest(baseUrl: string, page: number): SupplierListingRequest {
+    const listingUrl = new URL(this.listingUrl(baseUrl, page));
+    const categoryId = listingUrl.pathname.match(/^\/product\/category\/(\d+)/)?.[1] ?? '';
+    const endpoint = new URL('/product/searching/1-جستجو', listingUrl);
+    const body = new URLSearchParams({
+      q: '',
+      loadCategory: 'false',
+      shop: '',
+      like: '0',
+      campain: '0',
+      status: '0',
+      id: categoryId,
+      page: String(page),
+      pagination: '1',
+      quick: 'attr',
+      order: 'new',
+    });
+    body.append('price[]', '0');
+    body.append('price[]', '0');
+    return {
+      url: endpoint.toString(),
+      method: 'POST',
+      body: body.toString(),
+      contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+      referer: listingUrl.toString(),
+    };
+  }
 
   parseProduct(html: string, sourceUrl: string): CrawledSupplierProduct {
     const product = structuredProduct(html);

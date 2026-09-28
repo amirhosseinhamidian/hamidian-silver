@@ -849,6 +849,7 @@ enum SupplierCrawlerType {
 enum SupplierCrawlRunStatus {
   QUEUED
   RUNNING
+  PAUSED
   SUCCEEDED
   PARTIAL
   FAILED
@@ -858,6 +859,7 @@ enum SupplierCrawlRunStatus {
 enum SupplierCrawlScope {
   PRODUCT_URL
   CATEGORY_URL
+  CATALOG
   SCHEDULED
 }
 
@@ -902,6 +904,7 @@ model SupplierSource {
   supplier       Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   crawlRuns      SupplierCrawlRun[]
   importDrafts   SupplierProductImportDraft[]
+  categories     SupplierSourceCategory[]
 
   @@unique([supplierId, hostname])
   @@index([supplierId, isActive])
@@ -915,20 +918,47 @@ model SupplierCrawlRun {
   supplierSourceId String                 @db.Uuid
   scope            SupplierCrawlScope
   targetUrl        String                 @db.VarChar(2000)
+  categoryId       String?                @db.Uuid
+  requestedLimit   Int?
+  currentPage      Int                    @default(1)
+  pendingCategoryUrls String[]             @default([]) @db.VarChar(2000)
+  stopAtKnown      Boolean                @default(false)
   status           SupplierCrawlRunStatus @default(QUEUED)
   discoveredCount  Int                    @default(0)
   succeededCount   Int                    @default(0)
   failedCount      Int                    @default(0)
+  skippedCount     Int                    @default(0)
   errorMessage     String?                @db.VarChar(1000)
   startedAt        DateTime?              @db.Timestamptz(3)
+  lastHeartbeatAt  DateTime?              @db.Timestamptz(3)
   finishedAt       DateTime?              @db.Timestamptz(3)
   createdAt        DateTime               @default(now()) @db.Timestamptz(3)
   supplierSource   SupplierSource         @relation(fields: [supplierSourceId], references: [id], onDelete: Restrict)
+  category         SupplierSourceCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   importDrafts     SupplierProductImportDraft[]
 
   @@index([supplierSourceId, createdAt])
   @@index([status, createdAt])
+  @@index([categoryId])
   @@map("supplier_crawl_runs")
+}
+
+model SupplierSourceCategory {
+  id               String             @id @default(uuid()) @db.Uuid
+  supplierSourceId String             @db.Uuid
+  externalKey      String             @db.VarChar(120)
+  name             String             @db.VarChar(300)
+  url              String             @db.VarChar(2000)
+  isActive         Boolean            @default(true)
+  lastSeenAt       DateTime           @db.Timestamptz(3)
+  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime           @updatedAt @db.Timestamptz(3)
+  supplierSource   SupplierSource     @relation(fields: [supplierSourceId], references: [id], onDelete: Restrict)
+  crawlRuns        SupplierCrawlRun[]
+
+  @@unique([supplierSourceId, externalKey])
+  @@index([supplierSourceId, isActive, name])
+  @@map("supplier_source_categories")
 }
 
 model SupplierProductImportDraft {

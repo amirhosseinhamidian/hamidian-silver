@@ -1,4 +1,6 @@
 export type AdminSupplierImportStatus = 'PENDING_REVIEW' | 'REVIEWED' | 'REJECTED';
+export type AdminSupplierCrawlRunStatus =
+  'QUEUED' | 'RUNNING' | 'PAUSED' | 'SUCCEEDED' | 'PARTIAL' | 'FAILED' | 'CANCELLED';
 
 export type AdminSupplierImportAttribute = Readonly<{ key: string; value: string }>;
 
@@ -40,12 +42,49 @@ export type AdminSupplierImportDraft = Readonly<{
   reviewedBy: string | null;
 }>;
 
+export type AdminSupplierSourceCategory = Readonly<{
+  id: string;
+  supplierSourceId: string;
+  externalKey: string;
+  name: string;
+  url: string;
+}>;
+
+export type AdminSupplierCrawlRun = Readonly<{
+  id: string;
+  supplierSourceId: string;
+  sourceName: string;
+  supplierName: string;
+  categoryName: string | null;
+  status: AdminSupplierCrawlRunStatus;
+  requestedLimit: number | null;
+  currentPage: number;
+  discoveredCount: number;
+  succeededCount: number;
+  failedCount: number;
+  skippedCount: number;
+  stopAtKnown: boolean;
+  errorMessage: string | null;
+  createdAt: string;
+}>;
+
 export type AdminSupplierImportsData = Readonly<{
   sources: readonly AdminSupplierImportSource[];
   drafts: readonly AdminSupplierImportDraft[];
+  categories: readonly AdminSupplierSourceCategory[];
+  runs: readonly AdminSupplierCrawlRun[];
 }>;
 
 const STATUSES = new Set<AdminSupplierImportStatus>(['PENDING_REVIEW', 'REVIEWED', 'REJECTED']);
+const RUN_STATUSES = new Set<AdminSupplierCrawlRunStatus>([
+  'QUEUED',
+  'RUNNING',
+  'PAUSED',
+  'SUCCEEDED',
+  'PARTIAL',
+  'FAILED',
+  'CANCELLED',
+]);
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
@@ -182,4 +221,79 @@ export function parseSupplierImportDrafts(
   return parsed.some((item) => item === null)
     ? null
     : (parsed as readonly AdminSupplierImportDraft[]);
+}
+
+export function parseSupplierSourceCategories(
+  value: unknown,
+): readonly AdminSupplierSourceCategory[] | null {
+  if (!Array.isArray(value)) return null;
+  const parsed = value.map((entry) => {
+    const item = record(entry);
+    const id = text(item?.id);
+    const supplierSourceId = text(item?.supplierSourceId);
+    const externalKey = text(item?.externalKey);
+    const name = text(item?.name);
+    const url = text(item?.url);
+    return id && supplierSourceId && externalKey && name && url
+      ? { id, supplierSourceId, externalKey, name, url }
+      : null;
+  });
+  return parsed.some((item) => item === null)
+    ? null
+    : (parsed as readonly AdminSupplierSourceCategory[]);
+}
+
+export function parseSupplierCrawlRuns(value: unknown): readonly AdminSupplierCrawlRun[] | null {
+  if (!Array.isArray(value)) return null;
+  const parsed = value.map((entry) => {
+    const item = record(entry);
+    const source = record(item?.supplierSource);
+    const supplier = record(source?.supplier);
+    const category = record(item?.category);
+    const status = text(item?.status) as AdminSupplierCrawlRunStatus | null;
+    const id = text(item?.id);
+    const supplierSourceId = text(item?.supplierSourceId);
+    const sourceName = text(source?.name);
+    const supplierName = text(supplier?.name);
+    const createdAt = text(item?.createdAt);
+    const currentPage = number(item?.currentPage);
+    const discoveredCount = number(item?.discoveredCount);
+    const succeededCount = number(item?.succeededCount);
+    const failedCount = number(item?.failedCount);
+    const skippedCount = number(item?.skippedCount);
+    if (
+      !id ||
+      !supplierSourceId ||
+      !sourceName ||
+      !supplierName ||
+      !status ||
+      !RUN_STATUSES.has(status) ||
+      !createdAt ||
+      currentPage === null ||
+      discoveredCount === null ||
+      succeededCount === null ||
+      failedCount === null ||
+      skippedCount === null
+    ) {
+      return null;
+    }
+    return {
+      id,
+      supplierSourceId,
+      sourceName,
+      supplierName,
+      categoryName: text(category?.name),
+      status,
+      requestedLimit: number(item?.requestedLimit),
+      currentPage,
+      discoveredCount,
+      succeededCount,
+      failedCount,
+      skippedCount,
+      stopAtKnown: item?.stopAtKnown === true,
+      errorMessage: text(item?.errorMessage),
+      createdAt,
+    } satisfies AdminSupplierCrawlRun;
+  });
+  return parsed.some((item) => item === null) ? null : (parsed as readonly AdminSupplierCrawlRun[]);
 }

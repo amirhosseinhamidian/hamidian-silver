@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   parseSupplierImportDrafts,
   parseSupplierImportSources,
+  parseSupplierCrawlRuns,
+  parseSupplierSourceCategories,
 } from '@/lib/supplier-imports/supplier-imports-model';
 
 describe('supplier imports model', () => {
@@ -66,5 +68,38 @@ describe('supplier imports model', () => {
 
   it('rejects malformed draft records', () => {
     expect(parseSupplierImportDrafts([{ id: 'draft-1' }])).toBeNull();
+  });
+
+  it('parses supplier categories and bulk crawl progress', () => {
+    expect(
+      parseSupplierSourceCategories([
+        {
+          id: 'category-1',
+          supplierSourceId: 'source-1',
+          externalKey: '12',
+          name: 'دستبند',
+          url: 'https://bsjsilver.com/product/category/12-bracelet',
+        },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      parseSupplierCrawlRuns([
+        {
+          id: 'run-1',
+          supplierSourceId: 'source-1',
+          status: 'RUNNING',
+          requestedLimit: 100,
+          currentPage: 2,
+          discoveredCount: 20,
+          succeededCount: 12,
+          failedCount: 1,
+          skippedCount: 7,
+          stopAtKnown: false,
+          createdAt: '2026-09-27T10:00:00.000Z',
+          supplierSource: { name: 'سایت اصلی', supplier: { name: 'بی‌اس‌جی' } },
+          category: { name: 'دستبند' },
+        },
+      ])?.[0],
+    ).toEqual(expect.objectContaining({ status: 'RUNNING', succeededCount: 12 }));
   });
 });

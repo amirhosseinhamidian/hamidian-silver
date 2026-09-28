@@ -62,7 +62,16 @@ describe('SupplierProductImportsView', () => {
       }),
     );
     vi.stubGlobal('fetch', fetchMock);
-    render(<SupplierProductImportsView sources={[source]} drafts={[]} failed={false} canWrite />);
+    render(
+      <SupplierProductImportsView
+        sources={[source]}
+        drafts={[]}
+        categories={[]}
+        runs={[]}
+        failed={false}
+        canWrite
+      />,
+    );
 
     fireEvent.change(screen.getByLabelText('نشانی صفحه محصول'), {
       target: { value: draft.sourceUrl },
@@ -90,7 +99,14 @@ describe('SupplierProductImportsView', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
     render(
-      <SupplierProductImportsView sources={[source]} drafts={[draft]} failed={false} canWrite />,
+      <SupplierProductImportsView
+        sources={[source]}
+        drafts={[draft]}
+        categories={[]}
+        runs={[]}
+        failed={false}
+        canWrite
+      />,
     );
 
     expect(screen.getByText('۲۴٬۶۳۸٬۰۰۰ تومان')).toBeInTheDocument();

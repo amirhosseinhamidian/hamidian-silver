@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { type FormEvent, useMemo, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { SupplierBulkCrawlCard } from './supplier-bulk-crawl-card';
 import { Badge } from '@/components/ui/badge';
 import { BottomSheet, BottomSheetContent } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
@@ -22,11 +23,15 @@ import type {
   AdminSupplierImportDraft,
   AdminSupplierImportSource,
   AdminSupplierImportStatus,
+  AdminSupplierCrawlRun,
+  AdminSupplierSourceCategory,
 } from '@/lib/supplier-imports/supplier-imports-model';
 
 type Props = Readonly<{
   sources: readonly AdminSupplierImportSource[];
   drafts: readonly AdminSupplierImportDraft[];
+  categories: readonly AdminSupplierSourceCategory[];
+  runs: readonly AdminSupplierCrawlRun[];
   failed: boolean;
   canWrite: boolean;
 }>;
@@ -205,7 +210,14 @@ function DraftEditor({
   );
 }
 
-export function SupplierProductImportsView({ sources, drafts, failed, canWrite }: Props) {
+export function SupplierProductImportsView({
+  sources,
+  drafts,
+  categories,
+  runs,
+  failed,
+  canWrite,
+}: Props) {
   const router = useRouter();
   const supportedSources = sources.filter((source) => source.supported);
   const [sourceId, setSourceId] = useState(supportedSources[0]?.id ?? '');
@@ -251,6 +263,13 @@ export function SupplierProductImportsView({ sources, drafts, failed, canWrite }
           ارتباط با سرویس ورود محصول برقرار نشد. صفحه را دوباره بارگذاری کنید.
         </Alert>
       ) : null}
+
+      <SupplierBulkCrawlCard
+        sources={sources}
+        categories={categories}
+        runs={runs}
+        canWrite={canWrite}
+      />
 
       <Card
         title="دریافت یک محصول"
