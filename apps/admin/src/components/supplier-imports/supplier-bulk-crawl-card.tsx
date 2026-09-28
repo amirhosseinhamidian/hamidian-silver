@@ -52,6 +52,18 @@ function runBadge(run: AdminSupplierCrawlRun) {
   return <Badge tone="info">{run.status === 'RUNNING' ? 'در حال اجرا' : 'در صف'}</Badge>;
 }
 
+function runCategoryLabel(
+  run: AdminSupplierCrawlRun,
+  categories: readonly AdminSupplierSourceCategory[],
+) {
+  if (run.categoryName) return run.categoryName;
+  const selectedNames = run.scheduledCategoryIds
+    .map((categoryId) => categories.find((category) => category.id === categoryId)?.name)
+    .filter((name): name is string => Boolean(name));
+  if (selectedNames.length) return selectedNames.join('، ');
+  return run.isScheduled ? 'دسته‌بندی‌های منتخب' : 'همه محصولات';
+}
+
 export function SupplierBulkCrawlCard({
   sources,
   categories,
@@ -259,7 +271,7 @@ export function SupplierBulkCrawlCard({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="text-sm font-bold">
-                        {run.supplierName} · {run.categoryName ?? 'همه محصولات'}
+                        {run.supplierName} · {runCategoryLabel(run, categories)}
                       </p>
                       <p className="mt-1 text-xs text-[var(--admin-color-muted)]">
                         {formatAdminDateTime(run.createdAt)} · صفحه{' '}
@@ -301,7 +313,7 @@ export function SupplierBulkCrawlCard({
                   <div
                     className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--admin-color-surface-subtle)]"
                     role="progressbar"
-                    aria-label={`پیشرفت دریافت ${run.categoryName ?? 'همه محصولات'}`}
+                    aria-label={`پیشرفت دریافت ${runCategoryLabel(run, categories)}`}
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={percent}

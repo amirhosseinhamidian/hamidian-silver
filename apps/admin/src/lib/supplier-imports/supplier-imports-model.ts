@@ -59,6 +59,8 @@ export type AdminSupplierCrawlRun = Readonly<{
   sourceName: string;
   supplierName: string;
   categoryName: string | null;
+  isScheduled: boolean;
+  scheduledCategoryIds: readonly string[];
   status: AdminSupplierCrawlRunStatus;
   requestedLimit: number | null;
   currentPage: number;
@@ -351,6 +353,7 @@ export function parseSupplierCrawlRuns(value: unknown): readonly AdminSupplierCr
     const source = record(item?.supplierSource);
     const supplier = record(source?.supplier);
     const category = record(item?.category);
+    const schedule = record(item?.schedule);
     const status = text(item?.status) as AdminSupplierCrawlRunStatus | null;
     const id = text(item?.id);
     const supplierSourceId = text(item?.supplierSourceId);
@@ -384,6 +387,12 @@ export function parseSupplierCrawlRuns(value: unknown): readonly AdminSupplierCr
       sourceName,
       supplierName,
       categoryName: text(category?.name),
+      isScheduled: text(item?.scope) === 'SCHEDULED' || Boolean(text(item?.scheduleId)),
+      scheduledCategoryIds: Array.isArray(schedule?.categoryIds)
+        ? schedule.categoryIds.filter(
+            (categoryId): categoryId is string => typeof categoryId === 'string',
+          )
+        : [],
       status,
       requestedLimit: number(item?.requestedLimit),
       currentPage,

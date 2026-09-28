@@ -109,6 +109,8 @@ describe('SupplierBulkCrawlCard', () => {
               sourceName: source.name,
               supplierName: source.supplierName,
               categoryName: 'گوشواره',
+              isScheduled: false,
+              scheduledCategoryIds: [],
               status: 'RUNNING',
               requestedLimit: 100,
               currentPage: 2,
@@ -148,7 +150,15 @@ describe('SupplierBulkCrawlCard', () => {
     render(
       <SupplierBulkCrawlCard
         sources={[source]}
-        categories={[]}
+        categories={[
+          {
+            id: 'category-1',
+            supplierSourceId: source.id,
+            externalKey: '12',
+            name: 'دستبند نقره',
+            url: 'https://bsjsilver.com/product/category/12-bracelet',
+          },
+        ]}
         runs={{
           ...runPage(),
           total: 1,
@@ -159,6 +169,8 @@ describe('SupplierBulkCrawlCard', () => {
               sourceName: source.name,
               supplierName: source.supplierName,
               categoryName: null,
+              isScheduled: true,
+              scheduledCategoryIds: ['category-1'],
               status: 'SUCCEEDED',
               requestedLimit: 25,
               currentPage: 2,
@@ -180,6 +192,7 @@ describe('SupplierBulkCrawlCard', () => {
       />,
     );
 
+    expect(screen.getByText(/بی‌اس‌جی · دستبند نقره/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'بررسی شد و انتقال به تاریخچه' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock).toHaveBeenCalledWith(

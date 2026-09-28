@@ -129,6 +129,7 @@ describe('supplier imports model', () => {
         {
           id: 'run-1',
           supplierSourceId: 'source-1',
+          scope: 'SCHEDULED',
           status: 'RUNNING',
           requestedLimit: 100,
           currentPage: 2,
@@ -140,9 +141,17 @@ describe('supplier imports model', () => {
           createdAt: '2026-09-27T10:00:00.000Z',
           supplierSource: { name: 'سایت اصلی', supplier: { name: 'بی‌اس‌جی' } },
           category: { name: 'دستبند' },
+          schedule: { categoryIds: ['category-1'] },
         },
       ])?.[0],
-    ).toEqual(expect.objectContaining({ status: 'RUNNING', succeededCount: 12 }));
+    ).toEqual(
+      expect.objectContaining({
+        status: 'RUNNING',
+        succeededCount: 12,
+        isScheduled: true,
+        scheduledCategoryIds: ['category-1'],
+      }),
+    );
   });
 
   it('parses server-side draft and crawl history pages', () => {

@@ -210,6 +210,7 @@ describe('SupplierImportsService', () => {
     expect(prisma.supplierCrawlRun.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         scheduleId: 'schedule-1',
+        categoryId,
         scope: 'SCHEDULED',
         requestedLimit: 200,
         maxRetries: 2,

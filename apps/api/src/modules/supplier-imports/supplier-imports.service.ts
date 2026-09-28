@@ -268,6 +268,7 @@ export class SupplierImportsService {
             select: { id: true, name: true, supplier: { select: { name: true } } },
           },
           category: { select: { id: true, name: true } },
+          schedule: { select: { categoryIds: true } },
           archivedBy: { select: { id: true, firstName: true, lastName: true, phone: true } },
         },
       }),
@@ -945,6 +946,7 @@ export class SupplierImportsService {
       const run = await transaction.supplierCrawlRun.create({
         data: {
           supplierSourceId: source.id,
+          categoryId: categories.length === 1 ? categories[0]!.id : null,
           scheduleId: schedule.id,
           scope: SupplierCrawlScope.SCHEDULED,
           targetUrl,
