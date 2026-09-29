@@ -41,14 +41,18 @@ export default async function NewProductPage({ searchParams }: Props) {
         </p>
       ) : importedProduct ? (
         <div className="mt-6 rounded-[var(--admin-radius-lg)] border border-[var(--admin-color-border)] p-5">
-          <p className="text-sm">این پیش‌نویس قبلاً به محصول «{importedProduct.name}» تبدیل شده است.</p>
+          <p className="text-sm">
+            این پیش‌نویس قبلاً به محصول «{importedProduct.name}» تبدیل شده است.
+          </p>
           <ButtonLink href={`/products/${importedProduct.id}/edit`} className="mt-4">
             ویرایش محصول ساخته‌شده
           </ButtonLink>
         </div>
       ) : rejectedDraft ? (
         <div className="mt-6 rounded-[var(--admin-radius-lg)] border border-[var(--admin-color-border)] p-5">
-          <p className="text-sm">این پیش‌نویس رد شده است. ابتدا وضعیت آن را از فهرست بازبینی تغییر دهید.</p>
+          <p className="text-sm">
+            این پیش‌نویس رد شده است. ابتدا وضعیت آن را از فهرست بازبینی تغییر دهید.
+          </p>
           <ButtonLink href="/product-imports" variant="secondary" className="mt-4">
             بازگشت به محصولات دریافتی
           </ButtonLink>
