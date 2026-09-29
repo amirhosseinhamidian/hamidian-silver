@@ -20,7 +20,9 @@ import { Select } from '@/components/ui/select';
 import {
   preferredSupplier,
   type AdminSupplier,
+  type AdminSupplierCrawlerType,
   type AdminSupplierProduct,
+  type AdminSupplierSource,
 } from '@/lib/suppliers/suppliers-model';
 import {
   formatAdminDateTime,
@@ -44,6 +46,14 @@ function apiError(payload: unknown): string {
     'Supplier was not found.': 'تأمین‌کننده پیدا نشد یا دیگر در دسترس نیست.',
     'Product was not found.': 'محصول پیدا نشد یا دیگر در دسترس نیست.',
     'Supplier fields cannot be blank.': 'فیلدهای مشخصات تأمین‌کننده نمی‌توانند خالی باشند.',
+    'Supplier source was not found.': 'وب‌سایت تأمین‌کننده پیدا نشد یا دیگر در دسترس نیست.',
+    'Supplier source name is required.': 'نام وب‌سایت تأمین‌کننده الزامی است.',
+    'This supplier already has a source for the same hostname.':
+      'این دامنه قبلاً برای همین تأمین‌کننده ثبت شده است.',
+    'Custom crawler sources require an adapter key.': 'کلید آداپتر اختصاصی الزامی است.',
+    'Supplier source URL is invalid.': 'نشانی سایت معتبر نیست.',
+    'Supplier source must use a public HTTP or HTTPS hostname.':
+      'نشانی سایت باید یک دامنه عمومی معتبر با HTTP یا HTTPS باشد.',
   };
   if (typeof payload === 'object' && payload !== null) {
     const value = payload as Record<string, unknown>;
@@ -99,6 +109,31 @@ function productStatus(status: AdminSupplierProduct['status']) {
   if (status === 'ACTIVE') return <Badge tone="success">منتشرشده</Badge>;
   if (status === 'DRAFT') return <Badge tone="warning">پیش‌نویس</Badge>;
   return <Badge tone="neutral">آرشیوشده</Badge>;
+}
+
+const crawlerTypeOptions: ReadonlyArray<{
+  value: AdminSupplierCrawlerType;
+  label: string;
+}> = [
+  { value: 'GENERIC_HTML', label: 'HTML عمومی' },
+  { value: 'JSON_LD', label: 'داده ساختاریافته JSON-LD' },
+  { value: 'CUSTOM_ADAPTER', label: 'آداپتر اختصاصی' },
+  { value: 'API', label: 'وب‌سرویس API' },
+  { value: 'CSV', label: 'فایل CSV' },
+  { value: 'XML', label: 'فایل XML' },
+];
+
+function crawlerTypeLabel(value: AdminSupplierCrawlerType): string {
+  return crawlerTypeOptions.find((option) => option.value === value)?.label ?? value;
+}
+
+function crawlRunStatus(source: AdminSupplierSource) {
+  const status = source.lastRun?.status;
+  if (!status) return <Badge tone="neutral">هنوز اجرا نشده</Badge>;
+  if (status === 'SUCCEEDED') return <Badge tone="success">موفق</Badge>;
+  if (status === 'FAILED' || status === 'CANCELLED') return <Badge tone="danger">ناموفق</Badge>;
+  if (status === 'PARTIAL') return <Badge tone="warning">ناتمام</Badge>;
+  return <Badge tone="info">{status === 'RUNNING' ? 'در حال اجرا' : 'در صف'}</Badge>;
 }
 
 function SupplierForm({
@@ -253,6 +288,345 @@ function SupplierSheet({
           onSaved={() => setOpen(false)}
           onPendingChange={setPending}
         />
+      </BottomSheetContent>
+    </BottomSheet>
+  );
+}
+
+function SupplierSourceForm({
+  formId,
+  supplier,
+  source,
+  onSaved,
+  onPendingChange,
+}: Readonly<{
+  formId: string;
+  supplier: AdminSupplier;
+  source?: AdminSupplierSource;
+  onSaved: () => void;
+  onPendingChange: (pending: boolean) => void;
+}>) {
+  const router = useRouter();
+  const [crawlerType, setCrawlerType] = useState<AdminSupplierCrawlerType>(
+    source?.crawlerType ?? 'GENERIC_HTML',
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const name = String(formData.get('name') ?? '').trim();
+    const baseUrl = String(formData.get('baseUrl') ?? '').trim();
+    const adapterKey = String(formData.get('adapterKey') ?? '').trim();
+    const crawlDelayMs = parseNumber(String(formData.get('crawlDelayMs') ?? ''));
+    const maxConcurrency = parseNumber(String(formData.get('maxConcurrency') ?? ''));
+    if (!name || !baseUrl) return setError('نام و نشانی وب‌سایت الزامی است.');
+    if (
+      crawlDelayMs === null ||
+      !Number.isInteger(crawlDelayMs) ||
+      crawlDelayMs < 500 ||
+      crawlDelayMs > 60_000
+    )
+      return setError('فاصله درخواست‌ها باید بین ۵۰۰ تا ۶۰٬۰۰۰ میلی‌ثانیه باشد.');
+    if (
+      maxConcurrency === null ||
+      !Number.isInteger(maxConcurrency) ||
+      maxConcurrency < 1 ||
+      maxConcurrency > 5
+    )
+      return setError('تعداد درخواست هم‌زمان باید بین ۱ تا ۵ باشد.');
+    if (crawlerType === 'CUSTOM_ADAPTER' && !adapterKey)
+      return setError('برای آداپتر اختصاصی، کلید آداپتر را وارد کنید.');
+
+    setError(null);
+    onPendingChange(true);
+    try {
+      await requestJson(
+        source
+          ? `/api/pricing/suppliers/${supplier.id}/sources/${source.id}`
+          : `/api/pricing/suppliers/${supplier.id}/sources`,
+        source ? 'PATCH' : 'POST',
+        {
+          name,
+          baseUrl,
+          crawlerType,
+          adapterKey: adapterKey || (source ? null : undefined),
+          crawlDelayMs,
+          maxConcurrency,
+          isActive: formData.get('isActive') === 'on',
+        },
+      );
+      onSaved();
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : apiError(null));
+    } finally {
+      onPendingChange(false);
+    }
+  }
+
+  return (
+    <form id={formId} onSubmit={(event) => void submit(event)} className="space-y-4">
+      {error ? (
+        <Alert tone="danger" title="ذخیره وب‌سایت ناموفق بود">
+          {error}
+        </Alert>
+      ) : null}
+      {!supplier.active ? (
+        <Alert tone="warning">
+          تا زمانی که تأمین‌کننده غیرفعال است، وب‌سایت نیز غیرفعال ذخیره می‌شود.
+        </Alert>
+      ) : null}
+      <FormField id={`${formId}-name`} label="نام سایت" required>
+        {(props) => (
+          <Input
+            {...props}
+            name="name"
+            defaultValue={source?.name ?? ''}
+            placeholder="مثلاً فروشگاه اصلی تأمین‌کننده"
+            required
+          />
+        )}
+      </FormField>
+      <FormField
+        id={`${formId}-url`}
+        label="نشانی سایت"
+        hint="نشانی عمومی سایت یا مسیر پایه محصولات"
+        required
+      >
+        {(props) => (
+          <Input
+            {...props}
+            name="baseUrl"
+            type="url"
+            dir="ltr"
+            defaultValue={source?.baseUrl ?? ''}
+            placeholder="https://supplier.example.com/"
+            required
+          />
+        )}
+      </FormField>
+      <FormField id={`${formId}-crawler`} label="نوع Crawler" required>
+        {(props) => (
+          <Select
+            {...props}
+            value={crawlerType}
+            onValueChange={(value) => setCrawlerType(value as AdminSupplierCrawlerType)}
+            options={crawlerTypeOptions}
+            required
+          />
+        )}
+      </FormField>
+      {crawlerType === 'CUSTOM_ADAPTER' ? (
+        <FormField
+          id={`${formId}-adapter`}
+          label="کلید آداپتر"
+          hint="شناسه فنی آداپتر اختصاصی؛ مانند bsj-silver"
+          required
+        >
+          {(props) => (
+            <Input
+              {...props}
+              name="adapterKey"
+              dir="ltr"
+              defaultValue={source?.adapterKey ?? ''}
+              placeholder="bsj-silver"
+              pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+              required
+            />
+          )}
+        </FormField>
+      ) : null}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField
+          id={`${formId}-delay`}
+          label="فاصله درخواست‌ها"
+          hint="میلی‌ثانیه؛ حداقل ۵۰۰"
+          required
+        >
+          {(props) => (
+            <Input
+              {...props}
+              name="crawlDelayMs"
+              type="number"
+              dir="ltr"
+              min={500}
+              max={60000}
+              step={100}
+              defaultValue={source?.crawlDelayMs ?? 2000}
+              required
+            />
+          )}
+        </FormField>
+        <FormField id={`${formId}-concurrency`} label="درخواست هم‌زمان" hint="بین ۱ تا ۵" required>
+          {(props) => (
+            <Input
+              {...props}
+              name="maxConcurrency"
+              type="number"
+              dir="ltr"
+              min={1}
+              max={5}
+              defaultValue={source?.maxConcurrency ?? 1}
+              required
+            />
+          )}
+        </FormField>
+      </div>
+      <Checkbox
+        id={`${formId}-active`}
+        name="isActive"
+        label="این سایت فعال باشد"
+        description="فقط سایت‌های فعال در اجرای Crawl استفاده خواهند شد."
+        defaultChecked={source?.active ?? true}
+      />
+    </form>
+  );
+}
+
+function SupplierSourcesSheet({
+  supplier,
+  canWrite,
+}: Readonly<{ supplier: AdminSupplier; canWrite: boolean }>) {
+  const formId = useId();
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');
+  const [selectedSource, setSelectedSource] = useState<AdminSupplierSource | undefined>();
+
+  function changeOpen(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      setMode('list');
+      setSelectedSource(undefined);
+    }
+  }
+
+  const editing = mode === 'edit' ? selectedSource : undefined;
+  const formVisible = mode !== 'list';
+  return (
+    <BottomSheet open={open} onOpenChange={changeOpen}>
+      <BottomSheetTrigger asChild>
+        <Button variant="outline" size="sm">
+          وب‌سایت‌ها
+        </Button>
+      </BottomSheetTrigger>
+      <BottomSheetContent
+        title={`وب‌سایت‌های ${supplier.name}`}
+        description="منابع Crawl، نوع استخراج و سرعت درخواست‌ها را مدیریت کنید."
+        height="large"
+        footer={
+          formVisible ? (
+            <>
+              <Button
+                variant="outline"
+                disabled={pending}
+                onClick={() => {
+                  setMode('list');
+                  setSelectedSource(undefined);
+                }}
+              >
+                بازگشت
+              </Button>
+              <Button type="submit" form={formId} loading={pending}>
+                ذخیره وب‌سایت
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" onClick={() => changeOpen(false)}>
+              بستن
+            </Button>
+          )
+        }
+      >
+        {formVisible ? (
+          <SupplierSourceForm
+            key={editing?.id ?? 'new-source'}
+            formId={formId}
+            supplier={supplier}
+            source={editing}
+            onSaved={() => changeOpen(false)}
+            onPendingChange={setPending}
+          />
+        ) : (
+          <div className="space-y-4">
+            {canWrite ? (
+              <Button
+                className="w-full"
+                onClick={() => {
+                  setSelectedSource(undefined);
+                  setMode('create');
+                }}
+              >
+                افزودن سایت تأمین‌کننده
+              </Button>
+            ) : null}
+            {!supplier.sources.length ? (
+              <Alert tone="info" title="هنوز سایتی ثبت نشده است">
+                برای این تأمین‌کننده هیچ منبع Crawl تعریف نشده است.
+              </Alert>
+            ) : (
+              <div className="space-y-3">
+                {supplier.sources.map((source) => (
+                  <Card key={source.id} className="space-y-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-bold">{source.name}</p>
+                        <a
+                          href={source.baseUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          dir="ltr"
+                          className="mt-1 block truncate text-xs text-[var(--admin-color-info)] underline-offset-4 hover:underline"
+                        >
+                          {source.hostname}
+                        </a>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge tone={source.active ? 'success' : 'neutral'} dot>
+                          {source.active ? 'فعال' : 'غیرفعال'}
+                        </Badge>
+                        {crawlRunStatus(source)}
+                      </div>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
+                      <div>
+                        <dt className="text-[var(--admin-color-muted)]">نوع Crawler</dt>
+                        <dd className="mt-1 font-semibold">
+                          {crawlerTypeLabel(source.crawlerType)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[var(--admin-color-muted)]">فاصله درخواست</dt>
+                        <dd className="mt-1 font-semibold">
+                          {formatAdminInteger(source.crawlDelayMs)} میلی‌ثانیه
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[var(--admin-color-muted)]">آخرین اجرا</dt>
+                        <dd className="mt-1 font-semibold">
+                          {source.lastRun ? formatAdminDateTime(source.lastRun.createdAt) : '—'}
+                        </dd>
+                      </div>
+                    </dl>
+                    {canWrite ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedSource(source);
+                          setMode('edit');
+                        }}
+                      >
+                        ویرایش تنظیمات سایت
+                      </Button>
+                    ) : null}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </BottomSheetContent>
     </BottomSheet>
   );
@@ -461,6 +835,7 @@ function SupplierReadonlyDetails({
         ['کد', toPersianDigits(supplier.code)],
         ['مسئول ارتباط', supplier.contactName ?? 'ثبت نشده'],
         ['تلفن', supplier.phone ? formatAdminPhone(supplier.phone) : 'ثبت نشده'],
+        ['وب‌سایت Crawl', formatAdminInteger(supplier.sources.length)],
         ['محصول متصل', formatAdminInteger(links.length)],
         [
           'تأمین منتخب',
@@ -538,6 +913,7 @@ function SupplierMobileCard({
       status={supplierStatus(supplier)}
       items={[
         { label: 'مسئول ارتباط', value: supplier.contactName ?? 'ثبت نشده' },
+        { label: 'وب‌سایت Crawl', value: formatAdminInteger(supplier.sources.length) },
         { label: 'محصول متصل', value: formatAdminInteger(links.length) },
         {
           label: 'تأمین منتخب',
@@ -561,11 +937,14 @@ function SupplierMobileCard({
         )
       }
       detailsFooter={
-        canWrite ? (
-          <Button type="submit" form={formId} loading={pending}>
-            ذخیره تغییرات
-          </Button>
-        ) : undefined
+        <>
+          <SupplierSourcesSheet supplier={supplier} canWrite={canWrite} />
+          {canWrite ? (
+            <Button type="submit" form={formId} loading={pending}>
+              ذخیره تغییرات
+            </Button>
+          ) : null}
+        </>
       }
     />
   );
@@ -712,6 +1091,19 @@ export function SupplierManagementView({
       ),
     },
     {
+      id: 'sources',
+      header: 'وب‌سایت Crawl',
+      cell: (supplier) => (
+        <div>
+          <p className="font-semibold">{formatAdminInteger(supplier.sources.length)}</p>
+          <p className="mt-1 text-xs text-[var(--admin-color-muted)]">
+            {formatAdminInteger(supplier.sources.filter((source) => source.active).length)} فعال
+          </p>
+        </div>
+      ),
+      align: 'center',
+    },
+    {
       id: 'products',
       header: 'محصول',
       cell: (supplier) =>
@@ -739,9 +1131,12 @@ export function SupplierManagementView({
       header: 'عملیات',
       cell: (supplier) =>
         canWrite ? (
-          <SupplierSheet supplier={supplier} triggerLabel="ویرایش" />
+          <div className="flex justify-end gap-2">
+            <SupplierSourcesSheet supplier={supplier} canWrite />
+            <SupplierSheet supplier={supplier} triggerLabel="ویرایش" />
+          </div>
         ) : (
-          <span className="text-xs text-[var(--admin-color-subtle)]">فقط مشاهده</span>
+          <SupplierSourcesSheet supplier={supplier} canWrite={false} />
         ),
       align: 'end',
     },
@@ -829,11 +1224,20 @@ export function SupplierManagementView({
     );
   return (
     <div className="mt-6 space-y-6">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Card>
           <p className="text-xs text-[var(--admin-color-muted)]">تأمین‌کننده فعال</p>
           <p className="mt-2 text-2xl font-black">
             {formatAdminInteger(suppliers.filter((supplier) => supplier.active).length)}
+          </p>
+        </Card>
+        <Card>
+          <p className="text-xs text-[var(--admin-color-muted)]">سایت Crawl فعال</p>
+          <p className="mt-2 text-2xl font-black">
+            {formatAdminInteger(
+              suppliers.flatMap((supplier) => supplier.sources).filter((source) => source.active)
+                .length,
+            )}
           </p>
         </Card>
         <Card>

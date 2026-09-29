@@ -21,6 +21,8 @@ import {
 } from '@nestjs/swagger';
 import { MEDIA_UPLOAD_LIMIT_BYTES } from '../../config/media-storage';
 import { Public } from '../auth/public.decorator';
+import { CurrentPrincipal } from '../auth/current-principal.decorator';
+import type { AuthenticatedPrincipal } from '../authorization/authorization.types';
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CatalogMediaService } from './catalog-media.service';
@@ -471,8 +473,11 @@ export class CatalogController {
 
   @Post('products')
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
-  createProduct(@Body() dto: CreateProductDto) {
-    return this.catalogService.createProduct(dto);
+  createProduct(
+    @Body() dto: CreateProductDto,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ) {
+    return this.catalogService.createProduct(dto, principal.userId);
   }
 
   @Post('products/:productId/media')

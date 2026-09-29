@@ -20,6 +20,7 @@ import { ProfileModule } from './modules/profile/profile.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
 import { SiteSettingsModule } from './modules/site-settings/site-settings.module';
 import { SeoModule } from './modules/seo/seo.module';
+import { SupplierImportsModule } from './modules/supplier-imports/supplier-imports.module';
 import { UserManagementModule } from './modules/user-management/user-management.module';
 
 @Module({
@@ -51,6 +52,7 @@ import { UserManagementModule } from './modules/user-management/user-management.
     ShippingModule,
     SiteSettingsModule,
     SeoModule,
+    SupplierImportsModule,
     UserManagementModule,
   ],
   providers: [

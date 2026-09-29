@@ -4,9 +4,11 @@ import type { AuthenticatedPrincipal } from '../authorization/authorization.type
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
+import { CreateSupplierSourceDto } from './dto/create-supplier-source.dto';
 import { SetProductSupplierDto } from './dto/set-product-supplier.dto';
 import { SetSalePriceDto } from './dto/set-sale-price.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
+import { UpdateSupplierSourceDto } from './dto/update-supplier-source.dto';
 import { PricingService } from './pricing.service';
 
 @Controller('pricing')
@@ -44,6 +46,33 @@ export class PricingController {
     @Body() dto: UpdateSupplierDto,
   ) {
     return this.pricingService.updateSupplier(supplierId, dto);
+  }
+
+  @Get('suppliers/:supplierId/sources')
+  @RequirePermissions(PERMISSION_CODES.PRICING_READ)
+  listSupplierSources(
+    @Param('supplierId', new ParseUUIDPipe({ version: '4' })) supplierId: string,
+  ) {
+    return this.pricingService.listSupplierSources(supplierId);
+  }
+
+  @Post('suppliers/:supplierId/sources')
+  @RequirePermissions(PERMISSION_CODES.PRICING_WRITE)
+  createSupplierSource(
+    @Param('supplierId', new ParseUUIDPipe({ version: '4' })) supplierId: string,
+    @Body() dto: CreateSupplierSourceDto,
+  ) {
+    return this.pricingService.createSupplierSource(supplierId, dto);
+  }
+
+  @Patch('suppliers/:supplierId/sources/:sourceId')
+  @RequirePermissions(PERMISSION_CODES.PRICING_WRITE)
+  updateSupplierSource(
+    @Param('supplierId', new ParseUUIDPipe({ version: '4' })) supplierId: string,
+    @Param('sourceId', new ParseUUIDPipe({ version: '4' })) sourceId: string,
+    @Body() dto: UpdateSupplierSourceDto,
+  ) {
+    return this.pricingService.updateSupplierSource(supplierId, sourceId, dto);
   }
 
   @Put('products/:productId/suppliers/:supplierId')

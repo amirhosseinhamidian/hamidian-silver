@@ -28,6 +28,7 @@ describe('admin navigation', () => {
       'incidents',
       'orders',
       'products',
+      'product-imports',
       'variants',
       'categories',
       'brands',
@@ -85,6 +86,7 @@ describe('admin navigation', () => {
     const navigation = getAdminNavigation(user());
 
     expect(getAdminSection('products')?.permissions).toEqual(['catalog.read']);
+    expect(getAdminSection('product-imports')?.permissions).toEqual(['catalog.read']);
     expect(getAdminSection('variants')?.permissions).toEqual(['catalog.read']);
     expect(getAdminSection('payment-gateways')?.permissions).toEqual(['settings.read']);
     expect(getAdminSection('shipping-settings')?.permissions).toEqual(['settings.read']);

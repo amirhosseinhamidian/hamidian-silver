@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "supplier_product_import_drafts_supplierSourceId_sourceProductKe" RENAME TO "supplier_product_import_drafts_supplierSourceId_sourceProdu_key";

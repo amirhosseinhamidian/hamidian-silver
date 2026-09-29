@@ -69,7 +69,7 @@ export function CatalogFilterSheet({ children, activeCount }: CatalogFilterSheet
             فیلترهای جستجو، دسته‌بندی و برند محصولات.
           </DialogPrimitive.Description>
 
-          <div className="px-5 pb-6">{children}</div>
+          <div className="min-h-0 flex-1 overflow-hidden px-5 pb-6">{children}</div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

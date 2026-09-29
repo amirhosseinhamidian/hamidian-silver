@@ -1,7 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { calculatePlatingPriceToman } from '../../common/plating-price';
 import { Prisma } from '../../generated/prisma/client';
-import { ProductStatus, SeoRedirectEntityType, SizeMode } from '../../generated/prisma/enums';
+import {
+  ProductStatus,
+  SeoRedirectEntityType,
+  SizeMode,
+  SupplierProductImportStatus,
+} from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
@@ -80,11 +85,29 @@ export class CatalogService {
     });
   }
 
-  async createProduct(dto: CreateProductDto) {
+  async createProduct(dto: CreateProductDto, actorUserId?: string) {
     this.validateProductShape(dto);
     const attributes = this.normalizeProductAttributes(dto.attributes);
 
     return this.prisma.$transaction(async (transaction) => {
+      if (dto.supplierImportDraftId) {
+        if (!actorUserId) {
+          throw new BadRequestException('Import actor is required.');
+        }
+        const importDraft = await transaction.supplierProductImportDraft.findUnique({
+          where: { id: dto.supplierImportDraftId },
+          select: { id: true, status: true, productId: true },
+        });
+        if (!importDraft) {
+          throw new NotFoundException('Supplier product import draft was not found.');
+        }
+        if (importDraft.productId || importDraft.status === SupplierProductImportStatus.IMPORTED) {
+          throw new BadRequestException('This supplier product draft was already imported.');
+        }
+        if (importDraft.status === SupplierProductImportStatus.REJECTED) {
+          throw new BadRequestException('A rejected supplier product draft cannot be imported.');
+        }
+      }
       if (dto.brandId) {
         const brand = await transaction.brand.findFirst({
           where: {
@@ -278,6 +301,23 @@ export class CatalogService {
             ...attribute,
           })),
         });
+      }
+
+      if (dto.supplierImportDraftId) {
+        const linked = await transaction.supplierProductImportDraft.updateMany({
+          where: { id: dto.supplierImportDraftId, productId: null },
+          data: {
+            productId: product.id,
+            status: SupplierProductImportStatus.IMPORTED,
+            reviewedAt: new Date(),
+            reviewedByUserId: actorUserId,
+            importedAt: new Date(),
+            importedByUserId: actorUserId,
+          },
+        });
+        if (linked.count !== 1) {
+          throw new BadRequestException('This supplier product draft was already imported.');
+        }
       }
 
       return transaction.product.findUniqueOrThrow({
@@ -622,6 +662,18 @@ export class CatalogService {
         updatedAt: true,
         parentId: true,
         sortOrder: true,
+        _count: {
+          select: {
+            products: {
+              where: {
+                product: {
+                  status: ProductStatus.ACTIVE,
+                  deletedAt: null,
+                },
+              },
+            },
+          },
+        },
         image: {
           select: {
             storageKey: true,
@@ -655,6 +707,23 @@ export class CatalogService {
       },
     });
 
+    const categoriesById = new Map(categories.map((category) => [category.id, category] as const));
+    const visibleCategoryIds = new Set(
+      categories.filter((category) => category._count.products > 0).map((category) => category.id),
+    );
+
+    for (const categoryId of visibleCategoryIds) {
+      let current = categoriesById.get(categoryId);
+      const visited = new Set<string>();
+      while (current?.parentId && !visited.has(current.parentId)) {
+        visited.add(current.parentId);
+        const parent = categoriesById.get(current.parentId);
+        if (!parent) break;
+        visibleCategoryIds.add(parent.id);
+        current = parent;
+      }
+    }
+
     return categories.map((category) => ({
       id: category.id,
       name: category.name,
@@ -667,6 +736,7 @@ export class CatalogService {
       ...(category.updatedAt ? { updatedAt: category.updatedAt.toISOString() } : {}),
       parentId: category.parentId,
       sortOrder: category.sortOrder,
+      hasProducts: visibleCategoryIds.has(category.id),
       image:
         category.image && !category.image.deletedAt
           ? {
@@ -729,6 +799,16 @@ export class CatalogService {
             deletedAt: true,
           },
         },
+        _count: {
+          select: {
+            products: {
+              where: {
+                status: ProductStatus.ACTIVE,
+                deletedAt: null,
+              },
+            },
+          },
+        },
         image: {
           select: {
             storageKey: true,
@@ -777,6 +857,7 @@ export class CatalogService {
       name: brand.name,
       slug: brand.slug,
       description: brand.description,
+      hasProducts: brand._count.products > 0,
       seoTitle: brand.seoTitle,
       seoDescription: brand.seoDescription,
       seoCanonicalPath: brand.seoCanonicalPath,

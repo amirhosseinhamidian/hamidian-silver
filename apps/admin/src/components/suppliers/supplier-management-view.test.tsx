@@ -19,6 +19,22 @@ const supplier: AdminSupplier = {
   contactName: 'علی رضایی',
   phone: '09121234567',
   active: true,
+  sources: [
+    {
+      id: 'source-1',
+      name: 'فروشگاه اصلی',
+      baseUrl: 'https://supplier.example.com/',
+      hostname: 'supplier.example.com',
+      crawlerType: 'GENERIC_HTML',
+      adapterKey: null,
+      crawlDelayMs: 2000,
+      maxConcurrency: 1,
+      active: true,
+      createdAt: '2026-09-07T09:00:00.000Z',
+      updatedAt: '2026-09-07T10:00:00.000Z',
+      lastRun: null,
+    },
+  ],
   createdAt: '2026-09-07T09:00:00.000Z',
   updatedAt: '2026-09-07T10:00:00.000Z',
 };
@@ -102,5 +118,37 @@ describe('SupplierManagementView', () => {
     const dialog = await screen.findByRole('dialog', { name: 'نقره‌سازی پارس' });
     expect(within(dialog).queryByRole('button', { name: 'ذخیره تغییرات' })).not.toBeInTheDocument();
     expect(within(dialog).getByText('مسئول ارتباط')).toBeInTheDocument();
+  });
+
+  it('creates a dynamic crawl website for a supplier', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: 'source-2' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    render(view());
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'وب‌سایت‌ها' })[0]!);
+    const dialog = await screen.findByRole('dialog', { name: 'وب‌سایت‌های نقره‌سازی پارس' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'افزودن سایت تأمین‌کننده' }));
+    fireEvent.change(within(dialog).getByLabelText(/^نام سایت/), {
+      target: { value: 'فروشگاه دوم' },
+    });
+    fireEvent.change(within(dialog).getByLabelText(/نشانی سایت/), {
+      target: { value: 'https://shop.example.com/products' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'ذخیره وب‌سایت' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/pricing/suppliers/supplier-1/sources',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('https://shop.example.com/products'),
+      }),
+    );
+    expect(router.refresh).toHaveBeenCalled();
   });
 });

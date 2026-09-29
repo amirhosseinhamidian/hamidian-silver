@@ -87,6 +87,10 @@ export class ProductAttributeInputDto {
 }
 
 export class CreateProductDto {
+  @IsOptional()
+  @IsUUID('4')
+  supplierImportDraftId?: string;
+
   @IsString()
   @Length(1, 200)
   name!: string;

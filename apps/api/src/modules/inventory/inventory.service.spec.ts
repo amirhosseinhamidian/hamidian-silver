@@ -1,6 +1,7 @@
 import { ErrorCode } from '../../common/errors/error-codes';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { resolveHumanAuditEvent } from '../audit/audit-event';
+import type { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { InventoryService } from './inventory.service';
 
 describe('InventoryService', () => {
@@ -22,12 +23,18 @@ describe('InventoryService', () => {
     },
     $transaction: jest.fn(),
   };
+  const publicMediaUrl = {
+    resolve: jest.fn((storageKey: string) => `https://media.example/${storageKey}`),
+  };
 
   let service: InventoryService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new InventoryService(prisma as unknown as PrismaService);
+    service = new InventoryService(
+      prisma as unknown as PrismaService,
+      publicMediaUrl as unknown as PublicMediaUrlService,
+    );
   });
 
   it('creates a default warehouse after clearing the previous default', async () => {
@@ -401,7 +408,18 @@ describe('InventoryService', () => {
         name: null,
         isActive: true,
         size: { label: '52' },
-        product: { id: 'product-1', name: 'Ring', slug: 'ring', status: 'ACTIVE' },
+        product: {
+          id: 'product-1',
+          name: 'Ring',
+          slug: 'ring',
+          status: 'ACTIVE',
+          media: [
+            {
+              altText: 'Primary ring photo',
+              media: { storageKey: 'products/ring.webp', altText: null },
+            },
+          ],
+        },
         inventories: [],
       },
     ]);
@@ -413,7 +431,27 @@ describe('InventoryService', () => {
         reserved: 0,
         available: 0,
         isLowStock: true,
+        product: expect.objectContaining({
+          primaryMedia: {
+            url: 'https://media.example/products/ring.webp',
+            altText: 'Primary ring photo',
+          },
+        }),
       }),
     ]);
+    expect(prisma.productVariant.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          product: expect.objectContaining({
+            select: expect.objectContaining({
+              media: expect.objectContaining({
+                orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+                take: 1,
+              }),
+            }),
+          }),
+        }),
+      }),
+    );
   });
 });

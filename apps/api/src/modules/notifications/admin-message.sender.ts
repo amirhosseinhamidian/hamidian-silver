@@ -10,6 +10,16 @@ type BotApiResponse = Readonly<{
   retryAfterSeconds?: number;
 }>;
 
+const MAX_PHOTO_CAPTION_LENGTH = 1024;
+
+function splitPhotoMessage(message: string): readonly [string, string | null] {
+  if (message.length <= MAX_PHOTO_CAPTION_LENGTH) return [message, null];
+
+  const preferredBreak = message.lastIndexOf('\n', MAX_PHOTO_CAPTION_LENGTH);
+  const breakAt = preferredBreak >= 200 ? preferredBreak : MAX_PHOTO_CAPTION_LENGTH;
+  return [message.slice(0, breakAt), message.slice(breakAt) || null];
+}
+
 @Injectable()
 export class AdminMessageSender {
   private readonly timeoutMs: number;
@@ -23,20 +33,40 @@ export class AdminMessageSender {
       this.config.get<string>('TELEGRAM_RELAY_SECRET')?.trim() || undefined;
   }
 
-  async send(channel: AdminMessageChannel, chatId: string, message: string): Promise<void> {
+  async send(
+    channel: AdminMessageChannel,
+    chatId: string,
+    message: string,
+    imageUrl?: string | null,
+  ): Promise<void> {
+    const safeImageUrl = this.safeImageUrl(imageUrl);
+    const [firstMessage, remainingMessage] = safeImageUrl
+      ? splitPhotoMessage(message)
+      : ([message, null] as const);
+
     if (channel === AdminMessageChannel.TELEGRAM) {
       if (this.telegramRelayUrl || this.telegramRelaySecret) {
-        await this.sendTelegramThroughRelay(chatId, message);
-        return;
+        await this.sendTelegramThroughRelay(chatId, firstMessage, safeImageUrl);
+        if (remainingMessage) await this.sendTelegramThroughRelay(chatId, remainingMessage);
+      } else {
+        await this.sendDirectBotMessage(
+          channel,
+          'TELEGRAM_BOT_TOKEN',
+          'https://api.telegram.org',
+          chatId,
+          firstMessage,
+          safeImageUrl,
+        );
+        if (remainingMessage) {
+          await this.sendDirectBotMessage(
+            channel,
+            'TELEGRAM_BOT_TOKEN',
+            'https://api.telegram.org',
+            chatId,
+            remainingMessage,
+          );
+        }
       }
-
-      await this.sendDirectBotMessage(
-        channel,
-        'TELEGRAM_BOT_TOKEN',
-        'https://api.telegram.org',
-        chatId,
-        message,
-      );
       return;
     }
 
@@ -45,11 +75,25 @@ export class AdminMessageSender {
       'BALE_BOT_TOKEN',
       'https://tapi.bale.ai',
       chatId,
-      message,
+      firstMessage,
+      safeImageUrl,
     );
+    if (remainingMessage) {
+      await this.sendDirectBotMessage(
+        channel,
+        'BALE_BOT_TOKEN',
+        'https://tapi.bale.ai',
+        chatId,
+        remainingMessage,
+      );
+    }
   }
 
-  private async sendTelegramThroughRelay(chatId: string, message: string): Promise<void> {
+  private async sendTelegramThroughRelay(
+    chatId: string,
+    message: string,
+    imageUrl?: string,
+  ): Promise<void> {
     if (!this.telegramRelayUrl || !this.telegramRelaySecret) {
       throw new Error('TELEGRAM_RELAY_URL and TELEGRAM_RELAY_SECRET must be configured together.');
     }
@@ -62,7 +106,7 @@ export class AdminMessageSender {
           Authorization: `Bearer ${this.telegramRelaySecret}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ chatId, message }),
+        body: JSON.stringify({ chatId, message, ...(imageUrl ? { imageUrl } : {}) }),
         signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch (error) {
@@ -85,16 +129,21 @@ export class AdminMessageSender {
     baseUrl: string,
     chatId: string,
     message: string,
+    imageUrl?: string,
   ): Promise<void> {
     const token = this.config.get<string>(tokenKey)?.trim();
     if (!token) throw new Error(`${tokenKey} is not configured.`);
 
     let response: Response;
     try {
-      response = await fetch(`${baseUrl}/bot${token}/sendMessage`, {
+      response = await fetch(`${baseUrl}/bot${token}/${imageUrl ? 'sendPhoto' : 'sendMessage'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: message }),
+        body: JSON.stringify(
+          imageUrl
+            ? { chat_id: chatId, photo: imageUrl, caption: message }
+            : { chat_id: chatId, text: message },
+        ),
         signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch (error) {
@@ -148,5 +197,17 @@ export class AdminMessageSender {
     if (code) return `${error.message}; ${code}`;
     if (message) return `${error.message}; ${message}`;
     return error.message;
+  }
+
+  private safeImageUrl(value: string | null | undefined): string | undefined {
+    if (!value) return undefined;
+
+    try {
+      const url = new URL(value);
+      if (url.protocol !== 'https:' || url.username || url.password) return undefined;
+      return url.toString();
+    } catch {
+      return undefined;
+    }
   }
 }

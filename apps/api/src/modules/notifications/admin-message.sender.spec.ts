@@ -42,11 +42,12 @@ describe('AdminMessageSender', () => {
       TELEGRAM_BOT_TOKEN: 'telegram-test-token-123456789',
       ADMIN_MESSAGING_REQUEST_TIMEOUT_MS: 8000,
     });
-    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
     );
     const sender = new AdminMessageSender(config as unknown as ConfigService);
 
@@ -59,6 +60,103 @@ describe('AdminMessageSender', () => {
         body: JSON.stringify({ chat_id: '123456789', text: 'سفارش جدید' }),
       }),
     );
+  });
+
+  it('sends the product image through the Telegram relay', async () => {
+    const relaySecret = 'relay-secret-with-at-least-32-characters';
+    const config = createConfig({
+      TELEGRAM_RELAY_URL: 'https://hamidian-telegram-relay.vercel.app/api/telegram/send',
+      TELEGRAM_RELAY_SECRET: relaySecret,
+      ADMIN_MESSAGING_REQUEST_TIMEOUT_MS: 15_000,
+    });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, messageId: 42 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    const sender = new AdminMessageSender(config as unknown as ConfigService);
+
+    await sender.send(
+      AdminMessageChannel.TELEGRAM,
+      '123456789',
+      'سفارش جدید',
+      'https://media.hamidian.shop/catalog/ring.webp',
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://hamidian-telegram-relay.vercel.app/api/telegram/send',
+      expect.objectContaining({
+        body: JSON.stringify({
+          chatId: '123456789',
+          message: 'سفارش جدید',
+          imageUrl: 'https://media.hamidian.shop/catalog/ring.webp',
+        }),
+      }),
+    );
+  });
+
+  it('uses sendPhoto for Bale when a secure product image is available', async () => {
+    const config = createConfig({
+      BALE_BOT_TOKEN: 'bale-test-token',
+      ADMIN_MESSAGING_REQUEST_TIMEOUT_MS: 8000,
+    });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    const sender = new AdminMessageSender(config as unknown as ConfigService);
+
+    await sender.send(
+      AdminMessageChannel.BALE,
+      '123456789',
+      'سفارش جدید',
+      'https://media.hamidian.shop/catalog/ring.webp',
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://tapi.bale.ai/botbale-test-token/sendPhoto',
+      expect.objectContaining({
+        body: JSON.stringify({
+          chat_id: '123456789',
+          photo: 'https://media.hamidian.shop/catalog/ring.webp',
+          caption: 'سفارش جدید',
+        }),
+      }),
+    );
+  });
+
+  it('preserves long order details by sending the caption remainder as text', async () => {
+    const config = createConfig({
+      TELEGRAM_BOT_TOKEN: 'telegram-test-token-123456789',
+      ADMIN_MESSAGING_REQUEST_TIMEOUT_MS: 8000,
+    });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    );
+    const sender = new AdminMessageSender(config as unknown as ConfigService);
+    const message = `سفارش جدید\n${'جزئیات سفارش '.repeat(100)}`;
+
+    await sender.send(
+      AdminMessageChannel.TELEGRAM,
+      '123456789',
+      message,
+      'https://media.hamidian.shop/catalog/ring.webp',
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const firstBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as {
+      caption: string;
+    };
+    const secondBody = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)) as { text: string };
+    expect(firstBody.caption.length).toBeLessThanOrEqual(1024);
+    expect(firstBody.caption + secondBody.text).toBe(message);
   });
 
   it('rejects a partially configured relay before making a request', async () => {

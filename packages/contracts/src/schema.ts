@@ -1476,6 +1476,38 @@ export interface paths {
         patch: operations["PricingController_updateSupplier_v1"];
         trace?: never;
     };
+    "/api/v1/pricing/suppliers/{supplierId}/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PricingController_listSupplierSources_v1"];
+        put?: never;
+        post: operations["PricingController_createSupplierSource_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pricing/suppliers/{supplierId}/sources/{sourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PricingController_updateSupplierSource_v1"];
+        trace?: never;
+    };
     "/api/v1/pricing/products/{productId}/suppliers/{supplierId}": {
         parameters: {
             query?: never;
@@ -2980,6 +3012,310 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/supplier-imports/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_listSources_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_listDrafts_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/drafts/{draftId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_getDraft_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SupplierImportsController_updateDraft_v1"];
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_listCategories_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/categories/{categoryId}/mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SupplierImportsController_updateCategoryMapping_v1"];
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_listSourceChanges_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/changes/{changeId}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_acknowledgeSourceChange_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/categories/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_syncCategories_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_listRuns_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_listSchedules_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/schedules/{supplierSourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SupplierImportsController_updateSchedule_v1"];
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/schedules/{supplierSourceId}/run-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_runScheduleNow_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/bulk-crawls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_startBulkCrawl_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/runs/{runId}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_pauseRun_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/runs/{runId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_resumeRun_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/runs/{runId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_retryRun_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/runs/{runId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_archiveRun_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/crawl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SupplierImportsController_crawlProduct_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supplier-imports/drafts/{draftId}/images/{imageIndex}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SupplierImportsController_downloadDraftImage_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin-users": {
         parameters: {
             query?: never;
@@ -3180,6 +3516,7 @@ export interface components {
         PublicCatalogCategoryPageDto: {
             description: string | null;
             parentId: string | null;
+            hasProducts?: boolean;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
             heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             seoTitle?: string | null;
@@ -3202,6 +3539,7 @@ export interface components {
         };
         PublicCatalogBrandPageDto: {
             description: string | null;
+            hasProducts?: boolean;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
             heroImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
@@ -3219,6 +3557,7 @@ export interface components {
         };
         PublicCatalogBrandDto: {
             description: string | null;
+            hasProducts?: boolean;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
             heroImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
@@ -3230,6 +3569,7 @@ export interface components {
         PublicCatalogCategoryDto: {
             description: string | null;
             parentId: string | null;
+            hasProducts?: boolean;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
             id: string;
             name: string;
@@ -3490,6 +3830,8 @@ export interface components {
             sortOrder: number;
         };
         CreateProductDto: {
+            /** Format: uuid */
+            supplierImportDraftId?: string;
             name: string;
             slug: string;
             shortDescription?: string;
@@ -3762,6 +4104,28 @@ export interface components {
             name?: string;
             contactName?: string | null;
             phone?: string | null;
+            isActive?: boolean;
+        };
+        CreateSupplierSourceDto: {
+            name: string;
+            /** Format: uri */
+            baseUrl: string;
+            /** @enum {string} */
+            crawlerType: "GENERIC_HTML" | "JSON_LD" | "CUSTOM_ADAPTER" | "API" | "CSV" | "XML";
+            adapterKey?: string;
+            crawlDelayMs?: number;
+            maxConcurrency?: number;
+            isActive?: boolean;
+        };
+        UpdateSupplierSourceDto: {
+            name?: string;
+            /** Format: uri */
+            baseUrl?: string;
+            /** @enum {string} */
+            crawlerType?: "GENERIC_HTML" | "JSON_LD" | "CUSTOM_ADAPTER" | "API" | "CSV" | "XML";
+            adapterKey?: string | null;
+            crawlDelayMs?: number;
+            maxConcurrency?: number;
             isActive?: boolean;
         };
         SetProductSupplierDto: {
@@ -4319,7 +4683,7 @@ export interface components {
         };
         UpdateShipmentStatusDto: {
             /** @enum {string} */
-            status: "PENDING" | "CANCELLED" | "DELIVERED" | "FAILED" | "READY" | "HANDED_OVER" | "IN_TRANSIT";
+            status: "FAILED" | "CANCELLED" | "PENDING" | "DELIVERED" | "READY" | "HANDED_OVER" | "IN_TRANSIT";
             trackingCode?: string;
             providerShipmentId?: string;
             reason?: string;
@@ -4391,6 +4755,7 @@ export interface components {
         PublicHomepageFeaturedCategoryDto: {
             description: string | null;
             parentId: string | null;
+            hasProducts?: boolean;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
             id: string;
             name: string;
@@ -4647,6 +5012,54 @@ export interface components {
         SeoRedirectResponseDto: {
             destinationPath: string;
             permanent: boolean;
+        };
+        Object: Record<string, never>;
+        UpdateSupplierCategoryMappingDto: {
+            /** Format: uuid */
+            catalogCategoryId?: string | null;
+        };
+        SyncSupplierCategoriesDto: {
+            /** Format: uuid */
+            supplierSourceId: string;
+        };
+        UpdateSupplierCrawlScheduleDto: {
+            isEnabled: boolean;
+            timeOfDay: string;
+            categoryIds: string[];
+            requestedLimit: number;
+            stopAtKnown: boolean;
+            monitorKnownProducts: boolean;
+            maxRetries: number;
+            retryDelayMinutes: number;
+        };
+        StartBulkSupplierCrawlDto: {
+            /** Format: uuid */
+            supplierSourceId: string;
+            /** Format: uuid */
+            categoryId?: string;
+            limit: number;
+            stopAtKnown: boolean;
+            monitorKnownProducts: boolean;
+        };
+        StartSupplierCrawlDto: {
+            /** Format: uuid */
+            supplierSourceId: string;
+            /** Format: uri */
+            targetUrl: string;
+        };
+        SupplierImportAttributeDto: {
+            key: string;
+            value: string;
+        };
+        UpdateSupplierImportDraftDto: {
+            title?: string;
+            description?: string | null;
+            sourceCategory?: string | null;
+            supplierRetailPriceToman?: number | null;
+            weightGrams?: number | null;
+            attributes?: components["schemas"]["SupplierImportAttributeDto"][];
+            /** @enum {string} */
+            status?: "PENDING_REVIEW" | "REVIEWED" | "REJECTED" | "IMPORTED";
         };
         AdminManagedUserRoleDto: {
             /** @enum {string} */
@@ -6308,7 +6721,7 @@ export interface operations {
     PaymentRefundsController_list_v1: {
         parameters: {
             query?: {
-                status?: "PENDING" | "CANCELLED" | "FAILED" | "CONFIRMED";
+                status?: "FAILED" | "CANCELLED" | "PENDING" | "CONFIRMED";
                 orderId?: string;
                 from?: string;
                 to?: string;
@@ -7095,7 +7508,7 @@ export interface operations {
     NotificationOutboxRecoveryController_list_v1: {
         parameters: {
             query?: {
-                status?: "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT" | "FAILED" | "UNKNOWN";
+                status?: "FAILED" | "UNKNOWN" | "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT";
                 source?: "CUSTOMER" | "OPERATIONAL";
                 limit?: number;
             };
@@ -7249,6 +7662,78 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    PricingController_listSupplierSources_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+        };
+    };
+    PricingController_createSupplierSource_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSupplierSourceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    PricingController_updateSupplierSource_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierId: string;
+                sourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSupplierSourceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
             };
         };
     };
@@ -7514,7 +7999,7 @@ export interface operations {
     PlatingFulfillmentController_list_v1: {
         parameters: {
             query?: {
-                status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+                status?: "CANCELLED" | "PENDING" | "IN_PROGRESS" | "COMPLETED";
                 limit?: number;
             };
             header?: never;
@@ -9561,6 +10046,418 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_listSources_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_listDrafts_v1: {
+        parameters: {
+            query: {
+                page: components["schemas"]["Object"];
+                pageSize: components["schemas"]["Object"];
+                status?: "PENDING_REVIEW" | "REVIEWED" | "REJECTED" | "IMPORTED";
+                supplierSourceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_getDraft_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_updateDraft_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSupplierImportDraftDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_listCategories_v1: {
+        parameters: {
+            query: {
+                supplierSourceId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_updateCategoryMapping_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSupplierCategoryMappingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_listSourceChanges_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_acknowledgeSourceChange_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_syncCategories_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncSupplierCategoriesDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_listRuns_v1: {
+        parameters: {
+            query: {
+                view: "ACTIVE" | "ARCHIVED";
+                page: components["schemas"]["Object"];
+                pageSize: components["schemas"]["Object"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_listSchedules_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    SupplierImportsController_updateSchedule_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierSourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSupplierCrawlScheduleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_runScheduleNow_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierSourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_startBulkCrawl_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartBulkSupplierCrawlDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_pauseRun_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_resumeRun_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_retryRun_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_archiveRun_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_crawlProduct_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartSupplierCrawlDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupplierImportsController_downloadDraftImage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: string;
+                imageIndex: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

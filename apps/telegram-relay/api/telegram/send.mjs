@@ -66,6 +66,21 @@ function validatePayload(payload) {
     return `message must contain between 1 and ${MAX_MESSAGE_LENGTH} characters.`;
   }
 
+  if (payload.imageUrl !== undefined) {
+    if (typeof payload.imageUrl !== 'string') return 'imageUrl must be a secure public URL.';
+    try {
+      const imageUrl = new URL(payload.imageUrl);
+      if (imageUrl.protocol !== 'https:' || imageUrl.username || imageUrl.password) {
+        return 'imageUrl must be a secure public URL.';
+      }
+    } catch {
+      return 'imageUrl must be a secure public URL.';
+    }
+    if (payload.message.length > 1024) {
+      return 'messages with imageUrl must not exceed 1024 characters.';
+    }
+  }
+
   return null;
 }
 
@@ -111,15 +126,26 @@ export async function POST(request) {
 
   let telegramResponse;
   try {
-    telegramResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: payload.chatId.trim(),
-        text: payload.message,
-      }),
-      signal: AbortSignal.timeout(timeoutMs()),
-    });
+    telegramResponse = await fetch(
+      `https://api.telegram.org/bot${botToken}/${payload.imageUrl ? 'sendPhoto' : 'sendMessage'}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          payload.imageUrl
+            ? {
+                chat_id: payload.chatId.trim(),
+                photo: payload.imageUrl,
+                caption: payload.message,
+              }
+            : {
+                chat_id: payload.chatId.trim(),
+                text: payload.message,
+              },
+        ),
+        signal: AbortSignal.timeout(timeoutMs()),
+      },
+    );
   } catch (error) {
     const timedOut = error instanceof Error && error.name === 'TimeoutError';
     return json(

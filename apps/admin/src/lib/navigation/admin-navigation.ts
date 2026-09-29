@@ -110,6 +110,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['catalog.read'],
       },
       {
+        id: 'product-imports',
+        label: 'ورود محصولات تأمین‌کنندگان',
+        shortLabel: 'ورود محصولات',
+        href: '/product-imports',
+        icon: 'products',
+        description: 'خزش، بازبینی و آماده‌سازی محصولات تأمین‌کنندگان',
+        roadmapStage: 5,
+        permissions: ['catalog.read'],
+      },
+      {
         id: 'variants',
         label: 'تنوع و سایزبندی',
         shortLabel: 'تنوع‌ها',
