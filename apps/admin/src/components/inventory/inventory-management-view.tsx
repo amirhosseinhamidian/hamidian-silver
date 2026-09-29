@@ -1,7 +1,18 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element -- media host is runtime-configured on the API/VPS. */
+
 import { useRouter } from 'next/navigation';
-import { type FormEvent, useId, useMemo, useState } from 'react';
+import {
+  type FormEvent,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
+import { createPortal } from 'react-dom';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -116,6 +127,98 @@ function stockBadge(item: AdminInventoryItem) {
 
 function itemTitle(item: AdminInventoryItem): string {
   return item.variantName ?? item.sizeLabel ?? 'تنوع اصلی';
+}
+
+const PREVIEW_SIZE = 240;
+const PREVIEW_GAP = 10;
+const VIEWPORT_MARGIN = 12;
+const subscribeToClient = () => () => undefined;
+
+function ProductImagePreview({ item }: Readonly<{ item: AdminInventoryItem }>) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const tooltipId = useId();
+  const isClient = useSyncExternalStore(
+    subscribeToClient,
+    () => true,
+    () => false,
+  );
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const media = item.productPrimaryMedia;
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [open]);
+
+  if (!media) {
+    return (
+      <span
+        aria-label={`تصویری برای ${item.productName} ثبت نشده است`}
+        className="grid size-11 shrink-0 place-items-center rounded-[var(--admin-radius-md)] bg-[var(--admin-color-primary-soft)] text-sm font-black text-[var(--admin-color-primary)]"
+      >
+        {item.productName.slice(0, 1)}
+      </span>
+    );
+  }
+
+  function showPreview() {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const fitsBelow = rect.bottom + PREVIEW_GAP + PREVIEW_SIZE <= window.innerHeight;
+    const top = fitsBelow
+      ? rect.bottom + PREVIEW_GAP
+      : Math.max(VIEWPORT_MARGIN, rect.top - PREVIEW_GAP - PREVIEW_SIZE);
+    const centeredLeft = rect.left + rect.width / 2 - PREVIEW_SIZE / 2;
+    const left = Math.min(
+      Math.max(VIEWPORT_MARGIN, centeredLeft),
+      Math.max(VIEWPORT_MARGIN, window.innerWidth - PREVIEW_SIZE - VIEWPORT_MARGIN),
+    );
+    setPosition({ top, left });
+    setOpen(true);
+  }
+
+  const altText = media.altText ?? `تصویر ${item.productName}`;
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-label={`نمایش تصویر بزرگ ${item.productName}`}
+        aria-describedby={open ? tooltipId : undefined}
+        className="size-11 shrink-0 overflow-hidden rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] bg-[#f5f3f1] outline-none transition-[border-color,box-shadow,transform] duration-200 hover:scale-[1.04] hover:border-[var(--admin-color-border-strong)] focus-visible:shadow-[var(--admin-focus-ring)]"
+        onMouseEnter={showPreview}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={showPreview}
+        onBlur={() => setOpen(false)}
+      >
+        <img src={media.url} alt={altText} className="size-full object-cover" loading="lazy" />
+      </button>
+      {isClient
+        ? createPortal(
+            <div
+              id={tooltipId}
+              role="tooltip"
+              aria-hidden={!open}
+              className={`pointer-events-none fixed z-[200] size-60 overflow-hidden rounded-[var(--admin-radius-lg)] border border-[var(--admin-color-border)] bg-[#f5f3f1] p-1 shadow-[var(--admin-shadow-lg)] transition-[opacity,transform] duration-200 ease-out ${
+                open ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+              }`}
+              style={{ top: position.top, left: position.left }}
+            >
+              <img src={media.url} alt="" className="size-full rounded-lg object-contain" />
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
 }
 
 function WarehouseForm({
@@ -542,11 +645,14 @@ export function InventoryManagementView({
       id: 'product',
       header: 'محصول و تنوع',
       cell: (item) => (
-        <div>
-          <p className="font-bold">{item.productName}</p>
-          <p className="mt-1 text-xs text-[var(--admin-color-muted)]">
-            {itemTitle(item)} · {toPersianDigits(item.sku)}
-          </p>
+        <div className="flex min-w-0 items-center gap-3">
+          <ProductImagePreview item={item} />
+          <div className="min-w-0">
+            <p className="truncate font-bold">{item.productName}</p>
+            <p className="mt-1 truncate text-xs text-[var(--admin-color-muted)]">
+              {itemTitle(item)} · {toPersianDigits(item.sku)}
+            </p>
+          </div>
         </div>
       ),
     },
