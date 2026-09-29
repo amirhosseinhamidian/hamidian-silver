@@ -4,6 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 
 import { NotificationOutboxStatus, PaymentStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { formatAdminOrderMessage } from './admin-order-message.formatter';
 import { AdminMessageSender } from './admin-message.sender';
 
@@ -22,6 +23,7 @@ export class AdminOrderNotificationWorker {
   constructor(
     private readonly prisma: PrismaService,
     private readonly sender: AdminMessageSender,
+    private readonly publicMediaUrl: PublicMediaUrlService,
     config: ConfigService,
   ) {
     this.adminOrigin = config.get<string>('ADMIN_APP_ORIGIN', 'http://localhost:3002');
@@ -151,6 +153,20 @@ export class AdminOrderNotificationWorker {
               platingType: true,
               quantity: true,
               lineTotalToman: true,
+              variant: {
+                select: {
+                  product: {
+                    select: {
+                      media: {
+                        where: { media: { deletedAt: null } },
+                        orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+                        take: 1,
+                        select: { media: { select: { storageKey: true } } },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -163,7 +179,16 @@ export class AdminOrderNotificationWorker {
           `Admin order notification is not ready at ${order.payment?.status ?? 'NO_PAYMENT'}.`,
         );
       }
-      await this.sender.send(channel, chatId, formatAdminOrderMessage(order, this.adminOrigin));
+      const primaryStorageKey = order.items.find(
+        (item) => item.variant?.product.media[0]?.media.storageKey,
+      )?.variant?.product.media[0]?.media.storageKey;
+      const imageUrl = primaryStorageKey ? this.publicMediaUrl.resolve(primaryStorageKey) : null;
+      await this.sender.send(
+        channel,
+        chatId,
+        formatAdminOrderMessage(order, this.adminOrigin),
+        imageUrl,
+      );
       await this.prisma.adminOrderNotificationDelivery.updateMany({
         where: { id: deliveryId, status: NotificationOutboxStatus.PROCESSING, claimedAt },
         data: {

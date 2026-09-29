@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
 import { AuthModule } from '../auth/auth.module';
+import { CatalogModule } from '../catalog/catalog.module';
 import { AdminMessageRecipientsController } from './admin-message-recipients.controller';
 import { AdminMessageRecipientsService } from './admin-message-recipients.service';
 import { AdminMessageSender } from './admin-message.sender';
@@ -17,7 +18,7 @@ import { StockNotificationsService } from './stock-notifications.service';
 
 @Global()
 @Module({
-  imports: [DatabaseModule, AuthModule],
+  imports: [DatabaseModule, AuthModule, CatalogModule],
   controllers: [
     AdminMessageRecipientsController,
     NotificationOutboxRecoveryController,

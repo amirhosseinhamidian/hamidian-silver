@@ -85,6 +85,47 @@ test('forwards an authenticated message and returns the Telegram message ID', as
   });
 });
 
+test('forwards a secure product image as a Telegram photo', async () => {
+  configureRelay();
+  let forwardedUrl;
+  let forwardedBody;
+  globalThis.fetch = async (url, init) => {
+    forwardedUrl = String(url);
+    forwardedBody = JSON.parse(init.body);
+    return Response.json({ ok: true, result: { message_id: 43 } });
+  };
+
+  const response = await POST(
+    relayRequest({
+      chatId: '-1001234567890',
+      message: 'سفارش پرداخت شد',
+      imageUrl: 'https://media.hamidian.shop/catalog/ring.webp',
+    }),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(forwardedUrl, `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`);
+  assert.deepEqual(forwardedBody, {
+    chat_id: '-1001234567890',
+    photo: 'https://media.hamidian.shop/catalog/ring.webp',
+    caption: 'سفارش پرداخت شد',
+  });
+});
+
+test('rejects unsafe product image URLs', async () => {
+  configureRelay();
+  globalThis.fetch = async () => {
+    throw new Error('Telegram must not be called.');
+  };
+
+  const response = await POST(
+    relayRequest({ chatId: '123456789', message: 'test', imageUrl: 'http://127.0.0.1/a.jpg' }),
+  );
+
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).code, 'INVALID_REQUEST');
+});
+
 test('returns a sanitized Telegram rejection and retry delay', async () => {
   configureRelay();
   globalThis.fetch = async () =>

@@ -3516,6 +3516,7 @@ export interface components {
         PublicCatalogCategoryPageDto: {
             description: string | null;
             parentId: string | null;
+            hasProducts?: boolean;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
             heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             seoTitle?: string | null;
@@ -3538,6 +3539,7 @@ export interface components {
         };
         PublicCatalogBrandPageDto: {
             description: string | null;
+            hasProducts?: boolean;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
             heroImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
@@ -3555,6 +3557,7 @@ export interface components {
         };
         PublicCatalogBrandDto: {
             description: string | null;
+            hasProducts?: boolean;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
             heroImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
@@ -3566,6 +3569,7 @@ export interface components {
         PublicCatalogCategoryDto: {
             description: string | null;
             parentId: string | null;
+            hasProducts?: boolean;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
             id: string;
             name: string;
@@ -4751,6 +4755,7 @@ export interface components {
         PublicHomepageFeaturedCategoryDto: {
             description: string | null;
             parentId: string | null;
+            hasProducts?: boolean;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
             id: string;
             name: string;

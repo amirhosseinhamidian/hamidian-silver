@@ -495,6 +495,7 @@ describe('CatalogService', () => {
         seoOgMedia: null,
         parentId: null,
         sortOrder: 0,
+        _count: { products: 1 },
         image: {
           storageKey: 'categories/rings.jpg',
           mimeType: 'image/jpeg',
@@ -527,6 +528,7 @@ describe('CatalogService', () => {
         seoOgMedia: null,
         parentId: null,
         sortOrder: 0,
+        hasProducts: true,
         image: {
           url: 'https://media.hamidian.shop/categories/rings.jpg',
           mimeType: 'image/jpeg',
@@ -561,6 +563,7 @@ describe('CatalogService', () => {
         name: 'Hamidian',
         slug: 'hamidian',
         description: null,
+        _count: { products: 1 },
         originCountry: {
           id: '20000000-0000-4000-8000-000000000001',
           name: 'ایران',
@@ -592,6 +595,7 @@ describe('CatalogService', () => {
     await expect(service.listPublicBrands()).resolves.toEqual([
       expect.objectContaining({
         id: '10000000-0000-4000-8000-000000000001',
+        hasProducts: true,
         originCountry: {
           id: '20000000-0000-4000-8000-000000000001',
           name: 'ایران',
@@ -613,6 +617,113 @@ describe('CatalogService', () => {
           height: 1448,
         },
       }),
+    ]);
+  });
+
+  it('marks empty public brands and keeps category ancestors available to storefront filters', async () => {
+    prisma.category.findMany.mockResolvedValue([
+      {
+        id: 'parent',
+        name: 'Jewelry',
+        slug: 'jewelry',
+        description: null,
+        seoTitle: null,
+        seoDescription: null,
+        seoCanonicalPath: null,
+        seoNoIndex: false,
+        seoOgMedia: null,
+        parentId: null,
+        sortOrder: 0,
+        updatedAt: new Date('2026-09-28T00:00:00.000Z'),
+        _count: { products: 0 },
+        image: null,
+        heroMobileImage: null,
+      },
+      {
+        id: 'child',
+        name: 'Rings',
+        slug: 'rings',
+        description: null,
+        seoTitle: null,
+        seoDescription: null,
+        seoCanonicalPath: null,
+        seoNoIndex: false,
+        seoOgMedia: null,
+        parentId: 'parent',
+        sortOrder: 0,
+        updatedAt: new Date('2026-09-28T00:00:00.000Z'),
+        _count: { products: 1 },
+        image: null,
+        heroMobileImage: null,
+      },
+      {
+        id: 'empty',
+        name: 'Empty',
+        slug: 'empty',
+        description: null,
+        seoTitle: null,
+        seoDescription: null,
+        seoCanonicalPath: null,
+        seoNoIndex: false,
+        seoOgMedia: null,
+        parentId: null,
+        sortOrder: 0,
+        updatedAt: new Date('2026-09-28T00:00:00.000Z'),
+        _count: { products: 0 },
+        image: null,
+        heroMobileImage: null,
+      },
+    ]);
+    prisma.brand.findMany.mockResolvedValue([
+      {
+        id: 'active-brand',
+        name: 'Active',
+        slug: 'active',
+        description: null,
+        seoTitle: null,
+        seoDescription: null,
+        seoCanonicalPath: null,
+        seoNoIndex: false,
+        seoOgMedia: null,
+        updatedAt: new Date('2026-09-28T00:00:00.000Z'),
+        originCountry: null,
+        _count: { products: 1 },
+        image: null,
+        heroImage: null,
+        heroMobileImage: null,
+      },
+      {
+        id: 'empty-brand',
+        name: 'Empty',
+        slug: 'empty',
+        description: null,
+        seoTitle: null,
+        seoDescription: null,
+        seoCanonicalPath: null,
+        seoNoIndex: false,
+        seoOgMedia: null,
+        updatedAt: new Date('2026-09-28T00:00:00.000Z'),
+        originCountry: null,
+        _count: { products: 0 },
+        image: null,
+        heroImage: null,
+        heroMobileImage: null,
+      },
+    ]);
+
+    const [categories, brands] = await Promise.all([
+      service.listPublicCategories(),
+      service.listPublicBrands(),
+    ]);
+
+    expect(categories.map(({ slug, hasProducts }) => ({ slug, hasProducts }))).toEqual([
+      { slug: 'jewelry', hasProducts: true },
+      { slug: 'rings', hasProducts: true },
+      { slug: 'empty', hasProducts: false },
+    ]);
+    expect(brands.map(({ slug, hasProducts }) => ({ slug, hasProducts }))).toEqual([
+      { slug: 'active', hasProducts: true },
+      { slug: 'empty', hasProducts: false },
     ]);
   });
 

@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { AppModule } from './app.module';
 import { configureApiRouting } from './app.setup';
 import { createOpenApiDocument } from './openapi';
 
@@ -18,6 +17,7 @@ function configureOpenApiEnvironment(): void {
 
 async function generateOpenApiDocument(): Promise<void> {
   configureOpenApiEnvironment();
+  const { AppModule } = await import('./app.module.js');
 
   const app = await NestFactory.create(AppModule, { logger: false });
 
