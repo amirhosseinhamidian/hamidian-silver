@@ -49,7 +49,7 @@ afterEach(() => {
 });
 
 describe('SupplierBulkCrawlCard', () => {
-  it('queues an initial catalog crawl with the selected new-product limit', async () => {
+  it('queues an archive continuation with the selected new-product limit', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ id: 'run-1' }), {
         status: 201,
@@ -94,6 +94,7 @@ describe('SupplierBulkCrawlCard', () => {
           supplierSourceId: source.id,
           limit: 25,
           stopAtKnown: false,
+          resumeArchive: true,
           monitorKnownProducts: true,
         }),
       }),
@@ -140,7 +141,7 @@ describe('SupplierBulkCrawlCard', () => {
       />,
     );
 
-    expect(screen.getByText(/پیشرفت: ۲۸٪/)).toBeInTheDocument();
+    expect(screen.getByText(/پیشرفت نسبت به سقف انتخاب‌شده: ۲۸٪/)).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'پیشرفت دریافت گوشواره' })).toHaveAttribute(
       'aria-valuenow',
       '28',

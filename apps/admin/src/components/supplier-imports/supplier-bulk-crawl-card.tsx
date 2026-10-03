@@ -77,7 +77,7 @@ export function SupplierBulkCrawlCard({
   const supportedSources = useMemo(() => sources.filter((source) => source.supported), [sources]);
   const [sourceId, setSourceId] = useState(supportedSources[0]?.id ?? '');
   const [categoryId, setCategoryId] = useState('ALL');
-  const [mode, setMode] = useState('INITIAL');
+  const [mode, setMode] = useState('CONTINUE');
   const [monitorKnownProducts, setMonitorKnownProducts] = useState(true);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -117,6 +117,7 @@ export function SupplierBulkCrawlCard({
         ...(categoryId === 'ALL' ? {} : { categoryId }),
         limit,
         stopAtKnown: mode === 'SINCE_LAST',
+        resumeArchive: mode === 'CONTINUE',
         monitorKnownProducts,
       });
       setMessage('عملیات دریافت گروهی در صف قرار گرفت.');
@@ -175,7 +176,8 @@ export function SupplierBulkCrawlCard({
           value={mode}
           onValueChange={setMode}
           options={[
-            { value: 'INITIAL', label: 'دریافت اولیه / ادامه آرشیو' },
+            { value: 'CONTINUE', label: 'ادامه آرشیو از آخرین صفحه' },
+            { value: 'FULL', label: 'شروع از ابتدا / پایش کامل' },
             { value: 'SINCE_LAST', label: 'فقط جدیدها از آخرین Crawl' },
           ]}
           disabled={!canWrite || pending}
@@ -213,8 +215,8 @@ export function SupplierBulkCrawlCard({
           به‌روزرسانی دسته‌بندی‌ها
         </Button>
         <p className="text-xs leading-6 text-[var(--admin-color-muted)]">
-          در حالت «فقط جدیدها»، عملیات پس از رسیدن به چند محصول متوالی که قبلاً دیده شده‌اند متوقف
-          می‌شود. تاریخ واقعی انتشار در سایت تأمین‌کننده موجود نیست.
+          «ادامه آرشیو» از بالاترین صفحه‌ای که قبلاً با موفقیت به آن رسیده‌اید ادامه می‌دهد. حالت
+          «فقط جدیدها» پس از رسیدن به چند محصول متوالیِ قبلاً دیده‌شده متوقف می‌شود.
         </p>
       </div>
       {message ? <Alert className="mt-3">{message}</Alert> : null}
@@ -276,7 +278,7 @@ export function SupplierBulkCrawlCard({
                 ? Math.min(100, Math.round((processed / run.requestedLimit) * 100))
                 : 0;
               const isActive = ['QUEUED', 'RUNNING'].includes(run.status);
-              const percent = run.status === 'SUCCEEDED' ? 100 : calculatedPercent;
+              const percent = calculatedPercent;
               const visiblePercent = isActive && percent === 0 ? 2 : percent;
               return (
                 <section
@@ -348,12 +350,18 @@ export function SupplierBulkCrawlCard({
                     />
                   </div>
                   <p className="mt-2 text-xs text-[var(--admin-color-muted)]">
-                    پیشرفت: {formatAdminInteger(percent)}٪ · بررسی‌شده:{' '}
+                    پیشرفت نسبت به سقف انتخاب‌شده: {formatAdminInteger(percent)}٪ · بررسی‌شده:{' '}
                     {formatAdminInteger(run.discoveredCount)} · جدید:{' '}
                     {formatAdminInteger(run.succeededCount)} · تکراری:{' '}
                     {formatAdminInteger(run.skippedCount)} · خطا:{' '}
                     {formatAdminInteger(run.failedCount)}
                   </p>
+                  {run.status === 'SUCCEEDED' && run.stopAtKnown && run.skippedCount >= 3 ? (
+                    <p className="mt-2 text-xs text-[var(--admin-color-muted)]">
+                      اجرا پس از رسیدن به محصولات متوالیِ قبلاً دریافت‌شده متوقف شد؛ برای رفتن به
+                      محصولات قدیمی‌تر از حالت «ادامه آرشیو» استفاده کنید.
+                    </p>
+                  ) : null}
                   {run.errorMessage ? (
                     <p className="mt-2 text-xs text-[var(--admin-color-danger)]">
                       {run.errorMessage}
