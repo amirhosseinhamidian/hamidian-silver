@@ -2,6 +2,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
@@ -35,6 +36,7 @@ import {
   type AdminSupplierSourceCategory,
   type AdminSupplierCatalogCategory,
   type AdminSupplierSourceChange,
+  type AdminSupplierImportTab,
 } from '@/lib/supplier-imports/supplier-imports-model';
 
 type Props = Readonly<{
@@ -45,7 +47,7 @@ type Props = Readonly<{
   archivedRuns: AdminSupplierImportPage<AdminSupplierCrawlRun>;
   schedules?: readonly AdminSupplierCrawlSchedule[];
   catalogCategories?: readonly AdminSupplierCatalogCategory[];
-  sourceChanges?: readonly AdminSupplierSourceChange[];
+  sourceChanges?: AdminSupplierImportPage<AdminSupplierSourceChange>;
   filters: AdminSupplierImportFilters;
   failed: boolean;
   canWrite: boolean;
@@ -58,6 +60,14 @@ const statusOptions = [
   { value: 'REJECTED', label: 'ردشده' },
   { value: 'IMPORTED', label: 'واردشده به کاتالوگ' },
 ] as const;
+
+const importTabs: readonly Readonly<{ value: AdminSupplierImportTab; label: string }>[] = [
+  { value: 'SCHEDULE', label: 'زمان‌بندی خودکار' },
+  { value: 'CHANGES', label: 'تغییرات منبع' },
+  { value: 'MAPPINGS', label: 'نگاشت دسته‌بندی‌ها' },
+  { value: 'BULK', label: 'دریافت گروهی محصولات' },
+  { value: 'DRAFTS', label: 'پیش‌نویس‌های دریافتی' },
+];
 
 function statusBadge(status: AdminSupplierImportStatus) {
   if (status === 'IMPORTED') return <Badge tone="success">واردشده</Badge>;
@@ -237,7 +247,7 @@ export function SupplierProductImportsView({
   archivedRuns,
   schedules = [],
   catalogCategories = [],
-  sourceChanges = [],
+  sourceChanges = { items: [], total: 0, page: 1, pageSize: 20, totalPages: 1 },
   filters,
   failed,
   canWrite,
@@ -284,271 +294,307 @@ export function SupplierProductImportsView({
         </Alert>
       ) : null}
 
-      <SupplierCrawlScheduleCard
-        sources={sources}
-        categories={categories}
-        schedules={schedules}
-        canWrite={canWrite}
-      />
-
-      <SupplierSourceChangesCard changes={sourceChanges} canWrite={canWrite} />
-
-      <SupplierCategoryMappingCard
-        sources={sources}
-        categories={categories}
-        catalogCategories={catalogCategories}
-        canWrite={canWrite}
-      />
-
-      <SupplierBulkCrawlCard
-        sources={sources}
-        categories={categories}
-        runs={runs}
-        archivedRuns={archivedRuns}
-        filters={filters}
-        canWrite={canWrite}
-      />
-
-      <Card
-        title="دریافت یک محصول"
-        description="نشانی دقیق صفحه محصول را وارد کنید. خزنده فقط همان دامنه ثبت‌شده را می‌خواند."
+      <nav
+        aria-label="بخش‌های ورود محصولات تأمین‌کنندگان"
+        className="flex gap-2 overflow-x-auto border-b border-[var(--admin-color-border)] pb-3"
       >
-        {supportedSources.length === 0 ? (
-          <Alert tone="warning">
-            هنوز منبع فعالی با آداپتر پشتیبانی‌شده ثبت نشده است. آداپتر BSJ باید با کلید bsj-silver
-            در مدیریت تأمین‌کنندگان ثبت شود.
-          </Alert>
-        ) : (
-          <form
-            className="grid gap-3 lg:grid-cols-[minmax(14rem,0.7fr)_minmax(20rem,1.3fr)_auto]"
-            onSubmit={(event) => void crawl(event)}
+        {importTabs.map((tab) => (
+          <Link
+            key={tab.value}
+            href={buildSupplierImportsHref(filters, { tab: tab.value })}
+            aria-current={filters.tab === tab.value ? 'page' : undefined}
+            className={`inline-flex min-h-10 shrink-0 items-center rounded-[var(--admin-radius-md)] px-4 text-sm font-bold transition-colors ${
+              filters.tab === tab.value
+                ? 'bg-[var(--admin-color-primary)] !text-white'
+                : 'border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)]'
+            }`}
           >
-            <Select
-              aria-label="سایت تأمین‌کننده"
-              value={sourceId}
-              onValueChange={setSourceId}
-              options={supportedSources.map((source) => ({
-                value: source.id,
-                label: `${source.supplierName} — ${source.name}`,
-              }))}
-              disabled={!canWrite}
-            />
-            <Input
-              aria-label="نشانی صفحه محصول"
-              name="productUrl"
-              type="url"
-              dir="ltr"
-              placeholder="https://bsjsilver.com/product/..."
-              disabled={!canWrite}
-              required
-            />
-            <Button type="submit" loading={pending} disabled={!canWrite || !sourceId}>
-              دریافت محصول
-            </Button>
-          </form>
-        )}
-        {message ? (
-          <Alert tone={message.tone} className="mt-3">
-            {message.text}
-          </Alert>
-        ) : null}
-      </Card>
+            {tab.label}
+          </Link>
+        ))}
+      </nav>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-black">پیش‌نویس‌های دریافتی</h2>
-          <p className="mt-1 text-xs text-[var(--admin-color-muted)]">
-            {formatAdminInteger(drafts.total)} پیش‌نویس یافت شد؛{' '}
-            {formatAdminInteger(visibleDrafts.length)} مورد در این صفحه نمایش داده می‌شود.
-          </p>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <Select
-            aria-label="فیلتر تأمین‌کننده پیش‌نویس‌ها"
-            value={filters.supplierSourceId}
-            onValueChange={(value) =>
-              router.push(buildSupplierImportsHref(filters, { supplierSourceId: value, page: 1 }))
-            }
-            options={[
-              { value: 'ALL', label: 'همه تأمین‌کنندگان' },
-              ...supportedSources.map((source) => ({
-                value: source.id,
-                label: source.supplierName,
-              })),
-            ]}
-          />
-          <Select
-            aria-label="فیلتر وضعیت بازبینی"
-            value={filters.status}
-            onValueChange={(value) =>
-              router.push(
-                buildSupplierImportsHref(filters, {
-                  status: value as AdminSupplierImportStatus | 'ALL',
-                  page: 1,
-                }),
-              )
-            }
-            options={statusOptions}
-          />
-          <Select
-            aria-label="تعداد پیش‌نویس در هر صفحه"
-            value={String(filters.pageSize)}
-            onValueChange={(value) =>
-              router.push(buildSupplierImportsHref(filters, { page: 1, pageSize: Number(value) }))
-            }
-            options={[12, 24, 48, 96].map((value) => ({
-              value: String(value),
-              label: `${formatAdminInteger(value)} مورد در صفحه`,
-            }))}
-          />
-        </div>
-      </div>
+      {filters.tab === 'SCHEDULE' ? (
+        <SupplierCrawlScheduleCard
+          sources={sources}
+          categories={categories}
+          schedules={schedules}
+          canWrite={canWrite}
+        />
+      ) : null}
 
-      {visibleDrafts.length === 0 ? (
-        <Card>
-          <p className="py-8 text-center text-sm text-[var(--admin-color-muted)]">
-            پیش‌نویسی با این وضعیت وجود ندارد.
-          </p>
-        </Card>
-      ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
-          {visibleDrafts.map((draft) => (
-            <Card key={draft.id} className="overflow-hidden p-0">
-              <div className="flex flex-col gap-4 sm:flex-row">
-                <div className="aspect-square w-full shrink-0 overflow-hidden bg-[var(--admin-color-surface-subtle)] sm:w-44">
-                  {draft.imageUrls[0] ? (
-                    <img
-                      src={draft.imageUrls[0]}
-                      alt={draft.title}
-                      className="size-full object-contain"
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="grid size-full place-items-center text-xs text-[var(--admin-color-muted)]">
-                      بدون تصویر
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1 space-y-3 p-4 sm:ps-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-bold leading-7">{draft.title}</h3>
-                      <p className="text-xs text-[var(--admin-color-muted)]">
-                        {draft.source.supplierName} ·{' '}
-                        {draft.sourceCategory ?? 'بدون دسته‌بندی منبع'}
-                      </p>
-                    </div>
-                    <div>
-                      <dt className="text-[var(--admin-color-muted)]">موجودی در منبع</dt>
-                      <dd className="mt-1 font-semibold">
-                        {draft.sourceAvailability === 'IN_STOCK'
-                          ? 'موجود'
-                          : draft.sourceAvailability === 'OUT_OF_STOCK'
-                            ? 'ناموجود'
-                            : 'نامشخص'}
-                      </dd>
-                    </div>
-                    {statusBadge(draft.status)}
-                  </div>
-                  <dl className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <dt className="text-[var(--admin-color-muted)]">قیمت تک‌فروشی منبع</dt>
-                      <dd className="mt-1 font-semibold">
-                        {draft.supplierRetailPriceToman === null
-                          ? '—'
-                          : formatAdminToman(draft.supplierRetailPriceToman)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-[var(--admin-color-muted)]">وزن</dt>
-                      <dd className="mt-1 font-semibold">
-                        {draft.weightGrams === null ? '—' : `${draft.weightGrams} گرم`}
-                      </dd>
-                    </div>
-                  </dl>
-                  <p className="text-xs text-[var(--admin-color-muted)]">
-                    آخرین دریافت: {formatAdminDateTime(draft.lastCrawledAt)}
-                  </p>
-                  {draft.importedAt ? (
-                    <p className="text-xs text-[var(--admin-color-success)]">
-                      واردشده به کاتالوگ در {formatAdminDateTime(draft.importedAt)}
-                      {draft.importedBy ? ` · توسط ${draft.importedBy}` : ''}
-                    </p>
-                  ) : null}
-                  <div className="flex flex-wrap gap-2">
-                    <a
-                      href={draft.sourceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex min-h-8 items-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] px-2.5 text-xs font-semibold"
-                    >
-                      مشاهده منبع
-                    </a>
-                    {draft.imageUrls.map((_url, index) => (
-                      <a
-                        key={index}
-                        href={`/api/supplier-imports/drafts/${draft.id}/images/${index}/download`}
-                        className="inline-flex min-h-8 items-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] px-2.5 text-xs font-semibold"
-                      >
-                        دانلود تصویر {formatAdminInteger(index + 1)}
-                      </a>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {draft.product ? (
-                      <ButtonLink href={`/products/${draft.product.id}/edit`} size="sm">
-                        ویرایش محصول ساخته‌شده
-                      </ButtonLink>
-                    ) : draft.status !== 'REJECTED' ? (
-                      <ButtonLink
-                        href={`/products/new?importDraftId=${encodeURIComponent(draft.id)}`}
-                        size="sm"
-                      >
-                        تکمیل و ساخت محصول
-                      </ButtonLink>
-                    ) : null}
-                    {draft.status !== 'IMPORTED' ? (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setSelectedDraft(draft)}
-                        disabled={!canWrite}
-                      >
-                        بازبینی و ویرایش
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
+      {filters.tab === 'CHANGES' ? (
+        <SupplierSourceChangesCard changes={sourceChanges} filters={filters} canWrite={canWrite} />
+      ) : null}
+
+      {filters.tab === 'MAPPINGS' ? (
+        <SupplierCategoryMappingCard
+          sources={sources}
+          categories={categories}
+          catalogCategories={catalogCategories}
+          canWrite={canWrite}
+        />
+      ) : null}
+
+      {filters.tab === 'BULK' ? (
+        <SupplierBulkCrawlCard
+          sources={sources}
+          categories={categories}
+          runs={runs}
+          archivedRuns={archivedRuns}
+          filters={filters}
+          canWrite={canWrite}
+        />
+      ) : null}
+
+      {filters.tab === 'DRAFTS' ? (
+        <>
+          <Card
+            title="دریافت یک محصول"
+            description="نشانی دقیق صفحه محصول را وارد کنید. خزنده فقط همان دامنه ثبت‌شده را می‌خواند."
+          >
+            {supportedSources.length === 0 ? (
+              <Alert tone="warning">
+                هنوز منبع فعالی با آداپتر پشتیبانی‌شده ثبت نشده است. آداپتر BSJ باید با کلید
+                bsj-silver در مدیریت تأمین‌کنندگان ثبت شود.
+              </Alert>
+            ) : (
+              <form
+                className="grid gap-3 lg:grid-cols-[minmax(14rem,0.7fr)_minmax(20rem,1.3fr)_auto]"
+                onSubmit={(event) => void crawl(event)}
+              >
+                <Select
+                  aria-label="سایت تأمین‌کننده"
+                  value={sourceId}
+                  onValueChange={setSourceId}
+                  options={supportedSources.map((source) => ({
+                    value: source.id,
+                    label: `${source.supplierName} — ${source.name}`,
+                  }))}
+                  disabled={!canWrite}
+                />
+                <Input
+                  aria-label="نشانی صفحه محصول"
+                  name="productUrl"
+                  type="url"
+                  dir="ltr"
+                  placeholder="https://bsjsilver.com/product/..."
+                  disabled={!canWrite}
+                  required
+                />
+                <Button type="submit" loading={pending} disabled={!canWrite || !sourceId}>
+                  دریافت محصول
+                </Button>
+              </form>
+            )}
+            {message ? (
+              <Alert tone={message.tone} className="mt-3">
+                {message.text}
+              </Alert>
+            ) : null}
+          </Card>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-black">پیش‌نویس‌های دریافتی</h2>
+              <p className="mt-1 text-xs text-[var(--admin-color-muted)]">
+                {formatAdminInteger(drafts.total)} پیش‌نویس یافت شد؛{' '}
+                {formatAdminInteger(visibleDrafts.length)} مورد در این صفحه نمایش داده می‌شود.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Select
+                aria-label="فیلتر تأمین‌کننده پیش‌نویس‌ها"
+                value={filters.supplierSourceId}
+                onValueChange={(value) =>
+                  router.push(
+                    buildSupplierImportsHref(filters, { supplierSourceId: value, page: 1 }),
+                  )
+                }
+                options={[
+                  { value: 'ALL', label: 'همه تأمین‌کنندگان' },
+                  ...supportedSources.map((source) => ({
+                    value: source.id,
+                    label: source.supplierName,
+                  })),
+                ]}
+              />
+              <Select
+                aria-label="فیلتر وضعیت بازبینی"
+                value={filters.status}
+                onValueChange={(value) =>
+                  router.push(
+                    buildSupplierImportsHref(filters, {
+                      status: value as AdminSupplierImportStatus | 'ALL',
+                      page: 1,
+                    }),
+                  )
+                }
+                options={statusOptions}
+              />
+              <Select
+                aria-label="تعداد پیش‌نویس در هر صفحه"
+                value={String(filters.pageSize)}
+                onValueChange={(value) =>
+                  router.push(
+                    buildSupplierImportsHref(filters, { page: 1, pageSize: Number(value) }),
+                  )
+                }
+                options={[12, 24, 48, 96].map((value) => ({
+                  value: String(value),
+                  label: `${formatAdminInteger(value)} مورد در صفحه`,
+                }))}
+              />
+            </div>
+          </div>
+
+          {visibleDrafts.length === 0 ? (
+            <Card>
+              <p className="py-8 text-center text-sm text-[var(--admin-color-muted)]">
+                پیش‌نویسی با این وضعیت وجود ندارد.
+              </p>
             </Card>
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className="grid gap-4 xl:grid-cols-2">
+              {visibleDrafts.map((draft) => (
+                <Card key={draft.id} className="overflow-hidden p-0">
+                  <div className="flex flex-col gap-4 sm:flex-row">
+                    <div className="aspect-square w-full shrink-0 overflow-hidden bg-[var(--admin-color-surface-subtle)] sm:w-44">
+                      {draft.imageUrls[0] ? (
+                        <img
+                          src={draft.imageUrls[0]}
+                          alt={draft.title}
+                          className="size-full object-contain"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="grid size-full place-items-center text-xs text-[var(--admin-color-muted)]">
+                          بدون تصویر
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-3 p-4 sm:ps-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-bold leading-7">{draft.title}</h3>
+                          <p className="text-xs text-[var(--admin-color-muted)]">
+                            {draft.source.supplierName} ·{' '}
+                            {draft.sourceCategory ?? 'بدون دسته‌بندی منبع'}
+                          </p>
+                        </div>
+                        <div>
+                          <dt className="text-[var(--admin-color-muted)]">موجودی در منبع</dt>
+                          <dd className="mt-1 font-semibold">
+                            {draft.sourceAvailability === 'IN_STOCK'
+                              ? 'موجود'
+                              : draft.sourceAvailability === 'OUT_OF_STOCK'
+                                ? 'ناموجود'
+                                : 'نامشخص'}
+                          </dd>
+                        </div>
+                        {statusBadge(draft.status)}
+                      </div>
+                      <dl className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <dt className="text-[var(--admin-color-muted)]">قیمت تک‌فروشی منبع</dt>
+                          <dd className="mt-1 font-semibold">
+                            {draft.supplierRetailPriceToman === null
+                              ? '—'
+                              : formatAdminToman(draft.supplierRetailPriceToman)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[var(--admin-color-muted)]">وزن</dt>
+                          <dd className="mt-1 font-semibold">
+                            {draft.weightGrams === null ? '—' : `${draft.weightGrams} گرم`}
+                          </dd>
+                        </div>
+                      </dl>
+                      <p className="text-xs text-[var(--admin-color-muted)]">
+                        آخرین دریافت: {formatAdminDateTime(draft.lastCrawledAt)}
+                      </p>
+                      {draft.importedAt ? (
+                        <p className="text-xs text-[var(--admin-color-success)]">
+                          واردشده به کاتالوگ در {formatAdminDateTime(draft.importedAt)}
+                          {draft.importedBy ? ` · توسط ${draft.importedBy}` : ''}
+                        </p>
+                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        <a
+                          href={draft.sourceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex min-h-8 items-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] px-2.5 text-xs font-semibold"
+                        >
+                          مشاهده منبع
+                        </a>
+                        {draft.imageUrls.map((_url, index) => (
+                          <a
+                            key={index}
+                            href={`/api/supplier-imports/drafts/${draft.id}/images/${index}/download`}
+                            className="inline-flex min-h-8 items-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] px-2.5 text-xs font-semibold"
+                          >
+                            دانلود تصویر {formatAdminInteger(index + 1)}
+                          </a>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {draft.product ? (
+                          <ButtonLink href={`/products/${draft.product.id}/edit`} size="sm">
+                            ویرایش محصول ساخته‌شده
+                          </ButtonLink>
+                        ) : draft.status !== 'REJECTED' ? (
+                          <ButtonLink
+                            href={`/products/new?importDraftId=${encodeURIComponent(draft.id)}`}
+                            size="sm"
+                          >
+                            تکمیل و ساخت محصول
+                          </ButtonLink>
+                        ) : null}
+                        {draft.status !== 'IMPORTED' ? (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setSelectedDraft(draft)}
+                            disabled={!canWrite}
+                          >
+                            بازبینی و ویرایش
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
 
-      <Pagination
-        currentPage={drafts.page}
-        totalPages={drafts.totalPages}
-        totalItems={drafts.total}
-        pageSize={drafts.pageSize}
-        getPageHref={(page) => buildSupplierImportsHref(filters, { page })}
-        className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)]"
-      />
+          <Pagination
+            currentPage={drafts.page}
+            totalPages={drafts.totalPages}
+            totalItems={drafts.total}
+            pageSize={drafts.pageSize}
+            getPageHref={(page) => buildSupplierImportsHref(filters, { page })}
+            className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)]"
+          />
 
-      <BottomSheet
-        open={Boolean(selectedDraft)}
-        onOpenChange={(open) => !open && setSelectedDraft(null)}
-      >
-        {selectedDraft ? (
-          <BottomSheetContent
-            title="بازبینی محصول دریافتی"
-            description={selectedDraft.source.supplierName}
-            height="large"
+          <BottomSheet
+            open={Boolean(selectedDraft)}
+            onOpenChange={(open) => !open && setSelectedDraft(null)}
           >
-            <DraftEditor draft={selectedDraft} onSaved={() => setSelectedDraft(null)} />
-          </BottomSheetContent>
-        ) : null}
-      </BottomSheet>
+            {selectedDraft ? (
+              <BottomSheetContent
+                title="بازبینی محصول دریافتی"
+                description={selectedDraft.source.supplierName}
+                height="large"
+              >
+                <DraftEditor draft={selectedDraft} onSaved={() => setSelectedDraft(null)} />
+              </BottomSheetContent>
+            ) : null}
+          </BottomSheet>
+        </>
+      ) : null}
     </div>
   );
 }

@@ -115,7 +115,26 @@ describe('supplier crawl operations', () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<SupplierSourceChangesCard changes={[change]} canWrite />);
+    render(
+      <SupplierSourceChangesCard
+        changes={{ items: [change], total: 1, page: 1, pageSize: 20, totalPages: 1 }}
+        filters={{
+          tab: 'CHANGES',
+          status: 'ALL',
+          supplierSourceId: 'ALL',
+          page: 1,
+          pageSize: 24,
+          runPage: 1,
+          runPageSize: 10,
+          historyPage: 1,
+          historyPageSize: 10,
+          showHistory: false,
+          changePage: 1,
+          changePageSize: 20,
+        }}
+        canWrite
+      />,
+    );
 
     expect(screen.getByText(/قیمت فروش سایت را تغییر نمی‌دهد/)).toBeInTheDocument();
     expect(screen.getByText(/از ۱٬۰۰۰٬۰۰۰ تومان به/)).toBeInTheDocument();
