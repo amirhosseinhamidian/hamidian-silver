@@ -55,6 +55,22 @@ describe('admin UI primitives', () => {
     expect(layer).toBeGreaterThan(121);
   });
 
+  it('keeps select options inside compact viewports', () => {
+    render(
+      <Select
+        aria-label="دسته‌بندی"
+        options={[{ value: 'bracelets', label: 'دستبندهای نقره با عنوان طولانی' }]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'دسته‌بندی' }));
+
+    expect(document.querySelector('.admin-select-content')).toHaveClass(
+      'max-w-[calc(100vw-1.5rem)]',
+    );
+    expect(screen.getByRole('option', { name: 'دستبندهای نقره با عنوان طولانی' })).toBeVisible();
+  });
+
   it('pairs operational colors with readable status text', () => {
     render(
       <>
