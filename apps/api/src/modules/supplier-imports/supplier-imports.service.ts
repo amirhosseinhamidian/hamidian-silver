@@ -437,6 +437,27 @@ export class SupplierImportsService {
     if (dto.categoryId && !category) {
       throw new NotFoundException('Active supplier category was not found.');
     }
+    const previousArchiveProgress = dto.resumeArchive
+      ? await this.prisma.supplierCrawlRun.aggregate({
+          where: {
+            supplierSourceId: source.id,
+            categoryId: category?.id ?? null,
+            scope: category ? SupplierCrawlScope.CATEGORY_URL : SupplierCrawlScope.CATALOG,
+            stopAtKnown: false,
+            succeededCount: { gt: 0 },
+            status: {
+              in: [
+                SupplierCrawlRunStatus.SUCCEEDED,
+                SupplierCrawlRunStatus.PARTIAL,
+                SupplierCrawlRunStatus.FAILED,
+                SupplierCrawlRunStatus.CANCELLED,
+              ],
+            },
+          },
+          _max: { currentPage: true },
+        })
+      : null;
+    const currentPage = Math.max(1, previousArchiveProgress?._max.currentPage ?? 1);
     const targetUrl = adapter.listingUrl(category?.url ?? source.baseUrl!, 1);
     return this.prisma.supplierCrawlRun.create({
       data: {
@@ -444,6 +465,7 @@ export class SupplierImportsService {
         categoryId: category?.id,
         scope: category ? SupplierCrawlScope.CATEGORY_URL : SupplierCrawlScope.CATALOG,
         targetUrl,
+        currentPage,
         requestedLimit: dto.limit,
         stopAtKnown: dto.stopAtKnown,
         monitorKnownProducts: dto.monitorKnownProducts,

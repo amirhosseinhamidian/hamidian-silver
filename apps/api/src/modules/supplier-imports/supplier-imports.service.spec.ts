@@ -31,6 +31,7 @@ describe('SupplierImportsService', () => {
       findMany: jest.fn(),
       findFirst: jest.fn(),
       findUnique: jest.fn(),
+      aggregate: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
@@ -150,6 +151,7 @@ describe('SupplierImportsService', () => {
         categoryId: '10000000-0000-4000-8000-000000000004',
         limit: 100,
         stopAtKnown: true,
+        resumeArchive: false,
         monitorKnownProducts: true,
       }),
     ).resolves.toEqual({ id: runId, status: 'QUEUED' });
@@ -160,6 +162,29 @@ describe('SupplierImportsService', () => {
         stopAtKnown: true,
         monitorKnownProducts: true,
       }),
+    });
+  });
+
+  it('continues an archive crawl from the highest previously reached page', async () => {
+    prisma.supplierSource.findFirst.mockResolvedValue({
+      id: sourceId,
+      hostname: 'bsjsilver.com',
+      adapterKey: 'bsj-silver',
+      baseUrl: 'https://bsjsilver.com/',
+      crawlDelayMs: 1000,
+    });
+    prisma.supplierCrawlRun.aggregate.mockResolvedValue({ _max: { currentPage: 74 } });
+
+    await service.startBulkCrawl({
+      supplierSourceId: sourceId,
+      limit: 300,
+      stopAtKnown: false,
+      resumeArchive: true,
+      monitorKnownProducts: false,
+    });
+
+    expect(prisma.supplierCrawlRun.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ currentPage: 74, scope: 'CATALOG' }),
     });
   });
 

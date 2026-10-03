@@ -19,5 +19,8 @@ export class StartBulkSupplierCrawlDto {
   stopAtKnown!: boolean;
 
   @IsBoolean()
+  resumeArchive!: boolean;
+
+  @IsBoolean()
   monitorKnownProducts!: boolean;
 }
