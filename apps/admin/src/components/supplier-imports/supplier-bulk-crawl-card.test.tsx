@@ -21,6 +21,7 @@ const source: AdminSupplierImportSource = {
 };
 
 const filters = {
+  tab: 'BULK' as const,
   status: 'ALL' as const,
   supplierSourceId: 'ALL' as const,
   page: 1,
@@ -30,6 +31,8 @@ const filters = {
   historyPage: 1,
   historyPageSize: 10,
   showHistory: false,
+  changePage: 1,
+  changePageSize: 20,
 };
 
 const runPage = (items: readonly never[] = []) => ({

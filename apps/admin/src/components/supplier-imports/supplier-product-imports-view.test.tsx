@@ -59,6 +59,7 @@ const draft: AdminSupplierImportDraft = {
 };
 
 const filters = {
+  tab: 'DRAFTS' as const,
   status: 'ALL' as const,
   supplierSourceId: 'ALL' as const,
   page: 1,
@@ -68,6 +69,8 @@ const filters = {
   historyPage: 1,
   historyPageSize: 10,
   showHistory: false,
+  changePage: 1,
+  changePageSize: 20,
 };
 
 const runPage = { items: [], total: 0, page: 1, pageSize: 10, totalPages: 1 } as const;

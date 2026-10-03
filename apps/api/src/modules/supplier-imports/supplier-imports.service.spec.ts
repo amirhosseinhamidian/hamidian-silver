@@ -20,6 +20,7 @@ describe('SupplierImportsService', () => {
     },
     category: { findFirst: jest.fn() },
     supplierProductSourceChange: {
+      count: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
       updateMany: jest.fn(),
@@ -290,6 +291,26 @@ describe('SupplierImportsService', () => {
     });
     expect(prisma.supplierProductImportDraft.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ skip: 12, take: 12 }),
+    );
+  });
+
+  it('returns server-paginated unacknowledged source changes', async () => {
+    prisma.supplierProductSourceChange.count.mockResolvedValue(43);
+    prisma.supplierProductSourceChange.findMany.mockResolvedValue([{ id: 'change-page-2' }]);
+
+    await expect(service.listSourceChanges({ page: 2, pageSize: 20 })).resolves.toEqual({
+      items: [{ id: 'change-page-2' }],
+      total: 43,
+      page: 2,
+      pageSize: 20,
+      totalPages: 3,
+    });
+    expect(prisma.supplierProductSourceChange.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { acknowledgedAt: null },
+        skip: 20,
+        take: 20,
+      }),
     );
   });
 

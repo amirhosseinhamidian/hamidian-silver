@@ -8,11 +8,23 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { formatAdminDateTime, formatAdminToman } from '@/lib/presentation/formatters';
-import type { AdminSupplierSourceChange } from '@/lib/supplier-imports/supplier-imports-model';
+import { Pagination } from '@/components/ui/pagination';
+import { Select } from '@/components/ui/select';
+import {
+  formatAdminDateTime,
+  formatAdminInteger,
+  formatAdminToman,
+} from '@/lib/presentation/formatters';
+import {
+  buildSupplierImportsHref,
+  type AdminSupplierImportFilters,
+  type AdminSupplierImportPage,
+  type AdminSupplierSourceChange,
+} from '@/lib/supplier-imports/supplier-imports-model';
 
 type Props = Readonly<{
-  changes: readonly AdminSupplierSourceChange[];
+  changes: AdminSupplierImportPage<AdminSupplierSourceChange>;
+  filters: AdminSupplierImportFilters;
   canWrite: boolean;
 }>;
 
@@ -28,7 +40,7 @@ function changeValue(change: AdminSupplierSourceChange, value: string | null) {
   return amount !== null && Number.isFinite(amount) ? formatAdminToman(amount) : 'ثبت نشده';
 }
 
-export function SupplierSourceChangesCard({ changes, canWrite }: Props) {
+export function SupplierSourceChangesCard({ changes, filters, canWrite }: Props) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -53,7 +65,7 @@ export function SupplierSourceChangesCard({ changes, canWrite }: Props) {
 
   return (
     <Card
-      title={`تغییرات منبع (${changes.length})`}
+      title={`تغییرات منبع (${formatAdminInteger(changes.total)})`}
       description="تغییر قیمت تک‌فروشی یا موجودی تأمین‌کننده فقط گزارش می‌شود و قیمت فروش سایت را تغییر نمی‌دهد."
     >
       {message ? (
@@ -61,9 +73,29 @@ export function SupplierSourceChangesCard({ changes, canWrite }: Props) {
           {message}
         </Alert>
       ) : null}
-      {changes.length ? (
+      <div className="mb-3 flex justify-end">
+        <Select
+          aria-label="تعداد تغییرات منبع در هر صفحه"
+          value={String(changes.pageSize)}
+          onValueChange={(value) =>
+            router.push(
+              buildSupplierImportsHref(filters, {
+                tab: 'CHANGES',
+                changePage: 1,
+                changePageSize: Number(value),
+              }),
+            )
+          }
+          options={[10, 20, 50, 100].map((value) => ({
+            value: String(value),
+            label: `${formatAdminInteger(value)} مورد در صفحه`,
+          }))}
+          className="w-48"
+        />
+      </div>
+      {changes.items.length ? (
         <div className="space-y-3">
-          {changes.map((change) => (
+          {changes.items.map((change) => (
             <section
               key={change.id}
               className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] p-3"
@@ -112,6 +144,16 @@ export function SupplierSourceChangesCard({ changes, canWrite }: Props) {
       ) : (
         <p className="text-sm text-[var(--admin-color-muted)]">تغییر بررسی‌نشده‌ای وجود ندارد.</p>
       )}
+      <Pagination
+        currentPage={changes.page}
+        totalPages={changes.totalPages}
+        totalItems={changes.total}
+        pageSize={changes.pageSize}
+        getPageHref={(page) =>
+          buildSupplierImportsHref(filters, { tab: 'CHANGES', changePage: page })
+        }
+        className="mt-3 px-0"
+      />
     </Card>
   );
 }

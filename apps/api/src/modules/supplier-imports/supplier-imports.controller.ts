@@ -18,6 +18,7 @@ import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { ListSupplierImportDraftsQueryDto } from './dto/list-supplier-import-drafts-query.dto';
 import { ListSupplierCrawlRunsQueryDto } from './dto/list-supplier-crawl-runs-query.dto';
+import { ListSupplierSourceChangesQueryDto } from './dto/list-supplier-source-changes-query.dto';
 import { ListSupplierCategoriesQueryDto } from './dto/list-supplier-categories-query.dto';
 import { StartBulkSupplierCrawlDto } from './dto/start-bulk-supplier-crawl.dto';
 import { StartSupplierCrawlDto } from './dto/start-supplier-crawl.dto';
@@ -66,8 +67,8 @@ export class SupplierImportsController {
 
   @Get('changes')
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
-  listSourceChanges() {
-    return this.supplierImportsService.listSourceChanges();
+  listSourceChanges(@Query() query: ListSupplierSourceChangesQueryDto) {
+    return this.supplierImportsService.listSourceChanges(query);
   }
 
   @Post('changes/:changeId/acknowledge')

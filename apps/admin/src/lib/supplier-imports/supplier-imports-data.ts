@@ -10,7 +10,7 @@ import {
   parseSupplierCrawlRunPage,
   parseSupplierCrawlSchedules,
   parseSupplierCatalogCategories,
-  parseSupplierSourceChanges,
+  parseSupplierSourceChangePage,
   parseSupplierSourceCategories,
   type AdminSupplierImportFilters,
   type AdminSupplierImportsData,
@@ -53,6 +53,10 @@ export async function loadSupplierImports(filters: AdminSupplierImportFilters): 
       page: String(filters.historyPage),
       pageSize: String(filters.historyPageSize),
     });
+    const changesQuery = new URLSearchParams({
+      page: String(filters.changePage),
+      pageSize: String(filters.changePageSize),
+    });
     const [
       sourcesResponse,
       draftsResponse,
@@ -71,7 +75,7 @@ export async function loadSupplierImports(filters: AdminSupplierImportFilters): 
       requestAdminCatalog(`/api/v1/supplier-imports/runs?${historyQuery}`, token),
       requestAdminCatalog('/api/v1/supplier-imports/schedules', token),
       requestAdminCatalog('/api/v1/catalog/categories', token),
-      requestAdminCatalog('/api/v1/supplier-imports/changes', token),
+      requestAdminCatalog(`/api/v1/supplier-imports/changes?${changesQuery}`, token),
     ]);
     if (
       !sourcesResponse.ok ||
@@ -91,7 +95,9 @@ export async function loadSupplierImports(filters: AdminSupplierImportFilters): 
     const catalogCategories = parseSupplierCatalogCategories(
       await readJsonResponse(catalogCategoriesResponse),
     );
-    const sourceChanges = parseSupplierSourceChanges(await readJsonResponse(sourceChangesResponse));
+    const sourceChanges = parseSupplierSourceChangePage(
+      await readJsonResponse(sourceChangesResponse),
+    );
     if (
       !sources ||
       !drafts ||

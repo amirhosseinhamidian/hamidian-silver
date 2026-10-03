@@ -27,7 +27,7 @@ export class UpdateSupplierCrawlScheduleDto {
 
   @IsInt()
   @Min(1)
-  @Max(500)
+  @Max(10_000)
   requestedLimit!: number;
 
   @IsBoolean()

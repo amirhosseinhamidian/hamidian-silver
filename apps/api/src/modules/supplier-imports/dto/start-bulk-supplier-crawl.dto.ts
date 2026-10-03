@@ -12,7 +12,7 @@ export class StartBulkSupplierCrawlDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(500)
+  @Max(10_000)
   limit!: number;
 
   @IsBoolean()

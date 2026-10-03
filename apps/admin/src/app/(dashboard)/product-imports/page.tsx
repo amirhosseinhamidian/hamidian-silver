@@ -7,6 +7,7 @@ import {
   type AdminSupplierImportPage,
   type AdminSupplierImportDraft,
   type AdminSupplierCrawlRun,
+  type AdminSupplierSourceChange,
 } from '@/lib/supplier-imports/supplier-imports-model';
 
 type ProductImportsPageProps = Readonly<{
@@ -27,6 +28,13 @@ const emptyRunPage: AdminSupplierImportPage<AdminSupplierCrawlRun> = {
   total: 0,
   page: 1,
   pageSize: 10,
+  totalPages: 1,
+};
+const emptyChangePage: AdminSupplierImportPage<AdminSupplierSourceChange> = {
+  items: [],
+  total: 0,
+  page: 1,
+  pageSize: 20,
   totalPages: 1,
 };
 
@@ -57,7 +65,7 @@ export default async function ProductImportsPage({ searchParams }: ProductImport
         archivedRuns={result.data?.archivedRuns ?? emptyRunPage}
         schedules={result.data?.schedules ?? []}
         catalogCategories={result.data?.catalogCategories ?? []}
-        sourceChanges={result.data?.sourceChanges ?? []}
+        sourceChanges={result.data?.sourceChanges ?? emptyChangePage}
         filters={filters}
         failed={result.failed}
         canWrite={user.permissions.includes('catalog.write')}

@@ -1,4 +1,5 @@
 export type AdminSupplierImportStatus = 'PENDING_REVIEW' | 'REVIEWED' | 'REJECTED' | 'IMPORTED';
+export type AdminSupplierImportTab = 'SCHEDULE' | 'CHANGES' | 'MAPPINGS' | 'BULK' | 'DRAFTS';
 export type AdminSupplierCrawlRunStatus =
   'QUEUED' | 'RUNNING' | 'PAUSED' | 'SUCCEEDED' | 'PARTIAL' | 'FAILED' | 'CANCELLED';
 
@@ -136,6 +137,7 @@ export type AdminSupplierImportPage<T> = Readonly<{
 }>;
 
 export type AdminSupplierImportFilters = Readonly<{
+  tab: AdminSupplierImportTab;
   status: AdminSupplierImportStatus | 'ALL';
   supplierSourceId: string | 'ALL';
   page: number;
@@ -145,6 +147,8 @@ export type AdminSupplierImportFilters = Readonly<{
   historyPage: number;
   historyPageSize: number;
   showHistory: boolean;
+  changePage: number;
+  changePageSize: number;
 }>;
 
 export type AdminSupplierImportsData = Readonly<{
@@ -155,7 +159,7 @@ export type AdminSupplierImportsData = Readonly<{
   archivedRuns: AdminSupplierImportPage<AdminSupplierCrawlRun>;
   schedules: readonly AdminSupplierCrawlSchedule[];
   catalogCategories: readonly AdminSupplierCatalogCategory[];
-  sourceChanges: readonly AdminSupplierSourceChange[];
+  sourceChanges: AdminSupplierImportPage<AdminSupplierSourceChange>;
 }>;
 
 const STATUSES = new Set<AdminSupplierImportStatus>([
@@ -536,6 +540,12 @@ export function parseSupplierSourceChanges(
     : (parsed as readonly AdminSupplierSourceChange[]);
 }
 
+export function parseSupplierSourceChangePage(
+  value: unknown,
+): AdminSupplierImportPage<AdminSupplierSourceChange> | null {
+  return parsePage(value, parseSupplierSourceChanges);
+}
+
 export function parseSupplierCrawlRunPage(
   value: unknown,
 ): AdminSupplierImportPage<AdminSupplierCrawlRun> | null {
@@ -624,7 +634,19 @@ export function parseSupplierImportFilters(
     : 'ALL';
   const requestedPageSize = positiveInteger(queryText(value.pageSize), 24);
   const requestedHistoryPageSize = positiveInteger(queryText(value.historyPageSize), 10);
+  const requestedChangePageSize = positiveInteger(queryText(value.changePageSize), 20);
+  const rawTab = queryText(value.tab);
+  const tab: AdminSupplierImportTab = [
+    'SCHEDULE',
+    'CHANGES',
+    'MAPPINGS',
+    'BULK',
+    'DRAFTS',
+  ].includes(rawTab ?? '')
+    ? (rawTab as AdminSupplierImportTab)
+    : 'DRAFTS';
   return {
+    tab,
     status,
     supplierSourceId: queryText(value.supplierSourceId) ?? 'ALL',
     page: positiveInteger(queryText(value.page), 1),
@@ -636,6 +658,10 @@ export function parseSupplierImportFilters(
       ? requestedHistoryPageSize
       : 10,
     showHistory: queryText(value.crawlView) === 'history',
+    changePage: positiveInteger(queryText(value.changePage), 1),
+    changePageSize: [10, 20, 50, 100].includes(requestedChangePageSize)
+      ? requestedChangePageSize
+      : 20,
   };
 }
 
@@ -646,6 +672,7 @@ export function buildSupplierImportsHref(
 ): string {
   const next = { ...filters, ...overrides };
   const query = new URLSearchParams();
+  if (next.tab !== 'DRAFTS') query.set('tab', next.tab);
   if (next.status !== 'ALL') query.set('status', next.status);
   if (next.supplierSourceId !== 'ALL') query.set('supplierSourceId', next.supplierSourceId);
   if (next.page > 1) query.set('page', String(next.page));
@@ -656,6 +683,8 @@ export function buildSupplierImportsHref(
   if (next.historyPageSize !== 10) {
     query.set('historyPageSize', String(next.historyPageSize));
   }
+  if (next.changePage > 1) query.set('changePage', String(next.changePage));
+  if (next.changePageSize !== 20) query.set('changePageSize', String(next.changePageSize));
   const suffix = query.toString();
   return `/product-imports${suffix ? `?${suffix}` : ''}${hash}`;
 }

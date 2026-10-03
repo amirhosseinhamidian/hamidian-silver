@@ -19,6 +19,7 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { BsjSilverCrawlerAdapter } from './adapters/bsj-silver-crawler.adapter';
 import { ListSupplierImportDraftsQueryDto } from './dto/list-supplier-import-drafts-query.dto';
 import { ListSupplierCrawlRunsQueryDto } from './dto/list-supplier-crawl-runs-query.dto';
+import { ListSupplierSourceChangesQueryDto } from './dto/list-supplier-source-changes-query.dto';
 import { ListSupplierCategoriesQueryDto } from './dto/list-supplier-categories-query.dto';
 import { StartBulkSupplierCrawlDto } from './dto/start-bulk-supplier-crawl.dto';
 import { StartSupplierCrawlDto } from './dto/start-supplier-crawl.dto';
@@ -31,6 +32,8 @@ import type { SupplierCrawlerAdapter } from './supplier-crawler.types';
 const HTML_RESPONSE_LIMIT_BYTES = 5 * 1024 * 1024;
 const IMAGE_RESPONSE_LIMIT_BYTES = 10 * 1024 * 1024;
 const CRAWL_TIMEOUT_MS = 20_000;
+const CRAWL_REQUEST_ATTEMPTS = 4;
+const CRAWL_RETRY_BASE_DELAY_MS = 2_000;
 const MAX_REDIRECTS = 3;
 const BULK_CRAWL_SCOPES = [
   SupplierCrawlScope.CATALOG,
@@ -204,23 +207,35 @@ export class SupplierImportsService {
     });
   }
 
-  listSourceChanges() {
-    return this.prisma.supplierProductSourceChange.findMany({
-      where: { acknowledgedAt: null },
-      take: 100,
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      include: {
-        draft: {
-          select: {
-            id: true,
-            title: true,
-            sourceUrl: true,
-            product: { select: { id: true, name: true } },
-            supplierSource: { select: { name: true, supplier: { select: { name: true } } } },
+  async listSourceChanges(query: ListSupplierSourceChangesQueryDto) {
+    const where: Prisma.SupplierProductSourceChangeWhereInput = { acknowledgedAt: null };
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.supplierProductSourceChange.count({ where }),
+      this.prisma.supplierProductSourceChange.findMany({
+        where,
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        include: {
+          draft: {
+            select: {
+              id: true,
+              title: true,
+              sourceUrl: true,
+              product: { select: { id: true, name: true } },
+              supplierSource: { select: { name: true, supplier: { select: { name: true } } } },
+            },
           },
         },
-      },
-    });
+      }),
+    ]);
+    return {
+      items,
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+      totalPages: Math.max(1, Math.ceil(total / query.pageSize)),
+    };
   }
 
   async acknowledgeSourceChange(changeId: string, actorUserId: string) {
@@ -432,6 +447,8 @@ export class SupplierImportsService {
         requestedLimit: dto.limit,
         stopAtKnown: dto.stopAtKnown,
         monitorKnownProducts: dto.monitorKnownProducts,
+        maxRetries: 5,
+        retryDelayMinutes: 5,
         status: SupplierCrawlRunStatus.QUEUED,
       },
     });
@@ -873,6 +890,8 @@ export class SupplierImportsService {
     let consecutiveKnown = 0;
     try {
       const listingUrl = new URL(adapter.listingUrl(run.targetUrl, run.currentPage));
+      const currentCategoryId =
+        (await this.resolveCategoryIdFromUrl(source.id, run.targetUrl)) ?? run.categoryId;
       const listingRequest = adapter.listingRequest(run.targetUrl, run.currentPage);
       const listing = adapter.parseListing(
         await this.fetchListingPayload(listingRequest, source),
@@ -949,7 +968,14 @@ export class SupplierImportsService {
         if (existing) {
           if (run.monitorKnownProducts) {
             try {
-              await this.refreshKnownProduct(run.id, source, adapter, productUrl, existing);
+              await this.refreshKnownProduct(
+                run.id,
+                source,
+                adapter,
+                productUrl,
+                existing,
+                currentCategoryId,
+              );
             } catch (error) {
               failed += 1;
               await this.recordCrawlIssue(run.id, productUrl, error);
@@ -962,11 +988,12 @@ export class SupplierImportsService {
             await this.finishRun(run.id, discovered, succeeded, failed, skipped);
             return;
           }
+          if (run.monitorKnownProducts) await this.delay(source.crawlDelayMs ?? 2000);
           continue;
         }
         consecutiveKnown = 0;
         try {
-          await this.importBulkProduct(run.id, source, adapter, productUrl, run.categoryId);
+          await this.importBulkProduct(run.id, source, adapter, productUrl, currentCategoryId);
           succeeded += 1;
         } catch (error) {
           failed += 1;
@@ -1068,6 +1095,7 @@ export class SupplierImportsService {
       supplierRetailPriceToman: number | null;
       sourceAvailability: SupplierSourceAvailability;
     }>,
+    preferredCategoryId: string | null,
   ) {
     const targetUrl = this.validateSourceUrl(productUrl, source);
     const product = adapter.parseProduct(
@@ -1077,7 +1105,7 @@ export class SupplierImportsService {
     const sourceCategoryId = await this.resolveSourceCategoryId(
       source.id,
       product.sourceCategory,
-      null,
+      preferredCategoryId,
     );
     const priceChanged = existing.supplierRetailPriceToman !== product.supplierRetailPriceToman;
     const availabilityChanged =
@@ -1134,6 +1162,22 @@ export class SupplierImportsService {
     if (!sourceCategory) return null;
     const category = await this.prisma.supplierSourceCategory.findFirst({
       where: { supplierSourceId, isActive: true, name: sourceCategory },
+      select: { id: true },
+    });
+    return category?.id ?? null;
+  }
+
+  private async resolveCategoryIdFromUrl(supplierSourceId: string, value: string) {
+    let externalKey: string | null = null;
+    try {
+      externalKey =
+        new URL(value).pathname.match(/^\/product\/category\/(\d+)(?:-|\/|$)/)?.[1] ?? null;
+    } catch {
+      return null;
+    }
+    if (!externalKey) return null;
+    const category = await this.prisma.supplierSourceCategory.findUnique({
+      where: { supplierSourceId_externalKey: { supplierSourceId, externalKey } },
       select: { id: true },
     });
     return category?.id ?? null;
@@ -1519,24 +1563,42 @@ export class SupplierImportsService {
   ): Promise<Response> {
     let url = initialUrl;
     for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
-      let response: Response;
-      try {
-        response = await fetch(url, {
-          ...init,
-          redirect: 'manual',
-          signal: AbortSignal.timeout(CRAWL_TIMEOUT_MS),
-          headers: {
-            Accept:
-              destination === 'image'
-                ? 'image/avif,image/webp,image/png,image/jpeg'
-                : 'text/html,application/xhtml+xml',
-            'User-Agent':
-              'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 HamidianSilverSupplierImporter/1.0',
-            ...init.headers,
-          },
-        });
-      } catch {
-        throw new BadGatewayException('Supplier website did not respond in time.');
+      let response: Response | null = null;
+      let lastRequestError: unknown = null;
+      for (let attempt = 1; attempt <= CRAWL_REQUEST_ATTEMPTS; attempt += 1) {
+        try {
+          response = await fetch(url, {
+            ...init,
+            redirect: 'manual',
+            signal: AbortSignal.timeout(CRAWL_TIMEOUT_MS),
+            headers: {
+              Accept:
+                destination === 'image'
+                  ? 'image/avif,image/webp,image/png,image/jpeg'
+                  : 'text/html,application/xhtml+xml',
+              'User-Agent':
+                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 HamidianSilverSupplierImporter/1.0',
+              ...init.headers,
+            },
+          });
+          if (![408, 425, 429, 500, 502, 503, 504].includes(response.status)) break;
+          lastRequestError = new Error(`Supplier returned retryable HTTP ${response.status}.`);
+        } catch (error) {
+          lastRequestError = error;
+        }
+        if (attempt < CRAWL_REQUEST_ATTEMPTS) {
+          const retryAfterSeconds = Number(response?.headers.get('retry-after') ?? Number.NaN);
+          const delayMs = Number.isFinite(retryAfterSeconds)
+            ? Math.min(retryAfterSeconds * 1000, 60_000)
+            : CRAWL_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+          await this.delay(delayMs);
+        }
+      }
+      if (!response || [408, 425, 429, 500, 502, 503, 504].includes(response.status)) {
+        this.logger.warn(
+          `Supplier request exhausted retries: ${this.errorMessage(lastRequestError)}`,
+        );
+        throw new BadGatewayException('Supplier website did not respond after several attempts.');
       }
       if ([301, 302, 303, 307, 308].includes(response.status)) {
         if (!followRedirects) {
