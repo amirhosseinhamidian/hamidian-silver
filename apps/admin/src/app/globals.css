@@ -24,6 +24,18 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/*
+ * Radix Select locks body scrolling while its portalled list is open. In an RTL
+ * shell with a fixed right sidebar, react-remove-scroll can mistake the reserved
+ * layout width for a scrollbar and add a very large right margin. Keep the lock,
+ * but prevent that compensation from collapsing the admin content column.
+ */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
 button,
 input,
 select,
