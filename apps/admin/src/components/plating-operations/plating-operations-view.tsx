@@ -376,12 +376,8 @@ export function PlatingOperationsView({ orders, failed, canOperate, canComplete 
     event.preventDefault();
     if (!operation || pending) return;
     const cleanNote = note.trim();
-    if (cleanNote.length < 3) {
-      setError(
-        operation.kind === 'cancel'
-          ? 'دلیل لغو باید حداقل ۳ نویسه باشد.'
-          : 'یادداشت عملیات باید حداقل ۳ نویسه باشد.',
-      );
+    if (operation.kind === 'cancel' && cleanNote.length < 3) {
+      setError('دلیل لغو باید حداقل ۳ نویسه باشد.');
       return;
     }
     let payload: Record<string, string | number>;
@@ -397,13 +393,14 @@ export function PlatingOperationsView({ orders, failed, canOperate, canComplete 
       }
       payload = {
         actualCostToman: cost,
-        note: cleanNote,
+        ...(cleanNote ? { note: cleanNote } : {}),
         ...(externalReference.trim()
           ? { externalReference: toAsciiDigits(externalReference).trim() }
           : {}),
       };
     } else {
-      payload = operation.kind === 'cancel' ? { reason: cleanNote } : { note: cleanNote };
+      payload =
+        operation.kind === 'cancel' ? { reason: cleanNote } : cleanNote ? { note: cleanNote } : {};
     }
     setPending(true);
     setError('');
@@ -763,13 +760,15 @@ export function PlatingOperationsView({ orders, failed, canOperate, canComplete 
             ) : null}
             <FormField
               id="plating-operation-note"
-              label={operation?.kind === 'cancel' ? 'دلیل لغو' : 'یادداشت عملیات'}
-              required
+              label={operation?.kind === 'cancel' ? 'دلیل لغو' : 'یادداشت عملیات (اختیاری)'}
+              required={operation?.kind === 'cancel'}
               error={error || undefined}
               hint={
                 operation?.kind === 'start'
-                  ? 'نام کارگاه، نحوه تحویل یا نکته اجرایی را ثبت کنید.'
-                  : 'حداقل ۳ نویسه؛ این متن در سابقه عملیات نگهداری می‌شود.'
+                  ? 'در صورت نیاز نام کارگاه، نحوه تحویل یا نکته اجرایی را ثبت کنید.'
+                  : operation?.kind === 'cancel'
+                    ? 'حداقل ۳ نویسه؛ این متن در سابقه عملیات نگهداری می‌شود.'
+                    : 'در صورت نیاز نتیجه یا توضیح فاکتور کارگاه را ثبت کنید.'
               }
             >
               {(props) => (

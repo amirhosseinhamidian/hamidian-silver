@@ -13348,10 +13348,7 @@
             "minLength": 3,
             "maxLength": 500
           }
-        },
-        "required": [
-          "reason"
-        ]
+        }
       },
       "ResetShipmentProviderCreationDto": {
         "type": "object",

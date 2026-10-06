@@ -205,7 +205,7 @@ describe('ShippingManagementView', () => {
     );
   });
 
-  it('requires and normalizes tracking before handoff', async () => {
+  it('allows handoff without a tracking code or operational note', async () => {
     const fetchMock = vi.mocked(fetch).mockResolvedValue(new Response('{}', { status: 200 }));
     render(
       <ShippingManagementView
@@ -216,12 +216,8 @@ describe('ShippingManagementView', () => {
       />,
     );
     fireEvent.click(screen.getAllByRole('button', { name: 'تحویل به ارسال‌کننده' })[0]);
-    fireEvent.change(screen.getByLabelText(/یادداشت عملیات/), {
-      target: { value: 'تحویل به باجه پست' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی' }));
-    expect(screen.getByText(/ثبت کد رهگیری پیش از تحویل/)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText(/کد رهگیری/), { target: { value: '۱۲۳۴۵۶' } });
+    expect(screen.getByLabelText(/کد رهگیری/)).not.toBeRequired();
+    expect(screen.getByLabelText(/یادداشت عملیات/)).not.toBeRequired();
     fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(fetchMock).toHaveBeenCalledWith(
@@ -229,9 +225,7 @@ describe('ShippingManagementView', () => {
       expect.objectContaining({
         body: JSON.stringify({
           status: 'HANDED_OVER',
-          reason: 'تحویل به باجه پست',
           sendCustomerSms: true,
-          trackingCode: '123456',
         }),
       }),
     );

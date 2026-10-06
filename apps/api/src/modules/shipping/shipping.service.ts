@@ -615,7 +615,7 @@ export class ShippingService {
           actorUserId,
           fromStatus: null,
           toStatus: ShipmentStatus.READY,
-          reason: dto.reason.trim(),
+          reason: dto.reason?.trim() || null,
         },
       });
       return transaction.shipment.findUniqueOrThrow({
@@ -997,17 +997,6 @@ export class ShippingService {
         dto.status === ShipmentStatus.IN_TRANSIT ||
         dto.status === ShipmentStatus.DELIVERED
       ) {
-        if (
-          shipment.provider === MANUAL_SHIPPING_PROVIDER &&
-          shipment.deliveryTypeSnapshot !== 'COURIER' &&
-          !shipment.trackingCode &&
-          !dto.trackingCode?.trim()
-        ) {
-          throw new DomainException(
-            ErrorCode.SHIPMENT_NOT_READY,
-            'Tracking code is required before handing over a manual shipment.',
-          );
-        }
         const readiness = buildFulfillmentReadiness({
           id: shipment.order.id,
           orderNumber: shipment.order.orderNumber,

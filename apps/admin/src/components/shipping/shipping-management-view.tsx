@@ -317,7 +317,6 @@ export function ShippingManagementView({
     event.preventDefault();
     if (!action || pending) return;
     const cleanReason = reason.trim();
-    if (cleanReason.length < 3) return setError('دلیل عملیات باید حداقل ۳ نویسه باشد.');
     let endpoint: string;
     let method: 'POST' | 'PATCH';
     let payload: Record<string, string | number | boolean>;
@@ -343,21 +342,15 @@ export function ShippingManagementView({
             ? { carrierId: selectedCarrier.id }
             : { serviceName: serviceName.trim() }),
         estimatedDeliveryDays: days,
-        reason: cleanReason,
+        ...(cleanReason ? { reason: cleanReason } : {}),
       };
     } else {
       const tracking = toAsciiDigits(trackingCode).trim();
-      const isCourier =
-        (action.order.shipment?.deliveryType ??
-          action.order.shippingSelection?.deliveryType ??
-          'POST') === 'COURIER';
-      if (action.status === 'HANDED_OVER' && !isCourier && !tracking)
-        return setError('ثبت کد رهگیری پیش از تحویل مرسوله به پست الزامی است.');
       endpoint = `/api/shipping/orders/${encodeURIComponent(action.order.id)}/status`;
       method = 'PATCH';
       payload = {
         status: action.status,
-        reason: cleanReason,
+        ...(cleanReason ? { reason: cleanReason } : {}),
         sendCustomerSms,
         ...(tracking ? { trackingCode: tracking } : {}),
       };
@@ -695,9 +688,8 @@ export function ShippingManagementView({
               'POST') !== 'COURIER' ? (
               <FormField
                 id="manual-tracking-code"
-                label="کد رهگیری"
-                required
-                hint="پس از ثبت، این کد در حساب مشتری نمایش داده می‌شود."
+                label="کد رهگیری (اختیاری)"
+                hint="در صورت ثبت، این کد در حساب مشتری نمایش داده می‌شود."
               >
                 {(props) => (
                   <Input
@@ -719,8 +711,7 @@ export function ShippingManagementView({
             ) : null}
             <FormField
               id="shipping-operation-reason"
-              label="یادداشت عملیات"
-              required
+              label="یادداشت عملیات (اختیاری)"
               error={error || undefined}
               hint="در timeline ارسال با نام اپراتور ثبت می‌شود."
             >

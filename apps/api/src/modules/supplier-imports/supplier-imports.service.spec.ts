@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { BsjSilverCrawlerAdapter } from './adapters/bsj-silver-crawler.adapter';
+import { SaatYekCrawlerAdapter } from './adapters/saatyek-crawler.adapter';
 import { SupplierImportsService } from './supplier-imports.service';
 
 describe('SupplierImportsService', () => {
@@ -56,6 +57,7 @@ describe('SupplierImportsService', () => {
   const service = new SupplierImportsService(
     prisma as unknown as PrismaService,
     new BsjSilverCrawlerAdapter(),
+    new SaatYekCrawlerAdapter(),
   );
 
   beforeEach(() => {
@@ -488,5 +490,48 @@ describe('SupplierImportsService', () => {
         currentPage: 1,
       }),
     });
+  });
+
+  it('fetches a SaatYek Store API listing directly without requiring an XSRF session', async () => {
+    prisma.supplierCrawlRun.findFirst.mockResolvedValueOnce({ id: runId, startedAt: null });
+    prisma.supplierCrawlRun.findUnique.mockResolvedValue({
+      id: runId,
+      status: 'RUNNING',
+      targetUrl: 'https://saatyek.com/shop/',
+      currentPage: 1,
+      pendingCategoryUrls: [],
+      requestedLimit: 100,
+      stopAtKnown: false,
+      monitorKnownProducts: false,
+      discoveredCount: 0,
+      succeededCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      category: null,
+      supplierSource: {
+        id: sourceId,
+        hostname: 'saatyek.com',
+        adapterKey: 'saatyek-watch',
+        baseUrl: 'https://saatyek.com/',
+        crawlDelayMs: 3000,
+        isActive: true,
+        deletedAt: null,
+        supplier: { isActive: true, deletedAt: null },
+      },
+    });
+    const fetchSpy = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('[]', {
+        status: 200,
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      }),
+    );
+
+    await service.processBulkQueue();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0]?.[0].toString()).toContain(
+      '/wp-json/wc/store/v1/products?page=1&per_page=50',
+    );
+    expect(fetchSpy.mock.calls[0]?.[1]).toEqual(expect.objectContaining({ method: 'GET' }));
   });
 });

@@ -17,6 +17,7 @@ import {
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { BsjSilverCrawlerAdapter } from './adapters/bsj-silver-crawler.adapter';
+import { SaatYekCrawlerAdapter } from './adapters/saatyek-crawler.adapter';
 import { ListSupplierImportDraftsQueryDto } from './dto/list-supplier-import-drafts-query.dto';
 import { ListSupplierCrawlRunsQueryDto } from './dto/list-supplier-crawl-runs-query.dto';
 import { ListSupplierSourceChangesQueryDto } from './dto/list-supplier-source-changes-query.dto';
@@ -69,8 +70,12 @@ export class SupplierImportsService {
   constructor(
     private readonly prisma: PrismaService,
     bsjSilverAdapter: BsjSilverCrawlerAdapter,
+    saatYekAdapter: SaatYekCrawlerAdapter,
   ) {
-    this.adapters = new Map([[bsjSilverAdapter.key, bsjSilverAdapter]]);
+    this.adapters = new Map<string, SupplierCrawlerAdapter>([
+      [bsjSilverAdapter.key, bsjSilverAdapter],
+      [saatYekAdapter.key, saatYekAdapter],
+    ]);
   }
 
   listSources() {
@@ -605,7 +610,7 @@ export class SupplierImportsService {
       throw new BadRequestException('This supplier source does not have a supported crawler.');
     }
     const targetUrl = this.validateSourceUrl(dto.targetUrl, source);
-    if (!/^\/product\/\d+(?:-|\/|$)/.test(targetUrl.pathname)) {
+    if (!adapter.supportsProductUrl(targetUrl)) {
       throw new BadRequestException('The target URL must be a supplier product page.');
     }
 
@@ -913,7 +918,7 @@ export class SupplierImportsService {
     try {
       const listingUrl = new URL(adapter.listingUrl(run.targetUrl, run.currentPage));
       const currentCategoryId =
-        (await this.resolveCategoryIdFromUrl(source.id, run.targetUrl)) ?? run.categoryId;
+        (await this.resolveCategoryIdFromUrl(source.id, run.targetUrl, adapter)) ?? run.categoryId;
       const listingRequest = adapter.listingRequest(run.targetUrl, run.currentPage);
       const listing = adapter.parseListing(
         await this.fetchListingPayload(listingRequest, source),
@@ -970,7 +975,7 @@ export class SupplierImportsService {
           await this.finishRun(run.id, discovered, succeeded, failed, skipped);
           return;
         }
-        const key = this.productKey(productUrl);
+        const key = this.productKey(productUrl, adapter);
         const existing = key
           ? await this.prisma.supplierProductImportDraft.findUnique({
               where: {
@@ -1189,11 +1194,14 @@ export class SupplierImportsService {
     return category?.id ?? null;
   }
 
-  private async resolveCategoryIdFromUrl(supplierSourceId: string, value: string) {
+  private async resolveCategoryIdFromUrl(
+    supplierSourceId: string,
+    value: string,
+    adapter: SupplierCrawlerAdapter,
+  ) {
     let externalKey: string | null = null;
     try {
-      externalKey =
-        new URL(value).pathname.match(/^\/product\/category\/(\d+)(?:-|\/|$)/)?.[1] ?? null;
+      externalKey = adapter.categoryKey(new URL(value));
     } catch {
       return null;
     }
@@ -1382,9 +1390,9 @@ export class SupplierImportsService {
     return adapter;
   }
 
-  private productKey(productUrl: string): string | null {
+  private productKey(productUrl: string, adapter: SupplierCrawlerAdapter): string | null {
     try {
-      return new URL(productUrl).pathname.match(/^\/product\/(\d+)(?:-|\/|$)/)?.[1] ?? null;
+      return adapter.productKey(new URL(productUrl));
     } catch {
       return null;
     }
@@ -1509,6 +1517,18 @@ export class SupplierImportsService {
   ): Promise<string> {
     const url = this.validateSourceUrl(request.url, source);
     const referer = this.validateSourceUrl(request.referer, source);
+    if (!request.requiresXsrfSession) {
+      const response = await this.fetchResponse(url, source, 'document', {
+        method: request.method,
+        body: request.body,
+        headers: {
+          Accept: 'application/json,text/html,application/xhtml+xml',
+          ...(request.contentType ? { 'Content-Type': request.contentType } : {}),
+          Referer: referer.toString(),
+        },
+      });
+      return (await this.readLimitedBody(response, HTML_RESPONSE_LIMIT_BYTES)).toString('utf8');
+    }
     const sessionResponse = await this.fetchResponse(referer, source, 'document');
     await this.readLimitedBody(sessionResponse, HTML_RESPONSE_LIMIT_BYTES);
     const setCookies = sessionResponse.headers.getSetCookie();

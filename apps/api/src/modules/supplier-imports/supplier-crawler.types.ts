@@ -36,10 +36,14 @@ export type SupplierListingRequest = Readonly<{
   body?: string;
   contentType?: string;
   referer: string;
+  requiresXsrfSession?: boolean;
 }>;
 
 export interface SupplierCrawlerAdapter {
   readonly key: string;
+  supportsProductUrl(url: URL): boolean;
+  productKey(url: URL): string | null;
+  categoryKey(url: URL): string | null;
   parseProduct(html: string, sourceUrl: string): CrawledSupplierProduct;
   parseCategories(html: string, sourceUrl: string): readonly CrawledSupplierCategory[];
   parseListing(payload: string, sourceUrl: string): CrawledSupplierListing;
