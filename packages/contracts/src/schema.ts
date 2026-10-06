@@ -4675,7 +4675,7 @@ export interface components {
             carrierId?: string;
             serviceName?: string;
             estimatedDeliveryDays?: number;
-            reason: string;
+            reason?: string;
         };
         ResetShipmentProviderCreationDto: {
             confirmNoProviderShipment: boolean;

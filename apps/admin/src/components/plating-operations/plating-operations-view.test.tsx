@@ -64,20 +64,18 @@ describe('PlatingOperationsView', () => {
     expect(screen.getByLabelText('فیلتر SLA آبکاری')).toBeInTheDocument();
   });
 
-  it('starts a pending plating order with an audit note', async () => {
+  it('starts a pending plating order without requiring an audit note', async () => {
     const fetchMock = vi.mocked(fetch).mockResolvedValue(new Response('{}', { status: 201 }));
     render(<PlatingOperationsView orders={[order()]} failed={false} canOperate canComplete />);
     fireEvent.click(screen.getAllByRole('button', { name: 'شروع آبکاری' })[0]);
-    fireEvent.change(screen.getByLabelText(/یادداشت عملیات/), {
-      target: { value: 'تحویل به کارگاه مرکزی' },
-    });
+    expect(screen.getByLabelText(/یادداشت عملیات/)).not.toBeRequired();
     fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/plating-operations/orders/order-1/start',
       expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ note: 'تحویل به کارگاه مرکزی' }),
+        body: JSON.stringify({}),
       }),
     );
   });

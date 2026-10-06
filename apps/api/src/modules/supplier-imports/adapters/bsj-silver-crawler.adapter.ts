@@ -162,6 +162,18 @@ function extractImages(html: string, sourceUrl: string): readonly string[] {
 export class BsjSilverCrawlerAdapter implements SupplierCrawlerAdapter {
   readonly key = 'bsj-silver';
 
+  supportsProductUrl(url: URL): boolean {
+    return this.productKey(url) !== null;
+  }
+
+  productKey(url: URL): string | null {
+    return url.pathname.match(/^\/product\/(\d+)(?:-|\/|$)/)?.[1] ?? null;
+  }
+
+  categoryKey(url: URL): string | null {
+    return url.pathname.match(/^\/product\/category\/(\d+)(?:-|\/|$)/)?.[1] ?? null;
+  }
+
   parseCategories(html: string, sourceUrl: string): readonly CrawledSupplierCategory[] {
     const categories = new Map<string, CrawledSupplierCategory>();
     for (const url of hrefs(html, sourceUrl)) {
@@ -271,6 +283,7 @@ export class BsjSilverCrawlerAdapter implements SupplierCrawlerAdapter {
       body: body.toString(),
       contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
       referer: listingUrl.toString(),
+      requiresXsrfSession: true,
     };
   }
 

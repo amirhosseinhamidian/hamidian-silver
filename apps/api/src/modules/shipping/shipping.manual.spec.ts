@@ -1,4 +1,3 @@
-import { ErrorCode } from '../../common/errors/error-codes';
 import {
   OrderStatus,
   PaymentStatus,
@@ -57,7 +56,7 @@ describe('ShippingService manual fulfillment', () => {
     await expect(
       service.createManualShipment(
         orderId,
-        { serviceName: 'پست پیشتاز', estimatedDeliveryDays: 3, reason: 'بسته آماده است' },
+        { serviceName: 'پست پیشتاز', estimatedDeliveryDays: 3 },
         actorUserId,
       ),
     ).resolves.toEqual(shipment);
@@ -70,6 +69,9 @@ describe('ShippingService manual fulfillment', () => {
         shippingCostToman: 0,
         totalWeightGrams: '8.500',
       }),
+    });
+    expect(tx.shipmentStatusHistory.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ reason: null }),
     });
 
     const shippingCarriers = {
@@ -181,42 +183,51 @@ describe('ShippingService manual fulfillment', () => {
     });
   });
 
-  it('requires tracking before handing a manual shipment to the carrier', async () => {
+  it('hands a postal shipment over without requiring a tracking code', async () => {
+    const current = {
+      id: shipmentId,
+      orderId,
+      provider: 'manual',
+      status: ShipmentStatus.READY,
+      trackingCode: null,
+      deliveryTypeSnapshot: 'POST',
+      providerCreationState: ShipmentProviderCreationState.CREATED,
+      providerShipmentId: `manual:${orderId}`,
+      providerCreateError: null,
+      creationAttemptedAt: new Date(),
+      shippedAt: null,
+      deliveredAt: null,
+      order: {
+        id: orderId,
+        orderNumber: 'HS-MANUAL-1',
+        status: OrderStatus.PROCESSING,
+        paidAt: new Date(),
+        deliveredAt: null,
+        platingTotalToman: 0,
+        payment: { status: PaymentStatus.PAID },
+        platingFulfillment: null,
+      },
+    };
+    const updated = { ...current, status: ShipmentStatus.HANDED_OVER };
     const tx = {
       shipment: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: shipmentId,
-          orderId,
-          provider: 'manual',
-          status: ShipmentStatus.READY,
-          trackingCode: null,
-          deliveryTypeSnapshot: 'POST',
-          providerCreationState: ShipmentProviderCreationState.CREATED,
-          providerShipmentId: `manual:${orderId}`,
-          providerCreateError: null,
-          creationAttemptedAt: new Date(),
-          order: {
-            id: orderId,
-            orderNumber: 'HS-MANUAL-1',
-            status: OrderStatus.PROCESSING,
-            paidAt: new Date(),
-            deliveredAt: null,
-            platingTotalToman: 0,
-            payment: { status: PaymentStatus.PAID },
-            platingFulfillment: null,
-          },
-        }),
+        findUnique: jest.fn().mockResolvedValue(current),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(updated),
       },
+      shipmentStatusHistory: { create: jest.fn().mockResolvedValue({}) },
+      order: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      orderStatusHistory: { create: jest.fn().mockResolvedValue({}) },
     };
     const prisma = { $transaction: jest.fn((callback) => callback(tx)) };
     const service = new ShippingService(prisma as unknown as PrismaService, provider);
+
     await expect(
-      service.updateStatus(
-        orderId,
-        { status: ShipmentStatus.HANDED_OVER, reason: 'تحویل به پست' },
-        actorUserId,
-      ),
-    ).rejects.toMatchObject({ code: ErrorCode.SHIPMENT_NOT_READY });
+      service.updateStatus(orderId, { status: ShipmentStatus.HANDED_OVER }, actorUserId),
+    ).resolves.toEqual(updated);
+    expect(tx.shipment.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ trackingCode: undefined }) }),
+    );
   });
 
   it('hands a courier shipment over without requiring a postal tracking code', async () => {
