@@ -177,6 +177,7 @@ const RUN_STATUSES = new Set<AdminSupplierCrawlRunStatus>([
   'FAILED',
   'CANCELLED',
 ]);
+const SUPPORTED_CRAWLER_ADAPTERS = new Set(['bsj-silver', 'saatyek-watch']);
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
@@ -220,7 +221,7 @@ export function parseSupplierImportSources(
       adapterKey,
       supplierName,
       supplierCode,
-      supported: adapterKey === 'bsj-silver',
+      supported: adapterKey !== null && SUPPORTED_CRAWLER_ADAPTERS.has(adapterKey),
       lastRunStatus: text(lastRun?.status),
       lastRunAt: text(lastRun?.createdAt),
     } satisfies AdminSupplierImportSource;

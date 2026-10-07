@@ -15,26 +15,46 @@ import {
 } from '@/lib/supplier-imports/supplier-imports-model';
 
 describe('supplier imports model', () => {
-  it('marks the BSJ adapter as supported and parses the latest run', () => {
+  it.each([
+    ['bsj-silver', 'بی‌اس‌جی', 'BSJ'],
+    ['saatyek-watch', 'ساعت یک', 'SAATYEK'],
+  ])('marks the %s adapter as supported and parses the latest run', (adapterKey, name, code) => {
     expect(
       parseSupplierImportSources([
         {
           id: 'source-1',
           name: 'سایت اصلی',
-          baseUrl: 'https://bsjsilver.com/',
-          hostname: 'bsjsilver.com',
-          adapterKey: 'bsj-silver',
-          supplier: { name: 'بی‌اس‌جی', code: 'BSJ' },
+          baseUrl:
+            adapterKey === 'saatyek-watch' ? 'https://saatyek.com/' : 'https://bsjsilver.com/',
+          hostname: adapterKey === 'saatyek-watch' ? 'saatyek.com' : 'bsjsilver.com',
+          adapterKey,
+          supplier: { name, code },
           crawlRuns: [{ status: 'SUCCEEDED', createdAt: '2026-09-27T10:00:00.000Z' }],
         },
       ])?.[0],
     ).toEqual(
       expect.objectContaining({
         supported: true,
-        supplierName: 'بی‌اس‌جی',
+        supplierName: name,
         lastRunStatus: 'SUCCEEDED',
       }),
     );
+  });
+
+  it('keeps an unknown adapter out of crawl operations', () => {
+    expect(
+      parseSupplierImportSources([
+        {
+          id: 'source-1',
+          name: 'سایت آزمایشی',
+          baseUrl: 'https://supplier.example/',
+          hostname: 'supplier.example',
+          adapterKey: 'unknown-adapter',
+          supplier: { name: 'تأمین‌کننده آزمایشی', code: 'TEST' },
+          crawlRuns: [],
+        },
+      ])?.[0],
+    ).toEqual(expect.objectContaining({ supported: false }));
   });
 
   it('parses a review draft without treating supplier retail price as a sale price', () => {
