@@ -415,5 +415,10 @@ describe('InventoryService', () => {
         isLowStock: true,
       }),
     ]);
+    expect(prisma.productVariant.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ product: { createdAt: 'desc' } }, { productId: 'asc' }, { sku: 'asc' }],
+      }),
+    );
   });
 });

@@ -587,7 +587,7 @@ export class InventoryService {
         deletedAt: null,
         product: { deletedAt: null },
       },
-      orderBy: [{ productId: 'asc' }, { sku: 'asc' }],
+      orderBy: [{ product: { createdAt: 'desc' } }, { productId: 'asc' }, { sku: 'asc' }],
       select: {
         id: true,
         sku: true,

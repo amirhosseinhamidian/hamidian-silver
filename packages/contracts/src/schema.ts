@@ -244,6 +244,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/categories/{categoryId}/featured-image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_uploadCategoryFeaturedImage_v1"];
+        delete: operations["CatalogController_removeCategoryFeaturedImage_v1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/categories/{categoryId}/hero-mobile-image": {
         parameters: {
             query?: never;
@@ -3213,6 +3229,7 @@ export interface components {
             description: string | null;
             parentId: string | null;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            featuredImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             seoTitle?: string | null;
             seoDescription?: string | null;
@@ -3263,6 +3280,7 @@ export interface components {
             description: string | null;
             parentId: string | null;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            featuredImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             id: string;
             name: string;
             slug: string;
@@ -4426,6 +4444,7 @@ export interface components {
             description: string | null;
             parentId: string | null;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            featuredImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             id: string;
             name: string;
             slug: string;
@@ -5130,6 +5149,52 @@ export interface operations {
         };
     };
     CatalogController_removeCategoryImage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_uploadCategoryFeaturedImage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    altText?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogController_removeCategoryFeaturedImage_v1: {
         parameters: {
             query?: never;
             header?: never;

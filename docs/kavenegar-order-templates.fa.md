@@ -4,7 +4,7 @@
 
 ## قالب‌های لازم
 
-در پنل کاوه‌نگار، از بخش «اعتبارسنجی / قالب‌ها» هفت قالب زیر را بسازید. نام قالب‌ها انگلیسی و بدون فاصله یا `_` است.
+در پنل کاوه‌نگار، از بخش «اعتبارسنجی / قالب‌ها» هشت قالب زیر را بسازید. نام قالب‌ها انگلیسی و بدون فاصله یا `_` است.
 
 ### تأیید پرداخت
 
@@ -86,6 +86,21 @@
 
 دلیل کامل لغو سفارش در صفحه جزئیات سفارش مشتری نمایش داده می‌شود و داخل توکن پیامک قرار نمی‌گیرد.
 
+### موجود شدن محصول
+
+- نام: `hamidianstock`
+- متغیر: `KAVENEGAR_STOCK_AVAILABLE_TEMPLATE`
+
+```text
+محصول %token دوباره موجود شد.
+برای مشاهده و خرید به وبسایت گالری حمیدیان مراجعه کنید.
+نقره حمیدیان
+```
+
+نام محصول و در صورت وجود نام/سایز تنوع، در `%token` قرار می‌گیرد. فاصله‌های معمولی
+نام محصول پیش از ارسال به نیم‌فاصله تبدیل می‌شوند تا توکن VerifyLookup معتبر بماند؛
+متن نمایش‌داده‌شده همچنان خوانا است.
+
 ## تنظیم production.env
 
 بعد از تأیید همه قالب‌ها، این مقادیر را به `/etc/hamidian-silver/production.env` اضافه کنید:
@@ -102,9 +117,11 @@ KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE=hamidiantracking
 KAVENEGAR_ORDER_SHIPPED_TEMPLATE=hamidianshipped
 KAVENEGAR_ORDER_DELIVERED_TEMPLATE=hamidiandelivered
 KAVENEGAR_ORDER_CANCELLED_TEMPLATE=hamidiancancelled
+KAVENEGAR_STOCK_AVAILABLE_TEMPLATE=hamidianstock
 ```
 
-`KAVENEGAR_SENDER` فقط برای پیام آزاد اعلان موجودشدن کالا استفاده می‌شود. پیام‌های سفارش و OTP به sender وابسته نیستند.
+`KAVENEGAR_SENDER` فقط برای پیام‌های آزاد عملیاتی استفاده می‌شود. پیام‌های سفارش،
+موجودشدن محصول و OTP از VerifyLookup استفاده می‌کنند و به sender وابسته نیستند.
 
 فایل env و Compose را اعتبارسنجی کنید:
 

@@ -85,16 +85,13 @@ function categoryStatus(category: AdminCategory) {
 }
 
 function CategoryIdentity({ category }: Readonly<{ category: AdminCategory }>) {
+  const thumbnail = category.featuredImage ?? category.image;
+
   return (
     <div className="flex min-w-0 items-center gap-3">
       <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-[var(--admin-radius-md)] bg-[var(--admin-color-primary-soft)] font-black text-[var(--admin-color-primary)]">
-        {category.image ? (
-          <img
-            src={category.image.url}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
+        {thumbnail ? (
+          <img src={thumbnail.url} alt="" className="h-full w-full object-cover" loading="lazy" />
         ) : (
           category.name.slice(0, 1)
         )}
@@ -140,10 +137,13 @@ function CategoryForm({
   onPendingChange,
 }: CategoryFormProps) {
   const router = useRouter();
+  const featuredFileInputId = useId();
   const fileInputId = useId();
   const mobileFileInputId = useId();
+  const [featuredFile, setFeaturedFile] = useState<File | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [mobileFile, setMobileFile] = useState<File | null>(null);
+  const [removeFeaturedImage, setRemoveFeaturedImage] = useState(false);
   const [removeImage, setRemoveImage] = useState(false);
   const [removeMobileImage, setRemoveMobileImage] = useState(false);
   const [seo, setSeo] = useState(() => createSeoEditorValue(category));
@@ -191,6 +191,12 @@ function CategoryForm({
       return setError(
         'canonical دسته‌بندی باید یک مسیر امن زیر /categories/ و بدون query یا fragment باشد.',
       );
+    if (
+      featuredFile &&
+      (!ACCEPTED_IMAGE_TYPES.has(featuredFile.type) || featuredFile.size > MAX_IMAGE_BYTES)
+    ) {
+      return setError('تصویر شاخص باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
+    }
     if (file && (!ACCEPTED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
       return setError('تصویر Hero دسکتاپ باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
     }
@@ -233,6 +239,22 @@ function CategoryForm({
         category?.id ?? (typeof payloadRecord?.id === 'string' ? payloadRecord.id : null);
       if (!savedCategoryId) throw new Error('شناسه دسته‌بندی جدید از سرور دریافت نشد.');
       categorySaved = true;
+
+      if (featuredFile) {
+        const featuredImageData = new FormData();
+        featuredImageData.set('file', featuredFile);
+        featuredImageData.set('altText', name);
+        const featuredImageResponse = await fetch(
+          `/api/catalog/categories/${savedCategoryId}/featured-image`,
+          { method: 'POST', body: featuredImageData },
+        );
+        const featuredImagePayload = (await featuredImageResponse
+          .json()
+          .catch(() => null)) as unknown;
+        if (!featuredImageResponse.ok) throw new Error(responseError(featuredImagePayload));
+      } else if (category?.featuredImage && removeFeaturedImage) {
+        await requestJson(`/api/catalog/categories/${category.id}/featured-image`, 'DELETE');
+      }
 
       if (file) {
         const imageData = new FormData();
@@ -387,6 +409,59 @@ function CategoryForm({
           />
         )}
       </FormField>
+
+      <section className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] p-3">
+        <div className="flex items-center gap-3">
+          {category?.featuredImage && !removeFeaturedImage && !featuredFile ? (
+            <img
+              src={category.featuredImage.url}
+              alt={category.featuredImage.altText ?? category.name}
+              className="size-16 rounded-[var(--admin-radius-md)] object-cover"
+            />
+          ) : (
+            <span className="grid size-16 place-items-center rounded-[var(--admin-radius-md)] bg-[var(--admin-color-surface-subtle)] text-center text-xs text-[var(--admin-color-muted)]">
+              بدون تصویر شاخص
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <label htmlFor={featuredFileInputId} className="text-sm font-bold">
+              تصویر شاخص دسته‌بندی
+            </label>
+            <p className="mt-1 truncate text-xs text-[var(--admin-color-muted)]">
+              {featuredFile
+                ? featuredFile.name
+                : 'برای Thumbnail و کارت صفحه اول؛ ابعاد پیشنهادی ۱۲۰۰×۹۰۰ (نسبت ۴:۳)'}
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <label
+            htmlFor={featuredFileInputId}
+            className="inline-flex min-h-9 cursor-pointer items-center rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] px-3 text-xs font-semibold hover:bg-[var(--admin-color-surface-subtle)]"
+          >
+            انتخاب تصویر شاخص
+          </label>
+          <input
+            id={featuredFileInputId}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/avif"
+            className="sr-only"
+            onChange={(event) => {
+              setFeaturedFile(event.target.files?.[0] ?? null);
+              setRemoveFeaturedImage(false);
+            }}
+          />
+          {category?.featuredImage && !featuredFile ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setRemoveFeaturedImage((current) => !current)}
+            >
+              {removeFeaturedImage ? 'لغو حذف تصویر شاخص' : 'حذف تصویر شاخص فعلی'}
+            </Button>
+          ) : null}
+        </div>
+      </section>
 
       <section className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] p-3">
         <div className="flex items-center gap-3">
@@ -555,7 +630,7 @@ function CategorySheet({
       </BottomSheetTrigger>
       <BottomSheetContent
         title={category ? `ویرایش ${category.name}` : 'افزودن دسته‌بندی'}
-        description="ساختار، وضعیت، ترتیب و تصویر Hero دسته را تنظیم کنید."
+        description="ساختار، وضعیت، تصویر شاخص و تصاویر Hero دسته را تنظیم کنید."
         height="large"
         footer={
           <>
@@ -592,6 +667,7 @@ function ReadonlyCategoryDetails({ category }: Readonly<{ category: AdminCategor
         ['زیرمجموعه', formatAdminInteger(category.childCount)],
         ['محصول', formatAdminInteger(category.productCount)],
         ['توضیحات', category.description ?? 'ثبت نشده'],
+        ['تصویر شاخص', category.featuredImage ? 'ثبت شده' : 'ثبت نشده'],
         ['Hero دسکتاپ', category.image ? 'ثبت شده' : 'ثبت نشده'],
         ['Hero موبایل/تبلت', category.heroMobileImage ? 'ثبت شده' : 'ثبت نشده'],
         ['آخرین ویرایش', formatAdminDateTime(category.updatedAt)],

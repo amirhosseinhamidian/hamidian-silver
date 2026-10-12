@@ -279,6 +279,7 @@ model Media {
   updatedAt               DateTime       @updatedAt @db.Timestamptz(3)
   deletedAt               DateTime?      @db.Timestamptz(3)
   categoryImages          Category[]     @relation("CategoryImage")
+  categoryFeaturedImages   Category[]     @relation("CategoryFeaturedImage")
   categoryHeroMobileImages Category[]    @relation("CategoryHeroMobileImage")
   brandImages             Brand[]        @relation("BrandImage")
   brandHeroImages         Brand[]        @relation("BrandHeroImage")
@@ -460,6 +461,7 @@ model Category {
   seoOgMediaId     String?           @db.Uuid
   parentId    String?           @db.Uuid
   imageId     String?           @db.Uuid
+  featuredImageId String?       @db.Uuid
   heroMobileImageId String?     @db.Uuid
   sortOrder   Int               @default(0)
   isActive    Boolean           @default(true)
@@ -469,6 +471,7 @@ model Category {
   parent      Category?         @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
   children    Category[]        @relation("CategoryTree")
   image       Media?            @relation("CategoryImage", fields: [imageId], references: [id], onDelete: SetNull)
+  featuredImage Media?          @relation("CategoryFeaturedImage", fields: [featuredImageId], references: [id], onDelete: SetNull)
   heroMobileImage Media?        @relation("CategoryHeroMobileImage", fields: [heroMobileImageId], references: [id], onDelete: SetNull)
   seoOgMedia       Media?            @relation("CategorySeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   products    ProductCategory[]
@@ -476,6 +479,7 @@ model Category {
 
   @@index([parentId])
   @@index([imageId])
+  @@index([featuredImageId])
   @@index([heroMobileImageId])
   @@index([seoOgMediaId])
   @@index([isActive, sortOrder])

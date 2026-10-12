@@ -526,6 +526,7 @@ export function InventoryManagementView({
         const matchesQuery = !normalizedQuery || haystack.includes(normalizedQuery);
         const matchesStatus =
           status === 'all' ||
+          (status === 'uninitialized' && item.inventoryId === null) ||
           (status === 'out' && item.available <= 0) ||
           (status === 'low' && item.available > 0 && item.isLowStock) ||
           (status === 'reserved' && item.reserved > 0) ||
@@ -696,6 +697,7 @@ export function InventoryManagementView({
               aria-label="فیلتر وضعیت موجودی"
               options={[
                 { value: 'all', label: 'همه وضعیت‌ها' },
+                { value: 'uninitialized', label: 'تازه اضافه‌شده (بدون ثبت موجودی)' },
                 { value: 'out', label: 'ناموجود' },
                 { value: 'low', label: 'کم‌موجود' },
                 { value: 'reserved', label: 'دارای رزرو' },

@@ -77,6 +77,7 @@ export const envValidationSchema = Joi.object({
   KAVENEGAR_ORDER_SHIPPED_TEMPLATE: kavenegarTemplate,
   KAVENEGAR_ORDER_DELIVERED_TEMPLATE: kavenegarTemplate,
   KAVENEGAR_ORDER_CANCELLED_TEMPLATE: kavenegarTemplate,
+  KAVENEGAR_STOCK_AVAILABLE_TEMPLATE: kavenegarTemplate,
   ADMIN_APP_ORIGIN: Joi.string()
     .uri({ scheme: ['http', 'https'] })
     .default('http://localhost:3002'),

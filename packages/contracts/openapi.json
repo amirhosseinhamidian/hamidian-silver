@@ -665,6 +665,74 @@
         ]
       }
     },
+    "/api/v1/catalog/categories/{categoryId}/featured-image": {
+      "post": {
+        "operationId": "CatalogController_uploadCategoryFeaturedImage_v1",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "altText": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogController_removeCategoryFeaturedImage_v1",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/api/v1/catalog/categories/{categoryId}/hero-mobile-image": {
       "post": {
         "operationId": "CatalogController_uploadCategoryMobileHero_v1",
@@ -8103,6 +8171,15 @@
               }
             ]
           },
+          "featuredImage": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
           "heroMobileImage": {
             "nullable": true,
             "type": "object",
@@ -8350,6 +8427,15 @@
             "nullable": true
           },
           "image": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "featuredImage": {
             "nullable": true,
             "type": "object",
             "allOf": [
@@ -13035,6 +13121,15 @@
             "nullable": true
           },
           "image": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "featuredImage": {
             "nullable": true,
             "type": "object",
             "allOf": [

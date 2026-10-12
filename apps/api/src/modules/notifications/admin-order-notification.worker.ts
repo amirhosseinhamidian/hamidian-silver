@@ -4,12 +4,16 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 
 import { NotificationOutboxStatus, PaymentStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { formatAdminOrderMessage } from './admin-order-message.formatter';
 import { AdminMessageSender } from './admin-message.sender';
 
 const MAX_ATTEMPTS = 8;
 const DEFAULT_BATCH_SIZE = 50;
 const DEFAULT_STALE_MINUTES = 10;
+const TEXT_FALLBACK_ERROR_PREFIX = '[telegram-text-fallback] ';
+const TELEGRAM_IMAGE_FETCH_ERROR =
+  /^TELEGRAM(?: relay)? rejected the message: (?:TELEGRAM_REJECTED: )?Bad Request: failed to get HTTP URL content\.?$/i;
 
 @Injectable()
 export class AdminOrderNotificationWorker {
@@ -22,6 +26,7 @@ export class AdminOrderNotificationWorker {
   constructor(
     private readonly prisma: PrismaService,
     private readonly sender: AdminMessageSender,
+    private readonly publicMediaUrl: PublicMediaUrlService,
     config: ConfigService,
   ) {
     this.adminOrigin = config.get<string>('ADMIN_APP_ORIGIN', 'http://localhost:3002');
@@ -81,6 +86,8 @@ export class AdminOrderNotificationWorker {
           delivery.orderId,
           delivery.channel,
           delivery.chatIdSnapshot,
+          delivery.attempts,
+          delivery.lastError,
         );
       }
     } catch (error) {
@@ -95,6 +102,8 @@ export class AdminOrderNotificationWorker {
     orderId: string,
     channel: Parameters<AdminMessageSender['send']>[0],
     chatId: string,
+    previousAttempts: number,
+    previousError: string | null,
   ): Promise<void> {
     const claimedAt = new Date();
     const staleBefore = new Date(claimedAt.getTime() - this.staleMs);
@@ -151,6 +160,20 @@ export class AdminOrderNotificationWorker {
               platingType: true,
               quantity: true,
               lineTotalToman: true,
+              variant: {
+                select: {
+                  product: {
+                    select: {
+                      media: {
+                        where: { media: { deletedAt: null } },
+                        orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+                        take: 1,
+                        select: { media: { select: { storageKey: true } } },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -163,7 +186,17 @@ export class AdminOrderNotificationWorker {
           `Admin order notification is not ready at ${order.payment?.status ?? 'NO_PAYMENT'}.`,
         );
       }
-      await this.sender.send(channel, chatId, formatAdminOrderMessage(order, this.adminOrigin));
+      const textFallback = this.shouldUseTextFallback(channel, previousAttempts + 1, previousError);
+      const storageKey = order.items.find((item) => item.variant.product.media[0])?.variant.product
+        .media[0]?.media.storageKey;
+      const imageUrl = storageKey ? this.publicMediaUrl.resolve(storageKey) : null;
+      const sendOptions = imageUrl && !textFallback ? { imageUrl } : {};
+      await this.sender.send(
+        channel,
+        chatId,
+        formatAdminOrderMessage(order, this.adminOrigin),
+        sendOptions,
+      );
       await this.prisma.adminOrderNotificationDelivery.updateMany({
         where: { id: deliveryId, status: NotificationOutboxStatus.PROCESSING, claimedAt },
         data: {
@@ -174,24 +207,37 @@ export class AdminOrderNotificationWorker {
         },
       });
     } catch (error) {
-      const attempts = await this.prisma.adminOrderNotificationDelivery.findUnique({
-        where: { id: deliveryId },
-        select: { attempts: true },
-      });
-      const attemptCount = attempts?.attempts ?? MAX_ATTEMPTS;
+      const attemptCount = previousAttempts + 1;
+      const textFallback = this.shouldUseTextFallback(channel, attemptCount, previousError);
+      const errorMessage = this.errorMessage(error);
       await this.prisma.adminOrderNotificationDelivery.updateMany({
         where: { id: deliveryId, status: NotificationOutboxStatus.PROCESSING, claimedAt },
         data: {
           status: NotificationOutboxStatus.FAILED,
           nextAttemptAt: new Date(Date.now() + this.retryDelayMs(attemptCount)),
           claimedAt: null,
-          lastError: this.errorMessage(error).slice(0, 1000),
+          lastError: `${textFallback ? TEXT_FALLBACK_ERROR_PREFIX : ''}${errorMessage}`.slice(
+            0,
+            1000,
+          ),
         },
       });
       this.logger.warn(
         `Admin order notification ${deliveryId} failed: ${this.errorMessage(error)}`,
       );
     }
+  }
+
+  private shouldUseTextFallback(
+    channel: Parameters<AdminMessageSender['send']>[0],
+    attempt: number,
+    previousError: string | null,
+  ): boolean {
+    if (channel !== 'TELEGRAM' || attempt < 4 || !previousError) return false;
+    return (
+      previousError.startsWith(TEXT_FALLBACK_ERROR_PREFIX) ||
+      TELEGRAM_IMAGE_FETCH_ERROR.test(previousError)
+    );
   }
 
   private retryDelayMs(attempts: number): number {

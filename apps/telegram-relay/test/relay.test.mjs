@@ -85,6 +85,90 @@ test('forwards an authenticated message and returns the Telegram message ID', as
   });
 });
 
+test('forwards an image as a Telegram photo with the complete message as its caption', async () => {
+  configureRelay();
+  let forwardedUrl;
+  let forwardedBody;
+  globalThis.fetch = async (url, init) => {
+    forwardedUrl = String(url);
+    forwardedBody = JSON.parse(init.body);
+    return Response.json({ ok: true, result: { message_id: 43 } });
+  };
+
+  const response = await POST(
+    relayRequest({
+      chatId: '123456789',
+      message: 'اطلاعات کامل سفارش',
+      imageUrl: 'https://media.hamidian.shop/catalog/product.png',
+    }),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(forwardedUrl, `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`);
+  assert.deepEqual(forwardedBody, {
+    chat_id: '123456789',
+    photo: 'https://media.hamidian.shop/catalog/product.png',
+    caption: 'اطلاعات کامل سفارش',
+  });
+});
+
+test('preserves a long complete order message in a second Telegram request', async () => {
+  configureRelay();
+  const requests = [];
+  globalThis.fetch = async (url, init) => {
+    requests.push({ url: String(url), body: JSON.parse(init.body) });
+    return Response.json({ ok: true, result: { message_id: requests.length } });
+  };
+  const message = 'س'.repeat(1025);
+
+  const response = await POST(
+    relayRequest({
+      chatId: '123456789',
+      message,
+      imageUrl: 'https://media.hamidian.shop/catalog/product.png',
+    }),
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(requests, [
+    {
+      url: `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,
+      body: {
+        chat_id: '123456789',
+        photo: 'https://media.hamidian.shop/catalog/product.png',
+      },
+    },
+    {
+      url: `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+      body: { chat_id: '123456789', text: message },
+    },
+  ]);
+});
+
+test('returns the exact Telegram image-fetch rejection without exposing credentials', async () => {
+  configureRelay();
+  globalThis.fetch = async () =>
+    Response.json(
+      { ok: false, description: 'Bad Request: failed to get HTTP URL content' },
+      { status: 400 },
+    );
+
+  const response = await POST(
+    relayRequest({
+      chatId: '123456789',
+      message: 'test',
+      imageUrl: 'https://media.hamidian.shop/catalog/product.png',
+    }),
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 502);
+  assert.equal(body.code, 'TELEGRAM_REJECTED');
+  assert.equal(body.description, 'Bad Request: failed to get HTTP URL content');
+  assert.equal(JSON.stringify(body).includes(BOT_TOKEN), false);
+  assert.equal(JSON.stringify(body).includes(RELAY_SECRET), false);
+});
+
 test('returns a sanitized Telegram rejection and retry delay', async () => {
   configureRelay();
   globalThis.fetch = async () =>

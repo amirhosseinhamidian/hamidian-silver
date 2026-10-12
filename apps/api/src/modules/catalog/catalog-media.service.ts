@@ -195,6 +195,86 @@ export class CatalogMediaService {
     return { removed: true };
   }
 
+  async uploadForCategoryFeaturedImage(
+    categoryId: string,
+    file: CatalogUploadFile | undefined,
+    dto: UploadMediaDto,
+  ) {
+    if (!file) throw new BadRequestException('Image file is required.');
+    const category = await this.prisma.category.findFirst({
+      where: { id: categoryId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!category) throw new NotFoundException('Category was not found.');
+
+    const stored = await this.localMediaStorage.storeImage(file, dto.altText);
+    try {
+      const result = await this.prisma.$transaction(async (transaction) => {
+        const current = await transaction.category.findFirst({
+          where: { id: categoryId, deletedAt: null },
+          select: { id: true, featuredImageId: true },
+        });
+        if (!current) throw new NotFoundException('Category was not found.');
+
+        const media = await transaction.media.create({
+          data: {
+            storageKey: stored.storageKey,
+            originalName: normalizeOptionalText(file.originalname, 255),
+            mimeType: stored.mimeType,
+            sizeBytes: stored.sizeBytes,
+            altText: normalizeOptionalText(dto.altText, 255),
+          },
+        });
+        await transaction.category.update({
+          where: { id: categoryId },
+          data: { featuredImageId: media.id },
+        });
+        const orphanedStorageKey = current.featuredImageId
+          ? await this.markMediaDeletedWhenOrphaned(transaction, current.featuredImageId)
+          : null;
+        return { media, orphanedStorageKey };
+      });
+
+      if (result.orphanedStorageKey) {
+        await this.localMediaStorage.delete(result.orphanedStorageKey).catch(() => undefined);
+      }
+      return {
+        categoryId,
+        featuredImage: {
+          id: result.media.id,
+          url: this.publicMediaUrl.resolve(result.media.storageKey),
+          mimeType: result.media.mimeType,
+          altText: result.media.altText,
+        },
+      };
+    } catch (error) {
+      await this.localMediaStorage.delete(stored.storageKey).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async removeCategoryFeaturedImage(categoryId: string) {
+    const orphanedStorageKey = await this.prisma.$transaction(async (transaction) => {
+      const category = await transaction.category.findFirst({
+        where: { id: categoryId, deletedAt: null },
+        select: { id: true, featuredImageId: true },
+      });
+      if (!category) throw new NotFoundException('Category was not found.');
+      if (!category.featuredImageId) return null;
+
+      await transaction.category.update({
+        where: { id: categoryId },
+        data: { featuredImageId: null },
+      });
+      return this.markMediaDeletedWhenOrphaned(transaction, category.featuredImageId);
+    });
+
+    if (orphanedStorageKey) {
+      await this.localMediaStorage.delete(orphanedStorageKey).catch(() => undefined);
+    }
+    return { removed: true };
+  }
+
   async uploadForCategoryMobileHero(
     categoryId: string,
     file: CatalogUploadFile | undefined,
@@ -669,6 +749,7 @@ export class CatalogMediaService {
             select: {
               productMedia: true,
               categoryImages: true,
+              categoryFeaturedImages: true,
               categoryHeroMobileImages: true,
               brandImages: true,
               brandHeroImages: true,
@@ -742,6 +823,7 @@ export class CatalogMediaService {
           select: {
             productMedia: true,
             categoryImages: true,
+            categoryFeaturedImages: true,
             categoryHeroMobileImages: true,
             brandImages: true,
             brandHeroImages: true,

@@ -58,6 +58,7 @@ export default async function CategoriesPage() {
       >
         {roots.map((category, index) => {
           const children = childrenByParent.get(category.id) ?? [];
+          const thumbnail = category.featuredImage ?? category.image;
 
           return (
             <article
@@ -65,11 +66,11 @@ export default async function CategoriesPage() {
               className="overflow-hidden border border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)]"
             >
               <Link href={`/categories/${category.slug}`} className="group block">
-                {category.image?.url ? (
+                {thumbnail?.url ? (
                   <div className="aspect-square overflow-hidden bg-[var(--sf-color-surface)]">
                     <CatalogMedia
-                      media={category.image}
-                      alt={category.image.altText?.trim() || category.name}
+                      media={thumbnail}
+                      alt={thumbnail.altText?.trim() || category.name}
                       sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                       preload={index === 0}
                       fetchPriority={index === 0 ? 'high' : undefined}

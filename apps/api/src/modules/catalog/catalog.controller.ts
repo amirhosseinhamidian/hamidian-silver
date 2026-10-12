@@ -200,6 +200,38 @@ export class CatalogController {
     return this.catalogMediaService.removeCategoryImage(categoryId);
   }
 
+  @Post('categories/:categoryId/featured-image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MEDIA_UPLOAD_LIMIT_BYTES, files: 1 } }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        altText: { type: 'string', minLength: 1, maxLength: 255 },
+      },
+    },
+  })
+  uploadCategoryFeaturedImage(
+    @Param('categoryId', new ParseUUIDPipe({ version: '4' })) categoryId: string,
+    @UploadedFile() file: CatalogUploadFile | undefined,
+    @Body() dto: UploadMediaDto,
+  ) {
+    return this.catalogMediaService.uploadForCategoryFeaturedImage(categoryId, file, dto);
+  }
+
+  @Delete('categories/:categoryId/featured-image')
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  removeCategoryFeaturedImage(
+    @Param('categoryId', new ParseUUIDPipe({ version: '4' })) categoryId: string,
+  ) {
+    return this.catalogMediaService.removeCategoryFeaturedImage(categoryId);
+  }
+
   @Post('categories/:categoryId/hero-mobile-image')
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
   @UseInterceptors(

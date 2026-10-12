@@ -245,6 +245,50 @@ describe('CatalogMediaService', () => {
     expect(localMediaStorage.delete).toHaveBeenCalledWith('catalog/2026/09/category.webp');
   });
 
+  it('stores and attaches a featured category image independently from hero images', async () => {
+    const categoryId = '10000000-0000-4000-8000-000000000001';
+    const mediaId = '10000000-0000-4000-8000-000000000003';
+    prisma.category.findFirst.mockResolvedValue({ id: categoryId });
+    localMediaStorage.storeImage.mockResolvedValue({
+      storageKey: 'catalog/2026/10/category-featured.webp',
+      mimeType: 'image/webp',
+      sizeBytes: 11,
+    });
+    const transaction = {
+      category: {
+        findFirst: jest.fn().mockResolvedValue({ id: categoryId, featuredImageId: null }),
+        update: jest.fn(),
+      },
+      media: {
+        create: jest.fn().mockResolvedValue({
+          id: mediaId,
+          storageKey: 'catalog/2026/10/category-featured.webp',
+          mimeType: 'image/webp',
+          altText: 'انگشتر',
+        }),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(
+      service.uploadForCategoryFeaturedImage(categoryId, file, { altText: 'انگشتر' }),
+    ).resolves.toEqual({
+      categoryId,
+      featuredImage: {
+        id: mediaId,
+        url: 'https://media.example/catalog/2026/10/category-featured.webp',
+        mimeType: 'image/webp',
+        altText: 'انگشتر',
+      },
+    });
+    expect(transaction.category.update).toHaveBeenCalledWith({
+      where: { id: categoryId },
+      data: { featuredImageId: mediaId },
+    });
+  });
+
   it('stores and attaches a brand image through the shared media disk', async () => {
     const brandId = '10000000-0000-4000-8000-000000000001';
     const mediaId = '10000000-0000-4000-8000-000000000002';

@@ -239,9 +239,7 @@ async function run(): Promise<void> {
     // Streaming in Next.js can commit HTTP 200 before notFound() is raised.
     // Treat it as a documented fallback, not as a true HTTP 404.
     const streamedNotFound =
-      response.status === 200 &&
-      body.includes('NEXT_HTTP_ERROR_FALLBACK;404') &&
-      hasNoIndex(body);
+      response.status === 200 && body.includes('NEXT_HTTP_ERROR_FALLBACK;404') && hasNoIndex(body);
     assert(
       streamedNotFound,
       `Out-of-range catalog returned ${response.status} without a streamed 404 and noindex.`,

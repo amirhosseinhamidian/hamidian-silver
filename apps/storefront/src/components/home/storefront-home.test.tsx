@@ -36,6 +36,13 @@ const homepage: PublicHomepage = {
       parentId: null,
       sortOrder: 0,
       image: null,
+      featuredImage: {
+        url: 'https://media.example/rings-featured.webp',
+        mimeType: 'image/webp',
+        altText: 'تصویر شاخص انگشتر',
+        width: 1200,
+        height: 900,
+      },
       priority: 1,
     },
     {
@@ -46,6 +53,7 @@ const homepage: PublicHomepage = {
       parentId: null,
       sortOrder: 0,
       image: null,
+      featuredImage: null,
       priority: 3,
     },
   ],
@@ -76,6 +84,10 @@ describe('StorefrontHome', () => {
     expect(screen.getByRole('heading', { name: 'برند 4' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'برند 5' })).not.toBeInTheDocument();
     expect(screen.getByText('ضمانت کیفیت')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'تصویر شاخص انگشتر' })).toHaveAttribute(
+      'src',
+      'https://media.example/rings-featured.webp',
+    );
     expect(screen.getByRole('heading', { name: 'کشورهای سازنده' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ایتالیا/ })).toHaveAttribute(
       'href',
@@ -88,6 +100,9 @@ describe('StorefrontHome', () => {
     const brands = screen.getByRole('heading', { name: 'برندها' });
     const firstBrand = screen.getByRole('heading', { name: 'برند 1' });
     const lastCategory = screen.getByRole('heading', { name: 'گردنبند' });
+
+    expect(firstCategory.closest('a')).toHaveTextContent('مشاهده محصولات');
+    expect(lastCategory.closest('a')).toHaveTextContent('مشاهده محصولات');
 
     expect(newProducts).toHaveClass('text-lg', 'sm:text-3xl');
     expect(firstBrand.closest('ul')).toHaveClass('grid-cols-4');

@@ -10,6 +10,12 @@ type BotApiResponse = Readonly<{
   retryAfterSeconds?: number;
 }>;
 
+const TELEGRAM_MAX_CAPTION_LENGTH = 1024;
+
+export type AdminMessageSendOptions = Readonly<{
+  imageUrl?: string;
+}>;
+
 @Injectable()
 export class AdminMessageSender {
   private readonly timeoutMs: number;
@@ -23,10 +29,15 @@ export class AdminMessageSender {
       this.config.get<string>('TELEGRAM_RELAY_SECRET')?.trim() || undefined;
   }
 
-  async send(channel: AdminMessageChannel, chatId: string, message: string): Promise<void> {
+  async send(
+    channel: AdminMessageChannel,
+    chatId: string,
+    message: string,
+    options: AdminMessageSendOptions = {},
+  ): Promise<void> {
     if (channel === AdminMessageChannel.TELEGRAM) {
       if (this.telegramRelayUrl || this.telegramRelaySecret) {
-        await this.sendTelegramThroughRelay(chatId, message);
+        await this.sendTelegramThroughRelay(chatId, message, options.imageUrl);
         return;
       }
 
@@ -36,6 +47,7 @@ export class AdminMessageSender {
         'https://api.telegram.org',
         chatId,
         message,
+        options.imageUrl,
       );
       return;
     }
@@ -49,7 +61,11 @@ export class AdminMessageSender {
     );
   }
 
-  private async sendTelegramThroughRelay(chatId: string, message: string): Promise<void> {
+  private async sendTelegramThroughRelay(
+    chatId: string,
+    message: string,
+    imageUrl?: string,
+  ): Promise<void> {
     if (!this.telegramRelayUrl || !this.telegramRelaySecret) {
       throw new Error('TELEGRAM_RELAY_URL and TELEGRAM_RELAY_SECRET must be configured together.');
     }
@@ -62,7 +78,7 @@ export class AdminMessageSender {
           Authorization: `Bearer ${this.telegramRelaySecret}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ chatId, message }),
+        body: JSON.stringify({ chatId, message, ...(imageUrl ? { imageUrl } : {}) }),
         signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch (error) {
@@ -85,16 +101,45 @@ export class AdminMessageSender {
     baseUrl: string,
     chatId: string,
     message: string,
+    imageUrl?: string,
   ): Promise<void> {
     const token = this.config.get<string>(tokenKey)?.trim();
     if (!token) throw new Error(`${tokenKey} is not configured.`);
 
+    if (channel === AdminMessageChannel.TELEGRAM && imageUrl) {
+      await this.sendDirectBotRequest(channel, token, baseUrl, 'sendPhoto', {
+        chat_id: chatId,
+        photo: imageUrl,
+        ...(message.length <= TELEGRAM_MAX_CAPTION_LENGTH ? { caption: message } : {}),
+      });
+      if (message.length > TELEGRAM_MAX_CAPTION_LENGTH) {
+        await this.sendDirectBotRequest(channel, token, baseUrl, 'sendMessage', {
+          chat_id: chatId,
+          text: message,
+        });
+      }
+      return;
+    }
+
+    await this.sendDirectBotRequest(channel, token, baseUrl, 'sendMessage', {
+      chat_id: chatId,
+      text: message,
+    });
+  }
+
+  private async sendDirectBotRequest(
+    channel: AdminMessageChannel,
+    token: string,
+    baseUrl: string,
+    method: 'sendMessage' | 'sendPhoto',
+    body: Readonly<Record<string, string>>,
+  ): Promise<void> {
     let response: Response;
     try {
-      response = await fetch(`${baseUrl}/bot${token}/sendMessage`, {
+      response = await fetch(`${baseUrl}/bot${token}/${method}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: message }),
+        body: JSON.stringify(body),
         signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch (error) {

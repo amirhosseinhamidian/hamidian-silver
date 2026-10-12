@@ -632,6 +632,16 @@ export class CatalogService {
             deletedAt: true,
           },
         },
+        featuredImage: {
+          select: {
+            storageKey: true,
+            mimeType: true,
+            altText: true,
+            width: true,
+            height: true,
+            deletedAt: true,
+          },
+        },
         heroMobileImage: {
           select: {
             storageKey: true,
@@ -675,6 +685,16 @@ export class CatalogService {
               altText: category.image.altText,
               width: category.image.width,
               height: category.image.height,
+            }
+          : null,
+      featuredImage:
+        category.featuredImage && !category.featuredImage.deletedAt
+          ? {
+              url: this.publicMediaUrl.resolve(category.featuredImage.storageKey),
+              mimeType: category.featuredImage.mimeType,
+              altText: category.featuredImage.altText,
+              width: category.featuredImage.width,
+              height: category.featuredImage.height,
             }
           : null,
       heroMobileImage:
@@ -1061,6 +1081,16 @@ export class CatalogService {
                           deletedAt: true,
                         },
                       },
+                      featuredImage: {
+                        select: {
+                          storageKey: true,
+                          mimeType: true,
+                          altText: true,
+                          width: true,
+                          height: true,
+                          deletedAt: true,
+                        },
+                      },
                     },
                   },
                 },
@@ -1168,6 +1198,16 @@ export class CatalogService {
                       altText: category.image.altText,
                       width: category.image.width,
                       height: category.image.height,
+                    }
+                  : null,
+              featuredImage:
+                category.featuredImage && !category.featuredImage.deletedAt
+                  ? {
+                      url: this.publicMediaUrl.resolve(category.featuredImage.storageKey),
+                      mimeType: category.featuredImage.mimeType,
+                      altText: category.featuredImage.altText,
+                      width: category.featuredImage.width,
+                      height: category.featuredImage.height,
                     }
                   : null,
             })),
@@ -1425,6 +1465,16 @@ export class CatalogService {
                     deletedAt: true,
                   },
                 },
+                featuredImage: {
+                  select: {
+                    storageKey: true,
+                    mimeType: true,
+                    altText: true,
+                    width: true,
+                    height: true,
+                    deletedAt: true,
+                  },
+                },
               },
             },
           },
@@ -1672,6 +1722,16 @@ export class CatalogService {
                   altText: category.image.altText,
                   width: category.image.width,
                   height: category.image.height,
+                }
+              : null,
+          featuredImage:
+            category.featuredImage && !category.featuredImage.deletedAt
+              ? {
+                  url: this.publicMediaUrl.resolve(category.featuredImage.storageKey),
+                  mimeType: category.featuredImage.mimeType,
+                  altText: category.featuredImage.altText,
+                  width: category.featuredImage.width,
+                  height: category.featuredImage.height,
                 }
               : null,
         })),

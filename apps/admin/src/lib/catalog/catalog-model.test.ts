@@ -175,6 +175,12 @@ describe('catalog model', () => {
             mimeType: 'image/webp',
             altText: 'انگشتر زنانه',
           },
+          featuredImage: {
+            id: 'media-featured-1',
+            url: 'https://api.example/media/category-featured.webp',
+            mimeType: 'image/webp',
+            altText: 'تصویر شاخص انگشتر زنانه',
+          },
         },
       ]),
     ).toMatchObject([
@@ -183,6 +189,10 @@ describe('catalog model', () => {
         parent: { id: 'category-1', name: 'انگشتر' },
         productCount: 4,
         image: { id: 'media-1', url: 'https://api.example/media/category.webp' },
+        featuredImage: {
+          id: 'media-featured-1',
+          url: 'https://api.example/media/category-featured.webp',
+        },
       },
     ]);
   });

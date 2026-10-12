@@ -121,6 +121,36 @@ describe('AdminMessageSender', () => {
       sender.send(AdminMessageChannel.TELEGRAM, '123456789', 'سفارش جدید'),
     ).rejects.toThrow('TELEGRAM_REJECTED: Forbidden: bot was blocked by the user');
   });
+
+  it('passes the product image URL to the relay without logging credentials', async () => {
+    const relaySecret = 'relay-secret-with-at-least-32-characters';
+    const config = createConfig({
+      TELEGRAM_RELAY_URL: 'https://hamidian-telegram-relay.vercel.app/api/telegram/send',
+      TELEGRAM_RELAY_SECRET: relaySecret,
+    });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, messageId: 42 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    const sender = new AdminMessageSender(config as unknown as ConfigService);
+
+    await sender.send(AdminMessageChannel.TELEGRAM, '123456789', 'سفارش جدید', {
+      imageUrl: 'https://media.hamidian.shop/catalog/product.png',
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://hamidian-telegram-relay.vercel.app/api/telegram/send',
+      expect.objectContaining({
+        body: JSON.stringify({
+          chatId: '123456789',
+          message: 'سفارش جدید',
+          imageUrl: 'https://media.hamidian.shop/catalog/product.png',
+        }),
+      }),
+    );
+  });
 });
 
 function createConfig(values: Record<string, unknown>) {

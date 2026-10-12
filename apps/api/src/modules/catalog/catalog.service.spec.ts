@@ -447,6 +447,14 @@ describe('CatalogService', () => {
           height: 1200,
           deletedAt: null,
         },
+        featuredImage: {
+          storageKey: 'categories/rings-featured.jpg',
+          mimeType: 'image/jpeg',
+          altText: 'Rings collection',
+          width: 1200,
+          height: 900,
+          deletedAt: null,
+        },
         heroMobileImage: {
           storageKey: 'categories/rings-mobile.jpg',
           mimeType: 'image/jpeg',
@@ -477,6 +485,13 @@ describe('CatalogService', () => {
           altText: 'Silver rings',
           width: 1200,
           height: 1200,
+        },
+        featuredImage: {
+          url: 'https://media.hamidian.shop/categories/rings-featured.jpg',
+          mimeType: 'image/jpeg',
+          altText: 'Rings collection',
+          width: 1200,
+          height: 900,
         },
         heroMobileImage: {
           url: 'https://media.hamidian.shop/categories/rings-mobile.jpg',

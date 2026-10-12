@@ -2,6 +2,8 @@ import { timingSafeEqual } from 'node:crypto';
 
 const MAX_REQUEST_BYTES = 16 * 1024;
 const MAX_MESSAGE_LENGTH = 4000;
+const MAX_CAPTION_LENGTH = 1024;
+const MAX_IMAGE_URL_LENGTH = 2048;
 const DEFAULT_TIMEOUT_MS = 8000;
 const MIN_TIMEOUT_MS = 1000;
 const MAX_TIMEOUT_MS = 9000;
@@ -66,7 +68,69 @@ function validatePayload(payload) {
     return `message must contain between 1 and ${MAX_MESSAGE_LENGTH} characters.`;
   }
 
+  if (payload.imageUrl !== undefined) {
+    if (typeof payload.imageUrl !== 'string' || payload.imageUrl.length > MAX_IMAGE_URL_LENGTH) {
+      return `imageUrl must be an HTTP(S) URL no longer than ${MAX_IMAGE_URL_LENGTH} characters.`;
+    }
+
+    try {
+      const imageUrl = new URL(payload.imageUrl);
+      if (
+        (imageUrl.protocol !== 'http:' && imageUrl.protocol !== 'https:') ||
+        imageUrl.username ||
+        imageUrl.password
+      ) {
+        return 'imageUrl must be an HTTP(S) URL without credentials.';
+      }
+    } catch {
+      return 'imageUrl must be a valid HTTP(S) URL.';
+    }
+  }
+
   return null;
+}
+
+async function callTelegram(botToken, method, body) {
+  let response;
+  try {
+    response = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs()),
+    });
+  } catch (error) {
+    const timedOut = error instanceof Error && error.name === 'TimeoutError';
+    return {
+      ok: false,
+      response: json(
+        { ok: false, code: timedOut ? 'TELEGRAM_TIMEOUT' : 'TELEGRAM_UNREACHABLE' },
+        timedOut ? 504 : 502,
+      ),
+    };
+  }
+
+  const payload = await readTelegramResponse(response);
+  if (!response.ok || payload?.ok !== true) {
+    const retryAfter = Number(payload?.parameters?.retry_after);
+    const hasRetryAfter = Number.isSafeInteger(retryAfter) && retryAfter > 0;
+    return {
+      ok: false,
+      response: json(
+        {
+          ok: false,
+          code: 'TELEGRAM_REJECTED',
+          upstreamStatus: response.status,
+          description: telegramDescription(payload, `HTTP ${response.status}`),
+          ...(hasRetryAfter ? { retryAfterSeconds: retryAfter } : {}),
+        },
+        502,
+        hasRetryAfter ? { 'Retry-After': String(retryAfter) } : {},
+      ),
+    };
+  }
+
+  return { ok: true, payload };
 }
 
 export async function POST(request) {
@@ -109,47 +173,36 @@ export async function POST(request) {
     return json({ ok: false, code: 'INVALID_REQUEST', description: validationError }, 400);
   }
 
-  let telegramResponse;
-  try {
-    telegramResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: payload.chatId.trim(),
-        text: payload.message,
-      }),
-      signal: AbortSignal.timeout(timeoutMs()),
+  const chatId = payload.chatId.trim();
+  let telegramResult;
+
+  if (payload.imageUrl && payload.message.length <= MAX_CAPTION_LENGTH) {
+    telegramResult = await callTelegram(botToken, 'sendPhoto', {
+      chat_id: chatId,
+      photo: payload.imageUrl,
+      caption: payload.message,
     });
-  } catch (error) {
-    const timedOut = error instanceof Error && error.name === 'TimeoutError';
-    return json(
-      {
-        ok: false,
-        code: timedOut ? 'TELEGRAM_TIMEOUT' : 'TELEGRAM_UNREACHABLE',
-      },
-      timedOut ? 504 : 502,
-    );
+  } else if (payload.imageUrl) {
+    const photoResult = await callTelegram(botToken, 'sendPhoto', {
+      chat_id: chatId,
+      photo: payload.imageUrl,
+    });
+    if (!photoResult.ok) return photoResult.response;
+
+    telegramResult = await callTelegram(botToken, 'sendMessage', {
+      chat_id: chatId,
+      text: payload.message,
+    });
+  } else {
+    telegramResult = await callTelegram(botToken, 'sendMessage', {
+      chat_id: chatId,
+      text: payload.message,
+    });
   }
 
-  const telegramPayload = await readTelegramResponse(telegramResponse);
-  if (!telegramResponse.ok || telegramPayload?.ok !== true) {
-    const retryAfter = Number(telegramPayload?.parameters?.retry_after);
-    const hasRetryAfter = Number.isSafeInteger(retryAfter) && retryAfter > 0;
+  if (!telegramResult.ok) return telegramResult.response;
 
-    return json(
-      {
-        ok: false,
-        code: 'TELEGRAM_REJECTED',
-        upstreamStatus: telegramResponse.status,
-        description: telegramDescription(telegramPayload, `HTTP ${telegramResponse.status}`),
-        ...(hasRetryAfter ? { retryAfterSeconds: retryAfter } : {}),
-      },
-      502,
-      hasRetryAfter ? { 'Retry-After': String(retryAfter) } : {},
-    );
-  }
-
-  const messageId = telegramPayload?.result?.message_id;
+  const messageId = telegramResult.payload?.result?.message_id;
   return json(
     {
       ok: true,

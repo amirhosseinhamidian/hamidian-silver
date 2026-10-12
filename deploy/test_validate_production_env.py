@@ -57,24 +57,24 @@ class ProductionEnvValidationTests(unittest.TestCase):
         env["SMS_PROVIDER"] = "kavenegar"
         self.assertTrue(any("KAVENEGAR_API_KEY" in error for error in checker.validate(env)))
 
-    def test_accepts_kavenegar_with_all_order_templates(self):
+    def test_accepts_kavenegar_with_all_transactional_templates(self):
         env = self.fixture()
         env.update({
             "SMS_PROVIDER": "kavenegar",
             "KAVENEGAR_API_KEY": "kavenegar-test-api-key",
             "KAVENEGAR_OTP_TEMPLATE": "hamidianotp",
         })
-        env.update({key: "approved-template" for key in checker.KAVENEGAR_ORDER_TEMPLATE_KEYS})
+        env.update({key: "approved-template" for key in checker.KAVENEGAR_TRANSACTIONAL_TEMPLATE_KEYS})
         self.assertEqual(checker.validate(env), [])
 
-    def test_rejects_missing_or_malformed_order_template(self):
+    def test_rejects_missing_or_malformed_transactional_template(self):
         env = self.fixture()
         env.update({
             "SMS_PROVIDER": "kavenegar",
             "KAVENEGAR_API_KEY": "kavenegar-test-api-key",
             "KAVENEGAR_OTP_TEMPLATE": "hamidianotp",
         })
-        env.update({key: "approved-template" for key in checker.KAVENEGAR_ORDER_TEMPLATE_KEYS})
+        env.update({key: "approved-template" for key in checker.KAVENEGAR_TRANSACTIONAL_TEMPLATE_KEYS})
         env["KAVENEGAR_ORDER_SHIPPED_TEMPLATE"] = "invalid_template"
         result = " ".join(checker.validate(env))
         self.assertIn("KAVENEGAR_ORDER_SHIPPED_TEMPLATE", result)

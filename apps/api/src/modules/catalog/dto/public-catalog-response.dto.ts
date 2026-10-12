@@ -32,6 +32,9 @@ export class PublicCatalogCategoryDto {
 
   @ApiProperty({ type: () => PublicCatalogMediaDto, nullable: true })
   image!: PublicCatalogMediaDto | null;
+
+  @ApiPropertyOptional({ type: () => PublicCatalogMediaDto, nullable: true })
+  featuredImage?: PublicCatalogMediaDto | null;
 }
 
 export class PublicCatalogCategoryPageDto extends PublicCatalogCategoryDto {

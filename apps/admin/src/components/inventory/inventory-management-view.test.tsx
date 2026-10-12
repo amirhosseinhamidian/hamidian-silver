@@ -6,6 +6,31 @@ import type { AdminInventoryItem, AdminWarehouse } from '@/lib/inventory/invento
 
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
+vi.mock('@/components/ui/select', () => ({
+  Select: ({
+    value,
+    onValueChange,
+    options,
+    'aria-label': ariaLabel,
+  }: Readonly<{
+    value?: string;
+    onValueChange?: (value: string) => void;
+    options: readonly Readonly<{ value: string; label: string }>[];
+    'aria-label'?: string;
+  }>) => (
+    <select
+      aria-label={ariaLabel}
+      value={value}
+      onChange={(event) => onValueChange?.(event.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -61,6 +86,54 @@ describe('InventoryManagementView', () => {
     expect(screen.getByRole('region', { name: 'کارت‌های موجودی' })).toHaveClass('md:hidden');
     expect(screen.getAllByText('انگشتر آذر').length).toBeGreaterThan(0);
     expect(screen.getAllByText('۶').length).toBeGreaterThan(0);
+  });
+
+  it('filters newly added products by missing inventory history instead of zero stock', () => {
+    const neverInitialized: AdminInventoryItem = {
+      ...item,
+      inventoryId: null,
+      productId: 'product-2',
+      productName: 'گردنبند تازه',
+      productSlug: 'new-necklace',
+      variantId: '30000000-0000-4000-8000-000000000002',
+      sku: 'NECKLACE-NEW',
+      onHand: 0,
+      reserved: 0,
+      available: 0,
+      isLowStock: true,
+      updatedAt: null,
+    };
+    const initializedAtZero: AdminInventoryItem = {
+      ...item,
+      inventoryId: '40000000-0000-4000-8000-000000000002',
+      productId: 'product-3',
+      productName: 'دستبند قدیمی ناموجود',
+      productSlug: 'old-bracelet',
+      variantId: '30000000-0000-4000-8000-000000000003',
+      sku: 'BRACELET-OLD',
+      onHand: 0,
+      reserved: 0,
+      available: 0,
+      isLowStock: true,
+    };
+
+    render(
+      <InventoryManagementView
+        warehouses={[warehouse]}
+        items={[neverInitialized, initializedAtZero]}
+        selectedWarehouseId={warehouse.id}
+        warehousesFailed={false}
+        itemsFailed={false}
+        canWrite
+      />,
+    );
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'فیلتر وضعیت موجودی' }), {
+      target: { value: 'uninitialized' },
+    });
+
+    expect(screen.getAllByText('گردنبند تازه').length).toBeGreaterThan(0);
+    expect(screen.queryByText('دستبند قدیمی ناموجود')).not.toBeInTheDocument();
   });
 
   it('submits localized stock adjustments with a required reason', async () => {

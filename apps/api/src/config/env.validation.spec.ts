@@ -58,6 +58,39 @@ describe('envValidationSchema production HTTP settings', () => {
     expect(value.SMS_PROVIDER).toBe('console');
   });
 
+  it('requires an approved stock notification template for Kavenegar', () => {
+    const kavenegarEnvironment = {
+      ...requiredEnvironment,
+      SMS_PROVIDER: 'kavenegar',
+      KAVENEGAR_API_KEY: 'kavenegar-test-api-key',
+      KAVENEGAR_OTP_TEMPLATE: 'hamidianotp',
+      KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE: 'hamidianpayment',
+      KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE: 'hamidianreceipt',
+      KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE: 'hamidianreceiptrejected',
+      KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE: 'hamidiantracking',
+      KAVENEGAR_ORDER_SHIPPED_TEMPLATE: 'hamidianshipped',
+      KAVENEGAR_ORDER_DELIVERED_TEMPLATE: 'hamidiandelivered',
+      KAVENEGAR_ORDER_CANCELLED_TEMPLATE: 'hamidiancancelled',
+    };
+    const missing = envValidationSchema.validate(kavenegarEnvironment, {
+      allowUnknown: true,
+      abortEarly: false,
+    });
+
+    expect(missing.error?.details.map(({ path }) => path.join('.'))).toContain(
+      'KAVENEGAR_STOCK_AVAILABLE_TEMPLATE',
+    );
+
+    const configured = envValidationSchema.validate(
+      {
+        ...kavenegarEnvironment,
+        KAVENEGAR_STOCK_AVAILABLE_TEMPLATE: 'hamidianstock',
+      },
+      { allowUnknown: true, abortEarly: false },
+    );
+    expect(configured.error).toBeUndefined();
+  });
+
   it('rejects console OTP delivery in production', () => {
     const { error } = envValidationSchema.validate(
       {
