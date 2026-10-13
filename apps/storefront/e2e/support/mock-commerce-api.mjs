@@ -81,6 +81,7 @@ const guideSummary = {
   format: 'CARE_GUIDE',
   status: 'PUBLISHED',
   heroMedia: null,
+  cardMedia: null,
   seoCanonicalPath: '/guide/silver-care',
   seoNoIndex: false,
   seoOgMedia: null,
@@ -106,6 +107,7 @@ const relatedGuideSummary = {
 const guideArticle = {
   ...guideSummary,
   heroMobileMedia: null,
+  productRecommendationMode: 'MANUAL',
   seoTitle: null,
   seoDescription: null,
   searchKeywords: ['نگهداری نقره', 'تمیز کردن نقره'],
