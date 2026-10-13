@@ -1,7 +1,10 @@
 import { ErrorCode } from '../../common/errors/error-codes';
 import { INT32_MAX } from '../../common/int32';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
+import type { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { InventoryService } from './inventory.service';
+
+const publicMediaUrl = { resolve: jest.fn(() => null) } as unknown as PublicMediaUrlService;
 
 describe('InventoryService PostgreSQL Int32 range', () => {
   const actorUserId = '10000000-0000-4000-8000-000000000001';
@@ -36,7 +39,7 @@ describe('InventoryService PostgreSQL Int32 range', () => {
         callback(transaction),
       ),
     };
-    const service = new InventoryService(prisma as unknown as PrismaService);
+    const service = new InventoryService(prisma as unknown as PrismaService, publicMediaUrl);
 
     await expect(
       service.adjustStock(
@@ -60,7 +63,7 @@ describe('InventoryService PostgreSQL Int32 range', () => {
     const prisma = {
       $transaction: jest.fn(),
     };
-    const service = new InventoryService(prisma as unknown as PrismaService);
+    const service = new InventoryService(prisma as unknown as PrismaService, publicMediaUrl);
 
     await expect(
       service.bulkSetStock(

@@ -112,7 +112,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   categories={categories}
                   brands={brands}
                   idPrefix="mobile-catalog-filter"
-                  className="pt-2"
+                  className="h-full pt-2"
                 />
               </CatalogFilterSheet>
             </div>
@@ -156,7 +156,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
         <div className="grid gap-8 pt-8 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-10">
           <aside className="hidden lg:block">
-            <div className="sticky top-6">
+            <div className="sticky top-6 flex max-h-[calc(100dvh-3rem)] flex-col">
               <div className="mb-5 flex items-center justify-between gap-3">
                 <h2 className="text-base font-medium">فیلترها</h2>
                 {activeFilterCount > 0 ? (
@@ -170,6 +170,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 categories={categories}
                 brands={brands}
                 idPrefix="desktop-catalog-filter"
+                className="min-h-0"
               />
             </div>
           </aside>

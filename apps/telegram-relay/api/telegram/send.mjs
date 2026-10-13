@@ -1,3 +1,4 @@
+
 import { timingSafeEqual } from 'node:crypto';
 
 const MAX_REQUEST_BYTES = 16 * 1024;
@@ -27,19 +28,32 @@ function authorized(request, expectedSecret) {
   const actualBytes = Buffer.from(authorization);
   const expectedBytes = Buffer.from(expected);
 
-  return actualBytes.length === expectedBytes.length && timingSafeEqual(actualBytes, expectedBytes);
+  return (
+    actualBytes.length === expectedBytes.length &&
+    timingSafeEqual(actualBytes, expectedBytes)
+  );
 }
 
 function timeoutMs() {
-  const configured = Number(process.env.TELEGRAM_REQUEST_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS);
-  if (!Number.isInteger(configured) || configured < MIN_TIMEOUT_MS || configured > MAX_TIMEOUT_MS) {
+  const configured = Number(
+    process.env.TELEGRAM_REQUEST_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS,
+  );
+
+  if (
+    !Number.isInteger(configured) ||
+    configured < MIN_TIMEOUT_MS ||
+    configured > MAX_TIMEOUT_MS
+  ) {
     return DEFAULT_TIMEOUT_MS;
   }
+
   return configured;
 }
 
 function telegramDescription(payload, fallback) {
-  return typeof payload?.description === 'string' ? payload.description.slice(0, 300) : fallback;
+  return typeof payload?.description === 'string'
+    ? payload.description.slice(0, 300)
+    : fallback;
 }
 
 async function readTelegramResponse(response) {
@@ -56,7 +70,10 @@ function validatePayload(payload) {
     return 'Request body must be a JSON object.';
   }
 
-  if (typeof payload.chatId !== 'string' || !/^-?\d{1,20}$/.test(payload.chatId.trim())) {
+  if (
+    typeof payload.chatId !== 'string' ||
+    !/^-?\d{1,20}$/.test(payload.chatId.trim())
+  ) {
     return 'chatId must be a numeric Telegram Chat ID.';
   }
 
@@ -69,21 +86,25 @@ function validatePayload(payload) {
   }
 
   if (payload.imageUrl !== undefined) {
-    if (typeof payload.imageUrl !== 'string' || payload.imageUrl.length > MAX_IMAGE_URL_LENGTH) {
-      return `imageUrl must be an HTTP(S) URL no longer than ${MAX_IMAGE_URL_LENGTH} characters.`;
+    if (
+      typeof payload.imageUrl !== 'string' ||
+      payload.imageUrl.length > MAX_IMAGE_URL_LENGTH
+    ) {
+      return `imageUrl must be a secure public URL no longer than ${MAX_IMAGE_URL_LENGTH} characters.`;
     }
 
     try {
       const imageUrl = new URL(payload.imageUrl);
+
       if (
-        (imageUrl.protocol !== 'http:' && imageUrl.protocol !== 'https:') ||
+        imageUrl.protocol !== 'https:' ||
         imageUrl.username ||
         imageUrl.password
       ) {
-        return 'imageUrl must be an HTTP(S) URL without credentials.';
+        return 'imageUrl must be a secure public URL.';
       }
     } catch {
-      return 'imageUrl must be a valid HTTP(S) URL.';
+      return 'imageUrl must be a secure public URL.';
     }
   }
 
@@ -92,28 +113,42 @@ function validatePayload(payload) {
 
 async function callTelegram(botToken, method, body) {
   let response;
+
   try {
-    response = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs()),
-    });
+    response = await fetch(
+      `https://api.telegram.org/bot${botToken}/${method}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs()),
+      },
+    );
   } catch (error) {
-    const timedOut = error instanceof Error && error.name === 'TimeoutError';
+    const timedOut =
+      error instanceof Error && error.name === 'TimeoutError';
+
     return {
       ok: false,
       response: json(
-        { ok: false, code: timedOut ? 'TELEGRAM_TIMEOUT' : 'TELEGRAM_UNREACHABLE' },
+        {
+          ok: false,
+          code: timedOut ? 'TELEGRAM_TIMEOUT' : 'TELEGRAM_UNREACHABLE',
+        },
         timedOut ? 504 : 502,
       ),
     };
   }
 
   const payload = await readTelegramResponse(response);
+
   if (!response.ok || payload?.ok !== true) {
     const retryAfter = Number(payload?.parameters?.retry_after);
-    const hasRetryAfter = Number.isSafeInteger(retryAfter) && retryAfter > 0;
+    const hasRetryAfter =
+      Number.isSafeInteger(retryAfter) && retryAfter > 0;
+
     return {
       ok: false,
       response: json(
@@ -121,11 +156,18 @@ async function callTelegram(botToken, method, body) {
           ok: false,
           code: 'TELEGRAM_REJECTED',
           upstreamStatus: response.status,
-          description: telegramDescription(payload, `HTTP ${response.status}`),
-          ...(hasRetryAfter ? { retryAfterSeconds: retryAfter } : {}),
+          description: telegramDescription(
+            payload,
+            `HTTP ${response.status}`,
+          ),
+          ...(hasRetryAfter
+            ? { retryAfterSeconds: retryAfter }
+            : {}),
         },
         502,
-        hasRetryAfter ? { 'Retry-After': String(retryAfter) } : {},
+        hasRetryAfter
+          ? { 'Retry-After': String(retryAfter) }
+          : {},
       ),
     };
   }
@@ -138,75 +180,135 @@ export async function POST(request) {
   const relaySecret = process.env.TELEGRAM_RELAY_SECRET?.trim();
 
   if (!botToken || !relaySecret || relaySecret.length < 32) {
-    return json({ ok: false, code: 'RELAY_NOT_CONFIGURED' }, 503);
+    return json(
+      { ok: false, code: 'RELAY_NOT_CONFIGURED' },
+      503,
+    );
   }
 
   if (!authorized(request, relaySecret)) {
-    return json({ ok: false, code: 'UNAUTHORIZED' }, 401, {
-      'WWW-Authenticate': 'Bearer',
-    });
+    return json(
+      { ok: false, code: 'UNAUTHORIZED' },
+      401,
+      { 'WWW-Authenticate': 'Bearer' },
+    );
   }
 
-  const contentType = request.headers.get('content-type')?.toLowerCase() ?? '';
+  const contentType =
+    request.headers.get('content-type')?.toLowerCase() ?? '';
+
   if (!contentType.startsWith('application/json')) {
-    return json({ ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' }, 415);
+    return json(
+      { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' },
+      415,
+    );
   }
 
-  const contentLength = Number(request.headers.get('content-length') ?? 0);
-  if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BYTES) {
-    return json({ ok: false, code: 'PAYLOAD_TOO_LARGE' }, 413);
+  const contentLength = Number(
+    request.headers.get('content-length') ?? 0,
+  );
+
+  if (
+    Number.isFinite(contentLength) &&
+    contentLength > MAX_REQUEST_BYTES
+  ) {
+    return json(
+      { ok: false, code: 'PAYLOAD_TOO_LARGE' },
+      413,
+    );
   }
 
   let payload;
+
   try {
     const rawBody = await request.text();
+
     if (Buffer.byteLength(rawBody, 'utf8') > MAX_REQUEST_BYTES) {
-      return json({ ok: false, code: 'PAYLOAD_TOO_LARGE' }, 413);
+      return json(
+        { ok: false, code: 'PAYLOAD_TOO_LARGE' },
+        413,
+      );
     }
+
     payload = JSON.parse(rawBody);
   } catch {
-    return json({ ok: false, code: 'INVALID_JSON' }, 400);
+    return json(
+      { ok: false, code: 'INVALID_JSON' },
+      400,
+    );
   }
 
   const validationError = validatePayload(payload);
+
   if (validationError) {
-    return json({ ok: false, code: 'INVALID_REQUEST', description: validationError }, 400);
+    return json(
+      {
+        ok: false,
+        code: 'INVALID_REQUEST',
+        description: validationError,
+      },
+      400,
+    );
   }
 
   const chatId = payload.chatId.trim();
   let telegramResult;
 
   if (payload.imageUrl && payload.message.length <= MAX_CAPTION_LENGTH) {
-    telegramResult = await callTelegram(botToken, 'sendPhoto', {
-      chat_id: chatId,
-      photo: payload.imageUrl,
-      caption: payload.message,
-    });
+    telegramResult = await callTelegram(
+      botToken,
+      'sendPhoto',
+      {
+        chat_id: chatId,
+        photo: payload.imageUrl,
+        caption: payload.message,
+      },
+    );
   } else if (payload.imageUrl) {
-    const photoResult = await callTelegram(botToken, 'sendPhoto', {
-      chat_id: chatId,
-      photo: payload.imageUrl,
-    });
-    if (!photoResult.ok) return photoResult.response;
+    const photoResult = await callTelegram(
+      botToken,
+      'sendPhoto',
+      {
+        chat_id: chatId,
+        photo: payload.imageUrl,
+      },
+    );
 
-    telegramResult = await callTelegram(botToken, 'sendMessage', {
-      chat_id: chatId,
-      text: payload.message,
-    });
+    if (!photoResult.ok) {
+      return photoResult.response;
+    }
+
+    telegramResult = await callTelegram(
+      botToken,
+      'sendMessage',
+      {
+        chat_id: chatId,
+        text: payload.message,
+      },
+    );
   } else {
-    telegramResult = await callTelegram(botToken, 'sendMessage', {
-      chat_id: chatId,
-      text: payload.message,
-    });
+    telegramResult = await callTelegram(
+      botToken,
+      'sendMessage',
+      {
+        chat_id: chatId,
+        text: payload.message,
+      },
+    );
   }
 
-  if (!telegramResult.ok) return telegramResult.response;
+  if (!telegramResult.ok) {
+    return telegramResult.response;
+  }
 
   const messageId = telegramResult.payload?.result?.message_id;
+
   return json(
     {
       ok: true,
-      ...(Number.isSafeInteger(messageId) ? { messageId } : {}),
+      ...(Number.isSafeInteger(messageId)
+        ? { messageId }
+        : {}),
     },
     200,
   );

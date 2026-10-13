@@ -74,6 +74,7 @@ export type CustomerOrder = Readonly<{
   shippingTrackingUrl: string | null;
   shippingCarrierLogoUrl: string | null;
   shippingPayOnDelivery?: boolean;
+  shippingDeliveryType?: 'POST' | 'COURIER';
   reservationExpiresAt: string;
   paidAt: string | null;
   cancelledAt: string | null;

@@ -114,6 +114,9 @@ export class CustomerOrderSummaryDto {
   shippingCarrierLogoUrl!: string | null;
 
   shippingPayOnDelivery!: boolean;
+
+  @ApiProperty({ enum: ['POST', 'COURIER'] })
+  shippingDeliveryType!: 'POST' | 'COURIER';
   reservationExpiresAt!: Date;
 
   @ApiProperty({ type: Date, nullable: true })

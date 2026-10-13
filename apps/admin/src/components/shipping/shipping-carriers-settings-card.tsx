@@ -17,6 +17,7 @@ import {
   type AdminShippingCarrier,
   type ShippingCarrierPricingMode,
   type ShippingCarrierServiceArea,
+  type ShippingDeliveryType,
 } from '@/lib/shipping/shipping-pricing-model';
 import type { SiteMedia } from '@/lib/site-settings/site-settings-model';
 
@@ -219,6 +220,7 @@ function CarrierEditor({
   const [threshold, setThreshold] = useState(money(carrier.thresholdToman));
   const [discountedCost, setDiscountedCost] = useState(money(carrier.discountedCostToman));
   const [serviceArea, setServiceArea] = useState(carrier.serviceArea);
+  const [deliveryType, setDeliveryType] = useState(carrier.deliveryType);
   const [pending, setPending] = useState(false);
 
   async function update(values: Record<string, unknown>, success: string) {
@@ -245,6 +247,7 @@ function CarrierEditor({
       setThreshold(money(updated.thresholdToman));
       setDiscountedCost(money(updated.discountedCostToman));
       setServiceArea(updated.serviceArea);
+      setDeliveryType(updated.deliveryType);
       onUpdated(updated);
       onSuccess(success);
     } catch (caught) {
@@ -258,7 +261,7 @@ function CarrierEditor({
     event.preventDefault();
     if (name.trim().length < 2) return onError('نام شرکت ارسال باید حداقل ۲ نویسه باشد.');
     if (subtitle.trim().length < 2) return onError('زیرعنوان روش ارسال باید حداقل ۲ نویسه باشد.');
-    if (!validTrackingUrl(trackingUrl))
+    if (deliveryType === 'POST' && !validTrackingUrl(trackingUrl))
       return onError('نشانی سایت استعلام باید با https:// آغاز شود.');
     const pricing = pricingValues(
       pricingMode,
@@ -273,10 +276,11 @@ function CarrierEditor({
       {
         name: name.trim(),
         subtitle: subtitle.trim(),
-        trackingUrl: trackingUrl.trim() || null,
+        trackingUrl: deliveryType === 'POST' ? trackingUrl.trim() || null : null,
         logoMediaId: logo?.id ?? null,
         ...pricing,
         serviceArea,
+        deliveryType,
       },
       `اطلاعات «${name.trim()}» ذخیره شد.`,
     );
@@ -335,23 +339,39 @@ function CarrierEditor({
             />
           )}
         </FormField>
-        <FormField
-          id={`carrier-url-${carrier.id}`}
-          label="نشانی سایت استعلام"
-          hint="نشانی کامل و امن را با https:// وارد کنید."
-        >
+        <FormField id={`carrier-delivery-type-${carrier.id}`} label="نوع ارسال" required>
           {(props) => (
-            <Input
+            <Select
               {...props}
-              type="url"
-              dir="ltr"
-              value={trackingUrl}
-              maxLength={1000}
+              value={deliveryType}
               disabled={!canWrite || pending}
-              onChange={(event) => setTrackingUrl(event.target.value)}
+              options={[
+                { value: 'POST', label: 'پست (دارای کد رهگیری)' },
+                { value: 'COURIER', label: 'پیک (بدون الزام کد رهگیری)' },
+              ]}
+              onValueChange={(value) => setDeliveryType(value as ShippingDeliveryType)}
             />
           )}
         </FormField>
+        {deliveryType === 'POST' ? (
+          <FormField
+            id={`carrier-url-${carrier.id}`}
+            label="نشانی سایت استعلام"
+            hint="نشانی کامل و امن را با https:// وارد کنید."
+          >
+            {(props) => (
+              <Input
+                {...props}
+                type="url"
+                dir="ltr"
+                value={trackingUrl}
+                maxLength={1000}
+                disabled={!canWrite || pending}
+                onChange={(event) => setTrackingUrl(event.target.value)}
+              />
+            )}
+          </FormField>
+        ) : null}
         <SiteMediaField
           label="نماد شرکت ارسال"
           media={logo}
@@ -402,6 +422,7 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
   const [threshold, setThreshold] = useState('');
   const [discountedCost, setDiscountedCost] = useState('');
   const [serviceArea, setServiceArea] = useState<ShippingCarrierServiceArea>('NATIONWIDE');
+  const [deliveryType, setDeliveryType] = useState<ShippingDeliveryType>('POST');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -411,7 +432,7 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
     if (pending || !canWrite) return;
     if (name.trim().length < 2) return setError('نام شرکت ارسال باید حداقل ۲ نویسه باشد.');
     if (subtitle.trim().length < 2) return setError('زیرعنوان روش ارسال باید حداقل ۲ نویسه باشد.');
-    if (!validTrackingUrl(trackingUrl))
+    if (deliveryType === 'POST' && !validTrackingUrl(trackingUrl))
       return setError('نشانی سایت استعلام باید با https:// آغاز شود.');
     const pricing = pricingValues(
       pricingMode,
@@ -432,10 +453,11 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
         body: JSON.stringify({
           name: name.trim(),
           subtitle: subtitle.trim(),
-          trackingUrl: trackingUrl.trim() || null,
+          trackingUrl: deliveryType === 'POST' ? trackingUrl.trim() || null : null,
           logoMediaId: logo?.id ?? null,
           ...pricing,
           serviceArea,
+          deliveryType,
           isActive: true,
         }),
       });
@@ -454,6 +476,7 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
       setThreshold('');
       setDiscountedCost('');
       setServiceArea('NATIONWIDE');
+      setDeliveryType('POST');
       setSuccess(`شرکت «${created.name}» اضافه و برای ساخت مرسوله فعال شد.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : responseMessage(null));
@@ -507,24 +530,40 @@ export function ShippingCarriersSettingsCard({ initialCarriers, canWrite }: Prop
                 />
               )}
             </FormField>
-            <FormField
-              id="new-carrier-url"
-              label="نشانی سایت استعلام"
-              hint="نشانی کامل و امن را با https:// وارد کنید."
-            >
+            <FormField id="new-carrier-delivery-type" label="نوع ارسال" required>
               {(props) => (
-                <Input
+                <Select
                   {...props}
-                  type="url"
-                  dir="ltr"
-                  value={trackingUrl}
-                  maxLength={1000}
-                  placeholder="https://example.com/tracking"
+                  value={deliveryType}
                   disabled={pending}
-                  onChange={(event) => setTrackingUrl(event.target.value)}
+                  options={[
+                    { value: 'POST', label: 'پست (دارای کد رهگیری)' },
+                    { value: 'COURIER', label: 'پیک (بدون الزام کد رهگیری)' },
+                  ]}
+                  onValueChange={(value) => setDeliveryType(value as ShippingDeliveryType)}
                 />
               )}
             </FormField>
+            {deliveryType === 'POST' ? (
+              <FormField
+                id="new-carrier-url"
+                label="نشانی سایت استعلام"
+                hint="نشانی کامل و امن را با https:// وارد کنید."
+              >
+                {(props) => (
+                  <Input
+                    {...props}
+                    type="url"
+                    dir="ltr"
+                    value={trackingUrl}
+                    maxLength={1000}
+                    placeholder="https://example.com/tracking"
+                    disabled={pending}
+                    onChange={(event) => setTrackingUrl(event.target.value)}
+                  />
+                )}
+              </FormField>
+            ) : null}
             <SiteMediaField
               label="نماد شرکت ارسال"
               media={logo}

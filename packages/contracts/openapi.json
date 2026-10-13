@@ -12823,6 +12823,13 @@
             "nullable": true,
             "format": "uri"
           },
+          "shippingDeliveryType": {
+            "enum": [
+              "POST",
+              "COURIER"
+            ],
+            "type": "string"
+          },
           "paidAt": {
             "format": "date-time",
             "type": "string",
@@ -12911,6 +12918,7 @@
           "shippingMethodName",
           "shippingTrackingUrl",
           "shippingCarrierLogoUrl",
+          "shippingDeliveryType",
           "paidAt",
           "cancelledAt",
           "deliveredAt",
@@ -12975,6 +12983,13 @@
             "type": "string",
             "nullable": true,
             "format": "uri"
+          },
+          "shippingDeliveryType": {
+            "enum": [
+              "POST",
+              "COURIER"
+            ],
+            "type": "string"
           },
           "paidAt": {
             "format": "date-time",
@@ -13047,6 +13062,7 @@
           "shippingMethodName",
           "shippingTrackingUrl",
           "shippingCarrierLogoUrl",
+          "shippingDeliveryType",
           "paidAt",
           "cancelledAt",
           "deliveredAt",
@@ -13106,6 +13122,9 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
+          },
+          "sendCustomerSms": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -13969,6 +13988,13 @@
             ],
             "type": "string"
           },
+          "deliveryType": {
+            "enum": [
+              "POST",
+              "COURIER"
+            ],
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },
@@ -13984,6 +14010,7 @@
           "thresholdToman",
           "discountedCostToman",
           "serviceArea",
+          "deliveryType",
           "name",
           "baseCostToman"
         ]
@@ -14043,6 +14070,13 @@
             ],
             "type": "string"
           },
+          "deliveryType": {
+            "enum": [
+              "POST",
+              "COURIER"
+            ],
+            "type": "string"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -14071,6 +14105,7 @@
           "thresholdToman",
           "discountedCostToman",
           "serviceArea",
+          "deliveryType",
           "createdAt",
           "updatedAt",
           "name",
@@ -14133,6 +14168,14 @@
             ],
             "type": "string",
             "default": "NATIONWIDE"
+          },
+          "deliveryType": {
+            "enum": [
+              "POST",
+              "COURIER"
+            ],
+            "type": "string",
+            "default": "POST"
           },
           "isActive": {
             "type": "boolean",
@@ -14199,6 +14242,14 @@
             ],
             "type": "string",
             "default": "NATIONWIDE"
+          },
+          "deliveryType": {
+            "enum": [
+              "POST",
+              "COURIER"
+            ],
+            "type": "string",
+            "default": "POST"
           },
           "isActive": {
             "type": "boolean",
@@ -14353,10 +14404,7 @@
             "minLength": 3,
             "maxLength": 500
           }
-        },
-        "required": [
-          "reason"
-        ]
+        }
       },
       "ResetShipmentProviderCreationDto": {
         "type": "object",
@@ -14404,6 +14452,9 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
+          },
+          "sendCustomerSms": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -14705,6 +14756,9 @@
           "parentId": {
             "type": "string",
             "nullable": true
+          },
+          "hasProducts": {
+            "type": "boolean"
           },
           "image": {
             "nullable": true,
@@ -16077,6 +16131,199 @@
           "destinationPath",
           "permanent"
         ]
+      },
+      "Object": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateSupplierCategoryMappingDto": {
+        "type": "object",
+        "properties": {
+          "catalogCategoryId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        }
+      },
+      "SyncSupplierCategoriesDto": {
+        "type": "object",
+        "properties": {
+          "supplierSourceId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "supplierSourceId"
+        ]
+      },
+      "UpdateSupplierCrawlScheduleDto": {
+        "type": "object",
+        "properties": {
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "timeOfDay": {
+            "type": "string",
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "categoryIds": {
+            "uniqueItems": true,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "requestedLimit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "stopAtKnown": {
+            "type": "boolean"
+          },
+          "monitorKnownProducts": {
+            "type": "boolean"
+          },
+          "maxRetries": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "retryDelayMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1440
+          }
+        },
+        "required": [
+          "isEnabled",
+          "timeOfDay",
+          "categoryIds",
+          "requestedLimit",
+          "stopAtKnown",
+          "monitorKnownProducts",
+          "maxRetries",
+          "retryDelayMinutes"
+        ]
+      },
+      "StartBulkSupplierCrawlDto": {
+        "type": "object",
+        "properties": {
+          "supplierSourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "stopAtKnown": {
+            "type": "boolean"
+          },
+          "monitorKnownProducts": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "supplierSourceId",
+          "limit",
+          "stopAtKnown",
+          "monitorKnownProducts"
+        ]
+      },
+      "StartSupplierCrawlDto": {
+        "type": "object",
+        "properties": {
+          "supplierSourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetUrl": {
+            "type": "string",
+            "format": "uri",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "supplierSourceId",
+          "targetUrl"
+        ]
+      },
+      "SupplierImportAttributeDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "UpdateSupplierImportDraftDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceCategory": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "supplierRetailPriceToman": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "weightGrams": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "attributes": {
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierImportAttributeDto"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_REVIEW",
+              "REVIEWED",
+              "REJECTED",
+              "IMPORTED"
+            ]
+          }
+        }
       },
       "AdminManagedUserRoleDto": {
         "type": "object",

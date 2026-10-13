@@ -4,6 +4,53 @@ import type { PrismaService } from '../../infrastructure/database/prisma.service
 import { OrdersService } from './orders.service';
 
 describe('OrdersService status concurrency', () => {
+  it('does not enqueue the processing SMS when the operator opts out', async () => {
+    const orderId = '10000000-0000-4000-8000-000000000001';
+    const actorUserId = '20000000-0000-4000-8000-000000000001';
+    const updated = {
+      id: orderId,
+      orderNumber: 'HS-1001',
+      status: OrderStatus.PROCESSING,
+    };
+    const transaction = {
+      order: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: orderId,
+          orderNumber: 'HS-1001',
+          status: OrderStatus.PAID,
+          deliveredAt: null,
+          payment: { status: PaymentStatus.PAID },
+          shipment: null,
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(updated),
+      },
+      orderStatusHistory: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma = {
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
+    };
+    const outbox = { enqueueOrderEvent: jest.fn() };
+    const service = new OrdersService(
+      prisma as unknown as PrismaService,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      outbox as never,
+    );
+
+    await service.updateStatus(
+      orderId,
+      { status: OrderStatus.PROCESSING, sendCustomerSms: false },
+      actorUserId,
+    );
+
+    expect(outbox.enqueueOrderEvent).not.toHaveBeenCalled();
+  });
+
   it('does not write history when another worker wins the status transition', async () => {
     const orderId = '10000000-0000-4000-8000-000000000001';
     const actorUserId = '20000000-0000-4000-8000-000000000001';

@@ -54,6 +54,7 @@ const EVENT_LABELS: Readonly<Record<string, string>> = {
   PAYMENT_RECEIPT_SUBMITTED: 'ثبت رسید کارت‌به‌کارت',
   PAYMENT_RECEIPT_REJECTED: 'رد رسید کارت‌به‌کارت',
   SHIPMENT_TRACKING_AVAILABLE: 'کد رهگیری آماده',
+  ORDER_PROCESSING: 'آماده‌سازی سفارش',
   ORDER_SHIPPED: 'ارسال سفارش',
   ORDER_DELIVERED: 'تحویل سفارش',
   ORDER_CANCELLED: 'لغو سفارش',

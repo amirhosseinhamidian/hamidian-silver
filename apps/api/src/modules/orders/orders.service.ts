@@ -140,6 +140,7 @@ const CUSTOMER_ORDER_LIST_SELECT = {
   shippingCarrierNameSnapshot: true,
   shippingCarrierTrackingUrlSnapshot: true,
   shippingPricingModeSnapshot: true,
+  shippingDeliveryTypeSnapshot: true,
   shippingCarrierLogoSnapshot: { select: { storageKey: true } },
   taxTotalToman: true,
   grandTotalToman: true,
@@ -160,6 +161,7 @@ const CUSTOMER_ORDER_LIST_SELECT = {
       carrierLogoSnapshot: { select: { storageKey: true } },
       carrierPresentationSnapshottedAt: true,
       trackingCode: true,
+      deliveryTypeSnapshot: true,
     },
   },
   payment: {
@@ -297,6 +299,7 @@ const ADMIN_ORDER_LIST_INCLUDE = {
       estimatedDeliveryDays: true,
       providerShipmentId: true,
       trackingCode: true,
+      deliveryTypeSnapshot: true,
       shippedAt: true,
       deliveredAt: true,
       createdAt: true,
@@ -647,6 +650,7 @@ export class OrdersService {
       shippingCarrierNameSnapshot,
       shippingCarrierTrackingUrlSnapshot,
       shippingPricingModeSnapshot,
+      shippingDeliveryTypeSnapshot,
       shippingCarrierLogoSnapshot,
       ...summary
     } = order;
@@ -680,6 +684,7 @@ export class OrdersService {
           ? (this.publicMediaUrl?.resolve(shippingCarrierLogoSnapshot.storageKey) ?? null)
           : null,
       shippingPayOnDelivery: shippingPricingModeSnapshot === 'COLLECT',
+      shippingDeliveryType: shipment?.deliveryTypeSnapshot ?? shippingDeliveryTypeSnapshot,
       payment: payment
         ? {
             status: payment.status,
@@ -887,6 +892,21 @@ export class OrdersService {
           reason: dto.reason,
         },
       });
+
+      const notificationType: Partial<Record<OrderStatus, NotificationOutboxEventType>> = {
+        [OrderStatus.PROCESSING]: NotificationOutboxEventType.ORDER_PROCESSING,
+        [OrderStatus.SHIPPED]: NotificationOutboxEventType.ORDER_SHIPPED,
+        [OrderStatus.DELIVERED]: NotificationOutboxEventType.ORDER_DELIVERED,
+      };
+      const selectedNotificationType = notificationType[dto.status];
+      if (dto.sendCustomerSms !== false && selectedNotificationType) {
+        await this.outbox?.enqueueOrderEvent(transaction, {
+          type: selectedNotificationType,
+          orderId,
+          deduplicationKey: `order:${orderId}:${dto.status.toLowerCase()}`,
+          payload: {},
+        });
+      }
 
       const statusNames: Partial<Record<OrderStatus, string>> = {
         [OrderStatus.PROCESSING]: 'آماده‌سازی',

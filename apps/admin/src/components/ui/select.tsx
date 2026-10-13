@@ -109,18 +109,20 @@ export function Select({
           collisionPadding={12}
           className={cn(
             SELECT_CONTENT_LAYER_CLASS,
-            'min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] shadow-[var(--admin-shadow-md)]',
+            'admin-select-content w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] shadow-[var(--admin-shadow-md)]',
           )}
         >
-          <SelectPrimitive.Viewport className="max-h-72 overflow-y-auto p-1">
+          <SelectPrimitive.Viewport className="max-h-[min(18rem,var(--radix-select-content-available-height))] overflow-y-auto overscroll-contain p-1">
             {options.map((option) => (
               <SelectPrimitive.Item
                 key={option.value}
                 value={option.value}
                 disabled={option.disabled}
-                className="relative flex min-h-9 cursor-pointer select-none items-center rounded-[var(--admin-radius-sm)] py-1.5 pe-9 ps-3 text-sm outline-none data-[highlighted]:bg-[var(--admin-color-primary-soft)] data-[highlighted]:text-[var(--admin-color-primary)] data-[disabled]:pointer-events-none data-[disabled]:opacity-40"
+                className="relative flex min-h-9 min-w-0 cursor-pointer select-none items-center rounded-[var(--admin-radius-sm)] py-1.5 pe-9 ps-3 text-sm outline-none data-[highlighted]:bg-[var(--admin-color-primary-soft)] data-[highlighted]:text-[var(--admin-color-primary)] data-[disabled]:pointer-events-none data-[disabled]:opacity-40"
               >
-                <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
+                <SelectPrimitive.ItemText>
+                  <span className="block truncate">{option.label}</span>
+                </SelectPrimitive.ItemText>
                 <SelectPrimitive.ItemIndicator className="absolute end-3 text-[var(--admin-color-primary)]">
                   <Check />
                 </SelectPrimitive.ItemIndicator>

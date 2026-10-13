@@ -338,8 +338,8 @@ export async function getPublicCatalogIndex(filters: CatalogFilters): Promise<{
 
   return {
     products,
-    categories,
-    brands,
+    categories: categories.filter((category) => category.hasProducts === true),
+    brands: brands.filter((brand) => brand.hasProducts === true),
   };
 }
 

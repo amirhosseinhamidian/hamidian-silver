@@ -569,6 +569,7 @@ export class ShippingService {
                 carrierNameSnapshot: order.shippingCarrierNameSnapshot,
                 carrierTrackingUrlSnapshot: order.shippingCarrierTrackingUrlSnapshot,
                 carrierLogoMediaIdSnapshot: order.shippingCarrierLogoMediaIdSnapshot,
+                deliveryTypeSnapshot: order.shippingDeliveryTypeSnapshot,
                 carrierPresentationSnapshottedAt: new Date(),
               },
             }
@@ -582,6 +583,7 @@ export class ShippingService {
         carrierNameSnapshot: null,
         carrierTrackingUrlSnapshot: null,
         carrierLogoMediaIdSnapshot: null,
+        deliveryTypeSnapshot: 'POST',
         carrierPresentationSnapshottedAt: new Date(),
       };
       const serviceName = selectedCarrier?.serviceName ?? dto.serviceName?.trim();
@@ -613,7 +615,7 @@ export class ShippingService {
           actorUserId,
           fromStatus: null,
           toStatus: ShipmentStatus.READY,
-          reason: dto.reason.trim(),
+          reason: dto.reason?.trim() || null,
         },
       });
       return transaction.shipment.findUniqueOrThrow({
@@ -793,6 +795,7 @@ export class ShippingService {
             nextStatus,
             null,
             'Shipment status synchronized from provider',
+            true,
           );
         }
 
@@ -994,16 +997,6 @@ export class ShippingService {
         dto.status === ShipmentStatus.IN_TRANSIT ||
         dto.status === ShipmentStatus.DELIVERED
       ) {
-        if (
-          shipment.provider === MANUAL_SHIPPING_PROVIDER &&
-          !shipment.trackingCode &&
-          !dto.trackingCode?.trim()
-        ) {
-          throw new DomainException(
-            ErrorCode.SHIPMENT_NOT_READY,
-            'Tracking code is required before handing over a manual shipment.',
-          );
-        }
         const readiness = buildFulfillmentReadiness({
           id: shipment.order.id,
           orderNumber: shipment.order.orderNumber,
@@ -1112,7 +1105,7 @@ export class ShippingService {
         },
       });
 
-      if (!shipment.trackingCode && dto.trackingCode) {
+      if (dto.sendCustomerSms !== false && !shipment.trackingCode && dto.trackingCode) {
         await this.outbox?.enqueueOrderEvent(transaction, {
           type: NotificationOutboxEventType.SHIPMENT_TRACKING_AVAILABLE,
           orderId: shipment.orderId,
@@ -1130,6 +1123,7 @@ export class ShippingService {
         dto.status,
         actorUserId,
         dto.reason ?? 'Shipment status updated',
+        dto.sendCustomerSms !== false,
       );
 
       return updated;
@@ -1146,6 +1140,7 @@ export class ShippingService {
     shipmentStatus: ShipmentStatus,
     actorUserId: string | null,
     reason: string,
+    sendCustomerSms: boolean,
   ): Promise<void> {
     const target =
       shipmentStatus === ShipmentStatus.DELIVERED
@@ -1221,7 +1216,7 @@ export class ShippingService {
         },
       });
 
-      if (nextStatus === OrderStatus.SHIPPED) {
+      if (sendCustomerSms && nextStatus === OrderStatus.SHIPPED) {
         await this.outbox?.enqueueOrderEvent(transaction, {
           type: NotificationOutboxEventType.ORDER_SHIPPED,
           orderId: order.id,
@@ -1230,7 +1225,7 @@ export class ShippingService {
         });
       }
 
-      if (nextStatus === OrderStatus.DELIVERED) {
+      if (sendCustomerSms && nextStatus === OrderStatus.DELIVERED) {
         await this.outbox?.enqueueOrderEvent(transaction, {
           type: NotificationOutboxEventType.ORDER_DELIVERED,
           orderId: order.id,

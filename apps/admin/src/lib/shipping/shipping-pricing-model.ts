@@ -3,6 +3,7 @@ import type { SiteMedia } from '@/lib/site-settings/site-settings-model';
 export type ShippingPricingMode = 'FREE' | 'FIXED';
 export type ShippingCarrierPricingMode = 'FREE' | 'FIXED' | 'COLLECT';
 export type ShippingCarrierServiceArea = 'NATIONWIDE' | 'TEHRAN_ONLY';
+export type ShippingDeliveryType = 'POST' | 'COURIER';
 
 export type AdminShippingCarrier = Readonly<{
   id: string;
@@ -16,6 +17,7 @@ export type AdminShippingCarrier = Readonly<{
   thresholdToman: number | null;
   discountedCostToman: number | null;
   serviceArea: ShippingCarrierServiceArea;
+  deliveryType: ShippingDeliveryType;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -82,6 +84,10 @@ export function parseAdminShippingCarrier(value: unknown): AdminShippingCarrier 
     source.serviceArea === 'NATIONWIDE' || source.serviceArea === 'TEHRAN_ONLY'
       ? source.serviceArea
       : null;
+  const deliveryType =
+    source.deliveryType === 'POST' || source.deliveryType === 'COURIER'
+      ? source.deliveryType
+      : null;
   if (
     typeof source.id !== 'string' ||
     typeof source.name !== 'string' ||
@@ -93,6 +99,7 @@ export function parseAdminShippingCarrier(value: unknown): AdminShippingCarrier 
     !pricingMode ||
     baseCostToman === null ||
     !serviceArea ||
+    !deliveryType ||
     typeof source.isActive !== 'boolean' ||
     typeof source.createdAt !== 'string' ||
     typeof source.updatedAt !== 'string'
@@ -123,6 +130,7 @@ export function parseAdminShippingCarrier(value: unknown): AdminShippingCarrier 
     thresholdToman,
     discountedCostToman,
     serviceArea,
+    deliveryType,
     isActive: source.isActive,
     createdAt: source.createdAt,
     updatedAt: source.updatedAt,

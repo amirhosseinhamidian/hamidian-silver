@@ -36,6 +36,10 @@ describe('inventory model parsers', () => {
             name: 'انگشتر آذر',
             slug: 'azar-ring',
             status: 'ACTIVE',
+            primaryMedia: {
+              url: 'https://media.example/products/azar-ring.webp',
+              altText: 'انگشتر آذر',
+            },
           },
           variant: {
             id: 'variant-1',
@@ -58,6 +62,10 @@ describe('inventory model parsers', () => {
         sizeLabel: '۵۲',
         available: 0,
         isLowStock: true,
+        productPrimaryMedia: {
+          url: 'https://media.example/products/azar-ring.webp',
+          altText: 'انگشتر آذر',
+        },
       }),
     ]);
   });

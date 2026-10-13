@@ -23,7 +23,7 @@ export function AccountOrdersPanel({ orders }: Readonly<{ orders: CustomerOrder[
           سفارش‌ها
         </h2>
         <p className="mt-2 text-sm leading-7 text-[var(--sf-color-muted)]">
-          وضعیت سفارش‌ها و کد رهگیری مرسوله را اینجا مشاهده کنید.
+          وضعیت سفارش‌ها و اطلاعات ارسال را اینجا مشاهده کنید.
         </p>
       </div>
 
@@ -103,7 +103,9 @@ export function AccountOrdersPanel({ orders }: Readonly<{ orders: CustomerOrder[
                 }`}
               >
                 {order.status !== 'DELIVERED' ? (
-                  order.trackingCode ? (
+                  order.shippingDeliveryType === 'COURIER' ? (
+                    <p>{order.status === 'SHIPPED' ? 'ارسال از طریق پیک' : 'روش ارسال: پیک'}</p>
+                  ) : order.trackingCode ? (
                     <p>
                       کد رهگیری:{' '}
                       <span className="font-medium" dir="ltr">

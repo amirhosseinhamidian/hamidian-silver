@@ -62,6 +62,7 @@ const readyShipment: NonNullable<AdminOrder['shipment']> = {
   estimatedDeliveryDays: 3,
   providerShipmentId: 'manual:order-1',
   trackingCode: null,
+  deliveryType: 'POST',
   shippedAt: null,
   deliveredAt: null,
   createdAt: '2026-09-07T13:00:00.000Z',
@@ -133,6 +134,7 @@ describe('ShippingManagementView', () => {
             thresholdToman: null,
             discountedCostToman: null,
             serviceArea: 'NATIONWIDE',
+            deliveryType: 'POST',
             isActive: true,
             createdAt: '2026-09-15T00:00:00.000Z',
             updatedAt: '2026-09-15T00:00:00.000Z',
@@ -168,6 +170,7 @@ describe('ShippingManagementView', () => {
         carrierName: 'پیک تهران',
         pricingMode: 'COLLECT' as const,
         serviceArea: 'TEHRAN_ONLY' as const,
+        deliveryType: 'COURIER' as const,
       },
     };
     render(
@@ -202,7 +205,7 @@ describe('ShippingManagementView', () => {
     );
   });
 
-  it('requires and normalizes tracking before handoff', async () => {
+  it('allows handoff without a tracking code or operational note', async () => {
     const fetchMock = vi.mocked(fetch).mockResolvedValue(new Response('{}', { status: 200 }));
     render(
       <ShippingManagementView
@@ -212,13 +215,9 @@ describe('ShippingManagementView', () => {
         canUpdateStatus
       />,
     );
-    fireEvent.click(screen.getAllByRole('button', { name: 'تحویل به پست' })[0]);
-    fireEvent.change(screen.getByLabelText(/یادداشت عملیات/), {
-      target: { value: 'تحویل به باجه پست' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی' }));
-    expect(screen.getByText(/ثبت کد رهگیری پیش از تحویل/)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText(/کد رهگیری/), { target: { value: '۱۲۳۴۵۶' } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'تحویل به ارسال‌کننده' })[0]);
+    expect(screen.getByLabelText(/کد رهگیری/)).not.toBeRequired();
+    expect(screen.getByLabelText(/یادداشت عملیات/)).not.toBeRequired();
     fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(fetchMock).toHaveBeenCalledWith(
@@ -226,8 +225,7 @@ describe('ShippingManagementView', () => {
       expect.objectContaining({
         body: JSON.stringify({
           status: 'HANDED_OVER',
-          reason: 'تحویل به باجه پست',
-          trackingCode: '123456',
+          sendCustomerSms: true,
         }),
       }),
     );

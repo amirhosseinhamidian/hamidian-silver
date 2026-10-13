@@ -15,6 +15,10 @@ export type AdminInventoryItem = Readonly<{
   productName: string;
   productSlug: string;
   productStatus: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+  productPrimaryMedia: Readonly<{
+    url: string;
+    altText: string | null;
+  }> | null;
   variantId: string;
   sku: string;
   variantName: string | null;
@@ -82,6 +86,8 @@ function parseInventoryItem(value: unknown): AdminInventoryItem | null {
   const productName = text(product?.name);
   const productSlug = text(product?.slug);
   const productStatus = text(product?.status) as AdminInventoryItem['productStatus'] | null;
+  const primaryMedia = record(product?.primaryMedia);
+  const primaryMediaUrl = text(primaryMedia?.url);
   const variantId = text(variant?.id);
   const sku = text(variant?.sku);
   const onHand = integer(item?.onHand);
@@ -111,6 +117,9 @@ function parseInventoryItem(value: unknown): AdminInventoryItem | null {
     productName,
     productSlug,
     productStatus,
+    productPrimaryMedia: primaryMediaUrl
+      ? { url: primaryMediaUrl, altText: text(primaryMedia?.altText) }
+      : null,
     variantId,
     sku,
     variantName: text(variant?.name),

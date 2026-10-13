@@ -64,6 +64,11 @@ export class CreateShippingCarrierDto {
   @IsIn(['NATIONWIDE', 'TEHRAN_ONLY'])
   serviceArea?: 'NATIONWIDE' | 'TEHRAN_ONLY';
 
+  @ApiPropertyOptional({ enum: ['POST', 'COURIER'], default: 'POST' })
+  @IsOptional()
+  @IsIn(['POST', 'COURIER'])
+  deliveryType?: 'POST' | 'COURIER';
+
   @ApiPropertyOptional({ default: true })
   @IsOptional()
   @IsBoolean()
@@ -104,6 +109,9 @@ export class ShippingCarrierDto {
   @ApiProperty({ enum: ['NATIONWIDE', 'TEHRAN_ONLY'] })
   serviceArea!: 'NATIONWIDE' | 'TEHRAN_ONLY';
 
+  @ApiProperty({ enum: ['POST', 'COURIER'] })
+  deliveryType!: 'POST' | 'COURIER';
+
   isActive!: boolean;
 
   @ApiProperty({ format: 'date-time' })
@@ -138,4 +146,7 @@ export class PublicShippingOptionDto {
 
   @ApiProperty({ enum: ['NATIONWIDE', 'TEHRAN_ONLY'] })
   serviceArea!: 'NATIONWIDE' | 'TEHRAN_ONLY';
+
+  @ApiProperty({ enum: ['POST', 'COURIER'] })
+  deliveryType!: 'POST' | 'COURIER';
 }

@@ -104,6 +104,7 @@ export type AdminOrderShipment = Readonly<{
   estimatedDeliveryDays: number | null;
   providerShipmentId: string | null;
   trackingCode: string | null;
+  deliveryType: 'POST' | 'COURIER';
   shippedAt: string | null;
   deliveredAt: string | null;
   createdAt: string;
@@ -140,6 +141,7 @@ export type AdminOrderShippingSelection = Readonly<{
   carrierName: string;
   pricingMode: 'FREE' | 'FIXED' | 'COLLECT';
   serviceArea: 'NATIONWIDE' | 'TEHRAN_ONLY';
+  deliveryType: 'POST' | 'COURIER';
 }>;
 
 export type AdminOrder = Readonly<{
@@ -407,6 +409,7 @@ function parseShipment(value: unknown): AdminOrderShipment | null {
   const deliveredAt = nullableDate(shipment.deliveredAt);
   const createdAt = date(shipment.createdAt);
   const updatedAt = date(shipment.updatedAt);
+  const deliveryType = shipment.deliveryTypeSnapshot === 'COURIER' ? 'COURIER' : 'POST';
   if (
     !id ||
     !provider ||
@@ -438,6 +441,7 @@ function parseShipment(value: unknown): AdminOrderShipment | null {
     estimatedDeliveryDays: number(shipment.estimatedDeliveryDays),
     providerShipmentId: text(shipment.providerShipmentId),
     trackingCode: text(shipment.trackingCode),
+    deliveryType,
     shippedAt,
     deliveredAt,
     createdAt,
@@ -523,6 +527,8 @@ function parseOrder(value: unknown): AdminOrder | null {
   const shippingCarrierName = text(order.shippingCarrierNameSnapshot);
   const shippingPricingMode = text(order.shippingPricingModeSnapshot);
   const shippingServiceArea = text(order.shippingServiceAreaSnapshot);
+  const shippingDeliveryType =
+    order.shippingDeliveryTypeSnapshot === 'COURIER' ? 'COURIER' : 'POST';
   const hasShippingSelection =
     shippingCarrierId !== null ||
     shippingCarrierName !== null ||
@@ -593,6 +599,7 @@ function parseOrder(value: unknown): AdminOrder | null {
           carrierName: shippingCarrierName!,
           pricingMode: shippingPricingMode as AdminOrderShippingSelection['pricingMode'],
           serviceArea: shippingServiceArea as AdminOrderShippingSelection['serviceArea'],
+          deliveryType: shippingDeliveryType,
         }
       : null,
     returnAuthorization: returnAuthorizedAt

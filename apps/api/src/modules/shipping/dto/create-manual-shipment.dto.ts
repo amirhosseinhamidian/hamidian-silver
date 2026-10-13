@@ -16,7 +16,8 @@ export class CreateManualShipmentDto {
   @Max(30)
   estimatedDeliveryDays?: number;
 
+  @IsOptional()
   @IsString()
   @Length(3, 500)
-  reason!: string;
+  reason?: string;
 }

@@ -5,6 +5,7 @@ import { isNonNegativeInt32, isSignedInt32 } from '../../common/int32';
 import { InventoryMovementType } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { attachHumanAuditEvent } from '../audit/audit-event';
+import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { AdjustStockDto } from './dto/adjust-stock.dto';
 import { BulkSetStockDto } from './dto/bulk-set-stock.dto';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
@@ -24,7 +25,10 @@ type InventorySnapshot = {
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly publicMediaUrl: PublicMediaUrlService,
+  ) {}
 
   async createWarehouse(dto: CreateWarehouseDto) {
     const code = dto.code.trim();
@@ -595,7 +599,21 @@ export class InventoryService {
         isActive: true,
         size: { select: { label: true } },
         product: {
-          select: { id: true, name: true, slug: true, status: true },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            status: true,
+            media: {
+              where: { media: { deletedAt: null } },
+              orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+              take: 1,
+              select: {
+                altText: true,
+                media: { select: { storageKey: true, altText: true } },
+              },
+            },
+          },
         },
         inventories: {
           where: { warehouseId: query.warehouseId },
@@ -613,6 +631,7 @@ export class InventoryService {
 
     return variants.map((variant) => {
       const inventory = variant.inventories[0];
+      const primaryMedia = variant.product.media[0];
       const onHand = inventory?.onHand ?? 0;
       const reserved = inventory?.reserved ?? 0;
       const lowStockThreshold = inventory?.lowStockThreshold ?? 0;
@@ -628,7 +647,18 @@ export class InventoryService {
           isActive: variant.isActive,
           size: variant.size,
         },
-        product: variant.product,
+        product: {
+          id: variant.product.id,
+          name: variant.product.name,
+          slug: variant.product.slug,
+          status: variant.product.status,
+          primaryMedia: primaryMedia
+            ? {
+                url: this.publicMediaUrl.resolve(primaryMedia.media.storageKey),
+                altText: primaryMedia.altText ?? primaryMedia.media.altText,
+              }
+            : null,
+        },
         onHand,
         reserved,
         available,

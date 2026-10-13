@@ -54,6 +54,10 @@ const item: AdminInventoryItem = {
   productName: 'انگشتر آذر',
   productSlug: 'azar-ring',
   productStatus: 'ACTIVE',
+  productPrimaryMedia: {
+    url: 'https://media.example/products/azar-ring.webp',
+    altText: 'تصویر اصلی انگشتر آذر',
+  },
   variantId: '30000000-0000-4000-8000-000000000001',
   sku: 'RING-52',
   variantName: 'سایز ۵۲',
@@ -103,6 +107,7 @@ describe('InventoryManagementView', () => {
       isLowStock: true,
       updatedAt: null,
     };
+
     const initializedAtZero: AdminInventoryItem = {
       ...item,
       inventoryId: '40000000-0000-4000-8000-000000000002',
@@ -134,6 +139,36 @@ describe('InventoryManagementView', () => {
 
     expect(screen.getAllByText('گردنبند تازه').length).toBeGreaterThan(0);
     expect(screen.queryByText('دستبند قدیمی ناموجود')).not.toBeInTheDocument();
+  });
+
+  it('shows the primary product image as a thumbnail with a fading hover preview', () => {
+    render(view());
+
+    const thumbnail = screen.getByRole('button', {
+      name: 'نمایش تصویر بزرگ انگشتر آذر',
+    });
+
+    expect(
+      within(thumbnail).getByRole('img', {
+        name: 'تصویر اصلی انگشتر آذر',
+      }),
+    ).toHaveAttribute(
+      'src',
+      'https://media.example/products/azar-ring.webp',
+    );
+
+    fireEvent.mouseEnter(thumbnail);
+
+    expect(screen.getByRole('tooltip')).toHaveClass(
+      'opacity-100',
+      'scale-100',
+    );
+
+    fireEvent.mouseLeave(thumbnail);
+
+    expect(
+      screen.getByRole('tooltip', { hidden: true }),
+    ).toHaveClass('opacity-0', 'scale-95');
   });
 
   it('submits localized stock adjustments with a required reason', async () => {
