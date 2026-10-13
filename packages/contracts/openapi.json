@@ -11866,19 +11866,6 @@
             "nullable": true,
             "format": "uuid"
           },
-          "cardMediaId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "productRecommendationMode": {
-            "type": "string",
-            "enum": [
-              "AUTOMATIC",
-              "MANUAL",
-              "DISABLED"
-            ]
-          },
           "seoTitle": {
             "type": "string",
             "nullable": true,
@@ -11937,19 +11924,6 @@
             "type": "string",
             "nullable": true,
             "format": "uuid"
-          },
-          "cardMediaId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "productRecommendationMode": {
-            "enum": [
-              "AUTOMATIC",
-              "MANUAL",
-              "DISABLED"
-            ],
-            "type": "string"
           },
           "seoTitle": {
             "type": "string",
@@ -12085,6 +12059,19 @@
             "type": "string",
             "nullable": true,
             "format": "uuid"
+          },
+          "cardMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "productRecommendationMode": {
+            "type": "string",
+            "enum": [
+              "AUTOMATIC",
+              "MANUAL",
+              "DISABLED"
+            ]
           },
           "seoTitle": {
             "type": "string",
@@ -12227,6 +12214,19 @@
             "type": "string",
             "nullable": true,
             "format": "uuid"
+          },
+          "cardMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "productRecommendationMode": {
+            "enum": [
+              "AUTOMATIC",
+              "MANUAL",
+              "DISABLED"
+            ],
+            "type": "string"
           },
           "seoTitle": {
             "type": "string",
