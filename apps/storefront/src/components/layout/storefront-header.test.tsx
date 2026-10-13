@@ -48,6 +48,11 @@ describe('StorefrontHeader', () => {
     expect(screen.getByRole('button', { name: 'جستجو در محصولات' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'باز کردن منوی موبایل' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'سوالات متداول' })).toHaveAttribute('href', '/faq');
+    expect(screen.getByRole('link', { name: 'راهنمای سایز' })).toHaveAttribute(
+      'href',
+      '/size-guide',
+    );
+    expect(screen.getAllByRole('link', { name: 'دانستنی‌ها' })).toHaveLength(1);
     expect(screen.getByRole('link', { name: 'گالری حمیدیان، صفحه اصلی موبایل' })).toHaveAttribute(
       'href',
       '/',

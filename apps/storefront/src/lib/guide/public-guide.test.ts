@@ -17,6 +17,7 @@ const summary = {
   eyebrow: null,
   excerpt: 'چند نشانه کاربردی برای بررسی نقره',
   heroMedia: null,
+  cardMedia: null,
   seoCanonicalPath: null,
   seoNoIndex: false,
   seoOgMedia: null,
@@ -63,6 +64,7 @@ describe('public guide data', () => {
     const article = {
       ...summary,
       heroMobileMedia: null,
+      productRecommendationMode: 'MANUAL',
       seoTitle: null,
       seoDescription: null,
       searchKeywords: ['نقره'],

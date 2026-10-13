@@ -23,6 +23,7 @@ import {
   GuideArticleFormat,
   GuideArticleStatus,
   GuideBlockType,
+  GuideProductRecommendationMode,
 } from '../../../generated/prisma/enums';
 
 export const GUIDE_SLUG_PATTERN = /^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u;
@@ -93,6 +94,14 @@ export class CreateGuideArticleDto {
   @IsOptional()
   @IsUUID('4')
   heroMobileMediaId?: string | null;
+
+  @IsOptional()
+  @IsUUID('4')
+  cardMediaId?: string | null;
+
+  @IsOptional()
+  @IsEnum(GuideProductRecommendationMode)
+  productRecommendationMode?: GuideProductRecommendationMode;
 
   @IsOptional()
   @IsString()

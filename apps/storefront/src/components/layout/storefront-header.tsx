@@ -76,7 +76,7 @@ export function StorefrontHeader({
           >
             <Link href="/services">خدمات ما</Link>
             <Link href="/faq">سوالات متداول</Link>
-            <Link href="/guide">دانستنی‌ها</Link>
+            <Link href="/size-guide">راهنمای سایز</Link>
             <Link href="/contact">تماس با ما</Link>
             <Link href="/about">درباره گالری حمیدیان</Link>
           </nav>

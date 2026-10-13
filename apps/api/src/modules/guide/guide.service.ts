@@ -4,10 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '../../generated/prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 import {
   GuideArticleFormat,
   GuideArticleStatus,
+  GuideProductRecommendationMode,
   ProductStatus,
   SeoRedirectEntityType,
 } from '../../generated/prisma/enums';
@@ -28,8 +29,38 @@ import type { CreateGuideTopicDto, UpdateGuideTopicDto } from './dto/guide-topic
 
 const mediaSelect = { id: true, storageKey: true, mimeType: true, altText: true } as const;
 const topicInclude = { coverMedia: { select: mediaSelect } } as const;
+const relatedProductSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  shortDescription: true,
+  salePriceToman: true,
+  status: true,
+  deletedAt: true,
+  createdAt: true,
+  homepagePopularFeature: { select: { priority: true } },
+  variants: {
+    where: { isActive: true, deletedAt: null },
+    select: {
+      salePriceToman: true,
+      inventories: {
+        where: { warehouse: { isActive: true, deletedAt: null } },
+        select: { onHand: true, reserved: true },
+      },
+    },
+  },
+  media: {
+    orderBy: { sortOrder: 'asc' as const },
+    select: {
+      isPrimary: true,
+      altText: true,
+      media: { select: mediaSelect },
+    },
+  },
+} as const;
 const articleSummaryInclude = {
   heroMedia: { select: mediaSelect },
+  cardMedia: { select: mediaSelect },
   seoOgMedia: { select: mediaSelect },
   blocks: { select: { id: true } },
   topics: { include: { topic: { include: topicInclude } } },
@@ -40,6 +71,7 @@ const articleSummaryInclude = {
 const articleInclude = {
   heroMedia: { select: mediaSelect },
   heroMobileMedia: { select: mediaSelect },
+  cardMedia: { select: mediaSelect },
   seoOgMedia: { select: mediaSelect },
   blocks: {
     orderBy: { sortOrder: 'asc' as const },
@@ -51,23 +83,7 @@ const articleInclude = {
     select: {
       productId: true,
       product: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          shortDescription: true,
-          salePriceToman: true,
-          status: true,
-          deletedAt: true,
-          media: {
-            orderBy: { sortOrder: 'asc' as const },
-            select: {
-              isPrimary: true,
-              altText: true,
-              media: { select: mediaSelect },
-            },
-          },
-        },
+        select: relatedProductSelect,
       },
     },
   },
@@ -121,8 +137,11 @@ export class GuideService {
       include: articleInclude,
     });
     if (!row) throw new NotFoundException('Guide article was not found.');
-    const relatedArticles = await this.findRelatedArticles(row);
-    return this.projectArticle(row, relatedArticles);
+    const [relatedArticles, relatedProducts] = await Promise.all([
+      this.findRelatedArticles(row),
+      this.resolveRelatedProducts(row),
+    ]);
+    return this.projectArticle(row, relatedArticles, relatedProducts);
   }
 
   async listPublicRelatedArticles(query: PublicRelatedGuideArticlesQueryDto) {
@@ -178,7 +197,7 @@ export class GuideService {
       include: articleInclude,
     });
     if (!row) throw new NotFoundException('Guide article was not found.');
-    return this.projectArticle(row);
+    return this.projectArticle(row, [], this.projectSellableProducts(row.products));
   }
 
   async createArticle(dto: CreateGuideArticleDto, userId: string) {
@@ -196,6 +215,8 @@ export class GuideService {
             status: input.status,
             heroMediaId: input.heroMediaId,
             heroMobileMediaId: input.heroMobileMediaId,
+            cardMediaId: input.cardMediaId,
+            productRecommendationMode: input.productRecommendationMode,
             seoTitle: input.seoTitle,
             seoDescription: input.seoDescription,
             seoCanonicalPath: input.seoCanonicalPath,
@@ -269,6 +290,8 @@ export class GuideService {
             status: input.status,
             heroMediaId: input.heroMediaId,
             heroMobileMediaId: input.heroMobileMediaId,
+            cardMediaId: input.cardMediaId,
+            productRecommendationMode: input.productRecommendationMode,
             seoTitle: input.seoTitle,
             seoDescription: input.seoDescription,
             seoCanonicalPath: input.seoCanonicalPath,
@@ -482,6 +505,9 @@ export class GuideService {
       status: dto.status ?? GuideArticleStatus.DRAFT,
       heroMediaId: dto.heroMediaId ?? null,
       heroMobileMediaId: dto.heroMobileMediaId ?? null,
+      cardMediaId: dto.cardMediaId ?? null,
+      productRecommendationMode:
+        dto.productRecommendationMode ?? GuideProductRecommendationMode.AUTOMATIC,
       seoTitle: clean(dto.seoTitle),
       seoDescription: clean(dto.seoDescription),
       seoCanonicalPath: clean(dto.seoCanonicalPath),
@@ -545,6 +571,7 @@ export class GuideService {
       this.validateMediaIds([
         input.heroMediaId,
         input.heroMobileMediaId,
+        input.cardMediaId,
         input.seoOgMediaId,
         ...input.blocks.map((block) => block.primaryMediaId),
       ]),
@@ -616,7 +643,9 @@ export class GuideService {
       excerpt: row.excerpt,
       format: row.format,
       status: row.status,
+      productRecommendationMode: row.productRecommendationMode,
       heroMedia: this.projectMedia(row.heroMedia),
+      cardMedia: this.projectMedia(row.cardMedia),
       seoCanonicalPath: row.seoCanonicalPath,
       seoNoIndex: row.seoNoIndex,
       seoOgMedia: this.projectMedia(row.seoOgMedia),
@@ -630,10 +659,15 @@ export class GuideService {
     };
   }
 
-  private projectArticle(row: any, relatedArticles: readonly any[] = []) {
+  private projectArticle(
+    row: any,
+    relatedArticles: readonly any[] = [],
+    relatedProducts: readonly any[] = [],
+  ) {
     return {
       ...this.projectSummary(row),
       heroMobileMedia: this.projectMedia(row.heroMobileMedia),
+      productRecommendationMode: row.productRecommendationMode,
       seoTitle: row.seoTitle,
       seoDescription: row.seoDescription,
       searchKeywords: row.searchKeywords,
@@ -647,25 +681,7 @@ export class GuideService {
         sortOrder: block.sortOrder,
       })),
       productIds: row.products.map(({ productId }: any) => productId),
-      relatedProducts: row.products.flatMap(({ product }: any) => {
-        if (product.status !== ProductStatus.ACTIVE || product.deletedAt) return [];
-        const primary = product.media.find(({ isPrimary }: any) => isPrimary) ?? product.media[0];
-        return [
-          {
-            id: product.id,
-            name: product.name,
-            slug: product.slug,
-            shortDescription: product.shortDescription,
-            salePriceToman: product.salePriceToman,
-            primaryMedia: primary
-              ? this.projectMedia({
-                  ...primary.media,
-                  altText: primary.altText ?? primary.media.altText,
-                })
-              : null,
-          },
-        ];
-      }),
+      relatedProducts,
       categoryIds: row.categories.map(({ categoryId }: any) => categoryId),
       relatedCategories: row.categories.flatMap(({ category }: any) =>
         category?.isActive && !category.deletedAt
@@ -681,6 +697,110 @@ export class GuideService {
       relatedArticles,
       createdAt: row.createdAt,
     };
+  }
+
+  private async resolveRelatedProducts(source: any) {
+    const mode = source.productRecommendationMode ?? GuideProductRecommendationMode.MANUAL;
+    if (mode === GuideProductRecommendationMode.DISABLED) return [];
+    if (mode === GuideProductRecommendationMode.MANUAL)
+      return this.projectSellableProducts(source.products);
+
+    const categoryIds: string[] = source.categories.map(
+      ({ categoryId }: { categoryId: string }) => categoryId,
+    );
+    if (!categoryIds.length) return [];
+    const brandIds: string[] = source.brands.map(({ brandId }: { brandId: string }) => brandId);
+    const brandRank = brandIds.length
+      ? Prisma.sql`CASE WHEN product."brandId" IN (${Prisma.join(brandIds)}) THEN 1 ELSE 0 END`
+      : Prisma.sql`0`;
+    const candidates = await this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      SELECT product.id
+      FROM "products" AS product
+      WHERE product.status = 'ACTIVE'
+        AND product."deletedAt" IS NULL
+        AND EXISTS (
+          SELECT 1
+          FROM "product_categories" AS product_category
+          JOIN "categories" AS category ON category.id = product_category."categoryId"
+          WHERE product_category."productId" = product.id
+            AND product_category."categoryId" IN (${Prisma.join(categoryIds)})
+            AND category."isActive" = true
+            AND category."deletedAt" IS NULL
+        )
+        AND EXISTS (
+          SELECT 1
+          FROM "product_variants" AS variant
+          JOIN "inventory" AS inventory ON inventory."variantId" = variant.id
+          JOIN "warehouses" AS warehouse ON warehouse.id = inventory."warehouseId"
+          WHERE variant."productId" = product.id
+            AND variant."isActive" = true
+            AND variant."deletedAt" IS NULL
+            AND warehouse."isActive" = true
+            AND warehouse."deletedAt" IS NULL
+          GROUP BY variant.id
+          HAVING SUM(GREATEST(inventory."onHand" - inventory."reserved", 0)) > 0
+        )
+      ORDER BY
+        (
+          SELECT COUNT(*)
+          FROM "product_categories" AS ranked_category
+          WHERE ranked_category."productId" = product.id
+            AND ranked_category."categoryId" IN (${Prisma.join(categoryIds)})
+        ) DESC,
+        ${brandRank} DESC,
+        EXISTS (
+          SELECT 1 FROM "homepage_popular_products" AS popular
+          WHERE popular."productId" = product.id
+        ) DESC,
+        product."createdAt" DESC,
+        product.id ASC
+      LIMIT 4
+    `);
+    if (!candidates.length) return [];
+
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: candidates.map(({ id }) => id) } },
+      select: relatedProductSelect,
+    });
+    const byId = new Map(products.map((product) => [product.id, product]));
+    return this.projectSellableProducts(
+      candidates.flatMap(({ id }) => {
+        const product = byId.get(id);
+        return product ? [{ productId: id, product }] : [];
+      }),
+    );
+  }
+
+  private projectSellableProducts(relations: readonly any[]) {
+    return relations.flatMap(({ product }: any) => {
+      if (product.status !== ProductStatus.ACTIVE || product.deletedAt) return [];
+      const sellableVariants = product.variants.filter((variant: any) =>
+        variant.inventories.some(
+          (inventory: any) => Math.max(0, inventory.onHand - inventory.reserved) > 0,
+        ),
+      );
+      if (!sellableVariants.length) return [];
+      const prices = sellableVariants
+        .map((variant: any) => variant.salePriceToman ?? product.salePriceToman)
+        .filter((price: unknown): price is number => typeof price === 'number')
+        .sort((left: number, right: number) => left - right);
+      const primary = product.media.find(({ isPrimary }: any) => isPrimary) ?? product.media[0];
+      return [
+        {
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          shortDescription: product.shortDescription,
+          salePriceToman: prices[0] ?? product.salePriceToman,
+          primaryMedia: primary
+            ? this.projectMedia({
+                ...primary.media,
+                altText: primary.altText ?? primary.media.altText,
+              })
+            : null,
+        },
+      ];
+    });
   }
 
   private async findRelatedArticles(source: any) {
