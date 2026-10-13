@@ -20,6 +20,10 @@ import { MoneyInput } from '@/components/ui/money-input';
 import { Select } from '@/components/ui/select';
 import type { ProductFormData } from '@/lib/catalog/catalog-data';
 import type { ProductSizeMode, ProductStatus } from '@/lib/catalog/catalog-model';
+import {
+  normalizeProductAttributeKey,
+  parseProductAttributesText,
+} from '@/lib/catalog/product-attributes';
 import { toAsciiDigits, toPersianDigits } from '@/lib/presentation/formatters';
 import type { AdminSupplierImportDraft } from '@/lib/supplier-imports/supplier-imports-model';
 
@@ -185,6 +189,10 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
           value: attribute.value,
         })),
   );
+  const [attributeQuickInput, setAttributeQuickInput] = useState('');
+  const [attributeQuickMessage, setAttributeQuickMessage] = useState<string | null>(null);
+  const [attributeQuickError, setAttributeQuickError] = useState<string | null>(null);
+
   const [variants, setVariants] = useState<EditableProductVariant[]>(() => [
     createVariant(importDraft),
   ]);
@@ -219,6 +227,52 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
     }
     setError(null);
     setProductImages(files);
+  }
+
+  function addAttributesFromQuickInput() {
+    const parsed = parseProductAttributesText(attributeQuickInput);
+    if (!parsed.ok) {
+      setAttributeQuickMessage(null);
+      setAttributeQuickError(parsed.message);
+      return;
+    }
+
+    const retainedAttributes = attributes.filter(
+      (attribute) => attribute.key.trim() || attribute.value.trim(),
+    );
+    if (retainedAttributes.length + parsed.attributes.length > 30) {
+      setAttributeQuickMessage(null);
+      setAttributeQuickError(
+        `با احتساب ویژگی‌های فعلی، حداکثر ${toPersianDigits(30 - retainedAttributes.length)} ویژگی دیگر می‌توانید اضافه کنید.`,
+      );
+      return;
+    }
+
+    const existingKeys = new Set(
+      retainedAttributes
+        .map((attribute) => normalizeProductAttributeKey(attribute.key))
+        .filter(Boolean),
+    );
+    const duplicate = parsed.attributes.find((attribute) =>
+      existingKeys.has(normalizeProductAttributeKey(attribute.key)),
+    );
+    if (duplicate) {
+      setAttributeQuickMessage(null);
+      setAttributeQuickError(`کلید «${duplicate.key}» قبلاً در ویژگی‌های محصول وجود دارد.`);
+      return;
+    }
+
+    setAttributes([
+      ...retainedAttributes,
+      ...parsed.attributes.map((attribute) => ({
+        id: createAttributeId(),
+        key: attribute.key,
+        value: attribute.value,
+      })),
+    ]);
+    setAttributeQuickInput('');
+    setAttributeQuickError(null);
+    setAttributeQuickMessage(`${toPersianDigits(parsed.attributes.length)} ویژگی به فرم اضافه شد.`);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -729,6 +783,52 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
           </Button>
         }
       >
+        <div className="mb-5 rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface-subtle)] p-4">
+          <FormField
+            id="product-attributes-quick-input"
+            label="افزودن سریع ویژگی‌ها"
+            hint="هر ویژگی را در یک خط با قالب «کلید: مقدار» وارد کنید؛ ردیف‌های لازم به‌صورت خودکار ساخته می‌شوند."
+          >
+            {(props) => (
+              <Textarea
+                {...props}
+                rows={4}
+                className="min-h-24 bg-[var(--admin-color-surface)]"
+                value={attributeQuickInput}
+                placeholder={'جنس نقره: نقره ۹۲۵\nنوع آبکاری: رودیوم\nنحوه نگهداری: دور از رطوبت'}
+                disabled={pending}
+                invalid={Boolean(attributeQuickError)}
+                onChange={(event) => {
+                  setAttributeQuickInput(event.currentTarget.value);
+                  setAttributeQuickError(null);
+                  setAttributeQuickMessage(null);
+                }}
+              />
+            )}
+          </FormField>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pending || !attributeQuickInput.trim()}
+              onClick={addAttributesFromQuickInput}
+            >
+              تبدیل متن به ویژگی‌ها
+            </Button>
+            {attributeQuickError ? (
+              <p role="alert" className="text-xs text-[var(--admin-color-danger)]">
+                {attributeQuickError}
+              </p>
+            ) : null}
+            {attributeQuickMessage ? (
+              <p role="status" className="text-xs text-[var(--admin-color-success)]">
+                {attributeQuickMessage}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
         {attributes.length > 0 ? (
           <div className="space-y-3">
             {attributes.map((attribute, index) => (

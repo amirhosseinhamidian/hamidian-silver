@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
-import { ProductStatus, SeoRedirectEntityType } from '../../generated/prisma/enums';
+import {
+  GuideArticleStatus,
+  ProductStatus,
+  SeoRedirectEntityType,
+} from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 
 function entityPath(entityType: SeoRedirectEntityType, slug: string): string {
@@ -11,6 +15,8 @@ function entityPath(entityType: SeoRedirectEntityType, slug: string): string {
       return `/categories/${slug}`;
     case SeoRedirectEntityType.BRAND:
       return `/brands/${slug}`;
+    case SeoRedirectEntityType.GUIDE_ARTICLE:
+      return `/guide/${slug}`;
     default:
       throw new Error(`Unsupported SEO redirect entity type: ${String(entityType)}`);
   }
@@ -84,6 +90,18 @@ export class SeoRedirectsService {
         return Boolean(
           await this.prisma.brand.findFirst({
             where: { id: entityId, isActive: true, deletedAt: null },
+            select: { id: true },
+          }),
+        );
+      case SeoRedirectEntityType.GUIDE_ARTICLE:
+        return Boolean(
+          await this.prisma.guideArticle.findFirst({
+            where: {
+              id: entityId,
+              status: GuideArticleStatus.PUBLISHED,
+              publishedAt: { lte: new Date() },
+              deletedAt: null,
+            },
             select: { id: true },
           }),
         );

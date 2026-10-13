@@ -495,13 +495,14 @@ function HomepageSection({
             <SiteMediaField
               label="Hero محصولات دسکتاپ"
               media={catalogMedia(settings)}
-              altText={settings.catalogHeroTitle ?? 'محصولات نقره حمیدیان'}
+              altText={settings.catalogHeroTitle ?? 'محصولات نقره گالری حمیدیان'}
               disabled={!canWrite || pending !== null}
               aspect="page-desktop"
               hint="۱۹۴۲×۸۰۹ با نسبت ۲٫۴:۱"
               onUploaded={(media) =>
                 setSettings({
                   ...settings,
+                  catalogHeroEnabled: Boolean(settings.catalogHeroMobileMediaId),
                   catalogHeroMediaId: media.id,
                   catalogHeroMedia: { url: media.url, altText: media.altText },
                 })
@@ -518,13 +519,14 @@ function HomepageSection({
             <SiteMediaField
               label="Hero محصولات موبایل و تبلت"
               media={catalogMobileMedia(settings)}
-              altText={settings.catalogHeroTitle ?? 'محصولات نقره حمیدیان'}
+              altText={settings.catalogHeroTitle ?? 'محصولات نقره گالری حمیدیان'}
               disabled={!canWrite || pending !== null}
               aspect="mobile"
               hint="۱۰۸۶×۱۴۴۸ با نسبت ۳:۴"
               onUploaded={(media) =>
                 setSettings({
                   ...settings,
+                  catalogHeroEnabled: Boolean(settings.catalogHeroMediaId),
                   catalogHeroMobileMediaId: media.id,
                   catalogHeroMobileMedia: { url: media.url, altText: media.altText },
                 })
@@ -549,6 +551,10 @@ function HomepageSection({
                 setSettings({ ...settings, catalogHeroEnabled: event.currentTarget.checked })
               }
             />
+            <p className="text-xs leading-6 text-[var(--admin-color-muted)]">
+              با انتخاب هر دو تصویر دسکتاپ و موبایل، نمایش Hero به‌صورت خودکار فعال می‌شود؛ برای
+              اعمال تغییرات دکمه ذخیره را بزنید.
+            </p>
             <FormField id="catalog-hero-title" label="عنوان Hero">
               {(props) => (
                 <Input
@@ -807,7 +813,7 @@ function FooterSection({
                 onChange={(event) =>
                   onChange({ ...settings, galleryName: event.currentTarget.value || null })
                 }
-                placeholder="مثلاً گالری نقره حمیدیان"
+                placeholder="مثلاً گالری حمیدیان"
                 disabled={disabled}
               />
             )}
@@ -986,7 +992,7 @@ function SeoSettingsSection({
                 {...props}
                 value={settings.seoSiteName}
                 maxLength={120}
-                placeholder="نقره حمیدیان"
+                placeholder="گالری حمیدیان"
                 disabled={disabled}
                 onChange={(event) =>
                   onChange({ ...settings, seoSiteName: event.currentTarget.value })
@@ -1000,7 +1006,7 @@ function SeoSettingsSection({
                 {...props}
                 value={settings.seoDefaultTitle}
                 maxLength={200}
-                placeholder="فروشگاه نقره حمیدیان"
+                placeholder="گالری حمیدیان"
                 disabled={disabled}
                 onChange={(event) =>
                   onChange({ ...settings, seoDefaultTitle: event.currentTarget.value })
@@ -1020,7 +1026,7 @@ function SeoSettingsSection({
                 dir="ltr"
                 value={settings.seoTitleTemplate}
                 maxLength={200}
-                placeholder="%s | گالری حمدیان"
+                placeholder="%s | گالری حمیدیان"
                 disabled={disabled}
                 onChange={(event) =>
                   onChange({ ...settings, seoTitleTemplate: event.currentTarget.value })
@@ -1118,7 +1124,7 @@ function SeoSettingsSection({
                 {...props}
                 value={settings.seoOrganizationName}
                 maxLength={200}
-                placeholder="گالری نقره حمیدیان"
+                placeholder="گالری حمیدیان"
                 disabled={disabled}
                 onChange={(event) =>
                   onChange({ ...settings, seoOrganizationName: event.currentTarget.value })

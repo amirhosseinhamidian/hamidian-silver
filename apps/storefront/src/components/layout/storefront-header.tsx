@@ -76,18 +76,19 @@ export function StorefrontHeader({
           >
             <Link href="/services">خدمات ما</Link>
             <Link href="/faq">سوالات متداول</Link>
+            <Link href="/guide">دانستنی‌ها</Link>
             <Link href="/contact">تماس با ما</Link>
             <Link href="/about">درباره گالری حمیدیان</Link>
           </nav>
 
           <Link
             href="/"
-            aria-label="نقره حمیدیان، صفحه اصلی"
+            aria-label="گالری حمیدیان، صفحه اصلی"
             className="relative col-start-2 h-16 w-40 sm:h-20 sm:w-56"
           >
             <Image
               src="/brand/hamidian-signature.png"
-              alt="لوگوی نقره حمیدیان"
+              alt="لوگوی گالری حمیدیان"
               fill
               sizes="224px"
               loading="eager"
@@ -133,7 +134,7 @@ export function StorefrontHeader({
 
           <Link
             href="/"
-            aria-label="نقره حمیدیان، صفحه اصلی موبایل"
+            aria-label="گالری حمیدیان، صفحه اصلی موبایل"
             className="relative h-11 w-28 lg:hidden"
           >
             <Image
@@ -167,6 +168,9 @@ export function StorefrontHeader({
               </li>
               <li>
                 <Link href="/products?sort=newest">جدیدترین‌ها</Link>
+              </li>
+              <li>
+                <Link href="/guide">دانستنی‌ها</Link>
               </li>
             </ul>
           </nav>

@@ -12,12 +12,18 @@ const MAX_ATTEMPTS = 8;
 const DEFAULT_BATCH_SIZE = 50;
 const DEFAULT_STALE_MINUTES = 10;
 
+const TEXT_FALLBACK_ERROR_PREFIX = '[telegram-text-fallback] ';
+
+const TELEGRAM_IMAGE_FETCH_ERROR =
+  /^TELEGRAM(?: relay)? rejected the message: (?:TELEGRAM_REJECTED: )?Bad Request: failed to get HTTP URL content\.?$/i;
+
 @Injectable()
 export class AdminOrderNotificationWorker {
   private readonly logger = new Logger(AdminOrderNotificationWorker.name);
   private readonly adminOrigin: string;
   private readonly batchSize: number;
   private readonly staleMs: number;
+
   private running = false;
 
   constructor(
@@ -27,7 +33,9 @@ export class AdminOrderNotificationWorker {
     config: ConfigService,
   ) {
     this.adminOrigin = config.get<string>('ADMIN_APP_ORIGIN', 'http://localhost:3002');
+
     this.batchSize = config.get<number>('ADMIN_MESSAGING_OUTBOX_BATCH_SIZE', DEFAULT_BATCH_SIZE);
+
     this.staleMs =
       config.get<number>('ADMIN_MESSAGING_OUTBOX_STALE_MINUTES', DEFAULT_STALE_MINUTES) * 60_000;
   }
@@ -35,15 +43,20 @@ export class AdminOrderNotificationWorker {
   @Cron(CronExpression.EVERY_MINUTE, { name: 'admin-order-notification-dispatch' })
   async dispatchPending(): Promise<void> {
     if (this.running) return;
+
     this.running = true;
 
     try {
       const now = new Date();
       const staleBefore = new Date(now.getTime() - this.staleMs);
+
       const deliveries = await this.prisma.adminOrderNotificationDelivery.findMany({
         where: {
           OR: [
-            { status: NotificationOutboxStatus.PENDING, nextAttemptAt: { lte: now } },
+            {
+              status: NotificationOutboxStatus.PENDING,
+              nextAttemptAt: { lte: now },
+            },
             {
               status: NotificationOutboxStatus.FAILED,
               attempts: { lt: MAX_ATTEMPTS },
@@ -76,13 +89,17 @@ export class AdminOrderNotificationWorker {
               lastError: 'Worker lease expired after the maximum delivery attempts.',
             },
           });
+
           continue;
         }
+
         await this.dispatch(
           delivery.id,
           delivery.orderId,
           delivery.channel,
           delivery.chatIdSnapshot,
+          delivery.attempts,
+          delivery.lastError,
         );
       }
     } catch (error) {
@@ -97,14 +114,20 @@ export class AdminOrderNotificationWorker {
     orderId: string,
     channel: Parameters<AdminMessageSender['send']>[0],
     chatId: string,
+    previousAttempts: number,
+    previousError: string | null,
   ): Promise<void> {
     const claimedAt = new Date();
     const staleBefore = new Date(claimedAt.getTime() - this.staleMs);
+
     const claimed = await this.prisma.adminOrderNotificationDelivery.updateMany({
       where: {
         id: deliveryId,
         OR: [
-          { status: NotificationOutboxStatus.PENDING, nextAttemptAt: { lte: claimedAt } },
+          {
+            status: NotificationOutboxStatus.PENDING,
+            nextAttemptAt: { lte: claimedAt },
+          },
           {
             status: NotificationOutboxStatus.FAILED,
             attempts: { lt: MAX_ATTEMPTS },
@@ -123,6 +146,7 @@ export class AdminOrderNotificationWorker {
         claimedAt,
       },
     });
+
     if (claimed.count !== 1) return;
 
     try {
@@ -138,11 +162,26 @@ export class AdminOrderNotificationWorker {
           shippingTotalToman: true,
           taxTotalToman: true,
           grandTotalToman: true,
-          payment: { select: { status: true } },
+
+          payment: {
+            select: {
+              status: true,
+            },
+          },
+
           customerNote: true,
           shippingCarrierNameSnapshot: true,
-          user: { select: { phone: true, firstName: true, lastName: true } },
+
+          user: {
+            select: {
+              phone: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+
           shippingAddress: true,
+
           items: {
             orderBy: { createdAt: 'asc' },
             select: {
@@ -153,15 +192,26 @@ export class AdminOrderNotificationWorker {
               platingType: true,
               quantity: true,
               lineTotalToman: true,
+
               variant: {
                 select: {
                   product: {
                     select: {
                       media: {
-                        where: { media: { deletedAt: null } },
+                        where: {
+                          media: {
+                            deletedAt: null,
+                          },
+                        },
                         orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
                         take: 1,
-                        select: { media: { select: { storageKey: true } } },
+                        select: {
+                          media: {
+                            select: {
+                              storageKey: true,
+                            },
+                          },
+                        },
                       },
                     },
                   },
@@ -171,6 +221,7 @@ export class AdminOrderNotificationWorker {
           },
         },
       });
+
       if (
         order.payment?.status !== PaymentStatus.PAID &&
         order.payment?.status !== PaymentStatus.AWAITING_REVIEW
@@ -179,18 +230,33 @@ export class AdminOrderNotificationWorker {
           `Admin order notification is not ready at ${order.payment?.status ?? 'NO_PAYMENT'}.`,
         );
       }
+
+      // Continue without an image after repeated Telegram image-fetch errors.
+      const textFallback = this.shouldUseTextFallback(channel, previousAttempts + 1, previousError);
+
+      // Select the first ordered product with an available primary image.
+      // The variant relation can be null for historical order items.
       const primaryStorageKey = order.items.find(
         (item) => item.variant?.product.media[0]?.media.storageKey,
       )?.variant?.product.media[0]?.media.storageKey;
+
       const imageUrl = primaryStorageKey ? this.publicMediaUrl.resolve(primaryStorageKey) : null;
+
+      const sendOptions = imageUrl && !textFallback ? { imageUrl } : {};
+
       await this.sender.send(
         channel,
         chatId,
         formatAdminOrderMessage(order, this.adminOrigin),
-        imageUrl,
+        sendOptions,
       );
+
       await this.prisma.adminOrderNotificationDelivery.updateMany({
-        where: { id: deliveryId, status: NotificationOutboxStatus.PROCESSING, claimedAt },
+        where: {
+          id: deliveryId,
+          status: NotificationOutboxStatus.PROCESSING,
+          claimedAt,
+        },
         data: {
           status: NotificationOutboxStatus.SENT,
           processedAt: new Date(),
@@ -199,24 +265,46 @@ export class AdminOrderNotificationWorker {
         },
       });
     } catch (error) {
-      const attempts = await this.prisma.adminOrderNotificationDelivery.findUnique({
-        where: { id: deliveryId },
-        select: { attempts: true },
-      });
-      const attemptCount = attempts?.attempts ?? MAX_ATTEMPTS;
+      const attemptCount = previousAttempts + 1;
+
+      const textFallback = this.shouldUseTextFallback(channel, attemptCount, previousError);
+
+      const errorMessage = this.errorMessage(error);
+
       await this.prisma.adminOrderNotificationDelivery.updateMany({
-        where: { id: deliveryId, status: NotificationOutboxStatus.PROCESSING, claimedAt },
+        where: {
+          id: deliveryId,
+          status: NotificationOutboxStatus.PROCESSING,
+          claimedAt,
+        },
         data: {
           status: NotificationOutboxStatus.FAILED,
           nextAttemptAt: new Date(Date.now() + this.retryDelayMs(attemptCount)),
           claimedAt: null,
-          lastError: this.errorMessage(error).slice(0, 1000),
+          lastError: `${textFallback ? TEXT_FALLBACK_ERROR_PREFIX : ''}${errorMessage}`.slice(
+            0,
+            1000,
+          ),
         },
       });
-      this.logger.warn(
-        `Admin order notification ${deliveryId} failed: ${this.errorMessage(error)}`,
-      );
+
+      this.logger.warn(`Admin order notification ${deliveryId} failed: ${errorMessage}`);
     }
+  }
+
+  private shouldUseTextFallback(
+    channel: Parameters<AdminMessageSender['send']>[0],
+    attempt: number,
+    previousError: string | null,
+  ): boolean {
+    if (channel !== 'TELEGRAM' || attempt < 4 || !previousError) {
+      return false;
+    }
+
+    return (
+      previousError.startsWith(TEXT_FALLBACK_ERROR_PREFIX) ||
+      TELEGRAM_IMAGE_FETCH_ERROR.test(previousError)
+    );
   }
 
   private retryDelayMs(attempts: number): number {

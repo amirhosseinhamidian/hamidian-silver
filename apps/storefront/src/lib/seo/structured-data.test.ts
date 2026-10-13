@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import type { PublicCatalogProductDetail } from '@/lib/catalog/public-catalog';
+import type { PublicGuideArticle } from '@/lib/guide/public-guide';
 import {
   buildBreadcrumbStructuredData,
+  buildGuideArticleStructuredData,
+  buildGuideCollectionStructuredData,
+  buildGuideFaqStructuredData,
   buildOrganizationStructuredData,
   buildProductStructuredData,
+  buildWebSiteStructuredData,
   serializeJsonLd,
 } from '@/lib/seo/structured-data';
 import type { PublicSiteSettings } from '@/lib/site-settings/public-site-settings';
@@ -67,7 +72,153 @@ const product = {
   variants: [],
 } satisfies PublicCatalogProductDetail;
 
+const guideArticle = {
+  id: 'guide-1',
+  title: 'مراقبت از نقره',
+  slug: 'silver-care',
+  eyebrow: null,
+  excerpt: 'راهنمای کاربردی نگهداری نقره',
+  format: 'CARE_GUIDE',
+  heroMedia: {
+    id: 'media-1',
+    url: '/media/care.webp',
+    mimeType: 'image/webp',
+    altText: null,
+  },
+  seoCanonicalPath: '/guide/silver-care',
+  seoNoIndex: false,
+  seoOgMedia: null,
+  readingTimeMinutes: 4,
+  isFeatured: false,
+  publishedAt: '2026-10-10T10:00:00.000Z',
+  topics: [{ id: 'topic-1', name: 'نگهداری', slug: 'care', description: null, coverMedia: null }],
+  updatedAt: '2026-10-12T10:00:00.000Z',
+  heroMobileMedia: null,
+  seoTitle: null,
+  seoDescription: null,
+  searchKeywords: ['نگهداری نقره', 'تمیز کردن نقره'],
+  blocks: [
+    {
+      id: 'block-1',
+      type: 'FAQ',
+      variant: 'accordion',
+      anchorId: 'faq',
+      primaryMedia: null,
+      content: {
+        items: [{ question: 'نقره را کجا نگهداری کنیم؟', answer: 'در محیط خشک.' }],
+      },
+      sortOrder: 0,
+    },
+  ],
+  relatedProducts: [
+    {
+      id: 'product-1',
+      name: 'انگشتر نقره',
+      slug: 'silver-ring',
+      shortDescription: null,
+      salePriceToman: 1_000_000,
+      primaryMedia: null,
+    },
+  ],
+  relatedCategories: [{ id: 'category-1', name: 'انگشتر', slug: 'rings' }],
+  relatedBrands: [{ id: 'brand-1', name: 'برند نمونه', slug: 'sample-brand' }],
+  relatedArticles: [],
+  createdAt: '2026-10-10T09:00:00.000Z',
+} satisfies PublicGuideArticle;
+
 describe('storefront structured data', () => {
+  it('builds Article and FAQPage markup from safe structured guide content', () => {
+    expect(buildGuideArticleStructuredData(guideArticle, settings, origin)).toMatchObject({
+      '@type': 'Article',
+      '@id': 'https://silver.example/guide/silver-care#article',
+      headline: 'مراقبت از نقره',
+      image: ['https://silver.example/media/care.webp'],
+      inLanguage: 'fa-IR',
+      keywords: ['نگهداری نقره', 'تمیز کردن نقره'],
+      timeRequired: 'PT4M',
+      articleSection: ['نگهداری'],
+      isPartOf: {
+        '@id': 'https://silver.example/guide#collection',
+        name: 'دانستنی‌ها',
+      },
+      about: expect.arrayContaining([
+        {
+          '@type': 'CollectionPage',
+          name: 'انگشتر',
+          url: 'https://silver.example/categories/rings',
+        },
+        {
+          '@type': 'Brand',
+          name: 'برند نمونه',
+          url: 'https://silver.example/brands/sample-brand',
+        },
+        {
+          '@type': 'Product',
+          name: 'انگشتر نقره',
+          url: 'https://silver.example/products/silver-ring',
+        },
+      ]),
+    });
+    expect(buildGuideFaqStructuredData(guideArticle)).toMatchObject({
+      '@type': 'FAQPage',
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: 'نقره را کجا نگهداری کنیم؟',
+          acceptedAnswer: { '@type': 'Answer', text: 'در محیط خشک.' },
+        },
+      ],
+    });
+  });
+
+  it('builds an indexable CollectionPage item list for the knowledge hub', () => {
+    expect(
+      buildGuideCollectionStructuredData(
+        {
+          items: [
+            guideArticle,
+            { ...guideArticle, id: 'hidden', slug: 'hidden', seoNoIndex: true },
+          ],
+          total: 2,
+          page: 2,
+          limit: 12,
+          totalPages: 2,
+        },
+        origin,
+      ),
+    ).toMatchObject({
+      '@type': 'CollectionPage',
+      '@id': 'https://silver.example/guide#collection',
+      inLanguage: 'fa-IR',
+      mainEntity: {
+        '@type': 'ItemList',
+        numberOfItems: 1,
+        itemListElement: [
+          {
+            position: 13,
+            item: {
+              '@type': 'Article',
+              '@id': 'https://silver.example/guide/silver-care#article',
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  it('builds WebSite identity markup for the canonical home page', () => {
+    expect(buildWebSiteStructuredData(settings, origin)).toEqual({
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      '@id': 'https://silver.example/#website',
+      url: 'https://silver.example/',
+      name: 'گالری حمیدیان',
+      alternateName: 'silver.example',
+      publisher: { '@id': 'https://silver.example/#organization' },
+      inLanguage: 'fa-IR',
+    });
+  });
+
   it('builds a canonical Product offer using IRR instead of toman', () => {
     expect(buildProductStructuredData(product, settings, origin)).toMatchObject({
       '@context': 'https://schema.org',

@@ -5,7 +5,10 @@ import { JsonLd } from '@/components/seo/json-ld';
 import { getPublicHomepage } from '@/lib/home/public-homepage';
 import { HOME_SEO } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
-import { buildOrganizationStructuredData } from '@/lib/seo/structured-data';
+import {
+  buildOrganizationStructuredData,
+  buildWebSiteStructuredData,
+} from '@/lib/seo/structured-data';
 import { getPublicShippingOptionsForSeo } from '@/lib/shipping/public-shipping-pricing';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
@@ -32,6 +35,7 @@ export default async function StorefrontHomePage() {
   return (
     <>
       <JsonLd data={buildOrganizationStructuredData(settings, shippingOptions)} />
+      <JsonLd data={buildWebSiteStructuredData(settings)} />
       <StorefrontHome homepage={homepage} />
     </>
   );

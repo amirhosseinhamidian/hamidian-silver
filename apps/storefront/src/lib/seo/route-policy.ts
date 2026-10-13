@@ -12,6 +12,7 @@ const PUBLIC_STATIC_ROUTES = new Set([
   '/categories',
   '/contact',
   '/faq',
+  '/guide',
   '/privacy',
   '/services',
   '/size-guide',
@@ -32,6 +33,10 @@ function isRouteOrChild(pathname: string, prefix: string): boolean {
 function isCatalogDocument(pathname: string): boolean {
   if (pathname === '/products') return true;
   return /^\/(?:products|categories|brands)\/[^/]+$/.test(pathname);
+}
+
+function isGuideDocument(pathname: string): boolean {
+  return pathname === '/guide' || /^\/guide\/[^/]+$/.test(pathname);
 }
 
 function activeEntries(searchParams: URLSearchParams): Array<readonly [string, string]> {
@@ -76,6 +81,21 @@ export function resolveStorefrontSeoRoutePolicy(
       index: !hasCatalogVariant,
       follow: true,
       reason: hasCatalogVariant ? 'catalog-variant' : 'catalog-page',
+    };
+  }
+
+  if (isGuideDocument(normalizedPath)) {
+    const entries = activeEntries(searchParams);
+    const page = canonicalPage(searchParams);
+    const rawPage = searchParams.get('page')?.trim();
+    const hasInvalidPage = Boolean(rawPage && rawPage !== '1' && page === null);
+    const hasGuideVariant = entries.some(([key]) => key !== 'page') || hasInvalidPage;
+
+    return {
+      canonicalPath: hasGuideVariant ? normalizedPath : withPage(normalizedPath, page),
+      index: !hasGuideVariant,
+      follow: true,
+      reason: hasGuideVariant ? 'catalog-variant' : 'public-page',
     };
   }
 

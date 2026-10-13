@@ -14,7 +14,7 @@ type CatalogHeroProps = {
   devFallbackSrc?: string | null;
 };
 
-const DEFAULT_TITLE = 'محصولات نقره حمیدیان';
+const DEFAULT_TITLE = 'محصولات نقره گالری حمیدیان';
 
 export function CatalogHero({ settings, devFallbackSrc }: CatalogHeroProps) {
   const configuredDesktopImage = settings.catalogHeroEnabled

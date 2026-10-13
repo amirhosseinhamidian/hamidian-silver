@@ -41,7 +41,7 @@ function CategoryPair({ categories }: Readonly<{ categories: PublicHomepageFeatu
             <Link href={`/categories/${category.slug}`} className="group block">
               <div className="aspect-[4/3] overflow-hidden bg-[var(--sf-color-surface)]">
                 <CatalogMedia
-                  media={category.image}
+                  media={category.featuredImage ?? category.image}
                   alt={category.name}
                   sizes="(min-width: 768px) 50vw, 100vw"
                   imageClassName="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -54,6 +54,9 @@ function CategoryPair({ categories }: Readonly<{ categories: PublicHomepageFeatu
                     {category.description}
                   </p>
                 ) : null}
+                <span className="mt-4 inline-flex border-b border-[var(--sf-color-ink)] pb-1 text-sm font-medium transition-colors group-hover:border-[var(--sf-color-muted)] group-hover:text-[var(--sf-color-muted)]">
+                  مشاهده محصولات
+                </span>
               </div>
             </Link>
           </li>

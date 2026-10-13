@@ -28,6 +28,7 @@ export type AdminCategory = Readonly<{
   parent: CatalogLookup | null;
   parentId: string | null;
   image: AdminCategoryImage | null;
+  featuredImage: AdminCategoryImage | null;
   heroMobileImage: AdminCategoryImage | null;
   seoTitle: string | null;
   seoDescription: string | null;
@@ -437,6 +438,7 @@ function parseCategory(value: unknown): AdminCategory | null {
     parent: lookup(item?.parent),
     parentId: text(item?.parentId),
     image,
+    featuredImage: parseReferenceImage(item?.featuredImage),
     heroMobileImage: parseReferenceImage(item?.heroMobileImage),
     seoTitle: text(item?.seoTitle),
     seoDescription: text(item?.seoDescription),

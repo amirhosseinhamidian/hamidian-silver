@@ -73,7 +73,8 @@ describe('ContentPagesService', () => {
         heroMedia: null,
       }),
     );
-    expect(page.sections).toHaveLength(10);
+    expect(page.sections).toHaveLength(9);
+    expect(page.sections.some((section) => section.title.includes('ناموجود'))).toBe(false);
     expect(page.sections.find((section) => section.title.includes('مرجوع'))?.body).toContain(
       'پس از تأیید ادمین',
     );

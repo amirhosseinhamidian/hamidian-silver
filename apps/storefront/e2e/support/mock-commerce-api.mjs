@@ -64,6 +64,97 @@ const product = {
   attributes: [],
 };
 
+const guideTopic = {
+  id: 'a0000000-0000-4000-8000-000000000001',
+  name: 'نگهداری نقره',
+  slug: 'silver-care',
+  description: 'پاسخ‌های کاربردی برای مراقبت بهتر از نقره',
+  coverMedia: null,
+};
+
+const guideSummary = {
+  id: 'a0000000-0000-4000-8000-000000000002',
+  title: 'راهنمای نگهداری نقره',
+  slug: 'silver-care',
+  eyebrow: 'مراقبت روزمره',
+  excerpt: 'روش‌های ساده و امن برای تمیز نگه‌داشتن زیورآلات نقره.',
+  format: 'CARE_GUIDE',
+  status: 'PUBLISHED',
+  heroMedia: null,
+  seoCanonicalPath: '/guide/silver-care',
+  seoNoIndex: false,
+  seoOgMedia: null,
+  readingTimeMinutes: 4,
+  isFeatured: true,
+  blockCount: 2,
+  publishedAt: CREATED_AT,
+  topics: [guideTopic],
+  version: 1,
+  updatedAt: PAID_AT,
+};
+
+const relatedGuideSummary = {
+  ...guideSummary,
+  id: 'a0000000-0000-4000-8000-000000000003',
+  title: 'چطور نقره اصل را تشخیص دهیم؟',
+  slug: 'recognize-real-silver',
+  eyebrow: 'پاسخ روشن',
+  format: 'ANSWER',
+  isFeatured: false,
+};
+
+const guideArticle = {
+  ...guideSummary,
+  heroMobileMedia: null,
+  seoTitle: null,
+  seoDescription: null,
+  searchKeywords: ['نگهداری نقره', 'تمیز کردن نقره'],
+  blocks: [
+    {
+      id: 'a0000000-0000-4000-8000-000000000004',
+      type: 'LEAD',
+      variant: null,
+      anchorId: 'summary',
+      primaryMedia: null,
+      content: {
+        heading: 'چرا مراقبت درست مهم است؟',
+        body: 'با چند عادت ساده می‌توان درخشش نقره را برای مدت بیشتری حفظ کرد.',
+      },
+      sortOrder: 0,
+    },
+    {
+      id: 'a0000000-0000-4000-8000-000000000005',
+      type: 'FAQ',
+      variant: 'accordion',
+      anchorId: 'questions',
+      primaryMedia: null,
+      content: {
+        heading: 'پرسش‌های رایج',
+        items: [{ question: 'نقره را کجا نگهداری کنیم؟', answer: 'در محیط خشک و دور از رطوبت.' }],
+      },
+      sortOrder: 1,
+    },
+  ],
+  relatedProducts: [
+    {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      shortDescription: product.shortDescription,
+      salePriceToman: product.salePriceToman,
+      primaryMedia: product.primaryMedia,
+    },
+  ],
+  relatedCategories: [
+    { id: 'a0000000-0000-4000-8000-000000000006', name: 'انگشتر', slug: 'rings' },
+  ],
+  relatedBrands: [
+    { id: 'a0000000-0000-4000-8000-000000000007', name: 'برند نمونه', slug: 'sample' },
+  ],
+  relatedArticles: [relatedGuideSummary],
+  createdAt: CREATED_AT,
+};
+
 const address = {
   id: ADDRESS_ID,
   title: 'خانه',
@@ -304,6 +395,31 @@ async function handler(request, response) {
       total: 0,
       totalPages: 0,
     });
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/v1/guide/public/topics') {
+    return json(response, 200, [guideTopic]);
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/v1/guide/public/articles') {
+    const page = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
+    const limit = Number.parseInt(url.searchParams.get('limit') ?? '12', 10);
+    const items = url.searchParams.has('q') ? [] : [guideSummary, relatedGuideSummary];
+    return json(response, 200, {
+      items,
+      page,
+      limit,
+      total: items.length,
+      totalPages: items.length ? 1 : 0,
+    });
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/v1/guide/public/articles/silver-care') {
+    return json(response, 200, guideArticle);
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/v1/guide/public/related-articles') {
+    return json(response, 200, [guideSummary]);
   }
 
   if (request.method === 'POST' && url.pathname === '/api/v1/auth/otp/request') {

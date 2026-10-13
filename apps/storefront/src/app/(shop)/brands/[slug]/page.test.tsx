@@ -7,11 +7,18 @@ const catalogMocks = vi.hoisted(() => ({
   getPublicCatalogBrands: vi.fn(),
   getPublicCatalogProducts: vi.fn(),
 }));
+const guideMocks = vi.hoisted(() => ({
+  getPublicRelatedGuideArticles: vi.fn(),
+}));
 
 vi.mock('@/lib/catalog/public-catalog', () => ({
   getPublicCatalogBrands: catalogMocks.getPublicCatalogBrands,
   getPublicCatalogProducts: catalogMocks.getPublicCatalogProducts,
   parseCatalogSearchParams: () => ({ page: 1, pageSize: 24, sort: 'newest' }),
+}));
+
+vi.mock('@/lib/guide/public-guide', () => ({
+  getPublicRelatedGuideArticles: guideMocks.getPublicRelatedGuideArticles,
 }));
 
 vi.mock('@/components/catalog/catalog-collection-page', () => ({
@@ -22,6 +29,7 @@ vi.mock('@/components/catalog/catalog-collection-page', () => ({
 
 describe('BrandPage', () => {
   it('uses the brand hero and never its logo as collection media', async () => {
+    guideMocks.getPublicRelatedGuideArticles.mockResolvedValue([]);
     catalogMocks.getPublicCatalogBrands.mockResolvedValue([
       {
         id: 'brand-1',

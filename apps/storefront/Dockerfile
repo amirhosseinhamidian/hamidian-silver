@@ -14,12 +14,14 @@ FROM deps AS builder
 COPY . .
 ARG MEDIA_PUBLIC_BASE_URL
 ARG NEXT_PUBLIC_GA_MEASUREMENT_ID=""
+ARG NEXT_PUBLIC_STOCK_NOTIFICATIONS_ENABLED="false"
 ENV NEXT_TELEMETRY_DISABLED=1
 # Next.js embeds image remotePatterns and NEXT_PUBLIC_* values in its build output.
 # Only public configuration belongs in build arguments; never pass secrets here.
 RUN test -n "$MEDIA_PUBLIC_BASE_URL" \
     && MEDIA_PUBLIC_BASE_URL="$MEDIA_PUBLIC_BASE_URL" \
        NEXT_PUBLIC_GA_MEASUREMENT_ID="$NEXT_PUBLIC_GA_MEASUREMENT_ID" \
+       NEXT_PUBLIC_STOCK_NOTIFICATIONS_ENABLED="$NEXT_PUBLIC_STOCK_NOTIFICATIONS_ENABLED" \
        pnpm --filter @hamidian/storefront build
 
 FROM public.ecr.aws/docker/library/node:24-bookworm-slim AS runtime

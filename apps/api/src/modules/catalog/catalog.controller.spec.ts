@@ -27,6 +27,12 @@ describe('CatalogController', () => {
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.archiveCategory)).toBeUndefined();
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.uploadCategoryImage)).toBeUndefined();
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.removeCategoryImage)).toBeUndefined();
+    expect(
+      Reflect.getMetadata(IS_PUBLIC_KEY, prototype.uploadCategoryFeaturedImage),
+    ).toBeUndefined();
+    expect(
+      Reflect.getMetadata(IS_PUBLIC_KEY, prototype.removeCategoryFeaturedImage),
+    ).toBeUndefined();
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.updateBrand)).toBeUndefined();
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.archiveBrand)).toBeUndefined();
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.uploadBrandImage)).toBeUndefined();

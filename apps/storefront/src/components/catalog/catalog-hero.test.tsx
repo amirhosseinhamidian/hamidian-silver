@@ -43,7 +43,7 @@ describe('CatalogHero', () => {
     );
 
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'محصولات نقره حمیدیان' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'محصولات نقره گالری حمیدیان' })).toBeInTheDocument();
     expect(screen.queryByText('انتخاب‌های تازه نقره')).not.toBeInTheDocument();
   });
 
@@ -59,6 +59,6 @@ describe('CatalogHero', () => {
     );
 
     expect(screen.getByRole('presentation')).toHaveAttribute('src', '/dev-catalog/hero.webp');
-    expect(screen.getByRole('heading', { name: 'محصولات نقره حمیدیان' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'محصولات نقره گالری حمیدیان' })).toBeInTheDocument();
   });
 });

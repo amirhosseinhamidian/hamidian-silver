@@ -441,6 +441,7 @@ describe('InventoryService', () => {
     ]);
     expect(prisma.productVariant.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
+        orderBy: [{ product: { createdAt: 'desc' } }, { productId: 'asc' }, { sku: 'asc' }],
         select: expect.objectContaining({
           product: expect.objectContaining({
             select: expect.objectContaining({

@@ -39,9 +39,13 @@ function getCartVariantLabel(variant: ProductVariant): string {
 
 type ProductPurchasePanelProps = Readonly<{
   product: PublicCatalogProductDetail;
+  stockNotificationsEnabled?: boolean;
 }>;
 
-export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
+export function ProductPurchasePanel({
+  product,
+  stockNotificationsEnabled = process.env.NEXT_PUBLIC_STOCK_NOTIFICATIONS_ENABLED === 'true',
+}: ProductPurchasePanelProps) {
   const initiallySelectedVariant = product.variants.length === 1 ? product.variants[0]?.id : '';
   const [variantId, setVariantId] = useState(initiallySelectedVariant);
   const [platingType, setPlatingType] = useState<CartPlatingType | null>(null);
@@ -107,7 +111,8 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
     selectedVariant && (!selectedVariant.isAvailable || selectedVariant.availableQuantity <= 0)
       ? selectedVariant
       : null;
-  const showStockNotification = notificationVariant !== null || !hasPurchasableVariant;
+  const showStockNotification =
+    stockNotificationsEnabled && (notificationVariant !== null || !hasPurchasableVariant);
   const desktopAddButtonDisabled = !canAdd;
   const mobileAddButtonDisabled =
     !hasPricedVariant || !hasPurchasableVariant || (selectedVariant !== null && !canAdd);

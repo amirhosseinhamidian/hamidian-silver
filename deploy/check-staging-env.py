@@ -65,6 +65,7 @@ def validate(values: dict[str, str], production: dict[str, str] | None = None) -
         'PAYMENT_PROVIDER': 'disabled',
         'IRANDARGAH_SANDBOX': 'true',
         'SHIPPING_PROVIDER': 'disabled',
+        'STOCK_NOTIFICATIONS_ENABLED': 'false',
         'NEXT_PUBLIC_GA_MEASUREMENT_ID': '',
         'GOOGLE_SITE_VERIFICATION': '',
     }
@@ -93,7 +94,7 @@ def validate(values: dict[str, str], production: dict[str, str] | None = None) -
             'KAVENEGAR_OTP_TEMPLATE'
         ):
             errors.append('Kavenegar test SMS requires API key and OTP template')
-        for name in shared.KAVENEGAR_ORDER_TEMPLATE_KEYS:
+        for name in shared.KAVENEGAR_TRANSACTIONAL_TEMPLATE_KEYS:
             if not shared.KAVENEGAR_TEMPLATE_RE.fullmatch(values.get(name, '')):
                 errors.append(f'{name} must be a configured Kavenegar template name')
     shipping = values.get('MANUAL_SHIPPING_COST_TOMAN', '')

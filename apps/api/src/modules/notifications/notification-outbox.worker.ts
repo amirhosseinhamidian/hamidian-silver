@@ -35,6 +35,8 @@ export class NotificationOutboxWorker {
   private readonly orderShippedTemplate: string;
   private readonly orderDeliveredTemplate: string;
   private readonly orderCancelledTemplate: string;
+  private readonly stockAvailableTemplate: string;
+  private readonly stockNotificationsEnabled: boolean;
   private running = false;
 
   constructor(
@@ -70,6 +72,9 @@ export class NotificationOutboxWorker {
     this.orderShippedTemplate = config.get<string>('KAVENEGAR_ORDER_SHIPPED_TEMPLATE', '');
     this.orderDeliveredTemplate = config.get<string>('KAVENEGAR_ORDER_DELIVERED_TEMPLATE', '');
     this.orderCancelledTemplate = config.get<string>('KAVENEGAR_ORDER_CANCELLED_TEMPLATE', '');
+    this.stockAvailableTemplate = config.get<string>('KAVENEGAR_STOCK_AVAILABLE_TEMPLATE', '');
+    this.stockNotificationsEnabled =
+      config.get<boolean>('STOCK_NOTIFICATIONS_ENABLED', false) === true;
   }
 
   @Cron(CronExpression.EVERY_MINUTE, {
@@ -87,6 +92,9 @@ export class NotificationOutboxWorker {
       const staleBefore = new Date(now.getTime() - this.staleMs);
       const events = await this.prisma.notificationOutboxEvent.findMany({
         where: {
+          ...(this.stockNotificationsEnabled
+            ? {}
+            : { type: { not: NotificationOutboxEventType.STOCK_AVAILABLE } }),
           OR: [
             {
               status: NotificationOutboxStatus.PENDING,
@@ -129,6 +137,13 @@ export class NotificationOutboxWorker {
       });
 
       for (const event of events) {
+        if (
+          event.type === NotificationOutboxEventType.STOCK_AVAILABLE &&
+          !this.stockNotificationsEnabled
+        ) {
+          continue;
+        }
+
         if (event.status === NotificationOutboxStatus.DISPATCHING) {
           await this.quarantineStaleDispatch(event.id, event.claimedAt, staleBefore);
           continue;
@@ -458,10 +473,7 @@ export class NotificationOutboxWorker {
         ? `${subscription.product.name} (${variantLabel})`
         : subscription.product.name;
 
-      return {
-        phone: subscription.user.phone,
-        text: `${targetLabel} دوباره موجود شد. نقره حمیدیان`,
-      };
+      return this.stockAvailableMessage(subscription.user.phone, targetLabel);
     }
 
     if (aggregateType !== 'ORDER') {
@@ -582,6 +594,25 @@ export class NotificationOutboxWorker {
       template: normalizedTemplate,
       token: this.templateToken(token, 'order number'),
       ...(token2 ? { token2: this.templateToken(token2, 'tracking code') } : {}),
+    };
+  }
+
+  private stockAvailableMessage(phone: string, targetLabel: string): SendSmsTemplateMessage {
+    const template = this.stockAvailableTemplate.trim();
+    if (!template) {
+      throw new Error('KAVENEGAR_STOCK_AVAILABLE_TEMPLATE is required for stock notifications.');
+    }
+
+    // VerifyLookup tokens reject regular whitespace and underscores. A Persian half-space keeps
+    // multi-word product names readable while preserving the token contract used by Kavenegar.
+    const normalizedLabel = targetLabel.trim().replace(/[\s_]+/gu, '\u200c');
+    const token =
+      normalizedLabel.length > 100 ? `${normalizedLabel.slice(0, 99)}…` : normalizedLabel;
+
+    return {
+      phone,
+      template,
+      token: this.templateToken(token, 'product name'),
     };
   }
 

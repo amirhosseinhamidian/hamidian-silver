@@ -6,7 +6,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 const footerContent: StorefrontFooterContent = {
-  galleryName: 'گالری نقره حمیدیان',
+  galleryName: 'گالری حمیدیان',
   about: 'گالری حمیدیان ارائه‌دهنده مجموعه‌ای منتخب از زیورآلات نقره است.',
   address: 'تهران، بازار بزرگ',
   phoneNumbers: ['02112345678', '09121234567'],
@@ -22,7 +22,7 @@ describe('StorefrontFooter', () => {
   it('renders configured gallery information and social links', () => {
     render(<StorefrontFooter content={footerContent} />);
 
-    expect(screen.getByText('درباره گالری نقره حمیدیان')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'درباره گالری حمیدیان' })).toBeInTheDocument();
     expect(
       screen.getByText('گالری حمیدیان ارائه‌دهنده مجموعه‌ای منتخب از زیورآلات نقره است.'),
     ).toBeInTheDocument();

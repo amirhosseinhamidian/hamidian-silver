@@ -44,6 +44,14 @@ const payload = [
       {
         id: 'item-1',
         productNameSnapshot: 'انگشتر آذر',
+        productSlug: 'angoshtar-azar',
+        primaryMedia: {
+          url: 'https://media.hamidian.shop/media/products/angoshtar-azar.webp',
+          mimeType: 'image/webp',
+          altText: 'انگشتر آذر',
+          width: 1200,
+          height: 1200,
+        },
         variantNameSnapshot: 'سایز ۵۲',
         skuSnapshot: 'RING-52',
         sizeLabelSnapshot: '52',
@@ -127,7 +135,17 @@ describe('admin orders model', () => {
       }),
     );
     expect(orders?.[0]?.items[0]).toEqual(
-      expect.objectContaining({ unitWeightGrams: 4.25, supplierName: 'نقره‌سازی پارس' }),
+      expect.objectContaining({
+        productSlug: 'angoshtar-azar',
+        primaryMedia: {
+          url: 'https://media.hamidian.shop/media/products/angoshtar-azar.webp',
+          altText: 'انگشتر آذر',
+          width: 1200,
+          height: 1200,
+        },
+        unitWeightGrams: 4.25,
+        supplierName: 'نقره‌سازی پارس',
+      }),
     );
     expect(orders?.[0] && orderItemCount(orders[0])).toBe(2);
     expect(orders?.[0] && orderRequiresAttention(orders[0])).toBe(false);

@@ -77,6 +77,31 @@ function publicShippingMethodName(
   return shipment.provider;
 }
 
+const ORDER_ITEM_PRODUCT_PRESENTATION_SELECT = {
+  slug: true,
+  media: {
+    where: {
+      media: {
+        deletedAt: null,
+      },
+    },
+    orderBy: [{ isPrimary: 'desc' as const }, { sortOrder: 'asc' as const }],
+    take: 1,
+    select: {
+      altText: true,
+      media: {
+        select: {
+          storageKey: true,
+          mimeType: true,
+          altText: true,
+          width: true,
+          height: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.ProductSelect;
+
 const CUSTOMER_ORDER_ITEM_SELECT = {
   id: true,
   variantId: true,
@@ -98,30 +123,7 @@ const CUSTOMER_ORDER_ITEM_SELECT = {
   variant: {
     select: {
       product: {
-        select: {
-          slug: true,
-          media: {
-            where: {
-              media: {
-                deletedAt: null,
-              },
-            },
-            orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
-            take: 1,
-            select: {
-              altText: true,
-              media: {
-                select: {
-                  storageKey: true,
-                  mimeType: true,
-                  altText: true,
-                  width: true,
-                  height: true,
-                },
-              },
-            },
-          },
-        },
+        select: ORDER_ITEM_PRODUCT_PRESENTATION_SELECT,
       },
     },
   },
@@ -240,7 +242,17 @@ const ADMIN_ORDER_LIST_INCLUDE = {
       lastName: true,
     },
   },
-  items: true,
+  items: {
+    include: {
+      variant: {
+        select: {
+          product: {
+            select: ORDER_ITEM_PRODUCT_PRESENTATION_SELECT,
+          },
+        },
+      },
+    },
+  },
   shippingAddress: true,
   payment: {
     select: {
@@ -335,6 +347,10 @@ type CustomerOrderListRecord = Prisma.OrderGetPayload<{
 
 type CustomerOrderDetailRecord = Prisma.OrderGetPayload<{
   select: typeof CUSTOMER_ORDER_DETAIL_SELECT;
+}>;
+
+type AdminOrderListRecord = Prisma.OrderGetPayload<{
+  include: typeof ADMIN_ORDER_LIST_INCLUDE;
 }>;
 
 type PreparedOrderItem = {
@@ -719,8 +735,8 @@ export class OrdersService {
     };
   }
 
-  listOrders(query: ListOrdersQueryDto) {
-    return this.prisma.order.findMany({
+  async listOrders(query: ListOrdersQueryDto) {
+    const orders: AdminOrderListRecord[] = await this.prisma.order.findMany({
       where: {
         status: query.status,
       },
@@ -730,6 +746,28 @@ export class OrdersService {
       },
       include: ADMIN_ORDER_LIST_INCLUDE,
     });
+
+    return orders.map((order) => ({
+      ...order,
+      items: order.items.map(({ variant, ...item }) => {
+        const product = variant.product;
+        const primaryMedia = product.media[0];
+
+        return {
+          ...item,
+          productSlug: product.slug,
+          primaryMedia: primaryMedia
+            ? {
+                url: this.publicMediaUrl?.resolve(primaryMedia.media.storageKey) ?? null,
+                mimeType: primaryMedia.media.mimeType,
+                altText: primaryMedia.altText ?? primaryMedia.media.altText,
+                width: primaryMedia.media.width,
+                height: primaryMedia.media.height,
+              }
+            : null,
+        };
+      }),
+    }));
   }
 
   async updateStatus(orderId: string, dto: UpdateOrderStatusDto, actorUserId: string) {

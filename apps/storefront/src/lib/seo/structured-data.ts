@@ -1,4 +1,10 @@
 import type { PublicCatalogProductDetail } from '@/lib/catalog/public-catalog';
+import { STOREFRONT_BRAND_NAME } from '@/lib/brand/identity';
+import type {
+  PublicGuideArticle,
+  PublicGuideArticleList,
+  PublicGuideArticleSummary,
+} from '@/lib/guide/public-guide';
 import { getStorefrontAbsoluteUrl, getStorefrontMetadataBase } from '@/lib/seo/metadata';
 import type { PublicShippingOption } from '@/lib/shipping/public-shipping-pricing';
 import type { PublicSiteSettings } from '@/lib/site-settings/public-site-settings';
@@ -32,11 +38,32 @@ function uniqueHttpUrls(urls: Array<string | null | undefined>): string[] {
 }
 
 function organizationName(settings: PublicSiteSettings): string {
-  return settings.seoOrganizationName?.trim() || settings.seoSiteName?.trim() || 'گالری حمیدیان';
+  return (
+    settings.seoOrganizationName?.trim() || settings.seoSiteName?.trim() || STOREFRONT_BRAND_NAME
+  );
 }
 
 function organizationId(metadataBase: URL): string {
   return `${getStorefrontAbsoluteUrl('/', metadataBase)}#organization`;
+}
+
+export function buildWebSiteStructuredData(
+  settings: PublicSiteSettings,
+  metadataBase: URL = getStorefrontMetadataBase(),
+) {
+  const url = getStorefrontAbsoluteUrl('/', metadataBase);
+  const name = settings.seoSiteName?.trim() || STOREFRONT_BRAND_NAME;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${url}#website`,
+    url,
+    name,
+    alternateName: metadataBase.hostname.toLowerCase(),
+    publisher: { '@id': organizationId(metadataBase) },
+    inLanguage: 'fa-IR',
+  } as const;
 }
 
 function tomanToRial(value: number): number {
@@ -191,6 +218,137 @@ export function buildBreadcrumbStructuredData(
       position: index + 1,
       name: item.label,
       item: getStorefrontAbsoluteUrl(item.href, metadataBase),
+    })),
+  } as const;
+}
+
+function guideCanonicalPath(
+  article: Pick<PublicGuideArticleSummary, 'seoCanonicalPath' | 'slug'>,
+): string {
+  const fallback = `/guide/${article.slug}`;
+  const candidate = article.seoCanonicalPath?.trim();
+  return candidate && /^\/guide\/(?!\.{1,2}$)[^%\\/?#\s]+$/.test(candidate) ? candidate : fallback;
+}
+
+export function buildGuideArticleStructuredData(
+  article: PublicGuideArticle,
+  settings: PublicSiteSettings,
+  metadataBase: URL = getStorefrontMetadataBase(),
+) {
+  const canonicalUrl = getStorefrontAbsoluteUrl(guideCanonicalPath(article), metadataBase);
+  const imageUrl = article.seoOgMedia?.url || article.heroMedia?.url;
+  const guideUrl = getStorefrontAbsoluteUrl('/guide', metadataBase);
+  const about = [
+    ...article.topics.map((topic) => ({ '@type': 'Thing', name: topic.name })),
+    ...article.relatedCategories.map((category) => ({
+      '@type': 'CollectionPage',
+      name: category.name,
+      url: getStorefrontAbsoluteUrl(`/categories/${category.slug}`, metadataBase),
+    })),
+    ...article.relatedBrands.map((brand) => ({
+      '@type': 'Brand',
+      name: brand.name,
+      url: getStorefrontAbsoluteUrl(`/brands/${brand.slug}`, metadataBase),
+    })),
+    ...article.relatedProducts.map((product) => ({
+      '@type': 'Product',
+      name: product.name,
+      url: getStorefrontAbsoluteUrl(`/products/${product.slug}`, metadataBase),
+    })),
+  ];
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    '@id': `${canonicalUrl}#article`,
+    url: canonicalUrl,
+    mainEntityOfPage: canonicalUrl,
+    inLanguage: 'fa-IR',
+    isPartOf: {
+      '@type': 'CollectionPage',
+      '@id': `${guideUrl}#collection`,
+      url: guideUrl,
+      name: 'دانستنی‌ها',
+    },
+    headline: article.seoTitle?.trim() || article.title,
+    ...(article.seoDescription?.trim() || article.excerpt?.trim()
+      ? { description: article.seoDescription?.trim() || article.excerpt?.trim() }
+      : {}),
+    ...(imageUrl ? { image: [getStorefrontAbsoluteUrl(imageUrl, metadataBase)] } : {}),
+    ...(article.publishedAt ? { datePublished: article.publishedAt } : {}),
+    dateModified: article.updatedAt,
+    author: {
+      '@type': 'Organization',
+      '@id': organizationId(metadataBase),
+      name: organizationName(settings),
+    },
+    publisher: {
+      '@type': 'Organization',
+      '@id': organizationId(metadataBase),
+      name: organizationName(settings),
+    },
+    ...(article.searchKeywords.length ? { keywords: article.searchKeywords } : {}),
+    ...(article.readingTimeMinutes ? { timeRequired: `PT${article.readingTimeMinutes}M` } : {}),
+    ...(about.length ? { about } : {}),
+    ...(article.topics.length ? { articleSection: article.topics.map((topic) => topic.name) } : {}),
+  } as const;
+}
+
+export function buildGuideCollectionStructuredData(
+  articles: PublicGuideArticleList,
+  metadataBase: URL = getStorefrontMetadataBase(),
+) {
+  const url = getStorefrontAbsoluteUrl('/guide', metadataBase);
+  const offset = (articles.page - 1) * articles.limit;
+  const items = articles.items.filter((article) => !article.seoNoIndex);
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    '@id': `${url}#collection`,
+    url,
+    name: 'دانستنی‌ها',
+    description: 'پاسخ پرسش‌ها و راهنماهای کاربردی برای شناخت، انتخاب، خرید و نگهداری محصولات.',
+    inLanguage: 'fa-IR',
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: items.length,
+      itemListElement: items.map((article, index) => {
+        const articleUrl = getStorefrontAbsoluteUrl(guideCanonicalPath(article), metadataBase);
+        const imageUrl = article.seoOgMedia?.url || article.heroMedia?.url;
+        return {
+          '@type': 'ListItem',
+          position: offset + index + 1,
+          item: {
+            '@type': 'Article',
+            '@id': `${articleUrl}#article`,
+            url: articleUrl,
+            headline: article.title,
+            ...(imageUrl ? { image: getStorefrontAbsoluteUrl(imageUrl, metadataBase) } : {}),
+          },
+        };
+      }),
+    },
+  } as const;
+}
+
+export function buildGuideFaqStructuredData(article: PublicGuideArticle) {
+  const questions = article.blocks.flatMap((block) => {
+    if (block.type !== 'FAQ' || !Array.isArray(block.content.items)) return [];
+    return block.content.items.flatMap((value) => {
+      if (typeof value !== 'object' || value === null) return [];
+      const item = value as Record<string, unknown>;
+      const question = typeof item.question === 'string' ? item.question.trim() : '';
+      const answer = typeof item.answer === 'string' ? item.answer.trim() : '';
+      return question && answer ? [{ question, answer }] : [];
+    });
+  });
+  if (!questions.length) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: questions.map(({ question, answer }) => ({
+      '@type': 'Question',
+      name: question,
+      acceptedAnswer: { '@type': 'Answer', text: answer },
     })),
   } as const;
 }

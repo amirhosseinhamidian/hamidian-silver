@@ -6,7 +6,7 @@ import { peyda } from '@/styles/fonts';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'صفحه پیدا نشد | گالری حمدیان',
+  title: 'صفحه پیدا نشد | گالری حمیدیان',
   robots: { index: false, follow: false },
 };
 

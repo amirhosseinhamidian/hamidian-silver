@@ -14,7 +14,10 @@ describe('NotificationOutboxWorker', () => {
     jest.clearAllMocks();
   });
 
-  function createWorker(eventOverrides: Record<string, unknown> = {}) {
+  function createWorker(
+    eventOverrides: Record<string, unknown> = {},
+    templateOverrides: Record<string, string | boolean> = {},
+  ) {
     const event = {
       id: '10000000-0000-4000-8000-000000000001',
       type: NotificationOutboxEventType.PAYMENT_VERIFIED,
@@ -62,7 +65,7 @@ describe('NotificationOutboxWorker', () => {
       sendMessage: jest.fn().mockResolvedValue(undefined),
       sendTemplate: jest.fn().mockResolvedValue(undefined),
     };
-    const templates: Record<string, string> = {
+    const templates: Record<string, string | boolean> = {
       KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE: 'payment-verified',
       KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE: 'payment-receipt-submitted',
       KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE: 'payment-receipt-rejected',
@@ -71,6 +74,9 @@ describe('NotificationOutboxWorker', () => {
       KAVENEGAR_ORDER_SHIPPED_TEMPLATE: 'order-shipped',
       KAVENEGAR_ORDER_DELIVERED_TEMPLATE: 'order-delivered',
       KAVENEGAR_ORDER_CANCELLED_TEMPLATE: 'order-cancelled',
+      STOCK_NOTIFICATIONS_ENABLED: true,
+      KAVENEGAR_STOCK_AVAILABLE_TEMPLATE: 'stock-available',
+      ...templateOverrides,
     };
     const config = {
       get: jest.fn((key: string, fallback?: unknown) => templates[key] ?? fallback),
@@ -213,7 +219,7 @@ describe('NotificationOutboxWorker', () => {
     );
   });
 
-  it('sends a stock notification and marks its subscription notified', async () => {
+  it('sends a stock notification with its product name and marks its subscription notified', async () => {
     const subscriptionId = '30000000-0000-4000-8000-000000000001';
     const { worker, prisma, smsSender } = createWorker({
       type: NotificationOutboxEventType.STOCK_AVAILABLE,
@@ -223,10 +229,12 @@ describe('NotificationOutboxWorker', () => {
 
     await worker.dispatchPending();
 
-    expect(smsSender.sendMessage).toHaveBeenCalledWith({
+    expect(smsSender.sendTemplate).toHaveBeenCalledWith({
       phone: '+989120000000',
-      text: 'انگشتر نقره (۵۴) دوباره موجود شد. نقره حمیدیان',
+      template: 'stock-available',
+      token: 'انگشتر‌نقره‌(۵۴)',
     });
+    expect(smsSender.sendMessage).not.toHaveBeenCalled();
     expect(prisma.stockNotificationSubscription.updateMany).toHaveBeenCalledWith({
       where: {
         id: subscriptionId,
@@ -237,6 +245,100 @@ describe('NotificationOutboxWorker', () => {
         notifiedAt: expect.any(Date),
       },
     });
+  });
+
+  it('does not claim queued stock events while the feature is disabled', async () => {
+    const { worker, prisma, smsSender } = createWorker(
+      {
+        type: NotificationOutboxEventType.STOCK_AVAILABLE,
+        aggregateType: 'STOCK_SUBSCRIPTION',
+        aggregateId: '30000000-0000-4000-8000-000000000001',
+      },
+      { STOCK_NOTIFICATIONS_ENABLED: false, KAVENEGAR_STOCK_AVAILABLE_TEMPLATE: '' },
+    );
+
+    await worker.dispatchPending();
+
+    expect(prisma.notificationOutboxEvent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          type: { not: NotificationOutboxEventType.STOCK_AVAILABLE },
+        }),
+      }),
+    );
+    expect(prisma.notificationOutboxEvent.updateMany).not.toHaveBeenCalled();
+    expect(smsSender.sendTemplate).not.toHaveBeenCalled();
+  });
+
+  it('retries without dispatch when the stock template is not configured', async () => {
+    const subscriptionId = '30000000-0000-4000-8000-000000000001';
+    const { worker, prisma, smsSender } = createWorker(
+      {
+        type: NotificationOutboxEventType.STOCK_AVAILABLE,
+        aggregateType: 'STOCK_SUBSCRIPTION',
+        aggregateId: subscriptionId,
+      },
+      { KAVENEGAR_STOCK_AVAILABLE_TEMPLATE: '' },
+    );
+
+    await worker.dispatchPending();
+
+    expect(smsSender.sendTemplate).not.toHaveBeenCalled();
+    expect(smsSender.sendMessage).not.toHaveBeenCalled();
+    expect(prisma.stockNotificationSubscription.updateMany).not.toHaveBeenCalled();
+    expect(prisma.notificationOutboxEvent.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: NotificationOutboxStatus.FAILED,
+          lastError: 'KAVENEGAR_STOCK_AVAILABLE_TEMPLATE is required for stock notifications.',
+        }),
+      }),
+    );
+  });
+
+  it('keeps the stock subscription queued when Kavenegar rejects the template', async () => {
+    const subscriptionId = '30000000-0000-4000-8000-000000000001';
+    const { worker, prisma, smsSender } = createWorker({
+      type: NotificationOutboxEventType.STOCK_AVAILABLE,
+      aggregateType: 'STOCK_SUBSCRIPTION',
+      aggregateId: subscriptionId,
+    });
+    (smsSender.sendTemplate as jest.Mock).mockRejectedValueOnce(
+      new Error('Kavenegar rejected the stock template'),
+    );
+
+    await worker.dispatchPending();
+
+    expect(prisma.stockNotificationSubscription.updateMany).not.toHaveBeenCalled();
+    expect(prisma.notificationOutboxEvent.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: NotificationOutboxStatus.FAILED,
+          lastError: 'Kavenegar rejected the stock template',
+        }),
+      }),
+    );
+  });
+
+  it('keeps an oversized product label within the VerifyLookup token limit', async () => {
+    const { worker, prisma, smsSender } = createWorker({
+      type: NotificationOutboxEventType.STOCK_AVAILABLE,
+      aggregateType: 'STOCK_SUBSCRIPTION',
+      aggregateId: '30000000-0000-4000-8000-000000000001',
+    });
+    prisma.stockNotificationSubscription.findFirst.mockResolvedValueOnce({
+      user: { phone: '+989120000000' },
+      product: { name: `انگشتر ${'نقره'.repeat(30)}` },
+      variant: null,
+    });
+
+    await worker.dispatchPending();
+
+    const message = (smsSender.sendTemplate as jest.Mock).mock.calls[0]?.[0] as {
+      token: string;
+    };
+    expect(message.token).toHaveLength(100);
+    expect(message.token.endsWith('…')).toBe(true);
   });
 
   it('quarantines an ambiguous send instead of automatically retrying it', async () => {

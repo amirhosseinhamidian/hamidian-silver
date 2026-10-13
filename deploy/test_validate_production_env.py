@@ -32,6 +32,7 @@ class ProductionEnvValidationTests(unittest.TestCase):
             "SHIPPING_PROVIDER": "disabled",
             "MANUAL_SHIPPING_COST_TOMAN": "0",
             "SMS_PROVIDER": "disabled",
+            "STOCK_NOTIFICATIONS_ENABLED": "false",
             "PAYMENT_PROVIDER": "disabled",
             "IRANDARGAH_API_TOKEN": "idg_live_" + "a" * 32,
             "IRANDARGAH_SANDBOX": "false",
@@ -57,24 +58,40 @@ class ProductionEnvValidationTests(unittest.TestCase):
         env["SMS_PROVIDER"] = "kavenegar"
         self.assertTrue(any("KAVENEGAR_API_KEY" in error for error in checker.validate(env)))
 
-    def test_accepts_kavenegar_with_all_order_templates(self):
+    def test_accepts_kavenegar_without_the_disabled_stock_template(self):
         env = self.fixture()
         env.update({
             "SMS_PROVIDER": "kavenegar",
             "KAVENEGAR_API_KEY": "kavenegar-test-api-key",
             "KAVENEGAR_OTP_TEMPLATE": "hamidianotp",
         })
-        env.update({key: "approved-template" for key in checker.KAVENEGAR_ORDER_TEMPLATE_KEYS})
+        env.update({key: "approved-template" for key in checker.KAVENEGAR_TRANSACTIONAL_TEMPLATE_KEYS})
         self.assertEqual(checker.validate(env), [])
 
-    def test_rejects_missing_or_malformed_order_template(self):
+    def test_requires_an_approved_stock_template_only_when_the_feature_is_enabled(self):
+        env = self.fixture()
+        env.update({
+            "SMS_PROVIDER": "kavenegar",
+            "KAVENEGAR_API_KEY": "kavenegar-test-api-key",
+            "KAVENEGAR_OTP_TEMPLATE": "hamidianotp",
+            "STOCK_NOTIFICATIONS_ENABLED": "true",
+        })
+        env.update({key: "approved-template" for key in checker.KAVENEGAR_TRANSACTIONAL_TEMPLATE_KEYS})
+
+        result = " ".join(checker.validate(env))
+        self.assertIn("KAVENEGAR_STOCK_AVAILABLE_TEMPLATE", result)
+
+        env["KAVENEGAR_STOCK_AVAILABLE_TEMPLATE"] = "approved-stock-template"
+        self.assertEqual(checker.validate(env), [])
+
+    def test_rejects_missing_or_malformed_transactional_template(self):
         env = self.fixture()
         env.update({
             "SMS_PROVIDER": "kavenegar",
             "KAVENEGAR_API_KEY": "kavenegar-test-api-key",
             "KAVENEGAR_OTP_TEMPLATE": "hamidianotp",
         })
-        env.update({key: "approved-template" for key in checker.KAVENEGAR_ORDER_TEMPLATE_KEYS})
+        env.update({key: "approved-template" for key in checker.KAVENEGAR_TRANSACTIONAL_TEMPLATE_KEYS})
         env["KAVENEGAR_ORDER_SHIPPED_TEMPLATE"] = "invalid_template"
         result = " ".join(checker.validate(env))
         self.assertIn("KAVENEGAR_ORDER_SHIPPED_TEMPLATE", result)

@@ -8,6 +8,7 @@ import {
   ProductStatus,
 } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
+import type { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import type { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { OrdersService } from './orders.service';
 
@@ -515,7 +516,11 @@ describe('OrdersService', () => {
         include: expect.objectContaining({
           user: expect.any(Object),
           returnAuthorizedBy: expect.any(Object),
-          items: true,
+          items: expect.objectContaining({
+            include: expect.objectContaining({
+              variant: expect.any(Object),
+            }),
+          }),
           shippingAddress: true,
           payment: expect.any(Object),
           shipment: expect.any(Object),
@@ -523,6 +528,60 @@ describe('OrdersService', () => {
         }),
       }),
     );
+  });
+
+  it('adds product presentation data to order items for authorized staff', async () => {
+    const mediaUrl = {
+      resolve: jest.fn((storageKey: string) => `https://media.hamidian.shop/media/${storageKey}`),
+    };
+    service = new OrdersService(
+      prisma as unknown as PrismaService,
+      mediaUrl as unknown as PublicMediaUrlService,
+    );
+    prisma.order.findMany.mockResolvedValue([
+      {
+        id: '60000000-0000-4000-8000-000000000001',
+        items: [
+          {
+            id: '70000000-0000-4000-8000-000000000001',
+            productNameSnapshot: 'انگشتر آذر',
+            variant: {
+              product: {
+                slug: 'angoshtar-azar',
+                media: [
+                  {
+                    altText: 'تصویر اصلی انگشتر آذر',
+                    media: {
+                      storageKey: 'products/angoshtar-azar.webp',
+                      mimeType: 'image/webp',
+                      altText: null,
+                      width: 1200,
+                      height: 1200,
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    ]);
+
+    const orders = await service.listOrders({ limit: 25 });
+
+    expect(orders[0]?.items[0]).toEqual(
+      expect.objectContaining({
+        productSlug: 'angoshtar-azar',
+        primaryMedia: {
+          url: 'https://media.hamidian.shop/media/products/angoshtar-azar.webp',
+          mimeType: 'image/webp',
+          altText: 'تصویر اصلی انگشتر آذر',
+          width: 1200,
+          height: 1200,
+        },
+      }),
+    );
+    expect(orders[0]?.items[0]).not.toHaveProperty('variant');
   });
 
   it('does not release inventory when payment finalization wins the order-state claim', async () => {

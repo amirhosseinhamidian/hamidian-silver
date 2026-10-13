@@ -1,133 +1,157 @@
 import { describe, expect, it } from 'vitest';
 
-import type {
-  PublicCatalogBrandPage,
-  PublicCatalogCategoryPage,
-  PublicCatalogProductSummary,
-} from '@/lib/catalog/public-catalog';
-import type { PublicContentPage } from '@/lib/content/public-content-page';
+import type { PublicGuideArticleSummary } from '@/lib/guide/public-guide';
+import type { PublicSeoSitemap } from '@/lib/seo/public-sitemap-source';
 import { buildStorefrontSitemap } from '@/lib/seo/sitemap';
 
 const origin = new URL('https://silver.example');
 
-describe('buildStorefrontSitemap', () => {
-  it('uses canonicals, excludes no-index records and includes product images', () => {
-    const products = [
+function sitemapSources(): PublicSeoSitemap {
+  return {
+    products: [
       {
         id: 'product-1',
-        name: 'انگشتر',
         slug: 'ring',
-        shortDescription: null,
         seoCanonicalPath: '/products/ring-canonical',
         seoNoIndex: false,
         updatedAt: '2026-09-25T10:00:00.000Z',
-        salePriceToman: 1_000_000,
-        compareAtPriceToman: null,
-        sizeMode: 'NONE',
-        brand: null,
-        categories: [
-          {
-            id: 'category-1',
-            name: 'انگشتر',
-            slug: 'rings',
-            description: null,
-            parentId: 'category-parent',
-            sortOrder: 1,
-            image: null,
-          },
-        ],
-        primaryMedia: {
-          url: '/media/ring.webp',
-          mimeType: 'image/webp',
-          altText: null,
-          width: 1200,
-          height: 1200,
-        },
-        availableQuantity: 1,
-        isAvailable: true,
+        brandId: 'brand-1',
+        categoryIds: ['category-1'],
+        imageUrl: '/media/ring.webp',
       },
       {
         id: 'product-2',
-        name: 'محصول مخفی',
         slug: 'hidden',
-        shortDescription: null,
+        seoCanonicalPath: null,
         seoNoIndex: true,
-        salePriceToman: null,
-        compareAtPriceToman: null,
-        sizeMode: 'NONE',
-        brand: null,
-        categories: [],
-        primaryMedia: null,
-        availableQuantity: 0,
-        isAvailable: false,
+        updatedAt: '2026-09-22T10:00:00.000Z',
+        brandId: null,
+        categoryIds: [],
+        imageUrl: null,
       },
-    ] satisfies PublicCatalogProductSummary[];
-    const categories = [
+    ],
+    categories: [
       {
         id: 'category-parent',
-        name: 'زیورآلات',
         slug: 'jewelry',
-        description: null,
         parentId: null,
-        sortOrder: 0,
-        image: null,
+        seoCanonicalPath: null,
         seoNoIndex: false,
         updatedAt: '2026-09-20T08:00:00.000Z',
+        imageUrl: null,
       },
       {
         id: 'category-1',
-        name: 'انگشتر',
         slug: 'rings',
-        description: null,
         parentId: 'category-parent',
-        sortOrder: 1,
-        image: null,
+        seoCanonicalPath: null,
         seoNoIndex: false,
         updatedAt: '2026-09-24T08:00:00.000Z',
+        imageUrl: null,
       },
       {
         id: 'category-empty',
-        name: 'دسته خالی',
         slug: 'empty-category',
-        description: null,
         parentId: null,
-        sortOrder: 2,
-        image: null,
+        seoCanonicalPath: null,
         seoNoIndex: false,
         updatedAt: '2026-09-24T08:00:00.000Z',
+        imageUrl: null,
       },
-    ] satisfies PublicCatalogCategoryPage[];
-    const brands = [
+    ],
+    brands: [
       {
         id: 'brand-1',
-        name: 'برند مخفی',
-        slug: 'hidden-brand',
-        description: null,
-        image: null,
-        originCountry: null,
-        seoNoIndex: true,
+        slug: 'visible-brand',
+        seoCanonicalPath: null,
+        seoNoIndex: false,
+        updatedAt: '2026-09-21T08:00:00.000Z',
+        imageUrl: null,
       },
-    ] satisfies PublicCatalogBrandPage[];
-    const contentPages = [
+      {
+        id: 'brand-hidden',
+        slug: 'hidden-brand',
+        seoCanonicalPath: null,
+        seoNoIndex: true,
+        updatedAt: '2026-09-21T08:00:00.000Z',
+        imageUrl: null,
+      },
+    ],
+    contentPages: [
       {
         key: 'ABOUT',
-        title: 'درباره ما',
-        eyebrow: null,
-        subtitle: null,
-        body: null,
-        heroMedia: null,
-        heroMobileMedia: null,
-        sections: [],
-        seoTitle: null,
-        seoDescription: null,
         seoCanonicalPath: '/story',
         seoNoIndex: false,
-        seoOgMedia: null,
         updatedAt: '2026-09-23T09:30:00.000Z',
+        imageUrl: null,
       },
-    ] satisfies PublicContentPage[];
+    ],
+  };
+}
 
-    const sitemap = buildStorefrontSitemap({ products, categories, brands, contentPages }, origin);
+describe('buildStorefrontSitemap', () => {
+  it('includes indexable knowledge articles, their canonical and preferred image', () => {
+    const guideArticles = [
+      {
+        id: 'guide-1',
+        title: 'مراقبت از نقره',
+        slug: 'silver-care',
+        eyebrow: null,
+        excerpt: 'راهنمای نگهداری نقره',
+        format: 'CARE_GUIDE',
+        heroMedia: {
+          id: 'media-1',
+          url: '/media/guide.webp',
+          mimeType: 'image/webp',
+          altText: null,
+        },
+        seoCanonicalPath: '/guide/care-for-silver',
+        seoNoIndex: false,
+        seoOgMedia: null,
+        readingTimeMinutes: 4,
+        isFeatured: true,
+        publishedAt: '2026-10-11T10:00:00.000Z',
+        topics: [],
+        updatedAt: '2026-10-12T10:00:00.000Z',
+      },
+      {
+        id: 'guide-2',
+        title: 'مطلب مخفی',
+        slug: 'hidden-guide',
+        eyebrow: null,
+        excerpt: null,
+        format: 'GUIDE',
+        heroMedia: null,
+        seoCanonicalPath: null,
+        seoNoIndex: true,
+        seoOgMedia: null,
+        readingTimeMinutes: null,
+        isFeatured: false,
+        publishedAt: null,
+        topics: [],
+        updatedAt: '2026-10-12T10:00:00.000Z',
+      },
+    ] satisfies PublicGuideArticleSummary[];
+
+    const sitemap = buildStorefrontSitemap({ ...sitemapSources(), guideArticles }, origin);
+
+    expect(sitemap).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          url: 'https://silver.example/guide',
+          lastModified: new Date('2026-10-12T10:00:00.000Z'),
+        }),
+        expect.objectContaining({
+          url: 'https://silver.example/guide/care-for-silver',
+          images: ['https://silver.example/media/guide.webp'],
+        }),
+      ]),
+    );
+    expect(sitemap.some(({ url }) => url.includes('hidden-guide'))).toBe(false);
+  });
+
+  it('uses canonicals, excludes no-index records and includes product images', () => {
+    const sitemap = buildStorefrontSitemap(sitemapSources(), origin);
 
     expect(sitemap).toEqual(
       expect.arrayContaining([
@@ -153,6 +177,10 @@ describe('buildStorefrontSitemap', () => {
           lastModified: new Date('2026-09-25T10:00:00.000Z'),
         }),
         expect.objectContaining({
+          url: 'https://silver.example/brands/visible-brand',
+          lastModified: new Date('2026-09-25T10:00:00.000Z'),
+        }),
+        expect.objectContaining({
           url: 'https://silver.example/products/ring-canonical',
           lastModified: new Date('2026-09-25T10:00:00.000Z'),
           images: ['https://silver.example/media/ring.webp'],
@@ -163,17 +191,84 @@ describe('buildStorefrontSitemap', () => {
     expect(sitemap.some((entry) => entry.url.includes('empty-category'))).toBe(false);
   });
 
-  it('omits empty catalog hubs from the sitemap', () => {
+  it('uses the same safe canonical fallback as page metadata', () => {
+    const sources = sitemapSources();
+    sources.products[0]!.seoCanonicalPath = 'https://evil.example/product';
+    sources.categories[1]!.seoCanonicalPath = '/products/wrong-family';
+    sources.brands[0]!.seoCanonicalPath = '/account/orders';
+
+    const locations = buildStorefrontSitemap(sources, origin).map(({ url }) => url);
+
+    expect(locations).toEqual(
+      expect.arrayContaining([
+        'https://silver.example/products/ring',
+        'https://silver.example/categories/rings',
+        'https://silver.example/brands/visible-brand',
+      ]),
+    );
+    expect(locations.some((url) => url.startsWith('https://evil.example'))).toBe(false);
+  });
+
+  it('keeps collections populated by displayable no-index products', () => {
+    const sources = sitemapSources();
+    sources.products[0]!.seoNoIndex = true;
+
+    const locations = buildStorefrontSitemap(sources, origin).map(({ url }) => url);
+
+    expect(locations).toContain('https://silver.example/categories/rings');
+    expect(locations).toContain('https://silver.example/brands/visible-brand');
+    expect(locations).not.toContain('https://silver.example/products/ring-canonical');
+  });
+
+  it('ignores invalid dates instead of emitting a fabricated lastmod', () => {
+    const sources = sitemapSources();
+    sources.products[0]!.updatedAt = 'not-a-date';
+    sources.categories[1]!.updatedAt = 'also-invalid';
+
+    const entry = buildStorefrontSitemap(sources, origin).find(
+      ({ url }) => url === 'https://silver.example/categories/rings',
+    );
+
+    expect(entry).toEqual({ url: 'https://silver.example/categories/rings' });
+  });
+
+  it('builds a 10,000-product sitemap from one compact snapshot', () => {
+    const products = Array.from({ length: 10_000 }, (_, index) => ({
+      id: `product-${index}`,
+      slug: `product-${index}`,
+      seoCanonicalPath: null,
+      seoNoIndex: false,
+      updatedAt: '2026-10-01T10:00:00.000Z',
+      brandId: null,
+      categoryIds: [],
+      imageUrl: null,
+    }));
+
     const sitemap = buildStorefrontSitemap(
-      {
-        products: [],
-        categories: [],
-        brands: [],
-        contentPages: [],
-      },
+      { products, categories: [], brands: [], contentPages: [] },
       origin,
     );
 
-    expect(sitemap).toEqual([{ url: 'https://silver.example/' }]);
+    expect(sitemap.filter(({ url }) => url.includes('/products/'))).toHaveLength(10_000);
+    expect(new Set(sitemap.map(({ url }) => url))).toHaveProperty('size', sitemap.length);
+  });
+
+  it('omits empty catalog hubs from the sitemap', () => {
+    const sitemap = buildStorefrontSitemap(
+      { products: [], categories: [], brands: [], contentPages: [] },
+      origin,
+    );
+
+    const locations = sitemap.map(({ url }) => url);
+    expect(locations).toEqual(
+      expect.arrayContaining([
+        'https://silver.example/',
+        'https://silver.example/about',
+        'https://silver.example/contact',
+      ]),
+    );
+    expect(locations).not.toContain('https://silver.example/products');
+    expect(locations).not.toContain('https://silver.example/categories');
+    expect(locations).not.toContain('https://silver.example/brands');
   });
 });

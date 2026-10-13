@@ -58,6 +58,25 @@ describe('CatalogCollectionPage', () => {
             links: [{ label: 'کارتیر', href: '/brands/cartier' }],
           },
         ]}
+        knowledgeArticles={[
+          {
+            id: 'guide-1',
+            title: 'راهنمای انتخاب انگشتر',
+            slug: 'ring-guide',
+            eyebrow: null,
+            excerpt: 'نکته‌های کاربردی برای انتخاب بهتر',
+            format: 'BUYING_GUIDE',
+            heroMedia: null,
+            seoCanonicalPath: null,
+            seoNoIndex: false,
+            seoOgMedia: null,
+            readingTimeMinutes: 4,
+            isFeatured: false,
+            publishedAt: '2026-10-12T10:00:00.000Z',
+            topics: [],
+            updatedAt: '2026-10-12T10:00:00.000Z',
+          },
+        ]}
       />,
     );
 
@@ -77,5 +96,9 @@ describe('CatalogCollectionPage', () => {
     );
     expect(screen.getByRole('navigation', { name: 'برندهای این دسته' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'کارتیر' })).toHaveAttribute('href', '/brands/cartier');
+    expect(screen.getByRole('link', { name: 'راهنمای انتخاب انگشتر' })).toHaveAttribute(
+      'href',
+      '/guide/ring-guide',
+    );
   });
 });

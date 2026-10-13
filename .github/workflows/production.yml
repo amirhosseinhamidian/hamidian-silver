@@ -47,6 +47,10 @@ jobs:
         run: |
           npm install --global pnpm@11.9.0
           pnpm install --frozen-lockfile
+      - name: Generate API contracts and reject committed drift
+        run: |
+          pnpm contracts:generate
+          git diff --exit-code -- packages/contracts/openapi.json packages/contracts/src/schema.ts
       - name: Apply all migrations to an isolated disposable PostgreSQL
         run: |
           pnpm exec prisma validate

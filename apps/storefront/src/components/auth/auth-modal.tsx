@@ -612,7 +612,7 @@ export function AccountAuthButton({
             <div className="relative h-20 w-48 sm:h-24 sm:w-56">
               <Image
                 src="/brand/hamidian-signature.png"
-                alt="لوگوی نقره حمیدیان"
+                alt="لوگوی گالری حمیدیان"
                 fill
                 sizes="14rem"
                 loading="eager"

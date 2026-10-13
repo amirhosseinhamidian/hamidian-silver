@@ -4,7 +4,7 @@
 
 ## قالب‌های لازم
 
-در پنل کاوه‌نگار، از بخش «اعتبارسنجی / قالب‌ها» هفت قالب زیر را بسازید. نام قالب‌ها انگلیسی و بدون فاصله یا `_` است.
+در پنل کاوه‌نگار، از بخش «اعتبارسنجی / قالب‌ها» هشت قالب زیر را بسازید. نام قالب‌ها انگلیسی و بدون فاصله یا `_` است.
 
 ### تأیید پرداخت
 
@@ -96,6 +96,14 @@
 
 دلیل کامل لغو سفارش در صفحه جزئیات سفارش مشتری نمایش داده می‌شود و داخل توکن پیامک قرار نمی‌گیرد.
 
+### موجود شدن محصول
+
+کاوه‌نگار این پیام را تبلیغاتی/مارکتینگ تشخیص داده و قالب VerifyLookup آن را تأیید
+نکرده است. تا زمان اضافه‌شدن یک کانال مجاز، قابلیت با
+`STOCK_NOTIFICATIONS_ENABLED=false` غیرفعال می‌ماند و نام قالب ساختگی یا تأییدنشده
+نباید در production قرار بگیرد. مدل اشتراک، trigger موجودی و worker برای اتصال یک
+کانال جایگزین در آینده حفظ شده‌اند.
+
 ## تنظیم production.env
 
 بعد از تأیید همه قالب‌ها، این مقادیر را به `/etc/hamidian-silver/production.env` اضافه کنید:
@@ -113,9 +121,13 @@ KAVENEGAR_ORDER_PROCESSING_TEMPLATE=hamidianprocessing
 KAVENEGAR_ORDER_SHIPPED_TEMPLATE=hamidianshipped
 KAVENEGAR_ORDER_DELIVERED_TEMPLATE=hamidiandelivered
 KAVENEGAR_ORDER_CANCELLED_TEMPLATE=hamidiancancelled
+STOCK_NOTIFICATIONS_ENABLED=false
+KAVENEGAR_STOCK_AVAILABLE_TEMPLATE=
 ```
 
-`KAVENEGAR_SENDER` فقط برای پیام آزاد اعلان موجودشدن کالا استفاده می‌شود. پیام‌های سفارش و OTP به sender وابسته نیستند.
+`KAVENEGAR_SENDER` فقط برای پیام‌های آزاد عملیاتی استفاده می‌شود. پیام‌های سفارش،
+و OTP از VerifyLookup استفاده می‌کنند و به sender وابسته نیستند. اعلان موجودشدن
+محصول تا زمان فراهم‌شدن کانال جایگزین ارسال نمی‌شود.
 
 فایل env و Compose را اعتبارسنجی کنید:
 

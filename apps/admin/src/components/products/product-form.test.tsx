@@ -343,6 +343,28 @@ describe('ProductForm', () => {
     ]);
   });
 
+  it('converts key-value lines into populated attribute rows', () => {
+    render(<ProductForm data={data} mode="create" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن ویژگی' }));
+    fireEvent.change(screen.getByLabelText('افزودن سریع ویژگی‌ها'), {
+      target: {
+        value: 'جنس نقره: نقره ۹۲۵\nنوع آبکاری: رودیوم\nنحوه نگهداری: دور از رطوبت',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'تبدیل متن به ویژگی‌ها' }));
+
+    expect(screen.getAllByLabelText(/کلید ویژگی/)).toHaveLength(3);
+    expect(screen.getByLabelText(/کلید ویژگی ۱/)).toHaveValue('جنس نقره');
+    expect(screen.getByLabelText(/مقدار ویژگی ۱/)).toHaveValue('نقره ۹۲۵');
+    expect(screen.getByLabelText(/کلید ویژگی ۲/)).toHaveValue('نوع آبکاری');
+    expect(screen.getByLabelText(/مقدار ویژگی ۲/)).toHaveValue('رودیوم');
+    expect(screen.getByLabelText(/کلید ویژگی ۳/)).toHaveValue('نحوه نگهداری');
+    expect(screen.getByLabelText(/مقدار ویژگی ۳/)).toHaveValue('دور از رطوبت');
+    expect(screen.getByText('۳ ویژگی به فرم اضافه شد.')).toBeInTheDocument();
+    expect(screen.getByLabelText('افزودن سریع ویژگی‌ها')).toHaveValue('');
+  });
+
   it('rejects product short descriptions longer than seven words', () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

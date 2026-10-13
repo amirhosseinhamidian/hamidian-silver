@@ -31,6 +31,7 @@ def fixture():
         'BALE_BOT_TOKEN': '',
         'ADMIN_MESSAGING_REQUEST_TIMEOUT_MS': '8000',
         'SMS_PROVIDER': 'disabled',
+        'STOCK_NOTIFICATIONS_ENABLED': 'false',
         'PAYMENT_PROVIDER': 'disabled',
         'IRANDARGAH_SANDBOX': 'true',
         'IRANDARGAH_REQUEST_TIMEOUT_MS': '8000',
@@ -77,7 +78,7 @@ class StagingEnvTests(unittest.TestCase):
         values['TELEGRAM_RELAY_SECRET'] = 'r' * 64
         self.assertEqual(checker.validate(values), [])
 
-    def test_kavenegar_requires_all_order_templates(self):
+    def test_kavenegar_requires_all_transactional_templates(self):
         values = fixture()
         values.update({
             'SMS_PROVIDER': 'kavenegar',
@@ -87,7 +88,10 @@ class StagingEnvTests(unittest.TestCase):
         result = ' '.join(checker.validate(values))
         self.assertIn('KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE', result)
 
-        values.update({key: 'approved-template' for key in checker.shared.KAVENEGAR_ORDER_TEMPLATE_KEYS})
+        values.update({
+            key: 'approved-template'
+            for key in checker.shared.KAVENEGAR_TRANSACTIONAL_TEMPLATE_KEYS
+        })
         self.assertEqual(checker.validate(values), [])
 
     def test_bootstrap_rejects_unknown_or_injected_fields(self):

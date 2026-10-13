@@ -25,6 +25,7 @@ const categories: readonly AdminCategory[] = [
     parent: null,
     parentId: null,
     image: null,
+    featuredImage: null,
     heroMobileImage: null,
     seoTitle: null,
     seoDescription: null,
@@ -64,10 +65,11 @@ describe('CategoryManagementView', () => {
     expect(router.refresh).toHaveBeenCalled();
   });
 
-  it('creates a category then uploads its image through the same-origin BFF', async () => {
+  it('creates a category then uploads its featured and hero images through the same-origin BFF', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ id: 'category-2' }))
+      .mockResolvedValueOnce(jsonResponse({ featuredImage: { id: 'media-featured-1' } }))
       .mockResolvedValueOnce(jsonResponse({ image: { id: 'media-1' } }))
       .mockResolvedValueOnce(jsonResponse({ heroMobileImage: { id: 'media-mobile-1' } }));
     vi.stubGlobal('fetch', fetchMock);
@@ -81,6 +83,12 @@ describe('CategoryManagementView', () => {
     fireEvent.change(within(dialog).getByLabelText(/اسلاگ/), {
       target: { value: 'necklaces' },
     });
+    const featuredImage = new File(['featured-image'], 'necklace-featured.webp', {
+      type: 'image/webp',
+    });
+    fireEvent.change(within(dialog).getByLabelText('تصویر شاخص دسته‌بندی'), {
+      target: { files: [featuredImage] },
+    });
     const image = new File(['image'], 'necklace.webp', { type: 'image/webp' });
     fireEvent.change(within(dialog).getByLabelText('تصویر Hero دسکتاپ دسته‌بندی'), {
       target: { files: [image] },
@@ -93,12 +101,14 @@ describe('CategoryManagementView', () => {
     });
     fireEvent.click(within(dialog).getByRole('button', { name: 'ذخیره دسته‌بندی' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
     expect(fetchMock.mock.calls[0][0]).toBe('/api/catalog/categories');
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/catalog/categories/category-2/image');
-    expect(fetchMock.mock.calls[2][0]).toBe('/api/catalog/categories/category-2/hero-mobile-image');
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/catalog/categories/category-2/featured-image');
+    expect(fetchMock.mock.calls[2][0]).toBe('/api/catalog/categories/category-2/image');
+    expect(fetchMock.mock.calls[3][0]).toBe('/api/catalog/categories/category-2/hero-mobile-image');
     expect((fetchMock.mock.calls[1][1] as RequestInit).body).toBeInstanceOf(FormData);
     expect((fetchMock.mock.calls[2][1] as RequestInit).body).toBeInstanceOf(FormData);
+    expect((fetchMock.mock.calls[3][1] as RequestInit).body).toBeInstanceOf(FormData);
   });
 
   it('keeps mutation controls hidden for read-only catalog users', () => {

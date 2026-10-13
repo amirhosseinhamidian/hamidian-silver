@@ -9,6 +9,7 @@ import {
   type CatalogFilters,
   type CatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
+import { getPublicRelatedGuideArticles } from '@/lib/guide/public-guide';
 import { brandSeoDescription, brandSeoTitle } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSeoRedirect } from '@/lib/seo/redirects';
@@ -76,9 +77,10 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
     brand: slug,
   };
 
-  const [brands, products] = await Promise.all([
+  const [brands, products, knowledgeArticles] = await Promise.all([
     getPublicCatalogBrands(),
     getPublicCatalogProducts(filters),
+    getPublicRelatedGuideArticles({ brand: slug, limit: 3 }),
   ]);
   const brand = brands.find((candidate) => candidate.slug === slug);
 
@@ -102,6 +104,7 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
       mobileImage={brand.heroMobileImage ?? null}
       filters={filters}
       products={products}
+      knowledgeArticles={knowledgeArticles}
       contextLinkGroups={[
         {
           label: 'دسته‌بندی‌های این برند',

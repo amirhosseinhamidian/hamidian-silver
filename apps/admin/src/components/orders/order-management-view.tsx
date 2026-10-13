@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useMemo, useState } from 'react';
 
 import { OrderOperations } from '@/components/orders/order-operations';
@@ -7,7 +8,7 @@ import { PaymentReceiptReview } from '@/components/orders/payment-receipt-review
 import { Alert } from '@/components/ui/alert';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { BottomSheet, BottomSheetContent, BottomSheetTrigger } from '@/components/ui/bottom-sheet';
-import { Button } from '@/components/ui/button';
+import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { DataTableColumn } from '@/components/ui/data-table';
 import { DonutChart } from '@/components/ui/donut-chart';
@@ -84,6 +85,13 @@ const shipmentStatusPresentation: Record<AdminShipmentStatus, string> = {
 };
 
 const decimalFormatter = new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 3 });
+const storefrontOrigin = (
+  process.env.NEXT_PUBLIC_STOREFRONT_URL ?? 'https://hamidian.shop'
+).replace(/\/+$/, '');
+
+function storefrontProductUrl(productSlug: string): string {
+  return `${storefrontOrigin}/products/${encodeURIComponent(productSlug)}`;
+}
 
 function paymentMethodLabel(provider: string | undefined): string {
   if (!provider) return 'ثبت نشده';
@@ -159,16 +167,48 @@ function DetailRows({ rows }: Readonly<{ rows: readonly (readonly [string, strin
 function OrderItemCard({ item }: Readonly<{ item: AdminOrderItem }>) {
   return (
     <article className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h4 className="font-bold">{toPersianDigits(item.productName)}</h4>
-          <p className="mt-1 text-xs text-[var(--admin-color-muted)]">
-            {item.variantName ? `${toPersianDigits(item.variantName)} · ` : ''}
-            کد {toPersianDigits(item.sku)}
-            {item.sizeLabel ? ` · سایز ${toPersianDigits(item.sizeLabel)}` : ''}
-          </p>
+      <div className="flex items-start gap-3">
+        <div className="relative grid size-24 shrink-0 place-items-center overflow-hidden rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface-subtle)] sm:size-28">
+          {item.primaryMedia ? (
+            <Image
+              src={item.primaryMedia.url}
+              alt={item.primaryMedia.altText?.trim() || item.productName}
+              fill
+              unoptimized
+              sizes="(min-width: 640px) 112px, 96px"
+              className="object-cover"
+            />
+          ) : (
+            <span className="px-2 text-center text-[0.6875rem] text-[var(--admin-color-muted)]">
+              بدون تصویر
+            </span>
+          )}
         </div>
-        <Badge tone="neutral">{formatAdminInteger(item.quantity)} عدد</Badge>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h4 className="font-bold">{toPersianDigits(item.productName)}</h4>
+              <p className="mt-1 text-xs leading-5 text-[var(--admin-color-muted)]">
+                {item.variantName ? `${toPersianDigits(item.variantName)} · ` : ''}
+                کد {toPersianDigits(item.sku)}
+                {item.sizeLabel ? ` · سایز ${toPersianDigits(item.sizeLabel)}` : ''}
+              </p>
+            </div>
+            <Badge tone="neutral">{formatAdminInteger(item.quantity)} عدد</Badge>
+          </div>
+          {item.productSlug ? (
+            <ButtonLink
+              href={storefrontProductUrl(item.productSlug)}
+              target="_blank"
+              rel="noreferrer"
+              variant="outline"
+              size="sm"
+              className="mt-3 w-full sm:w-auto"
+            >
+              مشاهده صفحه محصول
+            </ButtonLink>
+          ) : null}
+        </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
         <div className="rounded-lg bg-[var(--admin-color-surface-subtle)] p-2.5">

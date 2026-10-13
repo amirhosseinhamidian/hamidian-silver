@@ -38,7 +38,7 @@ describe('StorefrontHeader', () => {
       'href',
       '/products',
     );
-    expect(screen.getByRole('img', { name: 'لوگوی نقره حمیدیان' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'لوگوی گالری حمیدیان' })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'علاقه‌مندی‌ها' })).toHaveLength(2);
     for (const link of screen.getAllByRole('link', { name: 'علاقه‌مندی‌ها' })) {
       expect(link).toHaveAttribute('href', '/wishlist');
@@ -48,7 +48,7 @@ describe('StorefrontHeader', () => {
     expect(screen.getByRole('button', { name: 'جستجو در محصولات' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'باز کردن منوی موبایل' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'سوالات متداول' })).toHaveAttribute('href', '/faq');
-    expect(screen.getByRole('link', { name: 'نقره حمیدیان، صفحه اصلی موبایل' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'گالری حمیدیان، صفحه اصلی موبایل' })).toHaveAttribute(
       'href',
       '/',
     );

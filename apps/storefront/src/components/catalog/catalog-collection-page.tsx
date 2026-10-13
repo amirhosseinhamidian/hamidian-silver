@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { CatalogProductGrid } from '@/components/catalog/catalog-product-grid';
+import { RelatedKnowledgeSection } from '@/components/guide/related-knowledge-section';
 import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import { Button, ButtonLink } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import {
   type PublicCatalogMedia,
   type PublicCatalogProductList,
 } from '@/lib/catalog/public-catalog';
+import type { PublicGuideArticleSummary } from '@/lib/guide/public-guide';
 
 type CatalogCollectionPageProps = Readonly<{
   path: string;
@@ -29,6 +31,7 @@ type CatalogCollectionPageProps = Readonly<{
     label: string;
     links: readonly Readonly<{ label: string; href: string }>[];
   }>[];
+  knowledgeArticles?: readonly PublicGuideArticleSummary[];
 }>;
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
@@ -107,6 +110,7 @@ export function CatalogCollectionPage({
   breadcrumbs,
   collectionLinks = [],
   contextLinkGroups = [],
+  knowledgeArticles = [],
 }: CatalogCollectionPageProps) {
   return (
     <main id="main-content">
@@ -208,6 +212,14 @@ export function CatalogCollectionPage({
             }
           />
         )}
+
+        <RelatedKnowledgeSection
+          articles={knowledgeArticles}
+          eyebrow={`راهنمای مرتبط با ${title}`}
+          title="پیش از انتخاب، بیشتر بدانید"
+          headingId={`collection-knowledge-${path.replace(/[^a-z0-9]+/gi, '-')}`}
+          className="border-t border-[var(--sf-color-border)] py-14 sm:py-20"
+        />
       </div>
     </main>
   );

@@ -8,6 +8,7 @@ import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { ProductMediaGallery } from '@/components/catalog/product-media-gallery';
 import { RelatedProductsSection } from '@/components/catalog/related-products-section';
+import { RelatedKnowledgeSection } from '@/components/guide/related-knowledge-section';
 import { JsonLd } from '@/components/seo/json-ld';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import { WishlistButton } from '@/components/wishlist/wishlist-button';
@@ -22,6 +23,7 @@ import {
 } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
+import { getPublicRelatedGuideArticles } from '@/lib/guide/public-guide';
 import { productSeoDescription } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSeoRedirect } from '@/lib/seo/redirects';
@@ -82,7 +84,15 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     notFound();
   }
 
-  const relatedProducts = await getPublicRelatedProducts(slug, 1, 8);
+  const [relatedProducts, knowledgeArticles] = await Promise.all([
+    getPublicRelatedProducts(slug, 1, 8),
+    getPublicRelatedGuideArticles({
+      product: product.slug,
+      categories: product.categories.map((category) => category.slug),
+      brand: product.brand?.slug,
+      limit: 3,
+    }),
+  ]);
   const primaryAssignedCategory = selectPrimaryCatalogCategory(categories, product.categories);
   const productBreadcrumbs = primaryAssignedCategory
     ? [
@@ -303,6 +313,14 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         ) : null}
 
         <RelatedProductsSection productSlug={product.slug} initial={relatedProducts} />
+
+        <RelatedKnowledgeSection
+          articles={knowledgeArticles}
+          eyebrow="راهنمای مرتبط با این محصول"
+          title="پیش از انتخاب، بیشتر بدانید"
+          headingId="product-related-knowledge-title"
+          className="mt-16 border-t border-[var(--sf-color-border)] pt-14 sm:mt-20 sm:pt-20"
+        />
       </main>
     </>
   );

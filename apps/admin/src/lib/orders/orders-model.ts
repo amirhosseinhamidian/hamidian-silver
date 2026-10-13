@@ -31,9 +31,18 @@ export type AdminOrderCustomer = Readonly<{
   phone: string;
 }>;
 
+export type AdminOrderItemMedia = Readonly<{
+  url: string;
+  altText: string | null;
+  width: number | null;
+  height: number | null;
+}>;
+
 export type AdminOrderItem = Readonly<{
   id: string;
   productName: string;
+  productSlug: string | null;
+  primaryMedia: AdminOrderItemMedia | null;
   variantName: string | null;
   sku: string;
   sizeLabel: string | null;
@@ -244,6 +253,19 @@ function actorLabel(value: unknown): string {
   return name || text(actor?.phone) || 'سیستم';
 }
 
+function parseItemMedia(value: unknown): AdminOrderItemMedia | null {
+  const media = record(value);
+  const url = text(media?.url);
+  if (!media || !url) return null;
+
+  return {
+    url,
+    altText: text(media.altText),
+    width: number(media.width),
+    height: number(media.height),
+  };
+}
+
 function parseItem(value: unknown): AdminOrderItem | null {
   const item = record(value);
   if (!item) return null;
@@ -269,6 +291,8 @@ function parseItem(value: unknown): AdminOrderItem | null {
   return {
     id,
     productName,
+    productSlug: text(item.productSlug),
+    primaryMedia: parseItemMedia(item.primaryMedia),
     variantName: text(item.variantNameSnapshot),
     sku,
     sizeLabel: text(item.sizeLabelSnapshot),
