@@ -1092,6 +1092,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/guide/public/topics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GuideController_listPublicTopics_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/guide/public/articles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GuideController_listPublicArticles_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/guide/public/related-articles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GuideController_listPublicRelatedArticles_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/guide/public/articles/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GuideController_getPublicArticle_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/guide/topics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GuideController_listAdminTopics_v1"];
+        put?: never;
+        post: operations["GuideController_createTopic_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/guide/topics/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["GuideController_deleteTopic_v1"];
+        options?: never;
+        head?: never;
+        patch: operations["GuideController_updateTopic_v1"];
+        trace?: never;
+    };
+    "/api/v1/guide/articles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GuideController_listAdminArticles_v1"];
+        put?: never;
+        post: operations["GuideController_createArticle_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/guide/articles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GuideController_getAdminArticle_v1"];
+        put?: never;
+        post?: never;
+        delete: operations["GuideController_deleteArticle_v1"];
+        options?: never;
+        head?: never;
+        patch: operations["GuideController_updateArticle_v1"];
+        trace?: never;
+    };
+    "/api/v1/guide/articles/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["GuideController_updateArticleStatus_v1"];
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -3012,6 +3156,22 @@ export interface paths {
         patch: operations["SiteSettingsController_updateSettings_v1"];
         trace?: never;
     };
+    "/api/v1/seo/sitemap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoController_getPublicSitemap_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/seo/redirects/resolve": {
         parameters: {
             query?: never;
@@ -3671,6 +3831,223 @@ export interface components {
         };
         ReverseOrderCostDto: {
             reason?: string;
+        };
+        GuideMediaDto: {
+            id: string;
+            url: string | null;
+            mimeType: string;
+            altText?: string | null;
+        };
+        GuideTopicDto: {
+            id: string;
+            name: string;
+            slug: string;
+            description?: string | null;
+            coverMedia?: components["schemas"]["GuideMediaDto"] | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex: boolean;
+            sortOrder: number;
+            isActive: boolean;
+        };
+        GuideArticleSummaryDto: {
+            id: string;
+            title: string;
+            slug: string;
+            eyebrow?: string | null;
+            excerpt?: string | null;
+            /** @enum {string} */
+            format: "GUIDE" | "ANSWER" | "BUYING_GUIDE" | "CARE_GUIDE" | "COMPARISON" | "STORY";
+            /** @enum {string} */
+            status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+            heroMedia?: components["schemas"]["GuideMediaDto"] | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex: boolean;
+            seoOgMedia?: components["schemas"]["GuideMediaDto"] | null;
+            readingTimeMinutes?: number | null;
+            isFeatured: boolean;
+            blockCount: number;
+            /** Format: date-time */
+            publishedAt?: string | null;
+            topics: components["schemas"]["GuideTopicDto"][];
+            version: number;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        GuideArticleListDto: {
+            items: components["schemas"]["GuideArticleSummaryDto"][];
+            total: number;
+            page: number;
+            limit: number;
+            totalPages: number;
+        };
+        GuideArticleBlockDto: {
+            id: string;
+            /** @enum {string} */
+            type: "LEAD" | "RICH_TEXT" | "IMAGE" | "IMAGE_TEXT" | "STEPS" | "QUOTE" | "TABLE" | "FAQ" | "GALLERY" | "PRODUCT_CARDS" | "CTA" | "DIVIDER";
+            variant?: string | null;
+            anchorId?: string | null;
+            primaryMedia?: components["schemas"]["GuideMediaDto"] | null;
+            content: {
+                [key: string]: unknown;
+            };
+            sortOrder: number;
+        };
+        GuideRelatedProductDto: {
+            id: string;
+            name: string;
+            slug: string;
+            shortDescription?: string | null;
+            salePriceToman?: number | null;
+            primaryMedia?: components["schemas"]["GuideMediaDto"] | null;
+        };
+        GuideRelatedCollectionDto: {
+            id: string;
+            name: string;
+            slug: string;
+        };
+        GuideArticleDto: {
+            id: string;
+            title: string;
+            slug: string;
+            eyebrow?: string | null;
+            excerpt?: string | null;
+            /** @enum {string} */
+            format: "GUIDE" | "ANSWER" | "BUYING_GUIDE" | "CARE_GUIDE" | "COMPARISON" | "STORY";
+            /** @enum {string} */
+            status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+            heroMedia?: components["schemas"]["GuideMediaDto"] | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex: boolean;
+            seoOgMedia?: components["schemas"]["GuideMediaDto"] | null;
+            readingTimeMinutes?: number | null;
+            isFeatured: boolean;
+            blockCount: number;
+            /** Format: date-time */
+            publishedAt?: string | null;
+            topics: components["schemas"]["GuideTopicDto"][];
+            version: number;
+            /** Format: date-time */
+            updatedAt: string;
+            heroMobileMedia?: components["schemas"]["GuideMediaDto"] | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            searchKeywords: string[];
+            blocks: components["schemas"]["GuideArticleBlockDto"][];
+            productIds: string[];
+            relatedProducts: components["schemas"]["GuideRelatedProductDto"][];
+            categoryIds: string[];
+            relatedCategories: components["schemas"]["GuideRelatedCollectionDto"][];
+            brandIds: string[];
+            relatedBrands: components["schemas"]["GuideRelatedCollectionDto"][];
+            relatedArticles: components["schemas"]["GuideArticleSummaryDto"][];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CreateGuideTopicDto: {
+            name: string;
+            slug: string;
+            description?: string | null;
+            /** Format: uuid */
+            coverMediaId?: string | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            /** Format: uuid */
+            seoOgMediaId?: string | null;
+            sortOrder?: number;
+            isActive?: boolean;
+        };
+        UpdateGuideTopicDto: {
+            name?: string;
+            slug?: string;
+            description?: string | null;
+            /** Format: uuid */
+            coverMediaId?: string | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            /** Format: uuid */
+            seoOgMediaId?: string | null;
+            sortOrder?: number;
+            isActive?: boolean;
+        };
+        GuideArticleBlockInputDto: {
+            /** @enum {string} */
+            type: "FAQ" | "LEAD" | "RICH_TEXT" | "IMAGE" | "IMAGE_TEXT" | "STEPS" | "QUOTE" | "TABLE" | "GALLERY" | "PRODUCT_CARDS" | "CTA" | "DIVIDER";
+            variant?: string | null;
+            anchorId?: string | null;
+            /** Format: uuid */
+            primaryMediaId?: string | null;
+            content: {
+                [key: string]: unknown;
+            };
+            sortOrder: number;
+        };
+        CreateGuideArticleDto: {
+            title: string;
+            slug: string;
+            eyebrow?: string | null;
+            excerpt?: string | null;
+            /** @enum {string} */
+            format?: "GUIDE" | "ANSWER" | "BUYING_GUIDE" | "CARE_GUIDE" | "COMPARISON" | "STORY";
+            /** @enum {string} */
+            status?: "DRAFT" | "ARCHIVED" | "PUBLISHED";
+            /** Format: uuid */
+            heroMediaId?: string | null;
+            /** Format: uuid */
+            heroMobileMediaId?: string | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            /** Format: uuid */
+            seoOgMediaId?: string | null;
+            searchKeywords?: string[];
+            readingTimeMinutes?: number | null;
+            isFeatured?: boolean;
+            blocks?: components["schemas"]["GuideArticleBlockInputDto"][];
+            topicIds?: string[];
+            productIds?: string[];
+            categoryIds?: string[];
+            brandIds?: string[];
+        };
+        UpdateGuideArticleDto: {
+            title?: string;
+            slug?: string;
+            eyebrow?: string | null;
+            excerpt?: string | null;
+            /** @enum {string} */
+            format?: "GUIDE" | "ANSWER" | "BUYING_GUIDE" | "CARE_GUIDE" | "COMPARISON" | "STORY";
+            /** @enum {string} */
+            status?: "DRAFT" | "ARCHIVED" | "PUBLISHED";
+            /** Format: uuid */
+            heroMediaId?: string | null;
+            /** Format: uuid */
+            heroMobileMediaId?: string | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            /** Format: uuid */
+            seoOgMediaId?: string | null;
+            searchKeywords?: string[];
+            readingTimeMinutes?: number | null;
+            isFeatured?: boolean;
+            blocks?: components["schemas"]["GuideArticleBlockInputDto"][];
+            topicIds?: string[];
+            productIds?: string[];
+            categoryIds?: string[];
+            brandIds?: string[];
+            expectedVersion: number;
+        };
+        GuideArticleStatusDto: {
+            /** @enum {string} */
+            status: "DRAFT" | "ARCHIVED" | "PUBLISHED";
+            expectedVersion: number;
         };
         CreateWarehouseDto: {
             code: string;
@@ -4696,6 +5073,55 @@ export interface components {
             seoHomeDescription?: string | null;
             /** Format: uuid */
             seoHomeOgMediaId?: string | null;
+        };
+        PublicSeoSitemapProductDto: {
+            seoCanonicalPath: string | null;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: uri */
+            imageUrl: string | null;
+            brandId: string | null;
+            categoryIds: string[];
+            id: string;
+            slug: string;
+            seoNoIndex: boolean;
+        };
+        PublicSeoSitemapCategoryDto: {
+            seoCanonicalPath: string | null;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: uri */
+            imageUrl: string | null;
+            parentId: string | null;
+            id: string;
+            slug: string;
+            seoNoIndex: boolean;
+        };
+        PublicSeoSitemapBrandDto: {
+            seoCanonicalPath: string | null;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: uri */
+            imageUrl: string | null;
+            id: string;
+            slug: string;
+            seoNoIndex: boolean;
+        };
+        PublicSeoSitemapContentPageDto: {
+            seoCanonicalPath: string | null;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: uri */
+            imageUrl: string | null;
+            /** @enum {string} */
+            key: "ABOUT" | "CONTACT" | "SERVICES" | "TERMS" | "PRIVACY" | "SIZE_GUIDE" | "FAQ";
+            seoNoIndex: boolean;
+        };
+        PublicSeoSitemapResponseDto: {
+            products: components["schemas"]["PublicSeoSitemapProductDto"][];
+            categories: components["schemas"]["PublicSeoSitemapCategoryDto"][];
+            brands: components["schemas"]["PublicSeoSitemapBrandDto"][];
+            contentPages: components["schemas"]["PublicSeoSitemapContentPageDto"][];
         };
         SeoRedirectResponseDto: {
             destinationPath: string;
@@ -6793,6 +7219,324 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    GuideController_listPublicTopics_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideTopicDto"][];
+                };
+            };
+        };
+    };
+    GuideController_listPublicArticles_v1: {
+        parameters: {
+            query?: {
+                q?: string;
+                topic?: string;
+                format?: "GUIDE" | "ANSWER" | "BUYING_GUIDE" | "CARE_GUIDE" | "COMPARISON" | "STORY";
+                featured?: boolean;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideArticleListDto"];
+                };
+            };
+        };
+    };
+    GuideController_listPublicRelatedArticles_v1: {
+        parameters: {
+            query?: {
+                product?: string;
+                categories?: string[];
+                brand?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideArticleSummaryDto"][];
+                };
+            };
+        };
+    };
+    GuideController_getPublicArticle_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideArticleDto"];
+                };
+            };
+        };
+    };
+    GuideController_listAdminTopics_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideTopicDto"][];
+                };
+            };
+        };
+    };
+    GuideController_createTopic_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGuideTopicDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideTopicDto"];
+                };
+            };
+        };
+    };
+    GuideController_deleteTopic_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GuideController_updateTopic_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGuideTopicDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideTopicDto"];
+                };
+            };
+        };
+    };
+    GuideController_listAdminArticles_v1: {
+        parameters: {
+            query?: {
+                q?: string;
+                topic?: string;
+                format?: "GUIDE" | "ANSWER" | "BUYING_GUIDE" | "CARE_GUIDE" | "COMPARISON" | "STORY";
+                featured?: boolean;
+                page?: number;
+                limit?: number;
+                status?: "DRAFT" | "ARCHIVED" | "PUBLISHED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideArticleListDto"];
+                };
+            };
+        };
+    };
+    GuideController_createArticle_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGuideArticleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideArticleDto"];
+                };
+            };
+        };
+    };
+    GuideController_getAdminArticle_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideArticleDto"];
+                };
+            };
+        };
+    };
+    GuideController_deleteArticle_v1: {
+        parameters: {
+            query: {
+                expectedVersion: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GuideController_updateArticle_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGuideArticleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideArticleDto"];
+                };
+            };
+        };
+    };
+    GuideController_updateArticleStatus_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuideArticleStatusDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideArticleDto"];
+                };
             };
         };
     };
@@ -9708,6 +10452,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminSiteSettingsDto"];
+                };
+            };
+        };
+    };
+    SeoController_getPublicSitemap_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicSeoSitemapResponseDto"];
                 };
             };
         };

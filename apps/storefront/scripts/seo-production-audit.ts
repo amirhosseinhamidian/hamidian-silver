@@ -1,4 +1,6 @@
 const PRIVATE_PATH_PREFIXES = ['/account', '/api', '/cart', '/checkout', '/payment', '/wishlist'];
+const SITEMAP_MAX_URLS = 50_000;
+const SITEMAP_MAX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024;
 
 function requiredOrigin(): URL {
   const value = process.env.SEO_AUDIT_ORIGIN?.trim();
@@ -155,7 +157,21 @@ async function run(): Promise<void> {
     sitemap = sitemapEntries(body);
     locations = sitemap.map(({ location }) => location);
     assert(locations.length > 0, 'The sitemap has no URL entries.');
+    assert(
+      locations.length <= SITEMAP_MAX_URLS,
+      `The sitemap contains ${locations.length} URLs; split it before exceeding ${SITEMAP_MAX_URLS}.`,
+    );
+    assert(
+      Buffer.byteLength(body, 'utf8') <= SITEMAP_MAX_UNCOMPRESSED_BYTES,
+      'The uncompressed sitemap exceeds 50 MiB.',
+    );
     assert(new Set(locations).size === locations.length, 'The sitemap contains duplicate URLs.');
+    for (const entry of sitemap) {
+      assert(
+        !entry.lastModified || !Number.isNaN(Date.parse(entry.lastModified)),
+        `Invalid sitemap lastmod for ${entry.location}.`,
+      );
+    }
     for (const location of locations) {
       const url = new URL(location);
       assert(url.origin === origin.origin, `Cross-origin sitemap URL: ${location}`);
@@ -210,6 +226,28 @@ async function run(): Promise<void> {
       assert(
         canonicalMatches(canonicalUrl(body), new URL(pathname, origin).href),
         `${pathname} canonical is invalid.`,
+      );
+      if (pathname === '/') {
+        const types = jsonLdTypes(body);
+        assert(types.has('WebSite'), 'Home page has no WebSite JSON-LD for the site name.');
+        assert(types.has('OnlineStore'), 'Home page has no OnlineStore JSON-LD.');
+      }
+    }
+  });
+
+  await check('sitemap collection canonicals', async () => {
+    for (const prefix of ['/products/', '/categories/', '/brands/']) {
+      const location = locations.find((candidate) =>
+        new URL(candidate).pathname.startsWith(prefix),
+      );
+      if (!location) continue;
+
+      const { response, body } = await fetchText(origin, location);
+      assert(response.ok, `${location} returned ${response.status}.`);
+      assert(!hasNoIndex(body), `${location} is noindex but exists in sitemap.xml.`);
+      assert(
+        canonicalMatches(canonicalUrl(body), location),
+        `${location} canonical does not match sitemap.`,
       );
     }
   });

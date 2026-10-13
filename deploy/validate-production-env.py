@@ -23,6 +23,7 @@ ALLOWED_KEYS = frozenset(
         "KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE", "KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE",
         "KAVENEGAR_ORDER_SHIPPED_TEMPLATE", "KAVENEGAR_ORDER_DELIVERED_TEMPLATE",
         "KAVENEGAR_ORDER_CANCELLED_TEMPLATE",
+        "STOCK_NOTIFICATIONS_ENABLED",
         "KAVENEGAR_STOCK_AVAILABLE_TEMPLATE",
         "ADMIN_APP_ORIGIN", "TELEGRAM_BOT_TOKEN", "TELEGRAM_RELAY_URL",
         "TELEGRAM_RELAY_SECRET", "BALE_BOT_TOKEN",
@@ -47,7 +48,6 @@ KAVENEGAR_TRANSACTIONAL_TEMPLATE_KEYS = (
     "KAVENEGAR_ORDER_SHIPPED_TEMPLATE",
     "KAVENEGAR_ORDER_DELIVERED_TEMPLATE",
     "KAVENEGAR_ORDER_CANCELLED_TEMPLATE",
-    "KAVENEGAR_STOCK_AVAILABLE_TEMPLATE",
 )
 
 
@@ -178,6 +178,20 @@ def validate(values: dict[str, str]) -> list[str]:
         for key in KAVENEGAR_TRANSACTIONAL_TEMPLATE_KEYS:
             if not KAVENEGAR_TEMPLATE_RE.fullmatch(values.get(key, "")):
                 errors.append(f"{key} must be a configured Kavenegar template name")
+
+    stock_notifications_enabled = values.get("STOCK_NOTIFICATIONS_ENABLED", "false")
+    if stock_notifications_enabled not in ("true", "false"):
+        errors.append("STOCK_NOTIFICATIONS_ENABLED must be true or false")
+    stock_template = values.get("KAVENEGAR_STOCK_AVAILABLE_TEMPLATE", "")
+    if stock_template and not KAVENEGAR_TEMPLATE_RE.fullmatch(stock_template):
+        errors.append("KAVENEGAR_STOCK_AVAILABLE_TEMPLATE must be a valid template name or remain empty")
+    if stock_notifications_enabled == "true":
+        if sms != "kavenegar":
+            errors.append("STOCK_NOTIFICATIONS_ENABLED requires SMS_PROVIDER=kavenegar")
+        if not stock_template:
+            errors.append(
+                "KAVENEGAR_STOCK_AVAILABLE_TEMPLATE is required when stock notifications are enabled"
+            )
 
     # PAYMENT_PROVIDER is a legacy flag; availability is set in Admin/DB.
     if values.get("PAYMENT_PROVIDER") != "disabled":

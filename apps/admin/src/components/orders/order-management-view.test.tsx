@@ -40,6 +40,13 @@ const order: AdminOrder = {
     {
       id: 'item-1',
       productName: 'انگشتر آذر',
+      productSlug: 'angoshtar-azar',
+      primaryMedia: {
+        url: 'https://media.hamidian.shop/media/products/angoshtar-azar.webp',
+        altText: 'انگشتر آذر',
+        width: 1200,
+        height: 1200,
+      },
       variantName: 'سایز ۵۲',
       sku: 'RING-52',
       sizeLabel: '52',
@@ -108,6 +115,18 @@ describe('OrderManagementView', () => {
     const dialog = await screen.findByRole('dialog', { name: 'سفارش HS-۱۲۳۴' });
     expect(within(dialog).getByText('مشتری و آدرس تحویل')).toBeInTheDocument();
     expect(within(dialog).getByText('انگشتر آذر')).toBeInTheDocument();
+    expect(within(dialog).getByRole('img', { name: 'انگشتر آذر' })).toHaveAttribute(
+      'src',
+      'https://media.hamidian.shop/media/products/angoshtar-azar.webp',
+    );
+    expect(within(dialog).getByRole('link', { name: 'مشاهده صفحه محصول' })).toHaveAttribute(
+      'href',
+      'https://hamidian.shop/products/angoshtar-azar',
+    );
+    expect(within(dialog).getByRole('link', { name: 'مشاهده صفحه محصول' })).toHaveAttribute(
+      'target',
+      '_blank',
+    );
     expect(within(dialog).getByText('تاریخچه وضعیت')).toBeInTheDocument();
     expect(within(dialog).getByText('۱۲۳۴۵۶۷۸۹۰')).toBeInTheDocument();
     expect(within(dialog).getByText('توضیحات مشتری')).toBeInTheDocument();

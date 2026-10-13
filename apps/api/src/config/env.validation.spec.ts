@@ -58,7 +58,7 @@ describe('envValidationSchema production HTTP settings', () => {
     expect(value.SMS_PROVIDER).toBe('console');
   });
 
-  it('requires an approved stock notification template for Kavenegar', () => {
+  it('keeps stock notifications disabled without requiring a Kavenegar template', () => {
     const kavenegarEnvironment = {
       ...requiredEnvironment,
       SMS_PROVIDER: 'kavenegar',
@@ -71,6 +71,30 @@ describe('envValidationSchema production HTTP settings', () => {
       KAVENEGAR_ORDER_SHIPPED_TEMPLATE: 'hamidianshipped',
       KAVENEGAR_ORDER_DELIVERED_TEMPLATE: 'hamidiandelivered',
       KAVENEGAR_ORDER_CANCELLED_TEMPLATE: 'hamidiancancelled',
+    };
+    const disabled = envValidationSchema.validate(kavenegarEnvironment, {
+      allowUnknown: true,
+      abortEarly: false,
+    });
+
+    expect(disabled.error).toBeUndefined();
+    expect(disabled.value.STOCK_NOTIFICATIONS_ENABLED).toBe(false);
+  });
+
+  it('requires an approved Kavenegar template when stock notifications are enabled', () => {
+    const kavenegarEnvironment = {
+      ...requiredEnvironment,
+      SMS_PROVIDER: 'kavenegar',
+      KAVENEGAR_API_KEY: 'kavenegar-test-api-key',
+      KAVENEGAR_OTP_TEMPLATE: 'hamidianotp',
+      KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE: 'hamidianpayment',
+      KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE: 'hamidianreceipt',
+      KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE: 'hamidianreceiptrejected',
+      KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE: 'hamidiantracking',
+      KAVENEGAR_ORDER_SHIPPED_TEMPLATE: 'hamidianshipped',
+      KAVENEGAR_ORDER_DELIVERED_TEMPLATE: 'hamidiandelivered',
+      KAVENEGAR_ORDER_CANCELLED_TEMPLATE: 'hamidiancancelled',
+      STOCK_NOTIFICATIONS_ENABLED: 'true',
     };
     const missing = envValidationSchema.validate(kavenegarEnvironment, {
       allowUnknown: true,

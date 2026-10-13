@@ -13,6 +13,7 @@ type StorefrontMobileMenuProps = Readonly<{
 const utilityLinks = [
   { href: '/brands', label: 'برندها' },
   { href: '/products?sort=newest', label: 'جدیدترین‌ها' },
+  { href: '/guide', label: 'دانستنی‌ها' },
   { href: '/wishlist', label: 'علاقه‌مندی‌ها' },
   { href: '/account', label: 'حساب کاربری' },
   { href: '/services', label: 'خدمات ما' },
@@ -71,7 +72,7 @@ export function StorefrontMobileMenu({ navigationCategories }: StorefrontMobileM
           </div>
 
           <DialogPrimitive.Description className="sr-only">
-            دسترسی به بخش‌های اصلی فروشگاه نقره حمیدیان.
+            دسترسی به بخش‌های اصلی فروشگاه گالری حمیدیان.
           </DialogPrimitive.Description>
 
           <nav aria-label="منوی موبایل" className="mt-8 overflow-y-auto">

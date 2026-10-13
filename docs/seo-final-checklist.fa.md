@@ -1,6 +1,6 @@
 # چک‌لیست نهایی SEO گالری حمیدیان
 
-این سند وضعیت branch تجمیعی `seo-phase-1` را پیش از Merge نهایی ثبت می‌کند.
+این سند وضعیت تجمیعی مراحل `SEO-01` تا `SEO-10` را پیش از Merge نهایی ثبت می‌کند.
 
 ## Technical SEO
 
@@ -18,6 +18,9 @@
 | Sitemap داینامیک محصولات                             | ✅     | همه محصولات public؛ noindex حذف می‌شود                        |
 | Sitemap Category/Brand/Content                       | ✅     | collectionهای خالی حذف می‌شوند                                |
 | Sitemap lastModified                                 | ✅     | based on real updatedAt و product aggregation                 |
+| Sitemap دانستنی‌ها                                   | ✅     | فقط مطالب منتشرشده و indexable با lastModified واقعی          |
+| `/guide` و `/guide/[slug]`                           | ✅     | canonical، noindex و redirect با policy مشترک Storefront      |
+| Article/FAQ/CollectionPage schema                    | ✅     | داده واقعی، زبان فارسی و اتصال مقاله به هاب                   |
 | /categories hub                                      | ✅     | ساختار parent/child و breadcrumb                              |
 | Breadcrumb JSON-LD                                   | ✅     | Product و collectionها                                        |
 | Product/ProductGroup schema                          | ✅     | variants، SKU، price، availability، image                     |
@@ -37,6 +40,9 @@
 | Category → Brand links                      | ✅    | فقط برندهای واقعی همان محصولات       |
 | Brand → Category links                      | ✅    | فقط دسته‌های واقعی همان محصولات      |
 | Product → Category/Brand links              | ✅    | موجود                                |
+| دانستنی → Product/Category/Brand            | ✅    | از رابطه‌های ثبت‌شده در CMS          |
+| Product/Category/Brand → دانستنی            | ✅    | فقط مطلب منتشرشده و indexable        |
+| Related knowledge ranking                   | ✅    | محصول، دسته، برند و سپس موضوع        |
 | duplicate SEO title audit                   | ✅    | warning                              |
 | duplicate description audit                 | ✅    | موجود                                |
 | missing/duplicate alt audit                 | ✅    | موجود                                |
@@ -75,6 +81,7 @@
 ## بعد از Deploy — مواردی که هنوز نمی‌توان ✅ کرد
 
 - 🟡 اجرای `SEO_AUDIT_ORIGIN=https://hamidian.shop pnpm seo:audit`
+- 🟡 اجرای `SEO_AUDIT_ORIGIN=https://hamidian.shop SEO_AUDIT_REQUIRE_GUIDE=true pnpm seo:guide:audit`
 - 🟡 اجرای production content audit روی دیتای واقعی
 - 🟡 بررسی Rich Results برای Product/ProductGroup و Breadcrumb
 - 🟡 Search Console Domain verification و submit کردن `/sitemap.xml`
@@ -89,11 +96,10 @@
 ## دستورهای قبل از Merge
 
 ```bash
-pnpm contracts:generate
-pnpm verify:contracts
-pnpm verify
-python3 -m unittest discover -s deploy -p 'test_*.py'
-pnpm frontend:format:check
+pnpm verify:seo-release
 ```
 
-بعد از سبز شدن همه موارد بالا، PR تجمیعی یک‌بار به `main` Merge و فقط یک Production Deploy انجام شود.
+این gate قرارداد OpenAPI، Prisma schema، تمام تست‌ها و buildها، ابزارهای deploy و Playwright را
+بررسی می‌کند. بعد از سبز شدن آن، PR تجمیعی یک‌بار به `main` Merge و فقط یک Production Deploy
+انجام شود. ترتیب migration، انتشار و rollback در
+`docs/seo-guide-release-runbook.fa.md` ثبت شده است.

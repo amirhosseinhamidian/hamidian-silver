@@ -35,6 +35,7 @@ export class NotificationOutboxWorker {
   private readonly orderDeliveredTemplate: string;
   private readonly orderCancelledTemplate: string;
   private readonly stockAvailableTemplate: string;
+  private readonly stockNotificationsEnabled: boolean;
   private running = false;
 
   constructor(
@@ -70,6 +71,8 @@ export class NotificationOutboxWorker {
     this.orderDeliveredTemplate = config.get<string>('KAVENEGAR_ORDER_DELIVERED_TEMPLATE', '');
     this.orderCancelledTemplate = config.get<string>('KAVENEGAR_ORDER_CANCELLED_TEMPLATE', '');
     this.stockAvailableTemplate = config.get<string>('KAVENEGAR_STOCK_AVAILABLE_TEMPLATE', '');
+    this.stockNotificationsEnabled =
+      config.get<boolean>('STOCK_NOTIFICATIONS_ENABLED', false) === true;
   }
 
   @Cron(CronExpression.EVERY_MINUTE, {
@@ -87,6 +90,9 @@ export class NotificationOutboxWorker {
       const staleBefore = new Date(now.getTime() - this.staleMs);
       const events = await this.prisma.notificationOutboxEvent.findMany({
         where: {
+          ...(this.stockNotificationsEnabled
+            ? {}
+            : { type: { not: NotificationOutboxEventType.STOCK_AVAILABLE } }),
           OR: [
             {
               status: NotificationOutboxStatus.PENDING,
@@ -129,6 +135,13 @@ export class NotificationOutboxWorker {
       });
 
       for (const event of events) {
+        if (
+          event.type === NotificationOutboxEventType.STOCK_AVAILABLE &&
+          !this.stockNotificationsEnabled
+        ) {
+          continue;
+        }
+
         if (event.status === NotificationOutboxStatus.DISPATCHING) {
           await this.quarantineStaleDispatch(event.id, event.claimedAt, staleBefore);
           continue;

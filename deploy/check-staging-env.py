@@ -65,6 +65,7 @@ def validate(values: dict[str, str], production: dict[str, str] | None = None) -
         'PAYMENT_PROVIDER': 'disabled',
         'IRANDARGAH_SANDBOX': 'true',
         'SHIPPING_PROVIDER': 'disabled',
+        'STOCK_NOTIFICATIONS_ENABLED': 'false',
         'NEXT_PUBLIC_GA_MEASUREMENT_ID': '',
         'GOOGLE_SITE_VERIFICATION': '',
     }

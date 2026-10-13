@@ -20,6 +20,11 @@ const kavenegarTemplate = Joi.when('SMS_PROVIDER', {
   otherwise: Joi.string().allow('').optional(),
 });
 
+const optionalKavenegarTemplate = Joi.string()
+  .pattern(/^[A-Za-z0-9-]+$/)
+  .allow('')
+  .optional();
+
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
   HOST: Joi.string().default('0.0.0.0'),
@@ -77,7 +82,20 @@ export const envValidationSchema = Joi.object({
   KAVENEGAR_ORDER_SHIPPED_TEMPLATE: kavenegarTemplate,
   KAVENEGAR_ORDER_DELIVERED_TEMPLATE: kavenegarTemplate,
   KAVENEGAR_ORDER_CANCELLED_TEMPLATE: kavenegarTemplate,
-  KAVENEGAR_STOCK_AVAILABLE_TEMPLATE: kavenegarTemplate,
+  STOCK_NOTIFICATIONS_ENABLED: Joi.when('SMS_PROVIDER', {
+    is: 'kavenegar',
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.boolean().truthy('true').falsy('false').default(false),
+    otherwise: Joi.boolean().truthy('true').falsy('false').valid(false).default(false),
+  }),
+  KAVENEGAR_STOCK_AVAILABLE_TEMPLATE: Joi.when('STOCK_NOTIFICATIONS_ENABLED', {
+    is: true,
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is Joi conditional syntax.
+    then: Joi.string()
+      .pattern(/^[A-Za-z0-9-]+$/)
+      .required(),
+    otherwise: optionalKavenegarTemplate,
+  }),
   ADMIN_APP_ORIGIN: Joi.string()
     .uri({ scheme: ['http', 'https'] })
     .default('http://localhost:3002'),

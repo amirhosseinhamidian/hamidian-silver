@@ -24,6 +24,7 @@ const storefrontLinks = [
   { label: 'محصولات', href: '/products' },
   { label: 'برندها', href: '/brands' },
   { label: 'جدیدترین‌ها', href: '/products?sort=newest' },
+  { label: 'دانستنی‌ها', href: '/guide' },
 ] as const;
 
 const informationLinks = [
@@ -47,7 +48,7 @@ function toPersianDigits(value: string): string {
 }
 
 export function StorefrontFooter({ content }: StorefrontFooterProps) {
-  const galleryName = content?.galleryName?.trim() || 'گالری نقره حمیدیان';
+  const galleryName = content?.galleryName?.trim() || 'گالری حمیدیان';
   const about = content?.about?.trim();
   const address = content?.address?.trim();
   const phoneNumbers = normalizeValues(content?.phoneNumbers);
@@ -68,10 +69,10 @@ export function StorefrontFooter({ content }: StorefrontFooterProps) {
         "
       >
         <div>
-          <Link href="/" aria-label="نقره حمیدیان، صفحه اصلی" className="relative block h-20 w-44">
+          <Link href="/" aria-label="گالری حمیدیان، صفحه اصلی" className="relative block h-20 w-44">
             <Image
               src="/brand/hamidian-signature.png"
-              alt="لوگوی نقره حمیدیان"
+              alt="لوگوی گالری حمیدیان"
               fill
               sizes="176px"
               className="object-contain object-right"
@@ -247,7 +248,7 @@ export function StorefrontFooter({ content }: StorefrontFooterProps) {
             text-[var(--sf-color-muted)] sm:flex-row sm:items-center sm:justify-between
           "
         >
-          <p>تمامی حقوق برای گالری نقره حمیدیان محفوظ است.</p>
+          <p>تمامی حقوق برای گالری حمیدیان محفوظ است.</p>
           <div className="flex items-center gap-5">
             <Link href="/terms">شرایط و قوانین</Link>
             <Link href="/privacy">حریم خصوصی</Link>

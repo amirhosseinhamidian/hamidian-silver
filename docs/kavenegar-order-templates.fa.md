@@ -88,18 +88,11 @@
 
 ### موجود شدن محصول
 
-- نام: `hamidianstock`
-- متغیر: `KAVENEGAR_STOCK_AVAILABLE_TEMPLATE`
-
-```text
-محصول %token دوباره موجود شد.
-برای مشاهده و خرید به وبسایت گالری حمیدیان مراجعه کنید.
-نقره حمیدیان
-```
-
-نام محصول و در صورت وجود نام/سایز تنوع، در `%token` قرار می‌گیرد. فاصله‌های معمولی
-نام محصول پیش از ارسال به نیم‌فاصله تبدیل می‌شوند تا توکن VerifyLookup معتبر بماند؛
-متن نمایش‌داده‌شده همچنان خوانا است.
+کاوه‌نگار این پیام را تبلیغاتی/مارکتینگ تشخیص داده و قالب VerifyLookup آن را تأیید
+نکرده است. تا زمان اضافه‌شدن یک کانال مجاز، قابلیت با
+`STOCK_NOTIFICATIONS_ENABLED=false` غیرفعال می‌ماند و نام قالب ساختگی یا تأییدنشده
+نباید در production قرار بگیرد. مدل اشتراک، trigger موجودی و worker برای اتصال یک
+کانال جایگزین در آینده حفظ شده‌اند.
 
 ## تنظیم production.env
 
@@ -117,11 +110,13 @@ KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE=hamidiantracking
 KAVENEGAR_ORDER_SHIPPED_TEMPLATE=hamidianshipped
 KAVENEGAR_ORDER_DELIVERED_TEMPLATE=hamidiandelivered
 KAVENEGAR_ORDER_CANCELLED_TEMPLATE=hamidiancancelled
-KAVENEGAR_STOCK_AVAILABLE_TEMPLATE=hamidianstock
+STOCK_NOTIFICATIONS_ENABLED=false
+KAVENEGAR_STOCK_AVAILABLE_TEMPLATE=
 ```
 
 `KAVENEGAR_SENDER` فقط برای پیام‌های آزاد عملیاتی استفاده می‌شود. پیام‌های سفارش،
-موجودشدن محصول و OTP از VerifyLookup استفاده می‌کنند و به sender وابسته نیستند.
+و OTP از VerifyLookup استفاده می‌کنند و به sender وابسته نیستند. اعلان موجودشدن
+محصول تا زمان فراهم‌شدن کانال جایگزین ارسال نمی‌شود.
 
 فایل env و Compose را اعتبارسنجی کنید:
 

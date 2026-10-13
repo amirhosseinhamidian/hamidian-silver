@@ -10,6 +10,7 @@ import {
   type CatalogFilters,
   type CatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
+import { getPublicRelatedGuideArticles } from '@/lib/guide/public-guide';
 import { categorySeoDescription, categorySeoTitle } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSeoRedirect } from '@/lib/seo/redirects';
@@ -77,9 +78,10 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     category: slug,
   };
 
-  const [categories, products] = await Promise.all([
+  const [categories, products, knowledgeArticles] = await Promise.all([
     getPublicCatalogCategories(),
     getPublicCatalogProducts(filters),
+    getPublicRelatedGuideArticles({ categories: [slug], limit: 3 }),
   ]);
   const category = categories.find((candidate) => candidate.slug === slug);
 
@@ -103,6 +105,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       mobileImage={category.heroMobileImage ?? null}
       filters={filters}
       products={products}
+      knowledgeArticles={knowledgeArticles}
       breadcrumbs={buildCategoryBreadcrumbItems(categories, category)}
       collectionLinks={categories
         .filter((candidate) => candidate.parentId === category.id)

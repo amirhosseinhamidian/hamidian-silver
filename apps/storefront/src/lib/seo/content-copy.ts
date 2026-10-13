@@ -2,6 +2,7 @@ import type {
   PublicCatalogBrandPage,
   PublicCatalogCategoryPage,
 } from '@/lib/catalog/public-catalog';
+import { STOREFRONT_BRAND_NAME } from '@/lib/brand/identity';
 
 function compact(value: string | null | undefined): string | null {
   const normalized = value?.trim().replace(/\s+/g, ' ');
@@ -31,7 +32,7 @@ export function categorySeoTitle(category: CategorySeoSource): string {
 export function categorySeoDescription(category: CategorySeoSource): string {
   return (
     compact(category.description) ??
-    `خرید و مشاهده مدل‌های ${silverLabel(category.name)} در گالری حمیدیان؛ بررسی قیمت، مشخصات و موجودی محصولات.`
+    `خرید و مشاهده مدل‌های ${silverLabel(category.name)} در ${STOREFRONT_BRAND_NAME}؛ بررسی قیمت، مشخصات و موجودی محصولات.`
   );
 }
 
@@ -42,7 +43,7 @@ export function brandSeoTitle(brand: BrandSeoSource): string {
 export function brandSeoDescription(brand: BrandSeoSource): string {
   return (
     compact(brand.description) ??
-    `مشاهده محصولات نقره کالکشن ${brand.name.trim()} در گالری حمیدیان؛ بررسی قیمت، مشخصات و موجودی مدل‌ها.`
+    `مشاهده محصولات نقره کالکشن ${brand.name.trim()} در ${STOREFRONT_BRAND_NAME}؛ بررسی قیمت، مشخصات و موجودی مدل‌ها.`
   );
 }
 
@@ -60,17 +61,15 @@ export function productSeoDescription(product: ProductSeoSource): string {
   }
 
   const factsText = facts.length ? `؛ ${facts.join('، ')}` : '';
-  return `خرید و مشاهده ${productName} در گالری حمیدیان${factsText}؛ بررسی قیمت، تصاویر، مشخصات، سایزبندی و موجودی محصول.`;
+  return `خرید و مشاهده ${productName} در ${STOREFRONT_BRAND_NAME}${factsText}؛ بررسی قیمت، تصاویر، مشخصات، سایزبندی و موجودی محصول.`;
 }
 
 export const HOME_SEO = {
-  title: 'گالری حمیدیان | خرید زیورآلات نقره',
-  description:
-    'خرید زیورآلات نقره از گالری حمیدیان؛ مشاهده کالکشن‌های دستبند، گردنبند، انگشتر و سایر محصولات همراه با قیمت و مشخصات.',
+  title: `${STOREFRONT_BRAND_NAME} | خرید زیورآلات نقره`,
+  description: `خرید زیورآلات نقره از ${STOREFRONT_BRAND_NAME}؛ مشاهده کالکشن‌های دستبند، گردنبند، انگشتر و سایر محصولات همراه با قیمت و مشخصات.`,
 } as const;
 
 export const ROOT_CATALOG_SEO = {
   title: 'خرید محصولات نقره',
-  description:
-    'خرید و مشاهده محصولات نقره گالری حمیدیان؛ بررسی قیمت، مشخصات، دسته‌بندی‌ها، برندها و موجودی مدل‌ها.',
+  description: `خرید و مشاهده محصولات نقره ${STOREFRONT_BRAND_NAME}؛ بررسی قیمت، مشخصات، دسته‌بندی‌ها، برندها و موجودی مدل‌ها.`,
 } as const;

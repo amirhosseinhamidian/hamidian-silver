@@ -31,6 +31,7 @@ def fixture():
         'BALE_BOT_TOKEN': '',
         'ADMIN_MESSAGING_REQUEST_TIMEOUT_MS': '8000',
         'SMS_PROVIDER': 'disabled',
+        'STOCK_NOTIFICATIONS_ENABLED': 'false',
         'PAYMENT_PROVIDER': 'disabled',
         'IRANDARGAH_SANDBOX': 'true',
         'IRANDARGAH_REQUEST_TIMEOUT_MS': '8000',

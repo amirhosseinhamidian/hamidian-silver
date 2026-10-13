@@ -11,6 +11,7 @@ const PUBLIC_PAGES: Readonly<Record<string, string>> = {
   '/terms': 'قوانین',
   '/services': 'خدمات',
   '/size-guide': 'راهنمای اندازه',
+  '/guide': 'دانستنی‌ها',
 };
 
 export function publicPageView(pathname: string, origin: string) {

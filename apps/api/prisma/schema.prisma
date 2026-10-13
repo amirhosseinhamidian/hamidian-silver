@@ -66,6 +66,8 @@ model User {
   adminMessageRecipient               AdminMessageRecipient?            @relation("AdminMessageRecipientUser")
   adminMessageRecipientsUpdated       AdminMessageRecipient[]            @relation("AdminMessageRecipientUpdater")
   adminOrderNotificationDeliveries    AdminOrderNotificationDelivery[]   @relation("AdminOrderNotificationRecipient")
+  guideArticlesCreated                GuideArticle[]                   @relation("GuideArticleCreator")
+  guideArticlesUpdated                GuideArticle[]                   @relation("GuideArticleUpdater")
 
   @@index([isActive])
   @@index([deletedAt])
@@ -250,6 +252,7 @@ enum SeoRedirectEntityType {
   PRODUCT
   CATEGORY
   BRAND
+  GUIDE_ARTICLE
 }
 
 model SeoRedirect {
@@ -303,6 +306,12 @@ model Media {
   shippingCarrierLogos        ShippingCarrier[]        @relation("ShippingCarrierLogo")
   shipmentCarrierLogoSnapshots Shipment[] @relation("ShipmentCarrierLogoSnapshot")
   orderShippingCarrierLogos   Order[]                  @relation("OrderShippingCarrierLogoSnapshot")
+  guideArticleHeroImages          GuideArticle[]            @relation("GuideArticleHero")
+  guideArticleHeroMobileImages    GuideArticle[]            @relation("GuideArticleHeroMobile")
+  guideArticleSeoOgImages         GuideArticle[]            @relation("GuideArticleSeoOg")
+  guideTopicCoverImages           GuideTopic[]              @relation("GuideTopicCover")
+  guideTopicSeoOgImages           GuideTopic[]              @relation("GuideTopicSeoOg")
+  guideBlockPrimaryMedia          GuideArticleBlock[]       @relation("GuideBlockPrimaryMedia")
 
   @@index([deletedAt])
   @@map("media")
@@ -476,6 +485,7 @@ model Category {
   seoOgMedia       Media?            @relation("CategorySeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   products    ProductCategory[]
   homepageFeature HomepageFeaturedCategory?
+  guideArticles     GuideArticleCategory[]
 
   @@index([parentId])
   @@index([imageId])
@@ -512,6 +522,7 @@ model Brand {
   originCountry Country? @relation("BrandOriginCountry", fields: [originCountryId], references: [id], onDelete: SetNull)
   products    Product[]
   homepageFeature HomepageFeaturedBrand?
+  guideArticles     GuideArticleBrand[]
 
   @@index([imageId])
   @@index([heroImageId])
@@ -617,6 +628,7 @@ model Product {
   homepagePopularFeature HomepagePopularProduct?
   relatedProductsAsSource ProductRelation[] @relation("ProductRelationSource")
   relatedProductsAsTarget ProductRelation[] @relation("ProductRelationTarget")
+  guideArticles                  GuideArticleProduct[]
 
   @@index([brandId])
   @@index([countryId])
@@ -624,6 +636,176 @@ model Product {
   @@index([status])
   @@index([deletedAt])
   @@map("products")
+}
+
+enum GuideArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum GuideArticleFormat {
+  GUIDE
+  ANSWER
+  BUYING_GUIDE
+  CARE_GUIDE
+  COMPARISON
+  STORY
+}
+
+enum GuideBlockType {
+  LEAD
+  RICH_TEXT
+  IMAGE
+  IMAGE_TEXT
+  STEPS
+  QUOTE
+  TABLE
+  FAQ
+  GALLERY
+  PRODUCT_CARDS
+  CTA
+  DIVIDER
+}
+
+model GuideTopic {
+  id               String              @id @default(uuid()) @db.Uuid
+  name             String              @db.VarChar(150)
+  slug             String              @unique @db.VarChar(180)
+  description      String?             @db.VarChar(1000)
+  coverMediaId     String?             @db.Uuid
+  seoTitle         String?             @db.VarChar(200)
+  seoDescription   String?             @db.VarChar(500)
+  seoCanonicalPath String?             @db.VarChar(1000)
+  seoNoIndex       Boolean             @default(false)
+  seoOgMediaId     String?             @db.Uuid
+  sortOrder        Int                 @default(0)
+  isActive         Boolean             @default(true)
+  createdAt        DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?           @db.Timestamptz(3)
+  coverMedia       Media?              @relation("GuideTopicCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  seoOgMedia       Media?              @relation("GuideTopicSeoOg", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
+  articles         GuideArticleTopic[]
+
+  @@index([isActive, sortOrder])
+  @@index([coverMediaId])
+  @@index([seoOgMediaId])
+  @@index([deletedAt])
+  @@map("guide_topics")
+}
+
+model GuideArticle {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  title              String                 @db.VarChar(220)
+  slug               String                 @unique @db.VarChar(220)
+  eyebrow            String?                @db.VarChar(100)
+  excerpt            String?                @db.VarChar(700)
+  format             GuideArticleFormat     @default(GUIDE)
+  status             GuideArticleStatus     @default(DRAFT)
+  heroMediaId        String?                @db.Uuid
+  heroMobileMediaId  String?                @db.Uuid
+  seoTitle           String?                @db.VarChar(200)
+  seoDescription     String?                @db.VarChar(500)
+  seoCanonicalPath   String?                @db.VarChar(1000)
+  seoNoIndex         Boolean                @default(false)
+  seoOgMediaId       String?                @db.Uuid
+  searchKeywords     String[]               @default([]) @db.VarChar(120)
+  readingTimeMinutes Int?
+  isFeatured         Boolean                @default(false)
+  publishedAt        DateTime?              @db.Timestamptz(3)
+  version            Int                    @default(1)
+  createdByUserId    String?                @db.Uuid
+  updatedByUserId    String?                @db.Uuid
+  createdAt          DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime               @updatedAt @db.Timestamptz(3)
+  deletedAt          DateTime?              @db.Timestamptz(3)
+  heroMedia          Media?                 @relation("GuideArticleHero", fields: [heroMediaId], references: [id], onDelete: SetNull)
+  heroMobileMedia    Media?                 @relation("GuideArticleHeroMobile", fields: [heroMobileMediaId], references: [id], onDelete: SetNull)
+  seoOgMedia         Media?                 @relation("GuideArticleSeoOg", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
+  createdBy          User?                  @relation("GuideArticleCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedBy          User?                  @relation("GuideArticleUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  blocks             GuideArticleBlock[]
+  topics             GuideArticleTopic[]
+  products           GuideArticleProduct[]
+  categories         GuideArticleCategory[]
+  brands             GuideArticleBrand[]
+
+  @@index([status, publishedAt])
+  @@index([isFeatured, publishedAt])
+  @@index([heroMediaId])
+  @@index([heroMobileMediaId])
+  @@index([seoOgMediaId])
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
+  @@index([deletedAt])
+  @@map("guide_articles")
+}
+
+model GuideArticleBlock {
+  id             String         @id @default(uuid()) @db.Uuid
+  articleId      String         @db.Uuid
+  type           GuideBlockType
+  variant        String?        @db.VarChar(50)
+  anchorId       String?        @db.VarChar(80)
+  primaryMediaId String?        @db.Uuid
+  content        Json
+  sortOrder      Int
+  createdAt      DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime       @updatedAt @db.Timestamptz(3)
+  article        GuideArticle   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  primaryMedia   Media?         @relation("GuideBlockPrimaryMedia", fields: [primaryMediaId], references: [id], onDelete: SetNull)
+
+  @@unique([articleId, sortOrder])
+  @@unique([articleId, anchorId])
+  @@index([primaryMediaId])
+  @@map("guide_article_blocks")
+}
+
+model GuideArticleTopic {
+  articleId String       @db.Uuid
+  topicId   String       @db.Uuid
+  article   GuideArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  topic     GuideTopic   @relation(fields: [topicId], references: [id], onDelete: Restrict)
+
+  @@id([articleId, topicId])
+  @@index([topicId])
+  @@map("guide_article_topics")
+}
+
+model GuideArticleProduct {
+  articleId String       @db.Uuid
+  productId String       @db.Uuid
+  sortOrder Int          @default(0)
+  article   GuideArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  product   Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@id([articleId, productId])
+  @@index([productId])
+  @@index([articleId, sortOrder])
+  @@map("guide_article_products")
+}
+
+model GuideArticleCategory {
+  articleId  String       @db.Uuid
+  categoryId String       @db.Uuid
+  article    GuideArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  category   Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@id([articleId, categoryId])
+  @@index([categoryId])
+  @@map("guide_article_categories")
+}
+
+model GuideArticleBrand {
+  articleId String       @db.Uuid
+  brandId   String       @db.Uuid
+  article   GuideArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  brand     Brand        @relation(fields: [brandId], references: [id], onDelete: Restrict)
+
+  @@id([articleId, brandId])
+  @@index([brandId])
+  @@map("guide_article_brands")
 }
 
 model ProductRelation {

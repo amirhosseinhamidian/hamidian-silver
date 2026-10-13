@@ -3198,6 +3198,579 @@
         ]
       }
     },
+    "/api/v1/guide/public/topics": {
+      "get": {
+        "operationId": "GuideController_listPublicTopics_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GuideTopicDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      }
+    },
+    "/api/v1/guide/public/articles": {
+      "get": {
+        "operationId": "GuideController_listPublicArticles_v1",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "topic",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "GUIDE",
+                "ANSWER",
+                "BUYING_GUIDE",
+                "CARE_GUIDE",
+                "COMPARISON",
+                "STORY"
+              ]
+            }
+          },
+          {
+            "name": "featured",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 48,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuideArticleListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      }
+    },
+    "/api/v1/guide/public/related-articles": {
+      "get": {
+        "operationId": "GuideController_listPublicRelatedArticles_v1",
+        "parameters": [
+          {
+            "name": "product",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categories",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxItems": 12,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 6,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GuideArticleSummaryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      }
+    },
+    "/api/v1/guide/public/articles/{slug}": {
+      "get": {
+        "operationId": "GuideController_getPublicArticle_v1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuideArticleDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      }
+    },
+    "/api/v1/guide/topics": {
+      "get": {
+        "operationId": "GuideController_listAdminTopics_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GuideTopicDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      },
+      "post": {
+        "operationId": "GuideController_createTopic_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGuideTopicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuideTopicDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      }
+    },
+    "/api/v1/guide/topics/{id}": {
+      "patch": {
+        "operationId": "GuideController_updateTopic_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGuideTopicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuideTopicDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      },
+      "delete": {
+        "operationId": "GuideController_deleteTopic_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      }
+    },
+    "/api/v1/guide/articles": {
+      "get": {
+        "operationId": "GuideController_listAdminArticles_v1",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "topic",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "GUIDE",
+                "ANSWER",
+                "BUYING_GUIDE",
+                "CARE_GUIDE",
+                "COMPARISON",
+                "STORY"
+              ]
+            }
+          },
+          {
+            "name": "featured",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 48,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "ARCHIVED",
+                "PUBLISHED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuideArticleListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      },
+      "post": {
+        "operationId": "GuideController_createArticle_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGuideArticleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuideArticleDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      }
+    },
+    "/api/v1/guide/articles/{id}": {
+      "get": {
+        "operationId": "GuideController_getAdminArticle_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuideArticleDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      },
+      "patch": {
+        "operationId": "GuideController_updateArticle_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGuideArticleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuideArticleDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      },
+      "delete": {
+        "operationId": "GuideController_deleteArticle_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expectedVersion",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      }
+    },
+    "/api/v1/guide/articles/{id}/status": {
+      "patch": {
+        "operationId": "GuideController_updateArticleStatus_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuideArticleStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuideArticleDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Guide"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "HealthController_check_v1",
@@ -7421,6 +7994,27 @@
         ]
       }
     },
+    "/api/v1/seo/sitemap": {
+      "get": {
+        "operationId": "SeoController_getPublicSitemap_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSeoSitemapResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
     "/api/v1/seo/redirects/resolve": {
       "get": {
         "operationId": "SeoController_resolveRedirect_v1",
@@ -10061,6 +10655,998 @@
             "maxLength": 1000
           }
         }
+      },
+      "GuideMediaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "altText": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "mimeType"
+        ]
+      },
+      "GuideTopicDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "coverMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GuideMediaDto"
+              }
+            ]
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "seoNoIndex",
+          "sortOrder",
+          "isActive"
+        ]
+      },
+      "GuideArticleSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "eyebrow": {
+            "type": "string",
+            "nullable": true
+          },
+          "excerpt": {
+            "type": "string",
+            "nullable": true
+          },
+          "format": {
+            "enum": [
+              "GUIDE",
+              "ANSWER",
+              "BUYING_GUIDE",
+              "CARE_GUIDE",
+              "COMPARISON",
+              "STORY"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "ARCHIVED"
+            ],
+            "type": "string"
+          },
+          "heroMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GuideMediaDto"
+              }
+            ]
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GuideMediaDto"
+              }
+            ]
+          },
+          "readingTimeMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "isFeatured": {
+            "type": "boolean"
+          },
+          "blockCount": {
+            "type": "number"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuideTopicDto"
+            }
+          },
+          "version": {
+            "type": "number"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "format",
+          "status",
+          "seoNoIndex",
+          "isFeatured",
+          "blockCount",
+          "topics",
+          "version",
+          "updatedAt"
+        ]
+      },
+      "GuideArticleListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuideArticleSummaryDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "limit",
+          "totalPages"
+        ]
+      },
+      "GuideArticleBlockDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "LEAD",
+              "RICH_TEXT",
+              "IMAGE",
+              "IMAGE_TEXT",
+              "STEPS",
+              "QUOTE",
+              "TABLE",
+              "FAQ",
+              "GALLERY",
+              "PRODUCT_CARDS",
+              "CTA",
+              "DIVIDER"
+            ],
+            "type": "string"
+          },
+          "variant": {
+            "type": "string",
+            "nullable": true
+          },
+          "anchorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "primaryMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GuideMediaDto"
+              }
+            ]
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "sortOrder": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "content",
+          "sortOrder"
+        ]
+      },
+      "GuideRelatedProductDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "shortDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "salePriceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "primaryMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GuideMediaDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
+      "GuideRelatedCollectionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
+      "GuideArticleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "eyebrow": {
+            "type": "string",
+            "nullable": true
+          },
+          "excerpt": {
+            "type": "string",
+            "nullable": true
+          },
+          "format": {
+            "enum": [
+              "GUIDE",
+              "ANSWER",
+              "BUYING_GUIDE",
+              "CARE_GUIDE",
+              "COMPARISON",
+              "STORY"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "ARCHIVED"
+            ],
+            "type": "string"
+          },
+          "heroMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GuideMediaDto"
+              }
+            ]
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GuideMediaDto"
+              }
+            ]
+          },
+          "readingTimeMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "isFeatured": {
+            "type": "boolean"
+          },
+          "blockCount": {
+            "type": "number"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuideTopicDto"
+            }
+          },
+          "version": {
+            "type": "number"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "heroMobileMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GuideMediaDto"
+              }
+            ]
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "searchKeywords": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuideArticleBlockDto"
+            }
+          },
+          "productIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "relatedProducts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuideRelatedProductDto"
+            }
+          },
+          "categoryIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "relatedCategories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuideRelatedCollectionDto"
+            }
+          },
+          "brandIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "relatedBrands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuideRelatedCollectionDto"
+            }
+          },
+          "relatedArticles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuideArticleSummaryDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "format",
+          "status",
+          "seoNoIndex",
+          "isFeatured",
+          "blockCount",
+          "topics",
+          "version",
+          "updatedAt",
+          "searchKeywords",
+          "blocks",
+          "productIds",
+          "relatedProducts",
+          "categoryIds",
+          "relatedCategories",
+          "brandIds",
+          "relatedBrands",
+          "relatedArticles",
+          "createdAt"
+        ]
+      },
+      "CreateGuideTopicDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "coverMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 0
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "slug"
+        ]
+      },
+      "UpdateGuideTopicDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "coverMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 0
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "GuideArticleBlockInputDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "FAQ",
+              "LEAD",
+              "RICH_TEXT",
+              "IMAGE",
+              "IMAGE_TEXT",
+              "STEPS",
+              "QUOTE",
+              "TABLE",
+              "GALLERY",
+              "PRODUCT_CARDS",
+              "CTA",
+              "DIVIDER"
+            ]
+          },
+          "variant": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 50
+          },
+          "anchorId": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 80,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "primaryMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "type",
+          "content",
+          "sortOrder"
+        ]
+      },
+      "CreateGuideArticleDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220
+          },
+          "eyebrow": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 100
+          },
+          "excerpt": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 700
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "GUIDE",
+              "ANSWER",
+              "BUYING_GUIDE",
+              "CARE_GUIDE",
+              "COMPARISON",
+              "STORY"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "ARCHIVED",
+              "PUBLISHED"
+            ]
+          },
+          "heroMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "heroMobileMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "searchKeywords": {
+            "uniqueItems": true,
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          "readingTimeMinutes": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 180
+          },
+          "isFeatured": {
+            "type": "boolean"
+          },
+          "blocks": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuideArticleBlockInputDto"
+            }
+          },
+          "topicIds": {
+            "uniqueItems": true,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "productIds": {
+            "uniqueItems": true,
+            "maxItems": 24,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "categoryIds": {
+            "uniqueItems": true,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "brandIds": {
+            "uniqueItems": true,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "title",
+          "slug"
+        ]
+      },
+      "UpdateGuideArticleDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220
+          },
+          "eyebrow": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 100
+          },
+          "excerpt": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 700
+          },
+          "format": {
+            "enum": [
+              "GUIDE",
+              "ANSWER",
+              "BUYING_GUIDE",
+              "CARE_GUIDE",
+              "COMPARISON",
+              "STORY"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "DRAFT",
+              "ARCHIVED",
+              "PUBLISHED"
+            ],
+            "type": "string"
+          },
+          "heroMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "heroMobileMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "searchKeywords": {
+            "uniqueItems": true,
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          "readingTimeMinutes": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 180
+          },
+          "isFeatured": {
+            "type": "boolean"
+          },
+          "blocks": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuideArticleBlockInputDto"
+            }
+          },
+          "topicIds": {
+            "uniqueItems": true,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "productIds": {
+            "uniqueItems": true,
+            "maxItems": 24,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "categoryIds": {
+            "uniqueItems": true,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "brandIds": {
+            "uniqueItems": true,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ]
+      },
+      "GuideArticleStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "ARCHIVED",
+              "PUBLISHED"
+            ]
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "status",
+          "expectedVersion"
+        ]
       },
       "CreateWarehouseDto": {
         "type": "object",
@@ -14279,6 +15865,203 @@
             "format": "uuid"
           }
         }
+      },
+      "PublicSeoSitemapProductDto": {
+        "type": "object",
+        "properties": {
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "brandId": {
+            "type": "string",
+            "nullable": true
+          },
+          "categoryIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "seoCanonicalPath",
+          "updatedAt",
+          "imageUrl",
+          "brandId",
+          "categoryIds",
+          "id",
+          "slug",
+          "seoNoIndex"
+        ]
+      },
+      "PublicSeoSitemapCategoryDto": {
+        "type": "object",
+        "properties": {
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "parentId": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "seoCanonicalPath",
+          "updatedAt",
+          "imageUrl",
+          "parentId",
+          "id",
+          "slug",
+          "seoNoIndex"
+        ]
+      },
+      "PublicSeoSitemapBrandDto": {
+        "type": "object",
+        "properties": {
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "seoCanonicalPath",
+          "updatedAt",
+          "imageUrl",
+          "id",
+          "slug",
+          "seoNoIndex"
+        ]
+      },
+      "PublicSeoSitemapContentPageDto": {
+        "type": "object",
+        "properties": {
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "key": {
+            "enum": [
+              "ABOUT",
+              "CONTACT",
+              "SERVICES",
+              "TERMS",
+              "PRIVACY",
+              "SIZE_GUIDE",
+              "FAQ"
+            ],
+            "type": "string"
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "seoCanonicalPath",
+          "updatedAt",
+          "imageUrl",
+          "key",
+          "seoNoIndex"
+        ]
+      },
+      "PublicSeoSitemapResponseDto": {
+        "type": "object",
+        "properties": {
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicSeoSitemapProductDto"
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicSeoSitemapCategoryDto"
+            }
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicSeoSitemapBrandDto"
+            }
+          },
+          "contentPages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicSeoSitemapContentPageDto"
+            }
+          }
+        },
+        "required": [
+          "products",
+          "categories",
+          "brands",
+          "contentPages"
+        ]
       },
       "SeoRedirectResponseDto": {
         "type": "object",

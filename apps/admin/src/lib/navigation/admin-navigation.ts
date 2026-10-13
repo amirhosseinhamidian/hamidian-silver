@@ -348,6 +348,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['cms.read'],
       },
       {
+        id: 'knowledge',
+        label: 'دانستنی‌ها',
+        shortLabel: 'دانستنی‌ها',
+        href: '/knowledge',
+        icon: 'content',
+        description: 'راهنمای خرید، پاسخ پرسش‌ها و محتوای آموزشی',
+        roadmapStage: 40,
+        permissions: ['cms.read'],
+      },
+      {
         id: 'users',
         label: 'کاربران و دسترسی',
         shortLabel: 'کاربران',

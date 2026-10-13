@@ -39,6 +39,6 @@ describe('Google Analytics configuration', () => {
     expect(googleAnalyticsBootstrap('G-ABC123')).toContain(
       "page_location: window.location.origin + '/'",
     );
-    expect(googleAnalyticsBootstrap('G-ABC123')).toContain("page_title: 'Hamidian Silver'");
+    expect(googleAnalyticsBootstrap('G-ABC123')).toContain("page_title: 'گالری حمیدیان'");
   });
 });

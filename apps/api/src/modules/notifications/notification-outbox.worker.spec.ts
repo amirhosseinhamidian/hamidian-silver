@@ -16,7 +16,7 @@ describe('NotificationOutboxWorker', () => {
 
   function createWorker(
     eventOverrides: Record<string, unknown> = {},
-    templateOverrides: Record<string, string> = {},
+    templateOverrides: Record<string, string | boolean> = {},
   ) {
     const event = {
       id: '10000000-0000-4000-8000-000000000001',
@@ -65,7 +65,7 @@ describe('NotificationOutboxWorker', () => {
       sendMessage: jest.fn().mockResolvedValue(undefined),
       sendTemplate: jest.fn().mockResolvedValue(undefined),
     };
-    const templates: Record<string, string> = {
+    const templates: Record<string, string | boolean> = {
       KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE: 'payment-verified',
       KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE: 'payment-receipt-submitted',
       KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE: 'payment-receipt-rejected',
@@ -73,6 +73,7 @@ describe('NotificationOutboxWorker', () => {
       KAVENEGAR_ORDER_SHIPPED_TEMPLATE: 'order-shipped',
       KAVENEGAR_ORDER_DELIVERED_TEMPLATE: 'order-delivered',
       KAVENEGAR_ORDER_CANCELLED_TEMPLATE: 'order-cancelled',
+      STOCK_NOTIFICATIONS_ENABLED: true,
       KAVENEGAR_STOCK_AVAILABLE_TEMPLATE: 'stock-available',
       ...templateOverrides,
     };
@@ -243,6 +244,29 @@ describe('NotificationOutboxWorker', () => {
         notifiedAt: expect.any(Date),
       },
     });
+  });
+
+  it('does not claim queued stock events while the feature is disabled', async () => {
+    const { worker, prisma, smsSender } = createWorker(
+      {
+        type: NotificationOutboxEventType.STOCK_AVAILABLE,
+        aggregateType: 'STOCK_SUBSCRIPTION',
+        aggregateId: '30000000-0000-4000-8000-000000000001',
+      },
+      { STOCK_NOTIFICATIONS_ENABLED: false, KAVENEGAR_STOCK_AVAILABLE_TEMPLATE: '' },
+    );
+
+    await worker.dispatchPending();
+
+    expect(prisma.notificationOutboxEvent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          type: { not: NotificationOutboxEventType.STOCK_AVAILABLE },
+        }),
+      }),
+    );
+    expect(prisma.notificationOutboxEvent.updateMany).not.toHaveBeenCalled();
+    expect(smsSender.sendTemplate).not.toHaveBeenCalled();
   });
 
   it('retries without dispatch when the stock template is not configured', async () => {

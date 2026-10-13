@@ -26,6 +26,20 @@ describe('resolveStorefrontSeoRoutePolicy', () => {
     },
   );
 
+  it('indexes the knowledge hub and its article documents', () => {
+    expect(resolveStorefrontSeoRoutePolicy('/guide')).toMatchObject({ index: true, follow: true });
+    expect(resolveStorefrontSeoRoutePolicy('/guide/silver-care')).toMatchObject({
+      index: true,
+      follow: true,
+    });
+  });
+
+  it('keeps guide search and topic variants crawlable but out of the index', () => {
+    expect(
+      resolveStorefrontSeoRoutePolicy('/guide', new URLSearchParams({ q: 'نقره', topic: 'care' })),
+    ).toMatchObject({ canonicalPath: '/guide', index: false, follow: true });
+  });
+
   it('keeps paginated catalog pages crawlable with a self canonical', () => {
     expect(
       resolveStorefrontSeoRoutePolicy('/products', new URLSearchParams({ page: '3' })),

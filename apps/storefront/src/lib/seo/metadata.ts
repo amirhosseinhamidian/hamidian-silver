@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 
+import {
+  STOREFRONT_BRAND_NAME,
+  STOREFRONT_DEFAULT_DESCRIPTION,
+  STOREFRONT_DEFAULT_TITLE,
+  STOREFRONT_TITLE_TEMPLATE,
+} from '@/lib/brand/identity';
 import { resolveStorefrontSeoRoutePolicy } from '@/lib/seo/route-policy';
 import type { PublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
-const DEFAULT_SITE_NAME = 'گالری حمیدیان';
-const DEFAULT_TITLE = 'گالری حمیدیان';
-const DEFAULT_TITLE_TEMPLATE = '%s | گالری حمیدیان';
-const DEFAULT_DESCRIPTION = 'فروشگاه آنلاین نقره گالری حمیدیان';
 const DEVELOPMENT_ORIGIN = 'http://localhost:3000';
 
 export type StorefrontSeoMedia = Readonly<{
@@ -30,6 +32,9 @@ export type StorefrontPageMetadataInput = Readonly<{
   seoOgMedia?: StorefrontSeoMedia | null;
   fallbackMedia?: StorefrontSeoMedia | null;
   absoluteTitle?: boolean;
+  openGraphType?: 'website' | 'article';
+  publishedTime?: string | null;
+  modifiedTime?: string | null;
 }>;
 
 function configuredText(value: string | null | undefined, fallback: string): string {
@@ -37,21 +42,21 @@ function configuredText(value: string | null | undefined, fallback: string): str
 }
 
 function siteName(settings: PublicSiteSettings): string {
-  return configuredText(settings.seoSiteName, DEFAULT_SITE_NAME);
+  return configuredText(settings.seoSiteName, STOREFRONT_BRAND_NAME);
 }
 
 function defaultTitle(settings: PublicSiteSettings): string {
-  return configuredText(settings.seoDefaultTitle, DEFAULT_TITLE);
+  return configuredText(settings.seoDefaultTitle, STOREFRONT_DEFAULT_TITLE);
 }
 
 function titleTemplate(settings: PublicSiteSettings): string {
-  const template = configuredText(settings.seoTitleTemplate, DEFAULT_TITLE_TEMPLATE);
+  const template = configuredText(settings.seoTitleTemplate, STOREFRONT_TITLE_TEMPLATE);
   const tokens = template.match(/%s/g)?.length ?? 0;
-  return tokens === 1 ? template : DEFAULT_TITLE_TEMPLATE;
+  return tokens === 1 ? template : STOREFRONT_TITLE_TEMPLATE;
 }
 
 function defaultDescription(settings: PublicSiteSettings): string {
-  return configuredText(settings.seoDefaultDescription, DEFAULT_DESCRIPTION);
+  return configuredText(settings.seoDefaultDescription, STOREFRONT_DEFAULT_DESCRIPTION);
 }
 
 function resolveDocumentTitle(
@@ -123,7 +128,10 @@ const PRIVATE_CANONICAL_PREFIXES = [
   '/wishlist',
 ];
 
-function safeCanonicalPath(value: string | null | undefined, fallback: string): string {
+export function resolveStorefrontCanonicalPath(
+  value: string | null | undefined,
+  fallback: string,
+): string {
   const candidate = value?.trim();
   if (!candidate) return fallback;
   if (!/^\/(?!\/)(?!\.{1,2}(?:\/|$))(?!.*\/\.{1,2}(?:\/|$))[^%\\\s?#]*$/.test(candidate)) {
@@ -137,7 +145,7 @@ function safeCanonicalPath(value: string | null | undefined, fallback: string): 
     return fallback;
   }
 
-  const resourcePrefix = ['/products/', '/categories/', '/brands/'].find((prefix) =>
+  const resourcePrefix = ['/products/', '/categories/', '/brands/', '/guide/'].find((prefix) =>
     fallback.startsWith(prefix),
   );
   if (resourcePrefix && !candidate.startsWith(resourcePrefix)) return fallback;
@@ -209,7 +217,10 @@ export function buildStorefrontPageMetadata(
     input.seoDescription,
     input.description?.trim() || defaultDescription(settings),
   );
-  const canonicalPath = safeCanonicalPath(input.seoCanonicalPath, policy.canonicalPath);
+  const canonicalPath = resolveStorefrontCanonicalPath(
+    input.seoCanonicalPath,
+    policy.canonicalPath,
+  );
   const canonical = new URL(canonicalPath, metadataBase);
   const index = policy.index && !input.seoNoIndex;
   const image = openGraphImage(
@@ -217,6 +228,14 @@ export function buildStorefrontPageMetadata(
     pageTitle,
   );
   const documentTitle = resolveDocumentTitle(settings, pageTitle, Boolean(input.absoluteTitle));
+  const commonOpenGraph = {
+    locale: 'fa_IR',
+    siteName: siteName(settings),
+    url: canonical,
+    title: documentTitle,
+    description,
+    ...(image ? { images: image } : {}),
+  };
 
   return {
     title: input.absoluteTitle ? { absolute: pageTitle } : pageTitle,
@@ -233,15 +252,15 @@ export function buildStorefrontPageMetadata(
         'max-video-preview': -1,
       },
     },
-    openGraph: {
-      type: 'website',
-      locale: 'fa_IR',
-      siteName: siteName(settings),
-      url: canonical,
-      title: documentTitle,
-      description,
-      ...(image ? { images: image } : {}),
-    },
+    openGraph:
+      input.openGraphType === 'article'
+        ? {
+            type: 'article',
+            ...commonOpenGraph,
+            ...(input.publishedTime ? { publishedTime: input.publishedTime } : {}),
+            ...(input.modifiedTime ? { modifiedTime: input.modifiedTime } : {}),
+          }
+        : { type: 'website', ...commonOpenGraph },
     twitter: {
       card: image ? 'summary_large_image' : 'summary',
       title: documentTitle,

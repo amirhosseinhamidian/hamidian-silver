@@ -9,6 +9,7 @@ const {
   getPublicCatalogProduct,
   getPublicCatalogCategories,
   getPublicRelatedProducts,
+  getPublicRelatedGuideArticles,
   getPublicSeoRedirect,
   permanentRedirect,
 } = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ const {
   getPublicRelatedProducts: vi.fn(() =>
     Promise.resolve({ items: [], page: 1, pageSize: 8, total: 0, totalPages: 0 }),
   ),
+  getPublicRelatedGuideArticles: vi.fn(() => Promise.resolve([])),
   getPublicSeoRedirect: vi.fn(),
   permanentRedirect: vi.fn((destinationPath: string) => {
     throw new Error(`NEXT_REDIRECT:${destinationPath}`);
@@ -36,6 +38,10 @@ vi.mock('@/lib/catalog/public-catalog', async (importOriginal) => {
 
 vi.mock('@/lib/seo/redirects', () => ({
   getPublicSeoRedirect,
+}));
+
+vi.mock('@/lib/guide/public-guide', () => ({
+  getPublicRelatedGuideArticles,
 }));
 
 vi.mock('next/navigation', () => ({

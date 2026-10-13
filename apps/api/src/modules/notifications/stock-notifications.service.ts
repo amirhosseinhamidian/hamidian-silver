@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DomainException } from '../../common/errors/domain-exception';
 import { ErrorCode } from '../../common/errors/error-codes';
 import { ProductStatus, StockNotificationStatus } from '../../generated/prisma/enums';
@@ -8,9 +9,20 @@ import type { CreateStockNotificationDto } from './dto/create-stock-notification
 
 @Injectable()
 export class StockNotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly enabled: boolean;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    config: ConfigService,
+  ) {
+    this.enabled = config.get<boolean>('STOCK_NOTIFICATIONS_ENABLED', false) === true;
+  }
 
   async subscribe(userId: string, dto: CreateStockNotificationDto) {
+    if (!this.enabled) {
+      throw new ServiceUnavailableException('Stock notifications are temporarily unavailable.');
+    }
+
     const product = await this.prisma.product.findFirst({
       where: {
         id: dto.productId,

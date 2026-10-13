@@ -356,7 +356,7 @@ describe('ProductPurchasePanel', () => {
   });
 
   it('allows selecting an unavailable size and registering a stock notification', async () => {
-    render(<ProductPurchasePanel product={product} />);
+    render(<ProductPurchasePanel product={product} stockNotificationsEnabled />);
 
     fireEvent.click(screen.getByRole('radio', { name: /54.*ناموجود/ }));
     const notificationButtons = screen.getAllByRole('button', {
@@ -377,5 +377,14 @@ describe('ProductPurchasePanel', () => {
       ),
     );
     expect(await screen.findAllByText('درخواست اطلاع‌رسانی ثبت شد')).toHaveLength(2);
+  });
+
+  it('does not offer stock subscriptions while their delivery channel is disabled', () => {
+    render(<ProductPurchasePanel product={product} stockNotificationsEnabled={false} />);
+
+    fireEvent.click(screen.getByRole('radio', { name: /54.*ناموجود/ }));
+
+    expect(screen.queryByRole('button', { name: 'اگر موجود شد خبرم کن' })).not.toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

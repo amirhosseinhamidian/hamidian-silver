@@ -194,4 +194,27 @@ describe('storefront metadata engine', () => {
       ).robots,
     ).toMatchObject({ index: false, follow: true });
   });
+
+  it('emits article Open Graph metadata and keeps guide canonicals in their route family', () => {
+    const metadata = buildStorefrontPageMetadata(
+      settings,
+      {
+        pathname: '/guide/silver-care',
+        title: 'مراقبت از نقره',
+        seoCanonicalPath: '/products/not-a-guide',
+        openGraphType: 'article',
+        publishedTime: '2026-10-10T10:00:00.000Z',
+        modifiedTime: '2026-10-12T10:00:00.000Z',
+      },
+      origin,
+    );
+    expect(metadata.alternates).toEqual({
+      canonical: new URL('https://silver.example/guide/silver-care'),
+    });
+    expect(metadata.openGraph).toMatchObject({
+      type: 'article',
+      publishedTime: '2026-10-10T10:00:00.000Z',
+      modifiedTime: '2026-10-12T10:00:00.000Z',
+    });
+  });
 });

@@ -15,7 +15,7 @@ window.gtag('js', new Date());
 window.gtag('config', '${measurementId}', {
   send_page_view: false,
   page_location: window.location.origin + '/',
-  page_title: 'Hamidian Silver',
+  page_title: 'گالری حمیدیان',
   page_referrer: ''
 });
 `;

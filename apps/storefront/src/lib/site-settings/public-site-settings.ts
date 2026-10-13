@@ -2,6 +2,12 @@ import { unstable_cache } from 'next/cache';
 import { cache } from 'react';
 
 import { createServerApiClient } from '@/lib/api/server-client';
+import {
+  STOREFRONT_BRAND_NAME,
+  STOREFRONT_DEFAULT_DESCRIPTION,
+  STOREFRONT_DEFAULT_TITLE,
+  STOREFRONT_TITLE_TEMPLATE,
+} from '@/lib/brand/identity';
 
 export type PublicSiteSettings = Readonly<{
   headerCategories: readonly Readonly<{ id: string; label: string; slug: string }>[];
@@ -64,12 +70,12 @@ const DEFAULT_PUBLIC_SITE_SETTINGS: PublicSiteSettings = {
   instagramUrl: null,
   telegramUrl: null,
   baleUrl: null,
-  seoSiteName: 'گالری حمیدیان',
-  seoDefaultTitle: 'گالری حمیدیان',
-  seoTitleTemplate: '%s | گالری حمیدیان',
-  seoDefaultDescription: 'فروشگاه آنلاین نقره گالری حمیدیان',
+  seoSiteName: STOREFRONT_BRAND_NAME,
+  seoDefaultTitle: STOREFRONT_DEFAULT_TITLE,
+  seoTitleTemplate: STOREFRONT_TITLE_TEMPLATE,
+  seoDefaultDescription: STOREFRONT_DEFAULT_DESCRIPTION,
   seoDefaultOgMedia: null,
-  seoOrganizationName: 'گالری حمیدیان',
+  seoOrganizationName: STOREFRONT_BRAND_NAME,
   seoOrganizationLogoMedia: null,
   seoSocialProfileUrls: [],
   seoHomeTitle: null,

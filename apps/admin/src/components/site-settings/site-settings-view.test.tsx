@@ -258,6 +258,61 @@ describe('SiteSettingsView', () => {
     });
   });
 
+  it('automatically enables the catalog hero after both responsive images are selected', async () => {
+    const fetchMock = vi
+      .mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: 'catalog-mobile-media',
+            url: 'https://media.example.com/catalog-mobile.webp',
+            mimeType: 'image/webp',
+            altText: 'محصولات گالری حمیدیان',
+          }),
+          { status: 201, headers: { 'Content-Type': 'application/json' } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ updatedAt: '2026-10-12T18:30:00.000Z' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    render(
+      <SiteSettingsView
+        data={{
+          ...data,
+          settings: {
+            ...data.settings!,
+            catalogHeroEnabled: false,
+            catalogHeroMediaId: 'catalog-desktop-media',
+            catalogHeroMedia: {
+              url: 'https://media.example.com/catalog-desktop.webp',
+              altText: 'محصولات گالری حمیدیان',
+            },
+          },
+        }}
+        canWrite
+      />,
+    );
+
+    expect(screen.getByLabelText('نمایش Hero محصولات')).not.toBeChecked();
+    fireEvent.change(screen.getByLabelText('انتخاب تصویر'), {
+      target: { files: [new File(['mobile'], 'catalog-mobile.webp', { type: 'image/webp' })] },
+    });
+
+    await waitFor(() => expect(screen.getByLabelText('نمایش Hero محصولات')).toBeChecked());
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره Hero محصولات' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const request = fetchMock.mock.calls[1]?.[1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      catalogHeroEnabled: true,
+      catalogHeroMediaId: 'catalog-desktop-media',
+      catalogHeroMobileMediaId: 'catalog-mobile-media',
+    });
+  });
+
   it('prevents enabling manufacturer countries with fewer than four selections', () => {
     render(<SiteSettingsView data={data} canWrite />);
 

@@ -12,7 +12,7 @@ export default function GlobalError({
   return (
     <html lang="fa" dir="rtl" className={peyda.variable}>
       <head>
-        <title>اختلال موقت | گالری حمدیان</title>
+        <title>اختلال موقت | گالری حمیدیان</title>
         <meta name="robots" content="noindex,nofollow" />
       </head>
       <body>

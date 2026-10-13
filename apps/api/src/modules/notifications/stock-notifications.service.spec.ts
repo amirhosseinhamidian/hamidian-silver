@@ -1,3 +1,4 @@
+import type { ConfigService } from '@nestjs/config';
 import { ErrorCode } from '../../common/errors/error-codes';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { StockNotificationsService } from './stock-notifications.service';
@@ -20,7 +21,15 @@ describe('StockNotificationsService', () => {
       groupBy: jest.fn(),
     },
   };
-  const service = new StockNotificationsService(prisma as unknown as PrismaService);
+  const enabledConfig = {
+    get: jest.fn((key: string, fallback?: unknown) =>
+      key === 'STOCK_NOTIFICATIONS_ENABLED' ? true : fallback,
+    ),
+  };
+  const service = new StockNotificationsService(
+    prisma as unknown as PrismaService,
+    enabledConfig as unknown as ConfigService,
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -50,6 +59,23 @@ describe('StockNotificationsService', () => {
         variantId,
       }),
     });
+  });
+
+  it('rejects subscriptions before reading catalog data when the feature is disabled', async () => {
+    const disabledConfig = {
+      get: jest.fn((key: string, fallback?: unknown) =>
+        key === 'STOCK_NOTIFICATIONS_ENABLED' ? false : fallback,
+      ),
+    };
+    const disabledService = new StockNotificationsService(
+      prisma as unknown as PrismaService,
+      disabledConfig as unknown as ConfigService,
+    );
+
+    await expect(disabledService.subscribe(userId, { productId })).rejects.toMatchObject({
+      status: 503,
+    });
+    expect(prisma.product.findFirst).not.toHaveBeenCalled();
   });
 
   it('returns the existing active subscription without creating a duplicate', async () => {

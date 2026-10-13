@@ -45,7 +45,7 @@ describe('AccountAuthButton', () => {
   it('opens an accessible dialog and validates the Iranian mobile number', () => {
     const dialog = openAuthDialog();
 
-    expect(within(dialog).getByRole('img', { name: 'لوگوی نقره حمیدیان' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('img', { name: 'لوگوی گالری حمیدیان' })).toBeInTheDocument();
     expect(within(dialog).getByRole('heading', { name: 'ورود یا ثبت‌نام' })).toBeInTheDocument();
 
     fireEvent.change(within(dialog).getByLabelText('شماره تلفن همراه'), {

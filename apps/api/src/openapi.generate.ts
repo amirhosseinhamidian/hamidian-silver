@@ -1,9 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { AppModule } from './app.module';
-import { configureApiRouting } from './app.setup';
-import { createOpenApiDocument } from './openapi';
 
 const OPENAPI_OUTPUT_PATH = resolve(process.cwd(), '../../packages/contracts/openapi.json');
 
@@ -18,8 +15,13 @@ function configureOpenApiEnvironment(): void {
 
 async function generateOpenApiDocument(): Promise<void> {
   configureOpenApiEnvironment();
+  const [{ AppModule }, { configureApiRouting }, { createOpenApiDocument }] = await Promise.all([
+    import('./app.module.js'),
+    import('./app.setup.js'),
+    import('./openapi.js'),
+  ]);
 
-  const app = await NestFactory.create(AppModule, { logger: false });
+  const app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
 
   try {
     configureApiRouting(app);
