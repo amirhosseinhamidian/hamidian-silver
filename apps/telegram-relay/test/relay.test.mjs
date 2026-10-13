@@ -1,4 +1,3 @@
-
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
 
@@ -59,12 +58,7 @@ test('rejects a request with an invalid relay secret before calling Telegram', a
     throw new Error('Telegram must not be called.');
   };
 
-  const response = await POST(
-    relayRequest(
-      { chatId: '123456789', message: 'test' },
-      'wrong',
-    ),
-  );
+  const response = await POST(relayRequest({ chatId: '123456789', message: 'test' }, 'wrong'));
 
   assert.equal(response.status, 401);
   assert.deepEqual(await response.json(), {
@@ -102,10 +96,7 @@ test('forwards an authenticated message and returns the Telegram message ID', as
     messageId: 42,
   });
 
-  assert.equal(
-    forwardedUrl,
-    `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
-  );
+  assert.equal(forwardedUrl, `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`);
 
   assert.deepEqual(forwardedBody, {
     chat_id: '-1001234567890',
@@ -144,10 +135,7 @@ test('forwards an image as a Telegram photo with the complete message as its cap
     messageId: 43,
   });
 
-  assert.equal(
-    forwardedUrl,
-    `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,
-  );
+  assert.equal(forwardedUrl, `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`);
 
   assert.deepEqual(forwardedBody, {
     chat_id: '123456789',
@@ -182,10 +170,7 @@ test('forwards a secure product image as a Telegram photo', async () => {
 
   assert.equal(response.status, 200);
 
-  assert.equal(
-    forwardedUrl,
-    `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,
-  );
+  assert.equal(forwardedUrl, `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`);
 
   assert.deepEqual(forwardedBody, {
     chat_id: '-1001234567890',
@@ -265,20 +250,11 @@ test('returns the exact Telegram image-fetch rejection without exposing credenti
 
   assert.equal(response.status, 502);
   assert.equal(body.code, 'TELEGRAM_REJECTED');
-  assert.equal(
-    body.description,
-    'Bad Request: failed to get HTTP URL content',
-  );
+  assert.equal(body.description, 'Bad Request: failed to get HTTP URL content');
 
-  assert.equal(
-    JSON.stringify(body).includes(BOT_TOKEN),
-    false,
-  );
+  assert.equal(JSON.stringify(body).includes(BOT_TOKEN), false);
 
-  assert.equal(
-    JSON.stringify(body).includes(RELAY_SECRET),
-    false,
-  );
+  assert.equal(JSON.stringify(body).includes(RELAY_SECRET), false);
 });
 
 test('rejects unsafe product image URLs', async () => {
@@ -297,10 +273,7 @@ test('rejects unsafe product image URLs', async () => {
   );
 
   assert.equal(response.status, 400);
-  assert.equal(
-    (await response.json()).code,
-    'INVALID_REQUEST',
-  );
+  assert.equal((await response.json()).code, 'INVALID_REQUEST');
 });
 
 test('returns a sanitized Telegram rejection and retry delay', async () => {

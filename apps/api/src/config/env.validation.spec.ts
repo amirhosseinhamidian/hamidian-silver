@@ -68,6 +68,7 @@ describe('envValidationSchema production HTTP settings', () => {
       KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE: 'hamidianreceipt',
       KAVENEGAR_PAYMENT_RECEIPT_REJECTED_TEMPLATE: 'hamidianreceiptrejected',
       KAVENEGAR_SHIPMENT_TRACKING_TEMPLATE: 'hamidiantracking',
+      KAVENEGAR_ORDER_PROCESSING_TEMPLATE: 'hamidianprocessing',
       KAVENEGAR_ORDER_SHIPPED_TEMPLATE: 'hamidianshipped',
       KAVENEGAR_ORDER_DELIVERED_TEMPLATE: 'hamidiandelivered',
       KAVENEGAR_ORDER_CANCELLED_TEMPLATE: 'hamidiancancelled',
@@ -94,6 +95,7 @@ describe('envValidationSchema production HTTP settings', () => {
       KAVENEGAR_ORDER_SHIPPED_TEMPLATE: 'hamidianshipped',
       KAVENEGAR_ORDER_DELIVERED_TEMPLATE: 'hamidiandelivered',
       KAVENEGAR_ORDER_CANCELLED_TEMPLATE: 'hamidiancancelled',
+      KAVENEGAR_ORDER_PROCESSING_TEMPLATE: 'hamidianprocessing',
       STOCK_NOTIFICATIONS_ENABLED: 'true',
     };
     const missing = envValidationSchema.validate(kavenegarEnvironment, {

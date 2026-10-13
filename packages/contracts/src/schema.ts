@@ -5484,6 +5484,7 @@ export interface components {
             categoryId?: string;
             limit: number;
             stopAtKnown: boolean;
+            resumeArchive: boolean;
             monitorKnownProducts: boolean;
         };
         StartSupplierCrawlDto: {
@@ -8317,7 +8318,7 @@ export interface operations {
     NotificationOutboxRecoveryController_list_v1: {
         parameters: {
             query?: {
-                status?: "FAILED" | "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT" | "UNKNOWN";
+                status?: "FAILED" | "UNKNOWN" | "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT";
                 source?: "CUSTOMER" | "OPERATIONAL";
                 limit?: number;
             };
@@ -8475,78 +8476,6 @@ export interface operations {
         };
     };
     PricingController_listSupplierSources_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                supplierId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>[];
-                };
-            };
-        };
-    };
-    PricingController_createSupplierSource_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                supplierId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateSupplierSourceDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
-        };
-    };
-    PricingController_updateSupplierSource_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                supplierId: string;
-                sourceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateSupplierSourceDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
-        };
-    };
-    PricingController_setProductSupplier_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -9003,9 +8932,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": Record<string, never>;
-                };
+                content?: never;
             };
         };
     };
@@ -11088,7 +11015,10 @@ export interface operations {
     };
     SupplierImportsController_listSourceChanges_v1: {
         parameters: {
-            query?: never;
+            query: {
+                page: components["schemas"]["Object"];
+                pageSize: components["schemas"]["Object"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -11099,9 +11029,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": Record<string, never>;
-                };
+                content?: never;
             };
         };
     };

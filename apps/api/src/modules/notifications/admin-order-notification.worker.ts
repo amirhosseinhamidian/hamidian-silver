@@ -1,4 +1,3 @@
-
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -35,14 +34,10 @@ export class AdminOrderNotificationWorker {
   ) {
     this.adminOrigin = config.get<string>('ADMIN_APP_ORIGIN', 'http://localhost:3002');
 
-    this.batchSize = config.get<number>(
-      'ADMIN_MESSAGING_OUTBOX_BATCH_SIZE',
-      DEFAULT_BATCH_SIZE,
-    );
+    this.batchSize = config.get<number>('ADMIN_MESSAGING_OUTBOX_BATCH_SIZE', DEFAULT_BATCH_SIZE);
 
     this.staleMs =
-      config.get<number>('ADMIN_MESSAGING_OUTBOX_STALE_MINUTES', DEFAULT_STALE_MINUTES) *
-      60_000;
+      config.get<number>('ADMIN_MESSAGING_OUTBOX_STALE_MINUTES', DEFAULT_STALE_MINUTES) * 60_000;
   }
 
   @Cron(CronExpression.EVERY_MINUTE, { name: 'admin-order-notification-dispatch' })
@@ -108,9 +103,7 @@ export class AdminOrderNotificationWorker {
         );
       }
     } catch (error) {
-      this.logger.error(
-        `Admin order notification batch failed: ${this.errorMessage(error)}`,
-      );
+      this.logger.error(`Admin order notification batch failed: ${this.errorMessage(error)}`);
     } finally {
       this.running = false;
     }
@@ -210,10 +203,7 @@ export class AdminOrderNotificationWorker {
                             deletedAt: null,
                           },
                         },
-                        orderBy: [
-                          { isPrimary: 'desc' },
-                          { sortOrder: 'asc' },
-                        ],
+                        orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
                         take: 1,
                         select: {
                           media: {
@@ -237,18 +227,12 @@ export class AdminOrderNotificationWorker {
         order.payment?.status !== PaymentStatus.AWAITING_REVIEW
       ) {
         throw new Error(
-          `Admin order notification is not ready at ${
-            order.payment?.status ?? 'NO_PAYMENT'
-          }.`,
+          `Admin order notification is not ready at ${order.payment?.status ?? 'NO_PAYMENT'}.`,
         );
       }
 
       // Continue without an image after repeated Telegram image-fetch errors.
-      const textFallback = this.shouldUseTextFallback(
-        channel,
-        previousAttempts + 1,
-        previousError,
-      );
+      const textFallback = this.shouldUseTextFallback(channel, previousAttempts + 1, previousError);
 
       // Select the first ordered product with an available primary image.
       // The variant relation can be null for historical order items.
@@ -256,13 +240,9 @@ export class AdminOrderNotificationWorker {
         (item) => item.variant?.product.media[0]?.media.storageKey,
       )?.variant?.product.media[0]?.media.storageKey;
 
-      const imageUrl = primaryStorageKey
-        ? this.publicMediaUrl.resolve(primaryStorageKey)
-        : null;
+      const imageUrl = primaryStorageKey ? this.publicMediaUrl.resolve(primaryStorageKey) : null;
 
-      const sendOptions = imageUrl && !textFallback
-        ? { imageUrl }
-        : {};
+      const sendOptions = imageUrl && !textFallback ? { imageUrl } : {};
 
       await this.sender.send(
         channel,
@@ -287,11 +267,7 @@ export class AdminOrderNotificationWorker {
     } catch (error) {
       const attemptCount = previousAttempts + 1;
 
-      const textFallback = this.shouldUseTextFallback(
-        channel,
-        attemptCount,
-        previousError,
-      );
+      const textFallback = this.shouldUseTextFallback(channel, attemptCount, previousError);
 
       const errorMessage = this.errorMessage(error);
 
@@ -303,19 +279,16 @@ export class AdminOrderNotificationWorker {
         },
         data: {
           status: NotificationOutboxStatus.FAILED,
-          nextAttemptAt: new Date(
-            Date.now() + this.retryDelayMs(attemptCount),
-          ),
+          nextAttemptAt: new Date(Date.now() + this.retryDelayMs(attemptCount)),
           claimedAt: null,
-          lastError: `${
-            textFallback ? TEXT_FALLBACK_ERROR_PREFIX : ''
-          }${errorMessage}`.slice(0, 1000),
+          lastError: `${textFallback ? TEXT_FALLBACK_ERROR_PREFIX : ''}${errorMessage}`.slice(
+            0,
+            1000,
+          ),
         },
       });
 
-      this.logger.warn(
-        `Admin order notification ${deliveryId} failed: ${errorMessage}`,
-      );
+      this.logger.warn(`Admin order notification ${deliveryId} failed: ${errorMessage}`);
     }
   }
 
@@ -324,11 +297,7 @@ export class AdminOrderNotificationWorker {
     attempt: number,
     previousError: string | null,
   ): boolean {
-    if (
-      channel !== 'TELEGRAM' ||
-      attempt < 4 ||
-      !previousError
-    ) {
+    if (channel !== 'TELEGRAM' || attempt < 4 || !previousError) {
       return false;
     }
 
@@ -339,15 +308,10 @@ export class AdminOrderNotificationWorker {
   }
 
   private retryDelayMs(attempts: number): number {
-    return Math.min(
-      2 ** Math.max(0, attempts - 1) * 60_000,
-      6 * 60 * 60_000,
-    );
+    return Math.min(2 ** Math.max(0, attempts - 1) * 60_000, 6 * 60 * 60_000);
   }
 
   private errorMessage(error: unknown): string {
-    return error instanceof Error
-      ? error.message
-      : String(error);
+    return error instanceof Error ? error.message : String(error);
   }
 }

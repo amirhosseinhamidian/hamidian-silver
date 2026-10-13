@@ -30,7 +30,7 @@ export class PublicCatalogCategoryDto {
 
   sortOrder!: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: Boolean })
   hasProducts?: boolean;
 
   @ApiProperty({ type: () => PublicCatalogMediaDto, nullable: true })
@@ -78,7 +78,7 @@ export class PublicCatalogBrandDto {
   @ApiProperty({ type: String, nullable: true })
   description!: string | null;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: Boolean })
   hasProducts?: boolean;
 
   @ApiProperty({ type: () => PublicCatalogMediaDto, nullable: true })

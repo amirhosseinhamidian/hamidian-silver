@@ -152,23 +152,15 @@ describe('InventoryManagementView', () => {
       within(thumbnail).getByRole('img', {
         name: 'تصویر اصلی انگشتر آذر',
       }),
-    ).toHaveAttribute(
-      'src',
-      'https://media.example/products/azar-ring.webp',
-    );
+    ).toHaveAttribute('src', 'https://media.example/products/azar-ring.webp');
 
     fireEvent.mouseEnter(thumbnail);
 
-    expect(screen.getByRole('tooltip')).toHaveClass(
-      'opacity-100',
-      'scale-100',
-    );
+    expect(screen.getByRole('tooltip')).toHaveClass('opacity-100', 'scale-100');
 
     fireEvent.mouseLeave(thumbnail);
 
-    expect(
-      screen.getByRole('tooltip', { hidden: true }),
-    ).toHaveClass('opacity-0', 'scale-95');
+    expect(screen.getByRole('tooltip', { hidden: true })).toHaveClass('opacity-0', 'scale-95');
   });
 
   it('submits localized stock adjustments with a required reason', async () => {
