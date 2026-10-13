@@ -4171,7 +4171,10 @@ export interface components {
             format: "GUIDE" | "ANSWER" | "BUYING_GUIDE" | "CARE_GUIDE" | "COMPARISON" | "STORY";
             /** @enum {string} */
             status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+            /** @enum {string} */
+            productRecommendationMode: "AUTOMATIC" | "MANUAL" | "DISABLED";
             heroMedia?: components["schemas"]["GuideMediaDto"] | null;
+            cardMedia?: components["schemas"]["GuideMediaDto"] | null;
             seoCanonicalPath?: string | null;
             seoNoIndex: boolean;
             seoOgMedia?: components["schemas"]["GuideMediaDto"] | null;
@@ -4227,7 +4230,10 @@ export interface components {
             format: "GUIDE" | "ANSWER" | "BUYING_GUIDE" | "CARE_GUIDE" | "COMPARISON" | "STORY";
             /** @enum {string} */
             status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+            /** @enum {string} */
+            productRecommendationMode: "AUTOMATIC" | "MANUAL" | "DISABLED";
             heroMedia?: components["schemas"]["GuideMediaDto"] | null;
+            cardMedia?: components["schemas"]["GuideMediaDto"] | null;
             seoCanonicalPath?: string | null;
             seoNoIndex: boolean;
             seoOgMedia?: components["schemas"]["GuideMediaDto"] | null;
@@ -4310,6 +4316,10 @@ export interface components {
             heroMediaId?: string | null;
             /** Format: uuid */
             heroMobileMediaId?: string | null;
+            /** Format: uuid */
+            cardMediaId?: string | null;
+            /** @enum {string} */
+            productRecommendationMode?: "AUTOMATIC" | "MANUAL" | "DISABLED";
             seoTitle?: string | null;
             seoDescription?: string | null;
             seoCanonicalPath?: string | null;
@@ -4338,6 +4348,10 @@ export interface components {
             heroMediaId?: string | null;
             /** Format: uuid */
             heroMobileMediaId?: string | null;
+            /** Format: uuid */
+            cardMediaId?: string | null;
+            /** @enum {string} */
+            productRecommendationMode?: "AUTOMATIC" | "MANUAL" | "DISABLED";
             seoTitle?: string | null;
             seoDescription?: string | null;
             seoCanonicalPath?: string | null;

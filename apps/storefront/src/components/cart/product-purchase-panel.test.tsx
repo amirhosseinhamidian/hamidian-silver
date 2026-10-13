@@ -282,7 +282,10 @@ describe('ProductPurchasePanel', () => {
     render(<ProductPurchasePanel product={necklaceProduct} />);
 
     expect(screen.getByRole('group', { name: 'انتخاب طول' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'راهنمای انتخاب سایز' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'راهنمای انتخاب سایز' })).toHaveAttribute(
+      'href',
+      '/size-guide',
+    );
     fireEvent.click(screen.getByRole('radio', { name: '54' }));
     expect(screen.getAllByText(formatTomanPrice(1_050_000))).toHaveLength(2);
     fireEvent.click(screen.getAllByRole('button', { name: 'افزودن به سبد خرید' })[0]);
@@ -386,5 +389,35 @@ describe('ProductPurchasePanel', () => {
 
     expect(screen.queryByRole('button', { name: 'اگر موجود شد خبرم کن' })).not.toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['بدون Variant', { ...product, sizeMode: 'NONE' as const, variants: [] }],
+    [
+      'Free Size',
+      {
+        ...product,
+        sizeMode: 'FREE_SIZE' as const,
+        variants: [{ ...product.variants[0]!, size: null }],
+      },
+    ],
+    ['چندسایزی', product],
+    [
+      'ناموجود',
+      {
+        ...product,
+        variants: product.variants.map((variant) => ({
+          ...variant,
+          availableQuantity: 0,
+          isAvailable: false,
+        })),
+      },
+    ],
+  ])('shows exactly one size-guide link for a %s product', (_label, testedProduct) => {
+    render(<ProductPurchasePanel product={testedProduct} />);
+
+    const links = screen.getAllByRole('link', { name: 'راهنمای انتخاب سایز' });
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute('href', '/size-guide');
   });
 });

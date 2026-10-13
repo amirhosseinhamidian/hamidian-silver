@@ -312,6 +312,7 @@ model Media {
   orderShippingCarrierLogos   Order[]                  @relation("OrderShippingCarrierLogoSnapshot")
   guideArticleHeroImages          GuideArticle[]            @relation("GuideArticleHero")
   guideArticleHeroMobileImages    GuideArticle[]            @relation("GuideArticleHeroMobile")
+  guideArticleCardImages          GuideArticle[]            @relation("GuideArticleCard")
   guideArticleSeoOgImages         GuideArticle[]            @relation("GuideArticleSeoOg")
   guideTopicCoverImages           GuideTopic[]              @relation("GuideTopicCover")
   guideTopicSeoOgImages           GuideTopic[]              @relation("GuideTopicSeoOg")
@@ -675,6 +676,12 @@ enum GuideBlockType {
   DIVIDER
 }
 
+enum GuideProductRecommendationMode {
+  AUTOMATIC
+  MANUAL
+  DISABLED
+}
+
 model GuideTopic {
   id               String              @id @default(uuid()) @db.Uuid
   name             String              @db.VarChar(150)
@@ -712,6 +719,8 @@ model GuideArticle {
   status             GuideArticleStatus     @default(DRAFT)
   heroMediaId        String?                @db.Uuid
   heroMobileMediaId  String?                @db.Uuid
+  cardMediaId               String?                        @db.Uuid
+  productRecommendationMode GuideProductRecommendationMode @default(AUTOMATIC)
   seoTitle           String?                @db.VarChar(200)
   seoDescription     String?                @db.VarChar(500)
   seoCanonicalPath   String?                @db.VarChar(1000)
@@ -729,6 +738,7 @@ model GuideArticle {
   deletedAt          DateTime?              @db.Timestamptz(3)
   heroMedia          Media?                 @relation("GuideArticleHero", fields: [heroMediaId], references: [id], onDelete: SetNull)
   heroMobileMedia    Media?                 @relation("GuideArticleHeroMobile", fields: [heroMobileMediaId], references: [id], onDelete: SetNull)
+  cardMedia          Media?                 @relation("GuideArticleCard", fields: [cardMediaId], references: [id], onDelete: SetNull)
   seoOgMedia         Media?                 @relation("GuideArticleSeoOg", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   createdBy          User?                  @relation("GuideArticleCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   updatedBy          User?                  @relation("GuideArticleUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
@@ -742,6 +752,7 @@ model GuideArticle {
   @@index([isFeatured, publishedAt])
   @@index([heroMediaId])
   @@index([heroMobileMediaId])
+  @@index([cardMediaId])
   @@index([seoOgMediaId])
   @@index([createdByUserId])
   @@index([updatedByUserId])

@@ -31,6 +31,8 @@ const article = {
   status: 'PUBLISHED',
   heroMedia: null,
   heroMobileMedia: null,
+  cardMedia: null,
+  productRecommendationMode: 'MANUAL',
   seoTitle: null,
   seoDescription: null,
   seoCanonicalPath: '/guide/clean-silver',

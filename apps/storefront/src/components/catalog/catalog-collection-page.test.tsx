@@ -67,6 +67,7 @@ describe('CatalogCollectionPage', () => {
             excerpt: 'نکته‌های کاربردی برای انتخاب بهتر',
             format: 'BUYING_GUIDE',
             heroMedia: null,
+            cardMedia: null,
             seoCanonicalPath: null,
             seoNoIndex: false,
             seoOgMedia: null,

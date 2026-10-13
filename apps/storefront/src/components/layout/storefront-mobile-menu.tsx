@@ -14,6 +14,7 @@ const utilityLinks = [
   { href: '/brands', label: 'برندها' },
   { href: '/products?sort=newest', label: 'جدیدترین‌ها' },
   { href: '/guide', label: 'دانستنی‌ها' },
+  { href: '/size-guide', label: 'راهنمای سایز' },
   { href: '/wishlist', label: 'علاقه‌مندی‌ها' },
   { href: '/account', label: 'حساب کاربری' },
   { href: '/services', label: 'خدمات ما' },

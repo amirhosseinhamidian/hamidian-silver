@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from 'react';
+import { forwardRef, type ComponentPropsWithoutRef } from 'react';
 
 import { cn } from '@/lib/ui/cn';
 
@@ -19,12 +19,16 @@ export function Input({ invalid = false, className, ...props }: InputProps) {
 
 type TextareaProps = ComponentPropsWithoutRef<'textarea'> & { invalid?: boolean };
 
-export function Textarea({ invalid = false, className, ...props }: TextareaProps) {
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
+  { invalid = false, className, ...props },
+  ref,
+) {
   return (
     <textarea
+      ref={ref}
       aria-invalid={invalid || undefined}
       className={cn(controlClassName, 'min-h-24 resize-y py-2.5 leading-6', className)}
       {...props}
     />
   );
-}
+});

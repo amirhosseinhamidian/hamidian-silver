@@ -9,6 +9,7 @@ export function GuideArticleCard({
   article,
   prominent = false,
 }: Readonly<{ article: PublicGuideArticleSummary; prominent?: boolean }>) {
+  const cardMedia = article.cardMedia ?? article.heroMedia;
   return (
     <article
       className={
@@ -26,10 +27,10 @@ export function GuideArticleCard({
         }
         aria-label={`مطالعه ${article.title}`}
       >
-        {article.heroMedia?.url ? (
+        {cardMedia?.url ? (
           <StorefrontImage
-            src={article.heroMedia.url}
-            alt={article.heroMedia.altText?.trim() || article.title}
+            src={cardMedia.url}
+            alt={cardMedia.altText?.trim() || article.title}
             fill
             sizes={
               prominent ? '(min-width: 1024px) 58vw, 100vw' : '(min-width: 1024px) 33vw, 100vw'

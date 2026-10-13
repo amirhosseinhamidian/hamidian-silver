@@ -24,6 +24,7 @@ import {
   type GuideArticle,
   type GuideArticleFormat,
   type GuideArticleStatus,
+  type GuideProductRecommendationMode,
   type GuideFormReferences,
 } from '@/lib/guide/guide-model';
 import type { SiteMedia } from '@/lib/site-settings/site-settings-model';
@@ -34,7 +35,7 @@ function stringValue(value: unknown): string {
 function draftFromArticle(article: GuideArticle | null): GuideBlockDraft[] {
   return (article?.blocks ?? []).map((block) => {
     const content = block.content;
-    let body = stringValue(content.body);
+    let body = stringValue(content.markdown) || stringValue(content.body);
     let auxiliary = stringValue(content.caption ?? content.attribution);
     if (Array.isArray(content.paragraphs))
       body = content.paragraphs
@@ -75,11 +76,14 @@ function blockContent(block: GuideBlockDraft): Record<string, unknown> {
   if (block.type === 'RICH_TEXT')
     return {
       heading,
+      markdown: body,
       paragraphs: body
         .split(/\n\s*\n/)
         .map((item) => item.trim())
         .filter(Boolean),
     };
+  if (block.type === 'LEAD' || block.type === 'IMAGE_TEXT')
+    return { heading, markdown: body, body };
   if (block.type === 'STEPS')
     return {
       heading,
@@ -190,6 +194,9 @@ export function GuideForm({
   const [heroMobileMedia, setHeroMobileMedia] = useState<SiteMedia | null>(
     article?.heroMobileMedia ?? null,
   );
+  const [cardMedia, setCardMedia] = useState<SiteMedia | null>(article?.cardMedia ?? null);
+  const [productRecommendationMode, setProductRecommendationMode] =
+    useState<GuideProductRecommendationMode>(article?.productRecommendationMode ?? 'AUTOMATIC');
   const [keywords, setKeywords] = useState(article?.searchKeywords.join('، ') ?? '');
   const [readingTime, setReadingTime] = useState(article?.readingTimeMinutes?.toString() ?? '');
   const [featured, setFeatured] = useState(article?.isFeatured ?? false);
@@ -249,6 +256,8 @@ export function GuideForm({
       status,
       heroMediaId: heroMedia?.id ?? null,
       heroMobileMediaId: heroMobileMedia?.id ?? null,
+      cardMediaId: cardMedia?.id ?? null,
+      productRecommendationMode,
       ...seoEditorPayload(seo),
       searchKeywords: keywords
         .split(/[،,\n]/)
@@ -444,8 +453,8 @@ export function GuideForm({
         </div>
       </Card>
       <Card
-        title="تصاویر Hero"
-        description="برای نتیجه حرفه‌ای، نسخه‌های دسکتاپ و موبایل را جداگانه انتخاب کنید."
+        title="تصاویر مقاله"
+        description="Hero دسکتاپ و موبایل مستقل هستند؛ تصویر کارت با نسبت ۴:۳ در فهرست‌ها نمایش داده می‌شود."
       >
         <div className="grid gap-5 lg:grid-cols-2">
           <SiteMediaField
@@ -468,6 +477,17 @@ export function GuideForm({
             onUploaded={setHeroMobileMedia}
             onClear={() => setHeroMobileMedia(null)}
           />
+          <SiteMediaField
+            label="تصویر شاخص کارت"
+            media={cardMedia}
+            altText={title || 'دانستنی'}
+            uploadUrl="/api/content-pages/media"
+            aspect="card"
+            hint="ابعاد پیشنهادی ۱۲۰۰×۹۰۰ پیکسل؛ در صورت خالی بودن از Hero دسکتاپ استفاده می‌شود."
+            disabled={pending}
+            onUploaded={setCardMedia}
+            onClear={() => setCardMedia(null)}
+          />
         </div>
       </Card>
       <GuideBlockEditor blocks={blocks} disabled={pending} onChange={setBlocks} />
@@ -475,6 +495,29 @@ export function GuideForm({
         title="ارتباط محتوایی"
         description="این ارتباط‌ها برای پیشنهاد محصول، لینک‌سازی داخلی و ساخت خوشه‌های موضوعی استفاده می‌شوند."
       >
+        <div className="mb-5">
+          <FormField id="guide-product-recommendation-mode" label="نحوه نمایش محصولات پیشنهادی">
+            {(props) => (
+              <Select
+                {...props}
+                value={productRecommendationMode}
+                disabled={pending}
+                options={[
+                  { value: 'AUTOMATIC', label: 'انتخاب خودکار' },
+                  { value: 'MANUAL', label: 'انتخاب دستی' },
+                  { value: 'DISABLED', label: 'غیرفعال' },
+                ]}
+                onValueChange={(value) =>
+                  setProductRecommendationMode(value as GuideProductRecommendationMode)
+                }
+              />
+            )}
+          </FormField>
+          <p className="mt-2 text-xs leading-6 text-[var(--admin-color-muted)]">
+            در حالت خودکار، محصولات فعال و موجود از دسته‌بندی‌های مرتبط انتخاب می‌شوند. شناسه‌های
+            دستی با تغییر حالت حذف نمی‌شوند.
+          </p>
+        </div>
         <div className="grid gap-5 md:grid-cols-2">
           <SelectionGroup
             title="موضوعات"
@@ -501,7 +544,7 @@ export function GuideForm({
             title="محصولات پیشنهادی"
             items={references.products}
             selected={productIds}
-            disabled={pending}
+            disabled={pending || productRecommendationMode !== 'MANUAL'}
             onChange={setProductIds}
           />
         </div>

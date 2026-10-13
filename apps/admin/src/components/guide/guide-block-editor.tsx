@@ -1,6 +1,7 @@
 'use client';
 
 import { SiteMediaField } from '@/components/site-settings/site-media-field';
+import { GuideMarkdownEditor } from '@/components/guide/guide-markdown-editor';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -39,6 +40,7 @@ const BLOCK_TYPES: readonly GuideBlockType[] = [
   'CTA',
   'DIVIDER',
 ];
+const MARKDOWN_BLOCK_TYPES = new Set<GuideBlockType>(['LEAD', 'RICH_TEXT', 'IMAGE_TEXT']);
 const VARIANTS: Record<GuideBlockType, readonly { value: string; label: string }[]> = {
   LEAD: [
     { value: 'editorial', label: 'ادیتوریال' },
@@ -266,16 +268,25 @@ export function GuideBlockEditor({
                           : 'متن'
                       }
                     >
-                      {(props) => (
-                        <Textarea
-                          {...props}
-                          value={block.body}
-                          maxLength={20000}
-                          disabled={disabled}
-                          className="min-h-36"
-                          onChange={(event) => update(index, { body: event.target.value })}
-                        />
-                      )}
+                      {(props) =>
+                        MARKDOWN_BLOCK_TYPES.has(block.type) ? (
+                          <GuideMarkdownEditor
+                            id={props.id}
+                            value={block.body}
+                            disabled={disabled}
+                            onChange={(body) => update(index, { body })}
+                          />
+                        ) : (
+                          <Textarea
+                            {...props}
+                            value={block.body}
+                            maxLength={20000}
+                            disabled={disabled}
+                            className="min-h-36"
+                            onChange={(event) => update(index, { body: event.target.value })}
+                          />
+                        )
+                      }
                     </FormField>
                   </div>
                 ) : null}

@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@hamidian/guide-markdown": ["../../packages/guide-markdown/src/index.ts"]
     }
   },
   "include": [

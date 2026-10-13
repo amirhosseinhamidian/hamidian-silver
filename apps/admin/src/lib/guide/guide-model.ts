@@ -3,6 +3,7 @@ import type { CatalogLookup } from '@/lib/catalog/catalog-model';
 import type { SiteMedia } from '@/lib/site-settings/site-settings-model';
 
 export type GuideArticleStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+export type GuideProductRecommendationMode = 'AUTOMATIC' | 'MANUAL' | 'DISABLED';
 export type GuideArticleFormat =
   'GUIDE' | 'ANSWER' | 'BUYING_GUIDE' | 'CARE_GUIDE' | 'COMPARISON' | 'STORY';
 export type GuideBlockType =
@@ -53,6 +54,8 @@ export type GuideArticle = Readonly<{
   status: GuideArticleStatus;
   heroMedia: SiteMedia | null;
   heroMobileMedia: SiteMedia | null;
+  cardMedia: SiteMedia | null;
+  productRecommendationMode: GuideProductRecommendationMode;
   seoTitle: string | null;
   seoDescription: string | null;
   seoCanonicalPath: string | null;
@@ -98,6 +101,11 @@ export type GuideFormReferences = Readonly<{
 }>;
 
 const STATUSES = new Set<GuideArticleStatus>(['DRAFT', 'PUBLISHED', 'ARCHIVED']);
+const PRODUCT_RECOMMENDATION_MODES = new Set<GuideProductRecommendationMode>([
+  'AUTOMATIC',
+  'MANUAL',
+  'DISABLED',
+]);
 const FORMATS = new Set<GuideArticleFormat>([
   'GUIDE',
   'ANSWER',
@@ -197,6 +205,9 @@ export function parseGuideArticle(value: unknown): GuideArticle | null {
   const slug = text(item?.slug);
   const status = text(item?.status) as GuideArticleStatus | null;
   const format = text(item?.format) as GuideArticleFormat | null;
+  const productRecommendationMode = text(
+    item?.productRecommendationMode,
+  ) as GuideProductRecommendationMode | null;
   const version = integer(item?.version);
   const updatedAt = text(item?.updatedAt);
   const blockCount = integer(item?.blockCount);
@@ -208,6 +219,8 @@ export function parseGuideArticle(value: unknown): GuideArticle | null {
     !STATUSES.has(status) ||
     !format ||
     !FORMATS.has(format) ||
+    !productRecommendationMode ||
+    !PRODUCT_RECOMMENDATION_MODES.has(productRecommendationMode) ||
     version === null ||
     !updatedAt
   )
@@ -228,6 +241,8 @@ export function parseGuideArticle(value: unknown): GuideArticle | null {
     status,
     heroMedia: media(item.heroMedia),
     heroMobileMedia: media(item.heroMobileMedia),
+    cardMedia: media(item.cardMedia),
+    productRecommendationMode,
     seoTitle: text(item.seoTitle),
     seoDescription: text(item.seoDescription),
     seoCanonicalPath: text(item.seoCanonicalPath),

@@ -3,6 +3,7 @@ import {
   GuideArticleFormat,
   GuideArticleStatus,
   GuideBlockType,
+  GuideProductRecommendationMode,
   ProductStatus,
 } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
@@ -19,10 +20,11 @@ function createService() {
     },
     media: { count: jest.fn().mockResolvedValue(0) },
     guideTopic: { count: jest.fn().mockResolvedValue(0) },
-    product: { count: jest.fn().mockResolvedValue(0) },
+    product: { count: jest.fn().mockResolvedValue(0), findMany: jest.fn().mockResolvedValue([]) },
     category: { count: jest.fn().mockResolvedValue(0) },
     brand: { count: jest.fn().mockResolvedValue(0) },
     $transaction: jest.fn(),
+    $queryRaw: jest.fn().mockResolvedValue([]),
   };
   const mediaUrls = { resolve: jest.fn((key: string) => `https://media.test/${key}`) };
   return {
@@ -76,6 +78,12 @@ describe('GuideService', () => {
       shortDescription: null,
       salePriceToman: 1_000_000,
       deletedAt: null,
+      variants: [
+        {
+          salePriceToman: 950_000,
+          inventories: [{ onHand: 2, reserved: 0 }],
+        },
+      ],
       media: [
         {
           isPrimary: true,
@@ -128,6 +136,118 @@ describe('GuideService', () => {
         },
       ],
     });
+  });
+
+  it('hides manual products that have no sellable inventory without deleting their IDs', async () => {
+    const { service, prisma } = createService();
+    const product = {
+      id: '00000000-0000-4000-8000-000000000030',
+      name: 'محصول ناموجود',
+      slug: 'unavailable-product',
+      shortDescription: null,
+      salePriceToman: 1_000_000,
+      status: ProductStatus.ACTIVE,
+      deletedAt: null,
+      variants: [{ salePriceToman: null, inventories: [{ onHand: 1, reserved: 1 }] }],
+      media: [],
+    };
+    prisma.guideArticle.findFirst.mockResolvedValue({
+      id: 'article-manual',
+      title: 'راهنما',
+      slug: 'manual-guide',
+      format: GuideArticleFormat.GUIDE,
+      status: GuideArticleStatus.PUBLISHED,
+      productRecommendationMode: GuideProductRecommendationMode.MANUAL,
+      heroMedia: null,
+      heroMobileMedia: null,
+      cardMedia: null,
+      seoOgMedia: null,
+      blocks: [],
+      topics: [],
+      categories: [],
+      brands: [],
+      products: [{ productId: product.id, product }],
+      publishedAt: new Date(),
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    });
+
+    await expect(service.getPublicArticle('manual-guide')).resolves.toMatchObject({
+      productIds: [product.id],
+      relatedProducts: [],
+    });
+  });
+
+  it('selects automatic products dynamically and preserves the database ranking', async () => {
+    const { service, prisma } = createService();
+    const product = {
+      id: '00000000-0000-4000-8000-000000000040',
+      name: 'انگشتر موجود',
+      slug: 'available-ring',
+      shortDescription: null,
+      salePriceToman: 1_100_000,
+      status: ProductStatus.ACTIVE,
+      deletedAt: null,
+      variants: [{ salePriceToman: 1_000_000, inventories: [{ onHand: 3, reserved: 1 }] }],
+      media: [],
+    };
+    prisma.$queryRaw.mockResolvedValue([{ id: product.id }]);
+    prisma.product.findMany.mockResolvedValue([product]);
+    prisma.guideArticle.findFirst.mockResolvedValue({
+      id: 'article-auto',
+      title: 'راهنمای انگشتر',
+      slug: 'automatic-guide',
+      format: GuideArticleFormat.BUYING_GUIDE,
+      status: GuideArticleStatus.PUBLISHED,
+      productRecommendationMode: GuideProductRecommendationMode.AUTOMATIC,
+      heroMedia: null,
+      heroMobileMedia: null,
+      cardMedia: null,
+      seoOgMedia: null,
+      blocks: [],
+      topics: [],
+      categories: [{ categoryId: '00000000-0000-4000-8000-000000000041', category: null }],
+      brands: [{ brandId: '00000000-0000-4000-8000-000000000042', brand: null }],
+      products: [],
+      publishedAt: new Date(),
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    });
+
+    await expect(service.getPublicArticle('automatic-guide')).resolves.toMatchObject({
+      relatedProducts: [{ id: product.id, salePriceToman: 1_000_000 }],
+    });
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.product.findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not resolve any products when recommendations are disabled', async () => {
+    const { service, prisma } = createService();
+    prisma.guideArticle.findFirst.mockResolvedValue({
+      id: 'article-disabled',
+      title: 'راهنما',
+      slug: 'disabled-guide',
+      format: GuideArticleFormat.GUIDE,
+      status: GuideArticleStatus.PUBLISHED,
+      productRecommendationMode: GuideProductRecommendationMode.DISABLED,
+      heroMedia: null,
+      heroMobileMedia: null,
+      cardMedia: null,
+      seoOgMedia: null,
+      blocks: [],
+      topics: [],
+      categories: [],
+      brands: [],
+      products: [],
+      publishedAt: new Date(),
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    });
+
+    await expect(service.getPublicArticle('disabled-guide')).resolves.toMatchObject({
+      relatedProducts: [],
+    });
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
   });
 
   it('ranks related articles by shared commerce references before shared topics', async () => {

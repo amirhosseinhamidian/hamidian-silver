@@ -3,6 +3,7 @@ import {
   GuideArticleFormat,
   GuideArticleStatus,
   GuideBlockType,
+  GuideProductRecommendationMode,
 } from '../../../generated/prisma/enums';
 
 export class GuideMediaDto {
@@ -44,7 +45,10 @@ export class GuideArticleSummaryDto {
   @ApiPropertyOptional({ nullable: true }) excerpt!: string | null;
   @ApiProperty({ enum: GuideArticleFormat }) format!: GuideArticleFormat;
   @ApiProperty({ enum: GuideArticleStatus }) status!: GuideArticleStatus;
+  @ApiProperty({ enum: GuideProductRecommendationMode })
+  productRecommendationMode!: GuideProductRecommendationMode;
   @ApiPropertyOptional({ nullable: true, type: GuideMediaDto }) heroMedia!: GuideMediaDto | null;
+  @ApiPropertyOptional({ nullable: true, type: GuideMediaDto }) cardMedia!: GuideMediaDto | null;
   @ApiPropertyOptional({ nullable: true }) seoCanonicalPath!: string | null;
   @ApiProperty() seoNoIndex!: boolean;
   @ApiPropertyOptional({ nullable: true, type: GuideMediaDto }) seoOgMedia!: GuideMediaDto | null;

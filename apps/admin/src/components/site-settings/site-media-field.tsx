@@ -35,7 +35,7 @@ export function SiteMediaField({
   altText: string;
   disabled?: boolean;
   uploadUrl?: string;
-  aspect?: 'wide' | 'page-desktop' | 'mobile';
+  aspect?: 'wide' | 'page-desktop' | 'mobile' | 'card';
   hint?: string;
   onUploaded: (media: SiteMedia) => void;
   onClear?: () => void;
@@ -81,9 +81,11 @@ export function SiteMediaField({
         className={`relative overflow-hidden rounded-[var(--admin-radius-md)] border border-dashed border-[var(--admin-color-border-strong)] bg-[var(--admin-color-surface-subtle)] ${
           aspect === 'mobile'
             ? 'mx-auto aspect-[3/4] max-h-80'
-            : aspect === 'page-desktop'
-              ? 'aspect-[1942/809]'
-              : 'aspect-[16/7]'
+            : aspect === 'card'
+              ? 'aspect-[4/3]'
+              : aspect === 'page-desktop'
+                ? 'aspect-[1942/809]'
+                : 'aspect-[16/7]'
         }`}
       >
         {media?.url ? (

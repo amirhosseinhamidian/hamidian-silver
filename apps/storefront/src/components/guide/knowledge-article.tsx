@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { RelatedKnowledgeSection } from '@/components/guide/related-knowledge-section';
+import { GuideMarkdown } from '@/components/guide/guide-markdown';
 import { StorefrontImage } from '@/components/media/storefront-image';
 import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
@@ -67,6 +68,7 @@ function GuideImage({
 
 function TextBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
   const heading = contentText(block.content, 'heading');
+  const markdown = contentText(block.content, 'markdown');
   const paragraphs = Array.isArray(block.content.paragraphs)
     ? block.content.paragraphs.filter(
         (item): item is string => typeof item === 'string' && Boolean(item.trim()),
@@ -88,9 +90,11 @@ function TextBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
       <div
         className={`${heading ? 'mt-6' : ''} space-y-5 text-base leading-9 text-[var(--sf-color-muted)] sm:text-lg sm:leading-10`}
       >
-        {paragraphs.map((paragraph, index) => (
-          <p key={`${paragraph}-${index}`}>{paragraph}</p>
-        ))}
+        {markdown ? (
+          <GuideMarkdown markdown={markdown} />
+        ) : (
+          paragraphs.map((paragraph, index) => <p key={`${paragraph}-${index}`}>{paragraph}</p>)
+        )}
       </div>
     </section>
   );
@@ -99,6 +103,7 @@ function TextBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
 function LeadBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
   const heading = contentText(block.content, 'heading');
   const body = contentText(block.content, 'body');
+  const markdown = contentText(block.content, 'markdown');
   return (
     <section
       id={safeAnchor(block.anchorId)}
@@ -109,7 +114,11 @@ function LeadBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
       <p className="text-xs tracking-[0.16em] text-[var(--sf-color-subtle)]">چکیده</p>
       <div className="max-w-4xl">
         {heading ? <h2 className="text-2xl font-normal sm:text-4xl">{heading}</h2> : null}
-        {body ? (
+        {markdown ? (
+          <div className="mt-5">
+            <GuideMarkdown markdown={markdown} />
+          </div>
+        ) : body ? (
           <p className="mt-5 text-lg leading-10 text-[var(--sf-color-muted)] sm:text-2xl sm:leading-[2]">
             {body}
           </p>
@@ -122,6 +131,7 @@ function LeadBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
 function ImageTextBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
   const heading = contentText(block.content, 'heading');
   const body = contentText(block.content, 'body');
+  const markdown = contentText(block.content, 'markdown');
   const imageLeft = block.variant === 'image-left';
   return (
     <section
@@ -135,7 +145,11 @@ function ImageTextBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
         {heading ? (
           <h2 className="text-3xl font-normal leading-[1.5] sm:text-4xl">{heading}</h2>
         ) : null}
-        {body ? (
+        {markdown ? (
+          <div className="mt-6">
+            <GuideMarkdown markdown={markdown} />
+          </div>
+        ) : body ? (
           <p className="mt-6 text-base leading-9 text-[var(--sf-color-muted)] sm:text-lg sm:leading-10">
             {body}
           </p>

@@ -16,6 +16,7 @@ export type GuideBlockType =
   | 'PRODUCT_CARDS'
   | 'CTA'
   | 'DIVIDER';
+export type GuideProductRecommendationMode = 'AUTOMATIC' | 'MANUAL' | 'DISABLED';
 
 export type PublicGuideMedia = Readonly<{
   id: string;
@@ -40,6 +41,7 @@ export type PublicGuideArticleSummary = Readonly<{
   excerpt: string | null;
   format: GuideArticleFormat;
   heroMedia: PublicGuideMedia | null;
+  cardMedia: PublicGuideMedia | null;
   seoCanonicalPath: string | null;
   seoNoIndex: boolean;
   seoOgMedia: PublicGuideMedia | null;
@@ -78,6 +80,7 @@ export type PublicGuideCollectionLink = Readonly<{
 export type PublicGuideArticle = PublicGuideArticleSummary &
   Readonly<{
     heroMobileMedia: PublicGuideMedia | null;
+    productRecommendationMode: GuideProductRecommendationMode;
     seoTitle: string | null;
     seoDescription: string | null;
     searchKeywords: readonly string[];
@@ -135,6 +138,11 @@ const BLOCK_TYPES = new Set<GuideBlockType>([
   'CTA',
   'DIVIDER',
 ]);
+const PRODUCT_RECOMMENDATION_MODES = new Set<GuideProductRecommendationMode>([
+  'AUTOMATIC',
+  'MANUAL',
+  'DISABLED',
+]);
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
@@ -189,6 +197,7 @@ function parseSummary(value: unknown): PublicGuideArticleSummary | null {
     excerpt: text(item.excerpt),
     format,
     heroMedia: media(item.heroMedia),
+    cardMedia: media(item.cardMedia),
     seoCanonicalPath: text(item.seoCanonicalPath),
     seoNoIndex: item.seoNoIndex === true,
     seoOgMedia: media(item.seoOgMedia),
@@ -248,6 +257,9 @@ export function parsePublicGuideArticle(value: unknown): PublicGuideArticle | nu
   const item = record(value);
   if (!summary || !item) return null;
   const blocks = Array.isArray(item.blocks) ? item.blocks.map(parseBlock) : null;
+  const productRecommendationMode = text(
+    item.productRecommendationMode,
+  ) as GuideProductRecommendationMode | null;
   const relatedProducts = Array.isArray(item.relatedProducts)
     ? item.relatedProducts.map(parseRelatedProduct)
     : [];
@@ -262,6 +274,8 @@ export function parsePublicGuideArticle(value: unknown): PublicGuideArticle | nu
     : [];
   if (
     !blocks ||
+    !productRecommendationMode ||
+    !PRODUCT_RECOMMENDATION_MODES.has(productRecommendationMode) ||
     !blocks.every((block): block is PublicGuideBlock => block !== null) ||
     !relatedProducts.every((product): product is PublicGuideRelatedProduct => product !== null) ||
     !relatedCategories.every(
@@ -274,6 +288,7 @@ export function parsePublicGuideArticle(value: unknown): PublicGuideArticle | nu
   return {
     ...summary,
     heroMobileMedia: media(item.heroMobileMedia),
+    productRecommendationMode,
     seoTitle: text(item.seoTitle),
     seoDescription: text(item.seoDescription),
     searchKeywords: Array.isArray(item.searchKeywords)

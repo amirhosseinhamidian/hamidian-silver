@@ -100,7 +100,6 @@ export function ProductPurchasePanel({
     ? (sizeGroup?.selectionLabel ?? 'انتخاب سایز')
     : 'انتخاب مدل';
   const sizeLabel = sizeGroup?.cartLabel ?? 'سایز';
-  const showSizeGuide = isSizeSelection && sizeLabel === 'سایز';
   const hasPurchasableVariant = product.variants.some(
     (variant) => variant.isAvailable && variant.availableQuantity > 0,
   );
@@ -190,32 +189,23 @@ export function ProductPurchasePanel({
       aria-labelledby="purchase-options-title"
       className="mt-9 border-t border-[var(--sf-color-border)] pt-7"
     >
-      <h2 id="purchase-options-title" className="text-sm font-medium">
-        انتخاب و خرید
-      </h2>
-
-      {showSizeGuide && !hasMultipleVariants ? (
+      <div className="flex items-center justify-between gap-4">
+        <h2 id="purchase-options-title" className="text-sm font-medium">
+          انتخاب و خرید
+        </h2>
         <Link
           href="/size-guide"
-          className="mt-4 inline-flex border-b border-[var(--sf-color-border-strong)] text-xs"
+          className="border-b border-[var(--sf-color-border-strong)] text-xs"
         >
           راهنمای انتخاب سایز
         </Link>
-      ) : null}
+      </div>
 
       {hasMultipleVariants ? (
         <fieldset ref={variantSelectorRef} className="mt-5 scroll-mt-28">
           <legend className="sr-only">{selectorLabel}</legend>
           <div className="flex items-center justify-between gap-4">
             <span className="text-xs text-[var(--sf-color-muted)]">{selectorLabel}</span>
-            {showSizeGuide ? (
-              <Link
-                href="/size-guide"
-                className="border-b border-[var(--sf-color-border-strong)] text-xs"
-              >
-                راهنمای انتخاب سایز
-              </Link>
-            ) : null}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {product.variants.map((variant) => (
