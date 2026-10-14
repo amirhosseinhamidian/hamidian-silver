@@ -188,10 +188,13 @@ describe('GuideService', () => {
       salePriceToman: 1_100_000,
       status: ProductStatus.ACTIVE,
       deletedAt: null,
+      brandId: '00000000-0000-4000-8000-000000000042',
+      createdAt: new Date('2026-10-14T10:00:00.000Z'),
+      homepagePopularFeature: { priority: 1 },
+      categories: [{ categoryId: '00000000-0000-4000-8000-000000000041' }],
       variants: [{ salePriceToman: 1_000_000, inventories: [{ onHand: 3, reserved: 1 }] }],
       media: [],
     };
-    prisma.$queryRaw.mockResolvedValue([{ id: product.id }]);
     prisma.product.findMany.mockResolvedValue([product]);
     prisma.guideArticle.findFirst.mockResolvedValue({
       id: 'article-auto',
@@ -217,17 +220,27 @@ describe('GuideService', () => {
     await expect(service.getPublicArticle('automatic-guide')).resolves.toMatchObject({
       relatedProducts: [{ id: product.id, salePriceToman: 1_000_000 }],
     });
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
     expect(prisma.product.findMany).toHaveBeenCalledTimes(1);
-    const query = prisma.$queryRaw.mock.calls[0]?.[0] as
-      { strings?: readonly string[] } | undefined;
-    expect(query?.strings?.join('')).toContain('::uuid');
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 80,
+        where: expect.objectContaining({
+          status: ProductStatus.ACTIVE,
+          deletedAt: null,
+          categories: {
+            some: expect.objectContaining({
+              categoryId: { in: ['00000000-0000-4000-8000-000000000041'] },
+            }),
+          },
+        }),
+      }),
+    );
   });
 
   it('keeps a public article available when automatic recommendations fail', async () => {
     const { service, prisma } = createService();
     const log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    prisma.$queryRaw.mockRejectedValue(new Error('automatic recommendation query failed'));
+    prisma.product.findMany.mockRejectedValue(new Error('automatic recommendation query failed'));
     prisma.guideArticle.findFirst.mockResolvedValue({
       id: 'article-auto-failure',
       title: 'راهنمای انگشتر',

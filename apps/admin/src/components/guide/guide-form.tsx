@@ -27,6 +27,7 @@ import {
   type GuideProductRecommendationMode,
   type GuideFormReferences,
 } from '@/lib/guide/guide-model';
+import { guideSaveIssue, type GuideFormIssue } from '@/lib/guide/guide-form-errors';
 import type { SiteMedia } from '@/lib/site-settings/site-settings-model';
 
 function stringValue(value: unknown): string {
@@ -127,15 +128,6 @@ function blockContent(block: GuideBlockDraft): Record<string, unknown> {
   return { heading, body };
 }
 
-function responseMessage(payload: unknown, fallback: string): string {
-  if (typeof payload === 'object' && payload !== null) {
-    const message = (payload as Record<string, unknown>).message;
-    if (typeof message === 'string') return message;
-    if (Array.isArray(message)) return message.join('، ');
-  }
-  return fallback;
-}
-
 function SelectionGroup({
   title,
   items,
@@ -205,36 +197,95 @@ export function GuideForm({
   const [categoryIds, setCategoryIds] = useState(article?.categoryIds ?? []);
   const [brandIds, setBrandIds] = useState(article?.brandIds ?? []);
   const [blocks, setBlocks] = useState<GuideBlockDraft[]>(draftFromArticle(article));
+  const [collapsedBlockIds, setCollapsedBlockIds] = useState<Set<string>>(() => new Set());
   const [seo, setSeo] = useState<SeoEditorValue>(
     createSeoEditorValue(
       article ? { ...article, seoOgMediaId: article.seoOgMedia?.id ?? null } : null,
     ),
   );
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<GuideFormIssue | null>(null);
 
-  function validate(): string | null {
-    if (!title.trim()) return 'عنوان دانستنی الزامی است.';
+  function validate(): GuideFormIssue | null {
+    if (!title.trim()) return { message: 'عنوان دانستنی الزامی است.', fieldId: 'guide-title' };
     if (!/^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u.test(slug.trim()))
-      return 'اسلاگ فقط می‌تواند شامل حروف، عدد و خط تیره باشد.';
-    if (status === 'PUBLISHED' && !excerpt.trim()) return 'برای انتشار، خلاصه دانستنی الزامی است.';
+      return {
+        message: 'اسلاگ فقط می‌تواند شامل حروف، عدد و خط تیره باشد.',
+        fieldId: 'guide-slug',
+      };
+    if (status === 'PUBLISHED' && !excerpt.trim())
+      return {
+        message: 'برای انتشار، خلاصه دانستنی الزامی است.',
+        fieldId: 'guide-excerpt',
+      };
     if (status === 'PUBLISHED' && !blocks.length)
-      return 'برای انتشار، حداقل یک بلوک محتوا لازم است.';
+      return { message: 'برای انتشار، حداقل یک بلوک محتوا لازم است.' };
     if (!isValidSeoCanonicalPath(seo.canonicalPath.trim(), '/guide/'))
-      return 'مسیر canonical باید با ‎/guide/‎ شروع شود و query یا fragment نداشته باشد.';
+      return {
+        message: 'مسیر canonical باید با ‎/guide/‎ شروع شود و query یا fragment نداشته باشد.',
+        fieldId: 'seo-canonical-path',
+      };
+    const invalidAnchorIndex = blocks.findIndex(
+      (block) =>
+        Boolean(block.anchorId.trim()) && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(block.anchorId.trim()),
+    );
+    if (invalidAnchorIndex >= 0) {
+      const block = blocks[invalidAnchorIndex]!;
+      return {
+        message: `خطا در بخش ${new Intl.NumberFormat('fa-IR').format(invalidAnchorIndex + 1)}، «شناسه لینک داخلی»: فقط حروف انگلیسی کوچک، عدد و خط تیره مجاز است؛ مانند silver-care.`,
+        fieldId: `guide-block-${block.clientId}-anchor`,
+        blockIndex: invalidAnchorIndex,
+      };
+    }
     const anchors = blocks.map((block) => block.anchorId.trim()).filter(Boolean);
-    if (new Set(anchors).size !== anchors.length) return 'شناسه لینک داخلی بلوک‌ها باید یکتا باشد.';
-    if (
-      blocks.some(
-        (block) =>
-          block.type !== 'DIVIDER' &&
-          !block.heading.trim() &&
-          !block.body.trim() &&
-          !block.auxiliary.trim(),
-      )
-    )
-      return 'یکی از بلوک‌ها هیچ محتوایی ندارد.';
+    if (new Set(anchors).size !== anchors.length) {
+      const duplicateIndex = blocks.findIndex(
+        (block, index) =>
+          Boolean(block.anchorId.trim()) &&
+          blocks.findIndex((item) => item.anchorId.trim() === block.anchorId.trim()) !== index,
+      );
+      const block = blocks[duplicateIndex]!;
+      return {
+        message: `شناسه لینک داخلی بخش ${new Intl.NumberFormat('fa-IR').format(duplicateIndex + 1)} تکراری است؛ هر شناسه باید یکتا باشد.`,
+        fieldId: `guide-block-${block.clientId}-anchor`,
+        blockIndex: duplicateIndex,
+      };
+    }
+    const emptyBlockIndex = blocks.findIndex(
+      (block) =>
+        block.type !== 'DIVIDER' &&
+        !block.heading.trim() &&
+        !block.body.trim() &&
+        !block.auxiliary.trim(),
+    );
+    if (emptyBlockIndex >= 0) {
+      const block = blocks[emptyBlockIndex]!;
+      return {
+        message: `بخش ${new Intl.NumberFormat('fa-IR').format(emptyBlockIndex + 1)} هیچ محتوایی ندارد.`,
+        fieldId: `guide-block-${block.clientId}-heading`,
+        blockIndex: emptyBlockIndex,
+      };
+    }
     return null;
+  }
+
+  function revealIssue(issue: GuideFormIssue) {
+    if (issue.blockIndex !== undefined) {
+      const block = blocks[issue.blockIndex];
+      if (block)
+        setCollapsedBlockIds((current) => {
+          const next = new Set(current);
+          next.delete(block.clientId);
+          return next;
+        });
+    }
+    window.requestAnimationFrame(() => {
+      const target = issue.fieldId ? document.getElementById(issue.fieldId) : null;
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.focus({ preventScroll: true });
+      } else window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
   async function submit(event: FormEvent) {
@@ -242,7 +293,7 @@ export function GuideForm({
     const issue = validate();
     if (issue) {
       setError(issue);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      revealIssue(issue);
       return;
     }
     setPending(true);
@@ -289,12 +340,24 @@ export function GuideForm({
         },
       );
       const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
-      if (!response.ok) throw new Error(responseMessage(body, 'ذخیره دانستنی انجام نشد.'));
+      if (!response.ok) {
+        const issue = guideSaveIssue(
+          body,
+          blocks.map((block) => block.clientId),
+        );
+        setError(issue);
+        revealIssue(issue);
+        return;
+      }
       const savedId = typeof body?.id === 'string' ? body.id : article?.id;
       router.push(savedId ? `/knowledge/${savedId}/edit?saved=1` : '/knowledge');
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'ذخیره دانستنی انجام نشد.');
+      const issue = {
+        message: caught instanceof Error ? caught.message : 'ذخیره دانستنی انجام نشد.',
+      };
+      setError(issue);
+      revealIssue(issue);
     } finally {
       setPending(false);
     }
@@ -321,7 +384,21 @@ export function GuideForm({
           </Button>
         </div>
       </header>
-      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {error ? (
+        <Alert
+          tone="danger"
+          title="دانستنی ذخیره نشد"
+          action={
+            error.fieldId ? (
+              <Button size="sm" variant="outline" onClick={() => revealIssue(error)}>
+                رفتن به بخش خطادار
+              </Button>
+            ) : undefined
+          }
+        >
+          {error.message}
+        </Alert>
+      ) : null}
       <Card
         title="اطلاعات اصلی"
         description="عنوان و خلاصه باید به سؤال یا نیاز واقعی کاربر پاسخ دهند."
@@ -490,7 +567,13 @@ export function GuideForm({
           />
         </div>
       </Card>
-      <GuideBlockEditor blocks={blocks} disabled={pending} onChange={setBlocks} />
+      <GuideBlockEditor
+        blocks={blocks}
+        collapsedBlockIds={collapsedBlockIds}
+        disabled={pending}
+        onChange={setBlocks}
+        onCollapsedChange={setCollapsedBlockIds}
+      />
       <Card
         title="ارتباط محتوایی"
         description="این ارتباط‌ها برای پیشنهاد محصول، لینک‌سازی داخلی و ساخت خوشه‌های موضوعی استفاده می‌شوند."
@@ -517,6 +600,12 @@ export function GuideForm({
             در حالت خودکار، محصولات فعال و موجود از دسته‌بندی‌های مرتبط انتخاب می‌شوند. شناسه‌های
             دستی با تغییر حالت حذف نمی‌شوند.
           </p>
+          {productRecommendationMode === 'AUTOMATIC' && !categoryIds.length ? (
+            <Alert tone="warning" className="mt-3">
+              برای فعال‌شدن پیشنهاد خودکار، حداقل یک دسته‌بندی مرتبط انتخاب کنید. بدون دسته‌بندی،
+              محصول نامرتبط جایگزین نمی‌شود و سکشن محصولات نمایش داده نخواهد شد.
+            </Alert>
+          ) : null}
         </div>
         <div className="grid gap-5 md:grid-cols-2">
           <SelectionGroup
