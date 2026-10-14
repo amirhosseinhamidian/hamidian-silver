@@ -24,7 +24,7 @@ export function RelatedKnowledgeSection({
     <section aria-labelledby={headingId} className={className}>
       <header className="flex flex-wrap items-end justify-between gap-5 border-b border-[var(--sf-color-border)] pb-6">
         <div>
-          <p className="text-xs tracking-[0.16em] text-[var(--sf-color-subtle)]">{eyebrow}</p>
+          <p className="text-sm tracking-[0.16em] text-[var(--sf-color-subtle)]">{eyebrow}</p>
           <h2 id={headingId} className="mt-3 text-3xl font-normal sm:text-4xl">
             {title}
           </h2>

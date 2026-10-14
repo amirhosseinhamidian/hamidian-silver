@@ -48,7 +48,7 @@ export function GuideArticleCard({
         }
       >
         <div
-          className={`flex flex-wrap items-center gap-x-4 gap-y-2 text-xs ${
+          className={`flex flex-wrap items-center gap-x-4 gap-y-2 text-sm ${
             prominent ? 'text-white/55' : 'text-[var(--sf-color-subtle)]'
           }`}
         >
@@ -64,7 +64,7 @@ export function GuideArticleCard({
         </h2>
         {article.excerpt ? (
           <p
-            className={`mt-5 line-clamp-3 text-sm leading-8 ${
+            className={`mt-5 line-clamp-3 text-base leading-8 ${
               prominent ? 'text-white/70' : 'text-[var(--sf-color-muted)]'
             }`}
           >
@@ -76,7 +76,7 @@ export function GuideArticleCard({
             className={`mt-6 flex flex-wrap gap-2 ${prominent ? 'text-white/60' : 'text-[var(--sf-color-muted)]'}`}
           >
             {article.topics.map((topic) => (
-              <span key={topic.id} className="text-xs">
+              <span key={topic.id} className="text-sm">
                 #{topic.name}
               </span>
             ))}

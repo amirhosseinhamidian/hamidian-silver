@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
@@ -109,6 +110,8 @@ type GuideMedia = { id: string; storageKey: string; mimeType: string; altText: s
 
 @Injectable()
 export class GuideService {
+  private readonly logger = new Logger(GuideService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly mediaUrls: PublicMediaUrlService,
@@ -139,7 +142,7 @@ export class GuideService {
     if (!row) throw new NotFoundException('Guide article was not found.');
     const [relatedArticles, relatedProducts] = await Promise.all([
       this.findRelatedArticles(row),
-      this.resolveRelatedProducts(row),
+      this.resolveRelatedProductsSafely(row),
     ]);
     return this.projectArticle(row, relatedArticles, relatedProducts);
   }
@@ -710,8 +713,13 @@ export class GuideService {
     );
     if (!categoryIds.length) return [];
     const brandIds: string[] = source.brands.map(({ brandId }: { brandId: string }) => brandId);
+    const categoryIdList = Prisma.join(
+      categoryIds.map((categoryId) => Prisma.sql`${categoryId}::uuid`),
+    );
     const brandRank = brandIds.length
-      ? Prisma.sql`CASE WHEN product."brandId" IN (${Prisma.join(brandIds)}) THEN 1 ELSE 0 END`
+      ? Prisma.sql`CASE WHEN product."brandId" IN (${Prisma.join(
+          brandIds.map((brandId) => Prisma.sql`${brandId}::uuid`),
+        )}) THEN 1 ELSE 0 END`
       : Prisma.sql`0`;
     const candidates = await this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
       SELECT product.id
@@ -723,7 +731,7 @@ export class GuideService {
           FROM "product_categories" AS product_category
           JOIN "categories" AS category ON category.id = product_category."categoryId"
           WHERE product_category."productId" = product.id
-            AND product_category."categoryId" IN (${Prisma.join(categoryIds)})
+            AND product_category."categoryId" IN (${categoryIdList})
             AND category."isActive" = true
             AND category."deletedAt" IS NULL
         )
@@ -745,7 +753,7 @@ export class GuideService {
           SELECT COUNT(*)
           FROM "product_categories" AS ranked_category
           WHERE ranked_category."productId" = product.id
-            AND ranked_category."categoryId" IN (${Prisma.join(categoryIds)})
+            AND ranked_category."categoryId" IN (${categoryIdList})
         ) DESC,
         ${brandRank} DESC,
         EXISTS (
@@ -769,6 +777,18 @@ export class GuideService {
         return product ? [{ productId: id, product }] : [];
       }),
     );
+  }
+
+  private async resolveRelatedProductsSafely(source: any) {
+    try {
+      return await this.resolveRelatedProducts(source);
+    } catch (error) {
+      this.logger.error(
+        `Guide product recommendations failed for article ${source.id}; rendering without recommendations.`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      return [];
+    }
   }
 
   private projectSellableProducts(relations: readonly any[]) {
