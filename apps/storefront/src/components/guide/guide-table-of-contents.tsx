@@ -25,7 +25,7 @@ export function GuideTableOfContents({
       aria-label="در این دانستنی"
       className={
         desktop
-          ? 'border border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)] p-6 shadow-[0_18px_50px_rgba(23,23,23,0.06)]'
+          ? 'flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden border border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)] p-6 shadow-[0_18px_50px_rgba(23,23,23,0.06)]'
           : 'sticky top-16 z-20 border-b border-[var(--sf-color-border)] bg-[color:var(--sf-color-canvas)/0.94] backdrop-blur-md lg:hidden'
       }
     >
@@ -37,7 +37,7 @@ export function GuideTableOfContents({
       <div
         className={
           desktop
-            ? 'mt-3 flex flex-col'
+            ? 'mt-3 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pe-2 [scrollbar-gutter:stable] [scrollbar-width:thin]'
             : 'sf-container flex gap-8 overflow-x-auto py-4 text-sm whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-12'
         }
       >

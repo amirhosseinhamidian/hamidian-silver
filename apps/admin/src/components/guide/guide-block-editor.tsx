@@ -109,12 +109,16 @@ function auxiliaryLabel(type: GuideBlockType): string {
 
 export function GuideBlockEditor({
   blocks,
+  collapsedBlockIds,
   disabled,
   onChange,
+  onCollapsedChange,
 }: Readonly<{
   blocks: readonly GuideBlockDraft[];
+  collapsedBlockIds: ReadonlySet<string>;
   disabled: boolean;
   onChange: (blocks: GuideBlockDraft[]) => void;
+  onCollapsedChange: (ids: Set<string>) => void;
 }>) {
   function update(index: number, patch: Partial<GuideBlockDraft>) {
     onChange(
@@ -147,215 +151,258 @@ export function GuideBlockEditor({
     [next[index], next[target]] = [next[target]!, next[index]!];
     onChange(next);
   }
+  function toggleCollapsed(clientId: string) {
+    const next = new Set(collapsedBlockIds);
+    if (next.has(clientId)) next.delete(clientId);
+    else next.add(clientId);
+    onCollapsedChange(next);
+  }
+  const allCollapsed =
+    blocks.length > 0 && blocks.every((block) => collapsedBlockIds.has(block.clientId));
+
   return (
     <Card
       title="چینش اختصاصی محتوا"
       description="با ترکیب بلوک‌ها، هر دانستنی می‌تواند ساختار و ریتم بصری متفاوتی داشته باشد."
       action={
-        <Button size="sm" variant="outline" disabled={disabled} onClick={add}>
-          افزودن بلوک
-        </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          {blocks.length ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={disabled}
+              aria-expanded={!allCollapsed}
+              onClick={() =>
+                onCollapsedChange(
+                  allCollapsed ? new Set() : new Set(blocks.map((block) => block.clientId)),
+                )
+              }
+            >
+              {allCollapsed ? 'بازکردن همه' : 'جمع‌کردن همه'}
+            </Button>
+          ) : null}
+          <Button size="sm" variant="outline" disabled={disabled} onClick={add}>
+            افزودن بلوک
+          </Button>
+        </div>
       }
     >
       {blocks.length ? (
         <div className="space-y-4">
-          {blocks.map((block, index) => (
-            <article
-              key={block.clientId}
-              className="rounded-[var(--admin-radius-lg)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface-subtle)] p-4"
-            >
-              <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Badge tone="info">بخش {formatAdminInteger(index + 1)}</Badge>
-                  <strong className="text-sm">{guideBlockLabel(block.type)}</strong>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={disabled || index === 0}
-                    onClick={() => move(index, -1)}
-                  >
-                    بالاتر
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={disabled || index === blocks.length - 1}
-                    onClick={() => move(index, 1)}
-                  >
-                    پایین‌تر
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    disabled={disabled}
-                    onClick={() => onChange(blocks.filter((_, itemIndex) => itemIndex !== index))}
-                  >
-                    حذف
-                  </Button>
-                </div>
-              </header>
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField id={`guide-block-${block.clientId}-type`} label="نوع بلوک">
-                  {(props) => (
-                    <Select
-                      {...props}
-                      value={block.type}
-                      disabled={disabled}
-                      options={BLOCK_TYPES.map((type) => ({
-                        value: type,
-                        label: guideBlockLabel(type),
-                      }))}
-                      onValueChange={(value) => {
-                        const type = value as GuideBlockType;
-                        update(index, { type, variant: VARIANTS[type][0]?.value ?? '' });
-                      }}
-                    />
-                  )}
-                </FormField>
-                <FormField id={`guide-block-${block.clientId}-variant`} label="سبک نمایش">
-                  {(props) => (
-                    <Select
-                      {...props}
-                      value={block.variant}
-                      disabled={disabled}
-                      options={VARIANTS[block.type]}
-                      onValueChange={(value) => update(index, { variant: value })}
-                    />
-                  )}
-                </FormField>
-                <FormField
-                  id={`guide-block-${block.clientId}-heading`}
-                  label={block.type === 'QUOTE' ? 'متن نقل‌قول' : 'عنوان'}
+          {blocks.map((block, index) => {
+            const collapsed = collapsedBlockIds.has(block.clientId);
+            const panelId = `guide-block-panel-${block.clientId}`;
+            return (
+              <article
+                key={block.clientId}
+                className="rounded-[var(--admin-radius-lg)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface-subtle)] p-4"
+              >
+                <header
+                  className={`${collapsed ? '' : 'mb-4'} flex flex-wrap items-center justify-between gap-2`}
                 >
-                  {(props) => (
-                    <Input
-                      {...props}
-                      value={block.heading}
-                      maxLength={300}
-                      disabled={disabled}
-                      onChange={(event) => update(index, { heading: event.target.value })}
-                    />
-                  )}
-                </FormField>
-                <FormField
-                  id={`guide-block-${block.clientId}-anchor`}
-                  label="شناسه لینک داخلی"
-                  hint="اختیاری؛ مانند silver-care"
-                >
-                  {(props) => (
-                    <Input
-                      {...props}
-                      dir="ltr"
-                      value={block.anchorId}
-                      maxLength={80}
-                      disabled={disabled}
-                      onChange={(event) => update(index, { anchorId: event.target.value })}
-                    />
-                  )}
-                </FormField>
-                {block.type !== 'DIVIDER' &&
-                block.type !== 'TABLE' &&
-                block.type !== 'STEPS' &&
-                block.type !== 'FAQ' ? (
-                  <div className="md:col-span-2">
-                    <FormField
-                      id={`guide-block-${block.clientId}-body`}
-                      label={
-                        block.type === 'RICH_TEXT'
-                          ? 'متن؛ هر پاراگراف را با یک خط خالی جدا کنید'
-                          : 'متن'
-                      }
+                  <div className="flex items-center gap-2">
+                    <Badge tone="info">بخش {formatAdminInteger(index + 1)}</Badge>
+                    <strong className="text-sm">{guideBlockLabel(block.type)}</strong>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={disabled || index === 0}
+                      onClick={() => move(index, -1)}
                     >
-                      {(props) =>
-                        MARKDOWN_BLOCK_TYPES.has(block.type) ? (
-                          <GuideMarkdownEditor
-                            id={props.id}
-                            value={block.body}
-                            disabled={disabled}
-                            onChange={(body) => update(index, { body })}
-                          />
-                        ) : (
+                      بالاتر
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={disabled || index === blocks.length - 1}
+                      onClick={() => move(index, 1)}
+                    >
+                      پایین‌تر
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={disabled}
+                      aria-expanded={!collapsed}
+                      aria-controls={panelId}
+                      aria-label={`${collapsed ? 'بازکردن' : 'جمع‌کردن'} بخش ${formatAdminInteger(index + 1)}`}
+                      onClick={() => toggleCollapsed(block.clientId)}
+                    >
+                      {collapsed ? 'بازکردن' : 'جمع‌کردن'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      disabled={disabled}
+                      onClick={() => onChange(blocks.filter((_, itemIndex) => itemIndex !== index))}
+                    >
+                      حذف
+                    </Button>
+                  </div>
+                </header>
+                <div id={panelId} hidden={collapsed} className="grid gap-4 md:grid-cols-2">
+                  <FormField id={`guide-block-${block.clientId}-type`} label="نوع بلوک">
+                    {(props) => (
+                      <Select
+                        {...props}
+                        value={block.type}
+                        disabled={disabled}
+                        options={BLOCK_TYPES.map((type) => ({
+                          value: type,
+                          label: guideBlockLabel(type),
+                        }))}
+                        onValueChange={(value) => {
+                          const type = value as GuideBlockType;
+                          update(index, { type, variant: VARIANTS[type][0]?.value ?? '' });
+                        }}
+                      />
+                    )}
+                  </FormField>
+                  <FormField id={`guide-block-${block.clientId}-variant`} label="سبک نمایش">
+                    {(props) => (
+                      <Select
+                        {...props}
+                        value={block.variant}
+                        disabled={disabled}
+                        options={VARIANTS[block.type]}
+                        onValueChange={(value) => update(index, { variant: value })}
+                      />
+                    )}
+                  </FormField>
+                  <FormField
+                    id={`guide-block-${block.clientId}-heading`}
+                    label={block.type === 'QUOTE' ? 'متن نقل‌قول' : 'عنوان'}
+                  >
+                    {(props) => (
+                      <Input
+                        {...props}
+                        value={block.heading}
+                        maxLength={300}
+                        disabled={disabled}
+                        onChange={(event) => update(index, { heading: event.target.value })}
+                      />
+                    )}
+                  </FormField>
+                  <FormField
+                    id={`guide-block-${block.clientId}-anchor`}
+                    label="شناسه لینک داخلی"
+                    hint="اختیاری؛ مانند silver-care"
+                  >
+                    {(props) => (
+                      <Input
+                        {...props}
+                        dir="ltr"
+                        value={block.anchorId}
+                        maxLength={80}
+                        disabled={disabled}
+                        onChange={(event) => update(index, { anchorId: event.target.value })}
+                      />
+                    )}
+                  </FormField>
+                  {block.type !== 'DIVIDER' &&
+                  block.type !== 'TABLE' &&
+                  block.type !== 'STEPS' &&
+                  block.type !== 'FAQ' ? (
+                    <div className="md:col-span-2">
+                      <FormField
+                        id={`guide-block-${block.clientId}-body`}
+                        label={
+                          block.type === 'RICH_TEXT'
+                            ? 'متن؛ هر پاراگراف را با یک خط خالی جدا کنید'
+                            : 'متن'
+                        }
+                      >
+                        {(props) =>
+                          MARKDOWN_BLOCK_TYPES.has(block.type) ? (
+                            <GuideMarkdownEditor
+                              id={props.id}
+                              value={block.body}
+                              disabled={disabled}
+                              onChange={(body) => update(index, { body })}
+                            />
+                          ) : (
+                            <Textarea
+                              {...props}
+                              value={block.body}
+                              maxLength={20000}
+                              disabled={disabled}
+                              className="min-h-36"
+                              onChange={(event) => update(index, { body: event.target.value })}
+                            />
+                          )
+                        }
+                      </FormField>
+                    </div>
+                  ) : null}
+                  {['STEPS', 'FAQ', 'TABLE', 'QUOTE', 'IMAGE', 'GALLERY'].includes(block.type) ? (
+                    <div className="md:col-span-2">
+                      <FormField
+                        id={`guide-block-${block.clientId}-auxiliary`}
+                        label={auxiliaryLabel(block.type)}
+                      >
+                        {(props) => (
                           <Textarea
                             {...props}
-                            value={block.body}
+                            dir={block.type === 'TABLE' ? 'ltr' : undefined}
+                            value={block.auxiliary}
                             maxLength={20000}
                             disabled={disabled}
-                            className="min-h-36"
-                            onChange={(event) => update(index, { body: event.target.value })}
+                            onChange={(event) => update(index, { auxiliary: event.target.value })}
                           />
-                        )
-                      }
-                    </FormField>
-                  </div>
-                ) : null}
-                {['STEPS', 'FAQ', 'TABLE', 'QUOTE', 'IMAGE', 'GALLERY'].includes(block.type) ? (
-                  <div className="md:col-span-2">
-                    <FormField
-                      id={`guide-block-${block.clientId}-auxiliary`}
-                      label={auxiliaryLabel(block.type)}
-                    >
-                      {(props) => (
-                        <Textarea
-                          {...props}
-                          dir={block.type === 'TABLE' ? 'ltr' : undefined}
-                          value={block.auxiliary}
-                          maxLength={20000}
-                          disabled={disabled}
-                          onChange={(event) => update(index, { auxiliary: event.target.value })}
-                        />
-                      )}
-                    </FormField>
-                  </div>
-                ) : null}
-                {block.type === 'CTA' ? (
-                  <>
-                    <FormField id={`guide-block-${block.clientId}-button-label`} label="متن دکمه">
-                      {(props) => (
-                        <Input
-                          {...props}
-                          value={block.buttonLabel}
-                          maxLength={100}
-                          disabled={disabled}
-                          onChange={(event) => update(index, { buttonLabel: event.target.value })}
-                        />
-                      )}
-                    </FormField>
-                    <FormField id={`guide-block-${block.clientId}-button-href`} label="لینک دکمه">
-                      {(props) => (
-                        <Input
-                          {...props}
-                          dir="ltr"
-                          value={block.buttonHref}
-                          maxLength={1000}
-                          disabled={disabled}
-                          placeholder="/products"
-                          onChange={(event) => update(index, { buttonHref: event.target.value })}
-                        />
-                      )}
-                    </FormField>
-                  </>
-                ) : null}
-                {needsMedia(block.type) ? (
-                  <div className="md:col-span-2">
-                    <SiteMediaField
-                      label={`تصویر ${guideBlockLabel(block.type)}`}
-                      media={block.primaryMedia}
-                      altText={block.heading || 'تصویر دانستنی'}
-                      uploadUrl="/api/content-pages/media"
-                      disabled={disabled}
-                      aspect="wide"
-                      onUploaded={(media) =>
-                        update(index, { primaryMediaId: media.id, primaryMedia: media })
-                      }
-                      onClear={() => update(index, { primaryMediaId: null, primaryMedia: null })}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            </article>
-          ))}
+                        )}
+                      </FormField>
+                    </div>
+                  ) : null}
+                  {block.type === 'CTA' ? (
+                    <>
+                      <FormField id={`guide-block-${block.clientId}-button-label`} label="متن دکمه">
+                        {(props) => (
+                          <Input
+                            {...props}
+                            value={block.buttonLabel}
+                            maxLength={100}
+                            disabled={disabled}
+                            onChange={(event) => update(index, { buttonLabel: event.target.value })}
+                          />
+                        )}
+                      </FormField>
+                      <FormField id={`guide-block-${block.clientId}-button-href`} label="لینک دکمه">
+                        {(props) => (
+                          <Input
+                            {...props}
+                            dir="ltr"
+                            value={block.buttonHref}
+                            maxLength={1000}
+                            disabled={disabled}
+                            placeholder="/products"
+                            onChange={(event) => update(index, { buttonHref: event.target.value })}
+                          />
+                        )}
+                      </FormField>
+                    </>
+                  ) : null}
+                  {needsMedia(block.type) ? (
+                    <div className="md:col-span-2">
+                      <SiteMediaField
+                        label={`تصویر ${guideBlockLabel(block.type)}`}
+                        media={block.primaryMedia}
+                        altText={block.heading || 'تصویر دانستنی'}
+                        uploadUrl="/api/content-pages/media"
+                        disabled={disabled}
+                        aspect="wide"
+                        onUploaded={(media) =>
+                          update(index, { primaryMediaId: media.id, primaryMedia: media })
+                        }
+                        onClear={() => update(index, { primaryMediaId: null, primaryMedia: null })}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </article>
+            );
+          })}
         </div>
       ) : (
         <div className="rounded-[var(--admin-radius-md)] border border-dashed border-[var(--admin-color-border-strong)] p-8 text-center">

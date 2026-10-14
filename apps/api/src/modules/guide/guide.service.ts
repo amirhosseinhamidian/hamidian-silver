@@ -713,70 +713,66 @@ export class GuideService {
     );
     if (!categoryIds.length) return [];
     const brandIds: string[] = source.brands.map(({ brandId }: { brandId: string }) => brandId);
-    const categoryIdList = Prisma.join(
-      categoryIds.map((categoryId) => Prisma.sql`${categoryId}::uuid`),
-    );
-    const brandRank = brandIds.length
-      ? Prisma.sql`CASE WHEN product."brandId" IN (${Prisma.join(
-          brandIds.map((brandId) => Prisma.sql`${brandId}::uuid`),
-        )}) THEN 1 ELSE 0 END`
-      : Prisma.sql`0`;
-    const candidates = await this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-      SELECT product.id
-      FROM "products" AS product
-      WHERE product.status = 'ACTIVE'
-        AND product."deletedAt" IS NULL
-        AND EXISTS (
-          SELECT 1
-          FROM "product_categories" AS product_category
-          JOIN "categories" AS category ON category.id = product_category."categoryId"
-          WHERE product_category."productId" = product.id
-            AND product_category."categoryId" IN (${categoryIdList})
-            AND category."isActive" = true
-            AND category."deletedAt" IS NULL
-        )
-        AND EXISTS (
-          SELECT 1
-          FROM "product_variants" AS variant
-          JOIN "inventory" AS inventory ON inventory."variantId" = variant.id
-          JOIN "warehouses" AS warehouse ON warehouse.id = inventory."warehouseId"
-          WHERE variant."productId" = product.id
-            AND variant."isActive" = true
-            AND variant."deletedAt" IS NULL
-            AND warehouse."isActive" = true
-            AND warehouse."deletedAt" IS NULL
-          GROUP BY variant.id
-          HAVING SUM(GREATEST(inventory."onHand" - inventory."reserved", 0)) > 0
-        )
-      ORDER BY
-        (
-          SELECT COUNT(*)
-          FROM "product_categories" AS ranked_category
-          WHERE ranked_category."productId" = product.id
-            AND ranked_category."categoryId" IN (${categoryIdList})
-        ) DESC,
-        ${brandRank} DESC,
-        EXISTS (
-          SELECT 1 FROM "homepage_popular_products" AS popular
-          WHERE popular."productId" = product.id
-        ) DESC,
-        product."createdAt" DESC,
-        product.id ASC
-      LIMIT 4
-    `);
-    if (!candidates.length) return [];
-
-    const products = await this.prisma.product.findMany({
-      where: { id: { in: candidates.map(({ id }) => id) } },
-      select: relatedProductSelect,
+    const candidates = await this.prisma.product.findMany({
+      where: {
+        status: ProductStatus.ACTIVE,
+        deletedAt: null,
+        categories: {
+          some: {
+            categoryId: { in: categoryIds },
+            category: { isActive: true, deletedAt: null },
+          },
+        },
+        variants: {
+          some: {
+            isActive: true,
+            deletedAt: null,
+            inventories: {
+              some: { warehouse: { isActive: true, deletedAt: null } },
+            },
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+      take: 80,
+      select: {
+        ...relatedProductSelect,
+        brandId: true,
+        categories: {
+          where: { categoryId: { in: categoryIds } },
+          select: { categoryId: true },
+        },
+      },
     });
-    const byId = new Map(products.map((product) => [product.id, product]));
-    return this.projectSellableProducts(
-      candidates.flatMap(({ id }) => {
-        const product = byId.get(id);
-        return product ? [{ productId: id, product }] : [];
-      }),
-    );
+    const matchingBrands = new Set(brandIds);
+    return candidates
+      .flatMap((product) => {
+        const [projected] = this.projectSellableProducts([{ productId: product.id, product }]);
+        return projected
+          ? [
+              {
+                projected,
+                categoryMatches: product.categories.length,
+                brandMatch: product.brandId ? Number(matchingBrands.has(product.brandId)) : 0,
+                popularPriority: product.homepagePopularFeature?.priority ?? null,
+                createdAt: product.createdAt,
+                id: product.id,
+              },
+            ]
+          : [];
+      })
+      .sort(
+        (left, right) =>
+          right.categoryMatches - left.categoryMatches ||
+          right.brandMatch - left.brandMatch ||
+          Number(right.popularPriority !== null) - Number(left.popularPriority !== null) ||
+          (left.popularPriority ?? Number.MAX_SAFE_INTEGER) -
+            (right.popularPriority ?? Number.MAX_SAFE_INTEGER) ||
+          right.createdAt.getTime() - left.createdAt.getTime() ||
+          left.id.localeCompare(right.id),
+      )
+      .slice(0, 4)
+      .map(({ projected }) => projected);
   }
 
   private async resolveRelatedProductsSafely(source: any) {

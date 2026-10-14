@@ -311,23 +311,28 @@ function RelatedProductCard({ product }: Readonly<{ product: PublicGuideRelatedP
   );
 }
 
-function ProductCardsBlock({
-  block,
+function ProductCardsSection({
   products,
-}: Readonly<{ block: PublicGuideBlock; products: readonly PublicGuideRelatedProduct[] }>) {
+  heading,
+  variant = 'grid',
+  anchorId,
+}: Readonly<{
+  products: readonly PublicGuideRelatedProduct[];
+  heading: string;
+  variant?: string | null;
+  anchorId?: string | null;
+}>) {
   if (!products.length) return null;
   return (
-    <section id={safeAnchor(block.anchorId)} className="scroll-mt-28">
+    <section id={safeAnchor(anchorId ?? null)} className="scroll-mt-28">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <h2 className="text-3xl font-normal sm:text-4xl">
-          {contentText(block.content, 'heading') || 'انتخاب‌های مرتبط'}
-        </h2>
+        <h2 className="text-3xl font-normal sm:text-4xl">{heading}</h2>
         <Link href="/products" className="border-b border-[var(--sf-color-ink)] pb-1 text-sm">
           مشاهده همه محصولات
         </Link>
       </div>
       <ul
-        className={`mt-8 grid gap-5 ${block.variant === 'carousel' ? 'grid-flow-col auto-cols-[72%] overflow-x-auto sm:auto-cols-[42%] lg:auto-cols-[27%]' : 'grid-cols-2 lg:grid-cols-4'}`}
+        className={`mt-8 grid gap-5 ${variant === 'carousel' ? 'grid-flow-col auto-cols-[72%] overflow-x-auto sm:auto-cols-[42%] lg:auto-cols-[27%]' : 'grid-cols-2 lg:grid-cols-4'}`}
       >
         {products.map((product) => (
           <RelatedProductCard key={product.id} product={product} />
@@ -397,7 +402,14 @@ function ArticleBlock({
     case 'FAQ':
       return <FaqBlock block={block} />;
     case 'PRODUCT_CARDS':
-      return <ProductCardsBlock block={block} products={article.relatedProducts} />;
+      return (
+        <ProductCardsSection
+          products={article.productRecommendationMode === 'DISABLED' ? [] : article.relatedProducts}
+          heading={contentText(block.content, 'heading') || 'انتخاب‌های مرتبط'}
+          variant={block.variant}
+          anchorId={block.anchorId}
+        />
+      );
     case 'CTA':
       return <CtaBlock block={block} />;
     case 'DIVIDER':
@@ -425,78 +437,79 @@ export function KnowledgeArticle({ article }: Readonly<{ article: PublicGuideArt
   const published = article.publishedAt ? new Date(article.publishedAt) : null;
   const publishedLabel =
     published && !Number.isNaN(published.getTime()) ? date.format(published) : null;
+  const hasProductCardsBlock = article.blocks.some((block) => block.type === 'PRODUCT_CARDS');
 
   return (
     <main id="main-content">
-      <div className={toc.length ? 'sf-guide-article-shell' : undefined}>
-        <div className="min-w-0">
-          <header
-            className={`relative isolate overflow-hidden ${article.heroMedia?.url ? 'aspect-[1086/1448] text-white lg:aspect-[1942/809]' : 'bg-[#ece8df] py-20 sm:py-28'}`}
-          >
-            {article.heroMedia?.url ? (
-              <ResponsiveHeroImage
-                desktopSrc={article.heroMedia.url}
-                mobileSrc={article.heroMobileMedia?.url}
-                alt={article.heroMedia.altText?.trim() || article.title}
-                preload
-                className="-z-20 object-cover"
-              />
-            ) : (
-              <div
-                aria-hidden="true"
-                className="absolute -bottom-48 -left-20 -z-20 size-[34rem] rounded-full bg-[radial-gradient(circle_at_40%_35%,#fff_0,#cfc8bb_38%,#776f63_75%)]"
-              />
-            )}
-            {article.heroMedia?.url ? (
-              <div className="absolute inset-0 -z-10 bg-gradient-to-l from-black/85 via-black/55 to-black/25" />
+      <header
+        className={`relative isolate overflow-hidden ${article.heroMedia?.url ? 'aspect-[1086/1448] text-white lg:aspect-[1942/809]' : 'bg-[#ece8df] py-20 sm:py-28'}`}
+      >
+        {article.heroMedia?.url ? (
+          <ResponsiveHeroImage
+            desktopSrc={article.heroMedia.url}
+            mobileSrc={article.heroMobileMedia?.url}
+            alt={article.heroMedia.altText?.trim() || article.title}
+            preload
+            className="-z-20 object-cover"
+          />
+        ) : (
+          <div
+            aria-hidden="true"
+            className="absolute -bottom-48 -left-20 -z-20 size-[34rem] rounded-full bg-[radial-gradient(circle_at_40%_35%,#fff_0,#cfc8bb_38%,#776f63_75%)]"
+          />
+        )}
+        {article.heroMedia?.url ? (
+          <div className="absolute inset-0 -z-10 bg-gradient-to-l from-black/85 via-black/55 to-black/25" />
+        ) : null}
+        <div
+          className={`sf-container flex h-full items-end ${article.heroMedia?.url ? 'pb-12 pt-28 lg:pb-16' : ''}`}
+        >
+          <div className="max-w-4xl">
+            <StorefrontBreadcrumbs
+              items={[
+                { label: 'خانه', href: '/' },
+                { label: 'دانستنی‌ها', href: '/guide' },
+                { label: article.title, href: `/guide/${article.slug}` },
+              ]}
+              className={`mb-7 ${article.heroMedia?.url ? 'text-white/70' : 'text-[var(--sf-color-muted)]'}`}
+            />
+            <p
+              className={`text-sm tracking-[0.16em] ${article.heroMedia?.url ? 'text-white/75' : 'text-[var(--sf-color-subtle)]'}`}
+            >
+              {article.eyebrow || guideFormatLabel(article.format)}
+            </p>
+            <h1 className="mt-5 max-w-3xl text-[clamp(2.2rem,4vw,4rem)] font-normal leading-[1.3]">
+              {article.title}
+            </h1>
+            {article.excerpt ? (
+              <p
+                className={`mt-7 max-w-3xl text-base leading-9 sm:text-xl sm:leading-10 ${article.heroMedia?.url ? 'text-white/78' : 'text-[var(--sf-color-muted)]'}`}
+              >
+                {article.excerpt}
+              </p>
             ) : null}
             <div
-              className={`sf-container flex h-full items-end ${toc.length ? 'lg:w-full lg:px-12' : ''} ${article.heroMedia?.url ? 'pb-12 pt-28 lg:pb-16' : ''}`}
+              className={`mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm ${article.heroMedia?.url ? 'text-white/70' : 'text-[var(--sf-color-subtle)]'}`}
             >
-              <div className="max-w-4xl">
-                <StorefrontBreadcrumbs
-                  items={[
-                    { label: 'خانه', href: '/' },
-                    { label: 'دانستنی‌ها', href: '/guide' },
-                    { label: article.title, href: `/guide/${article.slug}` },
-                  ]}
-                  className={`mb-7 ${article.heroMedia?.url ? 'text-white/70' : 'text-[var(--sf-color-muted)]'}`}
-                />
-                <p
-                  className={`text-sm tracking-[0.16em] ${article.heroMedia?.url ? 'text-white/75' : 'text-[var(--sf-color-subtle)]'}`}
+              {publishedLabel ? <span>به‌روزرسانی {publishedLabel}</span> : null}
+              {article.readingTimeMinutes ? (
+                <span>{number.format(article.readingTimeMinutes)} دقیقه مطالعه</span>
+              ) : null}
+              {article.topics.map((topic) => (
+                <Link
+                  key={topic.id}
+                  href={`/guide?topic=${encodeURIComponent(topic.slug)}#guide-results`}
                 >
-                  {article.eyebrow || guideFormatLabel(article.format)}
-                </p>
-                <h1 className="mt-5 max-w-3xl text-[clamp(2.35rem,5vw,4.8rem)] font-normal leading-[1.25]">
-                  {article.title}
-                </h1>
-                {article.excerpt ? (
-                  <p
-                    className={`mt-7 max-w-3xl text-base leading-9 sm:text-xl sm:leading-10 ${article.heroMedia?.url ? 'text-white/78' : 'text-[var(--sf-color-muted)]'}`}
-                  >
-                    {article.excerpt}
-                  </p>
-                ) : null}
-                <div
-                  className={`mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm ${article.heroMedia?.url ? 'text-white/70' : 'text-[var(--sf-color-subtle)]'}`}
-                >
-                  {publishedLabel ? <span>به‌روزرسانی {publishedLabel}</span> : null}
-                  {article.readingTimeMinutes ? (
-                    <span>{number.format(article.readingTimeMinutes)} دقیقه مطالعه</span>
-                  ) : null}
-                  {article.topics.map((topic) => (
-                    <Link
-                      key={topic.id}
-                      href={`/guide?topic=${encodeURIComponent(topic.slug)}#guide-results`}
-                    >
-                      #{topic.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
+                  #{topic.name}
+                </Link>
+              ))}
             </div>
-          </header>
+          </div>
+        </div>
+      </header>
 
+      <div className={toc.length ? 'sf-guide-article-shell' : undefined}>
+        <div className="min-w-0">
           {toc.length ? <GuideTableOfContents items={toc} /> : null}
 
           <article
@@ -506,6 +519,14 @@ export function KnowledgeArticle({ article }: Readonly<{ article: PublicGuideArt
               {article.blocks.map((block) => (
                 <ArticleBlock key={block.id} block={block} article={article} />
               ))}
+              {!hasProductCardsBlock &&
+              article.productRecommendationMode !== 'DISABLED' &&
+              article.relatedProducts.length ? (
+                <ProductCardsSection
+                  products={article.relatedProducts}
+                  heading="محصولات پیشنهادی برای این دانستنی"
+                />
+              ) : null}
             </div>
           </article>
         </div>
