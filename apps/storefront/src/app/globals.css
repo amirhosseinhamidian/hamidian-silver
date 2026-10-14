@@ -100,6 +100,18 @@ a {
   margin-inline: auto;
 }
 
+@media (min-width: 64rem) {
+  .sf-guide-article-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 19rem);
+    align-items: start;
+    gap: clamp(3rem, 5vw, 5rem);
+    width: min(calc(100% - var(--sf-page-gutter) - var(--sf-page-gutter)), var(--sf-content-max));
+    margin-inline: auto;
+    padding-block: 2rem 5rem;
+  }
+}
+
 .sf-skip-link {
   position: fixed;
   inset-block-start: 0.75rem;

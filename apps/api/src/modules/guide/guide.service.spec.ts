@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import {
   GuideArticleFormat,
   GuideArticleStatus,
@@ -219,6 +219,45 @@ describe('GuideService', () => {
     });
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
     expect(prisma.product.findMany).toHaveBeenCalledTimes(1);
+    const query = prisma.$queryRaw.mock.calls[0]?.[0] as
+      { strings?: readonly string[] } | undefined;
+    expect(query?.strings?.join('')).toContain('::uuid');
+  });
+
+  it('keeps a public article available when automatic recommendations fail', async () => {
+    const { service, prisma } = createService();
+    const log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    prisma.$queryRaw.mockRejectedValue(new Error('automatic recommendation query failed'));
+    prisma.guideArticle.findFirst.mockResolvedValue({
+      id: 'article-auto-failure',
+      title: 'راهنمای انگشتر',
+      slug: 'automatic-guide-failure',
+      format: GuideArticleFormat.BUYING_GUIDE,
+      status: GuideArticleStatus.PUBLISHED,
+      productRecommendationMode: GuideProductRecommendationMode.AUTOMATIC,
+      heroMedia: null,
+      heroMobileMedia: null,
+      cardMedia: null,
+      seoOgMedia: null,
+      blocks: [],
+      topics: [],
+      categories: [{ categoryId: '00000000-0000-4000-8000-000000000041', category: null }],
+      brands: [],
+      products: [],
+      publishedAt: new Date(),
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    });
+
+    await expect(service.getPublicArticle('automatic-guide-failure')).resolves.toMatchObject({
+      slug: 'automatic-guide-failure',
+      relatedProducts: [],
+    });
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining('article-auto-failure'),
+      expect.stringContaining('automatic recommendation query failed'),
+    );
+    log.mockRestore();
   });
 
   it('does not resolve any products when recommendations are disabled', async () => {

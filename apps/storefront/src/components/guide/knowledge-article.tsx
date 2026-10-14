@@ -1,7 +1,9 @@
 import Link from 'next/link';
 
+import { GuideAccordion } from '@/components/guide/guide-accordion';
 import { RelatedKnowledgeSection } from '@/components/guide/related-knowledge-section';
 import { GuideMarkdown } from '@/components/guide/guide-markdown';
+import { GuideTableOfContents } from '@/components/guide/guide-table-of-contents';
 import { StorefrontImage } from '@/components/media/storefront-image';
 import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
@@ -58,7 +60,7 @@ function GuideImage({
         />
       </div>
       {contentText(block.content, 'caption') ? (
-        <figcaption className="mt-3 text-xs leading-6 text-[var(--sf-color-subtle)]">
+        <figcaption className="mt-3 text-center text-sm leading-7 text-[var(--sf-color-subtle)]">
           {contentText(block.content, 'caption')}
         </figcaption>
       ) : null}
@@ -111,7 +113,7 @@ function LeadBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
         block.variant === 'soft' ? 'bg-[var(--sf-color-surface)] px-6 sm:px-10' : ''
       }`}
     >
-      <p className="text-xs tracking-[0.16em] text-[var(--sf-color-subtle)]">چکیده</p>
+      <p className="text-sm tracking-[0.16em] text-[var(--sf-color-subtle)]">چکیده</p>
       <div className="max-w-4xl">
         {heading ? <h2 className="text-2xl font-normal sm:text-4xl">{heading}</h2> : null}
         {markdown ? (
@@ -182,7 +184,7 @@ function StepsBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
             <div>
               <h3 className="text-xl font-normal">{contentText(item, 'title')}</h3>
               {contentText(item, 'body') ? (
-                <p className="mt-3 text-sm leading-8 text-[var(--sf-color-muted)]">
+                <p className="mt-3 text-base leading-8 text-[var(--sf-color-muted)]">
                   {contentText(item, 'body')}
                 </p>
               ) : null}
@@ -209,7 +211,7 @@ function QuoteBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
         </p>
       ) : null}
       {contentText(block.content, 'attribution') ? (
-        <figcaption className="mt-6 text-xs text-[var(--sf-color-subtle)]">
+        <figcaption className="mt-6 text-center text-sm text-[var(--sf-color-subtle)]">
           — {contentText(block.content, 'attribution')}
         </figcaption>
       ) : null}
@@ -260,7 +262,10 @@ function TableBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
 }
 
 function FaqBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
-  const items = contentItems(block.content);
+  const items = contentItems(block.content).map((item) => ({
+    question: contentText(item, 'question'),
+    answer: contentText(item, 'answer'),
+  }));
   return (
     <section id={safeAnchor(block.anchorId)} className="scroll-mt-28">
       {contentText(block.content, 'heading') ? (
@@ -268,26 +273,7 @@ function FaqBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
           {contentText(block.content, 'heading')}
         </h2>
       ) : null}
-      <div
-        className={`mt-8 ${block.variant === 'cards' ? 'grid gap-4 md:grid-cols-2' : 'border-t border-[var(--sf-color-border)]'}`}
-      >
-        {items.map((item, index) => (
-          <details
-            key={index}
-            className={`${block.variant === 'cards' ? 'border border-[var(--sf-color-border)] p-6' : 'border-b border-[var(--sf-color-border)] py-5'} group`}
-          >
-            <summary className="flex cursor-pointer list-none items-start justify-between gap-5 text-base font-medium leading-8">
-              {contentText(item, 'question')}
-              <span aria-hidden="true" className="text-xl font-normal group-open:rotate-45">
-                +
-              </span>
-            </summary>
-            <p className="pt-4 text-sm leading-8 text-[var(--sf-color-muted)]">
-              {contentText(item, 'answer')}
-            </p>
-          </details>
-        ))}
-      </div>
+      <GuideAccordion items={items} variant={block.variant} />
     </section>
   );
 }
@@ -308,7 +294,7 @@ function RelatedProductCard({ product }: Readonly<{ product: PublicGuideRelatedP
             className="object-cover transition-transform duration-700 group-hover:scale-[1.025]"
           />
         ) : (
-          <span className="flex h-full items-center justify-center p-6 text-center text-xs text-[var(--sf-color-subtle)]">
+          <span className="flex h-full items-center justify-center p-6 text-center text-sm text-[var(--sf-color-subtle)]">
             {product.name}
           </span>
         )}
@@ -364,7 +350,7 @@ function CtaBlock({ block }: Readonly<{ block: PublicGuideBlock }>) {
         </h2>
         {contentText(block.content, 'body') ? (
           <p
-            className={`mt-5 max-w-2xl text-sm leading-8 ${block.variant === 'soft' ? 'text-[var(--sf-color-muted)]' : 'text-white/70'}`}
+            className={`mt-5 max-w-2xl text-base leading-8 ${block.variant === 'soft' ? 'text-[var(--sf-color-muted)]' : 'text-white/75'}`}
           >
             {contentText(block.content, 'body')}
           </p>
@@ -442,101 +428,98 @@ export function KnowledgeArticle({ article }: Readonly<{ article: PublicGuideArt
 
   return (
     <main id="main-content">
-      <header
-        className={`relative isolate overflow-hidden ${article.heroMedia?.url ? 'aspect-[1086/1448] text-white lg:aspect-[1942/809]' : 'bg-[#ece8df] py-20 sm:py-28'}`}
-      >
-        {article.heroMedia?.url ? (
-          <ResponsiveHeroImage
-            desktopSrc={article.heroMedia.url}
-            mobileSrc={article.heroMobileMedia?.url}
-            alt={article.heroMedia.altText?.trim() || article.title}
-            preload
-            className="-z-20 object-cover"
-          />
-        ) : (
-          <div
-            aria-hidden="true"
-            className="absolute -bottom-48 -left-20 -z-20 size-[34rem] rounded-full bg-[radial-gradient(circle_at_40%_35%,#fff_0,#cfc8bb_38%,#776f63_75%)]"
-          />
-        )}
-        {article.heroMedia?.url ? (
-          <div className="absolute inset-0 -z-10 bg-gradient-to-l from-black/70 via-black/30 to-black/10" />
-        ) : null}
-        <div
-          className={`sf-container flex h-full items-end ${article.heroMedia?.url ? 'pb-12 pt-28 lg:pb-20' : ''}`}
-        >
-          <div className="max-w-4xl">
-            <StorefrontBreadcrumbs
-              items={[
-                { label: 'خانه', href: '/' },
-                { label: 'دانستنی‌ها', href: '/guide' },
-                { label: article.title, href: `/guide/${article.slug}` },
-              ]}
-              className={`mb-7 ${article.heroMedia?.url ? 'text-white/70' : 'text-[var(--sf-color-muted)]'}`}
-            />
-            <p
-              className={`text-xs tracking-[0.16em] ${article.heroMedia?.url ? 'text-white/65' : 'text-[var(--sf-color-subtle)]'}`}
-            >
-              {article.eyebrow || guideFormatLabel(article.format)}
-            </p>
-            <h1 className="mt-5 text-[clamp(2.6rem,6.8vw,6.2rem)] font-normal leading-[1.2]">
-              {article.title}
-            </h1>
-            {article.excerpt ? (
-              <p
-                className={`mt-7 max-w-3xl text-base leading-9 sm:text-xl sm:leading-10 ${article.heroMedia?.url ? 'text-white/78' : 'text-[var(--sf-color-muted)]'}`}
-              >
-                {article.excerpt}
-              </p>
+      <div className={toc.length ? 'sf-guide-article-shell' : undefined}>
+        <div className="min-w-0">
+          <header
+            className={`relative isolate overflow-hidden ${article.heroMedia?.url ? 'aspect-[1086/1448] text-white lg:aspect-[1942/809]' : 'bg-[#ece8df] py-20 sm:py-28'}`}
+          >
+            {article.heroMedia?.url ? (
+              <ResponsiveHeroImage
+                desktopSrc={article.heroMedia.url}
+                mobileSrc={article.heroMobileMedia?.url}
+                alt={article.heroMedia.altText?.trim() || article.title}
+                preload
+                className="-z-20 object-cover"
+              />
+            ) : (
+              <div
+                aria-hidden="true"
+                className="absolute -bottom-48 -left-20 -z-20 size-[34rem] rounded-full bg-[radial-gradient(circle_at_40%_35%,#fff_0,#cfc8bb_38%,#776f63_75%)]"
+              />
+            )}
+            {article.heroMedia?.url ? (
+              <div className="absolute inset-0 -z-10 bg-gradient-to-l from-black/85 via-black/55 to-black/25" />
             ) : null}
             <div
-              className={`mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs ${article.heroMedia?.url ? 'text-white/55' : 'text-[var(--sf-color-subtle)]'}`}
+              className={`sf-container flex h-full items-end ${toc.length ? 'lg:w-full lg:px-12' : ''} ${article.heroMedia?.url ? 'pb-12 pt-28 lg:pb-16' : ''}`}
             >
-              {publishedLabel ? <span>به‌روزرسانی {publishedLabel}</span> : null}
-              {article.readingTimeMinutes ? (
-                <span>{number.format(article.readingTimeMinutes)} دقیقه مطالعه</span>
-              ) : null}
-              {article.topics.map((topic) => (
-                <Link key={topic.id} href={`/guide?topic=${encodeURIComponent(topic.slug)}`}>
-                  #{topic.name}
-                </Link>
+              <div className="max-w-4xl">
+                <StorefrontBreadcrumbs
+                  items={[
+                    { label: 'خانه', href: '/' },
+                    { label: 'دانستنی‌ها', href: '/guide' },
+                    { label: article.title, href: `/guide/${article.slug}` },
+                  ]}
+                  className={`mb-7 ${article.heroMedia?.url ? 'text-white/70' : 'text-[var(--sf-color-muted)]'}`}
+                />
+                <p
+                  className={`text-sm tracking-[0.16em] ${article.heroMedia?.url ? 'text-white/75' : 'text-[var(--sf-color-subtle)]'}`}
+                >
+                  {article.eyebrow || guideFormatLabel(article.format)}
+                </p>
+                <h1 className="mt-5 max-w-3xl text-[clamp(2.35rem,5vw,4.8rem)] font-normal leading-[1.25]">
+                  {article.title}
+                </h1>
+                {article.excerpt ? (
+                  <p
+                    className={`mt-7 max-w-3xl text-base leading-9 sm:text-xl sm:leading-10 ${article.heroMedia?.url ? 'text-white/78' : 'text-[var(--sf-color-muted)]'}`}
+                  >
+                    {article.excerpt}
+                  </p>
+                ) : null}
+                <div
+                  className={`mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm ${article.heroMedia?.url ? 'text-white/70' : 'text-[var(--sf-color-subtle)]'}`}
+                >
+                  {publishedLabel ? <span>به‌روزرسانی {publishedLabel}</span> : null}
+                  {article.readingTimeMinutes ? (
+                    <span>{number.format(article.readingTimeMinutes)} دقیقه مطالعه</span>
+                  ) : null}
+                  {article.topics.map((topic) => (
+                    <Link
+                      key={topic.id}
+                      href={`/guide?topic=${encodeURIComponent(topic.slug)}#guide-results`}
+                    >
+                      #{topic.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {toc.length ? <GuideTableOfContents items={toc} /> : null}
+
+          <article
+            className={`${toc.length ? 'px-[var(--sf-page-gutter)] lg:px-0 lg:pb-0' : 'sf-container'} min-w-0 py-14 sm:py-20`}
+          >
+            <div className="mx-auto max-w-6xl space-y-16 sm:space-y-24">
+              {article.blocks.map((block) => (
+                <ArticleBlock key={block.id} block={block} article={article} />
               ))}
             </div>
-          </div>
+          </article>
         </div>
-      </header>
-
-      {toc.length ? (
-        <nav
-          aria-label="در این دانستنی"
-          className="sticky top-16 z-20 border-b border-[var(--sf-color-border)] bg-[color:var(--sf-color-canvas)/0.94] backdrop-blur-md"
-        >
-          <div className="sf-container flex gap-8 overflow-x-auto py-4 text-sm whitespace-nowrap sm:gap-12">
-            {toc.map((item) => (
-              <a
-                key={item.anchor}
-                href={`#${item.anchor}`}
-                className="transition-opacity hover:opacity-50"
-              >
-                {item.heading}
-              </a>
-            ))}
-          </div>
-        </nav>
-      ) : null}
-
-      <article className="sf-container py-14 sm:py-20">
-        <div className="mx-auto max-w-6xl space-y-16 sm:space-y-24">
-          {article.blocks.map((block) => (
-            <ArticleBlock key={block.id} block={block} article={article} />
-          ))}
-        </div>
-      </article>
+        {toc.length ? (
+          <aside className="sticky top-24 hidden self-start lg:block">
+            <GuideTableOfContents items={toc} desktop />
+          </aside>
+        ) : null}
+      </div>
 
       {article.relatedCategories.length || article.relatedBrands.length ? (
         <aside className="sf-container pb-14 sm:pb-20" aria-label="مسیرهای مرتبط برای ادامه">
           <div className="border-y border-[var(--sf-color-border)] py-7">
-            <p className="text-xs tracking-[0.16em] text-[var(--sf-color-subtle)]">
+            <p className="text-sm tracking-[0.16em] text-[var(--sf-color-subtle)]">
               برای ادامه بررسی
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
@@ -577,7 +560,7 @@ export function KnowledgeArticle({ article }: Readonly<{ article: PublicGuideArt
       <aside className="bg-[#171717] py-14 text-white sm:py-20">
         <div className="sf-container flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-end">
           <div>
-            <p className="text-xs tracking-[0.16em] text-white/50">پرسش بعدی شما چیست؟</p>
+            <p className="text-sm tracking-[0.16em] text-white/60">پرسش بعدی شما چیست؟</p>
             <h2 className="mt-4 text-3xl font-normal sm:text-5xl">دانستنی‌های بیشتری کشف کنید.</h2>
           </div>
           <ButtonLink href="/guide" variant="outline" className="border-white/45 text-white">
