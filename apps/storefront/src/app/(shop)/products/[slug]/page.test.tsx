@@ -166,9 +166,51 @@ describe('ProductDetailPage', () => {
     );
 
     const labels = screen.getAllByRole('term').map((term) => term.textContent);
-    expect(labels).toEqual(['برند', 'کشور سازنده', 'وزن تقریبی', 'جنس نگین', 'نوع آبکاری']);
+    expect(labels).toEqual(['وزن تقریبی', 'برند', 'کشور سازنده', 'جنس نگین', 'نوع آبکاری']);
     expect(screen.getByText('زیرکونیا')).toBeInTheDocument();
     expect(screen.getByText('رودیوم')).toBeInTheDocument();
+  });
+
+  it('lists each named variant weight before every other product feature', async () => {
+    getPublicCatalogProduct.mockResolvedValue({
+      ...product,
+      brand: {
+        id: 'brand-1',
+        name: 'حمیدیان',
+        slug: 'hamidian',
+        description: null,
+        image: null,
+        originCountry: null,
+      },
+      variants: [
+        {
+          id: 'variant-light',
+          name: 'مدل سبک',
+          weightGrams: 3.25,
+          size: null,
+          platingOptions: [],
+          availableQuantity: 2,
+          isAvailable: true,
+        },
+        {
+          id: 'variant-heavy',
+          name: 'مدل سنگین',
+          weightGrams: 4.5,
+          size: null,
+          platingOptions: [],
+          availableQuantity: 1,
+          isAvailable: true,
+        },
+      ],
+    });
+
+    render(await ProductDetailPage({ params: Promise.resolve({ slug: product.slug }) }));
+
+    const labels = screen.getAllByRole('term').map((term) => term.textContent);
+    expect(labels).toEqual(['وزن (مدل سبک)', 'وزن (مدل سنگین)', 'برند']);
+    expect(screen.getByText('۳٫۲۵ گرم')).toBeInTheDocument();
+    expect(screen.getByText('۴٫۵ گرم')).toBeInTheDocument();
+    expect(screen.queryByText('وابسته به سایز یا مدل انتخابی')).not.toBeInTheDocument();
   });
 
   it('lists multiple necklace lengths and the included default plating as generated features', async () => {
@@ -200,6 +242,9 @@ describe('ProductDetailPage', () => {
 
     expect(screen.getByText('طول')).toBeInTheDocument();
     expect(screen.getByText('40 / 45 / 50')).toBeInTheDocument();
+    expect(screen.getByText('وزن (40)')).toBeInTheDocument();
+    expect(screen.getByText('وزن (45)')).toBeInTheDocument();
+    expect(screen.getByText('وزن (50)')).toBeInTheDocument();
     expect(screen.getByText('آبکاری رودیوم')).toBeInTheDocument();
     expect(screen.queryByText('مقدار قدیمی')).not.toBeInTheDocument();
   });
