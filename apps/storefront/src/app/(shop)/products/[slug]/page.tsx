@@ -20,6 +20,7 @@ import {
   getPublicRelatedProducts,
   selectPrimaryCatalogCategory,
   type CatalogSearchParams,
+  type PublicCatalogProductDetail,
 } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
@@ -37,6 +38,32 @@ type ProductDetailPageProps = Readonly<{
   }>;
   searchParams?: Promise<CatalogSearchParams>;
 }>;
+
+type ProductVariant = PublicCatalogProductDetail['variants'][number];
+
+const weightNumber = new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 3 });
+const integerNumber = new Intl.NumberFormat('fa-IR');
+
+function variantWeightFeatures(variants: readonly ProductVariant[]): [string, string][] {
+  return variants.flatMap((variant, index) => {
+    if (variant.weightGrams === null) return [];
+    const variantLabel =
+      variant.name?.trim() ||
+      variant.size?.label?.trim() ||
+      (variants.length > 1 ? `تنوع ${integerNumber.format(index + 1)}` : null);
+    return [
+      [
+        variantLabel ? `وزن (${variantLabel})` : 'وزن تقریبی',
+        `${weightNumber.format(variant.weightGrams)} گرم`,
+      ],
+    ];
+  });
+}
+
+function isGeneratedProductFeature(key: string, generatedKeys: ReadonlySet<string>): boolean {
+  const normalized = key.trim();
+  return generatedKeys.has(normalized) || /^وزن(?:\s+تقریبی|\s*\(.+\))?$/.test(normalized);
+}
 
 export async function generateMetadata({
   params,
@@ -109,16 +136,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   const publicImages = product.media.filter(
     (media) => media.url && media.mimeType.startsWith('image/'),
   );
-  const variantWeights = product.variants
-    .map((variant) => variant.weightGrams)
-    .filter((weight): weight is number => weight !== null);
-  const uniqueWeights = [...new Set(variantWeights)];
-  const weightLabel =
-    uniqueWeights.length === 1
-      ? `${new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 3 }).format(uniqueWeights[0])} گرم`
-      : uniqueWeights.length > 1
-        ? 'وابسته به سایز یا مدل انتخابی'
-        : null;
+  const weightFeatures = variantWeightFeatures(product.variants);
   const variantSizes = product.variants
     .map((variant) => variant.size)
     .filter((size) => size !== null);
@@ -133,22 +151,23 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     'کشور سازنده',
     'سایزبندی',
     'طول',
+    'وزن',
     'وزن تقریبی',
     ...(product.defaultPlatingType ? ['نوع آبکاری'] : []),
   ]);
   const features = [
+    ...weightFeatures,
     product.brand ? ['برند', product.brand.name] : null,
     product.country ? ['کشور سازنده', product.country.name] : null,
     sizeFeature,
     product.defaultPlatingType
       ? ['نوع آبکاری', platingPresentation(product.defaultPlatingType).label]
       : null,
-    weightLabel ? ['وزن تقریبی', weightLabel] : null,
   ]
     .filter((feature): feature is [string, string] => feature !== null)
     .concat(
       product.attributes
-        .filter(({ key }) => !generatedFeatureKeys.has(key.trim()))
+        .filter(({ key }) => !isGeneratedProductFeature(key, generatedFeatureKeys))
         .map(({ key, value }) => [key, value] as [string, string]),
     );
 
