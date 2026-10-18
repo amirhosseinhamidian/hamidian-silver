@@ -129,6 +129,26 @@ describe('BsjSilverCrawlerAdapter', () => {
     });
   });
 
+  it('stops at the final BSJ page when the response includes pagination metadata', () => {
+    expect(
+      adapter.parseListing(
+        JSON.stringify({
+          status: 'OK',
+          total: 35,
+          from: 31,
+          to: 35,
+          totalPage: 4,
+          list: [{ share: 'https://bsjsilver.com/product/10607399-final-product' }],
+        }),
+        'https://bsjsilver.com/product/category/64444-earrings?page=4',
+      ),
+    ).toEqual({
+      productUrls: ['https://bsjsilver.com/product/10607399-final-product'],
+      childCategoryUrls: [],
+      hasNextPage: false,
+    });
+  });
+
   it('returns child categories from a parent BSJ category response', () => {
     expect(
       adapter.parseListing(

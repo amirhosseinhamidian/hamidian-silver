@@ -133,7 +133,7 @@ describe('SupplierImportsService', () => {
     );
   });
 
-  it('queues a category crawl with a new-product limit', async () => {
+  it('queues a category crawl with a large product limit', async () => {
     prisma.supplierSource.findFirst.mockResolvedValue({
       id: sourceId,
       hostname: 'bsjsilver.com',
@@ -151,7 +151,7 @@ describe('SupplierImportsService', () => {
       service.startBulkCrawl({
         supplierSourceId: sourceId,
         categoryId: '10000000-0000-4000-8000-000000000004',
-        limit: 100,
+        limit: 7000,
         stopAtKnown: true,
         resumeArchive: false,
         monitorKnownProducts: true,
@@ -160,14 +160,14 @@ describe('SupplierImportsService', () => {
     expect(prisma.supplierCrawlRun.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         scope: 'CATEGORY_URL',
-        requestedLimit: 100,
+        requestedLimit: 7000,
         stopAtKnown: true,
         monitorKnownProducts: true,
       }),
     });
   });
 
-  it('continues an archive crawl from the highest previously reached page', async () => {
+  it('continues an archive crawl from the exact previous target and pending category queue', async () => {
     prisma.supplierSource.findFirst.mockResolvedValue({
       id: sourceId,
       hostname: 'bsjsilver.com',
@@ -175,7 +175,11 @@ describe('SupplierImportsService', () => {
       baseUrl: 'https://bsjsilver.com/',
       crawlDelayMs: 1000,
     });
-    prisma.supplierCrawlRun.aggregate.mockResolvedValue({ _max: { currentPage: 74 } });
+    prisma.supplierCrawlRun.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      targetUrl: 'https://bsjsilver.com/product/category/64444-earrings?page=74',
+      currentPage: 74,
+      pendingCategoryUrls: ['https://bsjsilver.com/product/category/65006-pendants'],
+    });
 
     await service.startBulkCrawl({
       supplierSourceId: sourceId,
@@ -186,8 +190,19 @@ describe('SupplierImportsService', () => {
     });
 
     expect(prisma.supplierCrawlRun.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ currentPage: 74, scope: 'CATALOG' }),
+      data: expect.objectContaining({
+        targetUrl: 'https://bsjsilver.com/product/category/64444-earrings?page=74',
+        currentPage: 74,
+        pendingCategoryUrls: ['https://bsjsilver.com/product/category/65006-pendants'],
+        scope: 'CATALOG',
+      }),
     });
+    expect(prisma.supplierCrawlRun.findFirst).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: expect.objectContaining({ discoveredCount: { gt: 0 } }),
+      }),
+    );
   });
 
   it('stores a daily Tehran schedule with retry policy', async () => {
@@ -488,6 +503,53 @@ describe('SupplierImportsService', () => {
         targetUrl: childUrl,
         pendingCategoryUrls: [],
         currentPage: 1,
+      }),
+    });
+  });
+
+  it('treats a terminal listing 404 as the end of that category and continues the queue', async () => {
+    const exhaustedUrl = 'https://bsjsilver.com/product/category/64444-earrings';
+    const nextUrl = 'https://bsjsilver.com/product/category/65006-pendants';
+    prisma.supplierCrawlRun.findFirst.mockResolvedValueOnce({ id: runId, startedAt: null });
+    prisma.supplierCrawlRun.findUnique.mockResolvedValue({
+      id: runId,
+      status: 'RUNNING',
+      targetUrl: exhaustedUrl,
+      currentPage: 141,
+      pendingCategoryUrls: [nextUrl],
+      requestedLimit: 7000,
+      stopAtKnown: false,
+      monitorKnownProducts: true,
+      discoveredCount: 1400,
+      succeededCount: 0,
+      failedCount: 3,
+      skippedCount: 1397,
+      category: null,
+      supplierSource: {
+        id: sourceId,
+        hostname: 'bsjsilver.com',
+        adapterKey: 'bsj-silver',
+        baseUrl: 'https://bsjsilver.com/',
+        crawlDelayMs: 1000,
+        isActive: true,
+        deletedAt: null,
+        supplier: { isActive: true, deletedAt: null },
+      },
+    });
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 404 }));
+
+    await service.processBulkQueue();
+
+    expect(prisma.supplierCrawlRun.updateMany).toHaveBeenCalledWith({
+      where: { id: runId, status: 'RUNNING' },
+      data: expect.objectContaining({
+        status: 'QUEUED',
+        targetUrl: nextUrl,
+        pendingCategoryUrls: [],
+        currentPage: 1,
+        discoveredCount: 1400,
+        failedCount: 3,
+        skippedCount: 1397,
       }),
     });
   });
