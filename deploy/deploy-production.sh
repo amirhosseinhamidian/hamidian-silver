@@ -37,10 +37,22 @@ free_space() {
     done
 }
 
-# Only old build cache and unused dangling images: never -a, system prune, or volumes.
-prune_safe_cache() {
-    docker builder prune --force --filter until=72h --keep-storage=2GB
-    docker image prune --force --filter until=72h
+# Keep persistent named volumes, active images and the current/rollback releases.
+# `docker volume prune` without --all removes only unused anonymous volumes; the
+# named postgres_data and redis_data volumes are never candidates.
+cleanup_docker_space() {
+    local phase=$1 before after
+    before=$(df -PB1 -- /var/lib/docker | awk 'NR==2 {print $4}')
+    printf 'Starting safe Docker cleanup (%s); available bytes: %s\n' "$phase" "$before"
+
+    # Build cache is reproducible. Prune every unused record instead of waiting
+    # 72 hours, otherwise frequent releases can fill a small production disk.
+    docker builder prune --all --force --keep-storage=1GB
+    docker image prune --force
+    docker volume prune --force
+
+    after=$(df -PB1 -- /var/lib/docker | awk 'NR==2 {print $4}')
+    printf 'Finished safe Docker cleanup (%s); available bytes: %s\n' "$phase" "$after"
 }
 
 "$libexec/check-production-media.sh" >/dev/null
@@ -92,7 +104,7 @@ recover() {
             for service in migrate api storefront admin; do
                 docker image rm -- "hamidian-silver-$service:$sha" >/dev/null 2>&1 || true
             done
-            prune_safe_cache || printf 'Cache cleanup after failure did not complete; inspect Docker disk use.\n' >&2
+            cleanup_docker_space failed-deploy || printf 'Docker cleanup after failure did not complete; inspect Docker disk use.\n' >&2
             printf 'Failed release was not promoted. Its archive is retained for diagnosis; unused new images were cleaned when safe.\n' >&2
         fi
     fi
@@ -100,7 +112,8 @@ recover() {
 }
 trap recover EXIT
 
-prune_safe_cache
+# Reclaim leftovers from earlier releases before any pull, backup or main build.
+cleanup_docker_space pre-build
 free_space
 
 # Fail before taking a backup or starting any build if the public base-image
@@ -160,6 +173,9 @@ if [[ $old_tag != manual ]]; then
         docker image rm -- "hamidian-silver-$service:manual" >/dev/null 2>&1 || true
     done
 fi
-prune_safe_cache
+# Run only after the new release is healthy, promoted, and retired release
+# images have been removed. This also removes anonymous volumes left by
+# one-shot migration containers without touching named application data.
+cleanup_docker_space post-deploy
 free_space
 printf 'Production release %s deployed; prior release retained at %s.\n' "$sha" "$old"

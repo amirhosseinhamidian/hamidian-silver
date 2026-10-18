@@ -111,8 +111,9 @@ seed_compose() {
 }
 production_compose config --quiet
 seed_compose config --quiet
-docker builder prune --force --filter until=72h --keep-storage=2GB
-docker image prune --force --filter until=72h
+docker builder prune --all --force --keep-storage=1GB
+docker image prune --force
+docker volume prune --force
 df -h /var/lib/docker /var/backups/hamidian-silver
 production_compose up -d --wait --wait-timeout 240 postgres redis
 production_compose build migrate
