@@ -222,7 +222,11 @@ export class BsjSilverCrawlerAdapter implements SupplierCrawlerAdapter {
     const currentPageFromPayload = Number(
       response?.current_page ?? response?.currentPage ?? currentPage,
     );
-    const lastPage = Number(response?.last_page ?? response?.lastPage ?? Number.NaN);
+    const lastPage = Number(
+      response?.last_page ?? response?.lastPage ?? response?.totalPage ?? Number.NaN,
+    );
+    const hasCountMetadata = Number.isFinite(total) && Number.isFinite(to);
+    const hasPageMetadata = Number.isFinite(currentPageFromPayload) && Number.isFinite(lastPage);
     const hasNextPageByCount = Number.isFinite(total) && Number.isFinite(to) && to < total;
     const hasNextPageByNumber =
       Number.isFinite(currentPageFromPayload) &&
@@ -240,7 +244,9 @@ export class BsjSilverCrawlerAdapter implements SupplierCrawlerAdapter {
       // BSJ has returned responses without pagination metadata. One extra empty-page request is
       // safer than silently truncating a large import when that happens.
       hasNextPage:
-        hasNextPageByCount || hasNextPageByNumber || hasNextPageByLink || products.size > 0,
+        hasCountMetadata || hasPageMetadata
+          ? hasNextPageByCount || hasNextPageByNumber
+          : hasNextPageByLink || products.size > 0,
     };
   }
 

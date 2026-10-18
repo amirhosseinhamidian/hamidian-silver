@@ -62,6 +62,12 @@ type CrawlScheduleConfig = Readonly<{
   monitorKnownProducts: boolean;
 }>;
 
+class SupplierHttpStatusException extends BadGatewayException {
+  constructor(readonly supplierStatus: number) {
+    super(`Supplier website returned HTTP ${supplierStatus}.`);
+  }
+}
+
 @Injectable()
 export class SupplierImportsService {
   private readonly logger = new Logger(SupplierImportsService.name);
@@ -443,13 +449,13 @@ export class SupplierImportsService {
       throw new NotFoundException('Active supplier category was not found.');
     }
     const previousArchiveProgress = dto.resumeArchive
-      ? await this.prisma.supplierCrawlRun.aggregate({
+      ? await this.prisma.supplierCrawlRun.findFirst({
           where: {
             supplierSourceId: source.id,
             categoryId: category?.id ?? null,
             scope: category ? SupplierCrawlScope.CATEGORY_URL : SupplierCrawlScope.CATALOG,
             stopAtKnown: false,
-            succeededCount: { gt: 0 },
+            discoveredCount: { gt: 0 },
             status: {
               in: [
                 SupplierCrawlRunStatus.SUCCEEDED,
@@ -459,11 +465,13 @@ export class SupplierImportsService {
               ],
             },
           },
-          _max: { currentPage: true },
+          orderBy: { createdAt: 'desc' },
+          select: { targetUrl: true, currentPage: true, pendingCategoryUrls: true },
         })
       : null;
-    const currentPage = Math.max(1, previousArchiveProgress?._max.currentPage ?? 1);
-    const targetUrl = adapter.listingUrl(category?.url ?? source.baseUrl!, 1);
+    const currentPage = Math.max(1, previousArchiveProgress?.currentPage ?? 1);
+    const targetUrl =
+      previousArchiveProgress?.targetUrl ?? adapter.listingUrl(category?.url ?? source.baseUrl!, 1);
     return this.prisma.supplierCrawlRun.create({
       data: {
         supplierSourceId: source.id,
@@ -471,6 +479,7 @@ export class SupplierImportsService {
         scope: category ? SupplierCrawlScope.CATEGORY_URL : SupplierCrawlScope.CATALOG,
         targetUrl,
         currentPage,
+        pendingCategoryUrls: previousArchiveProgress?.pendingCategoryUrls ?? [],
         requestedLimit: dto.limit,
         stopAtKnown: dto.stopAtKnown,
         monitorKnownProducts: dto.monitorKnownProducts,
@@ -920,10 +929,41 @@ export class SupplierImportsService {
       const currentCategoryId =
         (await this.resolveCategoryIdFromUrl(source.id, run.targetUrl, adapter)) ?? run.categoryId;
       const listingRequest = adapter.listingRequest(run.targetUrl, run.currentPage);
-      const listing = adapter.parseListing(
-        await this.fetchListingPayload(listingRequest, source),
-        listingUrl.toString(),
-      );
+      let listingPayload: string;
+      try {
+        listingPayload = await this.fetchListingPayload(listingRequest, source);
+      } catch (error) {
+        const terminalListingResponse =
+          error instanceof SupplierHttpStatusException &&
+          [404, 410].includes(error.supplierStatus) &&
+          (run.currentPage > 1 || run.pendingCategoryUrls.length > 0 || run.discoveredCount > 0);
+        if (!terminalListingResponse) throw error;
+
+        this.logger.warn(
+          `Supplier listing ended with HTTP ${error.supplierStatus}; continuing the crawl queue.`,
+        );
+        if (run.pendingCategoryUrls.length > 0) {
+          await this.queueNextBulkPage(run.id, {
+            targetUrl: run.pendingCategoryUrls[0]!,
+            pendingCategoryUrls: run.pendingCategoryUrls.slice(1),
+            currentPage: 1,
+            discoveredCount: run.discoveredCount,
+            succeededCount: run.succeededCount,
+            failedCount: run.failedCount,
+            skippedCount: run.skippedCount,
+          });
+        } else {
+          await this.finishRun(
+            run.id,
+            run.discoveredCount,
+            run.succeededCount,
+            run.failedCount,
+            run.skippedCount,
+          );
+        }
+        return;
+      }
+      const listing = adapter.parseListing(listingPayload, listingUrl.toString());
       const pendingCategoryUrls = [
         ...new Set([
           ...run.pendingCategoryUrls,
@@ -1654,7 +1694,7 @@ export class SupplierImportsService {
         continue;
       }
       if (!response.ok) {
-        throw new BadGatewayException(`Supplier website returned HTTP ${response.status}.`);
+        throw new SupplierHttpStatusException(response.status);
       }
       return response;
     }
