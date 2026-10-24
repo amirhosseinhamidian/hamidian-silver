@@ -23,6 +23,7 @@ import {
   PaymentStatus,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
 import { OrderCostsService } from '../finance/order-costs.service';
 import { OrderFinanceService } from '../finance/order-finance.service';
 import { AdminOrderNotificationOutboxService } from '../notifications/admin-order-notification-outbox.service';
@@ -1582,14 +1583,7 @@ export class PaymentsService {
     orderId: string,
     items: Array<{ variantId: string; quantity: number }>,
   ): Promise<void> {
-    const quantitiesByVariant = new Map<string, number>();
-
-    for (const item of items) {
-      quantitiesByVariant.set(
-        item.variantId,
-        (quantitiesByVariant.get(item.variantId) ?? 0) + item.quantity,
-      );
-    }
+    const quantitiesByVariant = await resolveVariantInventoryRequirements(transaction, items);
 
     for (const [variantId, quantity] of quantitiesByVariant) {
       const inventory = await transaction.inventory.findUnique({

@@ -73,6 +73,7 @@ const product: PublicCatalogProductDetail = {
   description: null,
   salePriceToman: 800_000,
   compareAtPriceToman: 1_000_000,
+  purchaseMode: 'SIMPLE',
   sizeMode: 'SIZED',
   brand: null,
   categories: [],

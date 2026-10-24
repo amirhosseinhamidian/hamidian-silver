@@ -1882,14 +1882,7 @@
         },
         "responses": {
           "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
+            "description": ""
           }
         },
         "tags": [
@@ -9996,6 +9989,13 @@
               }
             ]
           },
+          "inventoryMode": {
+            "enum": [
+              "OWN",
+              "COMPONENTS"
+            ],
+            "type": "string"
+          },
           "platingOptions": {
             "type": "array",
             "items": {
@@ -10021,6 +10021,7 @@
           "salePriceToman",
           "compareAtPriceToman",
           "size",
+          "inventoryMode",
           "platingOptions",
           "id",
           "sku",
@@ -10105,6 +10106,13 @@
               }
             ]
           },
+          "purchaseMode": {
+            "enum": [
+              "SIMPLE",
+              "COMPOSITE"
+            ],
+            "type": "string"
+          },
           "defaultPlatingType": {
             "nullable": true,
             "enum": [
@@ -10186,6 +10194,7 @@
           "brand",
           "categories",
           "primaryMedia",
+          "purchaseMode",
           "description",
           "country",
           "variants",
@@ -10634,6 +10643,24 @@
           }
         }
       },
+      "ProductVariantComponentInputDto": {
+        "type": "object",
+        "properties": {
+          "componentSku": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "componentSku",
+          "quantity"
+        ]
+      },
       "CreateProductVariantDto": {
         "type": "object",
         "properties": {
@@ -10665,6 +10692,21 @@
           },
           "isActive": {
             "type": "boolean"
+          },
+          "inventoryMode": {
+            "enum": [
+              "OWN",
+              "COMPONENTS"
+            ],
+            "type": "string"
+          },
+          "components": {
+            "uniqueItems": true,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductVariantComponentInputDto"
+            }
           }
         },
         "required": [
@@ -10767,6 +10809,13 @@
               "DRAFT",
               "ACTIVE",
               "ARCHIVED"
+            ]
+          },
+          "purchaseMode": {
+            "type": "string",
+            "enum": [
+              "SIMPLE",
+              "COMPOSITE"
             ]
           },
           "sizeMode": {
@@ -10904,12 +10953,34 @@
           },
           "isActive": {
             "type": "boolean"
+          },
+          "inventoryMode": {
+            "type": "string",
+            "enum": [
+              "OWN",
+              "COMPONENTS"
+            ]
+          },
+          "components": {
+            "uniqueItems": true,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductVariantComponentInputDto"
+            }
           }
         }
       },
       "UpdateProductDto": {
         "type": "object",
         "properties": {
+          "purchaseMode": {
+            "type": "string",
+            "enum": [
+              "SIMPLE",
+              "COMPOSITE"
+            ]
+          },
           "defaultPlatingType": {
             "type": "string",
             "nullable": true,

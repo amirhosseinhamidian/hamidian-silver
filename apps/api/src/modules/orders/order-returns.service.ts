@@ -15,6 +15,7 @@ import {
   OrderStatus,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
 import { AuthorizeOrderReturnDto } from './dto/authorize-order-return.dto';
 import { CancelOrderReturnDto } from './dto/cancel-order-return.dto';
 import { CreateOrderReturnDto } from './dto/create-order-return.dto';
@@ -547,54 +548,48 @@ export class OrderReturnsService {
     quantity: number,
     actorUserId: string,
   ) {
-    const inventory = await transaction.inventory.findUnique({
-      where: {
-        warehouseId_variantId: {
-          warehouseId,
-          variantId,
+    const requirements = await resolveVariantInventoryRequirements(transaction, [
+      { variantId, quantity },
+    ]);
+
+    for (const [inventoryVariantId, inventoryQuantity] of requirements) {
+      const inventory = await transaction.inventory.findUnique({
+        where: {
+          warehouseId_variantId: { warehouseId, variantId: inventoryVariantId },
         },
-      },
-    });
+      });
+      if (!inventory) {
+        throw new ConflictException('Inventory record is missing for the returned item.');
+      }
 
-    if (!inventory) {
-      throw new ConflictException('Inventory record is missing for the returned item.');
+      const nextOnHand = inventory.onHand + inventoryQuantity;
+      if (!isNonNegativeInt32(nextOnHand)) {
+        throw new BadRequestException('Returned inventory exceeds the supported range.');
+      }
+
+      const updated = await transaction.inventory.updateMany({
+        where: { id: inventory.id, onHand: inventory.onHand, reserved: inventory.reserved },
+        data: { onHand: nextOnHand },
+      });
+      if (updated.count !== 1) {
+        throw new ConflictException('Inventory changed while receiving the return; retry.');
+      }
+
+      await transaction.inventoryMovement.create({
+        data: {
+          inventoryId: inventory.id,
+          actorUserId,
+          type: InventoryMovementType.RETURN,
+          onHandDelta: inventoryQuantity,
+          reservedDelta: 0,
+          onHandAfter: nextOnHand,
+          reservedAfter: inventory.reserved,
+          reason: 'Customer return restocked',
+          referenceType: 'ORDER_RETURN_ITEM',
+          referenceId: returnItemId,
+        },
+      });
     }
-
-    const nextOnHand = inventory.onHand + quantity;
-
-    if (!isNonNegativeInt32(nextOnHand)) {
-      throw new BadRequestException('Returned inventory exceeds the supported range.');
-    }
-
-    const updated = await transaction.inventory.updateMany({
-      where: {
-        id: inventory.id,
-        onHand: inventory.onHand,
-        reserved: inventory.reserved,
-      },
-      data: {
-        onHand: nextOnHand,
-      },
-    });
-
-    if (updated.count !== 1) {
-      throw new ConflictException('Inventory changed while receiving the return; retry.');
-    }
-
-    await transaction.inventoryMovement.create({
-      data: {
-        inventoryId: inventory.id,
-        actorUserId,
-        type: InventoryMovementType.RETURN,
-        onHandDelta: quantity,
-        reservedDelta: 0,
-        onHandAfter: nextOnHand,
-        reservedAfter: inventory.reserved,
-        reason: 'Customer return restocked',
-        referenceType: 'ORDER_RETURN_ITEM',
-        referenceId: returnItemId,
-      },
-    });
   }
 
   private async createSupplierCredit(

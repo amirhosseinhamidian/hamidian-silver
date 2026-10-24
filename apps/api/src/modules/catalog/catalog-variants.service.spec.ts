@@ -1,5 +1,10 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { ProductStatus, SizeMode } from '../../generated/prisma/enums';
+import {
+  ProductPurchaseMode,
+  ProductStatus,
+  SizeMode,
+  VariantInventoryMode,
+} from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CatalogVariantsService } from './catalog-variants.service';
 
@@ -66,6 +71,58 @@ describe('CatalogVariantsService', () => {
         isActive: true,
       }),
       include: { size: { include: { group: true } } },
+    });
+  });
+
+  it('creates a composite option with a recipe of physical variants', async () => {
+    const transaction = {
+      product: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'product-1',
+          sizeMode: SizeMode.NONE,
+          purchaseMode: ProductPurchaseMode.COMPOSITE,
+          salePriceToman: 2_000_000,
+          compareAtPriceToman: null,
+        }),
+      },
+      size: { findFirst: jest.fn() },
+      productVariant: {
+        findFirst: jest.fn(),
+        create: jest.fn().mockResolvedValue({ id: 'set-variant', sku: 'SET-FULL' }),
+        findMany: jest.fn().mockResolvedValue([
+          { id: 'bracelet-variant', sku: 'BRACELET', inventoryMode: VariantInventoryMode.OWN },
+          { id: 'necklace-variant', sku: 'NECKLACE', inventoryMode: VariantInventoryMode.OWN },
+        ]),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'set-variant', sku: 'SET-FULL' }),
+      },
+      productVariantComponent: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await service.createVariant('product-1', {
+      sku: 'SET-FULL',
+      inventoryMode: VariantInventoryMode.COMPONENTS,
+      components: [
+        { componentSku: 'BRACELET', quantity: 1 },
+        { componentSku: 'NECKLACE', quantity: 1 },
+      ],
+    });
+
+    expect(transaction.productVariantComponent.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          bundleVariantId: 'set-variant',
+          componentVariantId: 'bracelet-variant',
+          quantity: 1,
+        },
+        {
+          bundleVariantId: 'set-variant',
+          componentVariantId: 'necklace-variant',
+          quantity: 1,
+        },
+      ],
     });
   });
 

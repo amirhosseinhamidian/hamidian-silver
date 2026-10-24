@@ -3,6 +3,8 @@ import { toAsciiDigits } from '@/lib/presentation/formatters';
 export type ProductStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
 export type ProductSizeMode = 'NONE' | 'FREE_SIZE' | 'SIZED';
 export type ProductPlatingType = 'GOLD' | 'ROSE_GOLD' | 'RHODIUM';
+export type ProductPurchaseMode = 'SIMPLE' | 'COMPOSITE';
+export type VariantInventoryMode = 'OWN' | 'COMPONENTS';
 
 export type CatalogLookup = Readonly<{
   id: string;
@@ -107,6 +109,13 @@ export type AdminProductVariant = Readonly<{
   salePriceToman: number | null;
   compareAtPriceToman: number | null;
   active: boolean;
+  inventoryMode: VariantInventoryMode;
+  components: readonly Readonly<{
+    variantId: string;
+    sku: string;
+    name: string | null;
+    quantity: number;
+  }>[];
   size: VariantSize | null;
   platingTypes?: readonly ProductPlatingType[];
 }>;
@@ -138,6 +147,7 @@ export type AdminProduct = Readonly<{
   shortDescription: string | null;
   description: string | null;
   status: ProductStatus;
+  purchaseMode: ProductPurchaseMode;
   sizeMode: ProductSizeMode;
   defaultPlatingType?: ProductPlatingType | null;
   platingTypes?: readonly ProductPlatingType[];
@@ -179,6 +189,7 @@ export type ProductListResult = Readonly<{
 
 const STATUSES = new Set<ProductStatus>(['DRAFT', 'ACTIVE', 'ARCHIVED']);
 const SIZE_MODES = new Set<ProductSizeMode>(['NONE', 'FREE_SIZE', 'SIZED']);
+const PURCHASE_MODES = new Set<ProductPurchaseMode>(['SIMPLE', 'COMPOSITE']);
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
@@ -220,6 +231,24 @@ function parseVariant(value: unknown): AdminProductVariant | null {
       (type): type is ProductPlatingType =>
         type === 'GOLD' || type === 'ROSE_GOLD' || type === 'RHODIUM',
     );
+  const inventoryMode =
+    item?.inventoryMode === 'COMPONENTS' ? 'COMPONENTS' : ('OWN' as VariantInventoryMode);
+  const components = (Array.isArray(item?.bundleComponents) ? item.bundleComponents : [])
+    .map((relation) => {
+      const component = record(relation);
+      const componentVariant = record(component?.componentVariant);
+      const variantId = text(componentVariant?.id);
+      const componentSku = text(componentVariant?.sku);
+      const quantity = number(component?.quantity);
+      if (!variantId || !componentSku || quantity === null || quantity < 1) return null;
+      return {
+        variantId,
+        sku: componentSku,
+        name: text(componentVariant?.name),
+        quantity,
+      };
+    })
+    .filter((component): component is NonNullable<typeof component> => component !== null);
   return {
     id,
     sku,
@@ -228,6 +257,8 @@ function parseVariant(value: unknown): AdminProductVariant | null {
     salePriceToman: number(item?.salePriceToman),
     compareAtPriceToman: number(item?.compareAtPriceToman),
     active: item?.isActive !== false,
+    inventoryMode,
+    components,
     size:
       sizeId && sizeLabel && sizeGroup ? { id: sizeId, label: sizeLabel, group: sizeGroup } : null,
     platingTypes,
@@ -301,6 +332,7 @@ export function parseAdminProduct(value: unknown): AdminProduct | null {
   const slug = text(item?.slug);
   const status = text(item?.status) as ProductStatus | null;
   const sizeMode = text(item?.sizeMode) as ProductSizeMode | null;
+  const purchaseMode = (text(item?.purchaseMode) ?? 'SIMPLE') as ProductPurchaseMode;
   const createdAt = text(item?.createdAt);
   const updatedAt = text(item?.updatedAt);
   if (
@@ -311,6 +343,7 @@ export function parseAdminProduct(value: unknown): AdminProduct | null {
     !STATUSES.has(status) ||
     !sizeMode ||
     !SIZE_MODES.has(sizeMode) ||
+    !PURCHASE_MODES.has(purchaseMode) ||
     !createdAt ||
     !updatedAt
   ) {
@@ -344,6 +377,7 @@ export function parseAdminProduct(value: unknown): AdminProduct | null {
     shortDescription: text(item?.shortDescription),
     description: text(item?.description),
     status,
+    purchaseMode,
     sizeMode,
     defaultPlatingType:
       item?.defaultPlatingType === 'GOLD' ||

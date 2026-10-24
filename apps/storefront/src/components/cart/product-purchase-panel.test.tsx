@@ -38,6 +38,7 @@ const product: PublicCatalogProductDetail = {
   description: null,
   salePriceToman: 800_000,
   compareAtPriceToman: null,
+  purchaseMode: 'SIMPLE',
   sizeMode: 'SIZED',
   brand: null,
   categories: [],
@@ -55,6 +56,7 @@ const product: PublicCatalogProductDetail = {
       weightGrams: 4.25,
       salePriceToman: 800_000,
       compareAtPriceToman: null,
+      inventoryMode: 'OWN',
       size: {
         id: '10000000-0000-4000-8000-000000000012',
         code: '52',
@@ -83,6 +85,7 @@ const product: PublicCatalogProductDetail = {
       weightGrams: 4.5,
       salePriceToman: 850_000,
       compareAtPriceToman: null,
+      inventoryMode: 'OWN',
       size: {
         id: '10000000-0000-4000-8000-000000000014',
         code: '54',
@@ -109,6 +112,34 @@ describe('ProductPurchasePanel', () => {
         status: 201,
         json: vi.fn().mockResolvedValue({ subscribed: true, target: 'VARIANT' }),
       }),
+    );
+  });
+
+  it('presents composite variants as product combinations and keeps the selected label in cart', () => {
+    render(
+      <ProductPurchasePanel
+        product={{
+          ...product,
+          purchaseMode: 'COMPOSITE',
+          sizeMode: 'NONE',
+          variants: product.variants.map((variant, index) => ({
+            ...variant,
+            name: index === 0 ? 'نیم‌ست کامل' : 'فقط گردنبند',
+            size: null,
+            inventoryMode: index === 0 ? 'COMPONENTS' : 'OWN',
+            isAvailable: true,
+            availableQuantity: 2,
+          })),
+        }}
+      />,
+    );
+
+    expect(screen.getAllByText('انتخاب ترکیب محصول')).toHaveLength(2);
+    fireEvent.click(screen.getByText('نیم‌ست کامل'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'افزودن به سبد خرید' })[0]!);
+
+    expect(cartStoreMock.addItem).toHaveBeenCalledWith(
+      expect.objectContaining({ variantLabel: 'ترکیب: نیم‌ست کامل' }),
     );
   });
 

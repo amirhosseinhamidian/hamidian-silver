@@ -4,7 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ProductStatus, SizeMode } from '../../generated/prisma/enums';
+import type { Prisma } from '../../generated/prisma/client';
+import {
+  ProductPurchaseMode,
+  ProductStatus,
+  SizeMode,
+  VariantInventoryMode,
+} from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CreateProductVariantDto } from './dto/create-product.dto';
 import { CreateSizeDto } from './dto/create-size.dto';
@@ -171,9 +177,18 @@ export class CatalogVariantsService {
       return await this.prisma.$transaction(async (transaction) => {
         const product = await transaction.product.findFirst({
           where: { id: productId, deletedAt: null },
-          select: { id: true, sizeMode: true, salePriceToman: true, compareAtPriceToman: true },
+          select: {
+            id: true,
+            sizeMode: true,
+            purchaseMode: true,
+            salePriceToman: true,
+            compareAtPriceToman: true,
+          },
         });
         if (!product) throw new NotFoundException('Product was not found.');
+
+        const inventoryMode = dto.inventoryMode ?? VariantInventoryMode.OWN;
+        this.validateInventoryMode(product.purchaseMode, inventoryMode, dto.components);
 
         await this.validateSizeAssignment(
           transaction,
@@ -186,7 +201,7 @@ export class CatalogVariantsService {
           dto.compareAtPriceToman ?? product.compareAtPriceToman,
         );
 
-        return transaction.productVariant.create({
+        const variant = await transaction.productVariant.create({
           data: {
             productId,
             sku,
@@ -196,8 +211,35 @@ export class CatalogVariantsService {
             salePriceToman: dto.salePriceToman,
             compareAtPriceToman: dto.compareAtPriceToman,
             isActive: dto.isActive ?? true,
+            inventoryMode,
           },
           include: { size: { include: { group: true } } },
+        });
+
+        if (inventoryMode === VariantInventoryMode.OWN) {
+          return { ...variant, bundleComponents: [] };
+        }
+
+        const components = await this.resolveComponents(
+          transaction,
+          productId,
+          dto.components ?? [],
+          variant.id,
+        );
+        await transaction.productVariantComponent.createMany({
+          data: components.map((component) => ({
+            bundleVariantId: variant.id,
+            componentVariantId: component.id,
+            quantity: component.quantity,
+          })),
+        });
+
+        return transaction.productVariant.findUniqueOrThrow({
+          where: { id: variant.id },
+          include: {
+            size: { include: { group: true } },
+            bundleComponents: { include: { componentVariant: true } },
+          },
         });
       });
     } catch (error) {
@@ -220,10 +262,20 @@ export class CatalogVariantsService {
             salePriceToman: true,
             compareAtPriceToman: true,
             isActive: true,
+            inventoryMode: true,
+            bundleComponents: {
+              select: {
+                quantity: true,
+                componentVariant: { select: { id: true, sku: true } },
+              },
+            },
+            componentOf: { select: { bundleVariantId: true } },
+            _count: { select: { orderItems: true } },
             product: {
               select: {
                 id: true,
                 sizeMode: true,
+                purchaseMode: true,
                 status: true,
                 salePriceToman: true,
                 compareAtPriceToman: true,
@@ -232,6 +284,52 @@ export class CatalogVariantsService {
           },
         });
         if (!variant) throw new NotFoundException('Product variant was not found.');
+
+        const currentInventoryMode = variant.inventoryMode ?? VariantInventoryMode.OWN;
+        const currentComponents = variant.bundleComponents ?? [];
+        const nextInventoryMode = dto.inventoryMode ?? currentInventoryMode;
+        const requestedComponents =
+          dto.components === undefined
+            ? currentComponents.map((component) => ({
+                componentSku: component.componentVariant.sku,
+                quantity: component.quantity,
+              }))
+            : dto.components;
+        this.validateInventoryMode(
+          variant.product.purchaseMode ?? ProductPurchaseMode.SIMPLE,
+          nextInventoryMode,
+          requestedComponents,
+        );
+
+        const recipeChanged =
+          nextInventoryMode !== currentInventoryMode || dto.components !== undefined;
+        if (recipeChanged && (variant._count?.orderItems ?? 0) > 0) {
+          throw new ConflictException(
+            'A variant used by an order cannot change its inventory recipe.',
+          );
+        }
+        if (
+          (variant.componentOf ?? []).length > 0 &&
+          nextInventoryMode !== VariantInventoryMode.OWN
+        ) {
+          throw new ConflictException(
+            'A variant used as a component must keep independent inventory.',
+          );
+        }
+        if (
+          currentInventoryMode === VariantInventoryMode.OWN &&
+          nextInventoryMode === VariantInventoryMode.COMPONENTS
+        ) {
+          const inventory = await transaction.inventory.findFirst({
+            where: { variantId, OR: [{ onHand: { not: 0 } }, { reserved: { not: 0 } }] },
+            select: { variantId: true },
+          });
+          if (inventory) {
+            throw new ConflictException(
+              'Clear direct stock before converting a variant to a composite option.',
+            );
+          }
+        }
 
         const sizeId = dto.sizeId === undefined ? variant.sizeId : dto.sizeId;
         await this.validateSizeAssignment(
@@ -272,7 +370,7 @@ export class CatalogVariantsService {
           }
         }
 
-        return transaction.productVariant.update({
+        const updated = await transaction.productVariant.update({
           where: { id: variantId },
           data: {
             sku: dto.sku?.trim(),
@@ -282,8 +380,38 @@ export class CatalogVariantsService {
             salePriceToman: dto.salePriceToman,
             compareAtPriceToman: dto.compareAtPriceToman,
             isActive: dto.isActive,
+            inventoryMode: dto.inventoryMode,
           },
           include: { size: { include: { group: true } } },
+        });
+
+        if (!recipeChanged) {
+          return { ...updated, bundleComponents: currentComponents };
+        }
+
+        const components =
+          nextInventoryMode === VariantInventoryMode.COMPONENTS
+            ? await this.resolveComponents(transaction, productId, requestedComponents, variantId)
+            : [];
+        await transaction.productVariantComponent.deleteMany({
+          where: { bundleVariantId: variantId },
+        });
+        if (components.length > 0) {
+          await transaction.productVariantComponent.createMany({
+            data: components.map((component) => ({
+              bundleVariantId: variantId,
+              componentVariantId: component.id,
+              quantity: component.quantity,
+            })),
+          });
+        }
+
+        return transaction.productVariant.findUniqueOrThrow({
+          where: { id: variantId },
+          include: {
+            size: { include: { group: true } },
+            bundleComponents: { include: { componentVariant: true } },
+          },
         });
       });
     } catch (error) {
@@ -338,6 +466,81 @@ export class CatalogVariantsService {
     if (compareAtPriceToman !== null && compareAtPriceToman <= salePriceToman) {
       throw new BadRequestException('Variant compare price must be greater than its sale price.');
     }
+  }
+
+  private validateInventoryMode(
+    purchaseMode: ProductPurchaseMode,
+    inventoryMode: VariantInventoryMode,
+    components: readonly { componentSku: string; quantity: number }[] | undefined,
+  ) {
+    const recipe = components ?? [];
+    if (
+      purchaseMode === ProductPurchaseMode.SIMPLE &&
+      inventoryMode === VariantInventoryMode.COMPONENTS
+    ) {
+      throw new BadRequestException(
+        'Enable composite purchase mode before adding a composite option.',
+      );
+    }
+    if (inventoryMode === VariantInventoryMode.OWN && recipe.length > 0) {
+      throw new BadRequestException('Independent variants cannot contain component recipes.');
+    }
+    if (inventoryMode === VariantInventoryMode.COMPONENTS && recipe.length === 0) {
+      throw new BadRequestException('Composite options require at least one component.');
+    }
+  }
+
+  private async resolveComponents(
+    transaction: Prisma.TransactionClient,
+    productId: string,
+    recipe: readonly { componentSku: string; quantity: number }[],
+    bundleVariantId: string,
+  ) {
+    const normalized = recipe.map((component) => ({
+      sku: component.componentSku.trim(),
+      normalizedSku: component.componentSku.trim().toLocaleLowerCase('en-US'),
+      quantity: component.quantity,
+    }));
+    if (
+      normalized.some(
+        (component) =>
+          !component.sku || !Number.isSafeInteger(component.quantity) || component.quantity < 1,
+      ) ||
+      new Set(normalized.map((component) => component.normalizedSku)).size !== normalized.length
+    ) {
+      throw new BadRequestException('Composite component recipe is invalid.');
+    }
+
+    const variants = await transaction.productVariant.findMany({
+      where: {
+        productId,
+        sku: { in: normalized.map((component) => component.sku), mode: 'insensitive' },
+        isActive: true,
+        deletedAt: null,
+      },
+      select: { id: true, sku: true, inventoryMode: true },
+    });
+    if (variants.length !== normalized.length) {
+      throw new BadRequestException(
+        'Every composite component must be an active variant of the same product.',
+      );
+    }
+
+    const bySku = new Map(
+      variants.map((variant) => [variant.sku.trim().toLocaleLowerCase('en-US'), variant]),
+    );
+    return normalized.map((component) => {
+      const variant = bySku.get(component.normalizedSku);
+      if (!variant || variant.id === bundleVariantId) {
+        throw new BadRequestException(
+          'Composite components must reference another variant in the same product.',
+        );
+      }
+      if ((variant.inventoryMode ?? VariantInventoryMode.OWN) !== VariantInventoryMode.OWN) {
+        throw new BadRequestException('Nested composite options are not supported.');
+      }
+      return { id: variant.id, quantity: component.quantity };
+    });
   }
 
   private normalizeSizeGroup(dto: CreateSizeGroupDto): {

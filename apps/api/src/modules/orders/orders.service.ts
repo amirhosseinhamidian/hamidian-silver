@@ -22,6 +22,7 @@ import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { ShippingPricingService } from '../shipping/shipping-pricing.service';
 import { ShippingCarriersService } from '../shipping/shipping-carriers.service';
+import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderAddressDto, CreateOrderDto, CreateOrderItemDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
@@ -1007,14 +1008,10 @@ export class OrdersService {
         );
       }
 
-      const quantitiesByVariant = new Map<string, number>();
-
-      for (const item of order.items) {
-        quantitiesByVariant.set(
-          item.variantId,
-          (quantitiesByVariant.get(item.variantId) ?? 0) + item.quantity,
-        );
-      }
+      const quantitiesByVariant = await resolveVariantInventoryRequirements(
+        transaction,
+        order.items,
+      );
 
       for (const [variantId, quantity] of quantitiesByVariant) {
         const inventory = await transaction.inventory.findUnique({
@@ -1237,14 +1234,9 @@ export class OrdersService {
     items: PreparedOrderItem[],
     actorUserId: string,
   ): Promise<void> {
-    const quantitiesByVariant = new Map<string, number>();
-
-    for (const item of items) {
-      quantitiesByVariant.set(
-        item.variantId,
-        (quantitiesByVariant.get(item.variantId) ?? 0) + item.quantity,
-      );
-    }
+    const quantitiesByVariant = await resolveVariantInventoryRequirements(transaction, items, {
+      requirePurchasableComponents: true,
+    });
 
     for (const [variantId, quantity] of quantitiesByVariant) {
       const inventory = await transaction.inventory.findUnique({

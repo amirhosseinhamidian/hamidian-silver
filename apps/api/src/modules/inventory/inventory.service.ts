@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DomainException } from '../../common/errors/domain-exception';
 import { ErrorCode } from '../../common/errors/error-codes';
 import { isNonNegativeInt32, isSignedInt32 } from '../../common/int32';
-import { InventoryMovementType } from '../../generated/prisma/enums';
+import { InventoryMovementType, VariantInventoryMode } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { attachHumanAuditEvent } from '../audit/audit-event';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
@@ -203,11 +203,18 @@ export class InventoryService {
         select: {
           id: true,
           sku: true,
+          inventoryMode: true,
         },
       });
 
       if (!variant) {
         throw new DomainException(ErrorCode.NOT_FOUND, 'Product variant was not found.');
+      }
+      if (variant.inventoryMode === VariantInventoryMode.COMPONENTS) {
+        throw new DomainException(
+          ErrorCode.INVENTORY_NOT_AVAILABLE,
+          'Composite options derive stock from their components and cannot be adjusted directly.',
+        );
       }
 
       const current = await transaction.inventory.findUnique({
@@ -358,6 +365,7 @@ export class InventoryService {
         },
         select: {
           id: true,
+          inventoryMode: true,
         },
       });
 
@@ -365,6 +373,12 @@ export class InventoryService {
         throw new DomainException(
           ErrorCode.NOT_FOUND,
           'One or more product variants were not found.',
+        );
+      }
+      if (variants.some((variant) => variant.inventoryMode === VariantInventoryMode.COMPONENTS)) {
+        throw new DomainException(
+          ErrorCode.INVENTORY_NOT_AVAILABLE,
+          'Composite options derive stock from their components and cannot be adjusted directly.',
         );
       }
 
@@ -589,6 +603,7 @@ export class InventoryService {
     const variants = await this.prisma.productVariant.findMany({
       where: {
         deletedAt: null,
+        inventoryMode: VariantInventoryMode.OWN,
         product: { deletedAt: null },
       },
       orderBy: [{ product: { createdAt: 'desc' } }, { productId: 'asc' }, { sku: 'asc' }],
