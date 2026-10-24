@@ -2,6 +2,7 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
 import { InventoryMovementType, OrderStatus, PaymentStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
 
 const DEFAULT_BATCH_SIZE = 100;
 const MAX_BATCH_SIZE = 500;
@@ -174,14 +175,7 @@ export class OrderExpirationService {
     orderId: string,
     items: Array<{ variantId: string; quantity: number }>,
   ): Promise<void> {
-    const quantitiesByVariant = new Map<string, number>();
-
-    for (const item of items) {
-      quantitiesByVariant.set(
-        item.variantId,
-        (quantitiesByVariant.get(item.variantId) ?? 0) + item.quantity,
-      );
-    }
+    const quantitiesByVariant = await resolveVariantInventoryRequirements(transaction, items);
 
     for (const [variantId, quantity] of quantitiesByVariant) {
       const inventory = await transaction.inventory.findUnique({

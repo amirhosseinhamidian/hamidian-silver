@@ -19,7 +19,12 @@ import { FormField } from '@/components/ui/form-field';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Select } from '@/components/ui/select';
 import type { ProductFormData } from '@/lib/catalog/catalog-data';
-import type { ProductSizeMode, ProductStatus } from '@/lib/catalog/catalog-model';
+import type {
+  ProductPurchaseMode,
+  ProductSizeMode,
+  ProductStatus,
+  VariantInventoryMode,
+} from '@/lib/catalog/catalog-model';
 import {
   normalizeProductAttributeKey,
   parseProductAttributesText,
@@ -47,6 +52,8 @@ type EditableProductVariant = Readonly<{
   weightGrams: string;
   salePriceToman: string;
   compareAtPriceToman: string;
+  inventoryMode: VariantInventoryMode;
+  components: readonly Readonly<{ variantId: string; quantity: string }>[];
 }>;
 
 const MAX_PRODUCT_IMAGES = 12;
@@ -71,6 +78,8 @@ function createVariant(importDraft?: AdminSupplierImportDraft | null): EditableP
     weightGrams: importDraft?.weightGrams === null ? '' : String(importDraft?.weightGrams ?? ''),
     salePriceToman: '',
     compareAtPriceToman: '',
+    inventoryMode: 'OWN',
+    components: [],
   };
 }
 
@@ -173,6 +182,9 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
   const router = useRouter();
   const productImagesInputId = useId();
   const product = data.product;
+  const [purchaseMode, setPurchaseMode] = useState<ProductPurchaseMode>(
+    product?.purchaseMode ?? 'SIMPLE',
+  );
   const [sizeMode, setSizeMode] = useState<ProductSizeMode>(product?.sizeMode ?? 'NONE');
   const [sizeGroupId, setSizeGroupId] = useState(product?.sizeGroup?.id ?? 'none');
   const [seo, setSeo] = useState(() => createSeoEditorValue(product));
@@ -353,17 +365,24 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
       attributes: normalizedAttributes,
       defaultPlatingType: defaultPlatingType === 'none' ? null : defaultPlatingType,
       platingTypes,
+      purchaseMode,
       ...seoEditorPayload(seo),
     };
 
     if (mode === 'create') {
       const normalizedVariants = variants.map((variant) => ({
+        id: variant.id,
         sku: variant.sku.trim(),
         name: variant.name.trim(),
         sizeId: variant.sizeId,
         weightGrams: optionalNumberValue(variant.weightGrams),
         salePriceToman: optionalNumberValue(variant.salePriceToman),
         compareAtPriceToman: optionalNumberValue(variant.compareAtPriceToman),
+        inventoryMode: variant.inventoryMode,
+        components: variant.components.map((component) => ({
+          variantId: component.variantId,
+          quantity: Number(toAsciiDigits(component.quantity)),
+        })),
       }));
       if (normalizedVariants.some((variant) => !variant.sku)) {
         setError('SKU همه تنوع‌ها الزامی است.');
@@ -389,6 +408,30 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
       if (new Set(normalizedSkus).size !== normalizedSkus.length) {
         setError('SKU تنوع‌ها نباید تکراری باشد.');
         return;
+      }
+      if (
+        purchaseMode === 'SIMPLE' &&
+        normalizedVariants.some((variant) => variant.inventoryMode === 'COMPONENTS')
+      ) {
+        setError('برای تعریف گزینه ترکیبی، مدل فروش محصول را روی «انتخاب ترکیب» قرار دهید.');
+        return;
+      }
+      for (const variant of normalizedVariants) {
+        if (variant.inventoryMode === 'COMPONENTS' && variant.components.length === 0) {
+          setError(`برای تنوع «${variant.name || variant.sku}» حداقل یک جزء انتخاب کنید.`);
+          return;
+        }
+        if (
+          variant.components.some(
+            (component) =>
+              component.variantId === variant.id ||
+              !Number.isSafeInteger(component.quantity) ||
+              component.quantity < 1,
+          )
+        ) {
+          setError(`ترکیب اجزای تنوع «${variant.name || variant.sku}» معتبر نیست.`);
+          return;
+        }
       }
       if (sizeMode === 'SIZED' && normalizedVariants.some((variant) => variant.sizeId === 'none')) {
         setError('برای هر تنوع محصول سایزبندی‌شده، انتخاب سایز الزامی است.');
@@ -442,6 +485,17 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
           ? { compareAtPriceToman: variant.compareAtPriceToman }
           : {}),
         ...(sizeMode === 'SIZED' ? { sizeId: variant.sizeId } : {}),
+        ...(variant.inventoryMode === 'COMPONENTS'
+          ? {
+              inventoryMode: variant.inventoryMode,
+              components: variant.components.map((component) => ({
+                componentSku:
+                  normalizedVariants.find((candidate) => candidate.id === component.variantId)
+                    ?.sku ?? '',
+                quantity: component.quantity,
+              })),
+            }
+          : {}),
         isActive: true,
       }));
       delete payload.brandId;
@@ -560,6 +614,36 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
                 placeholder="silver-stone-ring"
                 dir="ltr"
                 required
+              />
+            )}
+          </FormField>
+          <FormField
+            id="product-purchase-mode"
+            label="مدل فروش محصول"
+            hint="برای فروش مجموعه کامل و اجزای آن از «انتخاب ترکیب» استفاده کنید."
+          >
+            {(props) => (
+              <Select
+                {...props}
+                name="purchaseMode"
+                value={purchaseMode}
+                onValueChange={(value) => {
+                  const nextMode = value as ProductPurchaseMode;
+                  setPurchaseMode(nextMode);
+                  if (nextMode === 'SIMPLE') {
+                    setVariants((current) =>
+                      current.map((variant) => ({
+                        ...variant,
+                        inventoryMode: 'OWN',
+                        components: [],
+                      })),
+                    );
+                  }
+                }}
+                options={[
+                  { value: 'SIMPLE', label: 'فروش معمولی' },
+                  { value: 'COMPOSITE', label: 'انتخاب ترکیب یا اجزای محصول' },
+                ]}
               />
             )}
           </FormField>
@@ -1239,13 +1323,47 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
                       variant="ghost"
                       disabled={pending || variants.length === 1}
                       onClick={() =>
-                        setVariants((current) => current.filter((item) => item.id !== variant.id))
+                        setVariants((current) =>
+                          current
+                            .filter((item) => item.id !== variant.id)
+                            .map((item) => ({
+                              ...item,
+                              components: item.components.filter(
+                                (component) => component.variantId !== variant.id,
+                              ),
+                            })),
+                        )
                       }
                     >
                       حذف تنوع
                     </Button>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {purchaseMode === 'COMPOSITE' ? (
+                      <FormField
+                        id={`product-variant-${variant.id}-inventory-mode`}
+                        label={`نوع موجودی تنوع ${number}`}
+                        hint="گزینه ترکیبی موجودی خود را از اجزای انتخاب‌شده می‌گیرد."
+                      >
+                        {(props) => (
+                          <Select
+                            {...props}
+                            value={variant.inventoryMode}
+                            disabled={pending}
+                            onValueChange={(value) =>
+                              updateVariant({
+                                inventoryMode: value as VariantInventoryMode,
+                                components: value === 'OWN' ? [] : variant.components,
+                              })
+                            }
+                            options={[
+                              { value: 'OWN', label: 'جزء مستقل با موجودی مستقیم' },
+                              { value: 'COMPONENTS', label: 'گزینه ترکیبی از اجزا' },
+                            ]}
+                          />
+                        )}
+                      </FormField>
+                    ) : null}
                     <FormField
                       id={`product-variant-${variant.id}-sku`}
                       label={`SKU تنوع ${number}`}
@@ -1358,6 +1476,76 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
                       )}
                     </FormField>
                   </div>
+                  {purchaseMode === 'COMPOSITE' && variant.inventoryMode === 'COMPONENTS' ? (
+                    <fieldset className="mt-4 rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] bg-white p-3">
+                      <legend className="px-1 text-sm font-bold">اجزای مصرفی این گزینه</legend>
+                      <p className="mb-3 text-xs leading-6 text-[var(--admin-color-muted)]">
+                        با فروش یک عدد از این گزینه، تعداد تعیین‌شده از موجودی هر جزء کسر می‌شود.
+                      </p>
+                      <div className="space-y-3">
+                        {variants
+                          .filter(
+                            (candidate) =>
+                              candidate.id !== variant.id && candidate.inventoryMode === 'OWN',
+                          )
+                          .map((candidate) => {
+                            const component = variant.components.find(
+                              (item) => item.variantId === candidate.id,
+                            );
+                            return (
+                              <div
+                                key={candidate.id}
+                                className="grid items-center gap-3 sm:grid-cols-[minmax(0,1fr)_8rem]"
+                              >
+                                <Checkbox
+                                  id={`product-variant-${variant.id}-component-${candidate.id}`}
+                                  label={
+                                    candidate.name.trim() || candidate.sku.trim() || 'تنوع بدون نام'
+                                  }
+                                  description={candidate.sku.trim() || 'ابتدا SKU را وارد کنید'}
+                                  checked={Boolean(component)}
+                                  disabled={pending}
+                                  onChange={(event) =>
+                                    updateVariant({
+                                      components: event.currentTarget.checked
+                                        ? [
+                                            ...variant.components,
+                                            { variantId: candidate.id, quantity: '1' },
+                                          ]
+                                        : variant.components.filter(
+                                            (item) => item.variantId !== candidate.id,
+                                          ),
+                                    })
+                                  }
+                                />
+                                {component ? (
+                                  <Input
+                                    aria-label={`تعداد مصرف ${candidate.name.trim() || candidate.sku.trim()}`}
+                                    value={component.quantity}
+                                    inputMode="numeric"
+                                    disabled={pending}
+                                    onChange={(event) =>
+                                      updateVariant({
+                                        components: variant.components.map((item) =>
+                                          item.variantId === candidate.id
+                                            ? {
+                                                ...item,
+                                                quantity: toPersianDigits(
+                                                  toAsciiDigits(event.currentTarget.value),
+                                                ),
+                                              }
+                                            : item,
+                                        ),
+                                      })
+                                    }
+                                  />
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </fieldset>
+                  ) : null}
                 </section>
               );
             })}

@@ -3,9 +3,11 @@ import { calculatePlatingPriceToman } from '../../common/plating-price';
 import { Prisma } from '../../generated/prisma/client';
 import {
   ProductStatus,
+  ProductPurchaseMode,
   SeoRedirectEntityType,
   SizeMode,
   SupplierProductImportStatus,
+  VariantInventoryMode,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
@@ -246,6 +248,7 @@ export class CatalogService {
           seoNoIndex: dto.seoNoIndex ?? false,
           seoOgMediaId: dto.seoOgMediaId,
           status: dto.status ?? ProductStatus.DRAFT,
+          purchaseMode: dto.purchaseMode ?? ProductPurchaseMode.SIMPLE,
           sizeMode: dto.sizeMode,
           defaultPlatingType: dto.defaultPlatingType,
           brandId: dto.brandId,
@@ -275,8 +278,46 @@ export class CatalogService {
           salePriceToman: variant.salePriceToman,
           compareAtPriceToman: variant.compareAtPriceToman,
           isActive: variant.isActive ?? true,
+          inventoryMode: variant.inventoryMode ?? VariantInventoryMode.OWN,
         })),
       });
+
+      const compositeVariants = dto.variants.filter(
+        (variant) =>
+          (variant.inventoryMode ?? VariantInventoryMode.OWN) === VariantInventoryMode.COMPONENTS,
+      );
+      if (compositeVariants.length > 0) {
+        const createdVariants = await transaction.productVariant.findMany({
+          where: { productId: product.id, deletedAt: null },
+          select: { id: true, sku: true },
+        });
+        const variantBySku = new Map(
+          createdVariants.map((variant) => [
+            variant.sku.trim().toLocaleLowerCase('en-US'),
+            variant,
+          ]),
+        );
+        const componentRows = compositeVariants.flatMap((variant) => {
+          const bundle = variantBySku.get(variant.sku.trim().toLocaleLowerCase('en-US'));
+          if (!bundle) throw new BadRequestException('Composite product option was not created.');
+          return (variant.components ?? []).map((component) => {
+            const target = variantBySku.get(
+              component.componentSku.trim().toLocaleLowerCase('en-US'),
+            );
+            if (!target) {
+              throw new BadRequestException(
+                'A composite component SKU was not found in the product.',
+              );
+            }
+            return {
+              bundleVariantId: bundle.id,
+              componentVariantId: target.id,
+              quantity: component.quantity,
+            };
+          });
+        });
+        await transaction.productVariantComponent.createMany({ data: componentRows });
+      }
 
       if (dto.platingTypes !== undefined) {
         await this.syncProductPlatingOptions(transaction, product.id, dto.platingTypes);
@@ -340,6 +381,7 @@ export class CatalogService {
             include: {
               size: { include: { group: true } },
               platingOptions: { where: { isActive: true }, include: { platingRate: true } },
+              bundleComponents: { include: { componentVariant: true } },
             },
           },
           media: {
@@ -439,6 +481,7 @@ export class CatalogService {
             },
             include: {
               size: { include: { group: true } },
+              bundleComponents: { include: { componentVariant: true } },
             },
           },
           media: {
@@ -480,6 +523,7 @@ export class CatalogService {
           include: {
             size: { include: { group: true } },
             platingOptions: { where: { isActive: true }, include: { platingRate: true } },
+            bundleComponents: { include: { componentVariant: true } },
           },
         },
         media: {
@@ -503,7 +547,13 @@ export class CatalogService {
     const updated = await this.prisma.$transaction(async (transaction) => {
       const current = await transaction.product.findFirst({
         where: { id: productId, deletedAt: null },
-        select: { id: true, slug: true, salePriceToman: true, compareAtPriceToman: true },
+        select: {
+          id: true,
+          slug: true,
+          purchaseMode: true,
+          salePriceToman: true,
+          compareAtPriceToman: true,
+        },
       });
 
       if (!current) throw new NotFoundException('Product was not found.');
@@ -553,6 +603,20 @@ export class CatalogService {
 
       const nextSlug = dto.slug?.trim();
 
+      if (
+        dto.purchaseMode === ProductPurchaseMode.SIMPLE &&
+        current.purchaseMode !== ProductPurchaseMode.SIMPLE
+      ) {
+        const compositeVariantCount = await transaction.productVariant.count({
+          where: { productId, deletedAt: null, inventoryMode: VariantInventoryMode.COMPONENTS },
+        });
+        if (compositeVariantCount > 0) {
+          throw new BadRequestException(
+            'Remove composite variant recipes before switching to simple purchase mode.',
+          );
+        }
+      }
+
       await transaction.product.update({
         where: { id: productId },
         data: {
@@ -572,6 +636,7 @@ export class CatalogService {
           salePriceToman: dto.salePriceToman,
           compareAtPriceToman: dto.compareAtPriceToman,
           defaultPlatingType: dto.defaultPlatingType,
+          purchaseMode: dto.purchaseMode,
         },
       });
 
@@ -618,6 +683,7 @@ export class CatalogService {
             include: {
               size: { include: { group: true } },
               platingOptions: { where: { isActive: true }, include: { platingRate: true } },
+              bundleComponents: { include: { componentVariant: true } },
             },
           },
           media: { orderBy: { sortOrder: 'asc' }, include: { media: true } },
@@ -1472,6 +1538,7 @@ export class CatalogService {
         updatedAt: true,
         salePriceToman: true,
         compareAtPriceToman: true,
+        purchaseMode: true,
         sizeMode: true,
         defaultPlatingType: true,
         brand: {
@@ -1575,6 +1642,7 @@ export class CatalogService {
             weightGrams: true,
             salePriceToman: true,
             compareAtPriceToman: true,
+            inventoryMode: true,
             platingEligible: true,
             platingOptions: {
               where: {
@@ -1625,6 +1693,25 @@ export class CatalogService {
                 },
               },
             },
+            bundleComponents: {
+              select: {
+                quantity: true,
+                componentVariant: {
+                  select: {
+                    inventoryMode: true,
+                    isActive: true,
+                    deletedAt: true,
+                    inventories: {
+                      select: {
+                        onHand: true,
+                        reserved: true,
+                        warehouse: { select: { isActive: true, deletedAt: true } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
         media: {
@@ -1663,14 +1750,39 @@ export class CatalogService {
       throw new NotFoundException('Product was not found.');
     }
 
-    const variants = product.variants.map((variant) => {
-      const availableQuantity = variant.inventories.reduce((total, inventory) => {
+    const ownAvailableQuantity = (
+      inventories: readonly {
+        onHand: number;
+        reserved: number;
+        warehouse: { isActive: boolean; deletedAt: Date | null };
+      }[],
+    ) =>
+      inventories.reduce((total, inventory) => {
         if (!inventory.warehouse.isActive || inventory.warehouse.deletedAt) {
           return total;
         }
 
         return total + Math.max(0, inventory.onHand - inventory.reserved);
       }, 0);
+
+    const variants = product.variants.map((variant) => {
+      const availableQuantity =
+        variant.inventoryMode === VariantInventoryMode.COMPONENTS
+          ? variant.bundleComponents.length === 0
+            ? 0
+            : Math.min(
+                ...variant.bundleComponents.map(({ componentVariant, quantity }) => {
+                  if (
+                    componentVariant.inventoryMode !== VariantInventoryMode.OWN ||
+                    !componentVariant.isActive ||
+                    componentVariant.deletedAt
+                  ) {
+                    return 0;
+                  }
+                  return Math.floor(ownAvailableQuantity(componentVariant.inventories) / quantity);
+                }),
+              )
+          : ownAvailableQuantity(variant.inventories);
       const weightGrams = variant.weightGrams;
       const platingOptions =
         variant.platingEligible && weightGrams
@@ -1713,13 +1825,14 @@ export class CatalogService {
             : null,
         availableQuantity,
         isAvailable: availableQuantity > 0,
+        inventoryMode: variant.inventoryMode,
         platingOptions,
       };
     });
-    const availableQuantity = variants.reduce(
-      (total, variant) => total + variant.availableQuantity,
-      0,
-    );
+    const availableQuantity =
+      product.purchaseMode === ProductPurchaseMode.COMPOSITE
+        ? Math.max(0, ...variants.map((variant) => variant.availableQuantity))
+        : variants.reduce((total, variant) => total + variant.availableQuantity, 0);
     const media = product.media
       .filter((item) => !item.media.deletedAt)
       .map((item) => ({
@@ -1756,6 +1869,7 @@ export class CatalogService {
           : null,
       salePriceToman: product.salePriceToman,
       compareAtPriceToman: product.compareAtPriceToman,
+      purchaseMode: product.purchaseMode,
       sizeMode: product.sizeMode,
       defaultPlatingType: product.defaultPlatingType,
       brand:
@@ -2424,10 +2538,41 @@ export class CatalogService {
       throw new BadRequestException('A product must have at least one variant.');
     }
 
-    const skus = dto.variants.map(({ sku }) => sku);
+    const skus = dto.variants.map(({ sku }) => sku.trim().toLocaleLowerCase('en-US'));
 
     if (new Set(skus).size !== skus.length) {
       throw new BadRequestException('Variant SKUs must be unique within a product.');
+    }
+
+    const purchaseMode = dto.purchaseMode ?? ProductPurchaseMode.SIMPLE;
+    const variantsBySku = new Map(skus.map((sku, index) => [sku, dto.variants[index]!]));
+    for (const variant of dto.variants) {
+      const inventoryMode = variant.inventoryMode ?? VariantInventoryMode.OWN;
+      const components = variant.components ?? [];
+      if (
+        purchaseMode === ProductPurchaseMode.SIMPLE &&
+        inventoryMode !== VariantInventoryMode.OWN
+      ) {
+        throw new BadRequestException('Simple products cannot contain composite options.');
+      }
+      if (inventoryMode === VariantInventoryMode.OWN && components.length > 0) {
+        throw new BadRequestException('Independent variants cannot contain component recipes.');
+      }
+      if (inventoryMode === VariantInventoryMode.COMPONENTS && components.length === 0) {
+        throw new BadRequestException('Composite options require at least one component.');
+      }
+      for (const component of components) {
+        const normalizedComponentSku = component.componentSku.trim().toLocaleLowerCase('en-US');
+        const target = variantsBySku.get(normalizedComponentSku);
+        if (!target || normalizedComponentSku === variant.sku.trim().toLocaleLowerCase('en-US')) {
+          throw new BadRequestException(
+            'Composite components must reference another variant in the same product.',
+          );
+        }
+        if ((target.inventoryMode ?? VariantInventoryMode.OWN) !== VariantInventoryMode.OWN) {
+          throw new BadRequestException('Nested composite options are not supported.');
+        }
+      }
     }
 
     if (dto.sizeMode === SizeMode.SIZED) {

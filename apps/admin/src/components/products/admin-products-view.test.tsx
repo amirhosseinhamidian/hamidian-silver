@@ -30,6 +30,7 @@ const data: ProductManagementData = {
           shortDescription: null,
           description: null,
           status: 'ACTIVE',
+          purchaseMode: 'SIMPLE',
           sizeMode: 'SIZED',
           sizeGroup: {
             id: 'group-ring',
@@ -62,6 +63,8 @@ const data: ProductManagementData = {
               salePriceToman: null,
               compareAtPriceToman: null,
               active: true,
+              inventoryMode: 'OWN',
+              components: [],
               size: {
                 id: 'size-1',
                 label: '۵۲',

@@ -21,6 +21,7 @@ import type {
   AdminProductVariant,
   CatalogSize,
   CatalogSizeGroup,
+  VariantInventoryMode,
 } from '@/lib/catalog/catalog-model';
 import {
   formatAdminInteger,
@@ -46,6 +47,18 @@ function apiError(payload: unknown): string {
     'Size was not found or is inactive.': 'سایز انتخاب‌شده پیدا نشد یا غیرفعال است.',
     'Product variant was not found.': 'تنوع محصول پیدا نشد.',
     'Product was not found.': 'محصول پیدا نشد.',
+    'Enable composite purchase mode before adding a composite option.':
+      'ابتدا مدل فروش محصول را روی «انتخاب ترکیب» قرار دهید.',
+    'Composite options require at least one component.':
+      'برای گزینه ترکیبی حداقل یک جزء انتخاب کنید.',
+    'Every composite component must be an active variant of the same product.':
+      'همه اجزای ترکیب باید تنوع فعال همین محصول باشند.',
+    'Nested composite options are not supported.':
+      'یک گزینه ترکیبی نمی‌تواند جزء گزینه ترکیبی دیگری باشد.',
+    'A variant used by an order cannot change its inventory recipe.':
+      'ترکیب تنوعی که در سفارش استفاده شده قابل تغییر نیست.',
+    'Clear direct stock before converting a variant to a composite option.':
+      'پیش از تبدیل این تنوع به گزینه ترکیبی، موجودی مستقیم آن را صفر کنید.',
   };
   if (typeof payload === 'object' && payload !== null) {
     const value = payload as Record<string, unknown>;
@@ -102,6 +115,17 @@ function VariantForm({
 }: VariantFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [inventoryMode, setInventoryMode] = useState<VariantInventoryMode>(
+    variant?.inventoryMode ?? 'OWN',
+  );
+  const [components, setComponents] = useState<
+    ReadonlyArray<Readonly<{ variantId: string; quantity: string }>>
+  >(() =>
+    (variant?.components ?? []).map((component) => ({
+      variantId: component.variantId,
+      quantity: String(component.quantity),
+    })),
+  );
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -131,10 +155,30 @@ function VariantForm({
     if (effectiveComparePrice !== null && effectiveComparePrice <= effectiveSalePrice) {
       return setError('قیمت قبل از تخفیف تنوع باید بیشتر از قیمت فروش آن باشد.');
     }
+    const normalizedComponents = components.map((component) => ({
+      componentSku:
+        product.variants.find((candidate) => candidate.id === component.variantId)?.sku ?? '',
+      quantity: Number(toAsciiDigits(component.quantity)),
+    }));
+    if (inventoryMode === 'COMPONENTS' && normalizedComponents.length === 0) {
+      return setError('برای گزینه ترکیبی حداقل یک جزء انتخاب کنید.');
+    }
+    if (
+      normalizedComponents.some(
+        (component) =>
+          !component.componentSku ||
+          !Number.isSafeInteger(component.quantity) ||
+          component.quantity < 1,
+      )
+    ) {
+      return setError('تعداد مصرف هر جزء باید یک عدد صحیح و حداقل یک باشد.');
+    }
 
     const payload: Record<string, unknown> = {
       sku,
       isActive: formData.get('isActive') === 'on',
+      inventoryMode,
+      components: inventoryMode === 'COMPONENTS' ? normalizedComponents : [],
       ...(product.sizeMode === 'SIZED'
         ? { sizeId: selectedSizeId }
         : variant
@@ -215,6 +259,90 @@ function VariantForm({
           />
         )}
       </FormField>
+      {product.purchaseMode === 'COMPOSITE' ? (
+        <>
+          <FormField
+            id={`${formId}-inventory-mode`}
+            label="نوع موجودی"
+            hint="گزینه ترکیبی موجودی مستقل ندارد و از موجودی اجزای آن استفاده می‌کند."
+          >
+            {(props) => (
+              <Select
+                {...props}
+                value={inventoryMode}
+                onValueChange={(value) => {
+                  const nextMode = value as VariantInventoryMode;
+                  setInventoryMode(nextMode);
+                  if (nextMode === 'OWN') setComponents([]);
+                }}
+                options={[
+                  { value: 'OWN', label: 'جزء مستقل با موجودی مستقیم' },
+                  { value: 'COMPONENTS', label: 'گزینه ترکیبی از اجزا' },
+                ]}
+              />
+            )}
+          </FormField>
+          {inventoryMode === 'COMPONENTS' ? (
+            <fieldset className="rounded-[var(--admin-radius-md)] border border-[var(--admin-color-border)] p-3">
+              <legend className="px-1 text-sm font-bold">اجزای مصرفی</legend>
+              <p className="mb-3 text-xs leading-6 text-[var(--admin-color-muted)]">
+                با فروش یک عدد از این گزینه، تعداد مشخص‌شده از هر جزء کسر می‌شود.
+              </p>
+              <div className="space-y-3">
+                {product.variants
+                  .filter(
+                    (candidate) =>
+                      candidate.id !== variant?.id && candidate.inventoryMode === 'OWN',
+                  )
+                  .map((candidate) => {
+                    const component = components.find((item) => item.variantId === candidate.id);
+                    return (
+                      <div
+                        key={candidate.id}
+                        className="grid items-center gap-3 sm:grid-cols-[minmax(0,1fr)_8rem]"
+                      >
+                        <Checkbox
+                          id={`${formId}-component-${candidate.id}`}
+                          label={candidate.name ?? candidate.sku}
+                          description={`SKU: ${candidate.sku}`}
+                          checked={Boolean(component)}
+                          onChange={(event) =>
+                            setComponents((current) =>
+                              event.currentTarget.checked
+                                ? [...current, { variantId: candidate.id, quantity: '1' }]
+                                : current.filter((item) => item.variantId !== candidate.id),
+                            )
+                          }
+                        />
+                        {component ? (
+                          <Input
+                            aria-label={`تعداد مصرف ${candidate.name ?? candidate.sku}`}
+                            value={component.quantity}
+                            inputMode="numeric"
+                            onChange={(event) =>
+                              setComponents((current) =>
+                                current.map((item) =>
+                                  item.variantId === candidate.id
+                                    ? {
+                                        ...item,
+                                        quantity: toPersianDigits(
+                                          toAsciiDigits(event.currentTarget.value),
+                                        ),
+                                      }
+                                    : item,
+                                ),
+                              )
+                            }
+                          />
+                        ) : null}
+                      </div>
+                    );
+                  })}
+              </div>
+            </fieldset>
+          ) : null}
+        </>
+      ) : null}
       {product.sizeMode === 'SIZED' ? (
         <FormField id={`${formId}-size`} label="سایز" required>
           {(props) => (
@@ -365,6 +493,10 @@ function VariantMobileCard({
       title={variant.name ?? variant.size?.label ?? 'تنوع بدون نام'}
       status={statusBadge(variant.active)}
       items={[
+        {
+          label: 'مدل موجودی',
+          value: variant.inventoryMode === 'COMPONENTS' ? 'ترکیبی' : 'مستقل',
+        },
         { label: 'سایز', value: variant.size?.label ?? 'ندارد' },
         { label: 'وزن', value: formatWeight(variant.weightGrams) },
         {
@@ -624,6 +756,14 @@ export function ProductVariantManager({ product, sizes }: ProductVariantManagerP
     { id: 'name', header: 'نام تنوع', cell: (variant) => variant.name ?? '—' },
     { id: 'size', header: 'سایز', cell: (variant) => variant.size?.label ?? '—' },
     { id: 'weight', header: 'وزن', cell: (variant) => formatWeight(variant.weightGrams) },
+    {
+      id: 'inventory-mode',
+      header: 'مدل موجودی',
+      cell: (variant) =>
+        variant.inventoryMode === 'COMPONENTS'
+          ? `ترکیبی (${toPersianDigits(variant.components.length)} جزء)`
+          : 'مستقل',
+    },
     {
       id: 'price',
       header: 'قیمت فروش',

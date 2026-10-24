@@ -29,6 +29,7 @@ const product = {
   seoCanonicalPath: '/products/ring-canonical',
   salePriceToman: 800_000,
   compareAtPriceToman: 1_000_000,
+  purchaseMode: 'SIMPLE',
   sizeMode: 'SIZED',
   brand: {
     id: 'brand-1',
@@ -258,6 +259,7 @@ describe('storefront structured data', () => {
           weightGrams: 4.1,
           salePriceToman: 800_000,
           compareAtPriceToman: null,
+          inventoryMode: 'OWN',
           size: {
             id: 'size-50',
             code: '50',
@@ -281,6 +283,7 @@ describe('storefront structured data', () => {
           weightGrams: 4.2,
           salePriceToman: 820_000,
           compareAtPriceToman: null,
+          inventoryMode: 'OWN',
           size: {
             id: 'size-52',
             code: '52',

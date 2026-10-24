@@ -237,6 +237,16 @@ enum ProductStatus {
   ARCHIVED
 }
 
+enum ProductPurchaseMode {
+  SIMPLE
+  COMPOSITE
+}
+
+enum VariantInventoryMode {
+  OWN
+  COMPONENTS
+}
+
 enum HomepageHeroPlacement {
   PRIMARY
   SECONDARY
@@ -613,6 +623,7 @@ model Product {
   seoNoIndex       Boolean                @default(false)
   seoOgMediaId     String?               @db.Uuid
   status           ProductStatus         @default(DRAFT)
+  purchaseMode     ProductPurchaseMode    @default(SIMPLE)
   sizeMode         SizeMode              @default(NONE)
   defaultPlatingType PlatingType?
   brandId          String?               @db.Uuid
@@ -926,6 +937,7 @@ model ProductVariant {
   salePriceToman                 Int?
   compareAtPriceToman            Int?
   isActive                       Boolean                         @default(true)
+  inventoryMode                  VariantInventoryMode            @default(OWN)
   createdAt                      DateTime                        @default(now()) @db.Timestamptz(3)
   updatedAt                      DateTime                        @updatedAt @db.Timestamptz(3)
   deletedAt                      DateTime?                       @db.Timestamptz(3)
@@ -936,12 +948,26 @@ model ProductVariant {
   platingOptions                 ProductPlatingOption[]
   orderItems                     OrderItem[]
   stockNotificationSubscriptions StockNotificationSubscription[]
+  bundleComponents               ProductVariantComponent[]       @relation("BundleVariantComponents")
+  componentOf                    ProductVariantComponent[]       @relation("ComponentVariantUsages")
 
   @@unique([productId, sizeId])
   @@index([productId, isActive])
   @@index([sizeId])
   @@index([deletedAt])
   @@map("product_variants")
+}
+
+model ProductVariantComponent {
+  bundleVariantId    String         @db.Uuid
+  componentVariantId String         @db.Uuid
+  quantity           Int            @default(1)
+  bundleVariant      ProductVariant @relation("BundleVariantComponents", fields: [bundleVariantId], references: [id], onDelete: Cascade)
+  componentVariant   ProductVariant @relation("ComponentVariantUsages", fields: [componentVariantId], references: [id], onDelete: Restrict)
+
+  @@id([bundleVariantId, componentVariantId])
+  @@index([componentVariantId])
+  @@map("product_variant_components")
 }
 
 model ProductCategory {

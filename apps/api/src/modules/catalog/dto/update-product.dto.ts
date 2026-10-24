@@ -15,11 +15,15 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { PlatingType } from '../../../generated/prisma/enums';
+import { PlatingType, ProductPurchaseMode } from '../../../generated/prisma/enums';
 import { PRODUCT_SEO_CANONICAL_PATH_PATTERN } from '../../seo/seo-validation';
 import { ProductAttributeInputDto } from './create-product.dto';
 
 export class UpdateProductDto {
+  @IsOptional()
+  @IsEnum(ProductPurchaseMode)
+  purchaseMode?: ProductPurchaseMode;
+
   @IsOptional()
   @IsEnum(PlatingType)
   defaultPlatingType?: PlatingType | null;

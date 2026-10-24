@@ -1,4 +1,20 @@
-import { IsBoolean, IsNumber, IsOptional, IsString, IsUUID, Length, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+import { VariantInventoryMode } from '../../../generated/prisma/enums';
+import { ProductVariantComponentInputDto } from './create-product.dto';
 
 export class UpdateProductVariantDto {
   @IsOptional()
@@ -33,4 +49,16 @@ export class UpdateProductVariantDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsEnum(VariantInventoryMode)
+  inventoryMode?: VariantInventoryMode;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ArrayUnique((item: ProductVariantComponentInputDto) => item.componentSku.trim().toLowerCase())
+  @ValidateNested({ each: true })
+  @Type(() => ProductVariantComponentInputDto)
+  components?: ProductVariantComponentInputDto[];
 }

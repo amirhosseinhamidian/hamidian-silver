@@ -1,4 +1,8 @@
-import { PlatingType } from '../../generated/prisma/enums';
+import {
+  PlatingType,
+  ProductPurchaseMode,
+  VariantInventoryMode,
+} from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CatalogService } from './catalog.service';
 import type { PublicMediaUrlService } from './public-media-url.service';
@@ -148,5 +152,81 @@ describe('CatalogService commerce projection', () => {
         }),
       }),
     );
+  });
+
+  it('derives a composite option availability from the limiting component', async () => {
+    prisma.product.findFirst.mockResolvedValue({
+      id: 'product-1',
+      name: 'نیم‌ست نقره',
+      slug: 'silver-half-set',
+      shortDescription: null,
+      description: null,
+      salePriceToman: 2_000_000,
+      compareAtPriceToman: null,
+      purchaseMode: ProductPurchaseMode.COMPOSITE,
+      sizeMode: 'NONE',
+      brand: null,
+      country: null,
+      categories: [],
+      attributes: [],
+      variants: [
+        {
+          id: 'set-variant',
+          sku: 'SET-FULL',
+          name: 'نیم‌ست کامل',
+          salePriceToman: 3_000_000,
+          compareAtPriceToman: null,
+          weightGrams: null,
+          inventoryMode: VariantInventoryMode.COMPONENTS,
+          platingEligible: false,
+          platingOptions: [],
+          size: null,
+          inventories: [],
+          bundleComponents: [
+            {
+              quantity: 1,
+              componentVariant: {
+                inventoryMode: VariantInventoryMode.OWN,
+                isActive: true,
+                deletedAt: null,
+                inventories: [
+                  {
+                    onHand: 8,
+                    reserved: 2,
+                    warehouse: { isActive: true, deletedAt: null },
+                  },
+                ],
+              },
+            },
+            {
+              quantity: 2,
+              componentVariant: {
+                inventoryMode: VariantInventoryMode.OWN,
+                isActive: true,
+                deletedAt: null,
+                inventories: [
+                  {
+                    onHand: 7,
+                    reserved: 1,
+                    warehouse: { isActive: true, deletedAt: null },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      media: [],
+    });
+
+    const product = await service.getPublicProduct('silver-half-set');
+
+    expect(product.purchaseMode).toBe(ProductPurchaseMode.COMPOSITE);
+    expect(product.availableQuantity).toBe(3);
+    expect(product.variants[0]).toMatchObject({
+      inventoryMode: VariantInventoryMode.COMPONENTS,
+      availableQuantity: 3,
+      isAvailable: true,
+    });
   });
 });

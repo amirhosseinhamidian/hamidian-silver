@@ -3,7 +3,11 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DomainException } from '../../common/errors/domain-exception';
 import { ErrorCode } from '../../common/errors/error-codes';
-import { ProductStatus, StockNotificationStatus } from '../../generated/prisma/enums';
+import {
+  ProductStatus,
+  StockNotificationStatus,
+  VariantInventoryMode,
+} from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { CreateStockNotificationDto } from './dto/create-stock-notification.dto';
 
@@ -39,6 +43,7 @@ export class StockNotificationsService {
           },
           select: {
             id: true,
+            inventoryMode: true,
             inventories: {
               where: {
                 warehouse: {
@@ -49,6 +54,22 @@ export class StockNotificationsService {
               select: {
                 onHand: true,
                 reserved: true,
+              },
+            },
+            bundleComponents: {
+              select: {
+                quantity: true,
+                componentVariant: {
+                  select: {
+                    inventoryMode: true,
+                    isActive: true,
+                    deletedAt: true,
+                    inventories: {
+                      where: { warehouse: { isActive: true, deletedAt: null } },
+                      select: { onHand: true, reserved: true },
+                    },
+                  },
+                },
               },
             },
           },
@@ -63,16 +84,29 @@ export class StockNotificationsService {
       );
     }
 
-    const availableQuantity = product.variants.reduce(
-      (productTotal, variant) =>
-        productTotal +
-        variant.inventories.reduce(
-          (variantTotal, inventory) =>
-            variantTotal + Math.max(0, inventory.onHand - inventory.reserved),
-          0,
-        ),
-      0,
-    );
+    const ownAvailable = (inventories: readonly { onHand: number; reserved: number }[]) =>
+      inventories.reduce(
+        (total, inventory) => total + Math.max(0, inventory.onHand - inventory.reserved),
+        0,
+      );
+    const availableQuantity = product.variants.reduce((productTotal, variant) => {
+      const variantAvailable =
+        variant.inventoryMode === VariantInventoryMode.COMPONENTS
+          ? (variant.bundleComponents ?? []).length === 0
+            ? 0
+            : Math.min(
+                ...(variant.bundleComponents ?? []).map(({ componentVariant, quantity }) =>
+                  (componentVariant.inventoryMode ?? VariantInventoryMode.OWN) ===
+                    VariantInventoryMode.OWN &&
+                  componentVariant.isActive &&
+                  !componentVariant.deletedAt
+                    ? Math.floor(ownAvailable(componentVariant.inventories) / quantity)
+                    : 0,
+                ),
+              )
+          : ownAvailable(variant.inventories);
+      return productTotal + variantAvailable;
+    }, 0);
 
     if (availableQuantity > 0) {
       throw new DomainException(

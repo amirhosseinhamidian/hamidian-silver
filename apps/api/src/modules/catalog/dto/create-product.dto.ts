@@ -17,8 +17,24 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { PlatingType, ProductStatus, SizeMode } from '../../../generated/prisma/enums';
+import {
+  PlatingType,
+  ProductPurchaseMode,
+  ProductStatus,
+  SizeMode,
+  VariantInventoryMode,
+} from '../../../generated/prisma/enums';
 import { PRODUCT_SEO_CANONICAL_PATH_PATTERN } from '../../seo/seo-validation';
+
+export class ProductVariantComponentInputDto {
+  @IsString()
+  @Length(1, 100)
+  componentSku!: string;
+
+  @IsInt()
+  @Min(1)
+  quantity!: number;
+}
 
 export class CreateProductVariantDto {
   @IsString()
@@ -52,6 +68,18 @@ export class CreateProductVariantDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsEnum(VariantInventoryMode)
+  inventoryMode?: VariantInventoryMode;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ArrayUnique((item: ProductVariantComponentInputDto) => item.componentSku.trim().toLowerCase())
+  @ValidateNested({ each: true })
+  @Type(() => ProductVariantComponentInputDto)
+  components?: ProductVariantComponentInputDto[];
 }
 
 export class CreateProductMediaDto {
@@ -134,6 +162,10 @@ export class CreateProductDto {
   @IsOptional()
   @IsEnum(ProductStatus)
   status?: ProductStatus;
+
+  @IsOptional()
+  @IsEnum(ProductPurchaseMode)
+  purchaseMode?: ProductPurchaseMode;
 
   @IsEnum(SizeMode)
   sizeMode!: SizeMode;

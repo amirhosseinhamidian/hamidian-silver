@@ -3823,6 +3823,8 @@ export interface components {
             salePriceToman: number | null;
             compareAtPriceToman: number | null;
             size: components["schemas"]["PublicCatalogSizeDto"] | null;
+            /** @enum {string} */
+            inventoryMode: "OWN" | "COMPONENTS";
             platingOptions: components["schemas"]["PublicCatalogPlatingOptionDto"][];
             id: string;
             sku: string;
@@ -3847,6 +3849,8 @@ export interface components {
             brand: components["schemas"]["PublicCatalogBrandDto"] | null;
             categories: components["schemas"]["PublicCatalogCategoryDto"][];
             primaryMedia: components["schemas"]["PublicCatalogMediaDto"] | null;
+            /** @enum {string} */
+            purchaseMode: "SIMPLE" | "COMPOSITE";
             /** @enum {string|null} */
             defaultPlatingType?: "GOLD" | "ROSE_GOLD" | "RHODIUM" | null;
             description: string | null;
@@ -3985,6 +3989,10 @@ export interface components {
             sortOrder?: number;
             isActive?: boolean;
         };
+        ProductVariantComponentInputDto: {
+            componentSku: string;
+            quantity: number;
+        };
         CreateProductVariantDto: {
             sku: string;
             name?: string;
@@ -3994,6 +4002,9 @@ export interface components {
             salePriceToman?: number;
             compareAtPriceToman?: number;
             isActive?: boolean;
+            /** @enum {string} */
+            inventoryMode?: "OWN" | "COMPONENTS";
+            components?: components["schemas"]["ProductVariantComponentInputDto"][];
         };
         CreateProductMediaDto: {
             /** Format: uuid */
@@ -4023,6 +4034,8 @@ export interface components {
             /** @enum {string} */
             status?: "DRAFT" | "ACTIVE" | "ARCHIVED";
             /** @enum {string} */
+            purchaseMode?: "SIMPLE" | "COMPOSITE";
+            /** @enum {string} */
             sizeMode: "NONE" | "FREE_SIZE" | "SIZED";
             /** @enum {string} */
             defaultPlatingType?: "GOLD" | "ROSE_GOLD" | "RHODIUM";
@@ -4050,8 +4063,13 @@ export interface components {
             salePriceToman?: number | null;
             compareAtPriceToman?: number | null;
             isActive?: boolean;
+            /** @enum {string} */
+            inventoryMode?: "OWN" | "COMPONENTS";
+            components?: components["schemas"]["ProductVariantComponentInputDto"][];
         };
         UpdateProductDto: {
+            /** @enum {string} */
+            purchaseMode?: "SIMPLE" | "COMPOSITE";
             /** @enum {string|null} */
             defaultPlatingType?: "GOLD" | "ROSE_GOLD" | "RHODIUM" | null;
             platingTypes?: ("GOLD" | "ROSE_GOLD" | "RHODIUM")[];
@@ -6818,9 +6836,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": Record<string, never>;
-                };
+                content?: never;
             };
         };
     };

@@ -25,7 +25,10 @@ function getVariantOptionLabel(variant: ProductVariant): string {
   return variant.size?.label?.trim() || variant.name?.trim() || 'بدون سایز';
 }
 
-function getCartVariantLabel(variant: ProductVariant): string {
+function getCartVariantLabel(
+  variant: ProductVariant,
+  purchaseMode: PublicCatalogProductDetail['purchaseMode'],
+): string {
   const sizeLabel = variant.size?.label?.trim();
 
   if (sizeLabel) {
@@ -33,6 +36,10 @@ function getCartVariantLabel(variant: ProductVariant): string {
   }
 
   const modelName = variant.name?.trim();
+
+  if (purchaseMode === 'COMPOSITE') {
+    return modelName ? `ترکیب: ${modelName}` : 'ترکیب انتخابی';
+  }
 
   return modelName ? `مدل: ${modelName}` : 'بدون سایز';
 }
@@ -96,9 +103,12 @@ export function ProductPurchasePanel({
   const hasMultipleVariants = product.variants.length > 1;
   const isSizeSelection = product.sizeMode === 'SIZED';
   const sizeGroup = product.variants.find((variant) => variant.size?.group)?.size?.group ?? null;
-  const selectorLabel = isSizeSelection
-    ? (sizeGroup?.selectionLabel ?? 'انتخاب سایز')
-    : 'انتخاب مدل';
+  const selectorLabel =
+    product.purchaseMode === 'COMPOSITE'
+      ? 'انتخاب ترکیب محصول'
+      : isSizeSelection
+        ? (sizeGroup?.selectionLabel ?? 'انتخاب سایز')
+        : 'انتخاب مدل';
   const sizeLabel = sizeGroup?.cartLabel ?? 'سایز';
   const hasPurchasableVariant = product.variants.some(
     (variant) => variant.isAvailable && variant.availableQuantity > 0,
@@ -133,9 +143,12 @@ export function ProductPurchasePanel({
     }
 
     if (hasMultipleVariants) {
-      const message = isSizeSelection
-        ? `لطفاً ${sizeLabel} را انتخاب کنید.`
-        : 'لطفاً مدل را انتخاب کنید.';
+      const message =
+        product.purchaseMode === 'COMPOSITE'
+          ? 'لطفاً ترکیب موردنظر را انتخاب کنید.'
+          : isSizeSelection
+            ? `لطفاً ${sizeLabel} را انتخاب کنید.`
+            : 'لطفاً مدل را انتخاب کنید.';
       setVariantMessage(message);
       setSelectionToast(message);
       variantSelectorRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
@@ -158,7 +171,7 @@ export function ProductPurchasePanel({
       variantId: selectedVariant.id,
       productSlug: product.slug,
       productName: product.name,
-      variantLabel: getCartVariantLabel(selectedVariant),
+      variantLabel: getCartVariantLabel(selectedVariant, product.purchaseMode),
       media: product.primaryMedia,
       unitSalePriceToman: selectedSalePriceToman,
       unitCompareAtPriceToman: selectedCompareAtPriceToman ?? null,
@@ -174,7 +187,7 @@ export function ProductPurchasePanel({
       brand: product.brand?.name,
       category: product.categories[0]?.name,
       variant: [
-        getCartVariantLabel(selectedVariant),
+        getCartVariantLabel(selectedVariant, product.purchaseMode),
         platingType && platingPresentation(platingType).label,
       ]
         .filter(Boolean)
@@ -345,9 +358,11 @@ export function ProductPurchasePanel({
         </div>
       ) : hasMultipleVariants ? (
         <p className="mt-6 hidden text-sm text-[var(--sf-color-muted)] lg:block">
-          {isSizeSelection
-            ? `برای ادامه ${sizeLabel} را انتخاب کنید.`
-            : 'برای ادامه مدل را انتخاب کنید.'}
+          {product.purchaseMode === 'COMPOSITE'
+            ? 'برای ادامه ترکیب موردنظر را انتخاب کنید.'
+            : isSizeSelection
+              ? `برای ادامه ${sizeLabel} را انتخاب کنید.`
+              : 'برای ادامه مدل را انتخاب کنید.'}
         </p>
       ) : null}
 
