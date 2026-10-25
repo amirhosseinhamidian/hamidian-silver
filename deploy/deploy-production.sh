@@ -47,7 +47,7 @@ cleanup_docker_space() {
 
     # Build cache is reproducible. Prune every unused record instead of waiting
     # 72 hours, otherwise frequent releases can fill a small production disk.
-    docker builder prune --all --force --keep-storage=1GB
+    docker builder prune --all --force --reserved-space=1GB
     docker image prune --force
     docker volume prune --force
 
