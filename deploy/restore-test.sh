@@ -105,7 +105,8 @@ ready=0
 
 for ((i = 0; i < 40; i++)); do
     if docker exec "$container" \
-        pg_isready -q -U postgres -d restorecheck; then
+        psql -X -q -U postgres -d restorecheck -c 'SELECT 1' \
+        >/dev/null 2>&1; then
         ready=1
         break
     fi
