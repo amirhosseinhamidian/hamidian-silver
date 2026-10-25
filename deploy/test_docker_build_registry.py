@@ -20,12 +20,27 @@ class DockerBuildRegistryTests(unittest.TestCase):
                 self.assertIn("ARG NPM_REGISTRY=https://registry.npmjs.org", contents)
                 self.assertIn("npm_config_registry=$NPM_REGISTRY", contents)
                 self.assertIn("PNPM_CONFIG_REGISTRY=$NPM_REGISTRY", contents)
+                self.assertIn(
+                    "ARG PRISMA_ENGINES_MIRROR=https://binaries.prisma.sh",
+                    contents,
+                )
+                self.assertIn(
+                    "PRISMA_ENGINES_MIRROR=$PRISMA_ENGINES_MIRROR",
+                    contents,
+                )
 
     def test_every_production_node_build_receives_the_registry_argument(self):
         compose = (ROOT / "compose.production.yaml").read_text()
         self.assertEqual(
             compose.count(
                 "NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}"
+            ),
+            5,
+        )
+        self.assertEqual(
+            compose.count(
+                "PRISMA_ENGINES_MIRROR: "
+                "${PRISMA_ENGINES_MIRROR:-https://binaries.prisma.sh}"
             ),
             5,
         )

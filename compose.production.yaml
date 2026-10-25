@@ -58,6 +58,7 @@ services:
       target: migrate
       args:
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-https://binaries.prisma.sh}
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set an internal postgresql://...@postgres:5432/... URL}
     depends_on:
@@ -77,6 +78,7 @@ services:
       target: operational-seed
       args:
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-https://binaries.prisma.sh}
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set an internal production DATABASE_URL}
       SEED_OPERATIONAL_DATA: 'true'
@@ -101,6 +103,7 @@ services:
       target: runtime
       args:
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-https://binaries.prisma.sh}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -171,6 +174,7 @@ services:
       dockerfile: apps/storefront/Dockerfile
       args:
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-https://binaries.prisma.sh}
         MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-https://media.hamidian.shop/media}
         NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
         NEXT_PUBLIC_STOCK_NOTIFICATIONS_ENABLED: ${STOCK_NOTIFICATIONS_ENABLED:-false}
@@ -202,6 +206,7 @@ services:
       dockerfile: apps/admin/Dockerfile
       args:
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-https://binaries.prisma.sh}
         NEXT_PUBLIC_STOREFRONT_URL: https://hamidian.shop
     restart: unless-stopped
     depends_on:
