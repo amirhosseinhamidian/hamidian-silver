@@ -21,6 +21,7 @@ class ProductionEnvValidationTests(unittest.TestCase):
             "DATABASE_URL": "postgresql://hamidian:" + quote(password, safe="") + "@postgres:5432/hamidian_silver?schema=public",
             "OTP_PEPPER": "b" * 64,
             "NPM_REGISTRY": "https://registry.npmjs.org",
+            "PRISMA_ENGINES_MIRROR": "https://binaries.prisma.sh",
             "MEDIA_PUBLIC_BASE_URL": "https://media.hamidian.shop/media",
             "CORS_ORIGINS": "https://hamidian.shop,https://admin.hamidian.shop",
             "PAYMENT_CALLBACK_URL": "https://hamidian.shop/api/payment/callback",
@@ -59,6 +60,16 @@ class ProductionEnvValidationTests(unittest.TestCase):
 
         env["NPM_REGISTRY"] = "https://packages.example.com"
         self.assertIn("NPM_REGISTRY", " ".join(checker.validate(env)))
+
+    def test_accepts_approved_prisma_mirror_and_rejects_other_hosts(self):
+        env = self.fixture()
+        env["PRISMA_ENGINES_MIRROR"] = (
+            "https://registry.npmmirror.com/-/binary/prisma"
+        )
+        self.assertEqual(checker.validate(env), [])
+
+        env["PRISMA_ENGINES_MIRROR"] = "https://binaries.example.com/prisma"
+        self.assertIn("PRISMA_ENGINES_MIRROR", " ".join(checker.validate(env)))
 
     def test_rejects_console_and_partially_configured_sms(self):
         env = self.fixture()
