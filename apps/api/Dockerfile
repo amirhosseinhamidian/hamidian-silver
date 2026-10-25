@@ -1,8 +1,14 @@
 # Build with the repository root as context: docker build -f apps/api/Dockerfile .
 FROM public.ecr.aws/docker/library/node:24-bookworm-slim AS base
+ARG NPM_REGISTRY=https://registry.npmjs.org
+ENV npm_config_registry=$NPM_REGISTRY
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates openssl \
     && rm -rf /var/lib/apt/lists/* \
-    && npm install --global pnpm@11.9.0
+    && npm install --global pnpm@11.9.0 \
+        --fetch-retries=5 \
+        --fetch-retry-mintimeout=20000 \
+        --fetch-retry-maxtimeout=120000 \
+        --fetch-timeout=300000
 WORKDIR /workspace
 
 FROM base AS deps

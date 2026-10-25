@@ -17,6 +17,7 @@ ENV_PATH = "/etc/hamidian-silver/production.env"
 ALLOWED_KEYS = frozenset(
     {
         "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "DATABASE_URL", "OTP_PEPPER",
+        "NPM_REGISTRY",
         "MEDIA_PUBLIC_BASE_URL", "CORS_ORIGINS", "PAYMENT_CALLBACK_URL",
         "SMS_PROVIDER", "KAVENEGAR_API_KEY", "KAVENEGAR_OTP_TEMPLATE", "KAVENEGAR_SENDER",
         "KAVENEGAR_PAYMENT_VERIFIED_TEMPLATE", "KAVENEGAR_PAYMENT_RECEIPT_SUBMITTED_TEMPLATE",
@@ -129,6 +130,12 @@ def validate(values: dict[str, str]) -> list[str]:
             valid = False
         if not valid:
             errors.append("DATABASE_URL must use matching credentials and postgres:5432/... ?schema=public")
+
+    if values.get("NPM_REGISTRY") not in {
+        "https://registry.npmjs.org",
+        "https://registry.npmmirror.com",
+    }:
+        errors.append("NPM_REGISTRY must use an approved HTTPS package registry")
 
     fixed = {
         "MEDIA_PUBLIC_BASE_URL": "https://media.hamidian.shop/media",

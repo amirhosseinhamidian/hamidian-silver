@@ -23,7 +23,7 @@ class ProductionDeployCleanupTests(unittest.TestCase):
         end = SCRIPT.index('\n}\n', start)
         cleanup = SCRIPT[start:end]
 
-        self.assertIn('docker builder prune --all --force --keep-storage=1GB', cleanup)
+        self.assertIn('docker builder prune --all --force --reserved-space=1GB', cleanup)
         self.assertIn('docker image prune --force', cleanup)
         self.assertIn('docker volume prune --force', cleanup)
         self.assertNotIn('docker system prune', cleanup)

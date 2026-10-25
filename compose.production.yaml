@@ -56,6 +56,8 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
       target: migrate
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set an internal postgresql://...@postgres:5432/... URL}
     depends_on:
@@ -73,6 +75,8 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
       target: operational-seed
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set an internal production DATABASE_URL}
       SEED_OPERATIONAL_DATA: 'true'
@@ -95,6 +99,8 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
       target: runtime
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -164,6 +170,7 @@ services:
       context: .
       dockerfile: apps/storefront/Dockerfile
       args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
         MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-https://media.hamidian.shop/media}
         NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
         NEXT_PUBLIC_STOCK_NOTIFICATIONS_ENABLED: ${STOCK_NOTIFICATIONS_ENABLED:-false}
@@ -194,6 +201,7 @@ services:
       context: .
       dockerfile: apps/admin/Dockerfile
       args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
         NEXT_PUBLIC_STOREFRONT_URL: https://hamidian.shop
     restart: unless-stopped
     depends_on:

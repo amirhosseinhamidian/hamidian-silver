@@ -20,6 +20,7 @@ class ProductionEnvValidationTests(unittest.TestCase):
             "POSTGRES_PASSWORD": password,
             "DATABASE_URL": "postgresql://hamidian:" + quote(password, safe="") + "@postgres:5432/hamidian_silver?schema=public",
             "OTP_PEPPER": "b" * 64,
+            "NPM_REGISTRY": "https://registry.npmjs.org",
             "MEDIA_PUBLIC_BASE_URL": "https://media.hamidian.shop/media",
             "CORS_ORIGINS": "https://hamidian.shop,https://admin.hamidian.shop",
             "PAYMENT_CALLBACK_URL": "https://hamidian.shop/api/payment/callback",
@@ -50,6 +51,14 @@ class ProductionEnvValidationTests(unittest.TestCase):
         self.assertIn("DATABASE_URL", result)
         self.assertIn("PAYMENT_CALLBACK_URL", result)
         self.assertNotIn(env["POSTGRES_PASSWORD"], result)
+
+    def test_accepts_approved_package_registries_and_rejects_other_hosts(self):
+        env = self.fixture()
+        env["NPM_REGISTRY"] = "https://registry.npmmirror.com"
+        self.assertEqual(checker.validate(env), [])
+
+        env["NPM_REGISTRY"] = "https://packages.example.com"
+        self.assertIn("NPM_REGISTRY", " ".join(checker.validate(env)))
 
     def test_rejects_console_and_partially_configured_sms(self):
         env = self.fixture()

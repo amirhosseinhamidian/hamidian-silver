@@ -49,7 +49,7 @@ free_space() {
 
 prune_cache() {
     # No --all, no volume prune, no application image or backup deletion.
-    docker builder prune --force --filter until=72h --keep-storage=2GB
+    docker builder prune --force --filter until=72h --reserved-space=2GB
     docker image prune --force --filter until=72h
 }
 
