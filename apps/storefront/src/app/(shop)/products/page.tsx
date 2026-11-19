@@ -19,7 +19,9 @@ import {
   buildCatalogHref,
   getPublicCatalogIndex,
   getPublicCatalogProducts,
+  isCatalogPageOutOfRange,
   parseCatalogSearchParams,
+  type CatalogFilters,
   type CatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
 import { ROOT_CATALOG_SEO } from '@/lib/seo/content-copy';
@@ -32,20 +34,27 @@ type ProductsPageProps = Readonly<{
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
 
-export async function generateMetadata({ searchParams }: ProductsPageProps): Promise<Metadata> {
-  const rawSearchParams = await searchParams;
-  const filters = parseCatalogSearchParams(rawSearchParams);
-  const isRootCatalog =
-    filters.page === 1 &&
+function isUnfilteredCatalog(filters: CatalogFilters): boolean {
+  return (
     filters.sort === 'newest' &&
     !filters.q &&
     !filters.category &&
     !filters.brand &&
-    !filters.country;
-  const [settings, rootProducts] = await Promise.all([
+    !filters.country
+  );
+}
+
+export async function generateMetadata({ searchParams }: ProductsPageProps): Promise<Metadata> {
+  const rawSearchParams = await searchParams;
+  const filters = parseCatalogSearchParams(rawSearchParams);
+  const [settings, products] = await Promise.all([
     getPublicSiteSettings(),
-    isRootCatalog ? getPublicCatalogProducts(filters) : Promise.resolve(null),
+    isUnfilteredCatalog(filters) ? getPublicCatalogProducts(filters) : Promise.resolve(null),
   ]);
+
+  if (products && isCatalogPageOutOfRange(filters, products)) {
+    return { title: 'صفحه محصولات یافت نشد', robots: { index: false, follow: false } };
+  }
 
   return buildStorefrontPageMetadata(settings, {
     pathname: '/products',
@@ -53,7 +62,7 @@ export async function generateMetadata({ searchParams }: ProductsPageProps): Pro
     title: filters.q ? `نتایج جستجوی «${filters.q}»` : ROOT_CATALOG_SEO.title,
     description: settings.catalogHeroSubtitle ?? ROOT_CATALOG_SEO.description,
     fallbackMedia: settings.catalogHeroMedia,
-    seoNoIndex: Boolean(isRootCatalog && rootProducts?.total === 0),
+    seoNoIndex: products?.total === 0,
   });
 }
 
@@ -67,9 +76,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const activeFilterCount = [filters.q, filters.category, filters.brand, filters.country].filter(
     Boolean,
   ).length;
-  const hasActiveFilters = Boolean(activeFilterCount > 0 || filters.sort !== 'newest');
-  const isIndexablePagination = !hasActiveFilters;
-  if (isIndexablePagination && filters.page > 1 && filters.page > products.totalPages) {
+  const hasActiveFilters = !isUnfilteredCatalog(filters);
+  if (!hasActiveFilters && isCatalogPageOutOfRange(filters, products)) {
     notFound();
   }
 

@@ -69,33 +69,24 @@ export function resolveStorefrontSeoRoutePolicy(
     };
   }
 
-  if (isCatalogDocument(normalizedPath)) {
+  const catalogDocument = isCatalogDocument(normalizedPath);
+  if (catalogDocument || isGuideDocument(normalizedPath)) {
+    const isListing = catalogDocument
+      ? !normalizedPath.startsWith('/products/')
+      : normalizedPath === '/guide';
     const entries = activeEntries(searchParams);
-    const page = canonicalPage(searchParams);
+    const page = isListing ? canonicalPage(searchParams) : null;
     const rawPage = searchParams.get('page')?.trim();
-    const hasInvalidPage = Boolean(rawPage && rawPage !== '1' && page === null);
-    const hasCatalogVariant = entries.some(([key]) => key !== 'page') || hasInvalidPage;
+    const hasVariant = isListing
+      ? entries.some(([key]) => key !== 'page') ||
+        Boolean(rawPage && rawPage !== '1' && page === null)
+      : entries.length > 0;
 
     return {
-      canonicalPath: hasCatalogVariant ? normalizedPath : withPage(normalizedPath, page),
-      index: !hasCatalogVariant,
+      canonicalPath: hasVariant ? normalizedPath : withPage(normalizedPath, page),
+      index: !hasVariant,
       follow: true,
-      reason: hasCatalogVariant ? 'catalog-variant' : 'catalog-page',
-    };
-  }
-
-  if (isGuideDocument(normalizedPath)) {
-    const entries = activeEntries(searchParams);
-    const page = canonicalPage(searchParams);
-    const rawPage = searchParams.get('page')?.trim();
-    const hasInvalidPage = Boolean(rawPage && rawPage !== '1' && page === null);
-    const hasGuideVariant = entries.some(([key]) => key !== 'page') || hasInvalidPage;
-
-    return {
-      canonicalPath: hasGuideVariant ? normalizedPath : withPage(normalizedPath, page),
-      index: !hasGuideVariant,
-      follow: true,
-      reason: hasGuideVariant ? 'catalog-variant' : 'public-page',
+      reason: hasVariant ? 'catalog-variant' : catalogDocument ? 'catalog-page' : 'public-page',
     };
   }
 

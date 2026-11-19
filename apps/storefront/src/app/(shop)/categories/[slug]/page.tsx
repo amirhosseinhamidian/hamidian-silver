@@ -6,6 +6,7 @@ import {
   buildCategoryBreadcrumbItems,
   getPublicCatalogCategories,
   getPublicCatalogProducts,
+  isCatalogPageOutOfRange,
   parseCatalogSearchParams,
   type CatalogFilters,
   type CatalogSearchParams,
@@ -41,16 +42,18 @@ export async function generateMetadata({
     };
   }
 
-  const shouldCheckEmpty = parsedFilters.page === 1 && parsedFilters.sort === 'newest';
-  const products = shouldCheckEmpty
-    ? await getPublicCatalogProducts({
-        page: 1,
-        pageSize: parsedFilters.pageSize,
-        sort: 'newest',
-        category: category.slug,
-      })
-    : null;
-  const emptyCollection = Boolean(shouldCheckEmpty && products?.total === 0);
+  const products =
+    parsedFilters.sort === 'newest'
+      ? await getPublicCatalogProducts({
+          page: parsedFilters.page,
+          pageSize: parsedFilters.pageSize,
+          sort: 'newest',
+          category: category.slug,
+        })
+      : null;
+  if (products && isCatalogPageOutOfRange(parsedFilters, products)) {
+    return { title: 'صفحه دسته‌بندی یافت نشد', robots: { index: false, follow: false } };
+  }
 
   return buildStorefrontPageMetadata(settings, {
     pathname: `/categories/${category.slug}`,
@@ -60,7 +63,7 @@ export async function generateMetadata({
     seoTitle: category.seoTitle,
     seoDescription: category.seoDescription,
     seoCanonicalPath: category.seoCanonicalPath,
-    seoNoIndex: Boolean(category.seoNoIndex || emptyCollection),
+    seoNoIndex: Boolean(category.seoNoIndex || products?.total === 0),
     seoOgMedia: category.seoOgMedia,
     fallbackMedia: category.image,
   });
@@ -91,7 +94,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     notFound();
   }
 
-  if (filters.sort === 'newest' && filters.page > 1 && filters.page > products.totalPages) {
+  if (isCatalogPageOutOfRange(filters, products)) {
     notFound();
   }
 

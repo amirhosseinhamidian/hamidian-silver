@@ -43,6 +43,21 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   experimental: { globalNotFound: true },
   poweredByHeader: false,
+  async redirects() {
+    // Exact legacy URLs observed in Search Console. Keep unrelated missing URLs as 404s.
+    return [
+      {
+        source: '/products/products/athena-gold-silver-chain-45cm-model-2',
+        destination: '/products/athena-gold-silver-chain-45cm-model-2',
+        permanent: true,
+      },
+      {
+        source: `/guide\\:${encodeURIComponent('دانستنی‌ها')}`,
+        destination: '/guide',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

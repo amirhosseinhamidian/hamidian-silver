@@ -76,6 +76,13 @@ export function parseCatalogSearchParams(searchParams: CatalogSearchParams): Cat
   };
 }
 
+export function isCatalogPageOutOfRange(
+  filters: Pick<CatalogFilters, 'page' | 'sort'>,
+  products: Pick<PublicCatalogProductList, 'totalPages'>,
+): boolean {
+  return filters.sort === 'newest' && filters.page > 1 && filters.page > products.totalPages;
+}
+
 type CatalogFilterOverrides = Partial<Omit<CatalogFilters, 'pageSize'>>;
 type CatalogCollectionHrefOverrides = Partial<Pick<CatalogFilters, 'page' | 'sort'>>;
 

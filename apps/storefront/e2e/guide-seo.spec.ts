@@ -65,3 +65,69 @@ test.describe('knowledge hub SEO and internal links', () => {
     await expect(page.locator('a[href="/guide/silver-care"]').first()).toBeVisible();
   });
 });
+
+test.describe('catalog and article URL policies', () => {
+  const productPath = '/products/athena-gold-silver-chain-45cm-model-2';
+
+  test('redirects only the observed malformed URLs to their public destinations', async ({
+    request,
+  }, testInfo) => {
+    const redirects = [
+      [productPath.replace('/products/', '/products/products/'), productPath],
+      [`/guide:${encodeURIComponent('دانستنی‌ها')}`, '/guide'],
+    ];
+
+    for (const [source, destination] of redirects) {
+      const response = await request.get(source, { maxRedirects: 0 });
+      expect(response.status(), source).toBe(308);
+      expect(new URL(response.headers().location, testInfo.project.use.baseURL).pathname).toBe(
+        destination,
+      );
+      expect((await request.get(destination, { maxRedirects: 0 })).status()).toBe(200);
+    }
+
+    expect(
+      (await request.get('/products/products/unrelated-slug', { maxRedirects: 0 })).status(),
+    ).toBe(404);
+  });
+
+  test('renders a clean canonical and noindex for page parameters on details', async ({ page }) => {
+    for (const path of [productPath, '/guide/silver-care']) {
+      const response = await page.goto(path);
+      expect(response?.status()).toBe(200);
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow');
+
+      await page.goto(`${path}?page=2`);
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+        'content',
+        'noindex, follow',
+      );
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+        'href',
+        new URL(path, page.url()).href,
+      );
+    }
+  });
+
+  test('keeps valid pagination indexable and removes SEO metadata for missing pages', async ({
+    request,
+  }) => {
+    for (const path of ['/products', '/categories/rings', '/brands/sample']) {
+      const valid = await request.get(`${path}?page=2`);
+      expect(valid.status(), path).toBe(200);
+      const validHtml = await valid.text();
+      expect(validHtml).toContain(`<link rel="canonical" href="${valid.url()}"`);
+      expect(validHtml).toContain('<meta name="robots" content="index, follow"');
+
+      const missing = await request.get(`${path}?page=3`);
+      expect([200, 404], path).toContain(missing.status());
+      const missingHtml = await missing.text();
+      if (missing.status() === 200) {
+        expect(missingHtml).toContain('NEXT_HTTP_ERROR_FALLBACK;404');
+      }
+      expect(missingHtml).toMatch(/<meta name="robots" content="noindex\b/);
+      expect(missingHtml).not.toContain('<meta name="robots" content="index, follow"');
+      expect(missingHtml).not.toContain('<link rel="canonical"');
+    }
+  });
+});

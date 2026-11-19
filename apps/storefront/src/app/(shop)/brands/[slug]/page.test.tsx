@@ -11,10 +11,10 @@ const guideMocks = vi.hoisted(() => ({
   getPublicRelatedGuideArticles: vi.fn(),
 }));
 
-vi.mock('@/lib/catalog/public-catalog', () => ({
+vi.mock('@/lib/catalog/public-catalog', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/catalog/public-catalog')>()),
   getPublicCatalogBrands: catalogMocks.getPublicCatalogBrands,
   getPublicCatalogProducts: catalogMocks.getPublicCatalogProducts,
-  parseCatalogSearchParams: () => ({ page: 1, pageSize: 24, sort: 'newest' }),
 }));
 
 vi.mock('@/lib/guide/public-guide', () => ({

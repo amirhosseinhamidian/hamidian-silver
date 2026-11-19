@@ -64,6 +64,30 @@ const product = {
   attributes: [],
 };
 
+const seoProduct = {
+  ...product,
+  id: '10000000-0000-4000-8000-000000000002',
+  slug: 'athena-gold-silver-chain-45cm-model-2',
+  name: 'زنجیر نقره آتنا',
+  seoCanonicalPath: null,
+  seoNoIndex: false,
+};
+
+const catalogCategory = {
+  id: 'a0000000-0000-4000-8000-000000000006',
+  name: 'انگشتر',
+  slug: 'rings',
+  parentId: null,
+  sortOrder: 1,
+  hasProducts: true,
+};
+
+const catalogBrand = {
+  id: 'a0000000-0000-4000-8000-000000000007',
+  name: 'برند نمونه',
+  slug: 'sample',
+};
+
 const guideTopic = {
   id: 'a0000000-0000-4000-8000-000000000001',
   name: 'نگهداری نقره',
@@ -147,12 +171,8 @@ const guideArticle = {
       primaryMedia: product.primaryMedia,
     },
   ],
-  relatedCategories: [
-    { id: 'a0000000-0000-4000-8000-000000000006', name: 'انگشتر', slug: 'rings' },
-  ],
-  relatedBrands: [
-    { id: 'a0000000-0000-4000-8000-000000000007', name: 'برند نمونه', slug: 'sample' },
-  ],
+  relatedCategories: [catalogCategory],
+  relatedBrands: [catalogBrand],
   relatedArticles: [relatedGuideSummary],
   createdAt: CREATED_AT,
 };
@@ -376,7 +396,23 @@ async function handler(request, response) {
   }
 
   if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/categories') {
-    return json(response, 200, []);
+    return json(response, 200, [catalogCategory]);
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/brands') {
+    return json(response, 200, [catalogBrand]);
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/products') {
+    const page = Number(url.searchParams.get('page') ?? '1');
+    const pageSize = Number(url.searchParams.get('pageSize') ?? '24');
+    return json(response, 200, {
+      items: page === 1 ? [product] : page === 2 ? [seoProduct] : [],
+      page,
+      pageSize,
+      total: pageSize + 1,
+      totalPages: 2,
+    });
   }
 
   if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/products/silver-ring') {
@@ -385,7 +421,15 @@ async function handler(request, response) {
 
   if (
     request.method === 'GET' &&
-    url.pathname === '/api/v1/catalog/public/products/silver-ring/related'
+    url.pathname === `/api/v1/catalog/public/products/${seoProduct.slug}`
+  ) {
+    return json(response, 200, seoProduct);
+  }
+
+  if (
+    request.method === 'GET' &&
+    (url.pathname === '/api/v1/catalog/public/products/silver-ring/related' ||
+      url.pathname === `/api/v1/catalog/public/products/${seoProduct.slug}/related`)
   ) {
     const page = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
     const pageSize = Number.parseInt(url.searchParams.get('pageSize') ?? '8', 10);

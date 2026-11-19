@@ -5,6 +5,7 @@ import { CatalogCollectionPage } from '@/components/catalog/catalog-collection-p
 import {
   getPublicCatalogBrands,
   getPublicCatalogProducts,
+  isCatalogPageOutOfRange,
   parseCatalogSearchParams,
   type CatalogFilters,
   type CatalogSearchParams,
@@ -40,16 +41,18 @@ export async function generateMetadata({
     };
   }
 
-  const shouldCheckEmpty = parsedFilters.page === 1 && parsedFilters.sort === 'newest';
-  const products = shouldCheckEmpty
-    ? await getPublicCatalogProducts({
-        page: 1,
-        pageSize: parsedFilters.pageSize,
-        sort: 'newest',
-        brand: brand.slug,
-      })
-    : null;
-  const emptyCollection = Boolean(shouldCheckEmpty && products?.total === 0);
+  const products =
+    parsedFilters.sort === 'newest'
+      ? await getPublicCatalogProducts({
+          page: parsedFilters.page,
+          pageSize: parsedFilters.pageSize,
+          sort: 'newest',
+          brand: brand.slug,
+        })
+      : null;
+  if (products && isCatalogPageOutOfRange(parsedFilters, products)) {
+    return { title: 'صفحه برند یافت نشد', robots: { index: false, follow: false } };
+  }
 
   return buildStorefrontPageMetadata(settings, {
     pathname: `/brands/${brand.slug}`,
@@ -59,7 +62,7 @@ export async function generateMetadata({
     seoTitle: brand.seoTitle,
     seoDescription: brand.seoDescription,
     seoCanonicalPath: brand.seoCanonicalPath,
-    seoNoIndex: Boolean(brand.seoNoIndex || emptyCollection),
+    seoNoIndex: Boolean(brand.seoNoIndex || products?.total === 0),
     seoOgMedia: brand.seoOgMedia,
     fallbackMedia: brand.heroImage ?? brand.image,
   });
@@ -90,7 +93,7 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
     notFound();
   }
 
-  if (filters.sort === 'newest' && filters.page > 1 && filters.page > products.totalPages) {
+  if (isCatalogPageOutOfRange(filters, products)) {
     notFound();
   }
 

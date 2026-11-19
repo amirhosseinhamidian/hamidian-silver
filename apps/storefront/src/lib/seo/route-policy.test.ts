@@ -40,15 +40,29 @@ describe('resolveStorefrontSeoRoutePolicy', () => {
     ).toMatchObject({ canonicalPath: '/guide', index: false, follow: true });
   });
 
-  it('keeps paginated catalog pages crawlable with a self canonical', () => {
-    expect(
-      resolveStorefrontSeoRoutePolicy('/products', new URLSearchParams({ page: '3' })),
-    ).toMatchObject({
-      canonicalPath: '/products?page=3',
-      index: true,
-      follow: true,
-    });
-  });
+  it.each(['/products', '/categories/rings', '/brands/cartier', '/guide'])(
+    'keeps valid pagination on %s crawlable with a self canonical',
+    (pathname) => {
+      expect(
+        resolveStorefrontSeoRoutePolicy(pathname, new URLSearchParams({ page: '3' })),
+      ).toMatchObject({
+        canonicalPath: `${pathname}?page=3`,
+        index: true,
+        follow: true,
+      });
+    },
+  );
+
+  it.each(['/products/ring', '/guide/silver-care'])(
+    'keeps fake detail pagination on %s out of the index',
+    (pathname) => {
+      for (const page of ['1', '2', 'abc']) {
+        expect(
+          resolveStorefrontSeoRoutePolicy(pathname, new URLSearchParams({ page })),
+        ).toMatchObject({ canonicalPath: pathname, index: false, follow: true });
+      }
+    },
+  );
 
   it('does not index malformed pagination variants', () => {
     expect(
