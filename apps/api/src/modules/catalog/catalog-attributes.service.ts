@@ -7,6 +7,7 @@ import {
 import { Prisma } from '../../generated/prisma/client';
 import { CatalogAttributeSource } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { completionVariantSelect, readAttributeCompletion } from './catalog-attribute-completion';
 import {
   attributeAppliesToCategories,
   normalizeCatalogAttributeConfig,
@@ -41,6 +42,7 @@ function projectVersion(row: VersionRow): CatalogAttributeDefinitionDto {
     unit: row.unit,
     source: row.source,
     isActive: row.isActive,
+    isRequired: row.isRequired,
     sortOrder: row.sortOrder,
     categoryIds: row.categoryIds,
     excludedCategoryIds: row.excludedCategoryIds,
@@ -50,7 +52,9 @@ function projectVersion(row: VersionRow): CatalogAttributeDefinitionDto {
   };
 }
 
-async function currentVersions(reader: Pick<AttributeReader, 'catalogAttributeDefinition'>) {
+export async function readCurrentCatalogAttributeDefinitions(
+  reader: Pick<AttributeReader, 'catalogAttributeDefinition'>,
+) {
   const definitions = await reader.catalogAttributeDefinition.findMany({
     include: latestDefinition,
   });
@@ -79,7 +83,7 @@ export async function remapCatalogAttributeCategoryScopes(
 ) {
   const source = sourceId.toLowerCase();
   const target = targetId.toLowerCase();
-  for (const definition of await currentVersions(transaction)) {
+  for (const definition of await readCurrentCatalogAttributeDefinitions(transaction)) {
     const allowedAtSource = definition.categoryIds.includes(source);
     const excludedAtSource = definition.excludedCategoryIds.includes(source);
     if (!allowedAtSource && !excludedAtSource) continue;
@@ -111,7 +115,12 @@ async function appendDefinitionVersion(
     throw new ConflictException('The attribute definition has changed. Reload it before saving.');
   }
   const row = await transaction.catalogAttributeVersion.create({
-    data: { attributeCode: current.code, version, ...versionPayload(config) },
+    data: {
+      attributeCode: current.code,
+      version,
+      ...versionPayload(config),
+      isRequired: config.isRequired ?? current.isRequired ?? false,
+    },
   });
   return projectVersion(row);
 }
@@ -121,7 +130,7 @@ export class CatalogAttributesService {
   constructor(private readonly prisma: PrismaService) {}
 
   listDefinitions() {
-    return currentVersions(this.prisma);
+    return readCurrentCatalogAttributeDefinitions(this.prisma);
   }
 
   async createDefinition(dto: CreateCatalogAttributeDto): Promise<CatalogAttributeDefinitionDto> {
@@ -130,7 +139,12 @@ export class CatalogAttributesService {
         await this.validateCategories(transaction, dto);
         await transaction.catalogAttributeDefinition.create({ data: { code: dto.code } });
         const row = await transaction.catalogAttributeVersion.create({
-          data: { attributeCode: dto.code, version: 1, ...versionPayload(dto) },
+          data: {
+            attributeCode: dto.code,
+            version: 1,
+            ...versionPayload(dto),
+            isRequired: dto.isRequired ?? false,
+          },
         });
         return projectVersion(row);
       });
@@ -161,16 +175,32 @@ export class CatalogAttributesService {
   }
 
   async listProductValues(productId: string): Promise<CatalogProductAttributeDto[]> {
-    const [context, definitions, stored] = await Promise.all([
+    const [context, definitions, stored, variants] = await Promise.all([
       this.loadCategoryContext(this.prisma, productId),
       this.listDefinitions(),
       this.latestValues(productId),
+      this.prisma.productVariant.findMany({
+        where: { productId, isActive: true, deletedAt: null },
+        select: completionVariantSelect,
+      }),
     ]);
     return definitions
       .filter((definition) =>
         attributeAppliesToCategories(definition, context.memberships, context.categories),
       )
-      .map((definition) => this.productProjection(definition, stored.get(definition.code)));
+      .map((definition) => {
+        const item = this.productProjection(definition, stored.get(definition.code));
+        return {
+          ...item,
+          needsCompletion:
+            definition.isRequired === true &&
+            readAttributeCompletion(
+              definition,
+              { sizeMode: context.sizeMode, variants },
+              item.value,
+            ) === 'missing',
+        };
+      });
   }
 
   async listPublicValues(productId: string): Promise<PublicTypedCatalogAttributeDto[]> {
@@ -212,73 +242,82 @@ export class CatalogAttributesService {
   }
 
   setProductValue(productId: string, code: string, dto: SetCatalogProductAttributeDto) {
-    return catalogHierarchyTransaction(this.prisma, async (transaction) => {
-      const [definition, context, existing] = await Promise.all([
-        this.requireDefinition(transaction, code),
-        this.loadCategoryContext(transaction, productId),
-        transaction.catalogProductAttributeValue.findFirst({
-          where: { productId, attributeCode: code },
-          orderBy: { revision: 'desc' },
-        }),
-      ]);
-      if (
-        definition.version !== dto.definitionVersion ||
-        (existing?.revision ?? 0) !== dto.expectedRevision
-      ) {
-        throw new ConflictException(
-          'The attribute definition or value has changed. Reload before saving.',
-        );
-      }
-      const clear = dto.clear === true;
-      const legacyValue = dto.legacyValue?.trim() || null;
-      const requested = [clear, Boolean(legacyValue), Boolean(dto.value)].filter(Boolean);
-      if (requested.length !== 1 || (dto.legacyValue != null && !legacyValue)) {
-        throw new BadRequestException(
-          'Provide one typed value, one mapped legacy value, or clear the value.',
-        );
-      }
-      if (
-        !clear &&
-        (definition.source !== CatalogAttributeSource.MANUAL ||
-          !attributeAppliesToCategories(definition, context.memberships, context.categories))
-      ) {
-        throw new BadRequestException('This product cannot set a manual value for this attribute.');
-      }
-      const mapped = legacyValue
-        ? definition.legacyMappings.find(
-            (entry) =>
-              normalizeLegacyAttributeValue(entry.legacyValue) ===
-              normalizeLegacyAttributeValue(legacyValue),
-          )?.value
-        : dto.value;
-      if (!clear && !mapped)
-        throw new BadRequestException('This legacy value has no approved mapping.');
-      const value =
-        clear || !mapped ? Prisma.DbNull : { ...validateCatalogAttributeValue(definition, mapped) };
-      const saved = await transaction.catalogProductAttributeValue
-        .create({
-          data: {
-            productId,
-            attributeCode: code,
-            revision: (existing?.revision ?? 0) + 1,
-            definitionVersion: definition.version,
-            value,
-            legacyValue,
-          },
-        })
-        .catch((error: unknown) => {
-          if (
-            typeof error === 'object' &&
-            error !== null &&
-            'code' in error &&
-            error.code === 'P2002'
-          ) {
-            throw new ConflictException('The attribute value has changed. Reload before saving.');
-          }
-          throw error;
-        });
-      return this.productProjection(definition, saved);
-    });
+    return catalogHierarchyTransaction(this.prisma, (transaction) =>
+      this.writeProductValue(transaction, productId, code, dto),
+    );
+  }
+
+  async writeProductValue(
+    transaction: Prisma.TransactionClient,
+    productId: string,
+    code: string,
+    dto: SetCatalogProductAttributeDto,
+  ) {
+    const [definition, context, existing] = await Promise.all([
+      this.requireDefinition(transaction, code),
+      this.loadCategoryContext(transaction, productId),
+      transaction.catalogProductAttributeValue.findFirst({
+        where: { productId, attributeCode: code },
+        orderBy: { revision: 'desc' },
+      }),
+    ]);
+    if (
+      definition.version !== dto.definitionVersion ||
+      (existing?.revision ?? 0) !== dto.expectedRevision
+    ) {
+      throw new ConflictException(
+        'The attribute definition or value has changed. Reload before saving.',
+      );
+    }
+    const clear = dto.clear === true;
+    const legacyValue = dto.legacyValue?.trim() || null;
+    const requested = [clear, Boolean(legacyValue), Boolean(dto.value)].filter(Boolean);
+    if (requested.length !== 1 || (dto.legacyValue != null && !legacyValue)) {
+      throw new BadRequestException(
+        'Provide one typed value, one mapped legacy value, or clear the value.',
+      );
+    }
+    if (
+      !clear &&
+      (definition.source !== CatalogAttributeSource.MANUAL ||
+        !attributeAppliesToCategories(definition, context.memberships, context.categories))
+    ) {
+      throw new BadRequestException('This product cannot set a manual value for this attribute.');
+    }
+    const mapped = legacyValue
+      ? definition.legacyMappings.find(
+          (entry) =>
+            normalizeLegacyAttributeValue(entry.legacyValue) ===
+            normalizeLegacyAttributeValue(legacyValue),
+        )?.value
+      : dto.value;
+    if (!clear && !mapped)
+      throw new BadRequestException('This legacy value has no approved mapping.');
+    const value =
+      clear || !mapped ? Prisma.DbNull : { ...validateCatalogAttributeValue(definition, mapped) };
+    const saved = await transaction.catalogProductAttributeValue
+      .create({
+        data: {
+          productId,
+          attributeCode: code,
+          revision: (existing?.revision ?? 0) + 1,
+          definitionVersion: definition.version,
+          value,
+          legacyValue,
+        },
+      })
+      .catch((error: unknown) => {
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          'code' in error &&
+          error.code === 'P2002'
+        ) {
+          throw new ConflictException('The attribute value has changed. Reload before saving.');
+        }
+        throw error;
+      });
+    return this.productProjection(definition, saved);
   }
 
   private async requireDefinition(
@@ -316,7 +355,7 @@ export class CatalogAttributesService {
     const [product, categories] = await Promise.all([
       reader.product.findFirst({
         where: { id: productId, deletedAt: null },
-        select: { categories: { select: { categoryId: true } } },
+        select: { sizeMode: true, categories: { select: { categoryId: true } } },
       }),
       reader.category.findMany({
         where: { isActive: true, deletedAt: null },
@@ -325,6 +364,7 @@ export class CatalogAttributesService {
     ]);
     if (!product) throw new NotFoundException('Product was not found.');
     return {
+      sizeMode: product.sizeMode,
       memberships: product.categories.map(({ categoryId }) => categoryId),
       categories: new Map(categories.map((category) => [category.id, category] as const)),
     };

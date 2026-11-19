@@ -2,7 +2,7 @@ import { ProductForm } from '@/components/products/product-form';
 import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { requireAdminSession } from '@/lib/auth/session';
-import { loadProductForm } from '@/lib/catalog/catalog-data';
+import { loadAttributeDefinitions, loadProductForm } from '@/lib/catalog/catalog-data';
 import { formatAdminInteger } from '@/lib/presentation/formatters';
 import { loadSupplierImportDraft } from '@/lib/supplier-imports/supplier-imports-data';
 
@@ -16,9 +16,10 @@ export default async function NewProductPage({ searchParams }: Props) {
     ? `/products/new?importDraftId=${encodeURIComponent(importDraftId)}`
     : '/products/new';
   await requireAdminSession({ permissions: ['catalog.write'], returnTo });
-  const [data, importDraft] = await Promise.all([
+  const [data, importDraft, definitions] = await Promise.all([
     loadProductForm(),
     importDraftId ? loadSupplierImportDraft(importDraftId) : Promise.resolve(null),
+    loadAttributeDefinitions(),
   ]);
   const unavailableDraft = Boolean(importDraftId && !importDraft);
   const importedProduct = importDraft?.product;
@@ -58,7 +59,12 @@ export default async function NewProductPage({ searchParams }: Props) {
           </ButtonLink>
         </div>
       ) : data ? (
-        <ProductForm data={data} mode="create" importDraft={importDraft} />
+        <ProductForm
+          data={data}
+          mode="create"
+          importDraft={importDraft}
+          attributeDefinitions={definitions.data ?? []}
+        />
       ) : (
         <p role="alert" className="mt-6 text-sm text-[var(--admin-color-danger)]">
           اطلاعات پایه کاتالوگ دریافت نشد. اتصال API را بررسی کنید.

@@ -19,6 +19,7 @@ import { FormField } from '@/components/ui/form-field';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Select } from '@/components/ui/select';
 import type { ProductFormData } from '@/lib/catalog/catalog-data';
+import type { AttributeDefinition } from '@/lib/catalog/catalog-attribute-model';
 import type {
   ProductPurchaseMode,
   ProductSizeMode,
@@ -36,6 +37,7 @@ type ProductFormProps = Readonly<{
   data: ProductFormData;
   mode: 'create' | 'edit';
   importDraft?: AdminSupplierImportDraft | null;
+  attributeDefinitions?: readonly AttributeDefinition[];
 }>;
 
 type EditableProductAttribute = Readonly<{
@@ -180,7 +182,12 @@ async function uploadProductImages(files: readonly File[], altText: string) {
   return uploaded;
 }
 
-export function ProductForm({ data, mode, importDraft = null }: ProductFormProps) {
+export function ProductForm({
+  data,
+  mode,
+  importDraft = null,
+  attributeDefinitions = [],
+}: ProductFormProps) {
   const router = useRouter();
   const productImagesInputId = useId();
   const product = data.product;
@@ -203,6 +210,26 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
     product?.purchaseMode ?? 'SIMPLE',
   );
   const [sizeMode, setSizeMode] = useState<ProductSizeMode>(product?.sizeMode ?? 'NONE');
+  const activeCategories = new Map(
+    data.categories.filter(({ active }) => active).map((category) => [category.id, category]),
+  );
+  const requiredFeatures = attributeDefinitions.filter(
+    (definition) =>
+      definition.isActive &&
+      definition.isRequired &&
+      (definition.source !== 'VARIANT_SIZE' || sizeMode === 'SIZED') &&
+      assignedCategoryIds.some((id) => {
+        const visited = new Set<string>();
+        let category = activeCategories.get(id);
+        while (category && !visited.has(category.id)) {
+          if (definition.excludedCategoryIds.includes(category.id)) return false;
+          if (definition.categoryIds.includes(category.id)) return true;
+          visited.add(category.id);
+          category = category.parentId ? activeCategories.get(category.parentId) : undefined;
+        }
+        return false;
+      }),
+  );
   const [sizeGroupId, setSizeGroupId] = useState(product?.sizeGroup?.id ?? 'none');
   const [seo, setSeo] = useState(() => createSeoEditorValue(product));
   const [attributes, setAttributes] = useState<EditableProductAttribute[]>(() =>
@@ -884,6 +911,13 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
                 />
               )}
             </FormField>
+            {requiredFeatures.length > 0 ? (
+              <Alert tone="info">
+                ویژگی‌های لازم برای دسته‌های انتخاب‌شده{' '}
+                {requiredFeatures.map(({ label }) => label).join('، ')}. پس از ذخیره، بخش ویژگی‌های
+                ساختاریافته را در صفحهٔ تنوع‌ها بررسی کنید.
+              </Alert>
+            ) : null}
           </div>
         ) : (
           <p className="text-sm text-[var(--admin-color-muted)]">

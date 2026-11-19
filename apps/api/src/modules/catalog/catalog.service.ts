@@ -14,7 +14,17 @@ import { recordSeoSlugChange } from '../seo/seo-redirects.service';
 import { readActiveCategoryProductCounts } from './catalog-category-counts';
 import { catalogHierarchyTransaction } from './catalog-hierarchy-transaction';
 import { CatalogAttributesService } from './catalog-attributes.service';
-import { readMatchingCatalogVariants } from './catalog-variant-filter';
+import {
+  catalogProductStockSql,
+  catalogStockCte,
+  readMatchingCatalogVariants,
+} from './catalog-variant-filter';
+import {
+  availabilitySelect,
+  productAvailableQuantity,
+  publicCatalogProductWhere,
+  variantAvailableQuantity,
+} from './catalog-public-availability';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
@@ -905,12 +915,7 @@ export class CatalogService {
         },
         _count: {
           select: {
-            products: {
-              where: {
-                status: ProductStatus.ACTIVE,
-                deletedAt: null,
-              },
-            },
+            products: { where: publicCatalogProductWhere },
           },
         },
         image: {
@@ -1033,8 +1038,7 @@ export class CatalogService {
     const categoryIds = category ? await this.resolvePublicCategoryIds(category) : undefined;
 
     const where = {
-      status: ProductStatus.ACTIVE,
-      deletedAt: null,
+      ...publicCatalogProductWhere,
       ...(matchingProductIds ? { id: { in: matchingProductIds } } : {}),
       ...(categoryIds
         ? {
@@ -1137,42 +1141,17 @@ export class CatalogService {
         orderBy,
         select: {
           id: true,
-          variants: {
-            where: {
-              isActive: true,
-              deletedAt: null,
-            },
-            select: {
-              inventories: {
-                select: {
-                  onHand: true,
-                  reserved: true,
-                  warehouse: {
-                    select: {
-                      isActive: true,
-                      deletedAt: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
+          purchaseMode: true,
+          sizeMode: true,
+          variants: { where: { isActive: true, deletedAt: null }, select: availabilitySelect },
         },
       });
       for (const product of orderedProducts) {
         availabilityByProductId.set(
           product.id,
-          product.variants.reduce(
-            (productTotal, variant) =>
-              productTotal +
-              variant.inventories.reduce((variantTotal, inventory) => {
-                if (!inventory.warehouse.isActive || inventory.warehouse.deletedAt) {
-                  return variantTotal;
-                }
-
-                return variantTotal + Math.max(0, inventory.onHand - inventory.reserved);
-              }, 0),
-            0,
+          productAvailableQuantity(
+            product.purchaseMode,
+            product.variants.map((variant) => variantAvailableQuantity(variant, product.sizeMode)),
           ),
         );
       }
@@ -1800,39 +1779,8 @@ export class CatalogService {
       throw new NotFoundException('Product was not found.');
     }
 
-    const ownAvailableQuantity = (
-      inventories: readonly {
-        onHand: number;
-        reserved: number;
-        warehouse: { isActive: boolean; deletedAt: Date | null };
-      }[],
-    ) =>
-      inventories.reduce((total, inventory) => {
-        if (!inventory.warehouse.isActive || inventory.warehouse.deletedAt) {
-          return total;
-        }
-
-        return total + Math.max(0, inventory.onHand - inventory.reserved);
-      }, 0);
-
     const variants = product.variants.map((variant) => {
-      const availableQuantity =
-        variant.inventoryMode === VariantInventoryMode.COMPONENTS
-          ? variant.bundleComponents.length === 0
-            ? 0
-            : Math.min(
-                ...variant.bundleComponents.map(({ componentVariant, quantity }) => {
-                  if (
-                    componentVariant.inventoryMode !== VariantInventoryMode.OWN ||
-                    !componentVariant.isActive ||
-                    componentVariant.deletedAt
-                  ) {
-                    return 0;
-                  }
-                  return Math.floor(ownAvailableQuantity(componentVariant.inventories) / quantity);
-                }),
-              )
-          : ownAvailableQuantity(variant.inventories);
+      const availableQuantity = variantAvailableQuantity(variant, product.sizeMode);
       const weightGrams = variant.weightGrams;
       const platingOptions =
         variant.platingEligible && weightGrams
@@ -1880,10 +1828,10 @@ export class CatalogService {
         platingOptions,
       };
     });
-    const availableQuantity =
-      product.purchaseMode === ProductPurchaseMode.COMPOSITE
-        ? Math.max(0, ...variants.map((variant) => variant.availableQuantity))
-        : variants.reduce((total, variant) => total + variant.availableQuantity, 0);
+    const availableQuantity = productAvailableQuantity(
+      product.purchaseMode,
+      variants.map((variant) => variant.availableQuantity),
+    );
     const media = product.media
       .filter((item) => !item.media.deletedAt)
       .map((item) => ({
@@ -2129,6 +2077,7 @@ export class CatalogService {
         updatedAt: true,
         salePriceToman: true,
         compareAtPriceToman: true,
+        purchaseMode: true,
         sizeMode: true,
         brand: {
           select: {
@@ -2161,13 +2110,7 @@ export class CatalogService {
           select: {
             salePriceToman: true,
             compareAtPriceToman: true,
-            inventories: {
-              select: {
-                onHand: true,
-                reserved: true,
-                warehouse: { select: { isActive: true, deletedAt: true } },
-              },
-            },
+            ...availabilitySelect,
           },
         },
         media: {
@@ -2191,17 +2134,9 @@ export class CatalogService {
     });
 
     return products.map((product) => {
-      const availableQuantity = product.variants.reduce(
-        (productTotal, variant) =>
-          productTotal +
-          variant.inventories.reduce(
-            (total, inventory) =>
-              inventory.warehouse.isActive && !inventory.warehouse.deletedAt
-                ? total + Math.max(0, inventory.onHand - inventory.reserved)
-                : total,
-            0,
-          ),
-        0,
+      const availableQuantity = productAvailableQuantity(
+        product.purchaseMode,
+        product.variants.map((variant) => variantAvailableQuantity(variant, product.sizeMode)),
       );
       const prices = product.variants
         .map((variant) => ({
@@ -2313,7 +2248,7 @@ export class CatalogService {
       : Prisma.empty;
 
     return this.prisma.$queryRaw<PublicProductSearchRow[]>(Prisma.sql`
-      WITH ${this.publicSearchMatchesSql(input.search)},
+      WITH ${catalogStockCte}, ${this.publicSearchMatchesSql(input.search)},
       ranked_search AS (
         SELECT "productId", MAX(score) AS score
         FROM search_matches
@@ -2326,17 +2261,7 @@ export class CatalogService {
           product."salePriceToman",
           product."createdAt",
           ranked_search.score,
-          COALESCE((
-            SELECT SUM(GREATEST(inventory."onHand" - inventory."reserved", 0))
-            FROM "product_variants" AS variant
-            JOIN "inventory" AS inventory ON inventory."variantId" = variant.id
-            JOIN "warehouses" AS warehouse ON warehouse.id = inventory."warehouseId"
-            WHERE variant."productId" = product.id
-              AND variant."isActive" = true
-              AND variant."deletedAt" IS NULL
-              AND warehouse."isActive" = true
-              AND warehouse."deletedAt" IS NULL
-          ), 0)::bigint AS "availableQuantity"
+          ${input.matchingProductIds ? Prisma.sql`0::bigint` : catalogProductStockSql} AS "availableQuantity"
         FROM ranked_search
         JOIN "products" AS product ON product.id = ranked_search."productId"
         WHERE product."status" = 'ACTIVE'

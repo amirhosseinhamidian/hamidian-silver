@@ -909,6 +909,7 @@ model CatalogAttributeVersion {
   unit                CatalogAttributeUnit
   source              CatalogAttributeSource
   isActive            Boolean @default(true)
+  isRequired          Boolean @default(false)
   sortOrder           Int @default(0)
   categoryIds         String[] @default([]) @db.Uuid
   excludedCategoryIds String[] @default([]) @db.Uuid

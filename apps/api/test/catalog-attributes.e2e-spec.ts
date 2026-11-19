@@ -11,7 +11,17 @@ import {
   VariantInventoryMode,
 } from '../src/generated/prisma/enums';
 import { PrismaService } from '../src/infrastructure/database/prisma.service';
-import { CatalogAttributesService } from '../src/modules/catalog/catalog-attributes.service';
+import {
+  CatalogAttributesService,
+  readCurrentCatalogAttributeDefinitions,
+} from '../src/modules/catalog/catalog-attributes.service';
+import {
+  applyCatalogQualityCandidate,
+  findCatalogQualityProduct,
+  inspectCatalogQualityProduct,
+  loadQualityCategories,
+  loadQualityValues,
+} from '../src/modules/catalog/catalog-quality';
 import { readMatchingCatalogVariants } from '../src/modules/catalog/catalog-variant-filter';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
 import type { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
@@ -41,6 +51,103 @@ describe('typed catalog attributes (PostgreSQL)', () => {
       if (error !== rollback) throw error;
     }
   }
+
+  it('applies only the reviewed diff once and retains an explicit clear', async () => {
+    await fixture(async (transaction, suffix) => {
+      const category = await transaction.category.create({
+        data: { name: 'Quality', slug: `quality-${suffix}` },
+      });
+      const product = await transaction.product.create({
+        data: {
+          name: 'Quality fixture',
+          slug: `quality-product-${suffix}`,
+          categories: { create: { categoryId: category.id } },
+          attributes: { create: { key: 'عیار', value: '۹۲۵', sortOrder: 1 } },
+        },
+      });
+      const scoped = {
+        $transaction: (run: (client: Prisma.TransactionClient) => Promise<unknown>) =>
+          run(transaction),
+        $queryRaw: transaction.$queryRaw.bind(transaction),
+        category: transaction.category,
+        product: transaction.product,
+        productVariant: transaction.productVariant,
+        catalogAttributeDefinition: transaction.catalogAttributeDefinition,
+        catalogProductAttributeValue: transaction.catalogProductAttributeValue,
+      } as unknown as PrismaService;
+      const code = `quality-${suffix}`;
+      const service = new CatalogAttributesService(scoped);
+      await service.createDefinition({
+        code,
+        label: 'عیار',
+        kind: Kind.NUMBER,
+        unit: Unit.PER_MILLE,
+        source: Source.MANUAL,
+        isActive: true,
+        isRequired: true,
+        sortOrder: 1,
+        categoryIds: [category.id],
+        excludedCategoryIds: [],
+        options: [],
+        legacyMappings: [{ legacyValue: '۹۲۵', value: { number: 925, unit: Unit.PER_MILLE } }],
+      });
+      expect(await service.listProductValues(product.id)).toEqual([
+        expect.objectContaining({ needsCompletion: true }),
+      ]);
+      const rules = [{ source: 'catalog', key: 'عیار', code }];
+      const [row, definitions, categories, values] = await Promise.all([
+        findCatalogQualityProduct(transaction, product.id),
+        readCurrentCatalogAttributeDefinitions(transaction),
+        loadQualityCategories(transaction),
+        loadQualityValues(transaction, [product.id]),
+      ]);
+      if (!row) throw new Error('Expected a catalog product');
+      const candidate = inspectCatalogQualityProduct(
+        row,
+        definitions,
+        categories,
+        values.get(product.id),
+        rules,
+      ).attributes[0]?.candidate;
+      expect(candidate).toMatchObject({
+        state: 'candidate',
+        before: null,
+        after: { number: 925 },
+        approved: false,
+      });
+      if (!candidate) throw new Error('Expected a candidate');
+      const reviewed = { ...candidate, productId: product.id };
+      await expect(
+        applyCatalogQualityCandidate(scoped, rules, { ...reviewed, after: { number: 950 } }),
+      ).resolves.toBe('preview-changed');
+      const legacyAttribute = { productId_key: { productId: product.id, key: 'عیار' } };
+      await transaction.productAttribute.update({ where: legacyAttribute, data: { value: '۹۵۰' } });
+      await expect(applyCatalogQualityCandidate(scoped, rules, reviewed)).resolves.toBe(
+        'preview-changed',
+      );
+      await transaction.productAttribute.update({ where: legacyAttribute, data: { value: '۹۲۵' } });
+      await expect(applyCatalogQualityCandidate(scoped, rules, reviewed)).resolves.toBe('applied');
+      expect(await service.listProductValues(product.id)).toEqual([
+        expect.objectContaining({ needsCompletion: false }),
+      ]);
+      await expect(applyCatalogQualityCandidate(scoped, rules, reviewed)).resolves.toBe(
+        'revision-exists',
+      );
+      await service.setProductValue(product.id, code, {
+        definitionVersion: 1,
+        expectedRevision: 1,
+        clear: true,
+      });
+      await expect(applyCatalogQualityCandidate(scoped, rules, reviewed)).resolves.toBe(
+        'revision-exists',
+      );
+      expect(
+        await transaction.catalogProductAttributeValue.count({
+          where: { productId: product.id, attributeCode: code },
+        }),
+      ).toBe(2);
+    });
+  }, 20000);
 
   it('retains legacy mappings and prior value revisions across a definition update', async () => {
     await fixture(async (transaction, suffix) => {
@@ -221,12 +328,16 @@ describe('typed catalog attributes (PostgreSQL)', () => {
         });
       }
 
+      const bundleCategory = await transaction.category.create({
+        data: { name: 'Bundle fixture', slug: `bundle-category-${suffix}` },
+      });
       const bundleProduct = await transaction.product.create({
         data: {
-          name: 'Bundle',
+          name: `Bundle ${suffix}`,
           slug: `bundle-${suffix}`,
           status: ProductStatus.ACTIVE,
           purchaseMode: ProductPurchaseMode.COMPOSITE,
+          categories: { create: { categoryId: bundleCategory.id } },
         },
       });
       const component = await transaction.productVariant.create({
@@ -246,6 +357,24 @@ describe('typed catalog attributes (PostgreSQL)', () => {
       const stock = await transaction.inventory.create({
         data: { warehouseId: warehouse.id, variantId: component.id, onHand: 3, reserved: 1 },
       });
+      const secondComponent = await transaction.productVariant.create({
+        data: { productId: bundleProduct.id, sku: `other-part-${suffix}` },
+      });
+      await transaction.inventory.create({
+        data: { warehouseId: warehouse.id, variantId: secondComponent.id, onHand: 2 },
+      });
+      expect(await catalog.getPublicProduct(bundleProduct.slug)).toMatchObject({
+        availableQuantity: 2,
+      });
+      for (const filters of [
+        { category: bundleCategory.slug },
+        { category: bundleCategory.slug, q: bundleProduct.name },
+      ]) {
+        const listing = await catalog.listPublicProducts(filters);
+        expect(listing.items.find(({ id }) => id === bundleProduct.id)).toMatchObject({
+          availableQuantity: 2,
+        });
+      }
       expect(
         (await readMatchingCatalogVariants(transaction, { minLengthMm: 260 }))?.get(
           bundleProduct.id,

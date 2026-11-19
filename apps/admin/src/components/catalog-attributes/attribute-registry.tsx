@@ -56,6 +56,7 @@ function AttributeEditor({
         unit,
         source,
         isActive: form.has('isActive'),
+        isRequired: form.has('isRequired'),
         sortOrder: Number(toAsciiDigits(text('sortOrder'))),
         categoryIds,
         excludedCategoryIds,
@@ -164,6 +165,12 @@ function AttributeEditor({
         name="isActive"
         label="ویژگی فعال باشد"
         defaultChecked={definition?.isActive ?? true}
+      />
+      <Checkbox
+        id="attribute-required"
+        name="isRequired"
+        label="تکمیل این ویژگی برای دسته‌های انتخاب‌شده پیگیری شود"
+        defaultChecked={definition?.isRequired ?? false}
       />
 
       <fieldset className="grid gap-3 border-t border-[var(--admin-color-border)] pt-3 sm:grid-cols-2 lg:grid-cols-3">

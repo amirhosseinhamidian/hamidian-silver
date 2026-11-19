@@ -15,7 +15,9 @@ const data: ProductFormData = {
   product: null,
   brands: [],
   countries: [],
-  categories: [{ id: '10000000-0000-4000-8000-000000000001', name: 'انگشتر' }],
+  categories: [
+    { id: '10000000-0000-4000-8000-000000000001', name: 'انگشتر', active: true, parentId: null },
+  ],
   sizes: [],
   sizeGroups: [],
 };
@@ -51,6 +53,48 @@ const importDraft: AdminSupplierImportDraft = {
 };
 
 describe('ProductForm', () => {
+  it('shows required attributes inherited from a parent and respects excluded branches', () => {
+    const parent = data.categories[0]!;
+    const child = { id: 'category-child', name: 'انگشتر زنانه', active: true, parentId: parent.id };
+    const excluded = {
+      id: 'category-excluded',
+      name: 'انگشتر سنگی',
+      active: true,
+      parentId: parent.id,
+    };
+    render(
+      <ProductForm
+        data={{ ...data, categories: [parent, child, excluded] }}
+        mode="create"
+        attributeDefinitions={[
+          {
+            code: 'silver-fineness',
+            label: 'عیار نقره',
+            kind: 'NUMBER',
+            unit: 'PER_MILLE',
+            source: 'MANUAL',
+            version: 1,
+            isActive: true,
+            isRequired: true,
+            sortOrder: 1,
+            categoryIds: [parent.id],
+            excludedCategoryIds: [excluded.id],
+            options: [],
+            legacyMappings: [],
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText(child.name));
+    expect(
+      screen.getByText(/ویژگی‌های لازم برای دسته‌های انتخاب‌شده عیار نقره/),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(child.name));
+    fireEvent.click(screen.getByLabelText(excluded.name));
+    expect(screen.queryByText(/ویژگی‌های لازم برای دسته‌های انتخاب‌شده/)).not.toBeInTheDocument();
+  });
+
   it('preselects the mapped internal category for a supplier draft', () => {
     render(
       <ProductForm

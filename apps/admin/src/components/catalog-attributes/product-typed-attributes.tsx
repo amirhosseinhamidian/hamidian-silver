@@ -161,24 +161,37 @@ export function ProductTypedAttributes({
   failed: boolean;
 }>) {
   return (
-    <Card title="ویژگی‌های ساختاریافتهٔ محصول" className="mt-6">
-      {failed ? (
-        <Alert tone="danger">دریافت ویژگی‌های ساختاریافته انجام نشد.</Alert>
-      ) : items.length === 0 ? (
-        <p className="text-sm text-[var(--admin-color-muted)]">
-          برای دسته‌های این محصول ویژگی فعالی ثبت نشده است.
-        </p>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {items.map((item) => (
-            <ProductAttributeForm
-              key={`${item.definition.code}:${item.definition.version}:${item.revision}`}
-              productId={productId}
-              item={item}
-            />
-          ))}
-        </div>
-      )}
-    </Card>
+    <section id="typed-attributes" className="scroll-mt-6">
+      <Card title="ویژگی‌های ساختاریافتهٔ محصول" className="mt-6">
+        {failed ? (
+          <Alert tone="danger">دریافت ویژگی‌های ساختاریافته انجام نشد.</Alert>
+        ) : items.length === 0 ? (
+          <p className="text-sm text-[var(--admin-color-muted)]">
+            برای دسته‌های این محصول ویژگی فعالی ثبت نشده است.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {items.some(({ needsCompletion }) => needsCompletion) ? (
+              <Alert tone="warning">
+                ویژگی‌های نیازمند تکمیل این محصول{' '}
+                {items
+                  .filter(({ needsCompletion }) => needsCompletion)
+                  .map(({ definition }) => definition.label)
+                  .join('، ')}
+              </Alert>
+            ) : null}
+            <div className="grid gap-4 md:grid-cols-2">
+              {items.map((item) => (
+                <ProductAttributeForm
+                  key={`${item.definition.code}:${item.definition.version}:${item.revision}`}
+                  productId={productId}
+                  item={item}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+    </section>
   );
 }

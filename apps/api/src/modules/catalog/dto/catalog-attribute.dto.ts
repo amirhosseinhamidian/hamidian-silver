@@ -111,6 +111,12 @@ export class CatalogAttributeConfigDto {
   @IsBoolean()
   isActive!: boolean;
 
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @Type(() => Object)
+  @IsBoolean()
+  isRequired?: boolean;
+
   @IsInt()
   @Min(0)
   @Max(10000)
@@ -195,6 +201,9 @@ export class CatalogProductAttributeDto {
   value!: CatalogAttributeValueDto | null;
 
   revision!: number;
+
+  @ApiPropertyOptional()
+  needsCompletion?: boolean;
 
   @ApiProperty({ type: Number, nullable: true })
   definitionVersion!: number | null;

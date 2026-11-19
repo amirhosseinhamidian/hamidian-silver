@@ -10,8 +10,47 @@ import {
   validateCatalogAttributeValue,
 } from './catalog-attribute-values';
 import { SetCatalogProductAttributeDto } from './dto/catalog-attribute.dto';
+import { buildCatalogQualityCandidate } from './catalog-quality';
 
 describe('typed catalog attribute rules', () => {
+  it('requires an agreed registry value when supplier and catalog evidence coexist', () => {
+    const definition = {
+      code: 'watch-water-resistance',
+      version: 1,
+      label: 'مقاومت آب',
+      kind: Kind.NUMBER,
+      unit: Unit.BAR,
+      source: Source.MANUAL,
+      isActive: true,
+      sortOrder: 1,
+      categoryIds: [],
+      excludedCategoryIds: [],
+      options: [],
+      legacyMappings: [{ legacyValue: '۱۰ بار (۱۰۰ متر)', value: { number: 10, unit: Unit.BAR } }],
+    };
+    const catalog = { source: 'catalog', key: 'مقاومت آب', legacyValue: '۱۰ بار (۱۰۰ متر)' };
+    const supplier = {
+      source: 'supplier:watch',
+      key: 'مقاومت در برابر آب',
+      legacyValue: '۱۰ بار (۱۰۰ متر)',
+    };
+    expect(buildCatalogQualityCandidate('product', definition, [catalog, supplier])).toMatchObject({
+      state: 'candidate',
+      after: { number: 10, unit: Unit.BAR },
+      approved: false,
+    });
+    expect(
+      buildCatalogQualityCandidate('product', definition, [
+        catalog,
+        { ...supplier, legacyValue: '۵ بار' },
+      ]),
+    ).toMatchObject({
+      state: 'review',
+      after: null,
+      approved: false,
+    });
+  });
+
   it('rejects strings used as numbers or booleans at the HTTP boundary', async () => {
     const pipe = new ValidationPipe({
       whitelist: true,

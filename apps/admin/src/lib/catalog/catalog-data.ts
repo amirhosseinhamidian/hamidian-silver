@@ -40,7 +40,7 @@ export type ProductFormData = Readonly<{
   product: AdminProduct | null;
   brands: readonly CatalogLookup[];
   countries: readonly CatalogLookup[];
-  categories: readonly CatalogLookup[];
+  categories: readonly Pick<AdminCategory, 'id' | 'name' | 'active' | 'parentId'>[];
   sizes: readonly CatalogSize[];
   sizeGroups: readonly CatalogSizeGroup[];
   products?: readonly ProductRelationCandidate[];
@@ -198,7 +198,7 @@ export async function loadProductForm(productId?: string): Promise<ProductFormDa
       productRequest,
       load(requestAdminCatalog('/api/v1/catalog/brands', token), parseCatalogLookups),
       load(requestAdminCatalog('/api/v1/catalog/countries', token), parseCatalogLookups),
-      load(requestAdminCatalog('/api/v1/catalog/categories', token), parseCatalogLookups),
+      load(requestAdminCatalog('/api/v1/catalog/categories', token), parseAdminCategories),
       load(requestAdminCatalog('/api/v1/catalog/sizes', token), parseCatalogSizes),
       load(requestAdminCatalog('/api/v1/catalog/size-groups', token), parseCatalogSizeGroups),
       loadProductRelationCandidates(token),
@@ -237,7 +237,12 @@ export async function loadProductForm(productId?: string): Promise<ProductFormDa
     product: product.data,
     brands: brands.data,
     countries: countries.data,
-    categories: categories.data,
+    categories: categories.data.map(({ id, name, active, parentId }) => ({
+      id,
+      name,
+      active,
+      parentId,
+    })),
     sizes: sizes.data,
     sizeGroups: sizeGroups.data,
     products: products.data.filter(({ id }) => id !== productId),

@@ -4254,6 +4254,7 @@ export interface components {
             unit: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
             /** @enum {string} */
             source: "MANUAL" | "VARIANT_SIZE" | "VARIANT_LENGTH" | "VARIANT_WEIGHT";
+            isRequired?: boolean;
             options: components["schemas"]["CatalogAttributeOptionDto"][];
             legacyMappings: components["schemas"]["CatalogAttributeLegacyMappingDto"][];
             code: string;
@@ -4271,6 +4272,7 @@ export interface components {
             unit: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
             /** @enum {string} */
             source: "MANUAL" | "VARIANT_SIZE" | "VARIANT_LENGTH" | "VARIANT_WEIGHT";
+            isRequired?: boolean;
             options: components["schemas"]["CatalogAttributeOptionDto"][];
             legacyMappings: components["schemas"]["CatalogAttributeLegacyMappingDto"][];
             code: string;
@@ -4287,6 +4289,7 @@ export interface components {
             unit: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
             /** @enum {string} */
             source: "MANUAL" | "VARIANT_SIZE" | "VARIANT_LENGTH" | "VARIANT_WEIGHT";
+            isRequired?: boolean;
             options: components["schemas"]["CatalogAttributeOptionDto"][];
             legacyMappings: components["schemas"]["CatalogAttributeLegacyMappingDto"][];
             expectedVersion: number;
@@ -4299,6 +4302,7 @@ export interface components {
         CatalogProductAttributeDto: {
             definition: components["schemas"]["CatalogAttributeDefinitionDto"];
             value: components["schemas"]["CatalogAttributeValueDto"] | null;
+            needsCompletion?: boolean;
             definitionVersion: number | null;
             legacyValue: string | null;
             revision: number;
