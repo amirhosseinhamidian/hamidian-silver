@@ -140,6 +140,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['catalog.read'],
       },
       {
+        id: 'catalog-attributes',
+        label: 'ویژگی‌های کاتالوگ',
+        shortLabel: 'ویژگی‌ها',
+        href: '/catalog-attributes',
+        icon: 'products',
+        description: 'تعریف ویژگی‌های نوع‌دار و دامنهٔ دسته‌ها',
+        roadmapStage: 8,
+        permissions: ['catalog.read'],
+      },
+      {
         id: 'brands',
         label: 'برندها و کشورها',
         shortLabel: 'برندها',

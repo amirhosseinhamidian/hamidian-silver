@@ -31,6 +31,7 @@ describe('admin navigation', () => {
       'product-imports',
       'variants',
       'categories',
+      'catalog-attributes',
       'brands',
       'inventory',
       'inventory-alerts',
@@ -89,6 +90,7 @@ describe('admin navigation', () => {
     expect(getAdminSection('products')?.permissions).toEqual(['catalog.read']);
     expect(getAdminSection('product-imports')?.permissions).toEqual(['catalog.read']);
     expect(getAdminSection('variants')?.permissions).toEqual(['catalog.read']);
+    expect(getAdminSection('catalog-attributes')?.permissions).toEqual(['catalog.read']);
     expect(getAdminSection('payment-gateways')?.permissions).toEqual(['settings.read']);
     expect(getAdminSection('shipping-settings')?.permissions).toEqual(['settings.read']);
     expect(getAdminSection('transactions')?.permissions).toEqual(['finance.read']);
@@ -101,6 +103,9 @@ describe('admin navigation', () => {
     expect(getAdminSection('unknown')).toBeUndefined();
     expect(findAdminNavigationItem('/orders/HS-1042', navigation)?.id).toBe('orders');
     expect(findAdminNavigationItem('/variants/product-1', navigation)?.id).toBe('variants');
+    expect(findAdminNavigationItem('/catalog-attributes', navigation)?.id).toBe(
+      'catalog-attributes',
+    );
     expect(findAdminNavigationItem('/unknown', navigation)).toBeUndefined();
     expect(isAdminNavigationItemActive('/orders/HS-1042', '/orders')).toBe(true);
     expect(isAdminNavigationItemActive('/orders', '/')).toBe(false);

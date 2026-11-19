@@ -5,11 +5,13 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   Length,
+  Max,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -35,6 +37,12 @@ export class UpdateProductVariantDto {
   @IsNumber({ maxDecimalPlaces: 3 })
   @Min(0)
   weightGrams?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  lengthMm?: number | null;
 
   @IsOptional()
   @IsNumber()

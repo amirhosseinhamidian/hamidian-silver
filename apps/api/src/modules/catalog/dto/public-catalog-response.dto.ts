@@ -5,6 +5,7 @@ import {
   SizeMode,
   VariantInventoryMode,
 } from '../../../generated/prisma/enums';
+import { PublicTypedCatalogAttributeDto } from './catalog-attribute.dto';
 
 export class PublicCatalogMediaDto {
   @ApiProperty({ type: String, nullable: true, format: 'uri' })
@@ -160,6 +161,9 @@ export class PublicCatalogVariantDto {
   @ApiProperty({ type: Number, nullable: true })
   weightGrams!: number | null;
 
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  lengthMm?: number | null;
+
   @ApiProperty({ type: Number, nullable: true })
   salePriceToman!: number | null;
 
@@ -179,7 +183,18 @@ export class PublicCatalogVariantDto {
   platingOptions!: PublicCatalogPlatingOptionDto[];
 }
 
+export class PublicCatalogMatchingVariantDto {
+  id!: string;
+  @ApiProperty({ type: String, nullable: true })
+  sizeId!: string | null;
+  @ApiProperty({ type: Number, nullable: true })
+  lengthMm!: number | null;
+  availableQuantity!: number;
+}
+
 export class PublicCatalogProductSummaryDto {
+  @ApiPropertyOptional({ type: () => PublicCatalogMatchingVariantDto, isArray: true })
+  matchingVariants?: PublicCatalogMatchingVariantDto[];
   id!: string;
   name!: string;
   slug!: string;
@@ -257,6 +272,9 @@ export class PublicCatalogProductDetailDto extends PublicCatalogProductSummaryDt
 
   @ApiProperty({ type: () => PublicCatalogProductAttributeDto, isArray: true })
   attributes!: PublicCatalogProductAttributeDto[];
+
+  @ApiPropertyOptional({ type: () => PublicTypedCatalogAttributeDto, isArray: true })
+  typedAttributes?: PublicTypedCatalogAttributeDto[];
 }
 
 export class PublicCatalogProductListDto {

@@ -345,6 +345,35 @@
             }
           },
           {
+            "name": "sizeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "minLengthMm",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "maxLengthMm",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100000,
+              "type": "number"
+            }
+          },
+          {
             "name": "sort",
             "required": false,
             "in": "query",
@@ -2063,6 +2092,180 @@
         },
         "tags": [
           "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/attribute-definitions": {
+      "get": {
+        "operationId": "CatalogAttributesController_listDefinitions_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogAttributeDefinitionDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CatalogAttributes"
+        ]
+      },
+      "post": {
+        "operationId": "CatalogAttributesController_createDefinition_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCatalogAttributeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogAttributeDefinitionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CatalogAttributes"
+        ]
+      }
+    },
+    "/api/v1/catalog/attribute-definitions/{code}": {
+      "patch": {
+        "operationId": "CatalogAttributesController_updateDefinition_v1",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCatalogAttributeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogAttributeDefinitionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CatalogAttributes"
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{productId}/typed-attributes": {
+      "get": {
+        "operationId": "CatalogAttributesController_listProductValues_v1",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogProductAttributeDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CatalogAttributes"
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{productId}/typed-attributes/{code}": {
+      "patch": {
+        "operationId": "CatalogAttributesController_setProductValue_v1",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCatalogProductAttributeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogProductAttributeDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CatalogAttributes"
         ]
       }
     },
@@ -9608,6 +9811,31 @@
           "slug"
         ]
       },
+      "PublicCatalogMatchingVariantDto": {
+        "type": "object",
+        "properties": {
+          "sizeId": {
+            "type": "string",
+            "nullable": true
+          },
+          "lengthMm": {
+            "type": "number",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "availableQuantity": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "sizeId",
+          "lengthMm",
+          "id",
+          "availableQuantity"
+        ]
+      },
       "PublicCatalogBrandDto": {
         "type": "object",
         "properties": {
@@ -9731,6 +9959,12 @@
       "PublicCatalogProductSummaryDto": {
         "type": "object",
         "properties": {
+          "matchingVariants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogMatchingVariantDto"
+            }
+          },
           "shortDescription": {
             "type": "string",
             "nullable": true
@@ -10018,6 +10252,10 @@
             "type": "number",
             "nullable": true
           },
+          "lengthMm": {
+            "type": "number",
+            "nullable": true
+          },
           "salePriceToman": {
             "type": "number",
             "nullable": true
@@ -10094,9 +10332,128 @@
           "sortOrder"
         ]
       },
+      "CatalogAttributeOptionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ]
+      },
+      "CatalogAttributeValueDto": {
+        "type": "object",
+        "properties": {
+          "unit": {
+            "enum": [
+              "NONE",
+              "GRAM",
+              "MILLIMETER",
+              "SIZE",
+              "PER_MILLE",
+              "BAR"
+            ],
+            "type": "string"
+          },
+          "optionCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "optionCodes": {
+            "uniqueItems": true,
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "number": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "boolean": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PublicTypedCatalogAttributeDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "SELECT",
+              "NUMBER",
+              "RANGE",
+              "BOOLEAN",
+              "MULTI_SELECT"
+            ],
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "NONE",
+              "GRAM",
+              "MILLIMETER",
+              "SIZE",
+              "PER_MILLE",
+              "BAR"
+            ],
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogAttributeOptionDto"
+            }
+          },
+          "value": {
+            "$ref": "#/components/schemas/CatalogAttributeValueDto"
+          },
+          "code": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "definitionVersion": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "unit",
+          "options",
+          "value",
+          "code",
+          "label",
+          "definitionVersion"
+        ]
+      },
       "PublicCatalogProductDetailDto": {
         "type": "object",
         "properties": {
+          "matchingVariants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogMatchingVariantDto"
+            }
+          },
           "shortDescription": {
             "type": "string",
             "nullable": true
@@ -10217,6 +10574,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PublicCatalogProductAttributeDto"
+            }
+          },
+          "typedAttributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicTypedCatalogAttributeDto"
             }
           },
           "id": {
@@ -10782,6 +11145,11 @@
             "type": "number",
             "minimum": 0
           },
+          "lengthMm": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100000
+          },
           "salePriceToman": {
             "type": "number",
             "minimum": 0
@@ -11045,6 +11413,12 @@
             "nullable": true,
             "minimum": 0
           },
+          "lengthMm": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 100000
+          },
           "salePriceToman": {
             "type": "number",
             "nullable": true,
@@ -11240,6 +11614,381 @@
             "minimum": 0
           }
         }
+      },
+      "CatalogAttributeLegacyMappingDto": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/CatalogAttributeValueDto"
+          },
+          "legacyValue": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "value",
+          "legacyValue"
+        ]
+      },
+      "CatalogAttributeDefinitionDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "SELECT",
+              "NUMBER",
+              "RANGE",
+              "BOOLEAN",
+              "MULTI_SELECT"
+            ],
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "NONE",
+              "GRAM",
+              "MILLIMETER",
+              "SIZE",
+              "PER_MILLE",
+              "BAR"
+            ],
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "MANUAL",
+              "VARIANT_SIZE",
+              "VARIANT_LENGTH",
+              "VARIANT_WEIGHT"
+            ],
+            "type": "string"
+          },
+          "options": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogAttributeOptionDto"
+            }
+          },
+          "legacyMappings": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogAttributeLegacyMappingDto"
+            }
+          },
+          "code": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "categoryIds": {
+            "uniqueItems": true,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "excludedCategoryIds": {
+            "uniqueItems": true,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "unit",
+          "source",
+          "options",
+          "legacyMappings",
+          "code",
+          "version",
+          "label",
+          "isActive",
+          "sortOrder",
+          "categoryIds",
+          "excludedCategoryIds"
+        ]
+      },
+      "CreateCatalogAttributeDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "SELECT",
+              "NUMBER",
+              "RANGE",
+              "BOOLEAN",
+              "MULTI_SELECT"
+            ],
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "NONE",
+              "GRAM",
+              "MILLIMETER",
+              "SIZE",
+              "PER_MILLE",
+              "BAR"
+            ],
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "MANUAL",
+              "VARIANT_SIZE",
+              "VARIANT_LENGTH",
+              "VARIANT_WEIGHT"
+            ],
+            "type": "string"
+          },
+          "options": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogAttributeOptionDto"
+            }
+          },
+          "legacyMappings": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogAttributeLegacyMappingDto"
+            }
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "categoryIds": {
+            "uniqueItems": true,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "excludedCategoryIds": {
+            "uniqueItems": true,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "unit",
+          "source",
+          "options",
+          "legacyMappings",
+          "code",
+          "label",
+          "isActive",
+          "sortOrder",
+          "categoryIds",
+          "excludedCategoryIds"
+        ]
+      },
+      "UpdateCatalogAttributeDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "SELECT",
+              "NUMBER",
+              "RANGE",
+              "BOOLEAN",
+              "MULTI_SELECT"
+            ],
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "NONE",
+              "GRAM",
+              "MILLIMETER",
+              "SIZE",
+              "PER_MILLE",
+              "BAR"
+            ],
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "MANUAL",
+              "VARIANT_SIZE",
+              "VARIANT_LENGTH",
+              "VARIANT_WEIGHT"
+            ],
+            "type": "string"
+          },
+          "options": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogAttributeOptionDto"
+            }
+          },
+          "legacyMappings": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogAttributeLegacyMappingDto"
+            }
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "categoryIds": {
+            "uniqueItems": true,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "excludedCategoryIds": {
+            "uniqueItems": true,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "unit",
+          "source",
+          "options",
+          "legacyMappings",
+          "expectedVersion",
+          "label",
+          "isActive",
+          "sortOrder",
+          "categoryIds",
+          "excludedCategoryIds"
+        ]
+      },
+      "CatalogProductAttributeDto": {
+        "type": "object",
+        "properties": {
+          "definition": {
+            "$ref": "#/components/schemas/CatalogAttributeDefinitionDto"
+          },
+          "value": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogAttributeValueDto"
+              }
+            ]
+          },
+          "definitionVersion": {
+            "type": "number",
+            "nullable": true
+          },
+          "legacyValue": {
+            "type": "string",
+            "nullable": true
+          },
+          "revision": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "definition",
+          "value",
+          "definitionVersion",
+          "legacyValue",
+          "revision"
+        ]
+      },
+      "SetCatalogProductAttributeDto": {
+        "type": "object",
+        "properties": {
+          "definitionVersion": {
+            "type": "number",
+            "minimum": 1
+          },
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 0
+          },
+          "value": {
+            "$ref": "#/components/schemas/CatalogAttributeValueDto"
+          },
+          "legacyValue": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "clear": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "definitionVersion",
+          "expectedRevision"
+        ]
       },
       "MarkSupplierPayablePaidDto": {
         "type": "object",

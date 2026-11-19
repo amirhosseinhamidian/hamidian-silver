@@ -134,12 +134,19 @@ function VariantForm({
     const name = String(formData.get('name') ?? '').trim();
     const selectedSizeId = String(formData.get('sizeId') ?? 'none');
     const weightGrams = optionalNumber(formData, 'weightGrams');
+    const lengthMm = optionalNumber(formData, 'lengthMm');
     const salePriceToman = optionalNumber(formData, 'salePriceToman');
     const compareAtPriceToman = optionalNumber(formData, 'compareAtPriceToman');
 
     if (!sku) return setError('SKU الزامی است.');
     if (weightGrams === undefined || (weightGrams !== null && weightGrams < 0)) {
       return setError('وزن باید یک عدد مثبت با حداکثر سه رقم اعشار باشد.');
+    }
+    if (
+      lengthMm === undefined ||
+      (lengthMm !== null && (!Number.isInteger(lengthMm) || lengthMm < 1 || lengthMm > 100000))
+    ) {
+      return setError('طول تنوع باید عدد صحیح مثبت به میلی‌متر باشد.');
     }
     if (product.sizeMode === 'SIZED' && selectedSizeId === 'none') {
       return setError('برای این محصول انتخاب سایز الزامی است.');
@@ -189,6 +196,8 @@ function VariantForm({
     else if (variant) payload.name = null;
     if (weightGrams !== null) payload.weightGrams = weightGrams;
     else if (variant) payload.weightGrams = null;
+    if (lengthMm !== null) payload.lengthMm = lengthMm;
+    else if (variant?.lengthMm != null) payload.lengthMm = null;
     if (salePriceToman !== null) payload.salePriceToman = salePriceToman;
     else if (variant) payload.salePriceToman = null;
     if (compareAtPriceToman !== null) payload.compareAtPriceToman = compareAtPriceToman;
@@ -372,6 +381,18 @@ function VariantForm({
             }
             placeholder="مثلاً ۴٫۲۵۰"
             inputMode="decimal"
+            onInput={localizeNumberInput}
+          />
+        )}
+      </FormField>
+      <FormField id={`${formId}-length`} label="طول تنوع به میلی‌متر">
+        {(props) => (
+          <Input
+            {...props}
+            name="lengthMm"
+            defaultValue={variant?.lengthMm == null ? '' : toPersianDigits(variant.lengthMm)}
+            placeholder="مثلاً ۲۳۰"
+            inputMode="numeric"
             onInput={localizeNumberInput}
           />
         )}

@@ -50,6 +50,7 @@ type EditableProductVariant = Readonly<{
   name: string;
   sizeId: string;
   weightGrams: string;
+  lengthMm: string;
   salePriceToman: string;
   compareAtPriceToman: string;
   inventoryMode: VariantInventoryMode;
@@ -76,6 +77,7 @@ function createVariant(importDraft?: AdminSupplierImportDraft | null): EditableP
     name: '',
     sizeId: 'none',
     weightGrams: importDraft?.weightGrams === null ? '' : String(importDraft?.weightGrams ?? ''),
+    lengthMm: '',
     salePriceToman: '',
     compareAtPriceToman: '',
     inventoryMode: 'OWN',
@@ -396,6 +398,7 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
         name: variant.name.trim(),
         sizeId: variant.sizeId,
         weightGrams: optionalNumberValue(variant.weightGrams),
+        lengthMm: optionalNumberValue(variant.lengthMm),
         salePriceToman: optionalNumberValue(variant.salePriceToman),
         compareAtPriceToman: optionalNumberValue(variant.compareAtPriceToman),
         inventoryMode: variant.inventoryMode,
@@ -413,6 +416,16 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
         normalizedVariants.some((variant) => Number.isNaN(variant.weightGrams))
       ) {
         setError('وزن تنوع‌ها باید فقط شامل عدد و حداکثر سه رقم اعشار باشد.');
+        return;
+      }
+      if (
+        normalizedVariants.some(
+          ({ lengthMm }) =>
+            lengthMm !== undefined &&
+            (!Number.isInteger(lengthMm) || lengthMm < 1 || lengthMm > 100000),
+        )
+      ) {
+        setError('طول تنوع باید عدد صحیح مثبت به میلی‌متر باشد.');
         return;
       }
       if (
@@ -500,6 +513,7 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
         sku: variant.sku,
         ...(variant.name ? { name: variant.name } : {}),
         ...(variant.weightGrams !== undefined ? { weightGrams: variant.weightGrams } : {}),
+        ...(variant.lengthMm !== undefined ? { lengthMm: variant.lengthMm } : {}),
         ...(variant.salePriceToman !== undefined ? { salePriceToman: variant.salePriceToman } : {}),
         ...(variant.compareAtPriceToman !== undefined
           ? { compareAtPriceToman: variant.compareAtPriceToman }
@@ -1484,6 +1498,25 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
                           onChange={(event) =>
                             updateVariant({
                               weightGrams: toPersianDigits(toAsciiDigits(event.target.value)),
+                            })
+                          }
+                        />
+                      )}
+                    </FormField>
+                    <FormField
+                      id={`product-variant-${variant.id}-length`}
+                      label={`طول تنوع ${number} به میلی‌متر`}
+                    >
+                      {(props) => (
+                        <Input
+                          {...props}
+                          value={variant.lengthMm}
+                          inputMode="numeric"
+                          placeholder="مثلاً ۲۳۰"
+                          disabled={pending}
+                          onChange={(event) =>
+                            updateVariant({
+                              lengthMm: toPersianDigits(toAsciiDigits(event.target.value)),
                             })
                           }
                         />

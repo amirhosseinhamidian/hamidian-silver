@@ -3,6 +3,10 @@ import 'server-only';
 import { cookies } from 'next/headers';
 
 import { requestAdminCatalog, readJsonResponse } from '@/lib/catalog/catalog-api';
+import type {
+  AttributeDefinition,
+  ProductTypedAttribute,
+} from '@/lib/catalog/catalog-attribute-model';
 import {
   parseAdminProduct,
   parseAdminBrands,
@@ -244,6 +248,24 @@ export async function loadProductForm(productId?: string): Promise<ProductFormDa
 export async function loadCategoryManagement(): Promise<CategoryManagementData> {
   const token = await accessToken();
   return load(requestAdminCatalog('/api/v1/catalog/categories', token), parseAdminCategories);
+}
+
+export async function loadAttributeDefinitions() {
+  const token = await accessToken();
+  return load(requestAdminCatalog('/api/v1/catalog/attribute-definitions', token), (value) =>
+    Array.isArray(value) ? (value as AttributeDefinition[]) : null,
+  );
+}
+
+export async function loadProductTypedAttributes(productId: string) {
+  const token = await accessToken();
+  return load(
+    requestAdminCatalog(
+      `/api/v1/catalog/products/${encodeURIComponent(productId)}/typed-attributes`,
+      token,
+    ),
+    (value) => (Array.isArray(value) ? (value as ProductTypedAttribute[]) : null),
+  );
 }
 
 export async function loadReferenceManagement(): Promise<ReferenceManagementData> {

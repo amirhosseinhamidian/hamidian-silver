@@ -11,6 +11,7 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { attachHumanAuditEvent } from '../audit/audit-event';
 import { PERMISSION_CODES, type PermissionCode } from '../authorization/rbac.constants';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
+import { remapCatalogAttributeCategoryScopes } from './catalog-attributes.service';
 import { readActiveCategoryProductCounts } from './catalog-category-counts';
 import { catalogHierarchyTransaction } from './catalog-hierarchy-transaction';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -249,6 +250,7 @@ export class CatalogCategoriesService {
       if (!result.merged) return result;
 
       await this.transferCategoryReferences(transaction, categoryId, targetCategoryId);
+      await remapCatalogAttributeCategoryScopes(transaction, categoryId, targetCategoryId);
       await transaction.category.updateMany({
         where: children,
         data: { parentId: targetCategoryId },

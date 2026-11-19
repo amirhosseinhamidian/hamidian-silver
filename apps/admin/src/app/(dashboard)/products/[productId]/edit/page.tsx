@@ -1,11 +1,12 @@
 import { notFound } from 'next/navigation';
 
 import { ProductForm } from '@/components/products/product-form';
+import { ProductTypedAttributes } from '@/components/catalog-attributes/product-typed-attributes';
 import { ProductMediaManager } from '@/components/products/product-media-manager';
 import { ProductVariantManager } from '@/components/products/product-variant-manager';
 import { Badge } from '@/components/ui/badge';
 import { requireAdminSession } from '@/lib/auth/session';
-import { loadProductForm } from '@/lib/catalog/catalog-data';
+import { loadProductForm, loadProductTypedAttributes } from '@/lib/catalog/catalog-data';
 import { formatAdminInteger } from '@/lib/presentation/formatters';
 
 type EditProductPageProps = Readonly<{ params: Promise<{ productId: string }> }>;
@@ -18,7 +19,10 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     permissions: ['catalog.write'],
     returnTo: `/products/${productId}/edit`,
   });
-  const data = await loadProductForm(productId);
+  const [data, attributes] = await Promise.all([
+    loadProductForm(productId),
+    loadProductTypedAttributes(productId),
+  ]);
   if (!data?.product) notFound();
 
   return (
@@ -39,6 +43,11 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       </div>
       <ProductVariantManager product={data.product} sizes={data.sizes} />
       <ProductForm data={data} mode="edit" />
+      <ProductTypedAttributes
+        productId={productId}
+        items={attributes.data ?? []}
+        failed={attributes.failed}
+      />
     </main>
   );
 }

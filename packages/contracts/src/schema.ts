@@ -644,6 +644,70 @@ export interface paths {
         patch: operations["CatalogController_updateProductMedia_v1"];
         trace?: never;
     };
+    "/api/v1/catalog/attribute-definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogAttributesController_listDefinitions_v1"];
+        put?: never;
+        post: operations["CatalogAttributesController_createDefinition_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/attribute-definitions/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogAttributesController_updateDefinition_v1"];
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/typed-attributes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogAttributesController_listProductValues_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/typed-attributes/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogAttributesController_setProductValue_v1"];
+        trace?: never;
+    };
     "/api/v1/finance/supplier-payables": {
         parameters: {
             query?: never;
@@ -3750,6 +3814,12 @@ export interface components {
             name: string;
             slug: string;
         };
+        PublicCatalogMatchingVariantDto: {
+            sizeId: string | null;
+            lengthMm: number | null;
+            id: string;
+            availableQuantity: number;
+        };
         PublicCatalogBrandDto: {
             description: string | null;
             hasProducts?: boolean;
@@ -3773,6 +3843,7 @@ export interface components {
             sortOrder: number;
         };
         PublicCatalogProductSummaryDto: {
+            matchingVariants?: components["schemas"]["PublicCatalogMatchingVariantDto"][];
             shortDescription: string | null;
             seoCanonicalPath?: string | null;
             seoNoIndex?: boolean;
@@ -3838,6 +3909,7 @@ export interface components {
         PublicCatalogVariantDto: {
             name: string | null;
             weightGrams: number | null;
+            lengthMm?: number | null;
             salePriceToman: number | null;
             compareAtPriceToman: number | null;
             size: components["schemas"]["PublicCatalogSizeDto"] | null;
@@ -3854,7 +3926,33 @@ export interface components {
             value: string;
             sortOrder: number;
         };
+        CatalogAttributeOptionDto: {
+            code: string;
+            label: string;
+        };
+        CatalogAttributeValueDto: {
+            /** @enum {string} */
+            unit?: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
+            optionCode?: string;
+            optionCodes?: string[];
+            number?: number;
+            min?: number;
+            max?: number;
+            boolean?: boolean;
+        };
+        PublicTypedCatalogAttributeDto: {
+            /** @enum {string} */
+            kind: "SELECT" | "NUMBER" | "RANGE" | "BOOLEAN" | "MULTI_SELECT";
+            /** @enum {string} */
+            unit: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
+            options: components["schemas"]["CatalogAttributeOptionDto"][];
+            value: components["schemas"]["CatalogAttributeValueDto"];
+            code: string;
+            label: string;
+            definitionVersion: number;
+        };
         PublicCatalogProductDetailDto: {
+            matchingVariants?: components["schemas"]["PublicCatalogMatchingVariantDto"][];
             shortDescription: string | null;
             seoCanonicalPath?: string | null;
             seoNoIndex?: boolean;
@@ -3880,6 +3978,7 @@ export interface components {
             variants: components["schemas"]["PublicCatalogVariantDto"][];
             media: components["schemas"]["PublicCatalogMediaDto"][];
             attributes: components["schemas"]["PublicCatalogProductAttributeDto"][];
+            typedAttributes?: components["schemas"]["PublicTypedCatalogAttributeDto"][];
             id: string;
             name: string;
             slug: string;
@@ -4033,6 +4132,7 @@ export interface components {
             /** Format: uuid */
             sizeId?: string;
             weightGrams?: number;
+            lengthMm?: number;
             salePriceToman?: number;
             compareAtPriceToman?: number;
             isActive?: boolean;
@@ -4096,6 +4196,7 @@ export interface components {
             /** Format: uuid */
             sizeId?: string | null;
             weightGrams?: number | null;
+            lengthMm?: number | null;
             salePriceToman?: number | null;
             compareAtPriceToman?: number | null;
             isActive?: boolean;
@@ -4141,6 +4242,73 @@ export interface components {
             altText?: string | null;
             isPrimary?: boolean;
             sortOrder?: number;
+        };
+        CatalogAttributeLegacyMappingDto: {
+            value: components["schemas"]["CatalogAttributeValueDto"];
+            legacyValue: string;
+        };
+        CatalogAttributeDefinitionDto: {
+            /** @enum {string} */
+            kind: "SELECT" | "NUMBER" | "RANGE" | "BOOLEAN" | "MULTI_SELECT";
+            /** @enum {string} */
+            unit: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
+            /** @enum {string} */
+            source: "MANUAL" | "VARIANT_SIZE" | "VARIANT_LENGTH" | "VARIANT_WEIGHT";
+            options: components["schemas"]["CatalogAttributeOptionDto"][];
+            legacyMappings: components["schemas"]["CatalogAttributeLegacyMappingDto"][];
+            code: string;
+            version: number;
+            label: string;
+            isActive: boolean;
+            sortOrder: number;
+            categoryIds: string[];
+            excludedCategoryIds: string[];
+        };
+        CreateCatalogAttributeDto: {
+            /** @enum {string} */
+            kind: "SELECT" | "NUMBER" | "RANGE" | "BOOLEAN" | "MULTI_SELECT";
+            /** @enum {string} */
+            unit: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
+            /** @enum {string} */
+            source: "MANUAL" | "VARIANT_SIZE" | "VARIANT_LENGTH" | "VARIANT_WEIGHT";
+            options: components["schemas"]["CatalogAttributeOptionDto"][];
+            legacyMappings: components["schemas"]["CatalogAttributeLegacyMappingDto"][];
+            code: string;
+            label: string;
+            isActive: boolean;
+            sortOrder: number;
+            categoryIds: string[];
+            excludedCategoryIds: string[];
+        };
+        UpdateCatalogAttributeDto: {
+            /** @enum {string} */
+            kind: "SELECT" | "NUMBER" | "RANGE" | "BOOLEAN" | "MULTI_SELECT";
+            /** @enum {string} */
+            unit: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
+            /** @enum {string} */
+            source: "MANUAL" | "VARIANT_SIZE" | "VARIANT_LENGTH" | "VARIANT_WEIGHT";
+            options: components["schemas"]["CatalogAttributeOptionDto"][];
+            legacyMappings: components["schemas"]["CatalogAttributeLegacyMappingDto"][];
+            expectedVersion: number;
+            label: string;
+            isActive: boolean;
+            sortOrder: number;
+            categoryIds: string[];
+            excludedCategoryIds: string[];
+        };
+        CatalogProductAttributeDto: {
+            definition: components["schemas"]["CatalogAttributeDefinitionDto"];
+            value: components["schemas"]["CatalogAttributeValueDto"] | null;
+            definitionVersion: number | null;
+            legacyValue: string | null;
+            revision: number;
+        };
+        SetCatalogProductAttributeDto: {
+            definitionVersion: number;
+            expectedRevision: number;
+            value?: components["schemas"]["CatalogAttributeValueDto"];
+            legacyValue?: string;
+            clear?: boolean;
         };
         MarkSupplierPayablePaidDto: {
             paymentReference?: string;
@@ -5844,6 +6012,9 @@ export interface operations {
                 category?: string;
                 brand?: string;
                 country?: string;
+                sizeId?: string;
+                minLengthMm?: number;
+                maxLengthMm?: number;
                 sort?: "newest" | "price-asc" | "price-desc" | "name-asc";
             };
             header?: never;
@@ -6997,6 +7168,120 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    CatalogAttributesController_listDefinitions_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogAttributeDefinitionDto"][];
+                };
+            };
+        };
+    };
+    CatalogAttributesController_createDefinition_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCatalogAttributeDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogAttributeDefinitionDto"];
+                };
+            };
+        };
+    };
+    CatalogAttributesController_updateDefinition_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCatalogAttributeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogAttributeDefinitionDto"];
+                };
+            };
+        };
+    };
+    CatalogAttributesController_listProductValues_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogProductAttributeDto"][];
+                };
+            };
+        };
+    };
+    CatalogAttributesController_setProductValue_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetCatalogProductAttributeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogProductAttributeDto"];
+                };
             };
         };
     };

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { calculatePlatingPriceToman } from '../../common/plating-price';
 import { Prisma } from '../../generated/prisma/client';
 import {
@@ -13,6 +13,8 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
 import { readActiveCategoryProductCounts } from './catalog-category-counts';
 import { catalogHierarchyTransaction } from './catalog-hierarchy-transaction';
+import { CatalogAttributesService } from './catalog-attributes.service';
+import { readMatchingCatalogVariants } from './catalog-variant-filter';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
@@ -43,6 +45,7 @@ export class CatalogService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly publicMediaUrl: PublicMediaUrlService,
+    @Optional() private readonly catalogAttributes?: CatalogAttributesService,
   ) {}
 
   async createBrand(dto: CreateBrandDto) {
@@ -282,6 +285,7 @@ export class CatalogService {
           sku: variant.sku,
           name: variant.name,
           weightGrams: variant.weightGrams,
+          lengthMm: variant.lengthMm,
           salePriceToman: variant.salePriceToman,
           compareAtPriceToman: variant.compareAtPriceToman,
           isActive: variant.isActive ?? true,
@@ -1023,11 +1027,15 @@ export class CatalogService {
     const category = query.category?.trim();
     const brand = query.brand?.trim();
     const country = query.country?.trim();
+    const matches = await readMatchingCatalogVariants(this.prisma, query);
+    if (matches?.size === 0) return { items: [], page, pageSize, total: 0, totalPages: 0 };
+    const matchingProductIds = matches ? [...matches.keys()] : undefined;
     const categoryIds = category ? await this.resolvePublicCategoryIds(category) : undefined;
 
     const where = {
       status: ProductStatus.ACTIVE,
       deletedAt: null,
+      ...(matchingProductIds ? { id: { in: matchingProductIds } } : {}),
       ...(categoryIds
         ? {
             categories: {
@@ -1103,12 +1111,26 @@ export class CatalogService {
         categoryIds,
         brand,
         country,
+        matchingProductIds,
       });
       pageProductIds = searchRows.map(({ id }) => id);
       total = Number(searchRows[0]?.total ?? 0);
       for (const row of searchRows) {
         availabilityByProductId.set(row.id, Number(row.availableQuantity));
       }
+    } else if (matches) {
+      const [rows, count] = await Promise.all([
+        this.prisma.product.findMany({
+          where,
+          orderBy,
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          select: { id: true },
+        }),
+        this.prisma.product.count({ where }),
+      ]);
+      pageProductIds = rows.map(({ id }) => id);
+      total = count;
     } else {
       const orderedProducts = await this.prisma.product.findMany({
         where,
@@ -1163,6 +1185,11 @@ export class CatalogService {
       total = prioritizedProductIds.length;
       pageProductIds = prioritizedProductIds.slice((page - 1) * pageSize, page * pageSize);
     }
+    const matchingVariantIds = matches
+      ? pageProductIds.flatMap(
+          (productId) => matches.get(productId)?.variants.map(({ id }) => id) ?? [],
+        )
+      : undefined;
     const products =
       pageProductIds.length === 0
         ? []
@@ -1184,7 +1211,11 @@ export class CatalogService {
               compareAtPriceToman: true,
               sizeMode: true,
               variants: {
-                where: { isActive: true, deletedAt: null },
+                where: {
+                  isActive: true,
+                  deletedAt: null,
+                  ...(matchingVariantIds ? { id: { in: matchingVariantIds } } : {}),
+                },
                 select: {
                   salePriceToman: true,
                   compareAtPriceToman: true,
@@ -1286,7 +1317,9 @@ export class CatalogService {
 
     return {
       items: orderedPageProducts.map((product) => {
-        const availableQuantity = availabilityByProductId.get(product.id) ?? 0;
+        const match = matches?.get(product.id);
+        const availableQuantity =
+          match?.availableQuantity ?? availabilityByProductId.get(product.id) ?? 0;
         const lowestPricedVariant = (product.variants ?? [])
           .map((variant) => ({
             salePriceToman: variant.salePriceToman ?? product.salePriceToman,
@@ -1383,6 +1416,7 @@ export class CatalogService {
             : null,
           availableQuantity,
           isAvailable: availableQuantity > 0,
+          ...(match ? { matchingVariants: match.variants } : {}),
         };
       }),
       page,
@@ -1655,6 +1689,7 @@ export class CatalogService {
             sku: true,
             name: true,
             weightGrams: true,
+            lengthMm: true,
             salePriceToman: true,
             compareAtPriceToman: true,
             inventoryMode: true,
@@ -1818,6 +1853,7 @@ export class CatalogService {
         sku: variant.sku,
         name: variant.name,
         weightGrams: variant.weightGrams === null ? null : Number(variant.weightGrams),
+        ...(variant.lengthMm !== undefined ? { lengthMm: variant.lengthMm } : {}),
         salePriceToman: variant.salePriceToman ?? product.salePriceToman,
         compareAtPriceToman: variant.compareAtPriceToman ?? product.compareAtPriceToman,
         size:
@@ -1864,6 +1900,7 @@ export class CatalogService {
       ({ category }) =>
         category.id === product.primaryCategoryId && category.isActive && !category.deletedAt,
     )?.category.id;
+    const typedAttributes = await this.catalogAttributes?.listPublicValues(product.id);
 
     return {
       id: product.id,
@@ -1973,6 +2010,7 @@ export class CatalogService {
       variants,
       media,
       attributes: product.attributes,
+      ...(typedAttributes?.length ? { typedAttributes } : {}),
     };
   }
 
@@ -2223,6 +2261,7 @@ export class CatalogService {
     categoryIds: string[] | undefined;
     brand: string | undefined;
     country: string | undefined;
+    matchingProductIds?: string[];
   }): Promise<PublicProductSearchRow[]> {
     const categoryFilter =
       input.categoryIds === undefined
@@ -2234,7 +2273,7 @@ export class CatalogService {
                 SELECT 1
                 FROM "product_categories" AS filter_category
                 WHERE filter_category."productId" = product.id
-                  AND filter_category."categoryId" IN (${Prisma.join(input.categoryIds)})
+                  AND filter_category."categoryId" IN (${Prisma.join(input.categoryIds.map((id) => Prisma.sql`${id}::uuid`))})
               )
             `;
     const brandFilter = input.brand
@@ -2269,6 +2308,9 @@ export class CatalogService {
           : input.sort === PublicCatalogSort.NAME_ASC
             ? Prisma.sql`name ASC, id ASC`
             : Prisma.sql`"createdAt" DESC, id DESC`;
+    const variantFilter = input.matchingProductIds?.length
+      ? Prisma.sql`AND product.id IN (${Prisma.join(input.matchingProductIds.map((id) => Prisma.sql`${id}::uuid`))})`
+      : Prisma.empty;
 
     return this.prisma.$queryRaw<PublicProductSearchRow[]>(Prisma.sql`
       WITH ${this.publicSearchMatchesSql(input.search)},
@@ -2302,10 +2344,12 @@ export class CatalogService {
           ${categoryFilter}
           ${brandFilter}
           ${countryFilter}
+          ${variantFilter}
       )
       SELECT id, "availableQuantity", COUNT(*) OVER () AS total
       FROM filtered_search
-      ORDER BY ("availableQuantity" > 0) DESC, score DESC, ${secondaryOrder}
+      ORDER BY ${input.matchingProductIds ? Prisma.empty : Prisma.sql`("availableQuantity" > 0) DESC,`}
+        score DESC, ${secondaryOrder}
       LIMIT ${input.pageSize}
       OFFSET ${(input.page - 1) * input.pageSize}
     `);

@@ -108,6 +108,7 @@ export type AdminProductVariant = Readonly<{
   sku: string;
   name: string | null;
   weightGrams: number | null;
+  lengthMm?: number | null;
   salePriceToman: number | null;
   compareAtPriceToman: number | null;
   active: boolean;
@@ -257,6 +258,7 @@ function parseVariant(value: unknown): AdminProductVariant | null {
     sku,
     name: text(item?.name),
     weightGrams: number(item?.weightGrams),
+    lengthMm: number(item?.lengthMm),
     salePriceToman: number(item?.salePriceToman),
     compareAtPriceToman: number(item?.compareAtPriceToman),
     active: item?.isActive !== false,
