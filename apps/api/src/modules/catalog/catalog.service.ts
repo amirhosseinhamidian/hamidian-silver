@@ -11,6 +11,8 @@ import {
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
+import { readActiveCategoryProductCounts } from './catalog-category-counts';
+import { catalogHierarchyTransaction } from './catalog-hierarchy-transaction';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
@@ -91,7 +93,7 @@ export class CatalogService {
     this.validateProductShape(dto);
     const attributes = this.normalizeProductAttributes(dto.attributes);
 
-    return this.prisma.$transaction(async (transaction) => {
+    return catalogHierarchyTransaction(this.prisma, async (transaction) => {
       if (dto.supplierImportDraftId) {
         if (!actorUserId) {
           throw new BadRequestException('Import actor is required.');
@@ -145,6 +147,10 @@ export class CatalogService {
       }
 
       const categoryIds = dto.categoryIds ?? [];
+      const primaryCategoryId = dto.primaryCategoryId?.toLowerCase();
+      if (primaryCategoryId && !categoryIds.some((id) => id.toLowerCase() === primaryCategoryId)) {
+        throw new BadRequestException('Primary category must be an active assigned category.');
+      }
 
       if (categoryIds.length > 0) {
         const categories = await transaction.category.findMany({
@@ -253,6 +259,7 @@ export class CatalogService {
           defaultPlatingType: dto.defaultPlatingType,
           brandId: dto.brandId,
           countryId: dto.countryId,
+          primaryCategoryId,
         },
         select: {
           id: true,
@@ -544,13 +551,14 @@ export class CatalogService {
   async updateProduct(productId: string, dto: UpdateProductDto) {
     const attributes =
       dto.attributes === undefined ? undefined : this.normalizeProductAttributes(dto.attributes);
-    const updated = await this.prisma.$transaction(async (transaction) => {
+    const updated = await catalogHierarchyTransaction(this.prisma, async (transaction) => {
       const current = await transaction.product.findFirst({
         where: { id: productId, deletedAt: null },
         select: {
           id: true,
           slug: true,
           purchaseMode: true,
+          primaryCategoryId: true,
           salePriceToman: true,
           compareAtPriceToman: true,
         },
@@ -585,6 +593,31 @@ export class CatalogService {
         if (categories.length !== dto.categoryIds.length) {
           throw new NotFoundException('One or more categories were not found.');
         }
+      }
+
+      let primaryCategoryId = dto.primaryCategoryId?.toLowerCase() ?? dto.primaryCategoryId;
+      if (primaryCategoryId) {
+        const requestedPrimaryId = primaryCategoryId;
+        const assigned = dto.categoryIds
+          ? dto.categoryIds.some((id) => id.toLowerCase() === requestedPrimaryId)
+          : await transaction.productCategory.findFirst({
+              where: {
+                productId,
+                categoryId: primaryCategoryId,
+                category: { isActive: true, deletedAt: null },
+              },
+              select: { categoryId: true },
+            });
+        if (!assigned) {
+          throw new BadRequestException('Primary category must be an active assigned category.');
+        }
+      } else if (
+        primaryCategoryId === undefined &&
+        current.primaryCategoryId &&
+        dto.categoryIds &&
+        !dto.categoryIds.some((id) => id.toLowerCase() === current.primaryCategoryId)
+      ) {
+        primaryCategoryId = null;
       }
 
       const salePriceToman =
@@ -633,6 +666,7 @@ export class CatalogService {
           seoOgMediaId: dto.seoOgMediaId,
           brandId: dto.brandId,
           countryId: dto.countryId,
+          primaryCategoryId,
           salePriceToman: dto.salePriceToman,
           compareAtPriceToman: dto.compareAtPriceToman,
           defaultPlatingType: dto.defaultPlatingType,
@@ -651,10 +685,16 @@ export class CatalogService {
       }
 
       if (dto.categoryIds) {
-        await transaction.productCategory.deleteMany({ where: { productId } });
+        await transaction.productCategory.deleteMany({
+          where: {
+            productId,
+            ...(dto.categoryIds.length ? { categoryId: { notIn: dto.categoryIds } } : {}),
+          },
+        });
         if (dto.categoryIds.length > 0) {
           await transaction.productCategory.createMany({
             data: dto.categoryIds.map((categoryId) => ({ productId, categoryId })),
+            skipDuplicates: true,
           });
         }
       }
@@ -710,6 +750,7 @@ export class CatalogService {
   }
 
   async listPublicCategories() {
+    const counts = await readActiveCategoryProductCounts(this.prisma);
     const categories = await this.prisma.category.findMany({
       where: {
         isActive: true,
@@ -728,18 +769,6 @@ export class CatalogService {
         updatedAt: true,
         parentId: true,
         sortOrder: true,
-        _count: {
-          select: {
-            products: {
-              where: {
-                product: {
-                  status: ProductStatus.ACTIVE,
-                  deletedAt: null,
-                },
-              },
-            },
-          },
-        },
         image: {
           select: {
             storageKey: true,
@@ -783,23 +812,6 @@ export class CatalogService {
       },
     });
 
-    const categoriesById = new Map(categories.map((category) => [category.id, category] as const));
-    const visibleCategoryIds = new Set(
-      categories.filter((category) => category._count.products > 0).map((category) => category.id),
-    );
-
-    for (const categoryId of visibleCategoryIds) {
-      let current = categoriesById.get(categoryId);
-      const visited = new Set<string>();
-      while (current?.parentId && !visited.has(current.parentId)) {
-        visited.add(current.parentId);
-        const parent = categoriesById.get(current.parentId);
-        if (!parent) break;
-        visibleCategoryIds.add(parent.id);
-        current = parent;
-      }
-    }
-
     return categories.map((category) => ({
       id: category.id,
       name: category.name,
@@ -812,7 +824,9 @@ export class CatalogService {
       ...(category.updatedAt ? { updatedAt: category.updatedAt.toISOString() } : {}),
       parentId: category.parentId,
       sortOrder: category.sortOrder,
-      hasProducts: visibleCategoryIds.has(category.id),
+      activeProductCount: counts.get(category.id)?.activeProductCount ?? 0,
+      activeSubtreeProductCount: counts.get(category.id)?.activeSubtreeProductCount ?? 0,
+      hasProducts: (counts.get(category.id)?.activeSubtreeProductCount ?? 0) > 0,
       image:
         category.image && !category.image.deletedAt
           ? {
@@ -1530,6 +1544,7 @@ export class CatalogService {
         name: true,
         slug: true,
         shortDescription: true,
+        primaryCategoryId: true,
         description: true,
         seoTitle: true,
         seoDescription: true,
@@ -1845,6 +1860,10 @@ export class CatalogService {
     const primaryMediaItem =
       product.media.find((item) => item.isPrimary && !item.media.deletedAt) ??
       product.media.find((item) => !item.media.deletedAt);
+    const primaryCategoryId = product.categories.find(
+      ({ category }) =>
+        category.id === product.primaryCategoryId && category.isActive && !category.deletedAt,
+    )?.category.id;
 
     return {
       id: product.id,
@@ -1852,6 +1871,7 @@ export class CatalogService {
       slug: product.slug,
       shortDescription: product.shortDescription,
       description: product.description,
+      ...(primaryCategoryId ? { primaryCategoryId } : {}),
       seoTitle: product.seoTitle,
       seoDescription: product.seoDescription,
       seoCanonicalPath: product.seoCanonicalPath,

@@ -1,6 +1,7 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { SeoRedirectEntityType } from '../../generated/prisma/enums';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
+import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CatalogCategoriesService } from './catalog-categories.service';
 import type { PublicMediaUrlService } from './public-media-url.service';
 
@@ -161,5 +162,75 @@ describe('CatalogCategoriesService', () => {
     await expect(service.create({ name: 'انگشتر', slug: 'rings' })).rejects.toBeInstanceOf(
       ConflictException,
     );
+  });
+
+  it('previews a merge without changing either category', async () => {
+    const transaction = {
+      category: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValueOnce({ slug: 'rings-old' })
+          .mockResolvedValueOnce({ slug: 'rings' })
+          .mockResolvedValueOnce({ parentId: null }),
+        count: jest.fn().mockResolvedValue(2),
+        update: jest.fn(),
+      },
+      productCategory: {
+        count: jest.fn().mockResolvedValueOnce(4).mockResolvedValueOnce(5).mockResolvedValueOnce(3),
+      },
+      $executeRaw: jest.fn(),
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(
+      service.merge('source', { targetCategoryId: 'target' }, [
+        PERMISSION_CODES.CATALOG_WRITE,
+        PERMISSION_CODES.CMS_WRITE,
+        PERMISSION_CODES.SETTINGS_WRITE,
+      ]),
+    ).resolves.toEqual({
+      merged: false,
+      childCount: 2,
+      sourceProductCount: 4,
+      targetProductCount: 5,
+      sharedProductCount: 3,
+      sourcePath: '/categories/rings-old',
+      targetPath: '/categories/rings',
+    });
+    expect(transaction.category.update).not.toHaveBeenCalled();
+    expect(transaction.$executeRaw).not.toHaveBeenCalled();
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'Serializable',
+    });
+  });
+
+  it('rejects merging into a descendant and preserves settings permissions', async () => {
+    const transaction = {
+      category: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValueOnce({ slug: 'rings' })
+          .mockResolvedValueOnce({ slug: 'women-rings' })
+          .mockResolvedValueOnce({ parentId: 'source' })
+          .mockResolvedValueOnce({ slug: 'rings' })
+          .mockResolvedValueOnce({ slug: 'jewelry' })
+          .mockResolvedValueOnce({ parentId: null }),
+      },
+      homepageFeaturedCategory: { findUnique: jest.fn().mockResolvedValue(null) },
+      siteSettings: { count: jest.fn().mockResolvedValue(1) },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+    const permissions = [PERMISSION_CODES.CATALOG_WRITE, PERMISSION_CODES.CMS_WRITE];
+
+    await expect(
+      service.merge('source', { targetCategoryId: 'target', dryRun: false }, permissions),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.merge('source', { targetCategoryId: 'target', dryRun: false }, permissions),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

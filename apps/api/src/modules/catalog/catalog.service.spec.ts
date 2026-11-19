@@ -346,7 +346,7 @@ describe('CatalogService', () => {
     );
   });
 
-  it('updates product fields and replaces category assignments atomically', async () => {
+  it('updates the preferred category and preserves existing membership rows atomically', async () => {
     const productId = '10000000-0000-4000-8000-000000000001';
     const categoryId = '10000000-0000-4000-8000-000000000002';
     const transaction = {
@@ -382,24 +382,67 @@ describe('CatalogService', () => {
         name: 'Updated ring',
         salePriceToman: 4_200_000,
         categoryIds: [categoryId],
+        primaryCategoryId: categoryId,
         attributes: [{ key: 'جنس نگین', value: 'زیرکونیا', sortOrder: 1 }],
       }),
     ).resolves.toEqual({ id: productId, name: 'Updated ring', media: [] });
 
     expect(transaction.product.update).toHaveBeenCalledWith({
       where: { id: productId },
-      data: expect.objectContaining({ name: 'Updated ring', salePriceToman: 4_200_000 }),
+      data: expect.objectContaining({
+        name: 'Updated ring',
+        salePriceToman: 4_200_000,
+        primaryCategoryId: categoryId,
+      }),
     });
     expect(transaction.productCategory.deleteMany).toHaveBeenCalledWith({
-      where: { productId },
+      where: { productId, categoryId: { notIn: [categoryId] } },
     });
     expect(transaction.productCategory.createMany).toHaveBeenCalledWith({
       data: [{ productId, categoryId }],
+      skipDuplicates: true,
     });
     expect(transaction.productAttribute.deleteMany).toHaveBeenCalledWith({ where: { productId } });
     expect(transaction.productAttribute.createMany).toHaveBeenCalledWith({
       data: [{ productId, key: 'جنس نگین', value: 'زیرکونیا', sortOrder: 1 }],
     });
+  });
+
+  it('rejects an unassigned preferred category and clears the preference when its membership is removed', async () => {
+    const productId = '10000000-0000-4000-8000-000000000001';
+    const oldCategoryId = '10000000-0000-4000-8000-000000000002';
+    const newCategoryId = '10000000-0000-4000-8000-000000000003';
+    const transaction = {
+      product: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: productId,
+          primaryCategoryId: oldCategoryId,
+          salePriceToman: null,
+          compareAtPriceToman: null,
+        }),
+        update: jest.fn(),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ id: productId, media: [] }),
+      },
+      category: { findMany: jest.fn().mockResolvedValue([{ id: newCategoryId }]) },
+      productCategory: { deleteMany: jest.fn(), createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
+    );
+
+    await expect(
+      service.updateProduct(productId, {
+        primaryCategoryId: oldCategoryId,
+        categoryIds: [newCategoryId],
+      }),
+    ).rejects.toThrow('Primary category must be an active assigned category.');
+    expect(transaction.product.update).not.toHaveBeenCalled();
+    await service.updateProduct(productId, { categoryIds: [newCategoryId] });
+    expect(transaction.product.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ primaryCategoryId: null }),
+      }),
+    );
   });
 
   it('rejects blank or duplicate product attribute keys before opening a transaction', async () => {
@@ -482,6 +525,13 @@ describe('CatalogService', () => {
   });
 
   it('returns only active categories through the public catalog projection', async () => {
+    prisma.$queryRaw.mockResolvedValueOnce([
+      {
+        id: '10000000-0000-4000-8000-000000000001',
+        activeProductCount: 1n,
+        activeSubtreeProductCount: 1n,
+      },
+    ]);
     prisma.category.findMany.mockResolvedValue([
       {
         id: '10000000-0000-4000-8000-000000000001',
@@ -537,6 +587,8 @@ describe('CatalogService', () => {
         parentId: null,
         sortOrder: 0,
         hasProducts: true,
+        activeProductCount: 1,
+        activeSubtreeProductCount: 1,
         image: {
           url: 'https://media.hamidian.shop/categories/rings.jpg',
           mimeType: 'image/jpeg',
@@ -636,6 +688,11 @@ describe('CatalogService', () => {
   });
 
   it('marks empty public brands and keeps category ancestors available to storefront filters', async () => {
+    prisma.$queryRaw.mockResolvedValueOnce([
+      { id: 'parent', activeProductCount: 0n, activeSubtreeProductCount: 1n },
+      { id: 'child', activeProductCount: 1n, activeSubtreeProductCount: 1n },
+      { id: 'empty', activeProductCount: 0n, activeSubtreeProductCount: 0n },
+    ]);
     prisma.category.findMany.mockResolvedValue([
       {
         id: 'parent',

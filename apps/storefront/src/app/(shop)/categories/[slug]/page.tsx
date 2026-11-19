@@ -81,11 +81,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     category: slug,
   };
 
-  const [categories, products, knowledgeArticles] = await Promise.all([
-    getPublicCatalogCategories(),
-    getPublicCatalogProducts(filters),
-    getPublicRelatedGuideArticles({ categories: [slug], limit: 3 }),
-  ]);
+  const categories = await getPublicCatalogCategories();
   const category = categories.find((candidate) => candidate.slug === slug);
 
   if (!category) {
@@ -93,6 +89,11 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     if (destinationPath) permanentRedirect(destinationPath);
     notFound();
   }
+
+  const [products, knowledgeArticles] = await Promise.all([
+    getPublicCatalogProducts(filters),
+    getPublicRelatedGuideArticles({ categories: [slug], limit: 3 }),
+  ]);
 
   if (isCatalogPageOutOfRange(filters, products)) {
     notFound();
@@ -115,6 +116,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         .map((candidate) => ({
           label: candidate.name,
           href: `/categories/${candidate.slug}`,
+          activeSubtreeProductCount: candidate.activeSubtreeProductCount,
         }))}
       contextLinkGroups={[
         {

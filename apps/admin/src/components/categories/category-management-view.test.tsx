@@ -116,4 +116,31 @@ describe('CategoryManagementView', () => {
     expect(screen.queryByRole('button', { name: 'افزودن دسته' })).not.toBeInTheDocument();
     expect(screen.getByText('فقط مشاهده')).toBeInTheDocument();
   });
+
+  it('shows a descendant path and active subtree count in the mobile hierarchy', () => {
+    const [root] = categories;
+    const child = {
+      ...root,
+      id: 'category-2',
+      name: 'انگشتر زنانه',
+      slug: 'women-rings',
+      parentId: root.id,
+      parent: { id: root.id, name: root.name },
+    };
+    const leaf = {
+      ...child,
+      id: 'category-3',
+      name: 'انگشتر ظریف',
+      slug: 'delicate-rings',
+      parentId: child.id,
+      parent: { id: child.id, name: child.name },
+      activeSubtreeProductCount: 4,
+    };
+    render(
+      <CategoryManagementView categories={[leaf, child, root]} failed={false} canWrite={false} />,
+    );
+    const mobile = within(screen.getByRole('region', { name: 'کارت‌های دسته‌بندی' }));
+    expect(mobile.getByText('انگشتر / انگشتر زنانه')).toBeInTheDocument();
+    expect(mobile.getByText('۴', { exact: true })).toBeInTheDocument();
+  });
 });

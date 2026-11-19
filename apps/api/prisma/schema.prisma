@@ -500,6 +500,7 @@ model Category {
   heroMobileImage Media?        @relation("CategoryHeroMobileImage", fields: [heroMobileImageId], references: [id], onDelete: SetNull)
   seoOgMedia       Media?            @relation("CategorySeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   products    ProductCategory[]
+  primaryForProducts Product[] @relation("ProductPrimaryCategory")
   homepageFeature HomepageFeaturedCategory?
   guideArticles     GuideArticleCategory[]
   supplierSourceCategories SupplierSourceCategory[]
@@ -628,6 +629,7 @@ model Product {
   defaultPlatingType PlatingType?
   brandId          String?               @db.Uuid
   countryId        String?               @db.Uuid
+  primaryCategoryId String?               @db.Uuid
   salePriceToman               Int?
   compareAtPriceToman          Int?
   createdAt        DateTime              @default(now()) @db.Timestamptz(3)
@@ -636,6 +638,7 @@ model Product {
   brand            Brand?                @relation(fields: [brandId], references: [id], onDelete: SetNull)
   seoOgMedia       Media?                @relation("ProductSeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   country          Country?              @relation(fields: [countryId], references: [id], onDelete: SetNull)
+  primaryCategory  Category?             @relation("ProductPrimaryCategory", fields: [primaryCategoryId], references: [id], onDelete: SetNull)
   categories       ProductCategory[]
   variants         ProductVariant[]
   media            ProductMedia[]
@@ -651,6 +654,7 @@ model Product {
 
   @@index([brandId])
   @@index([countryId])
+  @@index([primaryCategoryId])
   @@index([seoOgMediaId])
   @@index([status])
   @@index([deletedAt])

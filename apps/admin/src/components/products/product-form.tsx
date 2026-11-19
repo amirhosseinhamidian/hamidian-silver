@@ -182,6 +182,21 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
   const router = useRouter();
   const productImagesInputId = useId();
   const product = data.product;
+  const [assignedCategoryIds, setAssignedCategoryIds] = useState(() =>
+    data.categories
+      .filter(
+        (category) =>
+          product?.categories.some(({ id }) => id === category.id) ||
+          (mode === 'create' && importDraft?.catalogCategoryId === category.id),
+      )
+      .map(({ id }) => id),
+  );
+  const [preferredCategoryId, setPreferredCategoryId] = useState(
+    product?.primaryCategoryId ?? 'auto',
+  );
+  const primaryCategoryId = assignedCategoryIds.includes(preferredCategoryId)
+    ? preferredCategoryId
+    : 'auto';
   const [purchaseMode, setPurchaseMode] = useState<ProductPurchaseMode>(
     product?.purchaseMode ?? 'SIMPLE',
   );
@@ -362,6 +377,11 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
       salePriceToman: salePriceToman ?? null,
       compareAtPriceToman: compareAtPriceToman ?? null,
       categoryIds: formData.getAll('categoryIds').map(String),
+      ...(primaryCategoryId !== 'auto'
+        ? { primaryCategoryId }
+        : product?.primaryCategoryId
+          ? { primaryCategoryId: null }
+          : {}),
       attributes: normalizedAttributes,
       defaultPlatingType: defaultPlatingType === 'none' ? null : defaultPlatingType,
       platingTypes,
@@ -808,20 +828,48 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
 
       <Card title="دسته‌بندی‌ها" description="محصول می‌تواند در چند دسته نمایش داده شود">
         {data.categories.length ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {data.categories.map((category) => (
-              <Checkbox
-                key={category.id}
-                id={`category-${category.id}`}
-                name="categoryIds"
-                value={category.id}
-                label={category.name}
-                defaultChecked={
-                  product?.categories.some(({ id }) => id === category.id) ||
-                  (mode === 'create' && importDraft?.catalogCategoryId === category.id)
-                }
-              />
-            ))}
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {data.categories.map((category) => (
+                <Checkbox
+                  key={category.id}
+                  id={`category-${category.id}`}
+                  name="categoryIds"
+                  value={category.id}
+                  label={category.name}
+                  checked={assignedCategoryIds.includes(category.id)}
+                  onChange={(event) => {
+                    const checked = event.currentTarget.checked;
+                    setAssignedCategoryIds((current) =>
+                      checked
+                        ? [...current, category.id]
+                        : current.filter((id) => id !== category.id),
+                    );
+                    if (!checked && preferredCategoryId === category.id)
+                      setPreferredCategoryId('auto');
+                  }}
+                />
+              ))}
+            </div>
+            <FormField
+              id="product-primary-category"
+              label="دستهٔ اصلی برای مسیر راهنما"
+              hint="از دسته‌های انتخاب‌شده یک مورد را تعیین کنید یا انتخاب خودکار فروشگاه را نگه دارید."
+            >
+              {(props) => (
+                <Select
+                  {...props}
+                  value={primaryCategoryId}
+                  onValueChange={setPreferredCategoryId}
+                  options={[
+                    { value: 'auto', label: 'انتخاب خودکار' },
+                    ...data.categories
+                      .filter(({ id }) => assignedCategoryIds.includes(id))
+                      .map(({ id, name }) => ({ value: id, label: name })),
+                  ]}
+                />
+              )}
+            </FormField>
           </div>
         ) : (
           <p className="text-sm text-[var(--admin-color-muted)]">

@@ -862,6 +862,46 @@
         ]
       }
     },
+    "/api/v1/catalog/categories/{categoryId}/merge": {
+      "post": {
+        "operationId": "CatalogController_mergeCategory_v1",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryMergeResultDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/api/v1/catalog/brands": {
       "post": {
         "operationId": "CatalogController_createBrand_v1",
@@ -9386,6 +9426,12 @@
               }
             ]
           },
+          "activeProductCount": {
+            "type": "number"
+          },
+          "activeSubtreeProductCount": {
+            "type": "number"
+          },
           "heroMobileImage": {
             "nullable": true,
             "type": "object",
@@ -10106,6 +10152,9 @@
               }
             ]
           },
+          "primaryCategoryId": {
+            "type": "string"
+          },
           "purchaseMode": {
             "enum": [
               "SIMPLE",
@@ -10348,6 +10397,57 @@
             "type": "boolean"
           }
         }
+      },
+      "MergeCategoryDto": {
+        "type": "object",
+        "properties": {
+          "targetCategoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dryRun": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "targetCategoryId"
+        ]
+      },
+      "CategoryMergeResultDto": {
+        "type": "object",
+        "properties": {
+          "merged": {
+            "type": "boolean"
+          },
+          "childCount": {
+            "type": "number"
+          },
+          "sourceProductCount": {
+            "type": "number"
+          },
+          "targetProductCount": {
+            "type": "number"
+          },
+          "sharedProductCount": {
+            "type": "number"
+          },
+          "sourcePath": {
+            "type": "string"
+          },
+          "targetPath": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "merged",
+          "childCount",
+          "sourceProductCount",
+          "targetProductCount",
+          "sharedProductCount",
+          "sourcePath",
+          "targetPath"
+        ]
       },
       "CreateBrandDto": {
         "type": "object",
@@ -10871,6 +10971,10 @@
               "format": "uuid"
             }
           },
+          "primaryCategoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "variants": {
             "minItems": 1,
             "type": "array",
@@ -11071,6 +11175,11 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "primaryCategoryId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
           },
           "attributes": {
             "maxItems": 30,

@@ -292,6 +292,22 @@ export interface paths {
         patch: operations["CatalogController_updateCategory_v1"];
         trace?: never;
     };
+    "/api/v1/catalog/categories/{categoryId}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_mergeCategory_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/brands": {
         parameters: {
             query?: never;
@@ -3695,6 +3711,8 @@ export interface components {
             hasProducts?: boolean;
             image: components["schemas"]["PublicCatalogMediaDto"] | null;
             featuredImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            activeProductCount?: number;
+            activeSubtreeProductCount?: number;
             heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
             seoTitle?: string | null;
             seoDescription?: string | null;
@@ -3849,6 +3867,7 @@ export interface components {
             brand: components["schemas"]["PublicCatalogBrandDto"] | null;
             categories: components["schemas"]["PublicCatalogCategoryDto"][];
             primaryMedia: components["schemas"]["PublicCatalogMediaDto"] | null;
+            primaryCategoryId?: string;
             /** @enum {string} */
             purchaseMode: "SIMPLE" | "COMPOSITE";
             /** @enum {string|null} */
@@ -3908,6 +3927,21 @@ export interface components {
             imageId?: string | null;
             sortOrder?: number;
             isActive?: boolean;
+        };
+        MergeCategoryDto: {
+            /** Format: uuid */
+            targetCategoryId: string;
+            /** @default true */
+            dryRun: boolean;
+        };
+        CategoryMergeResultDto: {
+            merged: boolean;
+            childCount: number;
+            sourceProductCount: number;
+            targetProductCount: number;
+            sharedProductCount: number;
+            sourcePath: string;
+            targetPath: string;
         };
         CreateBrandDto: {
             name: string;
@@ -4047,6 +4081,8 @@ export interface components {
             salePriceToman?: number;
             compareAtPriceToman?: number;
             categoryIds?: string[];
+            /** Format: uuid */
+            primaryCategoryId?: string;
             variants: components["schemas"]["CreateProductVariantDto"][];
             media?: components["schemas"]["CreateProductMediaDto"][];
             attributes?: components["schemas"]["ProductAttributeInputDto"][];
@@ -4090,6 +4126,8 @@ export interface components {
             salePriceToman?: number | null;
             compareAtPriceToman?: number | null;
             categoryIds?: string[];
+            /** Format: uuid */
+            primaryCategoryId?: string | null;
             attributes?: components["schemas"]["ProductAttributeInputDto"][];
         };
         UpdateProductStatusDto: {
@@ -6144,6 +6182,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    CatalogController_mergeCategory_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeCategoryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryMergeResultDto"];
                 };
             };
         };

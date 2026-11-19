@@ -46,6 +46,12 @@ export class PublicCatalogCategoryDto {
 }
 
 export class PublicCatalogCategoryPageDto extends PublicCatalogCategoryDto {
+  @ApiPropertyOptional()
+  activeProductCount?: number;
+
+  @ApiPropertyOptional()
+  activeSubtreeProductCount?: number;
+
   @ApiPropertyOptional({ type: () => PublicCatalogMediaDto, nullable: true })
   heroMobileImage?: PublicCatalogMediaDto | null;
 
@@ -219,6 +225,9 @@ export class PublicCatalogProductAttributeDto {
 }
 
 export class PublicCatalogProductDetailDto extends PublicCatalogProductSummaryDto {
+  @ApiPropertyOptional({ type: String })
+  primaryCategoryId?: string;
+
   @ApiProperty({ enum: ProductPurchaseMode })
   purchaseMode!: ProductPurchaseMode;
 

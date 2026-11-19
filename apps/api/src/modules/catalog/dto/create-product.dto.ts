@@ -205,6 +205,10 @@ export class CreateProductDto {
   @IsUUID('4', { each: true })
   categoryIds?: string[];
 
+  @IsOptional()
+  @IsUUID('4')
+  primaryCategoryId?: string;
+
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })

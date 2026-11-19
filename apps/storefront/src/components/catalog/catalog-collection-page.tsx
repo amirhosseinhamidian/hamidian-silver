@@ -26,7 +26,11 @@ type CatalogCollectionPageProps = Readonly<{
   filters: CatalogFilters;
   products: PublicCatalogProductList;
   breadcrumbs?: readonly Readonly<{ label: string; href: string }>[];
-  collectionLinks?: readonly Readonly<{ label: string; href: string }>[];
+  collectionLinks?: readonly Readonly<{
+    label: string;
+    href: string;
+    activeSubtreeProductCount?: number;
+  }>[];
   contextLinkGroups?: readonly Readonly<{
     label: string;
     links: readonly Readonly<{ label: string; href: string }>[];
@@ -138,6 +142,9 @@ export function CatalogCollectionPage({
                 className="border border-[var(--sf-color-border)] px-4 py-2 text-sm text-[var(--sf-color-muted)] transition-colors hover:border-[var(--sf-color-ink)] hover:text-[var(--sf-color-ink)]"
               >
                 {item.label}
+                {item.activeSubtreeProductCount === undefined
+                  ? null
+                  : ` · ${persianNumber.format(item.activeSubtreeProductCount)} محصول`}
               </Link>
             ))}
           </nav>

@@ -145,8 +145,13 @@ function categoryDepth(
 export function selectPrimaryCatalogCategory(
   categories: readonly PublicCatalogCategoryPage[],
   assignedCategories: readonly Readonly<{ id: string }>[],
+  primaryCategoryId?: string,
 ): PublicCatalogCategoryPage | null {
   const byId = new Map(categories.map((category) => [category.id, category] as const));
+  if (primaryCategoryId && assignedCategories.some(({ id }) => id === primaryCategoryId)) {
+    const preferred = byId.get(primaryCategoryId);
+    if (preferred) return preferred;
+  }
   return (
     assignedCategories
       .flatMap(({ id }) => {

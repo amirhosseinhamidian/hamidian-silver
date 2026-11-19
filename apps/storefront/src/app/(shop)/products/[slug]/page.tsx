@@ -120,7 +120,11 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
       limit: 3,
     }),
   ]);
-  const primaryAssignedCategory = selectPrimaryCatalogCategory(categories, product.categories);
+  const primaryAssignedCategory = selectPrimaryCatalogCategory(
+    categories,
+    product.categories,
+    product.primaryCategoryId,
+  );
   const productBreadcrumbs = primaryAssignedCategory
     ? [
         ...buildCategoryBreadcrumbItems(categories, primaryAssignedCategory),

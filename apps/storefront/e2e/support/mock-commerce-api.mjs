@@ -82,6 +82,17 @@ const catalogCategory = {
   parentId: null,
   sortOrder: 1,
   hasProducts: true,
+  activeProductCount: 1,
+  activeSubtreeProductCount: 2,
+};
+
+const catalogChildCategory = {
+  ...catalogCategory,
+  id: 'a0000000-0000-4000-8000-000000000008',
+  name: 'انگشتر زنانه',
+  slug: 'women-rings',
+  parentId: catalogCategory.id,
+  activeSubtreeProductCount: 1,
 };
 
 const catalogBrand = {
@@ -418,7 +429,14 @@ async function handler(request, response) {
   }
 
   if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/categories') {
-    return json(response, 200, [catalogCategory]);
+    return json(response, 200, [catalogCategory, catalogChildCategory]);
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/v1/seo/redirects/resolve') {
+    if (url.searchParams.get('path') === '/categories/rings-legacy') {
+      return json(response, 200, { destinationPath: '/categories/rings', permanent: true });
+    }
+    return json(response, 404, { message: 'SEO redirect was not found.' });
   }
 
   if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/brands') {

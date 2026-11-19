@@ -190,5 +190,9 @@ describe('selectPrimaryCatalogCategory', () => {
     expect(
       selectPrimaryCatalogCategory(categories, [{ id: 'rings' }, { id: 'women-rings' }])?.id,
     ).toBe('women-rings');
+    const memberships = [{ id: 'rings' }, { id: 'women-rings' }];
+    expect(selectPrimaryCatalogCategory(categories, memberships, 'rings')?.id).toBe('rings');
+    expect(selectPrimaryCatalogCategory(categories, memberships, 'root')?.id).toBe('women-rings');
+    expect(selectPrimaryCatalogCategory(categories, memberships, 'hidden')?.id).toBe('women-rings');
   });
 });

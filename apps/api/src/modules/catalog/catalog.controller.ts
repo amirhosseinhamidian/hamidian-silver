@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   ParseUUIDPipe,
@@ -36,6 +37,7 @@ import { CreateBrandDto } from './dto/create-brand.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
 import { CreateProductDto, CreateProductVariantDto } from './dto/create-product.dto';
+import { CategoryMergeResultDto, MergeCategoryDto } from './dto/merge-category.dto';
 import { CreateSizeDto } from './dto/create-size.dto';
 import { CreateSizeGroupDto } from './dto/create-size-group.dto';
 import { PublicCatalogQueryDto } from './dto/public-catalog-query.dto';
@@ -268,6 +270,7 @@ export class CatalogController {
 
   @Get('categories')
   @RequirePermissions(PERMISSION_CODES.CATALOG_READ)
+  @ApiOkResponse({ schema: { type: 'array', items: { type: 'object' } } })
   listCategories() {
     return this.catalogCategoriesService.list();
   }
@@ -285,6 +288,18 @@ export class CatalogController {
   @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
   archiveCategory(@Param('categoryId', new ParseUUIDPipe({ version: '4' })) categoryId: string) {
     return this.catalogCategoriesService.archive(categoryId);
+  }
+
+  @Post('categories/:categoryId/merge')
+  @HttpCode(200)
+  @RequirePermissions(PERMISSION_CODES.CATALOG_WRITE)
+  @ApiOkResponse({ type: CategoryMergeResultDto })
+  mergeCategory(
+    @Param('categoryId', new ParseUUIDPipe({ version: '4' })) categoryId: string,
+    @Body() dto: MergeCategoryDto,
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ) {
+    return this.catalogCategoriesService.merge(categoryId, dto, principal.permissionCodes);
   }
 
   @Post('brands')
