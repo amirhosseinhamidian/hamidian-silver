@@ -6,6 +6,7 @@ import {
   tomanToIrr,
   type AnalyticsItem,
 } from '@/lib/analytics/analytics';
+import type { CatalogList } from '@/lib/analytics/funnel-contract';
 
 export type CommerceItemInput = Readonly<{
   itemId: string;
@@ -54,6 +55,17 @@ function trackItemEvent(
 
 export function trackProductView(item: CommerceItemInput): boolean {
   return trackItemEvent('view_item', item);
+}
+
+export function trackCatalogEvent(
+  eventName: 'view_item_list' | 'select_item',
+  list: CatalogList,
+  items: readonly CommerceItemInput[],
+): boolean {
+  return trackAnalyticsEvent(eventName, {
+    item_list_id: list,
+    items: items.map(toAnalyticsItem),
+  });
 }
 
 export function trackWishlistChange(item: CommerceItemInput, added: boolean): boolean {

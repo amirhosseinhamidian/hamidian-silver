@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
 import { Button } from '@/components/ui/button';
+import { trackCatalogEvent } from '@/lib/analytics/commerce-events';
+import type { CatalogList } from '@/lib/analytics/funnel-contract';
+import { trackFunnelEvent } from '@/lib/analytics/funnel-tracker';
 import {
   buildCatalogCollectionHref,
   buildCatalogHref,
@@ -60,6 +63,28 @@ function appendUniqueProducts(
   return [...current, ...incoming.filter(({ id }) => !existingIds.has(id))];
 }
 
+function measureCatalogProducts(
+  name: 'view_item_list' | 'select_item',
+  list: CatalogList,
+  products: readonly PublicCatalogProductSummary[],
+) {
+  void trackFunnelEvent(
+    { name, list, items: products.map((product) => ({ productId: product.slug })) },
+    {
+      publish: () =>
+        trackCatalogEvent(
+          name,
+          list,
+          products.map((product) => ({
+            itemId: product.slug,
+            itemName: product.name,
+            priceToman: product.salePriceToman,
+          })),
+        ),
+    },
+  );
+}
+
 export function CatalogProductGrid({
   filters,
   initialProducts,
@@ -78,6 +103,14 @@ export function CatalogProductGrid({
   const loadingRef = useRef(false);
   const nextPageRef = useRef(initialProducts.page + 1);
   const totalPagesRef = useRef(initialProducts.totalPages);
+  const measuredProducts = useRef(new Set<string>());
+  const list: CatalogList = paginationPath.startsWith('/categories/')
+    ? 'category'
+    : paginationPath.startsWith('/brands/')
+      ? 'brand'
+      : filters.q
+        ? 'search'
+        : 'catalog';
   const hasMore = nextPage <= totalPages;
   const nextPageHref =
     paginationPath === '/products'
@@ -121,6 +154,12 @@ export function CatalogProductGrid({
   }, [filters]);
 
   useEffect(() => {
+    const freshProducts = products.filter((product) => !measuredProducts.current.has(product.id));
+    for (const product of freshProducts) measuredProducts.current.add(product.id);
+    if (freshProducts.length > 0) measureCatalogProducts('view_item_list', list, freshProducts);
+  }, [list, products]);
+
+  useEffect(() => {
     const sentinel = sentinelRef.current;
 
     if (!sentinel || !hasMore || error || typeof IntersectionObserver === 'undefined') return;
@@ -147,6 +186,7 @@ export function CatalogProductGrid({
             fallbackSrc={initialFallbackSources[product.id]}
             imageSizes={imageSizes}
             preloadImage={prioritizeFirstImage && index === 0}
+            onSelect={() => measureCatalogProducts('select_item', list, [product])}
           />
         ))}
       </ul>

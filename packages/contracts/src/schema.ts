@@ -4671,6 +4671,12 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        CustomerOrderConfirmedRefundDto: {
+            id: string;
+            amountToman: number;
+            /** Format: date-time */
+            confirmedAt: string;
+        };
         CustomerOrderDetailDto: {
             /** @enum {string} */
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
@@ -4694,6 +4700,7 @@ export interface components {
             shippingAddress: components["schemas"]["CustomerOrderShippingAddressDto"];
             statusHistory: components["schemas"]["CustomerOrderStatusHistoryDto"][];
             cancellationReason: string | null;
+            confirmedRefunds?: components["schemas"]["CustomerOrderConfirmedRefundDto"][];
             id: string;
             orderNumber: string;
             merchandiseTotalToman: number;

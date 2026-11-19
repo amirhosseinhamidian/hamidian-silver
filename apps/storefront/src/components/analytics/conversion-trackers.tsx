@@ -2,12 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 
-import {
-  trackProductView,
-  trackPurchase,
-  trackSearch,
-  type PurchaseInput,
-} from '@/lib/analytics/commerce-events';
+import { trackProductView, trackPurchase, trackSearch } from '@/lib/analytics/commerce-events';
+import { trackFunnelEvent } from '@/lib/analytics/funnel-tracker';
+import type { OrderFunnelRecord } from '@/lib/analytics/order-funnel';
 import type { PublicCatalogProductDetail } from '@/lib/catalog/public-catalog';
 
 type SearchResultsAnalyticsProps = Readonly<{
@@ -40,66 +37,36 @@ export function ProductViewAnalytics({
       return;
     }
 
-    trackProductView({
-      itemId: product.slug,
-      itemName: product.name,
-      brand: product.brand?.name,
-      category: product.categories[0]?.name,
-      priceToman: product.salePriceToman,
-      quantity: 1,
-    });
+    void trackFunnelEvent(
+      { name: 'view_item', items: [{ productId: product.slug, quantity: 1 }] },
+      {
+        publish: () =>
+          trackProductView({
+            itemId: product.slug,
+            itemName: product.name,
+            brand: product.brand?.name,
+            category: product.categories[0]?.name,
+            priceToman: product.salePriceToman,
+            quantity: 1,
+          }),
+      },
+    );
     trackedProductId.current = product.id;
   }, [product]);
 
   return null;
 }
 
-const PURCHASE_STORAGE_PREFIX = 'hamidian-analytics-purchase-v1:';
-
-type PurchaseAnalyticsProps = PurchaseInput & Readonly<{ orderId: string }>;
-
-export function PurchaseAnalytics({
-  orderId,
-  transactionId,
-  valueToman,
-  shippingToman,
-  taxToman,
-  items,
-}: PurchaseAnalyticsProps) {
-  const attemptedOrderId = useRef<string | null>(null);
-
+export function OrderFunnelAnalytics({
+  records,
+}: Readonly<{ records: readonly OrderFunnelRecord[] }>) {
   useEffect(() => {
-    if (attemptedOrderId.current === orderId) {
-      return;
+    for (const { event, purchase } of records) {
+      void trackFunnelEvent(event, {
+        publish: purchase ? () => trackPurchase(purchase) : undefined,
+      });
     }
-    attemptedOrderId.current = orderId;
-
-    const storageKey = `${PURCHASE_STORAGE_PREFIX}${orderId}`;
-
-    try {
-      if (window.localStorage.getItem(storageKey) === 'sent') {
-        return;
-      }
-    } catch {
-      // In-memory deduplication above still protects this render when storage is unavailable.
-    }
-
-    const sent = trackPurchase({
-      transactionId,
-      valueToman,
-      shippingToman,
-      taxToman,
-      items,
-    });
-
-    if (sent) {
-      try {
-        window.localStorage.setItem(storageKey, 'sent');
-      } catch {
-        // A blocked storage API must not affect the verified payment result.
-      }
-    }
-  }, [items, orderId, shippingToman, taxToman, transactionId, valueToman]);
+  }, [records]);
 
   return null;
 }

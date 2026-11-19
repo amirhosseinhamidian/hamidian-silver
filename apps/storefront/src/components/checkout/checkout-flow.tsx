@@ -15,6 +15,8 @@ import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
 import { Select } from '@/components/ui/select';
 import { trackBeginCheckout } from '@/lib/analytics/commerce-events';
+import { trackFunnelEvent } from '@/lib/analytics/funnel-tracker';
+import { submittedOrderEvent } from '@/lib/analytics/order-funnel';
 import { AUTHENTICATION_SUCCEEDED_EVENT, openAuthModal } from '@/lib/auth/events';
 import { formatShippingToman, formatTomanPrice } from '@/lib/catalog/presentation';
 import { useCart } from '@/lib/cart/cart-store';
@@ -176,7 +178,6 @@ export function CheckoutFlow({
   const [cardToCardModalOpen, setCardToCardModalOpen] = useState(false);
   const [customerNote, setCustomerNote] = useState('');
   const paymentIdempotencyKey = useRef<string | null>(null);
-  const checkoutTracked = useRef(false);
 
   const selectedAddress = useMemo(
     () => addresses.find(({ id }) => id === selectedAddressId) ?? null,
@@ -217,20 +218,29 @@ export function CheckoutFlow({
   const estimatedTotalToman = subtotalToman + (estimatedShippingToman ?? 0);
 
   useEffect(() => {
-    if (checkoutTracked.current || items.length === 0) {
-      return;
-    }
-
-    checkoutTracked.current = true;
-    trackBeginCheckout(
-      subtotalToman,
-      items.map((item) => ({
-        itemId: item.productSlug,
-        itemName: item.productName,
-        variant: [item.variantLabel, item.platingType].filter(Boolean).join(' / '),
-        priceToman: item.unitSalePriceToman + item.unitPlatingPriceToman,
-        quantity: item.quantity,
-      })),
+    if (items.length === 0) return;
+    void trackFunnelEvent(
+      {
+        name: 'begin_checkout',
+        items: items.map((item) => ({
+          productId: item.productSlug,
+          variantId: item.variantId,
+          quantity: item.quantity,
+        })),
+      },
+      {
+        publish: () =>
+          trackBeginCheckout(
+            subtotalToman,
+            items.map((item) => ({
+              itemId: item.productSlug,
+              itemName: item.productName,
+              variant: [item.variantLabel, item.platingType].filter(Boolean).join(' / '),
+              priceToman: item.unitSalePriceToman + item.unitPlatingPriceToman,
+              quantity: item.quantity,
+            })),
+          ),
+      },
     );
   }, [items, subtotalToman]);
 
@@ -464,6 +474,7 @@ export function CheckoutFlow({
         }
         orderId = order.id;
         orderNumber = order.orderNumber;
+        void trackFunnelEvent(submittedOrderEvent(order));
         setPendingOrderId(order.id);
         setPendingOrderTotalToman(order.grandTotalToman);
         setPendingOrderShippingToman(order.shippingTotalToman);

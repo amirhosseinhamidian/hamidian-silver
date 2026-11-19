@@ -1,3 +1,5 @@
+import type { components } from '@hamidian/contracts';
+
 import type { PublicCatalogMedia } from '@/lib/catalog/public-catalog';
 
 export type CustomerProfile = Readonly<{
@@ -106,6 +108,7 @@ export type CustomerOrderDetail = CustomerOrder &
     shippingAddress: CustomerOrderShippingAddress;
     statusHistory: CustomerOrderStatusHistory[];
     cancellationReason: string | null;
+    confirmedRefunds?: readonly components['schemas']['CustomerOrderConfirmedRefundDto'][];
   }>;
 
 export type CustomerOrderReturnItem = Readonly<{

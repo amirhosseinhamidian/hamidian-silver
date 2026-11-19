@@ -14,6 +14,7 @@ type CatalogProductCardProps = Readonly<{
   badge?: string | null;
   imageSizes?: string;
   preloadImage?: boolean;
+  onSelect?: () => void;
 }>;
 
 export function CatalogProductCard({
@@ -22,6 +23,7 @@ export function CatalogProductCard({
   badge = null,
   imageSizes = '(min-width: 1024px) 25vw, 50vw',
   preloadImage = false,
+  onSelect,
 }: CatalogProductCardProps) {
   const wishlistItem = {
     productId: product.id,
@@ -38,6 +40,7 @@ export function CatalogProductCard({
       <div className="relative">
         <Link
           href={`/products/${product.slug}`}
+          onClick={onSelect}
           className="
             sf-catalog-card__media relative block aspect-square overflow-hidden
             rounded-[var(--sf-radius-md)] bg-[var(--sf-color-surface)]
@@ -77,7 +80,7 @@ export function CatalogProductCard({
           <p className="text-[0.7rem] text-[var(--sf-color-subtle)]">{product.brand.name}</p>
         ) : null}
 
-        <Link href={`/products/${product.slug}`} className="mt-2 block">
+        <Link href={`/products/${product.slug}`} className="mt-2 block" onClick={onSelect}>
           <h2 className="text-xs font-medium leading-5 sm:text-base sm:leading-6">
             {product.name}
           </h2>
@@ -115,6 +118,7 @@ export function CatalogProductCard({
         <div className="sf-catalog-card__action mt-auto pt-3 sm:pt-4">
           <ButtonLink
             href={`/products/${product.slug}`}
+            onClick={onSelect}
             variant="solid"
             size="sm"
             className="w-full sm:min-h-11 sm:px-5 sm:text-sm"

@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import type { ReactNode } from 'react';
 import { FaInstagram, FaTelegramPlane } from 'react-icons/fa';
 import { FiMail, FiMapPin, FiPhone } from 'react-icons/fi';
 
@@ -16,6 +17,7 @@ type StorefrontContentPageProps = Readonly<{
   page: PublicContentPage;
   kind: ContentPageKind;
   settings?: PublicSiteSettings;
+  children?: ReactNode;
 }>;
 
 type ContactSocialLink = Readonly<{
@@ -230,7 +232,10 @@ function ContactContent({
   );
 }
 
-function LegalContent({ page }: Readonly<{ page: PublicContentPage }>) {
+function LegalContent({
+  page,
+  children,
+}: Readonly<{ page: PublicContentPage; children?: ReactNode }>) {
   return (
     <main id="main-content" className="sf-container py-12 sm:py-20">
       <header className="max-w-4xl border-b border-[var(--sf-color-border)] pb-10 sm:pb-14">
@@ -263,13 +268,19 @@ function LegalContent({ page }: Readonly<{ page: PublicContentPage }>) {
             ) : null}
           </section>
         ))}
+        {children}
       </article>
     </main>
   );
 }
 
-export function StorefrontContentPage({ page, kind, settings }: StorefrontContentPageProps) {
-  if (kind === 'legal') return <LegalContent page={page} />;
+export function StorefrontContentPage({
+  page,
+  kind,
+  settings,
+  children,
+}: StorefrontContentPageProps) {
+  if (kind === 'legal') return <LegalContent page={page}>{children}</LegalContent>;
 
   return (
     <main id="main-content">

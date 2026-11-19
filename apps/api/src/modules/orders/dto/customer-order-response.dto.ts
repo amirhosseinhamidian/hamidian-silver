@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderStatus, PaymentStatus, PlatingType } from '../../../generated/prisma/enums';
 
 export enum CustomerPaymentMethod {
@@ -158,6 +158,12 @@ export class CustomerOrderStatusHistoryDto {
   createdAt!: Date;
 }
 
+export class CustomerOrderConfirmedRefundDto {
+  id!: string;
+  amountToman!: number;
+  confirmedAt!: Date;
+}
+
 export class CustomerOrderDetailDto extends CustomerOrderSummaryDto {
   @ApiProperty({ type: String, nullable: true })
   customerNote!: string | null;
@@ -170,4 +176,7 @@ export class CustomerOrderDetailDto extends CustomerOrderSummaryDto {
 
   @ApiProperty({ type: String, nullable: true })
   cancellationReason!: string | null;
+
+  @ApiPropertyOptional({ type: () => CustomerOrderConfirmedRefundDto, isArray: true })
+  confirmedRefunds?: CustomerOrderConfirmedRefundDto[];
 }

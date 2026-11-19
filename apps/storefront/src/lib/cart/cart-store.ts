@@ -4,6 +4,7 @@ import { useSyncExternalStore } from 'react';
 
 import {
   addCartItem,
+  cartItemKey,
   deserializeCart,
   getCartItemCount,
   getCartSubtotalToman,
@@ -80,7 +81,12 @@ function getServerSnapshot() {
 
 function addItem(input: AddCartItemInput) {
   initializeCartStore();
-  persistCart(addCartItem(cartItems, input));
+  const key = cartItemKey(input.variantId, input.platingType);
+  const before = cartItems.find((item) => item.key === key)?.quantity ?? 0;
+  const next = addCartItem(cartItems, input);
+  const after = next.find((item) => item.key === key)?.quantity ?? 0;
+  persistCart(next);
+  return Math.max(0, after - before);
 }
 
 function setQuantity(key: string, quantity: number) {

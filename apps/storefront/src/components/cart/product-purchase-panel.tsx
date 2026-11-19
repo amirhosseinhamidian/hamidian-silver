@@ -10,6 +10,7 @@ import { PlatingTypeIndicator } from '@/components/plating/plating-type-indicato
 import { Button, ButtonLink } from '@/components/ui/button';
 import { QuantityControl } from '@/components/ui/quantity-control';
 import { trackAddToCart } from '@/lib/analytics/commerce-events';
+import { trackFunnelEvent } from '@/lib/analytics/funnel-tracker';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
 import type { PublicCatalogProductDetail } from '@/lib/catalog/public-catalog';
@@ -167,7 +168,7 @@ export function ProductPurchasePanel({
       return;
     }
 
-    addItem({
+    const quantity = addItem({
       variantId: selectedVariant.id,
       productSlug: product.slug,
       productName: product.name,
@@ -181,20 +182,30 @@ export function ProductPurchasePanel({
       quantity: 1,
       maxQuantity,
     });
-    trackAddToCart({
-      itemId: product.slug,
-      itemName: product.name,
-      brand: product.brand?.name,
-      category: product.categories[0]?.name,
-      variant: [
-        getCartVariantLabel(selectedVariant, product.purchaseMode),
-        platingType && platingPresentation(platingType).label,
-      ]
-        .filter(Boolean)
-        .join(' / '),
-      priceToman: selectedSalePriceToman + (selectedPlating?.unitPriceToman ?? 0),
-      quantity: 1,
-    });
+    if (quantity <= 0) return;
+    void trackFunnelEvent(
+      {
+        name: 'add_to_cart',
+        items: [{ productId: product.slug, variantId: selectedVariant.id, quantity }],
+      },
+      {
+        publish: () =>
+          trackAddToCart({
+            itemId: product.slug,
+            itemName: product.name,
+            brand: product.brand?.name,
+            category: product.categories[0]?.name,
+            variant: [
+              getCartVariantLabel(selectedVariant, product.purchaseMode),
+              platingType && platingPresentation(platingType).label,
+            ]
+              .filter(Boolean)
+              .join(' / '),
+            priceToman: selectedSalePriceToman + (selectedPlating?.unitPriceToman ?? 0),
+            quantity,
+          }),
+      },
+    );
   }
 
   return (

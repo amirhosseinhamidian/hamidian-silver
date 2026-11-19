@@ -1,5 +1,11 @@
 'use client';
 
+import { analyticsConsentSince } from '@/lib/analytics/analytics-consent';
+import {
+  initializeGoogleAnalytics,
+  validGoogleMeasurementId,
+} from '@/lib/analytics/google-analytics';
+
 export const ANALYTICS_CURRENCY = 'IRR';
 
 export type AnalyticsItem = Readonly<{
@@ -18,7 +24,12 @@ type AnalyticsParameters = Readonly<Record<string, AnalyticsParameter>>;
 declare global {
   interface Window {
     dataLayer?: unknown[];
-    gtag?: (command: 'event', eventName: string, parameters?: AnalyticsParameters) => void;
+    gtag?: (
+      ...args:
+        | ['event', string, AnalyticsParameters?]
+        | ['config', string, AnalyticsParameters]
+        | ['js', Date]
+    ) => void;
   }
 }
 
@@ -30,11 +41,14 @@ export function trackAnalyticsEvent(
   eventName: string,
   parameters: AnalyticsParameters = {},
 ): boolean {
-  if (typeof window === 'undefined' || typeof window.gtag !== 'function') {
+  if (analyticsConsentSince() === null) {
     return false;
   }
 
   try {
+    const measurementId = validGoogleMeasurementId(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID);
+    if (measurementId) initializeGoogleAnalytics(measurementId);
+    if (typeof window.gtag !== 'function') return false;
     window.gtag('event', eventName, parameters);
     return true;
   } catch {

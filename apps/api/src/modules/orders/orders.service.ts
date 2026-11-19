@@ -10,6 +10,7 @@ import type { Prisma } from '../../generated/prisma/client';
 import {
   NotificationOutboxEventType,
   OrderStatus,
+  PaymentRefundStatus,
   PaymentStatus,
   PlatingType,
   ProductStatus,
@@ -190,6 +191,11 @@ const CUSTOMER_ORDER_DETAIL_SELECT = {
   payment: {
     select: {
       status: true,
+      refunds: {
+        where: { status: PaymentRefundStatus.CONFIRMED, confirmedAt: { not: null } },
+        orderBy: [{ confirmedAt: 'asc' as const }, { id: 'asc' as const }],
+        select: { id: true, amountToman: true, confirmedAt: true },
+      },
       attempts: {
         take: 1,
         orderBy: { createdAt: 'desc' as const },
@@ -657,6 +663,12 @@ export class OrdersService {
     } = order;
     const items = Array.isArray(selectedItems) ? selectedItems : [];
     const latestAttempt = payment?.attempts[0];
+    const confirmedRefunds =
+      'statusHistory' in order
+        ? (order.payment?.refunds?.flatMap(({ id, amountToman, confirmedAt }) =>
+            confirmedAt ? [{ id, amountToman, confirmedAt }] : [],
+          ) ?? [])
+        : [];
     const statusHistory = 'statusHistory' in order ? order.statusHistory : undefined;
     const cancellationReason = customerFacingCancellationReason(
       [...(statusHistory ?? [])].reverse().find((entry) => entry.toStatus === OrderStatus.CANCELLED)
@@ -730,6 +742,7 @@ export class OrdersService {
       ...(statusHistory
         ? {
             cancellationReason,
+            confirmedRefunds,
             statusHistory: statusHistory.map(({ reason: _reason, ...entry }) => entry),
           }
         : {}),

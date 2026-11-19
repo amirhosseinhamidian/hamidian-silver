@@ -13546,6 +13546,26 @@
           "createdAt"
         ]
       },
+      "CustomerOrderConfirmedRefundDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "amountToman": {
+            "type": "number"
+          },
+          "confirmedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "amountToman",
+          "confirmedAt"
+        ]
+      },
       "CustomerOrderDetailDto": {
         "type": "object",
         "properties": {
@@ -13632,6 +13652,12 @@
           "cancellationReason": {
             "type": "string",
             "nullable": true
+          },
+          "confirmedRefunds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerOrderConfirmedRefundDto"
+            }
           },
           "id": {
             "type": "string"

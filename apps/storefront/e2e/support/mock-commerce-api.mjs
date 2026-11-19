@@ -17,6 +17,8 @@ const CREATED_AT = '2026-09-11T08:00:00.000Z';
 const PAID_AT = '2026-09-11T08:02:00.000Z';
 
 let paymentConfirmed = false;
+let orderCreatedAt = CREATED_AT;
+let paymentConfirmedAt = PAID_AT;
 let orderCreated = false;
 let receiptSubmitted = false;
 let apiUnavailable = false;
@@ -198,7 +200,7 @@ function order() {
     orderNumber: 'HS-E2E-1001',
     status,
     trackingCode: null,
-    paidAt: paymentConfirmed ? PAID_AT : null,
+    paidAt: paymentConfirmed ? paymentConfirmedAt : null,
     cancelledAt: null,
     deliveredAt: null,
     merchandiseTotalToman: 800_000,
@@ -209,11 +211,11 @@ function order() {
     grandTotalToman: 800_000,
     returnAuthorized: false,
     reservationExpiresAt: '2026-09-11T08:30:00.000Z',
-    createdAt: CREATED_AT,
-    updatedAt: paymentConfirmed ? PAID_AT : CREATED_AT,
+    createdAt: orderCreatedAt,
+    updatedAt: paymentConfirmed ? paymentConfirmedAt : orderCreatedAt,
     payment: receiptSubmitted
       ? {
-          status: 'AWAITING_REVIEW',
+          status: paymentConfirmed ? 'PAID' : 'AWAITING_REVIEW',
           method: 'CARD_TO_CARD',
           receiptAvailable: true,
           receiptOriginalName: 'receipt.png',
@@ -253,10 +255,10 @@ function order() {
     },
     statusHistory: paymentConfirmed
       ? [
-          { fromStatus: null, toStatus: 'PENDING_PAYMENT', createdAt: CREATED_AT },
-          { fromStatus: 'PENDING_PAYMENT', toStatus: 'PAID', createdAt: PAID_AT },
+          { fromStatus: null, toStatus: 'PENDING_PAYMENT', createdAt: orderCreatedAt },
+          { fromStatus: 'PENDING_PAYMENT', toStatus: 'PAID', createdAt: paymentConfirmedAt },
         ]
-      : [{ fromStatus: null, toStatus: 'PENDING_PAYMENT', createdAt: CREATED_AT }],
+      : [{ fromStatus: null, toStatus: 'PENDING_PAYMENT', createdAt: orderCreatedAt }],
   };
 }
 
@@ -316,10 +318,19 @@ async function handler(request, response) {
 
   if (request.method === 'POST' && url.pathname === '/__e2e/reset') {
     paymentConfirmed = false;
+    orderCreatedAt = CREATED_AT;
+    paymentConfirmedAt = PAID_AT;
     orderCreated = false;
     receiptSubmitted = false;
     apiUnavailable = false;
     return json(response, 200, { reset: true });
+  }
+
+  if (request.method === 'POST' && url.pathname === '/__e2e/approve-receipt') {
+    if (!receiptSubmitted) return json(response, 409, { message: 'No receipt to approve.' });
+    if (!paymentConfirmed) paymentConfirmedAt = new Date().toISOString();
+    paymentConfirmed = true;
+    return json(response, 200, { paymentConfirmed });
   }
 
   if (request.method === 'POST' && url.pathname === '/__e2e/api-unavailable') {
@@ -367,6 +378,17 @@ async function handler(request, response) {
       instagramUrl: null,
       telegramUrl: null,
       baleUrl: null,
+    });
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/v1/site-settings/public/pages/PRIVACY') {
+    return json(response, 200, {
+      key: 'PRIVACY',
+      title: 'حریم خصوصی',
+      eyebrow: null,
+      subtitle: null,
+      body: null,
+      sections: [],
     });
   }
 
@@ -526,6 +548,7 @@ async function handler(request, response) {
     ) {
       return json(response, 400, { message: 'Unexpected E2E order payload.' });
     }
+    if (!orderCreated) orderCreatedAt = new Date().toISOString();
     orderCreated = true;
     return json(response, 201, order());
   }
@@ -583,6 +606,7 @@ async function handler(request, response) {
     if (url.searchParams.get('Authority') !== 'E2E-AUTHORITY') {
       return json(response, 400, { success: false, orderId: ORDER_ID });
     }
+    if (!paymentConfirmed) paymentConfirmedAt = new Date().toISOString();
     paymentConfirmed = true;
     return json(response, 200, {
       success: true,

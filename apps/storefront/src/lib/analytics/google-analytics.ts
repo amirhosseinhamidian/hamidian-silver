@@ -4,21 +4,29 @@ export function validGoogleMeasurementId(value?: string): string | null {
   return normalized && /^G-[A-Z0-9]+$/.test(normalized) ? normalized : null;
 }
 
-export function googleAnalyticsBootstrap(measurementId: string): string {
-  return `
-window.dataLayer = window.dataLayer || [];
-window.gtag = function gtag(){window.dataLayer.push(arguments);};
-window.gtag('js', new Date());
-// Default parameters for automatic events must not contain URL query strings.
-// Enhanced measurement (especially site search and history changes) must also
-// be disabled in the GA4 data stream before enabling the measurement ID.
-window.gtag('config', '${measurementId}', {
-  send_page_view: false,
-  page_location: window.location.origin + '/',
-  page_title: 'گالری حمیدیان',
-  page_referrer: ''
-});
-`;
+export function setGoogleAnalyticsEnabled(measurementId: string, enabled: boolean): void {
+  Reflect.set(window, `ga-disable-${measurementId}`, !enabled);
+}
+
+export function initializeGoogleAnalytics(measurementId: string): void {
+  setGoogleAnalyticsEnabled(measurementId, true);
+  if (typeof window.gtag === 'function') return;
+
+  const dataLayer = (window.dataLayer ??= []);
+  const tag: NonNullable<Window['gtag']> = function gtag() {
+    // eslint-disable-next-line prefer-rest-params -- Preserve the documented Google tag queue format.
+    dataLayer.push(arguments);
+  };
+  window.gtag = tag;
+  tag('js', new Date());
+  tag('config', measurementId, {
+    send_page_view: false,
+    allow_google_signals: false,
+    allow_ad_personalization_signals: false,
+    page_location: window.location.origin + '/',
+    page_title: 'گالری حمیدیان',
+    page_referrer: '',
+  });
 }
 
 export type WebVitalMetric = Readonly<{

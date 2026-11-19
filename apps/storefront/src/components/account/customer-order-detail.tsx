@@ -16,10 +16,12 @@ import { readResponseError, toPersianDigits } from '@/components/account/account
 import { CancelPendingOrder } from '@/components/account/cancel-pending-order';
 import { CustomerOrderReturns } from '@/components/account/customer-order-returns';
 import { RetryOrderPaymentButton } from '@/components/account/retry-order-payment-button';
+import { OrderFunnelAnalytics } from '@/components/analytics/conversion-trackers';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { verifiedOrderFunnel } from '@/lib/analytics/order-funnel';
 import { AUTHENTICATION_SUCCEEDED_EVENT, openAuthModal } from '@/lib/auth/events';
 import { formatShippingToman, formatTomanPrice } from '@/lib/catalog/presentation';
 
@@ -250,6 +252,7 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
 
   return (
     <main id="main-content" className="sf-container pb-[var(--sf-section-space)] pt-8 sm:pt-10">
+      <OrderFunnelAnalytics records={verifiedOrderFunnel(order)} />
       <nav aria-label="مسیر صفحه" className="text-xs text-[var(--sf-color-muted)]">
         <Link href="/account">حساب من</Link>
         <span aria-hidden="true" className="mx-2">
