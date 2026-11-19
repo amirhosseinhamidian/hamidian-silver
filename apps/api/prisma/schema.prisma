@@ -1585,6 +1585,10 @@ model Order {
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
+  @@index([createdAt])
+  @@index([paidAt])
+  @@index([cancelledAt])
+  @@index([deliveredAt])
   @@index([reservationExpiresAt])
   @@index([returnAuthorizedByUserId])
   @@index([shippingCarrierLogoMediaIdSnapshot])
@@ -1684,6 +1688,7 @@ model OrderStatusHistory {
   actor       User?        @relation("OrderStatusHistoryActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([orderId, createdAt])
+  @@index([toStatus, createdAt])
   @@index([actorUserId])
   @@map("order_status_history")
 }
@@ -1733,6 +1738,7 @@ model OrderReturn {
 
   @@index([orderId, createdAt])
   @@index([status, createdAt])
+  @@index([receivedAt])
   @@index([requestedByUserId])
   @@index([receivedByUserId])
   @@index([cancelledByUserId])
@@ -1950,6 +1956,7 @@ model PaymentAttempt {
   receiptOriginalName                String?                @db.VarChar(255)
   receiptSizeBytes                   Int?
   receiptUploadedAt                  DateTime?              @db.Timestamptz(3)
+  receiptRejectedAt                  DateTime?              @db.Timestamptz(3)
   receiptVerifiedAt                  DateTime?              @db.Timestamptz(3)
   receiptVerifiedByUserId            String?                @db.Uuid
   initiationRecoveryResolution       String?                @db.VarChar(32)
@@ -1967,6 +1974,7 @@ model PaymentAttempt {
   @@index([paymentId, createdAt])
   @@index([status, createdAt])
   @@index([receiptUploadedAt])
+  @@index([receiptRejectedAt])
   @@index([receiptVerifiedByUserId])
   @@index([initiationRecoveryResolvedByUserId])
   @@index([initiationRecoveryResolvedAt])
@@ -2003,6 +2011,7 @@ model PaymentReconciliation {
 
   @@index([status, createdAt])
   @@index([provider, createdAt])
+  @@index([createdAt])
   @@index([resolvedByUserId])
   @@map("payment_reconciliations")
 }

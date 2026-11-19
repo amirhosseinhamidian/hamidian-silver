@@ -778,6 +778,7 @@ export class PaymentsService {
           status: PaymentAttemptStatus.FAILED,
           failureCode: 'CARD_TO_CARD_RECEIPT_REJECTED',
           failureMessage: rejectionReason,
+          receiptRejectedAt: new Date(),
         },
       });
       if (rejectedAttempt.count !== 1) {

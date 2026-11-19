@@ -70,6 +70,7 @@ describe('PaymentsService card-to-card receipt rejection', () => {
         status: PaymentAttemptStatus.FAILED,
         failureCode: 'CARD_TO_CARD_RECEIPT_REJECTED',
         failureMessage: 'مبلغ واریزی با مبلغ سفارش مطابقت ندارد.',
+        receiptRejectedAt: expect.any(Date),
       },
     });
     expect(transaction.payment.updateMany).toHaveBeenCalledWith({

@@ -4044,6 +4044,198 @@
         ]
       }
     },
+    "/api/v1/growth-attribution/revenue": {
+      "get": {
+        "operationId": "GrowthAttributionController_summary_v1",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "First included calendar day in Asia/Tehran.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Last included calendar day in Asia/Tehran.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 96,
+              "type": "string"
+            }
+          },
+          {
+            "name": "medium",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 96,
+              "type": "string"
+            }
+          },
+          {
+            "name": "campaignId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrowthRevenueSummaryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid reporting period or filters."
+          }
+        },
+        "tags": [
+          "GrowthAttribution"
+        ]
+      }
+    },
+    "/api/v1/growth-attribution/revenue/events": {
+      "get": {
+        "operationId": "GrowthAttributionController_events_v1",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "First included calendar day in Asia/Tehran.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Last included calendar day in Asia/Tehran.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "order_submitted",
+                "payment_receipt_submitted",
+                "payment_receipt_rejected",
+                "payment_reconciliation_required",
+                "purchase_confirmed",
+                "order_delivered",
+                "cancellation",
+                "order_expired",
+                "return_received",
+                "refund_adjustment",
+                "payment_channel_fee",
+                "shipping_provider_cost"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "source",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 96,
+              "type": "string"
+            }
+          },
+          {
+            "name": "medium",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 96,
+              "type": "string"
+            }
+          },
+          {
+            "name": "campaignId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrowthRevenueEventsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid reporting period, filters or pagination."
+          }
+        },
+        "tags": [
+          "GrowthAttribution"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "HealthController_check_v1",
@@ -13379,6 +13571,256 @@
           "url",
           "campaignId",
           "campaign"
+        ]
+      },
+      "GrowthRevenuePeriodDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "timezone": {
+            "type": "string",
+            "enum": [
+              "Asia/Tehran"
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "timezone"
+        ]
+      },
+      "GrowthRevenueSummaryDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/GrowthRevenuePeriodDto"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "TOMAN"
+            ]
+          },
+          "paymentChannelFeeToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "shippingProviderCostToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "campaignDiscountToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "walletAppliedToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "marketingChannelCostToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "submittedOrderCount": {
+            "type": "number"
+          },
+          "paidOrderCount": {
+            "type": "number"
+          },
+          "attributedPaidOrderCount": {
+            "type": "number"
+          },
+          "paidOrderWithoutFinanceSnapshotCount": {
+            "type": "number"
+          },
+          "deliveredPaidOrderCount": {
+            "type": "number"
+          },
+          "cancelledOrderCount": {
+            "type": "number"
+          },
+          "expiredOrderCount": {
+            "type": "number"
+          },
+          "receiptSubmittedCount": {
+            "type": "number"
+          },
+          "awaitingReceiptReviewOrderCount": {
+            "type": "number"
+          },
+          "receiptRejectedCount": {
+            "type": "number"
+          },
+          "paymentReconciliationCount": {
+            "type": "number"
+          },
+          "receivedReturnCount": {
+            "type": "number"
+          },
+          "confirmedRefundCount": {
+            "type": "number"
+          },
+          "merchandiseToman": {
+            "type": "number"
+          },
+          "platingToman": {
+            "type": "number"
+          },
+          "orderDiscountToman": {
+            "type": "number"
+          },
+          "shippingChargedToman": {
+            "type": "number"
+          },
+          "taxToman": {
+            "type": "number"
+          },
+          "collectedToman": {
+            "type": "number"
+          },
+          "refundedToman": {
+            "type": "number"
+          },
+          "netCollectedToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "period",
+          "currency",
+          "paymentChannelFeeToman",
+          "shippingProviderCostToman",
+          "campaignDiscountToman",
+          "walletAppliedToman",
+          "marketingChannelCostToman",
+          "submittedOrderCount",
+          "paidOrderCount",
+          "attributedPaidOrderCount",
+          "paidOrderWithoutFinanceSnapshotCount",
+          "deliveredPaidOrderCount",
+          "cancelledOrderCount",
+          "expiredOrderCount",
+          "receiptSubmittedCount",
+          "awaitingReceiptReviewOrderCount",
+          "receiptRejectedCount",
+          "paymentReconciliationCount",
+          "receivedReturnCount",
+          "confirmedRefundCount",
+          "merchandiseToman",
+          "platingToman",
+          "orderDiscountToman",
+          "shippingChargedToman",
+          "taxToman",
+          "collectedToman",
+          "refundedToman",
+          "netCollectedToman"
+        ]
+      },
+      "GrowthRevenueEventDto": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "enum": [
+              "order_submitted",
+              "payment_receipt_submitted",
+              "payment_receipt_rejected",
+              "payment_reconciliation_required",
+              "purchase_confirmed",
+              "order_delivered",
+              "cancellation",
+              "order_expired",
+              "return_received",
+              "refund_adjustment",
+              "payment_channel_fee",
+              "shipping_provider_cost"
+            ],
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "amountToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "provider": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "nullable": true
+          },
+          "medium": {
+            "type": "string",
+            "nullable": true
+          },
+          "campaign": {
+            "type": "string",
+            "nullable": true
+          },
+          "campaignId": {
+            "type": "string",
+            "nullable": true
+          },
+          "eventId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderId",
+          "kind",
+          "occurredAt",
+          "amountToman",
+          "provider",
+          "source",
+          "medium",
+          "campaign",
+          "campaignId",
+          "eventId"
+        ]
+      },
+      "GrowthRevenueEventsDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/GrowthRevenuePeriodDto"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrowthRevenueEventDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "period",
+          "items",
+          "page",
+          "limit",
+          "total"
         ]
       },
       "CreateWarehouseDto": {

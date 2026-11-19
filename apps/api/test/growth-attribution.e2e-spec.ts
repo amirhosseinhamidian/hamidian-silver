@@ -68,6 +68,7 @@ it('reuses a campaign identity and persists only normalized attribution on an or
             warehouseId: warehouse.id,
             merchandiseTotalToman: 1000,
             grandTotalToman: 1000,
+            reservationExpiresAt: new Date(now.valueOf() + 60_000),
             attribution: { create: snapshot },
           },
           select: { id: true, attribution: true },

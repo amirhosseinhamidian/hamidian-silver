@@ -12,6 +12,7 @@ import {
 } from './attribution';
 import { buildCampaignUrl } from './campaign-links.service';
 import { GrowthAttributionController } from './growth-attribution.controller';
+import { growthRevenuePeriod } from './growth-revenue.service';
 
 const now = Date.parse('2026-11-20T10:00:00.000Z');
 const touch = (source: string, date: string, medium = 'email') => ({
@@ -28,6 +29,31 @@ const campaign = {
   campaignId: 'winter-1',
   content: 'hero',
 };
+
+describe('growth revenue reporting', () => {
+  it('requires finance permission for both reporting paths', () => {
+    for (const handler of [
+      GrowthAttributionController.prototype.summary,
+      GrowthAttributionController.prototype.events,
+    ]) {
+      expect(Reflect.getMetadata(PERMISSIONS_KEY, handler)).toEqual([
+        PERMISSION_CODES.FINANCE_READ,
+      ]);
+    }
+  });
+
+  it('validates dates and bounds the reporting period', () => {
+    const from = '2026-11-20';
+    expect(growthRevenuePeriod({ from, to: from })).toEqual({
+      from,
+      to: from,
+      timezone: 'Asia/Tehran',
+    });
+    for (const to of ['2026-11-19', '2026-11-31', '2027-02-20', '2026-11-20T00:00:00Z']) {
+      expect(() => growthRevenuePeriod({ from, to })).toThrow();
+    }
+  });
+});
 
 describe('order attribution policy', () => {
   it('lets checkout proceed when an older client sends an unsupported attribution shape', async () => {

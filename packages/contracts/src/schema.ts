@@ -1332,6 +1332,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/growth-attribution/revenue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GrowthAttributionController_summary_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/growth-attribution/revenue/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GrowthAttributionController_events_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -4630,6 +4662,67 @@ export interface components {
             url: string;
             campaignId: string;
             campaign: string;
+        };
+        GrowthRevenuePeriodDto: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** @enum {string} */
+            timezone: "Asia/Tehran";
+        };
+        GrowthRevenueSummaryDto: {
+            period: components["schemas"]["GrowthRevenuePeriodDto"];
+            /** @enum {string} */
+            currency: "TOMAN";
+            paymentChannelFeeToman: number | null;
+            shippingProviderCostToman: number | null;
+            campaignDiscountToman: number | null;
+            walletAppliedToman: number | null;
+            marketingChannelCostToman: number | null;
+            submittedOrderCount: number;
+            paidOrderCount: number;
+            attributedPaidOrderCount: number;
+            paidOrderWithoutFinanceSnapshotCount: number;
+            deliveredPaidOrderCount: number;
+            cancelledOrderCount: number;
+            expiredOrderCount: number;
+            receiptSubmittedCount: number;
+            awaitingReceiptReviewOrderCount: number;
+            receiptRejectedCount: number;
+            paymentReconciliationCount: number;
+            receivedReturnCount: number;
+            confirmedRefundCount: number;
+            merchandiseToman: number;
+            platingToman: number;
+            orderDiscountToman: number;
+            shippingChargedToman: number;
+            taxToman: number;
+            collectedToman: number;
+            refundedToman: number;
+            netCollectedToman: number;
+        };
+        GrowthRevenueEventDto: {
+            /** Format: uuid */
+            orderId: string;
+            /** @enum {string} */
+            kind: "order_submitted" | "payment_receipt_submitted" | "payment_receipt_rejected" | "payment_reconciliation_required" | "purchase_confirmed" | "order_delivered" | "cancellation" | "order_expired" | "return_received" | "refund_adjustment" | "payment_channel_fee" | "shipping_provider_cost";
+            /** Format: date-time */
+            occurredAt: string;
+            amountToman: number | null;
+            provider: string | null;
+            source: string | null;
+            medium: string | null;
+            campaign: string | null;
+            campaignId: string | null;
+            eventId: string;
+        };
+        GrowthRevenueEventsDto: {
+            period: components["schemas"]["GrowthRevenuePeriodDto"];
+            items: components["schemas"]["GrowthRevenueEventDto"][];
+            page: number;
+            limit: number;
+            total: number;
         };
         CreateWarehouseDto: {
             code: string;
@@ -8384,6 +8477,77 @@ export interface operations {
             };
             /** @description Tracking parameters or a campaign identity conflict. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthAttributionController_summary_v1: {
+        parameters: {
+            query: {
+                /** @description First included calendar day in Asia/Tehran. */
+                from: string;
+                /** @description Last included calendar day in Asia/Tehran. */
+                to: string;
+                source?: string;
+                medium?: string;
+                campaignId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthRevenueSummaryDto"];
+                };
+            };
+            /** @description Invalid reporting period or filters. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthAttributionController_events_v1: {
+        parameters: {
+            query: {
+                /** @description First included calendar day in Asia/Tehran. */
+                from: string;
+                /** @description Last included calendar day in Asia/Tehran. */
+                to: string;
+                kind?: "order_submitted" | "payment_receipt_submitted" | "payment_receipt_rejected" | "payment_reconciliation_required" | "purchase_confirmed" | "order_delivered" | "cancellation" | "order_expired" | "return_received" | "refund_adjustment" | "payment_channel_fee" | "shipping_provider_cost";
+                page?: number;
+                limit?: number;
+                source?: string;
+                medium?: string;
+                campaignId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthRevenueEventsDto"];
+                };
+            };
+            /** @description Invalid reporting period, filters or pagination. */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
