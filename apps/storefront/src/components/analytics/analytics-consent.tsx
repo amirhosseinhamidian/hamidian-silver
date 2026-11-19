@@ -64,8 +64,9 @@ export function AnalyticsPrivacySettings() {
         id="analytics-privacy-description"
         className="mt-3 text-sm leading-7 text-[var(--sf-color-muted)]"
       >
-        آمار اختیاری بازدید و خرید به بهبود فروشگاه کمک می‌کند. اگر Google Analytics فعال باشد، بخشی
-        از این آمار به گوگل ارسال می‌شود. می‌توانی هر زمان این گزینه را تغییر دهی.
+        آمار اختیاری بازدید و خرید به بهبود فروشگاه کمک می‌کند. با اجازهٔ تو، اطلاعات برچسب کمپین یا
+        دامنهٔ ارجاع در همین مرورگر برای سنجش منبع سفارش نگه داشته می‌شود. اگر Google Analytics فعال
+        باشد، بخشی از این آمار به گوگل ارسال می‌شود. می‌توانی هر زمان این گزینه را تغییر دهی.
       </p>
       <label className="mt-4 flex items-center gap-3 text-sm">
         <input

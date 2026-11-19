@@ -107,6 +107,9 @@ services:
       MEDIA_STORAGE_ROOT: /var/lib/hamidian-silver/staging-media
       MEDIA_PUBLIC_BASE_URL: https://media.staging.hamidian.shop/media
       CORS_ORIGINS: https://staging.hamidian.shop,https://admin.staging.hamidian.shop
+      STOREFRONT_PUBLIC_ORIGIN: https://staging.hamidian.shop
+      ATTRIBUTION_MODEL: ${ATTRIBUTION_MODEL:-LAST_NON_DIRECT}
+      ATTRIBUTION_WINDOW_DAYS: ${ATTRIBUTION_WINDOW_DAYS:-30}
       SMS_PROVIDER: ${SMS_PROVIDER:-disabled}
       KAVENEGAR_API_KEY: ${KAVENEGAR_API_KEY:-}
       KAVENEGAR_OTP_TEMPLATE: ${KAVENEGAR_OTP_TEMPLATE:-}

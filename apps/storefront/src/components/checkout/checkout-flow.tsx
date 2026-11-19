@@ -17,6 +17,7 @@ import { Select } from '@/components/ui/select';
 import { trackBeginCheckout } from '@/lib/analytics/commerce-events';
 import { trackFunnelEvent } from '@/lib/analytics/funnel-tracker';
 import { submittedOrderEvent } from '@/lib/analytics/order-funnel';
+import { attributionForOrder } from '@/lib/analytics/session-attribution';
 import { AUTHENTICATION_SUCCEEDED_EVENT, openAuthModal } from '@/lib/auth/events';
 import { formatShippingToman, formatTomanPrice } from '@/lib/catalog/presentation';
 import { useCart } from '@/lib/cart/cart-store';
@@ -437,10 +438,11 @@ export function CheckoutFlow({
               selectedShippingOption?.id,
               customerNote,
             );
+        const attribution = attributionForOrder();
         const orderResponse = await fetch('/api/checkout/order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderBody),
+          body: JSON.stringify(attribution ? { ...orderBody, attribution } : orderBody),
         });
         if (!orderResponse.ok) {
           if (orderResponse.status === 401) setAuth({ status: 'anonymous', expired: true });

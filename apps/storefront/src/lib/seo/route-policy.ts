@@ -1,3 +1,5 @@
+import { CAMPAIGN_PARAMETERS } from '@/lib/analytics/campaign-parameters';
+
 export type StorefrontSeoRoutePolicy = Readonly<{
   canonicalPath: string;
   follow: boolean;
@@ -81,9 +83,12 @@ export function resolveStorefrontSeoRoutePolicy(
       ? entries.some(([key]) => key !== 'page') ||
         Boolean(rawPage && rawPage !== '1' && page === null)
       : entries.length > 0;
+    const hasCatalogParameters = entries.some(
+      ([key]) => key !== 'page' && !CAMPAIGN_PARAMETERS.has(key.toLowerCase()),
+    );
 
     return {
-      canonicalPath: hasVariant ? normalizedPath : withPage(normalizedPath, page),
+      canonicalPath: withPage(normalizedPath, hasCatalogParameters ? null : page),
       index: !hasVariant,
       follow: true,
       reason: hasVariant ? 'catalog-variant' : catalogDocument ? 'catalog-page' : 'public-page',

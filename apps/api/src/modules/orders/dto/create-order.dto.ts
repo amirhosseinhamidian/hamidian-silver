@@ -1,5 +1,7 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  Allow,
   ArrayMinSize,
   ArrayUnique,
   IsArray,
@@ -16,6 +18,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PlatingType } from '../../../generated/prisma/enums';
+import { SessionAttributionDto } from '../../growth-attribution/dto/attribution.dto';
 
 export class CreateOrderAddressDto {
   @IsString()
@@ -58,6 +61,10 @@ export class CreateOrderItemDto {
 }
 
 export class CreateOrderDto {
+  @ApiPropertyOptional({ type: () => SessionAttributionDto })
+  @Allow()
+  attribution?: unknown;
+
   @IsOptional()
   @IsString()
   @MaxLength(1000)

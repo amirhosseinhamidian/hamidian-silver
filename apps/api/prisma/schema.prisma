@@ -1573,6 +1573,7 @@ model Order {
   shipment              Shipment?
   supplierPayables      SupplierPayable[]
   financeSnapshot       OrderFinanceSnapshot?
+  attribution           OrderAttribution?
   returns               OrderReturn[]
   supplierCredits       SupplierCredit[]
   costEntries           OrderCostEntry[]
@@ -1588,6 +1589,40 @@ model Order {
   @@index([returnAuthorizedByUserId])
   @@index([shippingCarrierLogoMediaIdSnapshot])
   @@map("orders")
+}
+
+enum AttributionModel {
+  FIRST_NON_DIRECT
+  LAST_NON_DIRECT
+}
+
+model CampaignLinkIdentity {
+  id        String   @id @db.VarChar(64)
+  campaign  String   @unique @db.VarChar(96)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@map("campaign_link_identities")
+}
+
+model OrderAttribution {
+  orderId       String           @id @db.Uuid
+  policyVersion Int
+  model         AttributionModel
+  windowDays    Int
+  firstTouch    Json
+  lastTouch     Json
+  source        String           @db.VarChar(96)
+  medium        String           @db.VarChar(96)
+  campaign      String?          @db.VarChar(96)
+  content       String?          @db.VarChar(96)
+  campaignId    String?          @db.VarChar(64)
+  attributedAt  DateTime         @db.Timestamptz(3)
+  recordedAt    DateTime         @default(now()) @db.Timestamptz(3)
+  order         Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, recordedAt])
+  @@index([source, medium, recordedAt])
+  @@map("order_attributions")
 }
 
 model OrderAddress {

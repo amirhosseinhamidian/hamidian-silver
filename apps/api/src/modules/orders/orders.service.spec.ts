@@ -116,8 +116,13 @@ describe('OrdersService', () => {
       async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction),
     );
 
-    await service.createOrder(userId, {
+    const now = new Date().toISOString();
+    const customerOrder = await service.createOrder(userId, {
       customerNote: '  لطفاً پیش از تحویل تماس بگیرید.  ',
+      attribution: {
+        version: 1,
+        touches: [{ source: 'Newsletter', medium: 'Email', occurredAt: now }],
+      },
       shippingAddress: {
         recipientName: 'Test Customer',
         phone: '09123456789',
@@ -145,6 +150,13 @@ describe('OrdersService', () => {
         shippingTotalToman: 85_000,
         grandTotalToman: 3_210_000,
         customerNote: 'لطفاً پیش از تحویل تماس بگیرید.',
+        attribution: {
+          create: expect.objectContaining({
+            source: 'newsletter',
+            medium: 'email',
+            model: 'LAST_NON_DIRECT',
+          }),
+        },
         items: {
           create: [
             expect.objectContaining({
@@ -164,6 +176,7 @@ describe('OrdersService', () => {
         id: true,
       },
     });
+    expect(customerOrder).not.toHaveProperty('attribution');
 
     expect(transaction.inventory.updateMany).toHaveBeenCalledWith({
       where: {

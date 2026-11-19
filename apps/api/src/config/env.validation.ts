@@ -100,6 +100,12 @@ export const envValidationSchema = Joi.object({
   ADMIN_APP_ORIGIN: Joi.string()
     .uri({ scheme: ['http', 'https'] })
     .default('http://localhost:3002'),
+  STOREFRONT_PUBLIC_ORIGIN: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .empty('')
+    .optional(),
+  ATTRIBUTION_MODEL: Joi.string().valid('FIRST_NON_DIRECT', 'LAST_NON_DIRECT').optional(),
+  ATTRIBUTION_WINDOW_DAYS: Joi.number().integer().min(1).max(90).optional(),
   TELEGRAM_BOT_TOKEN: Joi.string().min(20).allow('').optional(),
   TELEGRAM_RELAY_URL: Joi.string()
     .uri({ scheme: ['https'] })

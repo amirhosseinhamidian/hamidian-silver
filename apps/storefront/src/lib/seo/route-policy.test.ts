@@ -75,6 +75,25 @@ describe('resolveStorefrontSeoRoutePolicy', () => {
     });
   });
 
+  it('preserves the untracked canonical for campaign links including pagination and filtered listings', () => {
+    for (const [path, query] of [
+      ['/products', 'page=3'],
+      ['/products', 'category=rings&page=3'],
+      ['/products/silver-ring', ''],
+      ['/guide', 'page=2'],
+    ]) {
+      const untracked = new URLSearchParams(query);
+      const tracked = new URLSearchParams(untracked);
+      tracked.set('utm_source', 'newsletter');
+      tracked.set('utm_id', 'nowruz-1406');
+      expect(resolveStorefrontSeoRoutePolicy(path, tracked)).toMatchObject({
+        canonicalPath: resolveStorefrontSeoRoutePolicy(path, untracked).canonicalPath,
+        index: false,
+        follow: true,
+      });
+    }
+  });
+
   it.each([
     new URLSearchParams({ q: 'انگشتر' }),
     new URLSearchParams({ sort: 'price-desc' }),

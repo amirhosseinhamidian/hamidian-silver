@@ -20,6 +20,7 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { normalizeIranianMobile } from '../auth/phone-normalizer';
 import { attachHumanAuditEvent } from '../audit/audit-event';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
+import { attributionPolicy, buildOrderAttribution } from '../growth-attribution/attribution';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { ShippingPricingService } from '../shipping/shipping-pricing.service';
 import { ShippingCarriersService } from '../shipping/shipping-carriers.service';
@@ -501,6 +502,11 @@ export class OrdersService {
       const orderId = randomUUID();
       const orderNumber = `HS-${orderId.replaceAll('-', '').slice(0, 16).toUpperCase()}`;
       const reservationExpiresAt = new Date(Date.now() + RESERVATION_TTL_MINUTES * 60 * 1000);
+      const attribution = await buildOrderAttribution(
+        transaction,
+        dto.attribution,
+        attributionPolicy(this.config),
+      );
 
       const order = await transaction.order.create({
         data: {
@@ -516,6 +522,7 @@ export class OrdersService {
           grandTotalToman,
           customerNote,
           reservationExpiresAt,
+          ...(attribution ? { attribution: { create: attribution } } : {}),
           shippingAddress: {
             create: shippingAddress,
           },

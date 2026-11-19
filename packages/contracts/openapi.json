@@ -4007,6 +4007,43 @@
         ]
       }
     },
+    "/api/v1/growth-attribution/campaign-links": {
+      "post": {
+        "operationId": "GrowthAttributionController_createCampaignLink_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCampaignLinkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignLinkDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid destination or campaign labels."
+          },
+          "409": {
+            "description": "Tracking parameters or a campaign identity conflict."
+          }
+        },
+        "tags": [
+          "GrowthAttribution"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "HealthController_check_v1",
@@ -13283,6 +13320,67 @@
           "expectedVersion"
         ]
       },
+      "CreateCampaignLinkDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "maxLength": 96
+          },
+          "destination": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "campaignId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "medium": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          }
+        },
+        "required": [
+          "destination",
+          "campaign",
+          "campaignId",
+          "source",
+          "medium"
+        ]
+      },
+      "CampaignLinkDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "campaignId": {
+            "type": "string"
+          },
+          "campaign": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "campaignId",
+          "campaign"
+        ]
+      },
       "CreateWarehouseDto": {
         "type": "object",
         "properties": {
@@ -14064,6 +14162,57 @@
           "reason"
         ]
       },
+      "AttributionTouchDto": {
+        "type": "object",
+        "properties": {
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string"
+          },
+          "medium": {
+            "type": "string"
+          },
+          "campaign": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "campaignId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "occurredAt",
+          "source",
+          "medium"
+        ]
+      },
+      "SessionAttributionDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "touches": {
+            "maxItems": 32,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttributionTouchDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "touches"
+        ]
+      },
       "CreateOrderAddressDto": {
         "type": "object",
         "properties": {
@@ -14135,6 +14284,9 @@
       "CreateOrderDto": {
         "type": "object",
         "properties": {
+          "attribution": {
+            "$ref": "#/components/schemas/SessionAttributionDto"
+          },
           "customerNote": {
             "type": "string",
             "maxLength": 1000

@@ -17,7 +17,7 @@ async function upstreamResponse(response: Response): Promise<Response> {
 export async function forwardSiteSettingsJson(
   request: Request,
   path: string,
-  method: 'PATCH' | 'PUT',
+  method: 'POST' | 'PATCH' | 'PUT',
 ): Promise<Response> {
   const accessToken = await token();
   if (!accessToken) return Response.json({ message: 'Authentication required.' }, { status: 401 });

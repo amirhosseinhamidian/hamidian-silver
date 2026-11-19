@@ -23,8 +23,12 @@ test('OTP → product → cart → checkout → card-to-card receipt', async ({ 
     const consent = page.getByRole('checkbox', { name: 'اجازهٔ ثبت آمار بازدید و خرید' });
     await expect(consent).not.toBeChecked();
     await consent.check();
-    await page.goto('/products');
+    await page.goto('/products?utm_source=newsletter&utm_medium=email&utm_campaign=winter-sale');
     await waitForClientHydration(page);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/products$/);
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('hamidian-attribution-v1')))
+      .toContain('newsletter');
     await page
       .locator('a[href="/products/silver-ring"]')
       .filter({
@@ -73,7 +77,17 @@ test('OTP → product → cart → checkout → card-to-card receipt', async ({ 
     const cardToCardMethod = page.getByRole('radio', { name: /پرداخت کارت‌به‌کارت/ });
     await expect(cardToCardMethod).toBeEnabled();
     await cardToCardMethod.check();
+    const orderRequest = page.waitForRequest(
+      (outgoing) =>
+        new URL(outgoing.url()).pathname === '/api/checkout/order' && outgoing.method() === 'POST',
+    );
     await page.getByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }).click();
+    expect((await orderRequest).postDataJSON()).toMatchObject({
+      attribution: {
+        version: 1,
+        touches: [{ source: 'newsletter', medium: 'email', campaign: 'winter-sale' }],
+      },
+    });
     const cardDialog = page.getByRole('dialog', { name: 'اطلاعات کارت مقصد' });
     await expect(cardDialog).toBeVisible();
     await cardDialog.getByRole('button', { name: 'پرداخت انجام شد؛ ثبت رسید' }).click();
@@ -130,5 +144,8 @@ test('OTP → product → cart → checkout → card-to-card receipt', async ({ 
     await expect(consent).toBeChecked();
     await consent.uncheck();
     await expect.poll(funnelNames).toEqual([]);
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('hamidian-attribution-v1')))
+      .toBeNull();
   });
 });

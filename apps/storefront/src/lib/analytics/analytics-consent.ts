@@ -4,6 +4,7 @@ const CONSENT_KEY = 'hamidian-analytics-consent-v1';
 const CONSENT_CHANGE = 'hamidian-analytics-consent-change';
 export const FUNNEL_SESSION_KEY = 'hamidian-funnel-session-v1';
 export const FUNNEL_ORDER_EVENTS_KEY = 'hamidian-funnel-orders-v1';
+export const ANALYTICS_ATTRIBUTION_KEY = 'hamidian-attribution-v1';
 let deniedInTab = false;
 
 export function analyticsConsentSince(): number | null {
@@ -30,6 +31,7 @@ export function setAnalyticsConsent(allowed: boolean): boolean {
       window.localStorage.removeItem(CONSENT_KEY);
       deniedInTab = false;
       window.localStorage.removeItem(FUNNEL_ORDER_EVENTS_KEY);
+      window.localStorage.removeItem(ANALYTICS_ATTRIBUTION_KEY);
       window.sessionStorage.removeItem(FUNNEL_SESSION_KEY);
     }
   } catch {

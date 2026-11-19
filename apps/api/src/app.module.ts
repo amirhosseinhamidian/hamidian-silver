@@ -11,6 +11,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { HealthModule } from './modules/health/health.module';
 import { GuideModule } from './modules/guide/guide.module';
+import { GrowthAttributionModule } from './modules/growth-attribution/growth-attribution.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PricingModule } from './modules/pricing/pricing.module';
@@ -43,6 +44,7 @@ import { UserManagementModule } from './modules/user-management/user-management.
     CatalogModule,
     FinanceModule,
     GuideModule,
+    GrowthAttributionModule,
     HealthModule,
     InventoryModule,
     NotificationsModule,

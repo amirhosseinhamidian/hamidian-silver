@@ -1316,6 +1316,22 @@ export interface paths {
         patch: operations["GuideController_updateArticleStatus_v1"];
         trace?: never;
     };
+    "/api/v1/growth-attribution/campaign-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GrowthAttributionController_createCampaignLink_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -4601,6 +4617,20 @@ export interface components {
             status: "DRAFT" | "ARCHIVED" | "PUBLISHED";
             expectedVersion: number;
         };
+        CreateCampaignLinkDto: {
+            content?: string;
+            destination: string;
+            campaign: string;
+            campaignId: string;
+            source: string;
+            medium: string;
+        };
+        CampaignLinkDto: {
+            /** Format: uri */
+            url: string;
+            campaignId: string;
+            campaign: string;
+        };
         CreateWarehouseDto: {
             code: string;
             name: string;
@@ -4799,6 +4829,20 @@ export interface components {
         CancelPlatingFulfillmentDto: {
             reason: string;
         };
+        AttributionTouchDto: {
+            /** Format: date-time */
+            occurredAt: string;
+            source: string;
+            medium: string;
+            campaign?: string;
+            content?: string;
+            campaignId?: string;
+        };
+        SessionAttributionDto: {
+            /** @enum {number} */
+            version: 1;
+            touches: components["schemas"]["AttributionTouchDto"][];
+        };
         CreateOrderAddressDto: {
             recipientName: string;
             phone: string;
@@ -4815,6 +4859,7 @@ export interface components {
             platingType?: "GOLD" | "ROSE_GOLD" | "RHODIUM";
         };
         CreateOrderDto: {
+            attribution?: components["schemas"]["SessionAttributionDto"];
             customerNote?: string;
             /** Format: uuid */
             shippingCarrierId?: string;
@@ -8306,6 +8351,43 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GuideArticleDto"];
                 };
+            };
+        };
+    };
+    GrowthAttributionController_createCampaignLink_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCampaignLinkDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignLinkDto"];
+                };
+            };
+            /** @description Invalid destination or campaign labels. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tracking parameters or a campaign identity conflict. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

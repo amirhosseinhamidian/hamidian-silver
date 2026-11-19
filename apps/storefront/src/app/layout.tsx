@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 
 import { GoogleAnalytics } from '@/components/analytics/analytics-consent';
+import { AttributionLanding } from '@/components/analytics/attribution-landing';
 import { validGoogleMeasurementId } from '@/lib/analytics/google-analytics';
 import { buildStorefrontRootMetadata } from '@/lib/seo/metadata';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
@@ -24,6 +25,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="fa" dir="rtl" className={peyda.variable}>
       <body>
         {children}
+        <Suspense fallback={null}>
+          <AttributionLanding />
+        </Suspense>
         {measurementId ? <GoogleAnalytics measurementId={measurementId} /> : null}
       </body>
     </html>
