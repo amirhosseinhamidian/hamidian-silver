@@ -8508,6 +8508,110 @@
         ]
       }
     },
+    "/api/v1/seo/search-console/connection": {
+      "get": {
+        "operationId": "SearchConsoleController_connection_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchConsoleConnectionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
+    "/api/v1/seo/search-console/performance": {
+      "post": {
+        "operationId": "SearchConsoleController_performance_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchConsolePerformanceQueryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchConsolePerformanceDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
+    "/api/v1/seo/search-console/brand-performance": {
+      "post": {
+        "operationId": "SearchConsoleController_brandPerformance_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchConsolePeriodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchConsoleBrandPerformanceDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
+    "/api/v1/seo/search-console/sitemaps": {
+      "get": {
+        "operationId": "SearchConsoleController_sitemaps_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchConsoleSitemapsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
     "/api/v1/supplier-imports/sources": {
       "get": {
         "operationId": "SupplierImportsController_listSources_v1",
@@ -18385,6 +18489,409 @@
         "required": [
           "destinationPath",
           "permanent"
+        ]
+      },
+      "SearchConsoleConnectionDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "connected",
+              "unavailable"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "not_configured",
+              "invalid_credentials",
+              "authentication_failed",
+              "access_denied",
+              "property_not_found",
+              "quota_exceeded",
+              "rate_limited",
+              "busy",
+              "invalid_query",
+              "timeout",
+              "upstream_unavailable",
+              "invalid_response"
+            ],
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "property": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "property"
+        ]
+      },
+      "SearchConsoleFilterDto": {
+        "type": "object",
+        "properties": {
+          "dimension": {
+            "enum": [
+              "query",
+              "page",
+              "device"
+            ],
+            "type": "string"
+          },
+          "operator": {
+            "enum": [
+              "equals",
+              "notEquals",
+              "contains",
+              "notContains"
+            ],
+            "type": "string"
+          },
+          "expression": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        },
+        "required": [
+          "dimension",
+          "operator",
+          "expression"
+        ]
+      },
+      "SearchConsolePerformanceQueryDto": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "dimensions": {
+            "type": "array",
+            "uniqueItems": true,
+            "maxItems": 4,
+            "items": {
+              "type": "string",
+              "enum": [
+                "date",
+                "query",
+                "page",
+                "device"
+              ]
+            }
+          },
+          "searchType": {
+            "enum": [
+              "web",
+              "image",
+              "video",
+              "news",
+              "discover",
+              "googleNews",
+              "webMultimodal"
+            ],
+            "type": "string"
+          },
+          "aggregation": {
+            "enum": [
+              "auto",
+              "byPage",
+              "byProperty"
+            ],
+            "type": "string"
+          },
+          "filters": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchConsoleFilterDto"
+            }
+          },
+          "rowLimit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 25000
+          },
+          "startRow": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate"
+        ]
+      },
+      "SearchConsoleRowDto": {
+        "type": "object",
+        "properties": {
+          "averagePosition": {
+            "type": "number",
+            "nullable": true
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "clicks": {
+            "type": "number"
+          },
+          "impressions": {
+            "type": "number"
+          },
+          "ctr": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "averagePosition",
+          "keys",
+          "clicks",
+          "impressions",
+          "ctr"
+        ]
+      },
+      "SearchConsolePerformanceDto": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchConsoleRowDto"
+            }
+          },
+          "dimensions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "date",
+                "query",
+                "page",
+                "device"
+              ]
+            }
+          },
+          "searchType": {
+            "enum": [
+              "web",
+              "image",
+              "video",
+              "news",
+              "discover",
+              "googleNews",
+              "webMultimodal"
+            ],
+            "type": "string"
+          },
+          "aggregation": {
+            "nullable": true,
+            "enum": [
+              "auto",
+              "byPage",
+              "byProperty"
+            ],
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "property_total",
+              "page_total",
+              "filtered_total",
+              "grouped_rows"
+            ],
+            "type": "string"
+          },
+          "nextStartRow": {
+            "type": "number",
+            "nullable": true
+          },
+          "property": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "rows",
+          "dimensions",
+          "searchType",
+          "aggregation",
+          "scope",
+          "nextStartRow",
+          "property"
+        ]
+      },
+      "SearchConsolePeriodDto": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate"
+        ]
+      },
+      "SearchConsoleMetricsDto": {
+        "type": "object",
+        "properties": {
+          "averagePosition": {
+            "type": "number",
+            "nullable": true
+          },
+          "clicks": {
+            "type": "number"
+          },
+          "impressions": {
+            "type": "number"
+          },
+          "ctr": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "averagePosition",
+          "clicks",
+          "impressions",
+          "ctr"
+        ]
+      },
+      "SearchConsoleBrandPerformanceDto": {
+        "type": "object",
+        "properties": {
+          "classification": {
+            "enum": [
+              "google",
+              "estimated"
+            ],
+            "type": "string"
+          },
+          "branded": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SearchConsoleMetricsDto"
+              }
+            ]
+          },
+          "nonBranded": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SearchConsoleMetricsDto"
+              }
+            ]
+          },
+          "property": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "classification",
+          "branded",
+          "nonBranded",
+          "property"
+        ]
+      },
+      "SearchConsoleSitemapContentDto": {
+        "type": "object",
+        "properties": {
+          "submitted": {
+            "type": "number",
+            "nullable": true
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "submitted",
+          "type"
+        ]
+      },
+      "SearchConsoleSitemapDto": {
+        "type": "object",
+        "properties": {
+          "lastSubmitted": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "lastDownloaded": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "isPending": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "isSitemapIndex": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "warnings": {
+            "type": "number",
+            "nullable": true
+          },
+          "errors": {
+            "type": "number",
+            "nullable": true
+          },
+          "contents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchConsoleSitemapContentDto"
+            }
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lastSubmitted",
+          "lastDownloaded",
+          "isPending",
+          "isSitemapIndex",
+          "warnings",
+          "errors",
+          "contents",
+          "path"
+        ]
+      },
+      "SearchConsoleSitemapsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchConsoleSitemapDto"
+            }
+          },
+          "property": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "property"
         ]
       },
       "Object": {

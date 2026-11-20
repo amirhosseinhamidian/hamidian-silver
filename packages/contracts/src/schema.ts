@@ -3316,6 +3316,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/seo/search-console/connection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchConsoleController_connection_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/search-console/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SearchConsoleController_performance_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/search-console/brand-performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SearchConsoleController_brandPerformance_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/search-console/sitemaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchConsoleController_sitemaps_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/supplier-imports/sources": {
         parameters: {
             query?: never;
@@ -5844,6 +5908,93 @@ export interface components {
         SeoRedirectResponseDto: {
             destinationPath: string;
             permanent: boolean;
+        };
+        SearchConsoleConnectionDto: {
+            /** @enum {string} */
+            status: "connected" | "unavailable";
+            /** @enum {string} */
+            reason?: "not_configured" | "invalid_credentials" | "authentication_failed" | "access_denied" | "property_not_found" | "quota_exceeded" | "rate_limited" | "busy" | "invalid_query" | "timeout" | "upstream_unavailable" | "invalid_response";
+            message?: string;
+            property: string;
+        };
+        SearchConsoleFilterDto: {
+            /** @enum {string} */
+            dimension: "query" | "page" | "device";
+            /** @enum {string} */
+            operator: "equals" | "notEquals" | "contains" | "notContains";
+            expression: string;
+        };
+        SearchConsolePerformanceQueryDto: {
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            dimensions?: ("date" | "query" | "page" | "device")[];
+            /** @enum {string} */
+            searchType?: "web" | "image" | "video" | "news" | "discover" | "googleNews" | "webMultimodal";
+            /** @enum {string} */
+            aggregation?: "auto" | "byPage" | "byProperty";
+            filters?: components["schemas"]["SearchConsoleFilterDto"][];
+            rowLimit?: number;
+            startRow?: number;
+        };
+        SearchConsoleRowDto: {
+            averagePosition: number | null;
+            keys: string[];
+            clicks: number;
+            impressions: number;
+            ctr: number;
+        };
+        SearchConsolePerformanceDto: {
+            rows: components["schemas"]["SearchConsoleRowDto"][];
+            dimensions: ("date" | "query" | "page" | "device")[];
+            /** @enum {string} */
+            searchType: "web" | "image" | "video" | "news" | "discover" | "googleNews" | "webMultimodal";
+            /** @enum {string|null} */
+            aggregation: "auto" | "byPage" | "byProperty" | null;
+            /** @enum {string} */
+            scope: "property_total" | "page_total" | "filtered_total" | "grouped_rows";
+            nextStartRow: number | null;
+            property: string;
+        };
+        SearchConsolePeriodDto: {
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+        };
+        SearchConsoleMetricsDto: {
+            averagePosition: number | null;
+            clicks: number;
+            impressions: number;
+            ctr: number;
+        };
+        SearchConsoleBrandPerformanceDto: {
+            /** @enum {string} */
+            classification: "google" | "estimated";
+            branded: components["schemas"]["SearchConsoleMetricsDto"] | null;
+            nonBranded: components["schemas"]["SearchConsoleMetricsDto"] | null;
+            property: string;
+        };
+        SearchConsoleSitemapContentDto: {
+            submitted: number | null;
+            type: string;
+        };
+        SearchConsoleSitemapDto: {
+            /** Format: date-time */
+            lastSubmitted: string | null;
+            /** Format: date-time */
+            lastDownloaded: string | null;
+            isPending: boolean | null;
+            isSitemapIndex: boolean | null;
+            warnings: number | null;
+            errors: number | null;
+            contents: components["schemas"]["SearchConsoleSitemapContentDto"][];
+            path: string;
+        };
+        SearchConsoleSitemapsDto: {
+            items: components["schemas"]["SearchConsoleSitemapDto"][];
+            property: string;
         };
         Object: Record<string, never>;
         UpdateSupplierCategoryMappingDto: {
@@ -11512,6 +11663,90 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    SearchConsoleController_connection_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchConsoleConnectionDto"];
+                };
+            };
+        };
+    };
+    SearchConsoleController_performance_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchConsolePerformanceQueryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchConsolePerformanceDto"];
+                };
+            };
+        };
+    };
+    SearchConsoleController_brandPerformance_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchConsolePeriodDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchConsoleBrandPerformanceDto"];
+                };
+            };
+        };
+    };
+    SearchConsoleController_sitemaps_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchConsoleSitemapsDto"];
+                };
             };
         };
     };
