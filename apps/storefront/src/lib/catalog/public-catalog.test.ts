@@ -1,11 +1,54 @@
+import { emptyCatalogFacets, parseCatalogFacetFilters } from '@/lib/catalog/catalog-filter-state';
 import {
   buildCatalogCollectionHref,
   buildCatalogHref,
   buildCategoryBreadcrumbItems,
+  getPublicFacetedCatalog,
   selectPrimaryCatalogCategory,
   parseCatalogSearchParams,
 } from '@/lib/catalog/public-catalog';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const api = vi.hoisted(() => ({ GET: vi.fn(), POST: vi.fn() }));
+vi.mock('@/lib/api/server-client', () => ({ createServerApiClient: () => api }));
+
+describe('getPublicFacetedCatalog', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    api.GET.mockReset();
+    api.POST.mockReset();
+  });
+
+  it('reads current names for selected brands missing from the facet counts', async () => {
+    vi.stubEnv('HAMIDIAN_API_ORIGIN', 'https://api.example.test');
+    api.POST.mockResolvedValue({
+      response: { ok: true, status: 200 },
+      data: {
+        items: [],
+        page: 1,
+        pageSize: 24,
+        total: 0,
+        totalPages: 0,
+        facets: emptyCatalogFacets,
+      },
+    });
+    api.GET.mockResolvedValue({
+      response: { ok: true, status: 200 },
+      data: [
+        { slug: 'atelier', name: 'آتلیه' },
+        { slug: 'other', name: 'برند دیگر' },
+      ],
+    });
+
+    const listing = await getPublicFacetedCatalog(
+      parseCatalogFacetFilters({ brand: 'atelier', maxPriceToman: '900000' }),
+    );
+
+    expect(api.GET).toHaveBeenCalledTimes(1);
+    expect(api.GET).toHaveBeenCalledWith('/api/v1/catalog/public/brands', { cache: 'no-store' });
+    expect(listing.facets.brands).toEqual([{ value: 'atelier', label: 'آتلیه', count: 0 }]);
+  });
+});
 
 describe('parseCatalogSearchParams', () => {
   it('normalizes supported storefront catalog filters', () => {

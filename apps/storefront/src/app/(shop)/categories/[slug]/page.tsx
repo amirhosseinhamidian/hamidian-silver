@@ -3,13 +3,15 @@ import { notFound, permanentRedirect } from 'next/navigation';
 
 import { CatalogCollectionPage } from '@/components/catalog/catalog-collection-page';
 import {
+  hasCatalogFacetFilters,
+  isCatalogPageOutOfRange,
+  parseCatalogFacetFilters,
+  type CatalogSearchParams,
+} from '@/lib/catalog/catalog-filter-state';
+import {
   buildCategoryBreadcrumbItems,
   getPublicCatalogCategories,
-  getPublicCatalogProducts,
-  isCatalogPageOutOfRange,
-  parseCatalogSearchParams,
-  type CatalogFilters,
-  type CatalogSearchParams,
+  getPublicFacetedCatalog,
 } from '@/lib/catalog/public-catalog';
 import { getPublicRelatedGuideArticles } from '@/lib/guide/public-guide';
 import { categorySeoDescription, categorySeoTitle } from '@/lib/seo/content-copy';
@@ -32,7 +34,7 @@ export async function generateMetadata({
     getPublicCatalogCategories(),
     getPublicSiteSettings(),
   ]);
-  const parsedFilters = parseCatalogSearchParams(rawSearchParams);
+  const parsedFilters = parseCatalogFacetFilters(rawSearchParams);
   const category = categories.find((candidate) => candidate.slug === slug);
 
   if (!category) {
@@ -43,13 +45,8 @@ export async function generateMetadata({
   }
 
   const products =
-    parsedFilters.sort === 'newest'
-      ? await getPublicCatalogProducts({
-          page: parsedFilters.page,
-          pageSize: parsedFilters.pageSize,
-          sort: 'newest',
-          category: category.slug,
-        })
+    parsedFilters.sort === 'newest' && !hasCatalogFacetFilters(parsedFilters)
+      ? await getPublicFacetedCatalog(parsedFilters, { category: category.slug })
       : null;
   if (products && isCatalogPageOutOfRange(parsedFilters, products)) {
     return { title: 'صفحه دسته‌بندی یافت نشد', robots: { index: false, follow: false } };
@@ -70,16 +67,11 @@ export async function generateMetadata({
 }
 
 export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
-  const [{ slug }, parsedFilters] = await Promise.all([
+  const [{ slug }, filters] = await Promise.all([
     params,
-    searchParams.then(parseCatalogSearchParams),
+    searchParams.then(parseCatalogFacetFilters),
   ]);
-  const filters: CatalogFilters = {
-    page: parsedFilters.page,
-    pageSize: parsedFilters.pageSize,
-    sort: parsedFilters.sort,
-    category: slug,
-  };
+  const scope = { category: slug };
 
   const categories = await getPublicCatalogCategories();
   const category = categories.find((candidate) => candidate.slug === slug);
@@ -91,11 +83,11 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   }
 
   const [products, knowledgeArticles] = await Promise.all([
-    getPublicCatalogProducts(filters),
+    getPublicFacetedCatalog(filters, scope),
     getPublicRelatedGuideArticles({ categories: [slug], limit: 3 }),
   ]);
 
-  if (isCatalogPageOutOfRange(filters, products)) {
+  if (!hasCatalogFacetFilters(filters) && isCatalogPageOutOfRange(filters, products)) {
     notFound();
   }
 
@@ -108,6 +100,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       image={category.image}
       mobileImage={category.heroMobileImage ?? null}
       filters={filters}
+      scope={scope}
       products={products}
       knowledgeArticles={knowledgeArticles}
       breadcrumbs={buildCategoryBreadcrumbItems(categories, category)}

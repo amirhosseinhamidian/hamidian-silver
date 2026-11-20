@@ -4011,6 +4011,7 @@ export interface components {
             q?: string;
             scopeCategory?: string;
             scopeBrand?: string;
+            scopeCountry?: string;
             categories?: string[];
             brands?: string[];
             /** @enum {string} */

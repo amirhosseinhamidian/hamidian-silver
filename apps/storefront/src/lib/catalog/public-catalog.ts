@@ -3,6 +3,17 @@ import { unstable_cache } from 'next/cache';
 import { cache } from 'react';
 
 import { createServerApiClient } from '@/lib/api/server-client';
+import {
+  catalogFacetQuery,
+  emptyCatalogFacets,
+  maxCatalogFacetPage,
+  type CatalogFacetFilters,
+  type CatalogFacetQuery,
+  type CatalogFacetScope,
+  type CatalogFilters,
+  type CatalogListing,
+  type CatalogSort,
+} from './catalog-filter-state';
 import { normalizeCatalogSearchText } from '@/lib/catalog/search-normalization';
 
 export type PublicCatalogCategory = components['schemas']['PublicCatalogCategoryDto'];
@@ -19,111 +30,15 @@ export type PublicCatalogNamedSuggestion = components['schemas']['PublicCatalogN
 export type PublicCatalogProductSuggestions =
   components['schemas']['PublicCatalogProductSuggestionsDto'];
 
-export type CatalogSort = 'newest' | 'price-asc' | 'price-desc' | 'name-asc';
-
-export type CatalogFilters = Readonly<{
-  page: number;
-  pageSize: number;
-  q?: string;
-  category?: string;
-  brand?: string;
-  country?: string;
-  sort: CatalogSort;
-}>;
-
-export type CatalogSearchParams = Readonly<Record<string, string | string[] | undefined>>;
-
-const DEFAULT_PAGE_SIZE = 24;
-const SORT_VALUES = new Set<CatalogSort>(['newest', 'price-asc', 'price-desc', 'name-asc']);
-
-function firstValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function normalizedText(value: string | string[] | undefined): string | undefined {
-  const normalized = firstValue(value)?.trim();
-
-  return normalized || undefined;
-}
-
-function normalizedSearchText(value: string | string[] | undefined): string | undefined {
-  const normalized = normalizeCatalogSearchText(firstValue(value) ?? '');
-
-  return normalized || undefined;
-}
-
-function positiveInteger(value: string | string[] | undefined): number | undefined {
-  const parsed = Number(firstValue(value));
-
-  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-export function parseCatalogSearchParams(searchParams: CatalogSearchParams): CatalogFilters {
-  const requestedSort = normalizedText(searchParams.sort);
-  const sort =
-    requestedSort && SORT_VALUES.has(requestedSort as CatalogSort)
-      ? (requestedSort as CatalogSort)
-      : 'newest';
-
-  return {
-    page: positiveInteger(searchParams.page) ?? 1,
-    pageSize: DEFAULT_PAGE_SIZE,
-    q: normalizedSearchText(searchParams.q),
-    category: normalizedText(searchParams.category),
-    brand: normalizedText(searchParams.brand),
-    country: normalizedText(searchParams.country),
-    sort,
-  };
-}
-
-export function isCatalogPageOutOfRange(
-  filters: Pick<CatalogFilters, 'page' | 'sort'>,
-  products: Pick<PublicCatalogProductList, 'totalPages'>,
-): boolean {
-  return filters.sort === 'newest' && filters.page > 1 && filters.page > products.totalPages;
-}
-
-type CatalogFilterOverrides = Partial<Omit<CatalogFilters, 'pageSize'>>;
-type CatalogCollectionHrefOverrides = Partial<Pick<CatalogFilters, 'page' | 'sort'>>;
-
-export function buildCatalogHref(
-  filters: CatalogFilters,
-  overrides: CatalogFilterOverrides = {},
-): string {
-  const next = {
-    ...filters,
-    ...overrides,
-  };
-  const searchParams = new URLSearchParams();
-
-  if (next.q) {
-    searchParams.set('q', next.q);
-  }
-
-  if (next.category) {
-    searchParams.set('category', next.category);
-  }
-
-  if (next.brand) {
-    searchParams.set('brand', next.brand);
-  }
-
-  if (next.country) {
-    searchParams.set('country', next.country);
-  }
-
-  if (next.sort !== 'newest') {
-    searchParams.set('sort', next.sort);
-  }
-
-  if (next.page > 1) {
-    searchParams.set('page', String(next.page));
-  }
-
-  const query = searchParams.toString();
-
-  return query ? `/products?${query}` : '/products';
-}
+export {
+  buildCatalogCollectionHref,
+  buildCatalogHref,
+  isCatalogPageOutOfRange,
+  parseCatalogSearchParams,
+  type CatalogFilters,
+  type CatalogSearchParams,
+  type CatalogSort,
+} from './catalog-filter-state';
 
 function categoryDepth(
   categoriesById: ReadonlyMap<string, PublicCatalogCategoryPage>,
@@ -195,28 +110,6 @@ export function buildCategoryBreadcrumbItems(
   ];
 }
 
-export function buildCatalogCollectionHref(
-  pathname: string,
-  filters: CatalogFilters,
-  overrides: CatalogCollectionHrefOverrides = {},
-): string {
-  const page = overrides.page ?? filters.page;
-  const sort = overrides.sort ?? filters.sort;
-  const searchParams = new URLSearchParams();
-
-  if (sort !== 'newest') {
-    searchParams.set('sort', sort);
-  }
-
-  if (page > 1) {
-    searchParams.set('page', String(page));
-  }
-
-  const query = searchParams.toString();
-
-  return query ? `${pathname}?${query}` : pathname;
-}
-
 function publicCatalogApiOrigin(): string {
   const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;
   if (!apiOrigin) {
@@ -284,6 +177,87 @@ export function getPublicCatalogProducts(
   );
 }
 
+async function readPublicFacetedCatalog(
+  body: CatalogFacetQuery,
+  signal?: AbortSignal,
+): Promise<CatalogListing> {
+  const result = await createPublicCatalogClient().POST('/api/v1/catalog/public/search/facets', {
+    body,
+    signal,
+    cache: 'no-store',
+  });
+  if (result.response.status === 400) {
+    return {
+      items: [],
+      page: body.page ?? 1,
+      pageSize: body.pageSize ?? 24,
+      total: 0,
+      totalPages: 0,
+      facets: emptyCatalogFacets,
+      invalidFilters: true,
+    };
+  }
+  assertSuccessfulResponse(result.response, result.data, 'filtered storefront products');
+  return result.data;
+}
+
+const getPublicFacetedCatalogForRequest = cache(async (serialized: string) => {
+  const body = JSON.parse(serialized) as CatalogFacetQuery;
+  const listing = await readPublicFacetedCatalog(body);
+  const missingCategories = new Set(
+    body.categories?.filter(
+      (value) => !listing.facets.categories.some((item) => item.value === value),
+    ),
+  );
+  const missingBrands = new Set(
+    body.brands?.filter((value) => !listing.facets.brands.some((item) => item.value === value)),
+  );
+  if (!missingCategories.size && !missingBrands.size) return listing;
+
+  const apiOrigin = publicCatalogApiOrigin();
+  // The current facet response can know a selection before the directory cache does.
+  const [categories, brands] = await Promise.all([
+    missingCategories.size
+      ? readPublicCatalogCategories(apiOrigin, 'no-store').catch(() => [])
+      : [],
+    missingBrands.size ? readPublicCatalogBrands(apiOrigin, 'no-store').catch(() => []) : [],
+  ]);
+  return {
+    ...listing,
+    facets: {
+      ...listing.facets,
+      categories: [
+        ...listing.facets.categories,
+        ...categories
+          .filter(({ slug }) => missingCategories.has(slug))
+          .map(({ slug, name }) => ({ value: slug, label: name, count: 0 })),
+      ],
+      brands: [
+        ...listing.facets.brands,
+        ...brands
+          .filter(({ slug }) => missingBrands.has(slug))
+          .map(({ slug, name }) => ({ value: slug, label: name, count: 0 })),
+      ],
+    },
+  };
+});
+
+export async function getPublicFacetedCatalog(
+  filters: CatalogFacetFilters,
+  scope?: CatalogFacetScope,
+  signal?: AbortSignal,
+): Promise<CatalogListing> {
+  const body = catalogFacetQuery(filters, scope);
+  const listing = await (signal
+    ? readPublicFacetedCatalog(body, signal)
+    : getPublicFacetedCatalogForRequest(JSON.stringify(body)));
+  return {
+    ...listing,
+    totalPages: Math.min(listing.totalPages, maxCatalogFacetPage),
+    ...(filters.page > maxCatalogFacetPage ? { items: [], page: filters.page } : {}),
+  };
+}
+
 export async function getPublicCatalogProductSuggestions(
   query: string,
   limit = 8,
@@ -303,28 +277,38 @@ export async function getPublicCatalogProductSuggestions(
   return result.data;
 }
 
+async function readPublicCatalogCategories(
+  apiOrigin: string,
+  requestCache?: RequestCache,
+): Promise<PublicCatalogCategoryPage[]> {
+  const client = createPublicCatalogClient(apiOrigin);
+  const result = await client.GET('/api/v1/catalog/public/categories', { cache: requestCache });
+
+  assertSuccessfulResponse(result.response, result.data, 'storefront categories');
+
+  return result.data;
+}
+
 const getCachedPublicCatalogCategories = unstable_cache(
-  async (apiOrigin: string): Promise<PublicCatalogCategoryPage[]> => {
-    const client = createPublicCatalogClient(apiOrigin);
-    const result = await client.GET('/api/v1/catalog/public/categories');
-
-    assertSuccessfulResponse(result.response, result.data, 'storefront categories');
-
-    return result.data;
-  },
+  (apiOrigin: string) => readPublicCatalogCategories(apiOrigin),
   ['storefront-public-catalog-categories'],
   { revalidate: 60 },
 );
 
+async function readPublicCatalogBrands(
+  apiOrigin: string,
+  requestCache?: RequestCache,
+): Promise<PublicCatalogBrandPage[]> {
+  const client = createPublicCatalogClient(apiOrigin);
+  const result = await client.GET('/api/v1/catalog/public/brands', { cache: requestCache });
+
+  assertSuccessfulResponse(result.response, result.data, 'storefront brands');
+
+  return result.data;
+}
+
 const getCachedPublicCatalogBrands = unstable_cache(
-  async (apiOrigin: string): Promise<PublicCatalogBrandPage[]> => {
-    const client = createPublicCatalogClient(apiOrigin);
-    const result = await client.GET('/api/v1/catalog/public/brands');
-
-    assertSuccessfulResponse(result.response, result.data, 'storefront brands');
-
-    return result.data;
-  },
+  (apiOrigin: string) => readPublicCatalogBrands(apiOrigin),
   ['storefront-public-catalog-brands'],
   { revalidate: 60 },
 );

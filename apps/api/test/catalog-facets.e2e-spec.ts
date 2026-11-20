@@ -66,6 +66,10 @@ it('uses sellable variants and counts distinct products under every other facet'
             },
           });
         const main = await product('main', a.id, [root.id, child.id, outside.id]);
+        const country = await db.country.create({
+          data: { name: 'Facet fixture country', slug: `country-${suffix}`, isoCode: 'XZ' },
+        });
+        await db.product.update({ where: { id: main.id }, data: { countryId: country.id } });
         const second = await product('other', b.id, [child.id]);
         const unavailable = await product('unavailable', a.id, [child.id]);
         const draft = await product('hidden', hiddenBrand.id, [child.id], ProductStatus.DRAFT);
@@ -168,6 +172,18 @@ it('uses sellable variants and counts distinct products under every other facet'
           sort: PublicCatalogSort.PRICE_ASC,
         };
         const result = await service.searchPublicCatalog(query);
+        await expect(
+          service.searchPublicCatalog({
+            scopeCategory: root.slug,
+            scopeCountry: country.slug,
+            minWeightGrams: 2,
+            maxWeightGrams: 3,
+          }),
+        ).resolves.toMatchObject({
+          items: [{ id: main.id }],
+          total: 1,
+          facets: { brands: [{ value: a.slug, count: 1 }] },
+        });
         expect(result).toMatchObject({
           page: 1,
           pageSize: 1,

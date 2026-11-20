@@ -101,6 +101,13 @@ export class PublicCatalogFacetsQueryDto {
   @Length(1, 180)
   scopeBrand?: string;
 
+  @ApiPropertyOptional({ type: String, minLength: 1, maxLength: 160 })
+  @IsOptional()
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 160)
+  scopeCountry?: string;
+
   @ApiPropertyOptional({ type: String, isArray: true, maxItems: 16 })
   @IsOptional()
   @IsArray()

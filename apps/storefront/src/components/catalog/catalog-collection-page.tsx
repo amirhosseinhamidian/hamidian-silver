@@ -1,19 +1,16 @@
 import Link from 'next/link';
 
-import { CatalogProductGrid } from '@/components/catalog/catalog-product-grid';
+import { CatalogFacetedListing } from '@/components/catalog/catalog-faceted-listing';
 import { RelatedKnowledgeSection } from '@/components/guide/related-knowledge-section';
 import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
-import { Button, ButtonLink } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/empty-state';
-import { FormField } from '@/components/ui/form-field';
-import { Select } from '@/components/ui/select';
 import { getCatalogDevProductImageSources } from '@/lib/catalog/dev-media.server';
-import {
-  type CatalogFilters,
-  type PublicCatalogMedia,
-  type PublicCatalogProductList,
-} from '@/lib/catalog/public-catalog';
+import type {
+  CatalogFacetFilters,
+  CatalogFacetScope,
+  CatalogListing,
+} from '@/lib/catalog/catalog-filter-state';
+import type { PublicCatalogMedia } from '@/lib/catalog/public-catalog';
 import type { PublicGuideArticleSummary } from '@/lib/guide/public-guide';
 
 type CatalogCollectionPageProps = Readonly<{
@@ -23,8 +20,9 @@ type CatalogCollectionPageProps = Readonly<{
   description: string | null;
   image: PublicCatalogMedia | null;
   mobileImage: PublicCatalogMedia | null;
-  filters: CatalogFilters;
-  products: PublicCatalogProductList;
+  filters: CatalogFacetFilters;
+  scope: CatalogFacetScope;
+  products: CatalogListing;
   breadcrumbs?: readonly Readonly<{ label: string; href: string }>[];
   collectionLinks?: readonly Readonly<{
     label: string;
@@ -40,13 +38,6 @@ type CatalogCollectionPageProps = Readonly<{
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
 
-const sortOptions = [
-  { value: 'newest', label: 'جدیدترین‌ها' },
-  { value: 'price-asc', label: 'کمترین قیمت' },
-  { value: 'price-desc', label: 'بیشترین قیمت' },
-  { value: 'name-asc', label: 'نام محصول' },
-] as const;
-
 function CollectionHero({
   path,
   eyebrow,
@@ -55,12 +46,10 @@ function CollectionHero({
   image,
   mobileImage,
   breadcrumbs,
-  total,
 }: Pick<
   CatalogCollectionPageProps,
   'path' | 'eyebrow' | 'title' | 'description' | 'image' | 'mobileImage' | 'breadcrumbs'
-> &
-  Readonly<{ total: number }>) {
+>) {
   const parent = path.startsWith('/brands/')
     ? { label: 'برندها', href: '/brands' }
     : { label: 'محصولات', href: '/products' };
@@ -75,7 +64,6 @@ function CollectionHero({
       <p className="mt-6 text-sm opacity-75">{eyebrow}</p>
       <h1 className="mt-3 text-4xl font-normal sm:text-5xl lg:text-6xl">{title}</h1>
       {description ? <p className="mt-5 text-sm leading-8 opacity-80">{description}</p> : null}
-      <p className="mt-5 text-sm opacity-65">{persianNumber.format(total)} محصول</p>
     </div>
   );
 
@@ -110,6 +98,7 @@ export function CatalogCollectionPage({
   image,
   mobileImage,
   filters,
+  scope,
   products,
   breadcrumbs,
   collectionLinks = [],
@@ -126,7 +115,6 @@ export function CatalogCollectionPage({
         image={image}
         mobileImage={mobileImage}
         breadcrumbs={breadcrumbs}
-        total={products.total}
       />
 
       <div className="sf-container">
@@ -176,49 +164,14 @@ export function CatalogCollectionPage({
           ) : null,
         )}
 
-        <form
-          action={path}
-          method="get"
-          className="flex flex-wrap items-end justify-between gap-4 border-b border-[var(--sf-color-border)] py-6"
-        >
-          <FormField id={`collection-sort-${path}`} label="مرتب‌سازی" className="min-w-52">
-            {(controlProps) => (
-              <Select
-                {...controlProps}
-                name="sort"
-                defaultValue={filters.sort}
-                options={sortOptions}
-              />
-            )}
-          </FormField>
-
-          <Button type="submit">اعمال</Button>
-        </form>
-
-        {products.items.length > 0 ? (
-          <>
-            <CatalogProductGrid
-              key={`${path}:${filters.sort}:${filters.page}`}
-              filters={filters}
-              initialProducts={products}
-              initialFallbackSources={getCatalogDevProductImageSources(products.items)}
-              imageSizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
-              className="py-10 md:grid-cols-3 lg:grid-cols-4"
-              paginationPath={path}
-              prioritizeFirstImage={!image?.url}
-            />
-          </>
-        ) : (
-          <EmptyState
-            title="هنوز محصولی در این مجموعه نیست"
-            description="می‌توانید سایر محصولات گالری را مشاهده کنید."
-            action={
-              <ButtonLink href="/products" variant="text" size="sm">
-                مشاهده همه محصولات
-              </ButtonLink>
-            }
-          />
-        )}
+        <CatalogFacetedListing
+          path={path}
+          filters={filters}
+          scope={scope}
+          listing={products}
+          fallbackSources={getCatalogDevProductImageSources(products.items)}
+          prioritizeFirstImage={!image?.url}
+        />
 
         <RelatedKnowledgeSection
           articles={knowledgeArticles}

@@ -110,9 +110,11 @@ export function CatalogProductCard({
             </div>
           ) : null}
 
-          <p className="text-xs font-medium sm:text-base">
-            {formatTomanPrice(product.salePriceToman)}
-          </p>
+          {product.isAvailable || product.salePriceToman !== null ? (
+            <p className="text-xs font-medium sm:text-base">
+              {formatTomanPrice(product.salePriceToman)}
+            </p>
+          ) : null}
         </div>
 
         <div className="sf-catalog-card__action mt-auto pt-3 sm:pt-4">

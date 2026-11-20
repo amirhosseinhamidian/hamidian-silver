@@ -47,6 +47,7 @@ export function buildPublicCatalogFacetsQuery(
   const sizes = query.sizeIds ?? [];
   const scopeCategory = query.scopeCategory ?? null;
   const scopeBrand = query.scopeBrand ?? null;
+  const scopeCountry = query.scopeCountry ?? null;
   const priceActive = query.minPriceToman != null || query.maxPriceToman != null;
   const weightActive = query.minWeightGrams != null || query.maxWeightGrams != null;
   const lengthActive = query.minLengthMm != null || query.maxLengthMm != null;
@@ -79,7 +80,7 @@ export function buildPublicCatalogFacetsQuery(
           : minimum !== null || maximum !== null),
     ) ||
     new Set(attributes.map(({ code }) => code)).size !== attributes.length ||
-    [query.q, scopeCategory, scopeBrand, ...categories, ...brands].some((item) =>
+    [query.q, scopeCategory, scopeBrand, scopeCountry, ...categories, ...brands].some((item) =>
       item?.includes('\0'),
     )
   ) {
@@ -152,6 +153,14 @@ export function buildPublicCatalogFacetsQuery(
       LEFT JOIN "brands" brand ON brand.id = product."brandId" AND brand."isActive" AND brand."deletedAt" IS NULL
       WHERE product.status = 'ACTIVE' AND product."deletedAt" IS NULL
         ${scopeBrand ? Prisma.sql`AND brand.slug = ${scopeBrand}` : Prisma.empty}
+        ${
+          scopeCountry
+            ? Prisma.sql`AND EXISTS (
+          SELECT 1 FROM "countries" country WHERE country.id = product."countryId"
+            AND country.slug = ${scopeCountry} AND country."isActive" AND country."deletedAt" IS NULL
+        )`
+            : Prisma.empty
+        }
         ${
           scopeCategory
             ? Prisma.sql`AND EXISTS (

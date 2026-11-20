@@ -101,8 +101,45 @@ describe('CatalogProductGrid', () => {
     expect(screen.getByText('انگشتر اول')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/catalog/products?page=2&category=rings&sort=price-asc',
-      { cache: 'no-store' },
+      { cache: 'no-store', signal: expect.any(AbortSignal) },
     );
+  });
+
+  it('cancels a page request when filters start changing and ignores its late response', async () => {
+    let resolveRequest: (response: Response) => void = () => undefined;
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveRequest = resolve;
+        }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const initialProducts = productPage([firstProduct], 1, 2);
+    const scope = { category: 'rings' };
+    const { rerender } = render(
+      <CatalogProductGrid filters={filters} initialProducts={initialProducts} facetScope={scope} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'نمایش محصولات بیشتر' }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/catalog/facets?category=rings&sort=price-asc&page=2&scopeCategory=rings',
+      { cache: 'no-store', signal: expect.any(AbortSignal) },
+    );
+    const signal = fetchMock.mock.calls[0][1]?.signal as AbortSignal;
+    rerender(
+      <CatalogProductGrid
+        filters={filters}
+        initialProducts={initialProducts}
+        facetScope={scope}
+        paused
+      />,
+    );
+    expect(signal.aborted).toBe(true);
+
+    await act(async () => {
+      resolveRequest(jsonResponse(productPage([secondProduct], 2, 2)));
+    });
+    expect(screen.queryByText('انگشتر دوم')).not.toBeInTheDocument();
+    expect(screen.getByText('انگشتر اول')).toBeInTheDocument();
   });
 
   it('prioritizes only the first initial product image when requested', () => {

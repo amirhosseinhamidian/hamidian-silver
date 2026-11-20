@@ -101,6 +101,191 @@ const catalogBrand = {
   slug: 'sample',
 };
 
+const atelierBrand = { id: 'a0000000-0000-4000-8000-000000000009', name: 'آتلیه', slug: 'atelier' };
+const facetProducts = [
+  {
+    item: { ...product, brand: catalogBrand, categories: [catalogChildCategory] },
+    weight: 4.25,
+    audience: 'women',
+    country: 'italy',
+  },
+  {
+    item: {
+      ...seoProduct,
+      brand: atelierBrand,
+      categories: [catalogCategory],
+      salePriceToman: 1_200_000,
+    },
+    weight: 6.5,
+    audience: 'men',
+  },
+  {
+    item: {
+      ...product,
+      id: '10000000-0000-4000-8000-000000000003',
+      name: 'انگشتر ناموجود نمونه',
+      slug: 'sold-out-ring',
+      brand: catalogBrand,
+      categories: [catalogChildCategory],
+      salePriceToman: null,
+      compareAtPriceToman: null,
+      availableQuantity: 0,
+      isAvailable: false,
+    },
+    weight: null,
+    audience: 'women',
+  },
+];
+
+function facetedProducts(query) {
+  const matches = (omit) =>
+    facetProducts.filter(({ item, weight, audience, country }) => {
+      const categories = item.categories.map(({ slug }) => slug);
+      if (categories.includes('women-rings')) categories.push('rings');
+      if (query.scopeCategory && !categories.includes(query.scopeCategory)) return false;
+      if (query.scopeBrand && query.scopeBrand !== item.brand.slug) return false;
+      if (query.scopeCountry && query.scopeCountry !== country) return false;
+      if (query.q && !item.name.includes(query.q)) return false;
+      if (
+        omit !== 'category' &&
+        query.categories?.length &&
+        !query.categories.some((value) => categories.includes(value))
+      )
+        return false;
+      if (omit !== 'brand' && query.brands?.length && !query.brands.includes(item.brand.slug))
+        return false;
+      if (
+        omit !== 'availability' &&
+        query.availability &&
+        (query.availability === 'in-stock') !== item.isAvailable
+      )
+        return false;
+      if (
+        omit !== 'price' &&
+        ((query.minPriceToman != null && (item.salePriceToman ?? 0) < query.minPriceToman) ||
+          (query.maxPriceToman != null &&
+            (item.salePriceToman == null || item.salePriceToman > query.maxPriceToman)))
+      )
+        return false;
+      if (
+        omit !== 'weight' &&
+        ((query.minWeightGrams != null && (weight ?? 0) < query.minWeightGrams) ||
+          (query.maxWeightGrams != null && (weight == null || weight > query.maxWeightGrams)))
+      )
+        return false;
+      if (
+        omit !== 'intended-for' &&
+        query.attributes?.some(
+          ({ code, values }) => code === 'intended-for' && !values?.includes(audience),
+        )
+      )
+        return false;
+      return true;
+    });
+  const options = (values, records, applies) =>
+    values.flatMap(({ value, label }) => {
+      const count = records.filter((record) => applies(record, value)).length;
+      return count ? [{ value, label, count }] : [];
+    });
+  const range = (records, value) => {
+    const numbers = records.map(value).filter((item) => item != null);
+    return numbers.length
+      ? { min: Math.min(...numbers), max: Math.max(...numbers), count: numbers.length }
+      : null;
+  };
+  const audience = options(
+    [
+      { value: 'women', label: 'بانوان' },
+      { value: 'men', label: 'آقایان' },
+    ],
+    matches('intended-for'),
+    (record, value) => record.audience === value,
+  );
+  const facets = {
+    categories: options(
+      [catalogCategory, catalogChildCategory].map(({ slug, name }) => ({
+        value: slug,
+        label: name,
+      })),
+      matches('category'),
+      ({ item }, value) =>
+        item.categories.some(
+          ({ slug }) => slug === value || (value === 'rings' && slug === 'women-rings'),
+        ),
+    ),
+    brands: options(
+      [catalogBrand, atelierBrand].map(({ slug, name }) => ({ value: slug, label: name })),
+      matches('brand'),
+      ({ item }, value) => item.brand.slug === value,
+    ),
+    availability: options(
+      [
+        { value: 'in-stock', label: 'موجود' },
+        { value: 'out-of-stock', label: 'ناموجود' },
+      ],
+      matches('availability'),
+      ({ item }, value) => item.isAvailable === (value === 'in-stock'),
+    ),
+    sizes: [],
+    priceToman: range(matches('price'), ({ item }) => item.salePriceToman),
+    weightGrams: range(matches('weight'), ({ weight }) => weight),
+    lengthMm: null,
+    attributes: audience.length
+      ? [
+          {
+            code: 'intended-for',
+            label: 'قابل استفاده برای',
+            kind: 'MULTI_SELECT',
+            unit: 'NONE',
+            options: audience,
+            range: null,
+          },
+        ]
+      : [],
+  };
+  const { page = 1, pageSize = 24 } = query;
+  const items = matches().map(({ item }) => item);
+  // Preserve the two-page fixture used by catalog navigation tests.
+  if (
+    !query.q &&
+    !query.scopeCountry &&
+    !query.availability &&
+    !query.categories?.length &&
+    !query.brands?.length &&
+    !query.attributes?.length &&
+    query.minPriceToman == null &&
+    query.maxPriceToman == null &&
+    query.minWeightGrams == null &&
+    query.maxWeightGrams == null &&
+    items.length > 1
+  ) {
+    return {
+      items: page <= 2 ? items.slice(page - 1, page) : [],
+      page,
+      pageSize,
+      total: pageSize + 1,
+      totalPages: 2,
+      facets,
+    };
+  }
+  if (query.sort === 'price-asc' || query.sort === 'price-desc') {
+    const direction = query.sort === 'price-desc' ? -1 : 1;
+    items.sort(
+      (left, right) =>
+        Number(right.isAvailable) - Number(left.isAvailable) ||
+        ((left.salePriceToman ?? 0) - (right.salePriceToman ?? 0)) * direction,
+    );
+  }
+  return {
+    items: items.slice((page - 1) * pageSize, page * pageSize),
+    page,
+    pageSize,
+    total: items.length,
+    totalPages: Math.ceil(items.length / pageSize),
+    facets,
+  };
+}
+
 const guideTopic = {
   id: 'a0000000-0000-4000-8000-000000000001',
   name: 'نگهداری نقره',
@@ -440,7 +625,7 @@ async function handler(request, response) {
   }
 
   if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/brands') {
-    return json(response, 200, [catalogBrand]);
+    return json(response, 200, [catalogBrand, atelierBrand]);
   }
 
   if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/products') {
@@ -453,6 +638,10 @@ async function handler(request, response) {
       total: pageSize + 1,
       totalPages: 2,
     });
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/v1/catalog/public/search/facets') {
+    return json(response, 200, facetedProducts(await body(request)));
   }
 
   if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/products/silver-ring') {

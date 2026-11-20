@@ -5,7 +5,7 @@ import BrandPage from '@/app/(shop)/brands/[slug]/page';
 
 const catalogMocks = vi.hoisted(() => ({
   getPublicCatalogBrands: vi.fn(),
-  getPublicCatalogProducts: vi.fn(),
+  getPublicFacetedCatalog: vi.fn(),
 }));
 const guideMocks = vi.hoisted(() => ({
   getPublicRelatedGuideArticles: vi.fn(),
@@ -14,7 +14,7 @@ const guideMocks = vi.hoisted(() => ({
 vi.mock('@/lib/catalog/public-catalog', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/catalog/public-catalog')>()),
   getPublicCatalogBrands: catalogMocks.getPublicCatalogBrands,
-  getPublicCatalogProducts: catalogMocks.getPublicCatalogProducts,
+  getPublicFacetedCatalog: catalogMocks.getPublicFacetedCatalog,
 }));
 
 vi.mock('@/lib/guide/public-guide', () => ({
@@ -53,7 +53,7 @@ describe('BrandPage', () => {
         originCountry: null,
       },
     ]);
-    catalogMocks.getPublicCatalogProducts.mockResolvedValue({
+    catalogMocks.getPublicFacetedCatalog.mockResolvedValue({
       items: [],
       page: 1,
       pageSize: 24,

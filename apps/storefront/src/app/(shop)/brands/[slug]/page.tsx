@@ -3,13 +3,12 @@ import { notFound, permanentRedirect } from 'next/navigation';
 
 import { CatalogCollectionPage } from '@/components/catalog/catalog-collection-page';
 import {
-  getPublicCatalogBrands,
-  getPublicCatalogProducts,
+  hasCatalogFacetFilters,
   isCatalogPageOutOfRange,
-  parseCatalogSearchParams,
-  type CatalogFilters,
+  parseCatalogFacetFilters,
   type CatalogSearchParams,
-} from '@/lib/catalog/public-catalog';
+} from '@/lib/catalog/catalog-filter-state';
+import { getPublicCatalogBrands, getPublicFacetedCatalog } from '@/lib/catalog/public-catalog';
 import { getPublicRelatedGuideArticles } from '@/lib/guide/public-guide';
 import { brandSeoDescription, brandSeoTitle } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
@@ -31,7 +30,7 @@ export async function generateMetadata({
     getPublicCatalogBrands(),
     getPublicSiteSettings(),
   ]);
-  const parsedFilters = parseCatalogSearchParams(rawSearchParams);
+  const parsedFilters = parseCatalogFacetFilters(rawSearchParams);
   const brand = brands.find((candidate) => candidate.slug === slug);
 
   if (!brand) {
@@ -42,13 +41,8 @@ export async function generateMetadata({
   }
 
   const products =
-    parsedFilters.sort === 'newest'
-      ? await getPublicCatalogProducts({
-          page: parsedFilters.page,
-          pageSize: parsedFilters.pageSize,
-          sort: 'newest',
-          brand: brand.slug,
-        })
+    parsedFilters.sort === 'newest' && !hasCatalogFacetFilters(parsedFilters)
+      ? await getPublicFacetedCatalog(parsedFilters, { brand: brand.slug })
       : null;
   if (products && isCatalogPageOutOfRange(parsedFilters, products)) {
     return { title: 'صفحه برند یافت نشد', robots: { index: false, follow: false } };
@@ -69,22 +63,13 @@ export async function generateMetadata({
 }
 
 export default async function BrandPage({ params, searchParams }: BrandPageProps) {
-  const [{ slug }, parsedFilters] = await Promise.all([
+  const [{ slug }, filters] = await Promise.all([
     params,
-    searchParams.then(parseCatalogSearchParams),
+    searchParams.then(parseCatalogFacetFilters),
   ]);
-  const filters: CatalogFilters = {
-    page: parsedFilters.page,
-    pageSize: parsedFilters.pageSize,
-    sort: parsedFilters.sort,
-    brand: slug,
-  };
+  const scope = { brand: slug };
 
-  const [brands, products, knowledgeArticles] = await Promise.all([
-    getPublicCatalogBrands(),
-    getPublicCatalogProducts(filters),
-    getPublicRelatedGuideArticles({ brand: slug, limit: 3 }),
-  ]);
+  const brands = await getPublicCatalogBrands();
   const brand = brands.find((candidate) => candidate.slug === slug);
 
   if (!brand) {
@@ -93,7 +78,11 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
     notFound();
   }
 
-  if (isCatalogPageOutOfRange(filters, products)) {
+  const [products, knowledgeArticles] = await Promise.all([
+    getPublicFacetedCatalog(filters, scope),
+    getPublicRelatedGuideArticles({ brand: slug, limit: 3 }),
+  ]);
+  if (!hasCatalogFacetFilters(filters) && isCatalogPageOutOfRange(filters, products)) {
     notFound();
   }
 
@@ -106,6 +95,7 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
       image={brand.heroImage ?? null}
       mobileImage={brand.heroMobileImage ?? null}
       filters={filters}
+      scope={scope}
       products={products}
       knowledgeArticles={knowledgeArticles}
       contextLinkGroups={[

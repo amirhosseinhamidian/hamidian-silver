@@ -10512,6 +10512,11 @@
             "minLength": 1,
             "maxLength": 180
           },
+          "scopeCountry": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
           "categories": {
             "uniqueItems": true,
             "maxItems": 16,

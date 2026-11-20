@@ -10,20 +10,28 @@ import { trackFunnelEvent } from '@/lib/analytics/funnel-tracker';
 import {
   buildCatalogCollectionHref,
   buildCatalogHref,
+  buildFacetedCatalogHref,
+  catalogFacetSearchParams,
+  type CatalogFacetFilters,
+  type CatalogFacetScope,
   type CatalogFilters,
-  type PublicCatalogProductList,
-  type PublicCatalogProductSummary,
+} from '@/lib/catalog/catalog-filter-state';
+import type {
+  PublicCatalogProductList,
+  PublicCatalogProductSummary,
 } from '@/lib/catalog/public-catalog';
 import { cn } from '@/lib/ui/cn';
 
 type CatalogProductGridProps = Readonly<{
-  filters: CatalogFilters;
+  filters: CatalogFacetFilters;
   initialProducts: PublicCatalogProductList;
   initialFallbackSources?: Readonly<Record<string, string>>;
   imageSizes?: string;
   className?: string;
   paginationPath?: string;
   prioritizeFirstImage?: boolean;
+  facetScope?: CatalogFacetScope;
+  paused?: boolean;
 }>;
 
 function buildProductsRequestHref(filters: CatalogFilters, page: number): string {
@@ -93,6 +101,8 @@ export function CatalogProductGrid({
   className,
   paginationPath = '/products',
   prioritizeFirstImage = false,
+  facetScope,
+  paused = false,
 }: CatalogProductGridProps) {
   const [products, setProducts] = useState<PublicCatalogProductSummary[]>(initialProducts.items);
   const [nextPage, setNextPage] = useState(initialProducts.page + 1);
@@ -100,7 +110,7 @@ export function CatalogProductGrid({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const loadingRef = useRef(false);
+  const activeRequest = useRef<AbortController | null>(null);
   const nextPageRef = useRef(initialProducts.page + 1);
   const totalPagesRef = useRef(initialProducts.totalPages);
   const measuredProducts = useRef(new Set<string>());
@@ -112,28 +122,52 @@ export function CatalogProductGrid({
         ? 'search'
         : 'catalog';
   const hasMore = nextPage <= totalPages;
-  const nextPageHref =
-    paginationPath === '/products'
+  const nextPageHref = facetScope
+    ? buildFacetedCatalogHref(paginationPath, { ...filters, page: nextPage })
+    : paginationPath === '/products'
       ? buildCatalogHref(filters, { page: nextPage })
       : buildCatalogCollectionHref(paginationPath, filters, { page: nextPage });
+
+  useEffect(
+    () => () => {
+      const controller = activeRequest.current;
+      activeRequest.current = null;
+      controller?.abort();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (paused) activeRequest.current?.abort();
+  }, [paused]);
 
   const loadNextPage = useCallback(async () => {
     const pageToLoad = nextPageRef.current;
 
-    if (loadingRef.current || pageToLoad > totalPagesRef.current) return;
+    if (paused || activeRequest.current || pageToLoad > totalPagesRef.current) return;
 
-    loadingRef.current = true;
+    const controller = new AbortController();
+    activeRequest.current = controller;
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(buildProductsRequestHref(filters, pageToLoad), {
+      let href = buildProductsRequestHref(filters, pageToLoad);
+      if (facetScope) {
+        const query = catalogFacetSearchParams({ ...filters, page: pageToLoad });
+        if (facetScope.category) query.set('scopeCategory', facetScope.category);
+        if (facetScope.brand) query.set('scopeBrand', facetScope.brand);
+        href = `/api/catalog/facets?${query.toString()}`;
+      }
+      const response = await fetch(href, {
         cache: 'no-store',
+        signal: controller.signal,
       });
 
       if (!response.ok) throw new Error('Catalog request failed.');
 
       const payload: unknown = await response.json();
+      if (controller.signal.aborted) return;
 
       if (!isProductPage(payload) || payload.page !== pageToLoad) {
         throw new Error('Catalog response is invalid.');
@@ -146,12 +180,15 @@ export function CatalogProductGrid({
       setNextPage(followingPage);
       setTotalPages(payload.totalPages);
     } catch {
-      setError('بارگذاری محصولات بیشتر انجام نشد. دوباره تلاش کنید.');
+      if (!controller.signal.aborted)
+        setError('بارگذاری محصولات بیشتر انجام نشد. دوباره تلاش کنید.');
     } finally {
-      loadingRef.current = false;
-      setLoading(false);
+      if (activeRequest.current === controller) {
+        activeRequest.current = null;
+        setLoading(false);
+      }
     }
-  }, [filters]);
+  }, [facetScope, filters, paused]);
 
   useEffect(() => {
     const freshProducts = products.filter((product) => !measuredProducts.current.has(product.id));

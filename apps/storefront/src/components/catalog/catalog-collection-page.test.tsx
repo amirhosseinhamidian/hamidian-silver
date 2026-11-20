@@ -2,6 +2,9 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CatalogCollectionPage } from '@/components/catalog/catalog-collection-page';
+import { emptyCatalogFacets } from '@/lib/catalog/catalog-filter-state';
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 vi.mock('@/lib/catalog/dev-media.server', () => ({
   getCatalogDevProductImageSources: () => ({}),
@@ -11,7 +14,6 @@ const filters = {
   page: 1,
   pageSize: 24,
   sort: 'newest' as const,
-  brand: 'cartier',
 };
 
 const products = {
@@ -20,6 +22,7 @@ const products = {
   pageSize: 24,
   total: 0,
   totalPages: 0,
+  facets: emptyCatalogFacets,
 };
 
 describe('CatalogCollectionPage', () => {
@@ -45,6 +48,7 @@ describe('CatalogCollectionPage', () => {
           height: 1448,
         }}
         filters={filters}
+        scope={{ brand: 'cartier' }}
         products={products}
         breadcrumbs={[
           { label: 'خانه', href: '/' },
