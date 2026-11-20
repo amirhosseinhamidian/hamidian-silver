@@ -1,5 +1,6 @@
 import type { components } from '@hamidian/contracts';
 
+import { maxCatalogFacetPage, readCatalogFacetPage } from '@/lib/catalog/catalog-pagination';
 import { normalizeCatalogSearchText } from '@/lib/catalog/search-normalization';
 
 export type CatalogSort = NonNullable<components['schemas']['PublicCatalogFacetsQueryDto']['sort']>;
@@ -145,7 +146,6 @@ export type CatalogFacetQuery = components['schemas']['PublicCatalogFacetsQueryD
 type AttributeFilter = components['schemas']['PublicCatalogFacetFilterDto'];
 
 export type CatalogFacetScope = Readonly<{ category?: string; brand?: string }>;
-export const maxCatalogFacetPage = 1000;
 export type CatalogFacetFilters = CatalogFilters &
   Pick<
     CatalogFacetQuery,
@@ -217,7 +217,7 @@ function choices(value: string | string[] | undefined, maxLength: number, patter
     const text = boundedText(item, maxLength);
     return text && (!pattern || pattern.test(text)) ? [text] : [];
   });
-  return [...new Set(valid)].slice(0, 16);
+  return [...new Set(valid)].slice(0, 16).sort();
 }
 
 function readRange(
@@ -266,6 +266,7 @@ export function readCatalogFacetFilters(searchParams: CatalogSearchParams): {
   const availability = firstValue(searchParams.availability);
   const filters: CatalogFacetFilters = {
     ...base,
+    page: readCatalogFacetPage(searchParams.page) ?? 1,
     q: boundedText(base.q, 100),
     country: boundedText(base.country, 160),
     category: categories[0],
@@ -291,7 +292,7 @@ export function readCatalogFacetFilters(searchParams: CatalogSearchParams): {
     }),
   );
   const attributes: AttributeFilter[] = [];
-  for (const code of codes) {
+  for (const code of [...codes].sort()) {
     const values = choices(searchParams[`attr:${code}`], 64, attributeCode);
     if (values.length) {
       attributes.push({ code, values });

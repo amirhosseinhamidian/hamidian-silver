@@ -2,6 +2,7 @@ import {
   catalogSearchParamsFromEntries,
   parseCatalogFacetFilters,
 } from '@/lib/catalog/catalog-filter-state';
+import { maxCatalogFacetPage, readCatalogFacetPage } from '@/lib/catalog/catalog-pagination';
 import { getPublicFacetedCatalog } from '@/lib/catalog/public-catalog';
 
 export async function GET(request: Request): Promise<Response> {
@@ -11,6 +12,10 @@ export async function GET(request: Request): Promise<Response> {
     return value && value.length <= 180 && !value.includes('\0') ? value : undefined;
   };
   const headers = { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' };
+  const page = readCatalogFacetPage(searchParams.getAll('page'));
+  if (page === null || page > maxCatalogFacetPage) {
+    return Response.json({ message: 'شمارهٔ صفحه معتبر نیست.' }, { status: 400, headers });
+  }
 
   try {
     const products = await getPublicFacetedCatalog(

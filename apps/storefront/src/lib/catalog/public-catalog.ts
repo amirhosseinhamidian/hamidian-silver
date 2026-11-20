@@ -6,7 +6,6 @@ import { createServerApiClient } from '@/lib/api/server-client';
 import {
   catalogFacetQuery,
   emptyCatalogFacets,
-  maxCatalogFacetPage,
   type CatalogFacetFilters,
   type CatalogFacetQuery,
   type CatalogFacetScope,
@@ -14,6 +13,7 @@ import {
   type CatalogListing,
   type CatalogSort,
 } from './catalog-filter-state';
+import { maxCatalogFacetPage } from './catalog-pagination';
 import { normalizeCatalogSearchText } from '@/lib/catalog/search-normalization';
 
 export type PublicCatalogCategory = components['schemas']['PublicCatalogCategoryDto'];

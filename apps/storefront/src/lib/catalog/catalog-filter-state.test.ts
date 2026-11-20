@@ -31,13 +31,33 @@ describe('catalog facet URL state', () => {
     expect(catalogFacetQuery(initial, { category: 'silver' })).toMatchObject({
       scopeCategory: 'silver',
       scopeCountry: 'italy',
-      categories: ['rings', 'necklaces'],
-      brands: ['sample', 'atelier'],
+      categories: ['necklaces', 'rings'],
+      brands: ['atelier', 'sample'],
       minWeightGrams: 4.25,
       attributes: [
-        { code: 'intended-for', values: ['women', 'men'] },
         { code: 'fineness', min: 925 },
+        { code: 'intended-for', values: ['men', 'women'] },
       ],
     });
   });
+
+  it('generates the same URL for reordered and repeated selections', () => {
+    const paths = [
+      'category=rings&category=necklaces&brand=sample&brand=atelier&attr:audience=women&attr:audience=men&min:fineness=925',
+      'min:fineness=925&attr:audience=men&attr:audience=women&brand=atelier&brand=sample&category=necklaces&category=rings&category=rings',
+    ].map((query) =>
+      buildFacetedCatalogHref(
+        '/products',
+        parseCatalogFacetFilters(catalogSearchParamsFromEntries(new URLSearchParams(query))),
+      ),
+    );
+    expect(paths[0]).toBe(paths[1]);
+  });
+
+  it.each(['2e0', '02', ' 2', '0', ['2', '2']].map((page) => ({ page })))(
+    'uses page one for the malformed value $page',
+    ({ page }) => {
+      expect(parseCatalogFacetFilters({ page }).page).toBe(1);
+    },
+  );
 });

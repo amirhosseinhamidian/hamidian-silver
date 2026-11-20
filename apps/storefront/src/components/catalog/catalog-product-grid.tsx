@@ -12,6 +12,7 @@ import {
   buildCatalogHref,
   buildFacetedCatalogHref,
   catalogFacetSearchParams,
+  hasCatalogFacetFilters,
   type CatalogFacetFilters,
   type CatalogFacetScope,
   type CatalogFilters,
@@ -122,6 +123,8 @@ export function CatalogProductGrid({
         ? 'search'
         : 'catalog';
   const hasMore = nextPage <= totalPages;
+  const noFollowPagination =
+    facetScope && (filters.sort !== 'newest' || hasCatalogFacetFilters(filters));
   const nextPageHref = facetScope
     ? buildFacetedCatalogHref(paginationPath, { ...filters, page: nextPage })
     : paginationPath === '/products'
@@ -258,6 +261,7 @@ export function CatalogProductGrid({
               </Button>
               <a
                 href={nextPageHref}
+                rel={noFollowPagination ? 'nofollow' : undefined}
                 className="text-xs text-[var(--sf-color-muted)] underline underline-offset-4"
               >
                 رفتن به صفحه {persianNumber.format(nextPage)}

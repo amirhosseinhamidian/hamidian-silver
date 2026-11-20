@@ -1,4 +1,5 @@
 import { CAMPAIGN_PARAMETERS } from '@/lib/analytics/campaign-parameters';
+import { maxCatalogFacetPage, readCatalogFacetPage } from '@/lib/catalog/catalog-pagination';
 
 export type StorefrontSeoRoutePolicy = Readonly<{
   canonicalPath: string;
@@ -76,12 +77,24 @@ export function resolveStorefrontSeoRoutePolicy(
     const isListing = catalogDocument
       ? !normalizedPath.startsWith('/products/')
       : normalizedPath === '/guide';
-    const entries = activeEntries(searchParams);
-    const page = isListing ? canonicalPage(searchParams) : null;
+    const catalogListing = catalogDocument && isListing;
+    const entries = catalogListing ? [...searchParams.entries()] : activeEntries(searchParams);
+    const requestedPage = catalogListing
+      ? readCatalogFacetPage(searchParams.getAll('page'))
+      : canonicalPage(searchParams);
+    const page =
+      isListing &&
+      requestedPage !== null &&
+      requestedPage > 1 &&
+      (!catalogListing || requestedPage <= maxCatalogFacetPage)
+        ? requestedPage
+        : null;
     const rawPage = searchParams.get('page')?.trim();
+    const invalidPage = catalogListing
+      ? searchParams.has('page') && page === null
+      : Boolean(rawPage && rawPage !== '1' && page === null);
     const hasVariant = isListing
-      ? entries.some(([key]) => key !== 'page') ||
-        Boolean(rawPage && rawPage !== '1' && page === null)
+      ? entries.some(([key]) => key !== 'page') || invalidPage
       : entries.length > 0;
     const hasCatalogParameters = entries.some(
       ([key]) => key !== 'page' && !CAMPAIGN_PARAMETERS.has(key.toLowerCase()),

@@ -91,6 +91,9 @@ const catalogChildCategory = {
   id: 'a0000000-0000-4000-8000-000000000008',
   name: 'انگشتر زنانه',
   slug: 'women-rings',
+  description: 'برای انتخاب انگشتر زنانه، پهنای حلقه و سایز مدلی را که راحت می‌پوشید مقایسه کنید.',
+  seoTitle: 'راهنمای انتخاب انگشتر زنانه نقره',
+  seoCanonicalPath: '/categories/women-rings',
   parentId: catalogCategory.id,
   activeSubtreeProductCount: 1,
 };
@@ -99,9 +102,25 @@ const catalogBrand = {
   id: 'a0000000-0000-4000-8000-000000000007',
   name: 'برند نمونه',
   slug: 'sample',
+  seoCanonicalPath: '/brands/sample',
 };
 
 const atelierBrand = { id: 'a0000000-0000-4000-8000-000000000009', name: 'آتلیه', slug: 'atelier' };
+const soldOutProduct = {
+  ...product,
+  id: '10000000-0000-4000-8000-000000000003',
+  name: 'انگشتر ناموجود نمونه',
+  slug: 'sold-out-ring',
+  seoCanonicalPath: null,
+  seoNoIndex: false,
+  brand: catalogBrand,
+  categories: [catalogChildCategory],
+  salePriceToman: 800_000,
+  compareAtPriceToman: null,
+  availableQuantity: 0,
+  isAvailable: false,
+  variants: [{ ...product.variants[0], availableQuantity: 0, isAvailable: false }],
+};
 const facetProducts = [
   {
     item: { ...product, brand: catalogBrand, categories: [catalogChildCategory] },
@@ -120,18 +139,7 @@ const facetProducts = [
     audience: 'men',
   },
   {
-    item: {
-      ...product,
-      id: '10000000-0000-4000-8000-000000000003',
-      name: 'انگشتر ناموجود نمونه',
-      slug: 'sold-out-ring',
-      brand: catalogBrand,
-      categories: [catalogChildCategory],
-      salePriceToman: null,
-      compareAtPriceToman: null,
-      availableQuantity: 0,
-      isAvailable: false,
-    },
+    item: { ...soldOutProduct, salePriceToman: null },
     weight: null,
     audience: 'women',
   },
@@ -623,6 +631,30 @@ async function handler(request, response) {
     return json(response, 200, [catalogCategory, catalogChildCategory]);
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/v1/seo/sitemap') {
+    const entity = ({ id, slug, seoCanonicalPath, seoNoIndex }) => ({
+      id,
+      slug,
+      seoCanonicalPath: seoCanonicalPath ?? null,
+      seoNoIndex: seoNoIndex ?? false,
+      updatedAt: CREATED_AT,
+      imageUrl: null,
+    });
+    return json(response, 200, {
+      products: facetProducts.map(({ item }) => ({
+        ...entity(item),
+        brandId: item.brand.id,
+        categoryIds: item.categories.map(({ id }) => id),
+      })),
+      categories: [catalogCategory, catalogChildCategory].map((category) => ({
+        ...entity(category),
+        parentId: category.parentId,
+      })),
+      brands: [catalogBrand, atelierBrand].map(entity),
+      contentPages: [],
+    });
+  }
+
   if (request.method === 'GET' && url.pathname === '/api/v1/seo/redirects/resolve') {
     if (url.searchParams.get('path') === '/categories/rings-legacy') {
       return json(response, 200, { destinationPath: '/categories/rings', permanent: true });
@@ -656,6 +688,13 @@ async function handler(request, response) {
 
   if (
     request.method === 'GET' &&
+    url.pathname === '/api/v1/catalog/public/products/sold-out-ring'
+  ) {
+    return json(response, 200, soldOutProduct);
+  }
+
+  if (
+    request.method === 'GET' &&
     url.pathname === `/api/v1/catalog/public/products/${seoProduct.slug}`
   ) {
     return json(response, 200, seoProduct);
@@ -664,6 +703,7 @@ async function handler(request, response) {
   if (
     request.method === 'GET' &&
     (url.pathname === '/api/v1/catalog/public/products/silver-ring/related' ||
+      url.pathname === '/api/v1/catalog/public/products/sold-out-ring/related' ||
       url.pathname === `/api/v1/catalog/public/products/${seoProduct.slug}/related`)
   ) {
     const page = Number.parseInt(url.searchParams.get('page') ?? '1', 10);

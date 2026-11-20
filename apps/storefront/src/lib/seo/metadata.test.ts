@@ -156,6 +156,24 @@ describe('storefront metadata engine', () => {
     });
   });
 
+  it('keeps the page number with a configured self canonical on a collection', () => {
+    expect(
+      buildStorefrontPageMetadata(
+        settings,
+        {
+          pathname: '/brands/cartier',
+          searchParams: { page: '2' },
+          seoCanonicalPath: '/brands/cartier',
+          title: 'کارتیه',
+        },
+        origin,
+      ),
+    ).toMatchObject({
+      alternates: { canonical: new URL('https://silver.example/brands/cartier?page=2') },
+      robots: { index: true, follow: true },
+    });
+  });
+
   it('rejects unsafe or private canonical overrides at render time', () => {
     for (const seoCanonicalPath of [
       'https://evil.example/product',

@@ -8,6 +8,7 @@ import {
   parseCatalogFacetFilters,
   type CatalogSearchParams,
 } from '@/lib/catalog/catalog-filter-state';
+import { maxCatalogFacetPage } from '@/lib/catalog/catalog-pagination';
 import {
   buildCategoryBreadcrumbItems,
   getPublicCatalogCategories,
@@ -37,7 +38,7 @@ export async function generateMetadata({
   const parsedFilters = parseCatalogFacetFilters(rawSearchParams);
   const category = categories.find((candidate) => candidate.slug === slug);
 
-  if (!category) {
+  if (!category || parsedFilters.page > maxCatalogFacetPage) {
     return {
       title: 'دسته‌بندی یافت نشد',
       robots: { index: false, follow: false },
@@ -81,6 +82,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     if (destinationPath) permanentRedirect(destinationPath);
     notFound();
   }
+  if (filters.page > maxCatalogFacetPage) notFound();
 
   const [products, knowledgeArticles] = await Promise.all([
     getPublicFacetedCatalog(filters, scope),

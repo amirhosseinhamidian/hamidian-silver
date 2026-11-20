@@ -14,6 +14,7 @@ import {
   parseCatalogFacetFilters,
   type CatalogSearchParams,
 } from '@/lib/catalog/catalog-filter-state';
+import { maxCatalogFacetPage } from '@/lib/catalog/catalog-pagination';
 import { getPublicFacetedCatalog } from '@/lib/catalog/public-catalog';
 import { ROOT_CATALOG_SEO } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
@@ -26,6 +27,9 @@ type ProductsPageProps = Readonly<{
 export async function generateMetadata({ searchParams }: ProductsPageProps): Promise<Metadata> {
   const rawSearchParams = await searchParams;
   const filters = parseCatalogFacetFilters(rawSearchParams);
+  if (filters.page > maxCatalogFacetPage) {
+    return { title: 'صفحه محصولات یافت نشد', robots: { index: false, follow: false } };
+  }
   const [settings, products] = await Promise.all([
     getPublicSiteSettings(),
     filters.sort === 'newest' && !hasCatalogFacetFilters(filters)
@@ -47,6 +51,7 @@ export async function generateMetadata({ searchParams }: ProductsPageProps): Pro
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const filters = parseCatalogFacetFilters(await searchParams);
+  if (filters.page > maxCatalogFacetPage) notFound();
   const [listing, siteSettings] = await Promise.all([
     getPublicFacetedCatalog(filters),
     getPublicSiteSettings(),

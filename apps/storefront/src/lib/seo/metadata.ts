@@ -150,7 +150,7 @@ export function resolveStorefrontCanonicalPath(
   );
   if (resourcePrefix && !candidate.startsWith(resourcePrefix)) return fallback;
 
-  return candidate;
+  return fallback.startsWith(`${candidate}?`) ? fallback : candidate;
 }
 
 function openGraphImage(media: StorefrontSeoMedia | null, fallbackAlt: string) {

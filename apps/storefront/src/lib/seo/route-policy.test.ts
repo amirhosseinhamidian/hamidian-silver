@@ -75,6 +75,21 @@ describe('resolveStorefrontSeoRoutePolicy', () => {
     });
   });
 
+  it.each([
+    'page=',
+    'page=1',
+    'page=02',
+    'page=2e0',
+    'page=2&page=2',
+    'page=1001',
+    'page=2&availability=',
+    'page=2&unknown=',
+  ])('keeps the noncanonical catalog request %s out of the index', (query) => {
+    expect(
+      resolveStorefrontSeoRoutePolicy('/categories/rings', new URLSearchParams(query)),
+    ).toMatchObject({ canonicalPath: '/categories/rings', index: false, follow: true });
+  });
+
   it('preserves the untracked canonical for campaign links including pagination and filtered listings', () => {
     for (const [path, query] of [
       ['/products', 'page=3'],

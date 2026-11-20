@@ -155,19 +155,37 @@ describe('CatalogProductGrid', () => {
     expect(screen.getByText('انگشتر دوم')).toHaveAttribute('data-preload-image', 'false');
   });
 
-  it('builds crawlable pagination links for collection routes', () => {
+  it('builds followable HTML pagination for the clean collection', () => {
     render(
       <CatalogProductGrid
-        filters={{ ...filters, category: 'rings', page: 2 }}
+        filters={{ page: 2, pageSize: 24, sort: 'newest' }}
         initialProducts={productPage([firstProduct], 2, 3)}
         paginationPath="/categories/rings"
+        facetScope={{ category: 'rings' }}
       />,
     );
 
-    expect(screen.getByRole('link', { name: 'رفتن به صفحه ۳' })).toHaveAttribute(
-      'href',
-      '/categories/rings?sort=price-asc&page=3',
+    const nextPage = screen.getByRole('link', { name: 'رفتن به صفحه ۳' });
+    expect(nextPage).toHaveAttribute('href', '/categories/rings?page=3');
+    expect(nextPage).not.toHaveAttribute('rel', 'nofollow');
+  });
+
+  it('keeps the filters in pagination links and marks them nofollow', () => {
+    render(
+      <CatalogProductGrid
+        filters={{ ...filters, brand: 'sample', category: undefined }}
+        initialProducts={productPage([firstProduct], 1, 2)}
+        paginationPath="/categories/rings"
+        facetScope={{ category: 'rings' }}
+      />,
     );
+
+    const nextPage = screen.getByRole('link', { name: 'رفتن به صفحه ۲' });
+    expect(nextPage).toHaveAttribute(
+      'href',
+      '/categories/rings?brand=sample&sort=price-asc&page=2',
+    );
+    expect(nextPage).toHaveAttribute('rel', 'nofollow');
   });
 
   it('offers a retry when loading the next page fails', async () => {

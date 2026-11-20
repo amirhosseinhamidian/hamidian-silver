@@ -8,6 +8,7 @@ import {
   parseCatalogFacetFilters,
   type CatalogSearchParams,
 } from '@/lib/catalog/catalog-filter-state';
+import { maxCatalogFacetPage } from '@/lib/catalog/catalog-pagination';
 import { getPublicCatalogBrands, getPublicFacetedCatalog } from '@/lib/catalog/public-catalog';
 import { getPublicRelatedGuideArticles } from '@/lib/guide/public-guide';
 import { brandSeoDescription, brandSeoTitle } from '@/lib/seo/content-copy';
@@ -33,7 +34,7 @@ export async function generateMetadata({
   const parsedFilters = parseCatalogFacetFilters(rawSearchParams);
   const brand = brands.find((candidate) => candidate.slug === slug);
 
-  if (!brand) {
+  if (!brand || parsedFilters.page > maxCatalogFacetPage) {
     return {
       title: 'برند یافت نشد',
       robots: { index: false, follow: false },
@@ -77,6 +78,7 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
     if (destinationPath) permanentRedirect(destinationPath);
     notFound();
   }
+  if (filters.page > maxCatalogFacetPage) notFound();
 
   const [products, knowledgeArticles] = await Promise.all([
     getPublicFacetedCatalog(filters, scope),
