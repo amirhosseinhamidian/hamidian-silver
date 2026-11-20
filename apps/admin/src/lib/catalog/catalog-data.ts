@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { cookies } from 'next/headers';
+import type { components } from '@hamidian/contracts';
 
 import { requestAdminCatalog, readJsonResponse } from '@/lib/catalog/catalog-api';
 import type {
@@ -270,6 +271,20 @@ export async function loadProductTypedAttributes(productId: string) {
       token,
     ),
     (value) => (Array.isArray(value) ? (value as ProductTypedAttribute[]) : null),
+  );
+}
+
+export async function loadProductMerchandising(productId: string) {
+  const token = await accessToken();
+  return load(
+    requestAdminCatalog(
+      `/api/v1/catalog/products/${encodeURIComponent(productId)}/merchandising`,
+      token,
+    ),
+    (value) =>
+      value && typeof value === 'object' && 'revision' in value
+        ? (value as components['schemas']['CatalogMerchandisingDto'])
+        : null,
   );
 }
 

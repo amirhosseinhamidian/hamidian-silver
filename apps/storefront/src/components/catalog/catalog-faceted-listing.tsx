@@ -32,6 +32,9 @@ const sortOptions = [
   { value: 'price-asc', label: 'کمترین قیمت' },
   { value: 'price-desc', label: 'بیشترین قیمت' },
   { value: 'name-asc', label: 'نام محصول' },
+  { value: 'availability', label: 'بیشترین موجودی' },
+  { value: 'best-selling', label: 'پرفروش‌ها' },
+  { value: 'featured', label: 'اولویت فروشگاه' },
 ] as const;
 
 type Chip = { label: string; name: string; value?: string; second?: string };
@@ -155,6 +158,13 @@ export function CatalogFacetedListing({
             : listing.invalidFilters
               ? 'فیلترها نیاز به اصلاح دارند'
               : `${number.format(listing.total)} محصول`}
+          {!pending && listing.total > 0 && listing.ranking?.requestedSort === 'best-selling' ? (
+            <span className="mt-1 block text-xs text-[var(--sf-color-muted)]">
+              {listing.ranking.appliedSort === 'newest'
+                ? 'فروش تأییدشده کافی نیست. محصولات به ترتیب جدیدترین نمایش داده می‌شوند.'
+                : 'محصولات با فروش تأییدشدهٔ کافی در ۳۰ روز گذشته در اولویت‌اند.'}
+            </span>
+          ) : null}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <div className="lg:hidden">

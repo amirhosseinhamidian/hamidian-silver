@@ -6,6 +6,7 @@ import {
   VariantInventoryMode,
 } from '../../../generated/prisma/enums';
 import { PublicTypedCatalogAttributeDto } from './catalog-attribute.dto';
+import { PublicCatalogSort } from './public-catalog-query.dto';
 
 export class PublicCatalogMediaDto {
   @ApiProperty({ type: String, nullable: true, format: 'uri' })
@@ -277,6 +278,17 @@ export class PublicCatalogProductDetailDto extends PublicCatalogProductSummaryDt
   typedAttributes?: PublicTypedCatalogAttributeDto[];
 }
 
+export class PublicCatalogRankingDto {
+  @ApiProperty({ type: Number, example: 1 })
+  version!: number;
+
+  @ApiProperty({ enum: PublicCatalogSort })
+  requestedSort!: PublicCatalogSort;
+
+  @ApiProperty({ enum: PublicCatalogSort })
+  appliedSort!: PublicCatalogSort;
+}
+
 export class PublicCatalogProductListDto {
   @ApiProperty({ type: () => PublicCatalogProductSummaryDto, isArray: true })
   items!: PublicCatalogProductSummaryDto[];
@@ -285,6 +297,9 @@ export class PublicCatalogProductListDto {
   pageSize!: number;
   total!: number;
   totalPages!: number;
+
+  @ApiPropertyOptional({ type: () => PublicCatalogRankingDto })
+  ranking?: PublicCatalogRankingDto;
 }
 
 export class PublicCatalogProductSuggestionDto {

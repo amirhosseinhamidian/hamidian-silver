@@ -3,10 +3,15 @@ import { notFound } from 'next/navigation';
 import { ProductForm } from '@/components/products/product-form';
 import { ProductTypedAttributes } from '@/components/catalog-attributes/product-typed-attributes';
 import { ProductMediaManager } from '@/components/products/product-media-manager';
+import { ProductMerchandisingForm } from '@/components/products/product-merchandising-form';
 import { ProductVariantManager } from '@/components/products/product-variant-manager';
 import { Badge } from '@/components/ui/badge';
 import { requireAdminSession } from '@/lib/auth/session';
-import { loadProductForm, loadProductTypedAttributes } from '@/lib/catalog/catalog-data';
+import {
+  loadProductForm,
+  loadProductMerchandising,
+  loadProductTypedAttributes,
+} from '@/lib/catalog/catalog-data';
 import { formatAdminInteger } from '@/lib/presentation/formatters';
 
 type EditProductPageProps = Readonly<{ params: Promise<{ productId: string }> }>;
@@ -19,9 +24,10 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     permissions: ['catalog.write'],
     returnTo: `/products/${productId}/edit`,
   });
-  const [data, attributes] = await Promise.all([
+  const [data, attributes, merchandising] = await Promise.all([
     loadProductForm(productId),
     loadProductTypedAttributes(productId),
+    loadProductMerchandising(productId),
   ]);
   if (!data?.product) notFound();
 
@@ -43,6 +49,11 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       </div>
       <ProductVariantManager product={data.product} sizes={data.sizes} />
       <ProductForm data={data} mode="edit" />
+      <ProductMerchandisingForm
+        productId={productId}
+        settings={merchandising.data}
+        published={data.product.status === 'ACTIVE'}
+      />
       <ProductTypedAttributes
         productId={productId}
         items={attributes.data ?? []}

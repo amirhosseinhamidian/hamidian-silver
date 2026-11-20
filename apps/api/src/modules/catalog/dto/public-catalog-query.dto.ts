@@ -6,6 +6,9 @@ export enum PublicCatalogSort {
   PRICE_ASC = 'price-asc',
   PRICE_DESC = 'price-desc',
   NAME_ASC = 'name-asc',
+  AVAILABILITY = 'availability',
+  BEST_SELLING = 'best-selling',
+  FEATURED = 'featured',
 }
 
 export class PublicCatalogQueryDto {

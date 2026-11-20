@@ -21,6 +21,7 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
 import { readActiveCategoryProductCounts } from './catalog-category-counts';
 import { buildPublicCatalogFacetsQuery, type CatalogFacetPageRow } from './catalog-facets-query';
+import { CATALOG_RANKING_VERSION, isCommercialCatalogSort } from './catalog-ranking';
 import { catalogHierarchyTransaction } from './catalog-hierarchy-transaction';
 import { CatalogAttributesService } from './catalog-attributes.service';
 import {
@@ -1050,6 +1051,21 @@ export class CatalogService {
     const category = query.category?.trim();
     const brand = query.brand?.trim();
     const country = query.country?.trim();
+    if (isCommercialCatalogSort(sort)) {
+      const { items, total, totalPages, ranking } = await this.searchPublicCatalog({
+        sort,
+        page,
+        pageSize,
+        q: query.q,
+        scopeCategory: category || undefined,
+        scopeBrand: brand || undefined,
+        scopeCountry: country || undefined,
+        sizeIds: query.sizeId ? [query.sizeId] : undefined,
+        minLengthMm: query.minLengthMm,
+        maxLengthMm: query.maxLengthMm,
+      });
+      return { items, page, pageSize, total, totalPages, ranking };
+    }
     const matches = await readMatchingCatalogVariants(this.prisma, query);
     if (matches?.size === 0) {
       if (search && page === 1) await this.recordCatalogSearch(search, true);
@@ -1228,7 +1244,18 @@ export class CatalogService {
           ),
           new Map(result.items.map((item) => [item.id, item])),
         );
-        return { ...products, facets: result.facets };
+        const requestedSort = query.sort;
+        const ranking = isCommercialCatalogSort(requestedSort)
+          ? {
+              version: CATALOG_RANKING_VERSION,
+              requestedSort,
+              appliedSort:
+                requestedSort === PublicCatalogSort.BEST_SELLING && !result.qualifiedSales
+                  ? PublicCatalogSort.NEWEST
+                  : requestedSort,
+            }
+          : undefined;
+        return { ...products, facets: result.facets, ...(ranking ? { ranking } : {}) };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 10_000 },
     );

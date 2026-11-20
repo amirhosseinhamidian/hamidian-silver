@@ -2,7 +2,7 @@ import type { components } from '@hamidian/contracts';
 
 import { normalizeCatalogSearchText } from '@/lib/catalog/search-normalization';
 
-export type CatalogSort = 'newest' | 'price-asc' | 'price-desc' | 'name-asc';
+export type CatalogSort = NonNullable<components['schemas']['PublicCatalogFacetsQueryDto']['sort']>;
 
 export type CatalogFilters = Readonly<{
   page: number;
@@ -17,7 +17,15 @@ export type CatalogFilters = Readonly<{
 export type CatalogSearchParams = Readonly<Record<string, string | string[] | undefined>>;
 
 const DEFAULT_PAGE_SIZE = 24;
-const SORT_VALUES = new Set<CatalogSort>(['newest', 'price-asc', 'price-desc', 'name-asc']);
+const SORT_VALUES = new Set<CatalogSort>([
+  'newest',
+  'price-asc',
+  'price-desc',
+  'name-asc',
+  'availability',
+  'best-selling',
+  'featured',
+]);
 
 function firstValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;

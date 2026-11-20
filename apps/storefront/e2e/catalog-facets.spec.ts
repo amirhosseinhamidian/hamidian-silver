@@ -62,3 +62,22 @@ test('retains the collection path and explains empty or unavailable results', as
   await expect(page.getByRole('heading', { name: 'انگشتر نقره حمیدیان', level: 2 })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
+
+test('clarifies when best-selling sort falls back and preserves the collection canonical', async ({
+  page,
+}) => {
+  await page.goto('/categories/rings');
+  await waitForClientHydration(page);
+  await page.getByRole('combobox', { name: 'مرتب‌سازی محصولات' }).click();
+  await page.getByRole('option', { name: 'پرفروش‌ها', exact: true }).click();
+  await expect(page).toHaveURL(/\/categories\/rings\?sort=best-selling$/);
+  await expect(
+    page.getByRole('status').filter({ hasText: 'فروش تأییدشده کافی نیست' }),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'انگشتر نقره حمیدیان', level: 2 })).toBeVisible();
+  await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute('content', /noindex/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    /\/categories\/rings$/,
+  );
+});

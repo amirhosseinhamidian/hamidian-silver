@@ -724,6 +724,22 @@ export interface paths {
         patch: operations["CatalogAttributesController_setProductValue_v1"];
         trace?: never;
     };
+    "/api/v1/catalog/products/{productId}/merchandising": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogMerchandisingController_read_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogMerchandisingController_update_v1"];
+        trace?: never;
+    };
     "/api/v1/finance/supplier-payables": {
         parameters: {
             query?: never;
@@ -3990,8 +4006,17 @@ export interface components {
             availableQuantity: number;
             isAvailable: boolean;
         };
+        PublicCatalogRankingDto: {
+            /** @example 1 */
+            version: number;
+            /** @enum {string} */
+            requestedSort: "newest" | "price-asc" | "price-desc" | "name-asc" | "availability" | "best-selling" | "featured";
+            /** @enum {string} */
+            appliedSort: "newest" | "price-asc" | "price-desc" | "name-asc" | "availability" | "best-selling" | "featured";
+        };
         PublicCatalogProductListDto: {
             items: components["schemas"]["PublicCatalogProductSummaryDto"][];
+            ranking?: components["schemas"]["PublicCatalogRankingDto"];
             page: number;
             pageSize: number;
             total: number;
@@ -4028,7 +4053,7 @@ export interface components {
              * @default newest
              * @enum {string}
              */
-            sort: "newest" | "price-asc" | "price-desc" | "name-asc";
+            sort: "newest" | "price-asc" | "price-desc" | "name-asc" | "availability" | "best-selling" | "featured";
         };
         PublicCatalogFacetOptionDto: {
             value: string;
@@ -4062,6 +4087,7 @@ export interface components {
         };
         PublicFacetedCatalogDto: {
             items: components["schemas"]["PublicCatalogProductSummaryDto"][];
+            ranking?: components["schemas"]["PublicCatalogRankingDto"];
             facets: components["schemas"]["PublicCatalogFacetsDto"];
             page: number;
             pageSize: number;
@@ -4512,6 +4538,26 @@ export interface components {
             value?: components["schemas"]["CatalogAttributeValueDto"];
             legacyValue?: string;
             clear?: boolean;
+        };
+        CatalogMerchandisingDto: {
+            enabled: boolean;
+            pinned: boolean;
+            weight: number;
+            /** Format: date-time */
+            startsAt: string | null;
+            /** Format: date-time */
+            endsAt: string | null;
+            revision: number;
+        };
+        UpdateCatalogMerchandisingDto: {
+            enabled: boolean;
+            pinned: boolean;
+            weight: number;
+            /** Format: date-time */
+            startsAt?: string | null;
+            /** Format: date-time */
+            endsAt?: string | null;
+            expectedRevision: number;
         };
         MarkSupplierPayablePaidDto: {
             paymentReference?: string;
@@ -6395,7 +6441,7 @@ export interface operations {
                 sizeId?: string;
                 minLengthMm?: number;
                 maxLengthMm?: number;
-                sort?: "newest" | "price-asc" | "price-desc" | "name-asc";
+                sort?: "newest" | "price-asc" | "price-desc" | "name-asc" | "availability" | "best-selling" | "featured";
             };
             header?: never;
             path?: never;
@@ -7697,6 +7743,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CatalogProductAttributeDto"];
+                };
+            };
+        };
+    };
+    CatalogMerchandisingController_read_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogMerchandisingDto"];
+                };
+            };
+        };
+    };
+    CatalogMerchandisingController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCatalogMerchandisingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogMerchandisingDto"];
                 };
             };
         };

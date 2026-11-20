@@ -245,6 +245,10 @@ function facetedProducts(query) {
   };
   const { page = 1, pageSize = 24 } = query;
   const items = matches().map(({ item }) => item);
+  const ranking =
+    query.sort === 'best-selling'
+      ? { version: 1, requestedSort: 'best-selling', appliedSort: 'newest' }
+      : undefined;
   // Preserve the two-page fixture used by catalog navigation tests.
   if (
     !query.q &&
@@ -266,6 +270,7 @@ function facetedProducts(query) {
       total: pageSize + 1,
       totalPages: 2,
       facets,
+      ...(ranking ? { ranking } : {}),
     };
   }
   if (query.sort === 'price-asc' || query.sort === 'price-desc') {
@@ -283,6 +288,7 @@ function facetedProducts(query) {
     total: items.length,
     totalPages: Math.ceil(items.length / pageSize),
     facets,
+    ...(ranking ? { ranking } : {}),
   };
 }
 

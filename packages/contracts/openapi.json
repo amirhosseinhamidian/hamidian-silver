@@ -384,7 +384,10 @@
                 "newest",
                 "price-asc",
                 "price-desc",
-                "name-asc"
+                "name-asc",
+                "availability",
+                "best-selling",
+                "featured"
               ]
             }
           }
@@ -2303,6 +2306,74 @@
         },
         "tags": [
           "CatalogAttributes"
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{productId}/merchandising": {
+      "get": {
+        "operationId": "CatalogMerchandisingController_read_v1",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogMerchandisingDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CatalogMerchandising"
+        ]
+      },
+      "patch": {
+        "operationId": "CatalogMerchandisingController_update_v1",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCatalogMerchandisingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogMerchandisingDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CatalogMerchandising"
         ]
       }
     },
@@ -10421,6 +10492,44 @@
           "isAvailable"
         ]
       },
+      "PublicCatalogRankingDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "example": 1
+          },
+          "requestedSort": {
+            "enum": [
+              "newest",
+              "price-asc",
+              "price-desc",
+              "name-asc",
+              "availability",
+              "best-selling",
+              "featured"
+            ],
+            "type": "string"
+          },
+          "appliedSort": {
+            "enum": [
+              "newest",
+              "price-asc",
+              "price-desc",
+              "name-asc",
+              "availability",
+              "best-selling",
+              "featured"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "requestedSort",
+          "appliedSort"
+        ]
+      },
       "PublicCatalogProductListDto": {
         "type": "object",
         "properties": {
@@ -10429,6 +10538,9 @@
             "items": {
               "$ref": "#/components/schemas/PublicCatalogProductSummaryDto"
             }
+          },
+          "ranking": {
+            "$ref": "#/components/schemas/PublicCatalogRankingDto"
           },
           "page": {
             "type": "number"
@@ -10598,7 +10710,10 @@
               "newest",
               "price-asc",
               "price-desc",
-              "name-asc"
+              "name-asc",
+              "availability",
+              "best-selling",
+              "featured"
             ],
             "type": "string",
             "default": "newest"
@@ -10778,6 +10893,9 @@
             "items": {
               "$ref": "#/components/schemas/PublicCatalogProductSummaryDto"
             }
+          },
+          "ranking": {
+            "$ref": "#/components/schemas/PublicCatalogRankingDto"
           },
           "facets": {
             "$ref": "#/components/schemas/PublicCatalogFacetsDto"
@@ -12722,6 +12840,83 @@
         },
         "required": [
           "definitionVersion",
+          "expectedRevision"
+        ]
+      },
+      "CatalogMerchandisingDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "revision": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "enabled",
+          "pinned",
+          "weight",
+          "startsAt",
+          "endsAt",
+          "revision"
+        ]
+      },
+      "UpdateCatalogMerchandisingDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "(?:Z|[+-]\\d{2}:\\d{2})$",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "(?:Z|[+-]\\d{2}:\\d{2})$",
+            "format": "date-time"
+          },
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483646
+          }
+        },
+        "required": [
+          "enabled",
+          "pinned",
+          "weight",
           "expectedRevision"
         ]
       },

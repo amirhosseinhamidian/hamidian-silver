@@ -5,6 +5,7 @@ import {
   catalogAttributeFacetCountsCtes,
   catalogFacetAttributesCtes,
 } from './catalog-facet-attributes';
+import { catalogRankingSql } from './catalog-ranking';
 import {
   catalogActiveVariantCriteria,
   catalogStockCte,
@@ -17,7 +18,6 @@ import {
   type PublicCatalogFacetsDto,
   type PublicCatalogFacetsQueryDto,
 } from './dto/public-catalog-facets.dto';
-import { PublicCatalogSort } from './dto/public-catalog-query.dto';
 
 export type CatalogFacetPageRow = {
   total: bigint;
@@ -30,6 +30,7 @@ export type CatalogFacetPageRow = {
   }[];
   facets: PublicCatalogFacetsDto;
   invalidAttributeFilter: string | null;
+  qualifiedSales: boolean;
 };
 
 export function buildPublicCatalogFacetsQuery(
@@ -100,14 +101,7 @@ export function buildPublicCatalogFacetsQuery(
     bound == null ? Prisma.sql`TRUE` : Prisma.sql`${column} >= ${bound}::numeric`;
   const upperBound = (column: Prisma.Sql, bound: number | undefined) =>
     bound == null ? Prisma.sql`TRUE` : Prisma.sql`${column} <= ${bound}::numeric`;
-  const sort =
-    query.sort === PublicCatalogSort.PRICE_ASC
-      ? Prisma.sql`"salePriceToman" ASC NULLS LAST, "createdAt" DESC, id ASC`
-      : query.sort === PublicCatalogSort.PRICE_DESC
-        ? Prisma.sql`"salePriceToman" DESC NULLS LAST, "createdAt" DESC, id ASC`
-        : query.sort === PublicCatalogSort.NAME_ASC
-          ? Prisma.sql`name ASC, id ASC`
-          : Prisma.sql`"createdAt" DESC, id DESC`;
+  const ranking = catalogRankingSql(query.sort);
   const range = (scope: string, column: Prisma.Sql) => Prisma.sql`
     (SELECT CASE WHEN COUNT(*) = 0 THEN NULL ELSE jsonb_build_object(
        'min', MIN(${column}), 'max', MAX(${column}), 'count', COUNT(DISTINCT p.id)
@@ -267,9 +261,10 @@ export function buildPublicCatalogFacetsQuery(
           : Prisma.empty
       }
     ),
+    ${ranking.ctes}
     result_page AS (
-      SELECT *, row_number() OVER (ORDER BY ("availableQuantity" > 0) DESC, score DESC, ${sort}) AS position
-      FROM eligible_products WHERE scope = 'results'
+      SELECT p.*, row_number() OVER (ORDER BY ${ranking.order}) AS position
+      FROM eligible_products p ${ranking.join} WHERE p.scope = 'results'
       ORDER BY position LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}
     ),
     brands AS (
@@ -300,6 +295,7 @@ export function buildPublicCatalogFacetsQuery(
     ),
     ${catalogAttributeFacetCountsCtes}
     SELECT (SELECT COUNT(*) FROM eligible_products WHERE scope = 'results') AS total,
+      ${ranking.qualifiedSales} AS "qualifiedSales",
       (SELECT code FROM invalid_attribute_filters ORDER BY code LIMIT 1) AS "invalidAttributeFilter",
       COALESCE((SELECT jsonb_agg(jsonb_build_object(
         'id', p.id, 'availableQuantity', p."availableQuantity",
