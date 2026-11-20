@@ -1002,6 +1002,16 @@ enum CatalogAttributeSource {
   VARIANT_WEIGHT
 }
 
+model CatalogSearchDaily {
+  day           DateTime @db.Date
+  term          String   @db.VarChar(100)
+  searches      BigInt   @default(0)
+  withoutResult BigInt   @default(0)
+
+  @@id([day, term])
+  @@map("catalog_search_daily")
+}
+
 model CatalogAttributeDefinition {
   code           String @id @db.VarChar(64)
   currentVersion Int   @default(1)

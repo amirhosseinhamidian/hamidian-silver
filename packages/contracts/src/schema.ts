@@ -6462,6 +6462,13 @@ export interface operations {
                     "application/json": components["schemas"]["PublicCatalogProductSuggestionsDto"];
                 };
             };
+            /** @description Search suggestions are busy. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     CatalogController_getPublicProduct_v1: {

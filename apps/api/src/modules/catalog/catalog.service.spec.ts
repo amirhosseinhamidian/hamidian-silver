@@ -36,6 +36,7 @@ describe('CatalogService', () => {
       update: jest.fn(),
     },
     $queryRaw: jest.fn(),
+    $executeRaw: jest.fn(),
     $transaction: jest.fn(),
   };
 
@@ -1064,10 +1065,34 @@ describe('CatalogService', () => {
     );
 
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.$executeRaw).toHaveBeenCalledWith(expect.anything(), 'other', 0);
     expect(prisma.product.findMany).toHaveBeenCalledTimes(1);
     expect(prisma.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: { in: [productId] } } }),
     );
+  });
+
+  it('rejects overload and releases the suggestion slot after pending reads finish', async () => {
+    let finish: (rows: unknown[]) => void = () => undefined;
+    const pending = new Promise<unknown[]>((resolve) => {
+      finish = resolve;
+    });
+    for (let query = 0; query < 9; query++) prisma.$queryRaw.mockImplementationOnce(() => pending);
+    const active = Array.from({ length: 3 }, () => service.listPublicProductSuggestions('انگشتر'));
+    try {
+      await expect(service.listPublicProductSuggestions('گردنبند')).rejects.toMatchObject({
+        status: 429,
+      });
+    } finally {
+      finish([]);
+      await Promise.all(active);
+    }
+    prisma.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    await expect(service.listPublicProductSuggestions('گردنبند')).resolves.toEqual({
+      items: [],
+      categories: [],
+      brands: [],
+    });
   });
 
   it('returns at most eight lightweight ordered product suggestions', async () => {

@@ -476,6 +476,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Search suggestions are busy."
           }
         },
         "tags": [

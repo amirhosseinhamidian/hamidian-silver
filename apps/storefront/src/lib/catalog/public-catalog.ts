@@ -261,6 +261,7 @@ export async function getPublicFacetedCatalog(
 export async function getPublicCatalogProductSuggestions(
   query: string,
   limit = 8,
+  signal?: AbortSignal,
 ): Promise<PublicCatalogProductSuggestions> {
   const client = createPublicCatalogClient();
   const result = await client.GET('/api/v1/catalog/public/search/suggestions', {
@@ -270,12 +271,17 @@ export async function getPublicCatalogProductSuggestions(
         limit,
       },
     },
+    signal,
+    cache: 'no-store',
   });
 
+  if (result.response.status === 429) throw new CatalogSuggestionsBusyError();
   assertSuccessfulResponse(result.response, result.data, 'product search suggestions');
 
   return result.data;
 }
+
+export class CatalogSuggestionsBusyError extends Error {}
 
 async function readPublicCatalogCategories(
   apiOrigin: string,

@@ -21,6 +21,7 @@ import {
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
 import { MEDIA_UPLOAD_LIMIT_BYTES } from '../../config/media-storage';
 import { Public } from '../auth/public.decorator';
@@ -115,6 +116,7 @@ export class CatalogController {
   @Public()
   @Get('public/search/suggestions')
   @ApiOkResponse({ type: PublicCatalogProductSuggestionsDto })
+  @ApiTooManyRequestsResponse({ description: 'Search suggestions are busy.' })
   listPublicProductSuggestions(@Query() query: PublicCatalogSuggestionsQueryDto) {
     return this.catalogService.listPublicProductSuggestions(query.q, query.limit);
   }

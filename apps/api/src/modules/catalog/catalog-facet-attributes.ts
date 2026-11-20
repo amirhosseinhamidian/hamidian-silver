@@ -1,6 +1,6 @@
 import { Prisma } from '../../generated/prisma/client';
 
-export const catalogFacetAttributesCtes = Prisma.sql`
+export const catalogAttributeValuesCtes = Prisma.sql`
   attribute_definitions AS MATERIALIZED (
     SELECT v.*, d.code
     FROM "catalog_attribute_definitions" d
@@ -22,21 +22,6 @@ export const catalogFacetAttributesCtes = Prisma.sql`
     FROM attribute_definitions d
     CROSS JOIN (VALUES ('true', 'بله'), ('false', 'خیر')) option(value, label)
     WHERE d.kind = 'BOOLEAN'
-  ),
-  invalid_attribute_filters AS (
-    SELECT filter.code
-    FROM requested_attributes filter
-    LEFT JOIN attribute_definitions d ON d.code = filter.code
-    WHERE d.code IS NULL OR (
-      filter.choices IS NOT NULL AND (
-        d.kind NOT IN ('SELECT', 'MULTI_SELECT', 'BOOLEAN') OR EXISTS (
-          SELECT 1 FROM jsonb_array_elements_text(filter.choices) choice(value)
-          WHERE NOT EXISTS (
-            SELECT 1 FROM attribute_options opt WHERE opt.code = filter.code AND opt.value = choice.value
-          )
-        )
-      )
-    ) OR (filter.choices IS NULL AND d.kind NOT IN ('NUMBER', 'RANGE'))
   ),
   current_values AS MATERIALIZED (
     SELECT DISTINCT ON (v."productId", v."attributeCode")
@@ -125,6 +110,25 @@ export const catalogFacetAttributesCtes = Prisma.sql`
         WHEN unit = 'NONE' THEN true
         ELSE minimum >= 0
       END
+  )
+`;
+
+export const catalogFacetAttributesCtes = Prisma.sql`
+  ${catalogAttributeValuesCtes},
+  invalid_attribute_filters AS (
+    SELECT filter.code
+    FROM requested_attributes filter
+    LEFT JOIN attribute_definitions d ON d.code = filter.code
+    WHERE d.code IS NULL OR (
+      filter.choices IS NOT NULL AND (
+        d.kind NOT IN ('SELECT', 'MULTI_SELECT', 'BOOLEAN') OR EXISTS (
+          SELECT 1 FROM jsonb_array_elements_text(filter.choices) choice(value)
+          WHERE NOT EXISTS (
+            SELECT 1 FROM attribute_options opt WHERE opt.code = filter.code AND opt.value = choice.value
+          )
+        )
+      )
+    ) OR (filter.choices IS NULL AND d.kind NOT IN ('NUMBER', 'RANGE'))
   ),
   product_requirements AS MATERIALIZED (
     SELECT p.*, ARRAY(

@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { GET } from '@/app/api/catalog/search/suggestions/route';
+import { CatalogSuggestionsBusyError } from '@/lib/catalog/public-catalog';
 
 const { getPublicCatalogProductSuggestions } = vi.hoisted(() => ({
   getPublicCatalogProductSuggestions: vi.fn(),
 }));
 
-vi.mock('@/lib/catalog/public-catalog', () => ({
+vi.mock('@/lib/catalog/public-catalog', async (original) => ({
+  ...(await original<typeof import('@/lib/catalog/public-catalog')>()),
   getPublicCatalogProductSuggestions,
 }));
 
@@ -25,8 +27,22 @@ describe('catalog search suggestions BFF', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(getPublicCatalogProductSuggestions).toHaveBeenCalledWith('انگشتر کیان', 8);
+    expect(getPublicCatalogProductSuggestions).toHaveBeenCalledWith(
+      'انگشتر کیان',
+      8,
+      expect.any(AbortSignal),
+    );
     await expect(response.json()).resolves.toEqual({ items: [], categories: [], brands: [] });
+  });
+
+  it('preserves temporary overload as 429', async () => {
+    getPublicCatalogProductSuggestions.mockRejectedValueOnce(new CatalogSuggestionsBusyError());
+    const response = await GET(
+      new Request('http://storefront.local/api/catalog/search/suggestions?q=انگشتر'),
+    );
+    expect(response.status).toBe(429);
+    expect(response.headers.get('retry-after')).toBe('2');
+    expect(response.headers.get('cache-control')).toBe('no-store');
   });
 
   it('returns an empty result for short queries without calling the API', async () => {

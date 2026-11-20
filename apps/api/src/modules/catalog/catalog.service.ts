@@ -1,4 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
 import { calculatePlatingPriceToman } from '../../common/plating-price';
 import { Prisma } from '../../generated/prisma/client';
 import {
@@ -38,7 +46,8 @@ import type {
 import { PublicCatalogQueryDto, PublicCatalogSort } from './dto/public-catalog-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PublicMediaUrlService } from './public-media-url.service';
-import { normalizeCatalogSearch } from './catalog-search';
+import { catalogSearchMetricTerm, normalizeCatalogSearch } from './catalog-search';
+import { publicNamedSuggestionSql, publicSearchMatchesSql } from './catalog-search-query';
 
 type PublicProductSearchRow = {
   id: string;
@@ -58,6 +67,9 @@ type PublicNamedSuggestionRow = {
 
 @Injectable()
 export class CatalogService {
+  private readonly logger = new Logger(CatalogService.name);
+  private inFlightSuggestions = 0;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly publicMediaUrl: PublicMediaUrlService,
@@ -1039,7 +1051,10 @@ export class CatalogService {
     const brand = query.brand?.trim();
     const country = query.country?.trim();
     const matches = await readMatchingCatalogVariants(this.prisma, query);
-    if (matches?.size === 0) return { items: [], page, pageSize, total: 0, totalPages: 0 };
+    if (matches?.size === 0) {
+      if (search && page === 1) await this.recordCatalogSearch(search, true);
+      return { items: [], page, pageSize, total: 0, totalPages: 0 };
+    }
     const matchingProductIds = matches ? [...matches.keys()] : undefined;
     const categoryIds = category ? await this.resolvePublicCategoryIds(category) : undefined;
 
@@ -1170,7 +1185,7 @@ export class CatalogService {
       total = prioritizedProductIds.length;
       pageProductIds = prioritizedProductIds.slice((page - 1) * pageSize, page * pageSize);
     }
-    return this.readPublicProductPage(
+    const listing = await this.readPublicProductPage(
       this.prisma,
       pageProductIds,
       page,
@@ -1179,6 +1194,8 @@ export class CatalogService {
       availabilityByProductId,
       matches,
     );
+    if (search && page === 1) await this.recordCatalogSearch(search, listing.total === 0);
+    return listing;
   }
 
   async searchPublicCatalog(query: PublicCatalogFacetsQueryDto): Promise<PublicFacetedCatalogDto> {
@@ -1187,9 +1204,9 @@ export class CatalogService {
     const pageSize = query.pageSize ?? 24;
     const statement = buildPublicCatalogFacetsQuery(
       query,
-      search ? this.publicSearchMatchesSql(search) : undefined,
+      search ? publicSearchMatchesSql(search) : undefined,
     );
-    return this.prisma.$transaction(
+    const listing = await this.prisma.$transaction(
       async (reader) => {
         const [result] = await reader.$queryRaw<CatalogFacetPageRow[]>(statement);
         if (result.invalidAttributeFilter) {
@@ -1215,6 +1232,23 @@ export class CatalogService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 10_000 },
     );
+    if (search && page === 1) await this.recordCatalogSearch(search, listing.total === 0);
+    return listing;
+  }
+
+  private async recordCatalogSearch(search: string, withoutResult: boolean): Promise<void> {
+    const term = catalogSearchMetricTerm(search);
+    try {
+      await this.prisma.$executeRaw`
+        INSERT INTO "catalog_search_daily" ("day", "term", "searches", "withoutResult")
+        VALUES ((CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date, ${term}, 1, ${withoutResult ? 1 : 0}::bigint)
+        ON CONFLICT ("day", "term") DO UPDATE SET
+          "searches" = "catalog_search_daily"."searches" + 1,
+          "withoutResult" = "catalog_search_daily"."withoutResult" + EXCLUDED."withoutResult"
+      `;
+    } catch {
+      this.logger.warn('Could not record aggregate catalog search metrics.');
+    }
   }
 
   private async readPublicProductPage(
@@ -1479,11 +1513,25 @@ export class CatalogService {
 
   async listPublicProductSuggestions(query: string, limit = 8) {
     const search = normalizeCatalogSearch(query);
-    if (search.length < 2) return { items: [], categories: [], brands: [] };
+    if (search.length < 2 || !/[\p{L}\p{N}]/u.test(search)) {
+      return { items: [], categories: [], brands: [] };
+    }
 
-    const [rows, categories, brands] = await Promise.all([
+    if (this.inFlightSuggestions >= 3) {
+      throw new HttpException('Search suggestions are busy.', HttpStatus.TOO_MANY_REQUESTS);
+    }
+    this.inFlightSuggestions++;
+    try {
+      return await this.readPublicProductSuggestions(search, limit);
+    } finally {
+      this.inFlightSuggestions--;
+    }
+  }
+
+  private async readPublicProductSuggestions(search: string, limit: number) {
+    const [productsResult, categoriesResult, brandsResult] = await Promise.allSettled([
       this.prisma.$queryRaw<PublicProductSuggestionRow[]>(Prisma.sql`
-        WITH ${this.publicSearchMatchesSql(search)},
+        WITH ${publicSearchMatchesSql(search)},
         ranked_search AS (
           SELECT "productId", MAX(score) AS score
           FROM search_matches
@@ -1497,56 +1545,17 @@ export class CatalogService {
         ORDER BY ranked_search.score DESC, product."createdAt" DESC, product.id ASC
         LIMIT ${Math.min(Math.max(limit, 1), 8)}
       `),
-      this.prisma.$queryRaw<PublicNamedSuggestionRow[]>(Prisma.sql`
-        WITH search_query AS (
-          SELECT normalize_fa_search(${search}) AS value
-        )
-        SELECT category.id, category.name, category.slug
-        FROM "categories" AS category
-        CROSS JOIN search_query
-        WHERE category."isActive" = TRUE
-          AND category."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(category.name) % search_query.value
-            OR normalize_fa_search(category.name) LIKE '%' || search_query.value || '%'
-          )
-        ORDER BY
-          CASE
-            WHEN normalize_fa_search(category.name) = search_query.value THEN 0
-            WHEN normalize_fa_search(category.name) LIKE search_query.value || '%' THEN 1
-            ELSE 2
-          END,
-          similarity(normalize_fa_search(category.name), search_query.value) DESC,
-          category."sortOrder" ASC,
-          category.name ASC,
-          category.id ASC
-        LIMIT 4
-      `),
-      this.prisma.$queryRaw<PublicNamedSuggestionRow[]>(Prisma.sql`
-        WITH search_query AS (
-          SELECT normalize_fa_search(${search}) AS value
-        )
-        SELECT brand.id, brand.name, brand.slug
-        FROM "brands" AS brand
-        CROSS JOIN search_query
-        WHERE brand."isActive" = TRUE
-          AND brand."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(brand.name) % search_query.value
-            OR normalize_fa_search(brand.name) LIKE '%' || search_query.value || '%'
-          )
-        ORDER BY
-          CASE
-            WHEN normalize_fa_search(brand.name) = search_query.value THEN 0
-            WHEN normalize_fa_search(brand.name) LIKE search_query.value || '%' THEN 1
-            ELSE 2
-          END,
-          similarity(normalize_fa_search(brand.name), search_query.value) DESC,
-          brand.name ASC,
-          brand.id ASC
-        LIMIT 4
-      `),
+      this.prisma.$queryRaw<PublicNamedSuggestionRow[]>(
+        publicNamedSuggestionSql(search, 'category'),
+      ),
+      this.prisma.$queryRaw<PublicNamedSuggestionRow[]>(publicNamedSuggestionSql(search, 'brand')),
     ]);
+    if (productsResult.status === 'rejected') throw productsResult.reason;
+    if (categoriesResult.status === 'rejected') throw categoriesResult.reason;
+    if (brandsResult.status === 'rejected') throw brandsResult.reason;
+    const { value: rows } = productsResult;
+    const { value: categories } = categoriesResult;
+    const { value: brands } = brandsResult;
     const productIds = rows.map(({ id }) => id);
 
     const products =
@@ -2320,7 +2329,7 @@ export class CatalogService {
       : Prisma.empty;
 
     return this.prisma.$queryRaw<PublicProductSearchRow[]>(Prisma.sql`
-      WITH ${catalogStockCte}, ${this.publicSearchMatchesSql(input.search)},
+      WITH ${catalogStockCte}, ${publicSearchMatchesSql(input.search)},
       ranked_search AS (
         SELECT "productId", MAX(score) AS score
         FROM search_matches
@@ -2350,101 +2359,6 @@ export class CatalogService {
       LIMIT ${input.pageSize}
       OFFSET ${(input.page - 1) * input.pageSize}
     `);
-  }
-
-  private publicSearchMatchesSql(search: string): Prisma.Sql {
-    return Prisma.sql`
-      search_query AS (
-        SELECT normalize_fa_search(${search}) AS value
-      ),
-      search_matches AS (
-        SELECT
-          product.id AS "productId",
-          similarity(normalize_fa_search(product.name), search_query.value)
-            + CASE
-                WHEN normalize_fa_search(product.name) = search_query.value THEN 2
-                WHEN normalize_fa_search(product.name) LIKE search_query.value || '%' THEN 1
-                WHEN normalize_fa_search(product.name) LIKE '%' || search_query.value || '%' THEN 0.4
-                ELSE 0
-              END AS score
-        FROM "products" AS product
-        CROSS JOIN search_query
-        WHERE product."status" = 'ACTIVE'
-          AND product."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(product.name) % search_query.value
-            OR normalize_fa_search(product.name) LIKE '%' || search_query.value || '%'
-          )
-
-        UNION ALL
-
-        SELECT
-          product.id AS "productId",
-          similarity(normalize_fa_search(product."shortDescription"), search_query.value) * 0.25
-            AS score
-        FROM "products" AS product
-        CROSS JOIN search_query
-        WHERE product."status" = 'ACTIVE'
-          AND product."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(product."shortDescription") % search_query.value
-            OR normalize_fa_search(product."shortDescription") LIKE '%' || search_query.value || '%'
-          )
-
-        UNION ALL
-
-        SELECT
-          product.id AS "productId",
-          similarity(normalize_fa_search(brand.name), search_query.value) * 0.65 AS score
-        FROM "products" AS product
-        JOIN "brands" AS brand ON brand.id = product."brandId"
-        CROSS JOIN search_query
-        WHERE product."status" = 'ACTIVE'
-          AND product."deletedAt" IS NULL
-          AND brand."isActive" = true
-          AND brand."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(brand.name) % search_query.value
-            OR normalize_fa_search(brand.name) LIKE '%' || search_query.value || '%'
-          )
-
-        UNION ALL
-
-        SELECT
-          product.id AS "productId",
-          similarity(normalize_fa_search(category.name), search_query.value) * 0.55 AS score
-        FROM "products" AS product
-        JOIN "product_categories" AS product_category
-          ON product_category."productId" = product.id
-        JOIN "categories" AS category ON category.id = product_category."categoryId"
-        CROSS JOIN search_query
-        WHERE product."status" = 'ACTIVE'
-          AND product."deletedAt" IS NULL
-          AND category."isActive" = true
-          AND category."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(category.name) % search_query.value
-            OR normalize_fa_search(category.name) LIKE '%' || search_query.value || '%'
-          )
-
-        UNION ALL
-
-        SELECT
-          product.id AS "productId",
-          similarity(normalize_fa_search(variant.sku), search_query.value) * 0.4 AS score
-        FROM "products" AS product
-        JOIN "product_variants" AS variant ON variant."productId" = product.id
-        CROSS JOIN search_query
-        WHERE product."status" = 'ACTIVE'
-          AND product."deletedAt" IS NULL
-          AND variant."isActive" = true
-          AND variant."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(variant.sku) % search_query.value
-            OR normalize_fa_search(variant.sku) LIKE '%' || search_query.value || '%'
-          )
-      )
-    `;
   }
 
   private async resolvePublicCategoryIds(slug: string): Promise<string[]> {

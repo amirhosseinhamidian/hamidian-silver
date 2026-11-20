@@ -100,6 +100,7 @@ export function StorefrontSearch() {
           if (!response.ok) throw new Error('Suggestion request failed.');
           const result = parseSuggestions(payload);
           if (!result) throw new Error('Suggestion response was invalid.');
+          if (controller.signal.aborted) return;
           setSuggestions(result);
           const resultCount = result.categories.length + result.brands.length + result.items.length;
           setStatus(resultCount > 0 ? 'success' : 'empty');
@@ -188,7 +189,7 @@ export function StorefrontSearch() {
             </div>
 
             <DialogPrimitive.Description className="mt-2 text-xs text-[var(--sf-color-muted)]">
-              نام محصول، برند، دسته‌بندی یا کد محصول را وارد کنید.
+              نام، برند، دسته‌بندی، کد یا ویژگی محصول را وارد کنید.
             </DialogPrimitive.Description>
 
             <form
