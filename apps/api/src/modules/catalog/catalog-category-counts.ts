@@ -1,3 +1,4 @@
+import { Prisma } from '../../generated/prisma/client';
 import type { PrismaService } from '../../infrastructure/database/prisma.service';
 
 type CategoryCountRow = {
@@ -6,17 +7,19 @@ type CategoryCountRow = {
   activeSubtreeProductCount: bigint;
 };
 
-export async function readActiveCategoryProductCounts(prisma: Pick<PrismaService, '$queryRaw'>) {
-  // UNION terminates even if legacy category data contains a loop.
-  const counts = await prisma.$queryRaw<CategoryCountRow[]>`
-    WITH RECURSIVE subtree("rootId", "categoryId") AS (
+// UNION terminates even if legacy category data contains a loop.
+export const catalogCategorySubtreeCte = Prisma.sql`subtree("rootId", "categoryId") AS (
       SELECT id, id FROM "categories" WHERE "isActive" AND "deletedAt" IS NULL
       UNION
       SELECT subtree."rootId", child.id
       FROM subtree
       JOIN "categories" AS child ON child."parentId" = subtree."categoryId"
       WHERE child."isActive" AND child."deletedAt" IS NULL
-    )
+    )`;
+
+export async function readActiveCategoryProductCounts(prisma: Pick<PrismaService, '$queryRaw'>) {
+  const counts = await prisma.$queryRaw<CategoryCountRow[]>`
+    WITH RECURSIVE ${catalogCategorySubtreeCte}
     SELECT
       subtree."rootId" AS id,
       COUNT(DISTINCT product.id) FILTER (WHERE subtree."rootId" = subtree."categoryId") AS "activeProductCount",

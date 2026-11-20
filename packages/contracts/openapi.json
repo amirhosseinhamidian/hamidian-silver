@@ -406,6 +406,40 @@
         ]
       }
     },
+    "/api/v1/catalog/public/search/facets": {
+      "post": {
+        "operationId": "CatalogController_searchPublicCatalog_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicCatalogFacetsQueryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFacetedCatalogDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/api/v1/catalog/public/search/suggestions": {
       "get": {
         "operationId": "CatalogController_listPublicProductSuggestions_v1",
@@ -2773,9 +2807,9 @@
             "schema": {
               "type": "string",
               "enum": [
+                "PENDING",
                 "FAILED",
                 "CANCELLED",
-                "PENDING",
                 "CONFIRMED"
               ]
             }
@@ -4741,9 +4775,9 @@
             "schema": {
               "type": "string",
               "enum": [
+                "PENDING",
                 "FAILED",
                 "UNKNOWN",
-                "PENDING",
                 "PROCESSING",
                 "DISPATCHING",
                 "SENT"
@@ -5469,8 +5503,8 @@
             "schema": {
               "type": "string",
               "enum": [
-                "CANCELLED",
                 "PENDING",
+                "CANCELLED",
                 "IN_PROGRESS",
                 "COMPLETED"
               ]
@@ -10408,6 +10442,354 @@
         },
         "required": [
           "items",
+          "page",
+          "pageSize",
+          "total",
+          "totalPages"
+        ]
+      },
+      "PublicCatalogFacetFilterDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "values": {
+            "uniqueItems": true,
+            "minItems": 1,
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 64,
+              "minLength": 1
+            }
+          },
+          "min": {
+            "type": "number",
+            "minimum": -1000000,
+            "maximum": 1000000
+          },
+          "max": {
+            "type": "number",
+            "minimum": -1000000,
+            "maximum": 1000000
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "PublicCatalogFacetsQueryDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1000,
+            "default": 1
+          },
+          "pageSize": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 48,
+            "default": 24
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "scopeCategory": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "scopeBrand": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "categories": {
+            "uniqueItems": true,
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 180,
+              "minLength": 1
+            }
+          },
+          "brands": {
+            "uniqueItems": true,
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 180,
+              "minLength": 1
+            }
+          },
+          "availability": {
+            "enum": [
+              "in-stock",
+              "out-of-stock"
+            ],
+            "type": "string"
+          },
+          "sizeIds": {
+            "uniqueItems": true,
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "minPriceToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "maxPriceToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "minWeightGrams": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 9999999.999
+          },
+          "maxWeightGrams": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 9999999.999
+          },
+          "minLengthMm": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "maxLengthMm": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "attributes": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogFacetFilterDto"
+            }
+          },
+          "sort": {
+            "enum": [
+              "newest",
+              "price-asc",
+              "price-desc",
+              "name-asc"
+            ],
+            "type": "string",
+            "default": "newest"
+          }
+        }
+      },
+      "PublicCatalogFacetOptionDto": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "value",
+          "label",
+          "count"
+        ]
+      },
+      "PublicCatalogFacetRangeDto": {
+        "type": "object",
+        "properties": {
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "min",
+          "max",
+          "count"
+        ]
+      },
+      "PublicCatalogAttributeFacetDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "SELECT",
+              "NUMBER",
+              "RANGE",
+              "BOOLEAN",
+              "MULTI_SELECT"
+            ],
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "NONE",
+              "GRAM",
+              "MILLIMETER",
+              "SIZE",
+              "PER_MILLE",
+              "BAR"
+            ],
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogFacetOptionDto"
+            }
+          },
+          "range": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogFacetRangeDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "kind",
+          "unit",
+          "options",
+          "range"
+        ]
+      },
+      "PublicCatalogFacetsDto": {
+        "type": "object",
+        "properties": {
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogFacetOptionDto"
+            }
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogFacetOptionDto"
+            }
+          },
+          "availability": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogFacetOptionDto"
+            }
+          },
+          "sizes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogFacetOptionDto"
+            }
+          },
+          "priceToman": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogFacetRangeDto"
+              }
+            ]
+          },
+          "weightGrams": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogFacetRangeDto"
+              }
+            ]
+          },
+          "lengthMm": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogFacetRangeDto"
+              }
+            ]
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogAttributeFacetDto"
+            }
+          }
+        },
+        "required": [
+          "categories",
+          "brands",
+          "availability",
+          "sizes",
+          "priceToman",
+          "weightGrams",
+          "lengthMm",
+          "attributes"
+        ]
+      },
+      "PublicFacetedCatalogDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogProductSummaryDto"
+            }
+          },
+          "facets": {
+            "$ref": "#/components/schemas/PublicCatalogFacetsDto"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "facets",
           "page",
           "pageSize",
           "total",
@@ -16788,9 +17170,9 @@
           "status": {
             "type": "string",
             "enum": [
+              "PENDING",
               "FAILED",
               "CANCELLED",
-              "PENDING",
               "DELIVERED",
               "READY",
               "HANDED_OVER",

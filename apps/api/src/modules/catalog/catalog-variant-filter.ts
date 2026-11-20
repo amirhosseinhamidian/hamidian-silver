@@ -34,7 +34,7 @@ export const catalogStockCte = Prisma.sql`stock AS (
       WHERE warehouse."isActive" AND warehouse."deletedAt" IS NULL
       GROUP BY inventory."variantId"
 )`;
-const catalogVariantStockSql = Prisma.sql`CASE WHEN variant."inventoryMode" = 'COMPONENTS' THEN COALESCE((
+export const catalogVariantStockSql = Prisma.sql`CASE WHEN variant."inventoryMode" = 'COMPONENTS' THEN COALESCE((
           SELECT MIN(CASE
             WHEN component."isActive" AND component."deletedAt" IS NULL AND component."inventoryMode" = 'OWN' AND recipe.quantity > 0
             THEN FLOOR(COALESCE(component_stock.units, 0)::numeric / NULLIF(recipe.quantity, 0))
@@ -45,10 +45,10 @@ const catalogVariantStockSql = Prisma.sql`CASE WHEN variant."inventoryMode" = 'C
           LEFT JOIN stock AS component_stock ON component_stock."variantId" = component.id
           WHERE recipe."bundleVariantId" = variant.id
         ), 0) ELSE COALESCE(own_stock.units, 0) END::bigint`;
-const catalogVariantStockJoins = Prisma.sql`LEFT JOIN stock AS own_stock ON own_stock."variantId" = variant.id
+export const catalogVariantStockJoins = Prisma.sql`LEFT JOIN stock AS own_stock ON own_stock."variantId" = variant.id
       LEFT JOIN "sizes" AS size ON size.id = variant."sizeId"
       LEFT JOIN "size_groups" AS size_group ON size_group.id = size."groupId"`;
-const catalogActiveVariantCriteria = Prisma.sql`AND variant."isActive" AND variant."deletedAt" IS NULL
+export const catalogActiveVariantCriteria = Prisma.sql`AND variant."isActive" AND variant."deletedAt" IS NULL
         AND (product."sizeMode" <> 'SIZED' OR
           (size."isActive" AND size."deletedAt" IS NULL AND size_group."isActive" AND size_group."deletedAt" IS NULL))`;
 

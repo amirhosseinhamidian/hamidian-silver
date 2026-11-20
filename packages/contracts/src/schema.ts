@@ -148,6 +148,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/public/search/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_searchPublicCatalog_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/public/search/suggestions": {
         parameters: {
             query?: never;
@@ -3981,6 +3997,76 @@ export interface components {
             total: number;
             totalPages: number;
         };
+        PublicCatalogFacetFilterDto: {
+            code: string;
+            values?: string[];
+            min?: number;
+            max?: number;
+        };
+        PublicCatalogFacetsQueryDto: {
+            /** @default 1 */
+            page: number;
+            /** @default 24 */
+            pageSize: number;
+            q?: string;
+            scopeCategory?: string;
+            scopeBrand?: string;
+            categories?: string[];
+            brands?: string[];
+            /** @enum {string} */
+            availability?: "in-stock" | "out-of-stock";
+            sizeIds?: string[];
+            minPriceToman?: number;
+            maxPriceToman?: number;
+            minWeightGrams?: number;
+            maxWeightGrams?: number;
+            minLengthMm?: number;
+            maxLengthMm?: number;
+            attributes?: components["schemas"]["PublicCatalogFacetFilterDto"][];
+            /**
+             * @default newest
+             * @enum {string}
+             */
+            sort: "newest" | "price-asc" | "price-desc" | "name-asc";
+        };
+        PublicCatalogFacetOptionDto: {
+            value: string;
+            label: string;
+            count: number;
+        };
+        PublicCatalogFacetRangeDto: {
+            min: number;
+            max: number;
+            count: number;
+        };
+        PublicCatalogAttributeFacetDto: {
+            code: string;
+            label: string;
+            /** @enum {string} */
+            kind: "SELECT" | "NUMBER" | "RANGE" | "BOOLEAN" | "MULTI_SELECT";
+            /** @enum {string} */
+            unit: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
+            options: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            range: components["schemas"]["PublicCatalogFacetRangeDto"] | null;
+        };
+        PublicCatalogFacetsDto: {
+            categories: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            brands: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            availability: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            sizes: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            priceToman: components["schemas"]["PublicCatalogFacetRangeDto"] | null;
+            weightGrams: components["schemas"]["PublicCatalogFacetRangeDto"] | null;
+            lengthMm: components["schemas"]["PublicCatalogFacetRangeDto"] | null;
+            attributes: components["schemas"]["PublicCatalogAttributeFacetDto"][];
+        };
+        PublicFacetedCatalogDto: {
+            items: components["schemas"]["PublicCatalogProductSummaryDto"][];
+            facets: components["schemas"]["PublicCatalogFacetsDto"];
+            page: number;
+            pageSize: number;
+            total: number;
+            totalPages: number;
+        };
         PublicCatalogProductSuggestionDto: {
             salePriceToman: number | null;
             compareAtPriceToman: number | null;
@@ -5529,7 +5615,7 @@ export interface components {
         };
         UpdateShipmentStatusDto: {
             /** @enum {string} */
-            status: "FAILED" | "CANCELLED" | "PENDING" | "DELIVERED" | "READY" | "HANDED_OVER" | "IN_TRANSIT";
+            status: "PENDING" | "FAILED" | "CANCELLED" | "DELIVERED" | "READY" | "HANDED_OVER" | "IN_TRANSIT";
             trackingCode?: string;
             providerShipmentId?: string;
             reason?: string;
@@ -6323,6 +6409,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PublicCatalogProductListDto"];
                 };
+            };
+        };
+    };
+    CatalogController_searchPublicCatalog_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicCatalogFacetsQueryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFacetedCatalogDto"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -7891,7 +8006,7 @@ export interface operations {
     PaymentRefundsController_list_v1: {
         parameters: {
             query?: {
-                status?: "FAILED" | "CANCELLED" | "PENDING" | "CONFIRMED";
+                status?: "PENDING" | "FAILED" | "CANCELLED" | "CONFIRMED";
                 orderId?: string;
                 from?: string;
                 to?: string;
@@ -9104,7 +9219,7 @@ export interface operations {
     NotificationOutboxRecoveryController_list_v1: {
         parameters: {
             query?: {
-                status?: "FAILED" | "UNKNOWN" | "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT";
+                status?: "PENDING" | "FAILED" | "UNKNOWN" | "PROCESSING" | "DISPATCHING" | "SENT";
                 source?: "CUSTOMER" | "OPERATIONAL";
                 limit?: number;
             };
@@ -9595,7 +9710,7 @@ export interface operations {
     PlatingFulfillmentController_list_v1: {
         parameters: {
             query?: {
-                status?: "CANCELLED" | "PENDING" | "IN_PROGRESS" | "COMPLETED";
+                status?: "PENDING" | "CANCELLED" | "IN_PROGRESS" | "COMPLETED";
                 limit?: number;
             };
             header?: never;

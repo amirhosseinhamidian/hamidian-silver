@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   Param,
   Patch,
@@ -14,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
+  ApiBadRequestResponse,
   ApiBody,
   ApiConsumes,
   ApiCreatedResponse,
@@ -41,6 +43,10 @@ import { CategoryMergeResultDto, MergeCategoryDto } from './dto/merge-category.d
 import { CreateSizeDto } from './dto/create-size.dto';
 import { CreateSizeGroupDto } from './dto/create-size-group.dto';
 import { PublicCatalogQueryDto } from './dto/public-catalog-query.dto';
+import {
+  PublicCatalogFacetsQueryDto,
+  PublicFacetedCatalogDto,
+} from './dto/public-catalog-facets.dto';
 import { PublicCatalogSuggestionsQueryDto } from './dto/public-catalog-suggestions-query.dto';
 import { ReorderProductMediaDto } from './dto/reorder-product-media.dto';
 import {
@@ -94,6 +100,16 @@ export class CatalogController {
   @ApiOkResponse({ type: PublicCatalogProductListDto })
   listPublicProducts(@Query() query: PublicCatalogQueryDto) {
     return this.catalogService.listPublicProducts(query);
+  }
+
+  @Public()
+  @Post('public/search/facets')
+  @HttpCode(200)
+  @Header('X-Robots-Tag', 'noindex')
+  @ApiOkResponse({ type: PublicFacetedCatalogDto })
+  @ApiBadRequestResponse()
+  searchPublicCatalog(@Body() query: PublicCatalogFacetsQueryDto) {
+    return this.catalogService.searchPublicCatalog(query);
   }
 
   @Public()

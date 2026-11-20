@@ -12,12 +12,14 @@ import {
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
 import { readActiveCategoryProductCounts } from './catalog-category-counts';
+import { buildPublicCatalogFacetsQuery, type CatalogFacetPageRow } from './catalog-facets-query';
 import { catalogHierarchyTransaction } from './catalog-hierarchy-transaction';
 import { CatalogAttributesService } from './catalog-attributes.service';
 import {
   catalogProductStockSql,
   catalogStockCte,
   readMatchingCatalogVariants,
+  type MatchingCatalogVariants,
 } from './catalog-variant-filter';
 import {
   availabilitySelect,
@@ -29,6 +31,10 @@ import { CreateBrandDto } from './dto/create-brand.dto';
 import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
 import { CreateProductDto } from './dto/create-product.dto';
+import type {
+  PublicCatalogFacetsQueryDto,
+  PublicFacetedCatalogDto,
+} from './dto/public-catalog-facets.dto';
 import { PublicCatalogQueryDto, PublicCatalogSort } from './dto/public-catalog-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PublicMediaUrlService } from './public-media-url.service';
@@ -1164,15 +1170,77 @@ export class CatalogService {
       total = prioritizedProductIds.length;
       pageProductIds = prioritizedProductIds.slice((page - 1) * pageSize, page * pageSize);
     }
-    const matchingVariantIds = matches
-      ? pageProductIds.flatMap(
-          (productId) => matches.get(productId)?.variants.map(({ id }) => id) ?? [],
-        )
-      : undefined;
+    return this.readPublicProductPage(
+      this.prisma,
+      pageProductIds,
+      page,
+      pageSize,
+      total,
+      availabilityByProductId,
+      matches,
+    );
+  }
+
+  async searchPublicCatalog(query: PublicCatalogFacetsQueryDto): Promise<PublicFacetedCatalogDto> {
+    const search = normalizeCatalogSearch(query.q ?? '');
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 24;
+    const statement = buildPublicCatalogFacetsQuery(
+      query,
+      search ? this.publicSearchMatchesSql(search) : undefined,
+    );
+    return this.prisma.$transaction(
+      async (reader) => {
+        const [result] = await reader.$queryRaw<CatalogFacetPageRow[]>(statement);
+        if (result.invalidAttributeFilter) {
+          throw new BadRequestException(
+            'A catalog attribute filter is not supported by the current definition.',
+          );
+        }
+        const products = await this.readPublicProductPage(
+          reader,
+          result.items.map(({ id }) => id),
+          page,
+          pageSize,
+          Number(result.total),
+          new Map(result.items.map(({ id, availableQuantity }) => [id, availableQuantity])),
+          new Map(
+            result.items.flatMap(({ id, availableQuantity, variants }) =>
+              variants.length ? [[id, { availableQuantity, variants }] as const] : [],
+            ),
+          ),
+          new Map(result.items.map((item) => [item.id, item])),
+        );
+        return { ...products, facets: result.facets };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 10_000 },
+    );
+  }
+
+  private async readPublicProductPage(
+    reader: Pick<PrismaService, 'product'>,
+    pageProductIds: string[],
+    page: number,
+    pageSize: number,
+    total: number,
+    availabilityByProductId: ReadonlyMap<string, number>,
+    matches?: ReadonlyMap<string, MatchingCatalogVariants>,
+    facetPrices?: ReadonlyMap<
+      string,
+      Pick<CatalogFacetPageRow['items'][number], 'salePriceToman' | 'compareAtPriceToman'>
+    >,
+  ) {
+    const matchingVariantIds = facetPrices
+      ? []
+      : matches?.size
+        ? pageProductIds.flatMap(
+            (productId) => matches.get(productId)?.variants.map(({ id }) => id) ?? [],
+          )
+        : undefined;
     const products =
       pageProductIds.length === 0
         ? []
-        : await this.prisma.product.findMany({
+        : await reader.product.findMany({
             where: {
               id: {
                 in: pageProductIds,
@@ -1297,6 +1365,7 @@ export class CatalogService {
     return {
       items: orderedPageProducts.map((product) => {
         const match = matches?.get(product.id);
+        const facetPrice = facetPrices?.get(product.id);
         const availableQuantity =
           match?.availableQuantity ?? availabilityByProductId.get(product.id) ?? 0;
         const lowestPricedVariant = (product.variants ?? [])
@@ -1349,9 +1418,12 @@ export class CatalogService {
           seoCanonicalPath: product.seoCanonicalPath,
           seoNoIndex: product.seoNoIndex,
           ...(product.updatedAt ? { updatedAt: product.updatedAt.toISOString() } : {}),
-          salePriceToman: lowestPricedVariant?.salePriceToman ?? product.salePriceToman,
-          compareAtPriceToman:
-            lowestPricedVariant?.compareAtPriceToman ?? product.compareAtPriceToman,
+          salePriceToman: facetPrice
+            ? facetPrice.salePriceToman
+            : (lowestPricedVariant?.salePriceToman ?? product.salePriceToman),
+          compareAtPriceToman: facetPrice
+            ? facetPrice.compareAtPriceToman
+            : (lowestPricedVariant?.compareAtPriceToman ?? product.compareAtPriceToman),
           sizeMode: product.sizeMode,
           brand,
           categories: product.categories

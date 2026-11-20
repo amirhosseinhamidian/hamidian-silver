@@ -10,6 +10,7 @@ describe('CatalogController', () => {
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.listPublicCategories)).toBe(true);
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.listPublicBrands)).toBe(true);
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.listPublicProducts)).toBe(true);
+    expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.searchPublicCatalog)).toBe(true);
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.listPublicProductSuggestions)).toBe(true);
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.getPublicProduct)).toBe(true);
 
