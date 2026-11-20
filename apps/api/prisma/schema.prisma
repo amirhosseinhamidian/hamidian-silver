@@ -283,6 +283,111 @@ model SeoRedirect {
   @@map("seo_redirects")
 }
 
+enum SeoSyncStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model SeoIntegration {
+  id           String                @id @default(uuid()) @db.Uuid
+  property     String                @unique @db.VarChar(128)
+  plannedOn    DateTime?             @db.Date
+  plannedScope String?               @db.VarChar(100)
+  pausedUntil  DateTime?             @db.Timestamptz(3)
+  createdAt    DateTime              @default(now()) @db.Timestamptz(3)
+  runs         SeoSyncRun[]
+  performance  SeoPerformanceDaily[]
+  urls         SeoUrlInventory[]
+
+  @@map("seo_integrations")
+}
+
+model SeoSyncRun {
+  id             String                @id @default(uuid()) @db.Uuid
+  integrationId  String                @db.Uuid
+  metricDate     DateTime              @db.Date
+  scheduledOn    DateTime              @db.Date
+  searchType     String                @db.VarChar(20)
+  status         SeoSyncStatus         @default(PENDING)
+  attempts       Int                   @default(0)
+  availableAt    DateTime              @default(now()) @db.Timestamptz(3)
+  leaseUntil     DateTime?             @db.Timestamptz(3)
+  startedAt      DateTime?             @db.Timestamptz(3)
+  finishedAt     DateTime?             @db.Timestamptz(3)
+  errorCode      String?               @db.VarChar(50)
+  rowCount       Int?
+  coverage       Json?
+  integration    SeoIntegration        @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  performance    SeoPerformanceDaily[]
+
+  @@unique([integrationId, metricDate, searchType, scheduledOn], map: "seo_sync_runs_schedule_key")
+  @@index([integrationId, status, availableAt])
+  @@index([integrationId, status, leaseUntil])
+  @@index([integrationId, finishedAt])
+  @@map("seo_sync_runs")
+}
+
+model SeoUrlInventory {
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  integrationId   String                @db.Uuid
+  urlKey          String                @db.Char(64)
+  reportedUrl     String
+  reportedPath    String
+  reportedSearch  String?
+  normalizedPath  String
+  canonicalPath   String?
+  matchedBy       String?               @db.VarChar(12)
+  productId       String?               @db.Uuid
+  categoryId      String?               @db.Uuid
+  brandId         String?               @db.Uuid
+  articleId       String?               @db.Uuid
+  firstObservedAt DateTime              @default(now()) @db.Timestamptz(3)
+  lastObservedAt  DateTime              @default(now()) @db.Timestamptz(3)
+  integration     SeoIntegration        @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  product         Product?              @relation(fields: [productId], references: [id], onDelete: SetNull)
+  category        Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brand           Brand?                @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  article         GuideArticle?         @relation(fields: [articleId], references: [id], onDelete: SetNull)
+  performance     SeoPerformanceDaily[]
+
+  @@unique([integrationId, urlKey])
+  @@index([productId])
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([articleId])
+  @@map("seo_url_inventory")
+}
+
+model SeoPerformanceDaily {
+  integrationId   String           @db.Uuid
+  metricDate      DateTime         @db.Date
+  dimensionKey    String           @db.Char(64)
+  searchType      String           @db.VarChar(20)
+  scope           String           @db.VarChar(24)
+  aggregation     String?          @db.VarChar(16)
+  device          String?          @db.VarChar(16)
+  searchQuery     String?
+  brand           String?          @db.VarChar(16)
+  brandSource     String?          @db.VarChar(12)
+  urlId           String?          @db.Uuid
+  clicks          Float
+  impressions     Float
+  averagePosition Float?
+  syncRunId       String?          @db.Uuid
+  sourceVersion   DateTime         @db.Date
+  integration     SeoIntegration   @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  url             SeoUrlInventory? @relation(fields: [urlId], references: [id], onDelete: SetNull)
+  syncRun         SeoSyncRun?      @relation(fields: [syncRunId], references: [id], onDelete: SetNull)
+
+  @@id([integrationId, metricDate, dimensionKey])
+  @@index([integrationId, searchType, scope, metricDate], map: "seo_performance_daily_scope_idx")
+  @@index([urlId, searchType, scope, metricDate])
+  @@index([syncRunId])
+  @@map("seo_performance_daily")
+}
+
 model Media {
   id                      String         @id @default(uuid()) @db.Uuid
   storageKey              String         @unique @db.VarChar(500)
@@ -504,6 +609,7 @@ model Category {
   homepageFeature HomepageFeaturedCategory?
   guideArticles     GuideArticleCategory[]
   supplierSourceCategories SupplierSourceCategory[]
+  seoUrls SeoUrlInventory[]
 
   @@index([parentId])
   @@index([imageId])
@@ -541,6 +647,7 @@ model Brand {
   products    Product[]
   homepageFeature HomepageFeaturedBrand?
   guideArticles     GuideArticleBrand[]
+  seoUrls           SeoUrlInventory[]
 
   @@index([imageId])
   @@index([heroImageId])
@@ -652,6 +759,7 @@ model Product {
   relatedProductsAsTarget ProductRelation[] @relation("ProductRelationTarget")
   guideArticles                  GuideArticleProduct[]
   supplierImportDraft SupplierProductImportDraft?
+  seoUrls          SeoUrlInventory[]
 
   @@index([brandId])
   @@index([countryId])
@@ -763,6 +871,7 @@ model GuideArticle {
   products           GuideArticleProduct[]
   categories         GuideArticleCategory[]
   brands             GuideArticleBrand[]
+  seoUrls            SeoUrlInventory[]
 
   @@index([status, publishedAt])
   @@index([isFeatured, publishedAt])

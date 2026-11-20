@@ -104,6 +104,11 @@ export const envValidationSchema = Joi.object({
     .uri({ scheme: ['http', 'https'] })
     .empty('')
     .optional(),
+  SEARCH_CONSOLE_SYNC_ENABLED: Joi.boolean().default(false),
+  SEARCH_CONSOLE_SYNC_HISTORY_DAYS: Joi.number().integer().min(3).max(90).default(30),
+  SEARCH_CONSOLE_SYNC_SEARCH_TYPES: Joi.string()
+    .pattern(/^(web|image|video|news)(,(web|image|video|news)){0,3}$/)
+    .default('web'),
   ATTRIBUTION_MODEL: Joi.string().valid('FIRST_NON_DIRECT', 'LAST_NON_DIRECT').optional(),
   ATTRIBUTION_WINDOW_DAYS: Joi.number().integer().min(1).max(90).optional(),
   TELEGRAM_BOT_TOKEN: Joi.string().min(20).allow('').optional(),

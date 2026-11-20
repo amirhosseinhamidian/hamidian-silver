@@ -10,6 +10,8 @@ import {
   SEARCH_CONSOLE_CLIENT,
 } from './search-console/google-search-console.client';
 import { SearchConsoleController } from './search-console/search-console.controller';
+import { SearchConsoleSyncStore } from './search-console/search-console-sync.store';
+import { SearchConsoleSyncWorker } from './search-console/search-console-sync.worker';
 import { SearchConsoleService } from './search-console/search-console.service';
 
 @Module({
@@ -19,6 +21,8 @@ import { SearchConsoleService } from './search-console/search-console.service';
     SeoRedirectsService,
     SeoSitemapService,
     SearchConsoleService,
+    SearchConsoleSyncStore,
+    SearchConsoleSyncWorker,
     {
       provide: SEARCH_CONSOLE_CLIENT,
       inject: [ConfigService],
