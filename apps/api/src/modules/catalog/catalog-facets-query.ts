@@ -267,12 +267,13 @@ export function buildPublicCatalogFacetsQuery(
       FROM eligible_products p ${ranking.join} WHERE p.scope = 'results'
       ORDER BY position LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}
     ),
-    brands AS (
+    -- Keep facet CTE names distinct from tables read by the recursive query.
+    brand_facets AS (
       SELECT p."brandSlug" AS value, p."brandLabel" AS label, COUNT(*) AS count
       FROM eligible_products p WHERE p.scope = ${facetScope('brands')} AND p."brandSlug" IS NOT NULL
       GROUP BY p."brandSlug", p."brandLabel"
     ),
-    categories AS (
+    category_facets AS (
       SELECT cat.slug AS value, cat.name AS label, COUNT(DISTINCT p.id) AS count
       FROM eligible_products p JOIN "product_categories" membership ON membership."productId" = p.id
       JOIN subtree relation ON relation."categoryId" = membership."categoryId"
@@ -280,7 +281,7 @@ export function buildPublicCatalogFacetsQuery(
       WHERE p.scope = ${facetScope('categories')} AND ${withinPageCategory(Prisma.sql`cat.id`)}
       GROUP BY cat.slug, cat.name
     ),
-    sizes AS (
+    size_facets AS (
       SELECT size.id::text AS value, size.label, COUNT(DISTINCT p.id) AS count
       FROM eligible_products p
       JOIN selected_variants v ON v.scope = p.scope AND v."productId" = p.id
@@ -288,7 +289,7 @@ export function buildPublicCatalogFacetsQuery(
       WHERE p.scope = ${facetScope('sizes')}
       GROUP BY size.id, size.label
     ),
-    availability AS (
+    availability_facets AS (
       SELECT CASE WHEN p."availableQuantity" > 0 THEN 'in-stock' ELSE 'out-of-stock' END AS value,
         CASE WHEN p."availableQuantity" > 0 THEN 'موجود' ELSE 'ناموجود' END AS label, COUNT(*) AS count
       FROM eligible_products p WHERE p.scope = ${facetScope('availability')} GROUP BY 1, 2
@@ -316,10 +317,10 @@ export function buildPublicCatalogFacetsQuery(
         ORDER BY v.id LIMIT 1
       ) price ON TRUE), '[]'::jsonb) AS items,
       jsonb_build_object(
-        'categories', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM categories o), '[]'::jsonb),
-        'brands', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM brands o), '[]'::jsonb),
-        'sizes', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM sizes o), '[]'::jsonb),
-        'availability', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.value) FROM availability o), '[]'::jsonb),
+        'categories', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM category_facets o), '[]'::jsonb),
+        'brands', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM brand_facets o), '[]'::jsonb),
+        'sizes', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM size_facets o), '[]'::jsonb),
+        'availability', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.value) FROM availability_facets o), '[]'::jsonb),
         'priceToman', ${range('price', Prisma.sql`v."salePriceToman"`)},
         'weightGrams', ${range('weight', Prisma.sql`v."weightGrams"`)},
         'lengthMm', ${range('length', Prisma.sql`v."lengthMm"`)},
