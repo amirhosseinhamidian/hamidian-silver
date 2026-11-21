@@ -45,7 +45,7 @@ const country: AdminCountry = {
   updatedAt: '2026-09-07T11:00:00.000Z',
 };
 
-function view(canWrite = true) {
+function view(canWrite = true, initialEditId?: string) {
   return (
     <ReferenceManagementView
       brands={[brand]}
@@ -53,11 +53,19 @@ function view(canWrite = true) {
       brandsFailed={false}
       countriesFailed={false}
       canWrite={canWrite}
+      initialEditId={initialEditId}
     />
   );
 }
 
 describe('ReferenceManagementView', () => {
+  it('opens the editor for the specified brand only with write access', async () => {
+    const { rerender } = render(view(false, brand.id));
+    expect(screen.queryByRole('dialog', { name: 'ویرایش حمیدیان' })).not.toBeInTheDocument();
+    rerender(view(true, brand.id));
+    expect(await screen.findByRole('dialog', { name: 'ویرایش حمیدیان' })).toBeVisible();
+  });
+
   it('switches between responsive brand and country views', () => {
     render(view());
     expect(screen.getByRole('region', { name: 'کارت‌های برندها' })).toHaveClass('md:hidden');

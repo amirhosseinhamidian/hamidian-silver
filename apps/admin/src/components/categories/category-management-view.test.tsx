@@ -46,6 +46,27 @@ function jsonResponse(body: unknown): Response {
 }
 
 describe('CategoryManagementView', () => {
+  it('opens the referenced category editor only for authorized users', async () => {
+    const { rerender } = render(
+      <CategoryManagementView
+        categories={categories}
+        failed={false}
+        canWrite={false}
+        initialEditId="category-1"
+      />,
+    );
+    expect(screen.queryByRole('dialog', { name: 'ویرایش انگشتر' })).not.toBeInTheDocument();
+    rerender(
+      <CategoryManagementView
+        categories={categories}
+        failed={false}
+        canWrite
+        initialEditId="category-1"
+      />,
+    );
+    expect(await screen.findByRole('dialog', { name: 'ویرایش انگشتر' })).toBeVisible();
+  });
+
   it('uses mobile cards and normalizes Persian order input when editing', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: 'category-1' }));
     vi.stubGlobal('fetch', fetchMock);

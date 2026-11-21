@@ -6,12 +6,14 @@ import { formatAdminInteger } from '@/lib/presentation/formatters';
 
 export const dynamic = 'force-dynamic';
 
-export default async function CategoriesPage() {
+type Props = Readonly<{ searchParams: Promise<{ edit?: string | string[] }> }>;
+
+export default async function CategoriesPage({ searchParams }: Props) {
   const user = await requireAdminSession({
     permissions: ['catalog.read'],
     returnTo: '/categories',
   });
-  const categories = await loadCategoryManagement();
+  const [categories, { edit }] = await Promise.all([loadCategoryManagement(), searchParams]);
 
   return (
     <main className="admin-container py-6 sm:py-8 lg:py-10">
@@ -27,6 +29,7 @@ export default async function CategoriesPage() {
         categories={categories.data ?? []}
         failed={categories.failed}
         canWrite={user.permissions.includes('catalog.write')}
+        initialEditId={typeof edit === 'string' ? edit : undefined}
       />
     </main>
   );

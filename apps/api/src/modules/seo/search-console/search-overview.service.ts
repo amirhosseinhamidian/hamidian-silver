@@ -39,7 +39,7 @@ function cached<T>(cache: Cache<T>, key: string, read: () => Promise<T>): Promis
   return result;
 }
 
-function calendar(query: SearchOverviewQueryDto) {
+export function reportCalendar(query: SearchOverviewQueryDto) {
   const first = new Date(`${query.startDate}T00:00:00Z`);
   const last = new Date(`${query.endDate}T00:00:00Z`);
   const days = (last.valueOf() - first.valueOf()) / dayMs + 1;
@@ -118,6 +118,17 @@ function changes(current: SearchOverviewPeriodDto, previous: SearchOverviewPerio
   };
 }
 
+export function compareSearchPeriods(
+  { previousFirst, days }: ReturnType<typeof reportCalendar>,
+  rows: OverviewDayRow[],
+) {
+  const timeline = dailySeries(previousFirst, days * 2, rows);
+  const daily = timeline.slice(days);
+  const current = period(daily);
+  const previous = period(timeline.slice(0, days));
+  return { current, previous, change: changes(current, previous), daily };
+}
+
 @Injectable()
 export class SearchOverviewService {
   private readonly overviewCache: Cache<SearchOverviewDto> = new Map();
@@ -131,7 +142,7 @@ export class SearchOverviewService {
   ) {}
 
   overview(query: SearchOverviewQueryDto) {
-    const dates = calendar(query);
+    const dates = reportCalendar(query);
     const key = JSON.stringify([
       query.startDate,
       query.endDate,
@@ -213,12 +224,9 @@ export class SearchOverviewService {
             { isolationLevel: 'RepeatableRead', timeout: 10_000 },
           )
         : { rows: [], sync: initialSync };
-      const timeline = dailySeries(previousFirst, days * 2, result.rows);
-      const daily = timeline.slice(days);
-      const current = period(daily);
-      const previous = period(timeline.slice(0, days));
+      const comparison = compareSearchPeriods(dates, result.rows);
       const weekly = Array.from({ length: Math.ceil(days / 7) }, (_, index) =>
-        period(daily.slice(index * 7, index * 7 + 7)),
+        period(comparison.daily.slice(index * 7, index * 7 + 7)),
       );
       return {
         property,
@@ -226,17 +234,14 @@ export class SearchOverviewService {
         scope: query.brand ? 'brand' : query.device ? 'device' : 'property',
         timeZone: 'America/Los_Angeles',
         sync: result.sync,
-        current,
-        previous,
-        change: changes(current, previous),
-        daily,
+        ...comparison,
         weekly,
       };
     });
   }
 
   rows(query: SearchOverviewRowsQueryDto) {
-    const { searchType } = calendar(query);
+    const { searchType } = reportCalendar(query);
     if (query.q?.includes('\0')) throw new BadRequestException('Invalid search text.');
     const page = query.page ?? 1;
     const limit = query.limit ?? 25;

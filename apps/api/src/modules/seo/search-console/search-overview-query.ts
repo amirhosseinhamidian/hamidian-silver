@@ -13,14 +13,14 @@ export type OverviewDayRow = {
 };
 
 type StoredFilters = Pick<SearchOverviewQueryDto, 'device' | 'brand'>;
-type ReportWindow = {
-  integrationId: string;
+export type ReportWindow = {
+  integrationId: string | null;
   searchType: string;
   startDate: string;
   endDate: string;
 };
 
-function latestSuccessfulRuns(window: ReportWindow) {
+export function latestSuccessfulRuns(window: ReportWindow) {
   return Prisma.sql`latest AS MATERIALIZED (
     SELECT DISTINCT ON (run."metricDate") run.id, run."metricDate", run.coverage
     FROM seo_sync_runs run

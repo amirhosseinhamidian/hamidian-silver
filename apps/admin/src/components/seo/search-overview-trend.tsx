@@ -8,10 +8,10 @@ import { toPersianDigits } from '@/lib/presentation/formatters';
 export function SearchOverviewTrend({
   daily,
   weekly,
-}: Readonly<{ daily: OverviewPeriod[]; weekly: OverviewPeriod[] }>) {
+}: Readonly<{ daily: OverviewPeriod[]; weekly?: OverviewPeriod[] }>) {
   const [interval, setInterval] = useState<'daily' | 'weekly'>('daily');
   const [metric, setMetric] = useState<keyof OverviewMetrics>('clicks');
-  const points = interval === 'daily' ? daily : weekly;
+  const points = interval === 'weekly' && weekly ? weekly : daily;
   const maximum = Math.max(1, ...points.map((point) => point.metrics?.[metric] ?? 0));
   const show = (point: OverviewPeriod) => displaySearchMetric(metric, point.metrics?.[metric]);
   const period = (point: OverviewPeriod) =>
@@ -24,17 +24,21 @@ export function SearchOverviewTrend({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3 text-sm">
-        <label className="grid gap-1">
-          فاصلهٔ نمودار
-          <select
-            value={interval}
-            onChange={(event) => setInterval(event.target.value === 'weekly' ? 'weekly' : 'daily')}
-            className="rounded border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] p-2"
-          >
-            <option value="daily">روزانه</option>
-            <option value="weekly">هفتگی</option>
-          </select>
-        </label>
+        {weekly ? (
+          <label className="grid gap-1">
+            فاصلهٔ نمودار
+            <select
+              value={interval}
+              onChange={(event) =>
+                setInterval(event.target.value === 'weekly' ? 'weekly' : 'daily')
+              }
+              className="rounded border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] p-2"
+            >
+              <option value="daily">روزانه</option>
+              <option value="weekly">هفتگی</option>
+            </select>
+          </label>
+        ) : null}
         <label className="grid gap-1">
           شاخص نمودار
           <select

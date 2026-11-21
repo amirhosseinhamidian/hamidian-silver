@@ -9236,6 +9236,260 @@
         ]
       }
     },
+    "/api/v1/seo/search-entities": {
+      "get": {
+        "operationId": "SearchEntityController_list_v1",
+        "parameters": [
+          {
+            "name": "startDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "searchType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "web",
+              "type": "string",
+              "enum": [
+                "web",
+                "image",
+                "video",
+                "news"
+              ]
+            }
+          },
+          {
+            "name": "minimumImpressions",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "product",
+                "category",
+                "brand",
+                "article"
+              ]
+            }
+          },
+          {
+            "name": "opportunity",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "low-ctr",
+                "decline",
+                "growth"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 160,
+              "type": "string"
+            }
+          },
+          {
+            "name": "maximumCtrPercent",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0.01,
+              "maximum": 100,
+              "default": 2,
+              "type": "number"
+            }
+          },
+          {
+            "name": "minimumChangePercent",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "minimumPreviousClicks",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100000,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 5000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchEntityListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
+    "/api/v1/seo/search-entities/{kind}/{id}": {
+      "get": {
+        "operationId": "SearchEntityController_detail_v1",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "product",
+                "category",
+                "brand",
+                "article"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "searchType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "web",
+              "type": "string",
+              "enum": [
+                "web",
+                "image",
+                "video",
+                "news"
+              ]
+            }
+          },
+          {
+            "name": "minimumImpressions",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "urlId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "urlPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 5000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchEntityDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
     "/api/v1/supplier-imports/sources": {
       "get": {
         "operationId": "SupplierImportsController_listSources_v1",
@@ -20682,6 +20936,265 @@
           "page",
           "limit",
           "total"
+        ]
+      },
+      "SearchEntityListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "enum": [
+              "product",
+              "category",
+              "brand",
+              "article"
+            ],
+            "type": "string"
+          },
+          "canonicalUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "clicks": {
+            "type": "number",
+            "nullable": true
+          },
+          "impressions": {
+            "type": "number",
+            "nullable": true
+          },
+          "ctr": {
+            "type": "number",
+            "nullable": true
+          },
+          "clickChangePercent": {
+            "type": "number",
+            "nullable": true
+          },
+          "opportunities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "low-ctr",
+                "decline",
+                "growth"
+              ]
+            }
+          },
+          "sufficient": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "canonicalUrl",
+          "clicks",
+          "impressions",
+          "ctr",
+          "clickChangePercent",
+          "opportunities",
+          "sufficient",
+          "name",
+          "seoNoIndex"
+        ]
+      },
+      "SearchEntityListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchEntityListItemDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "limit",
+          "total"
+        ]
+      },
+      "SearchEntityIdentityDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "enum": [
+              "product",
+              "category",
+              "brand",
+              "article"
+            ],
+            "type": "string"
+          },
+          "canonicalUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "name": {
+            "type": "string"
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "canonicalUrl",
+          "name",
+          "seoNoIndex"
+        ]
+      },
+      "SearchEntityUrlDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reportedUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "reportedSearch": {
+            "type": "string",
+            "nullable": true
+          },
+          "recordedCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "matchedBy": {
+            "nullable": true,
+            "enum": [
+              "direct",
+              "redirect"
+            ],
+            "type": "string"
+          },
+          "isCanonical": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "reportedUrl",
+          "reportedSearch",
+          "recordedCanonicalPath",
+          "matchedBy",
+          "isCanonical"
+        ]
+      },
+      "SearchEntityDetailDto": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "$ref": "#/components/schemas/SearchEntityIdentityDto"
+          },
+          "selectedUrl": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SearchEntityUrlDto"
+              }
+            ]
+          },
+          "urls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchEntityUrlDto"
+            }
+          },
+          "current": {
+            "$ref": "#/components/schemas/SearchOverviewPeriodDto"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/SearchOverviewPeriodDto"
+          },
+          "change": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SearchOverviewMetricsDto"
+              }
+            ]
+          },
+          "daily": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchOverviewPeriodDto"
+            }
+          },
+          "topQueries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchOverviewRowDto"
+            }
+          },
+          "devices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchOverviewRowDto"
+            }
+          },
+          "urlPage": {
+            "type": "number"
+          },
+          "urlLimit": {
+            "type": "number"
+          },
+          "urlTotal": {
+            "type": "number"
+          },
+          "cappedQueryDays": {
+            "type": "number"
+          },
+          "sufficient": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entity",
+          "selectedUrl",
+          "urls",
+          "current",
+          "previous",
+          "change",
+          "daily",
+          "topQueries",
+          "devices",
+          "urlPage",
+          "urlLimit",
+          "urlTotal",
+          "cappedQueryDays",
+          "sufficient"
         ]
       },
       "Object": {

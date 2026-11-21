@@ -255,7 +255,12 @@ export function SearchOverviewView({
 }>) {
   return (
     <main className="admin-container space-y-6 py-6 sm:py-8 lg:py-10">
-      <h1 className="text-2xl font-black">عملکرد جست‌وجو</h1>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-black">عملکرد جست‌وجو</h1>
+        <ButtonLink href="/seo/entities" variant="outline">
+          عملکرد صفحات و فرصت‌ها
+        </ButtonLink>
+      </header>
       <Card
         title="بازه و فیلترها"
         description="روزهای میلادی بر اساس ساعت اقیانوس آرام و حداکثر بازه ۹۰ روز است."

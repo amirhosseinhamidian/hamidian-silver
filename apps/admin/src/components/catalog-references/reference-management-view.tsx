@@ -37,6 +37,7 @@ type ReferenceKind = 'brand' | 'country';
 type CatalogReference = AdminBrand | AdminCountry;
 
 type ReferenceManagementViewProps = Readonly<{
+  initialEditId?: string;
   brands: readonly AdminBrand[];
   countries: readonly AdminCountry[];
   brandsFailed: boolean;
@@ -617,9 +618,15 @@ function ReferenceSheet({
   kind,
   reference,
   triggerLabel,
-}: Readonly<{ kind: ReferenceKind; reference?: CatalogReference; triggerLabel: string }>) {
+  initiallyOpen = false,
+}: Readonly<{
+  kind: ReferenceKind;
+  reference?: CatalogReference;
+  triggerLabel: string;
+  initiallyOpen?: boolean;
+}>) {
   const formId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
   const [pending, setPending] = useState(false);
   const copy = COPY[kind];
   return (
@@ -903,10 +910,22 @@ export function ReferenceManagementView({
   brandsFailed,
   countriesFailed,
   canWrite,
+  initialEditId,
 }: ReferenceManagementViewProps) {
   const [kind, setKind] = useState<ReferenceKind>('brand');
+  const initialEdit =
+    canWrite && initialEditId ? brands.find(({ id }) => id === initialEditId) : null;
   return (
     <div className="mt-6 space-y-5">
+      {initialEdit ? (
+        <ReferenceSheet
+          key={initialEdit.id}
+          kind="brand"
+          reference={initialEdit}
+          triggerLabel={`ویرایش ${initialEdit.name}`}
+          initiallyOpen
+        />
+      ) : null}
       <div
         role="tablist"
         aria-label="نوع اطلاعات پایه کاتالوگ"

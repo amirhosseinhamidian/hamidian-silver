@@ -3492,6 +3492,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/seo/search-entities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchEntityController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/search-entities/{kind}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchEntityController_detail_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/supplier-imports/sources": {
         parameters: {
             query?: never;
@@ -6370,6 +6402,65 @@ export interface components {
             page: number;
             limit: number;
             total: number;
+        };
+        SearchEntityListItemDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "product" | "category" | "brand" | "article";
+            /** Format: uri */
+            canonicalUrl: string;
+            clicks: number | null;
+            impressions: number | null;
+            ctr: number | null;
+            clickChangePercent: number | null;
+            opportunities: ("low-ctr" | "decline" | "growth")[];
+            sufficient: boolean;
+            name: string;
+            seoNoIndex: boolean;
+        };
+        SearchEntityListDto: {
+            items: components["schemas"]["SearchEntityListItemDto"][];
+            page: number;
+            limit: number;
+            total: number;
+        };
+        SearchEntityIdentityDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "product" | "category" | "brand" | "article";
+            /** Format: uri */
+            canonicalUrl: string;
+            name: string;
+            seoNoIndex: boolean;
+        };
+        SearchEntityUrlDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uri */
+            reportedUrl: string;
+            reportedSearch: string | null;
+            recordedCanonicalPath: string | null;
+            /** @enum {string|null} */
+            matchedBy: "direct" | "redirect" | null;
+            isCanonical: boolean;
+        };
+        SearchEntityDetailDto: {
+            entity: components["schemas"]["SearchEntityIdentityDto"];
+            selectedUrl: components["schemas"]["SearchEntityUrlDto"] | null;
+            urls: components["schemas"]["SearchEntityUrlDto"][];
+            current: components["schemas"]["SearchOverviewPeriodDto"];
+            previous: components["schemas"]["SearchOverviewPeriodDto"];
+            change: components["schemas"]["SearchOverviewMetricsDto"] | null;
+            daily: components["schemas"]["SearchOverviewPeriodDto"][];
+            topQueries: components["schemas"]["SearchOverviewRowDto"][];
+            devices: components["schemas"]["SearchOverviewRowDto"][];
+            urlPage: number;
+            urlLimit: number;
+            urlTotal: number;
+            cappedQueryDays: number;
+            sufficient: boolean;
         };
         Object: Record<string, never>;
         UpdateSupplierCategoryMappingDto: {
@@ -12365,6 +12456,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchOverviewRowsDto"];
+                };
+            };
+        };
+    };
+    SearchEntityController_list_v1: {
+        parameters: {
+            query: {
+                startDate: string;
+                endDate: string;
+                searchType?: "web" | "image" | "video" | "news";
+                minimumImpressions?: number;
+                kind: "product" | "category" | "brand" | "article";
+                opportunity?: "low-ctr" | "decline" | "growth";
+                q?: string;
+                maximumCtrPercent?: number;
+                minimumChangePercent?: number;
+                minimumPreviousClicks?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchEntityListDto"];
+                };
+            };
+        };
+    };
+    SearchEntityController_detail_v1: {
+        parameters: {
+            query: {
+                startDate: string;
+                endDate: string;
+                searchType?: "web" | "image" | "video" | "news";
+                minimumImpressions?: number;
+                urlId?: string;
+                urlPage?: number;
+            };
+            header?: never;
+            path: {
+                kind: "product" | "category" | "brand" | "article";
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchEntityDetailDto"];
                 };
             };
         };

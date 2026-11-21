@@ -37,6 +37,7 @@ const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', '
 type CategoryMergeResult = components['schemas']['CategoryMergeResultDto'];
 
 type CategoryManagementViewProps = Readonly<{
+  initialEditId?: string;
   categories: readonly AdminCategory[];
   failed: boolean;
   canWrite: boolean;
@@ -763,13 +764,15 @@ function CategorySheet({
   category,
   categories,
   triggerLabel,
+  initiallyOpen = false,
 }: Readonly<{
   category?: AdminCategory;
   categories: readonly AdminCategory[];
   triggerLabel: string;
+  initiallyOpen?: boolean;
 }>) {
   const formId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
   const [pending, setPending] = useState(false);
   return (
     <BottomSheet open={open} onOpenChange={setOpen}>
@@ -892,10 +895,13 @@ export function CategoryManagementView({
   categories,
   failed,
   canWrite,
+  initialEditId,
 }: CategoryManagementViewProps) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('all');
   const [parent, setParent] = useState('all');
+  const initialEdit =
+    canWrite && initialEditId ? categories.find(({ id }) => id === initialEditId) : null;
   const hierarchy = useMemo(() => categoryHierarchy(categories), [categories]);
   const normalizedQuery = query.trim().toLocaleLowerCase('fa');
   const filtered = useMemo(
@@ -969,6 +975,15 @@ export function CategoryManagementView({
 
   return (
     <div className="mt-6 space-y-4">
+      {initialEdit ? (
+        <CategorySheet
+          key={initialEdit.id}
+          category={initialEdit}
+          categories={categories}
+          triggerLabel={`ویرایش ${initialEdit.name}`}
+          initiallyOpen
+        />
+      ) : null}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           ['کل دسته‌ها', categories.length],
