@@ -72,6 +72,8 @@ model User {
   supplierProductImportsImported      SupplierProductImportDraft[]       @relation("SupplierProductImportImporter")
   supplierCrawlRunsArchived           SupplierCrawlRun[]                  @relation("SupplierCrawlRunArchiver")
   supplierSourceChangesAcknowledged   SupplierProductSourceChange[]       @relation("SupplierSourceChangeAcknowledger")
+  ownedCampaigns                      Campaign[]
+  campaignRevisions                   CampaignRevision[]
 
   @@index([isActive])
   @@index([deletedAt])
@@ -432,6 +434,7 @@ model Media {
   guideTopicCoverImages           GuideTopic[]              @relation("GuideTopicCover")
   guideTopicSeoOgImages           GuideTopic[]              @relation("GuideTopicSeoOg")
   guideBlockPrimaryMedia          GuideArticleBlock[]       @relation("GuideBlockPrimaryMedia")
+  campaignBanners                 Campaign[]
 
   @@index([deletedAt])
   @@map("media")
@@ -1741,8 +1744,68 @@ model CampaignLinkIdentity {
   campaign  String   @unique @db.VarChar(96)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   costs     GrowthCampaignCost[]
+  lifecycle Campaign?
 
   @@map("campaign_link_identities")
+}
+
+enum CampaignStatus {
+  DRAFT
+  APPROVED
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+model Campaign {
+  id              String               @id @default(uuid()) @db.Uuid
+  slug            String               @unique @db.VarChar(64)
+  name            String               @db.VarChar(150)
+  goal            String               @db.VarChar(500)
+  channel         String               @db.VarChar(96)
+  ownerId         String               @db.Uuid
+  trackingId      String               @unique @db.VarChar(64)
+  status          CampaignStatus       @default(DRAFT)
+  allProducts     Boolean
+  productIds      String[]             @default([]) @db.Uuid
+  categoryIds     String[]             @default([]) @db.Uuid
+  startsAt        DateTime             @db.Timestamptz(3)
+  endsAt          DateTime             @db.Timestamptz(3)
+  budgetToman     Int
+  message         String               @db.VarChar(500)
+  bannerEnabled   Boolean              @default(false)
+  bannerPriority  Int                  @default(0)
+  mediaId         String?              @db.Uuid
+  ctaPath         String?              @db.VarChar(1000)
+  ctaLabel        String?              @db.VarChar(80)
+  revision        Int                  @default(1)
+  createdAt       DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime             @updatedAt @db.Timestamptz(3)
+  owner           User                 @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  tracking        CampaignLinkIdentity @relation(fields: [trackingId], references: [id], onDelete: Restrict)
+  media           Media?               @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  revisions       CampaignRevision[]
+
+  @@index([status, startsAt])
+  @@index([status, endsAt])
+  @@map("campaigns")
+}
+
+model CampaignRevision {
+  campaignId  String   @db.Uuid
+  version     Int
+  action      String   @db.VarChar(24)
+  actorUserId String?  @db.Uuid
+  requestId   String?  @db.Uuid
+  snapshot    Json
+  recordedAt  DateTime @default(now()) @db.Timestamptz(3)
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@id([campaignId, version])
+  @@unique([campaignId, requestId])
+  @@map("campaign_revisions")
 }
 
 model GrowthCampaignCost {

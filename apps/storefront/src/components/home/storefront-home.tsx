@@ -3,10 +3,15 @@ import { FiCheckCircle, FiCreditCard, FiPackage, FiShield } from 'react-icons/fi
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
+import { CampaignBanner } from '@/components/home/campaign-banner';
 import { HomepageHero } from '@/components/home/homepage-hero';
+import type { PublicCampaignBanner } from '@/lib/home/public-campaign-banner';
 import type { PublicHomepage, PublicHomepageFeaturedCategory } from '@/lib/home/public-homepage';
 
-type StorefrontHomeProps = Readonly<{ homepage: PublicHomepage }>;
+type StorefrontHomeProps = Readonly<{
+  homepage: PublicHomepage;
+  campaignBanner?: PublicCampaignBanner | null;
+}>;
 
 function SectionHeading({
   id,
@@ -66,7 +71,7 @@ function CategoryPair({ categories }: Readonly<{ categories: PublicHomepageFeatu
   );
 }
 
-export function StorefrontHome({ homepage }: StorefrontHomeProps) {
+export function StorefrontHome({ homepage, campaignBanner }: StorefrontHomeProps) {
   const firstCategories = homepage.featuredCategories.filter(({ priority }) => priority <= 2);
   const lastCategories = homepage.featuredCategories.filter(
     ({ priority }) => priority >= 3 && priority <= 4,
@@ -91,6 +96,8 @@ export function StorefrontHome({ homepage }: StorefrontHomeProps) {
         fallbackTitle="گالری حمیدیان"
         preload
       />
+
+      {campaignBanner && <CampaignBanner key={campaignBanner.endsAt} banner={campaignBanner} />}
 
       <section
         aria-labelledby="new-products-title"

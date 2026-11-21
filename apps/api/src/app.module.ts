@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthenticationGuard } from './modules/auth/authentication.guard';
 import { PermissionsGuard } from './modules/authorization/permissions.guard';
+import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { HealthModule } from './modules/health/health.module';
@@ -41,6 +42,7 @@ import { UserManagementModule } from './modules/user-management/user-management.
     ScheduleModule.forRoot(),
     AuthModule,
     AuditModule,
+    CampaignsModule,
     CatalogModule,
     FinanceModule,
     GuideModule,

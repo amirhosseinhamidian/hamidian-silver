@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { StorefrontHome } from '@/components/home/storefront-home';
 import { JsonLd } from '@/components/seo/json-ld';
+import { getPublicCampaignBanner } from '@/lib/home/public-campaign-banner';
 import { getPublicHomepage } from '@/lib/home/public-homepage';
 import { HOME_SEO } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
@@ -26,17 +27,18 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function StorefrontHomePage() {
-  const [homepage, settings, shippingOptions] = await Promise.all([
+  const [homepage, settings, shippingOptions, campaignBanner] = await Promise.all([
     getPublicHomepage(),
     getPublicSiteSettings(),
     getPublicShippingOptionsForSeo(),
+    getPublicCampaignBanner(),
   ]);
 
   return (
     <>
       <JsonLd data={buildOrganizationStructuredData(settings, shippingOptions)} />
       <JsonLd data={buildWebSiteStructuredData(settings)} />
-      <StorefrontHome homepage={homepage} />
+      <StorefrontHome homepage={homepage} campaignBanner={campaignBanner} />
     </>
   );
 }

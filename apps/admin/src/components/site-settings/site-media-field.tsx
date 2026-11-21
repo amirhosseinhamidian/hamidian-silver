@@ -29,6 +29,7 @@ export function SiteMediaField({
   hint,
   onUploaded,
   onClear,
+  onPendingChange,
 }: Readonly<{
   label: string;
   media: SiteMedia | null;
@@ -39,6 +40,7 @@ export function SiteMediaField({
   hint?: string;
   onUploaded: (media: SiteMedia) => void;
   onClear?: () => void;
+  onPendingChange?: (pending: boolean) => void;
 }>) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +57,7 @@ export function SiteMediaField({
     body.set('file', file);
     body.set('altText', altText.trim() || label);
     setPending(true);
+    onPendingChange?.(true);
     setError(null);
     try {
       const response = await fetch(uploadUrl, { method: 'POST', body });
@@ -72,6 +75,7 @@ export function SiteMediaField({
       setError(caught instanceof Error ? caught.message : responseMessage(null));
     } finally {
       setPending(false);
+      onPendingChange?.(false);
     }
   }
 

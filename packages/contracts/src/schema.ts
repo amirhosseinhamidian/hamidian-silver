@@ -100,6 +100,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaigns/public/banner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignsController_publicBanner_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignsController_list_v1"];
+        put?: never;
+        post: operations["CampaignsController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignsController_detail_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CampaignsController_update_v1"];
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CampaignsController_transition_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/public/categories": {
         parameters: {
             query?: never;
@@ -4017,6 +4081,133 @@ export interface components {
             /** Format: date-time */
             generatedAt: string;
         };
+        CampaignMediaDto: {
+            url: string | null;
+            altText: string | null;
+            id: string;
+            mimeType: string;
+        };
+        CampaignBannerDto: {
+            /** Format: date-time */
+            endsAt: string;
+            ctaPath: string | null;
+            ctaLabel: string | null;
+            media: components["schemas"]["CampaignMediaDto"] | null;
+            name: string;
+            message: string;
+        };
+        PublicCampaignDto: {
+            banner: components["schemas"]["CampaignBannerDto"] | null;
+        };
+        CampaignSummaryDto: {
+            /** @enum {string} */
+            status: "DRAFT" | "APPROVED" | "SCHEDULED" | "ACTIVE" | "PAUSED" | "ENDED";
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            id: string;
+            slug: string;
+            name: string;
+            ownerId: string;
+            startsTehran: string;
+            endsTehran: string;
+            revision: number;
+        };
+        CampaignListDto: {
+            items: components["schemas"]["CampaignSummaryDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        CampaignRevisionDto: {
+            actorUserId: string | null;
+            /** Format: date-time */
+            recordedAt: string;
+            snapshot: {
+                [key: string]: unknown;
+            };
+            version: number;
+            action: string;
+        };
+        CampaignDetailDto: {
+            /** @enum {string} */
+            status: "DRAFT" | "APPROVED" | "SCHEDULED" | "ACTIVE" | "PAUSED" | "ENDED";
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            productSlugs: string[];
+            categorySlugs: string[];
+            ctaPath: string | null;
+            ctaLabel: string | null;
+            media: components["schemas"]["CampaignMediaDto"] | null;
+            history: components["schemas"]["CampaignRevisionDto"][];
+            goal: string;
+            channel: string;
+            trackingId: string;
+            trackingLabel: string;
+            allProducts: boolean;
+            budgetToman: number;
+            message: string;
+            bannerEnabled: boolean;
+            bannerPriority: number;
+            historyPage: number;
+            hasMoreHistory: boolean;
+            id: string;
+            slug: string;
+            name: string;
+            ownerId: string;
+            startsTehran: string;
+            endsTehran: string;
+            revision: number;
+        };
+        CreateCampaignDto: {
+            productSlugs: string[];
+            categorySlugs: string[];
+            /** Format: uuid */
+            mediaId?: string | null;
+            ctaPath?: string | null;
+            ctaLabel?: string | null;
+            slug: string;
+            trackingId: string;
+            trackingLabel: string;
+            name: string;
+            goal: string;
+            channel: string;
+            allProducts: boolean;
+            startsTehran: string;
+            endsTehran: string;
+            budgetToman: number;
+            message: string;
+            bannerEnabled: boolean;
+            bannerPriority: number;
+        };
+        UpdateCampaignDto: {
+            productSlugs: string[];
+            categorySlugs: string[];
+            /** Format: uuid */
+            mediaId?: string | null;
+            ctaPath?: string | null;
+            ctaLabel?: string | null;
+            expectedRevision: number;
+            name: string;
+            goal: string;
+            channel: string;
+            allProducts: boolean;
+            startsTehran: string;
+            endsTehran: string;
+            budgetToman: number;
+            message: string;
+            bannerEnabled: boolean;
+            bannerPriority: number;
+        };
+        CampaignTransitionDto: {
+            /** @enum {string} */
+            action: "APPROVE" | "SCHEDULE" | "PAUSE" | "RESUME" | "REOPEN" | "END";
+            expectedRevision: number;
+            /** Format: uuid */
+            requestId: string;
+        };
         PublicCatalogMediaDto: {
             /** Format: uri */
             url: string | null;
@@ -6720,6 +6911,142 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditLogSnapshotDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_publicBanner_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCampaignDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignListDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCampaignDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignSummaryDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_detail_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignDetailDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCampaignDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignSummaryDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_transition_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignTransitionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignSummaryDto"];
                 };
             };
         };

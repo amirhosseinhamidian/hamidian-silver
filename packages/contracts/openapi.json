@@ -231,6 +231,208 @@
         ]
       }
     },
+    "/api/v1/campaigns/public/banner": {
+      "get": {
+        "operationId": "CampaignsController_publicBanner_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCampaignDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
+    "/api/v1/campaigns": {
+      "get": {
+        "operationId": "CampaignsController_list_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Campaigns"
+        ]
+      },
+      "post": {
+        "operationId": "CampaignsController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCampaignDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
+    "/api/v1/campaigns/{id}": {
+      "get": {
+        "operationId": "CampaignsController_detail_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Campaigns"
+        ]
+      },
+      "patch": {
+        "operationId": "CampaignsController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCampaignDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
+    "/api/v1/campaigns/{id}/transitions": {
+      "post": {
+        "operationId": "CampaignsController_transition_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignTransitionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
     "/api/v1/catalog/public/categories": {
       "get": {
         "operationId": "CatalogController_listPublicCategories_v1",
@@ -10774,6 +10976,592 @@
           "resources",
           "operationTypes",
           "generatedAt"
+        ]
+      },
+      "CampaignMediaDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "altText": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "altText",
+          "id",
+          "mimeType"
+        ]
+      },
+      "CampaignBannerDto": {
+        "type": "object",
+        "properties": {
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ctaPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "ctaLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "media": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignMediaDto"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "endsAt",
+          "ctaPath",
+          "ctaLabel",
+          "media",
+          "name",
+          "message"
+        ]
+      },
+      "PublicCampaignDto": {
+        "type": "object",
+        "properties": {
+          "banner": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignBannerDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "banner"
+        ]
+      },
+      "CampaignSummaryDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "DRAFT",
+              "APPROVED",
+              "SCHEDULED",
+              "ACTIVE",
+              "PAUSED",
+              "ENDED"
+            ],
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "startsTehran": {
+            "type": "string"
+          },
+          "endsTehran": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "status",
+          "startsAt",
+          "endsAt",
+          "id",
+          "slug",
+          "name",
+          "ownerId",
+          "startsTehran",
+          "endsTehran",
+          "revision"
+        ]
+      },
+      "CampaignListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignSummaryDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "hasMore"
+        ]
+      },
+      "CampaignRevisionDto": {
+        "type": "object",
+        "properties": {
+          "actorUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "snapshot": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "version": {
+            "type": "number"
+          },
+          "action": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "actorUserId",
+          "recordedAt",
+          "snapshot",
+          "version",
+          "action"
+        ]
+      },
+      "CampaignDetailDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "DRAFT",
+              "APPROVED",
+              "SCHEDULED",
+              "ACTIVE",
+              "PAUSED",
+              "ENDED"
+            ],
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "productSlugs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "categorySlugs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ctaPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "ctaLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "media": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignMediaDto"
+              }
+            ]
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignRevisionDto"
+            }
+          },
+          "goal": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "trackingId": {
+            "type": "string"
+          },
+          "trackingLabel": {
+            "type": "string"
+          },
+          "allProducts": {
+            "type": "boolean"
+          },
+          "budgetToman": {
+            "type": "number"
+          },
+          "message": {
+            "type": "string"
+          },
+          "bannerEnabled": {
+            "type": "boolean"
+          },
+          "bannerPriority": {
+            "type": "number"
+          },
+          "historyPage": {
+            "type": "number"
+          },
+          "hasMoreHistory": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "startsTehran": {
+            "type": "string"
+          },
+          "endsTehran": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "status",
+          "startsAt",
+          "endsAt",
+          "productSlugs",
+          "categorySlugs",
+          "ctaPath",
+          "ctaLabel",
+          "media",
+          "history",
+          "goal",
+          "channel",
+          "trackingId",
+          "trackingLabel",
+          "allProducts",
+          "budgetToman",
+          "message",
+          "bannerEnabled",
+          "bannerPriority",
+          "historyPage",
+          "hasMoreHistory",
+          "id",
+          "slug",
+          "name",
+          "ownerId",
+          "startsTehran",
+          "endsTehran",
+          "revision"
+        ]
+      },
+      "CreateCampaignDto": {
+        "type": "object",
+        "properties": {
+          "productSlugs": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 220,
+              "minLength": 1
+            }
+          },
+          "categorySlugs": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 180,
+              "minLength": 1
+            }
+          },
+          "mediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "ctaPath": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "ctaLabel": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "trackingId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "trackingLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "goal": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "allProducts": {
+            "type": "boolean"
+          },
+          "startsTehran": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 24
+          },
+          "endsTehran": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 24
+          },
+          "budgetToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "bannerEnabled": {
+            "type": "boolean"
+          },
+          "bannerPriority": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "productSlugs",
+          "categorySlugs",
+          "slug",
+          "trackingId",
+          "trackingLabel",
+          "name",
+          "goal",
+          "channel",
+          "allProducts",
+          "startsTehran",
+          "endsTehran",
+          "budgetToman",
+          "message",
+          "bannerEnabled",
+          "bannerPriority"
+        ]
+      },
+      "UpdateCampaignDto": {
+        "type": "object",
+        "properties": {
+          "productSlugs": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 220,
+              "minLength": 1
+            }
+          },
+          "categorySlugs": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 180,
+              "minLength": 1
+            }
+          },
+          "mediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "ctaPath": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "ctaLabel": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "goal": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "allProducts": {
+            "type": "boolean"
+          },
+          "startsTehran": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 24
+          },
+          "endsTehran": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 24
+          },
+          "budgetToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "bannerEnabled": {
+            "type": "boolean"
+          },
+          "bannerPriority": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "productSlugs",
+          "categorySlugs",
+          "expectedRevision",
+          "name",
+          "goal",
+          "channel",
+          "allProducts",
+          "startsTehran",
+          "endsTehran",
+          "budgetToman",
+          "message",
+          "bannerEnabled",
+          "bannerPriority"
+        ]
+      },
+      "CampaignTransitionDto": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "enum": [
+              "APPROVE",
+              "SCHEDULE",
+              "PAUSE",
+              "RESUME",
+              "REOPEN",
+              "END"
+            ],
+            "type": "string"
+          },
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "action",
+          "expectedRevision",
+          "requestId"
         ]
       },
       "PublicCatalogMediaDto": {

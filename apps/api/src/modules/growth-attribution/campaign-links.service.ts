@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { isDirectAttribution, normalizeAttributionToken } from './attribution';
 import type { CampaignLinkDto, CreateCampaignLinkDto } from './dto/attribution.dto';
@@ -7,8 +8,7 @@ import type { CampaignLinkDto, CreateCampaignLinkDto } from './dto/attribution.d
 const publicPath = /^\/(?:$|(?:products|categories|brands|guide)(?:\/[^/]+)?\/?$)/;
 const destinationParameters = new Set(['page', 'category', 'brand', 'country', 'sort']);
 
-export function buildCampaignUrl(origin: string, input: CreateCampaignLinkDto): CampaignLinkDto {
-  const { destination } = input;
+export function parseCampaignDestination(origin: string, destination: string): URL {
   if (
     !destination.startsWith('/') ||
     destination.startsWith('//') ||
@@ -29,6 +29,11 @@ export function buildCampaignUrl(origin: string, input: CreateCampaignLinkDto): 
       );
     }
   }
+  return url;
+}
+
+export function buildCampaignUrl(origin: string, input: CreateCampaignLinkDto): CampaignLinkDto {
+  const url = parseCampaignDestination(origin, input.destination);
   const source = normalizeAttributionToken(input.source);
   const medium = normalizeAttributionToken(input.medium);
   const campaign = normalizeAttributionToken(input.campaign);
@@ -54,6 +59,20 @@ export function buildCampaignUrl(origin: string, input: CreateCampaignLinkDto): 
   return { url: url.toString(), campaign, campaignId };
 }
 
+export async function ensureCampaignLinkIdentity(
+  db: Pick<Prisma.TransactionClient, 'campaignLinkIdentity'>,
+  id: string,
+  campaign: string,
+): Promise<void> {
+  await db.campaignLinkIdentity.createMany({ data: [{ id, campaign }], skipDuplicates: true });
+  const identity = await db.campaignLinkIdentity.findUnique({ where: { id } });
+  if (identity?.campaign !== campaign) {
+    throw new ConflictException(
+      'This campaign identifier or name is already assigned to another campaign.',
+    );
+  }
+}
+
 @Injectable()
 export class CampaignLinksService {
   constructor(
@@ -69,18 +88,7 @@ export class CampaignLinksService {
     const origin = new URL(this.config.get<string>('STOREFRONT_PUBLIC_ORIGIN') ?? defaultOrigin)
       .origin;
     const link = buildCampaignUrl(origin, input);
-    await this.prisma.campaignLinkIdentity.createMany({
-      data: [{ id: link.campaignId, campaign: link.campaign }],
-      skipDuplicates: true,
-    });
-    const identity = await this.prisma.campaignLinkIdentity.findUnique({
-      where: { id: link.campaignId },
-    });
-    if (identity?.campaign !== link.campaign) {
-      throw new ConflictException(
-        'This campaign identifier or name is already assigned to another campaign.',
-      );
-    }
+    await ensureCampaignLinkIdentity(this.prisma, link.campaignId, link.campaign);
     return link;
   }
 }

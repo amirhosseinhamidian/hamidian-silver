@@ -449,6 +449,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['settings.read'],
       },
       {
+        id: 'campaigns',
+        label: 'کمپین‌های فروش',
+        shortLabel: 'کمپین‌ها',
+        href: '/campaigns',
+        icon: 'content',
+        description: 'تقویم، تأیید و انتشار کمپین',
+        roadmapStage: 32,
+        permissions: ['settings.read'],
+      },
+      {
         id: 'seo',
         label: 'عملکرد جست‌وجو',
         shortLabel: 'سئو',
