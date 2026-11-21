@@ -164,6 +164,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaigns/public/landing/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignLandingsController_readLanding_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/public/placement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignLandingsController_placement_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/public/sitemap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignLandingsController_sitemap_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/landing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignLandingsController_edit_v1"];
+        put: operations["CampaignLandingsController_save_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/landing/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CampaignLandingsController_preview_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/public/categories": {
         parameters: {
             query?: never;
@@ -4272,6 +4352,12 @@ export interface components {
             /** Format: uuid */
             requestId: string;
         };
+        PublicCatalogMatchingVariantDto: {
+            sizeId: string | null;
+            lengthMm: number | null;
+            id: string;
+            availableQuantity: number;
+        };
         PublicCatalogMediaDto: {
             /** Format: uri */
             url: string | null;
@@ -4280,56 +4366,11 @@ export interface components {
             height: number | null;
             mimeType: string;
         };
-        PublicCatalogCategoryPageDto: {
-            description: string | null;
-            parentId: string | null;
-            hasProducts?: boolean;
-            image: components["schemas"]["PublicCatalogMediaDto"] | null;
-            featuredImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
-            activeProductCount?: number;
-            activeSubtreeProductCount?: number;
-            heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
-            seoTitle?: string | null;
-            seoDescription?: string | null;
-            seoCanonicalPath?: string | null;
-            seoNoIndex?: boolean;
-            seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
-            /** Format: date-time */
-            updatedAt?: string;
-            id: string;
-            name: string;
-            slug: string;
-            sortOrder: number;
-        };
         PublicCatalogCountryDto: {
             id: string;
             name: string;
             slug: string;
             isoCode: string;
-        };
-        PublicCatalogBrandPageDto: {
-            description: string | null;
-            hasProducts?: boolean;
-            image: components["schemas"]["PublicCatalogMediaDto"] | null;
-            heroImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
-            heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
-            originCountry: components["schemas"]["PublicCatalogCountryDto"] | null;
-            seoTitle?: string | null;
-            seoDescription?: string | null;
-            seoCanonicalPath?: string | null;
-            seoNoIndex?: boolean;
-            seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
-            /** Format: date-time */
-            updatedAt?: string;
-            id: string;
-            name: string;
-            slug: string;
-        };
-        PublicCatalogMatchingVariantDto: {
-            sizeId: string | null;
-            lengthMm: number | null;
-            id: string;
-            availableQuantity: number;
         };
         PublicCatalogBrandDto: {
             description: string | null;
@@ -4389,11 +4430,120 @@ export interface components {
             total: number;
             totalPages: number;
         };
+        PublicCampaignLandingDto: {
+            /** @enum {string} */
+            seoMode: "TEMPORARY" | "RECURRING";
+            media: components["schemas"]["CampaignMediaDto"] | null;
+            products: components["schemas"]["PublicCatalogProductListDto"];
+            slug: string;
+            title: string;
+            story: string;
+            active: boolean;
+            ctaPath: string;
+            ctaLabel: string;
+        };
+        CampaignSitemapEntryDto: {
+            /** Format: date-time */
+            updatedAt: string;
+            slug: string;
+        };
+        CampaignSitemapDto: {
+            entries: components["schemas"]["CampaignSitemapEntryDto"][];
+        };
         PublicCatalogFacetFilterDto: {
             code: string;
             values?: string[];
             min?: number;
             max?: number;
+        };
+        CampaignCollectionFiltersDto: {
+            categories?: string[];
+            brands?: string[];
+            minPriceToman?: number;
+            maxPriceToman?: number;
+            attributes?: components["schemas"]["PublicCatalogFacetFilterDto"][];
+            /** @enum {string} */
+            sort?: "newest" | "price-asc" | "price-desc" | "name-asc" | "availability" | "best-selling" | "featured";
+            minimumQuantity?: number;
+        };
+        CampaignPlacementDraftDto: {
+            /** @enum {string} */
+            slot: "HOME" | "CATEGORY" | "PRODUCT";
+            targetSlug?: string | null;
+            startsTehran?: string | null;
+            endsTehran?: string | null;
+            priority: number;
+        };
+        CampaignLandingDraftDto: {
+            /** @enum {string} */
+            seoMode: "TEMPORARY" | "RECURRING";
+            /** @enum {string} */
+            collectionMode: "FILTERED" | "MANUAL";
+            filters: components["schemas"]["CampaignCollectionFiltersDto"];
+            manualProductSlugs: string[];
+            placements: components["schemas"]["CampaignPlacementDraftDto"][];
+            slug: string;
+            title: string;
+            story: string;
+        };
+        CampaignLandingEditorDto: {
+            landing: components["schemas"]["CampaignLandingDraftDto"] | null;
+            revision: number;
+        };
+        SaveCampaignLandingDto: {
+            /** @enum {string} */
+            seoMode: "TEMPORARY" | "RECURRING";
+            /** @enum {string} */
+            collectionMode: "FILTERED" | "MANUAL";
+            filters: components["schemas"]["CampaignCollectionFiltersDto"];
+            manualProductSlugs: string[];
+            placements: components["schemas"]["CampaignPlacementDraftDto"][];
+            slug: string;
+            title: string;
+            story: string;
+            expectedRevision: number;
+        };
+        CampaignLandingPreviewDto: {
+            total: number;
+        };
+        PublicCatalogCategoryPageDto: {
+            description: string | null;
+            parentId: string | null;
+            hasProducts?: boolean;
+            image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            featuredImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            activeProductCount?: number;
+            activeSubtreeProductCount?: number;
+            heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            /** Format: date-time */
+            updatedAt?: string;
+            id: string;
+            name: string;
+            slug: string;
+            sortOrder: number;
+        };
+        PublicCatalogBrandPageDto: {
+            description: string | null;
+            hasProducts?: boolean;
+            image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            heroImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            originCountry: components["schemas"]["PublicCatalogCountryDto"] | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            /** Format: date-time */
+            updatedAt?: string;
+            id: string;
+            name: string;
+            slug: string;
         };
         PublicCatalogFacetsQueryDto: {
             /** @default 1 */
@@ -7169,6 +7319,141 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CampaignSummaryDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_readLanding_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCampaignLandingDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_placement_v1: {
+        parameters: {
+            query: {
+                slot: "HOME" | "CATEGORY" | "PRODUCT";
+                slug?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCampaignDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_sitemap_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignSitemapDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_edit_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignLandingEditorDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveCampaignLandingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignLandingEditorDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_preview_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignLandingDraftDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignLandingPreviewDto"];
                 };
             };
         };

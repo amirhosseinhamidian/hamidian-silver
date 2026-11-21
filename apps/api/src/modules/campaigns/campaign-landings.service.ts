@@ -1,0 +1,534 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  Prisma,
+  type Campaign,
+  type CampaignBannerSlot,
+  type CampaignLanding,
+  type Media,
+} from '../../generated/prisma/client';
+import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { CatalogService } from '../catalog/catalog.service';
+import { PublicCatalogAvailability } from '../catalog/dto/public-catalog-facets.dto';
+import { PublicMediaUrlService } from '../catalog/public-media-url.service';
+import { formatTehranDate, parseTehranDate } from './campaign-calendar';
+import type { CampaignBannerDto } from './dto/campaign.dto';
+import type {
+  CampaignCollectionFiltersDto,
+  CampaignLandingDraftDto,
+  CampaignLandingEditorDto,
+  CampaignSitemapDto,
+  PublicCampaignLandingDto,
+  SaveCampaignLandingDto,
+} from './dto/campaign-landing.dto';
+
+const productPageSize = 24;
+const emptyProducts = { items: [], total: 0, totalPages: 0, page: 1, pageSize: productPageSize };
+const activeWindow = (now: Date) =>
+  ({
+    status: 'ACTIVE',
+    startsAt: { lte: now },
+    endsAt: { gt: now },
+  }) satisfies Prisma.CampaignWhereInput;
+const publicOrder: Prisma.CampaignLandingOrderByWithRelationInput[] = [
+  { campaign: { startsAt: 'desc' } },
+  { campaignId: 'asc' },
+];
+
+@Injectable()
+export class CampaignLandingsService {
+  constructor(
+    private readonly db: PrismaService,
+    private readonly catalog: CatalogService,
+    private readonly mediaUrls: PublicMediaUrlService,
+  ) {}
+
+  async editor(campaignId: string): Promise<CampaignLandingEditorDto> {
+    const campaign = await this.db.campaign.findUnique({
+      where: { id: campaignId },
+      select: { revision: true, landing: { include: { placements: true } } },
+    });
+    if (!campaign) throw new NotFoundException('Campaign not found.');
+    const landing = campaign.landing;
+    if (!landing) return { revision: campaign.revision, landing: null };
+    const [products, categories, targets] = await Promise.all([
+      this.db.product.findMany({
+        where: { id: { in: landing.manualProductIds } },
+        select: { id: true, slug: true },
+      }),
+      this.db.category.findMany({
+        where: {
+          id: {
+            in: landing.placements.flatMap((row) =>
+              row.slot === 'CATEGORY' && row.targetId ? [row.targetId] : [],
+            ),
+          },
+        },
+        select: { id: true, slug: true },
+      }),
+      this.db.product.findMany({
+        where: {
+          id: {
+            in: landing.placements.flatMap((row) =>
+              row.slot === 'PRODUCT' && row.targetId ? [row.targetId] : [],
+            ),
+          },
+        },
+        select: { id: true, slug: true },
+      }),
+    ]);
+    const slugs = new Map(products.map((row) => [row.id, row.slug]));
+    return {
+      revision: campaign.revision,
+      landing: {
+        slug: landing.slug,
+        seoMode: landing.seoMode,
+        title: landing.title,
+        story: landing.story,
+        collectionMode: landing.collectionMode,
+        filters: landing.filters as CampaignCollectionFiltersDto,
+        manualProductSlugs: landing.manualProductIds.flatMap((id) => slugs.get(id) ?? []),
+        placements: landing.placements.map((row) => ({
+          slot: row.slot,
+          priority: row.priority,
+          targetSlug:
+            (row.slot === 'CATEGORY' ? categories : targets).find(({ id }) => id === row.targetId)
+              ?.slug ?? row.targetId,
+          startsTehran: row.startsAt ? formatTehranDate(row.startsAt) : null,
+          endsTehran: row.endsAt ? formatTehranDate(row.endsAt) : null,
+        })),
+      },
+    };
+  }
+
+  async preview(campaignId: string, input: CampaignLandingDraftDto) {
+    return this.db.$transaction(
+      async (tx) => {
+        const campaign = await tx.campaign.findUnique({ where: { id: campaignId } });
+        if (!campaign) throw new NotFoundException('Campaign not found.');
+        const prepared = await this.prepare(tx, campaign, input);
+        const { total } = await this.readCollection(tx, campaign, prepared, 1, 0);
+        return { total };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 10_000 },
+    );
+  }
+
+  async save(
+    campaignId: string,
+    input: SaveCampaignLandingDto,
+    actorUserId: string,
+  ): Promise<CampaignLandingEditorDto> {
+    await this.db.$transaction(
+      async (tx) => {
+        const [locked] = await tx.$queryRaw<
+          Array<{ id: string }>
+        >`SELECT id FROM "campaigns" WHERE id = ${campaignId}::uuid FOR UPDATE`;
+        if (!locked) throw new NotFoundException('Campaign not found.');
+        const campaign = await tx.campaign.findUniqueOrThrow({
+          where: { id: campaignId },
+          include: { landing: true },
+        });
+        if (campaign.status !== 'DRAFT' || campaign.revision !== input.expectedRevision) {
+          throw new ConflictException('Only the current draft revision can be edited.');
+        }
+        if (
+          campaign.landing &&
+          (campaign.landing.slug !== input.slug || campaign.landing.seoMode !== input.seoMode)
+        ) {
+          throw new BadRequestException('The saved landing path and SEO mode are fixed.');
+        }
+        await this.lockPath(tx, input.slug);
+        const collision = await tx.campaignLanding.findFirst({
+          where: {
+            slug: input.slug,
+            campaignId: { not: campaignId },
+            ...(input.seoMode === 'RECURRING' ? { seoMode: 'TEMPORARY' } : {}),
+          },
+          select: { campaignId: true },
+        });
+        if (collision) throw new ConflictException('The landing path is already assigned.');
+
+        const { placements, ...landing } = await this.prepare(tx, campaign, input);
+        await tx.campaignLanding.upsert({
+          where: { campaignId },
+          create: { campaignId, ...landing },
+          update: landing,
+        });
+        await tx.campaignPlacement.deleteMany({ where: { campaignId } });
+        if (placements.length) {
+          await tx.campaignPlacement.createMany({
+            data: placements.map((placement) => ({ campaignId, ...placement })),
+          });
+        }
+        const updated = await tx.campaign.update({
+          where: { id: campaignId },
+          data: { revision: { increment: 1 } },
+        });
+        await tx.campaignRevision.create({
+          data: {
+            campaignId,
+            version: updated.revision,
+            actorUserId,
+            action: 'LANDING_EDIT',
+            snapshot: {
+              ...updated,
+              startsAt: updated.startsAt.toISOString(),
+              endsAt: updated.endsAt.toISOString(),
+              createdAt: updated.createdAt.toISOString(),
+              updatedAt: updated.updatedAt.toISOString(),
+              landing,
+              placements: placements.map((placement) => ({
+                ...placement,
+                startsAt: placement.startsAt?.toISOString() ?? null,
+                endsAt: placement.endsAt?.toISOString() ?? null,
+              })),
+            },
+          },
+        });
+      },
+      { timeout: 10_000 },
+    );
+    return this.editor(campaignId);
+  }
+
+  async validateForPublication(tx: Prisma.TransactionClient, campaign: Campaign) {
+    const landing = await tx.campaignLanding.findUnique({
+      where: { campaignId: campaign.id },
+      include: { placements: true },
+    });
+    if (!landing) return;
+    await this.lockPath(tx, landing.slug);
+    if (landing.seoMode === 'RECURRING') {
+      const overlap = await tx.campaignLanding.findFirst({
+        where: {
+          slug: landing.slug,
+          campaignId: { not: campaign.id },
+          campaign: {
+            status: { in: ['APPROVED', 'SCHEDULED', 'ACTIVE', 'PAUSED'] },
+            startsAt: { lt: campaign.endsAt },
+            endsAt: { gt: campaign.startsAt },
+          },
+        },
+        select: { campaignId: true },
+      });
+      if (overlap)
+        throw new ConflictException('Another campaign uses this landing path in the same period.');
+    }
+    for (const placement of landing.placements) this.checkWindow(campaign, placement);
+    const { total } = await this.readCollection(tx, campaign, landing, 1, 0);
+    if (total === 0) throw new BadRequestException('The collection has no sellable products.');
+  }
+
+  async publicLanding(
+    slug: string,
+    page: number,
+    now = new Date(),
+  ): Promise<PublicCampaignLandingDto> {
+    return this.db.$transaction(
+      async (tx) => {
+        const live = await tx.campaignLanding.findFirst({
+          where: { slug, campaign: activeWindow(now) },
+          include: { campaign: { include: { media: true } } },
+          orderBy: publicOrder,
+        });
+        const landing = live ?? (page === 1 ? await this.archivedLanding(tx, slug, now) : null);
+        if (!landing) throw new NotFoundException('Campaign landing not found.');
+        const products = live
+          ? await this.publicCollection(tx, landing.campaign, landing, page)
+          : emptyProducts;
+        if (page > 1 && page > products.totalPages)
+          throw new NotFoundException('Collection page not found.');
+        return {
+          slug: landing.slug,
+          title: landing.title,
+          story: landing.story,
+          seoMode: landing.seoMode,
+          active: Boolean(live),
+          media: this.media(landing.campaign.media),
+          ctaPath: live ? (landing.campaign.ctaPath ?? '/products') : '/products',
+          ctaLabel: live
+            ? (landing.campaign.ctaLabel ?? 'مشاهدهٔ محصولات')
+            : 'مشاهدهٔ محصولات فروشگاه',
+          products,
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 10_000 },
+    );
+  }
+
+  private async archivedLanding(tx: Prisma.TransactionClient, slug: string, now: Date) {
+    const completed = await tx.campaignLanding.findMany({
+      where: {
+        slug,
+        seoMode: 'RECURRING',
+        campaign: {
+          OR: [{ status: 'ENDED' }, { status: { in: ['ACTIVE', 'PAUSED'] }, endsAt: { lte: now } }],
+          revisions: { some: { action: 'PUBLISH' } },
+        },
+      },
+      include: {
+        campaign: {
+          include: {
+            media: true,
+            revisions: {
+              where: { action: { in: ['PUBLISH', 'EDIT', 'LANDING_EDIT'] } },
+              select: { action: true },
+              orderBy: { version: 'desc' },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: publicOrder,
+    });
+    return completed.find(({ campaign }) => campaign.revisions[0]?.action === 'PUBLISH') ?? null;
+  }
+
+  async placement(slot: CampaignBannerSlot, slug: string | undefined, now = new Date()) {
+    return this.db.$transaction(
+      async (tx) => {
+        const targetId = await this.resolveTarget(tx, slot, slug);
+        if (slug && !targetId) return null;
+        const choices = await tx.campaignPlacement.findMany({
+          where: {
+            slot,
+            OR: [{ targetId: null }, ...(targetId ? [{ targetId }] : [])],
+            AND: [
+              { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+              { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+            ],
+            landing: { campaign: { ...activeWindow(now), bannerEnabled: true } },
+          },
+          include: { landing: { include: { campaign: { include: { media: true } } } } },
+          orderBy: [
+            { priority: 'desc' },
+            { landing: { campaign: { startsAt: 'desc' } } },
+            { campaignId: 'asc' },
+          ],
+        });
+        for (const candidate of choices) {
+          const campaign = candidate.landing.campaign;
+          const { total } = await this.publicCollection(tx, campaign, candidate.landing, 1, 0);
+          if (total === 0) continue;
+          const endsAt =
+            candidate.endsAt && candidate.endsAt < campaign.endsAt
+              ? candidate.endsAt
+              : campaign.endsAt;
+          return {
+            priority: candidate.priority,
+            startsAt: campaign.startsAt,
+            campaignId: campaign.id,
+            banner: {
+              name: campaign.name,
+              message: campaign.message,
+              endsAt: endsAt.toISOString(),
+              ctaPath: `/campaigns/${candidate.landing.slug}`,
+              ctaLabel: 'دیدن مجموعه',
+              media: this.media(campaign.media),
+            } satisfies CampaignBannerDto,
+          };
+        }
+        return null;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 10_000 },
+    );
+  }
+
+  async sitemap(now = new Date()): Promise<CampaignSitemapDto> {
+    return this.db.$transaction(
+      async (tx) => {
+        const landings = await tx.campaignLanding.findMany({
+          where: { seoMode: 'RECURRING', campaign: activeWindow(now) },
+          include: { campaign: true },
+          orderBy: publicOrder,
+        });
+        const entries: CampaignSitemapDto['entries'] = [];
+        for (const landing of landings) {
+          if (entries.some(({ slug }) => slug === landing.slug)) continue;
+          const { total } = await this.publicCollection(tx, landing.campaign, landing, 1, 0);
+          if (total > 0) {
+            const latest =
+              landing.updatedAt > landing.campaign.updatedAt
+                ? landing.updatedAt
+                : landing.campaign.updatedAt;
+            entries.push({ slug: landing.slug, updatedAt: latest.toISOString() });
+          }
+        }
+        return { entries };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 10_000 },
+    );
+  }
+
+  private async prepare(
+    tx: Prisma.TransactionClient,
+    campaign: Campaign,
+    input: CampaignLandingDraftDto,
+  ) {
+    const { slug, seoMode, title, story, collectionMode, filters, manualProductSlugs } = input;
+    if (
+      collectionMode === 'MANUAL' ? manualProductSlugs.length === 0 : manualProductSlugs.length > 0
+    ) {
+      throw new BadRequestException('Choose filtered collection or enter its manual products.');
+    }
+    const products = await tx.product.findMany({
+      where: { slug: { in: manualProductSlugs }, status: 'ACTIVE', deletedAt: null },
+      select: { id: true, slug: true, categories: { select: { categoryId: true } } },
+    });
+    if (
+      products.length !== manualProductSlugs.length ||
+      products.some(
+        (product) =>
+          !campaign.allProducts &&
+          !campaign.productIds.includes(product.id) &&
+          !product.categories.some(({ categoryId }) => campaign.categoryIds.includes(categoryId)),
+      )
+    ) {
+      throw new BadRequestException('Select published products within the campaign scope.');
+    }
+    const idsBySlug = new Map(products.map((product) => [product.slug, product.id] as const));
+    const placements = [];
+    for (const inputPlacement of input.placements) {
+      const { slot, priority } = inputPlacement;
+      const targetSlug = inputPlacement.targetSlug?.trim();
+      if (slot === 'HOME' && targetSlug)
+        throw new BadRequestException('The homepage placement does not take a target.');
+      const targetId = await this.resolveTarget(tx, slot, targetSlug);
+      if (targetSlug && !targetId)
+        throw new BadRequestException('Select a published banner target.');
+      const placement = {
+        slot,
+        priority,
+        targetId,
+        startsAt: inputPlacement.startsTehran ? parseTehranDate(inputPlacement.startsTehran) : null,
+        endsAt: inputPlacement.endsTehran ? parseTehranDate(inputPlacement.endsTehran) : null,
+      };
+      this.checkWindow(campaign, placement);
+      placements.push(placement);
+    }
+    const storedFilters: Prisma.InputJsonObject = {
+      ...(collectionMode === 'FILTERED'
+        ? {
+            categories: filters.categories ?? [],
+            brands: filters.brands ?? [],
+            ...(filters.minPriceToman != null ? { minPriceToman: filters.minPriceToman } : {}),
+            ...(filters.maxPriceToman != null ? { maxPriceToman: filters.maxPriceToman } : {}),
+            attributes: (filters.attributes ?? []).map(({ code, values, min, max }) => ({
+              code,
+              ...(values?.length ? { values } : {}),
+              ...(min != null ? { min } : {}),
+              ...(max != null ? { max } : {}),
+            })),
+            ...(filters.sort ? { sort: filters.sort } : {}),
+          }
+        : {}),
+      minimumQuantity: filters.minimumQuantity ?? 1,
+    };
+    return {
+      slug,
+      seoMode,
+      title,
+      story,
+      collectionMode,
+      filters: storedFilters,
+      manualProductIds: manualProductSlugs.map((key) => idsBySlug.get(key)!),
+      placements,
+    };
+  }
+
+  private readCollection(
+    tx: Prisma.TransactionClient,
+    campaign: Campaign,
+    landing: Pick<CampaignLanding, 'collectionMode' | 'manualProductIds'> & {
+      filters: Prisma.JsonValue | Prisma.InputJsonObject;
+    },
+    page: number,
+    pageSize: number,
+  ) {
+    const { minimumQuantity = 1, ...filters } = landing.filters as CampaignCollectionFiltersDto;
+    return this.catalog.readCampaignCollection(
+      tx,
+      {
+        ...filters,
+        availability: PublicCatalogAvailability.IN_STOCK,
+        minPriceToman: filters.minPriceToman ?? 1,
+      },
+      {
+        allProducts: campaign.allProducts,
+        productIds: campaign.productIds,
+        categoryIds: campaign.categoryIds,
+        minimumQuantity,
+        ...(landing.collectionMode === 'MANUAL'
+          ? { manualProductIds: landing.manualProductIds }
+          : {}),
+      },
+      page,
+      pageSize,
+    );
+  }
+
+  private async publicCollection(
+    tx: Prisma.TransactionClient,
+    campaign: Campaign,
+    landing: CampaignLanding,
+    page: number,
+    pageSize = productPageSize,
+  ) {
+    try {
+      return await this.readCollection(tx, campaign, landing, page, pageSize);
+    } catch (error) {
+      if (error instanceof BadRequestException) return emptyProducts;
+      throw error;
+    }
+  }
+
+  private async resolveTarget(
+    tx: Prisma.TransactionClient,
+    slot: CampaignBannerSlot,
+    slug?: string,
+  ) {
+    if (!slug || slot === 'HOME') return null;
+    const record =
+      slot === 'CATEGORY'
+        ? await tx.category.findFirst({
+            where: { slug, isActive: true, deletedAt: null },
+            select: { id: true },
+          })
+        : await tx.product.findFirst({
+            where: { slug, status: 'ACTIVE', deletedAt: null },
+            select: { id: true },
+          });
+    return record?.id ?? null;
+  }
+
+  private checkWindow(
+    campaign: Campaign,
+    placement: { startsAt: Date | null; endsAt: Date | null },
+  ) {
+    const startsAt = placement.startsAt ?? campaign.startsAt;
+    const endsAt = placement.endsAt ?? campaign.endsAt;
+    if (startsAt < campaign.startsAt || endsAt > campaign.endsAt || startsAt >= endsAt) {
+      throw new BadRequestException('Banner times must be within the campaign window.');
+    }
+  }
+
+  private async lockPath(tx: Prisma.TransactionClient, slug: string) {
+    await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${`campaign-landing:${slug}`}, 0))`;
+  }
+
+  private media(media: Media | null) {
+    return media && !media.deletedAt
+      ? {
+          id: media.id,
+          mimeType: media.mimeType,
+          url: this.mediaUrls.resolve(media.storageKey),
+          altText: media.altText,
+        }
+      : null;
+  }
+}

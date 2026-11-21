@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 
 import { CampaignDetailView } from '@/components/campaigns/campaign-detail-view';
+import { CampaignLandingEditor } from '@/components/campaigns/campaign-landing-editor';
 import { CampaignPromotionEditor } from '@/components/campaigns/campaign-promotion-editor';
 import { CampaignEditor } from '@/components/campaigns/campaign-editor';
 import { Alert } from '@/components/ui/alert';
@@ -55,15 +56,23 @@ export default async function CampaignsPage({ searchParams }: Props) {
             .catch(() => null)
         : null;
     const campaign = result?.data;
-    const promotion =
+    const [promotion, landing] =
       campaign && !(edit === '1' && canWrite && campaign.status === 'DRAFT')
-        ? await client
-            .GET('/api/v1/promotions/{campaignId}', {
-              params: { path: { campaignId: campaign.id } },
-              cache: 'no-store',
-            })
-            .catch(() => null)
-        : null;
+        ? await Promise.all([
+            client
+              .GET('/api/v1/promotions/{campaignId}', {
+                params: { path: { campaignId: campaign.id } },
+                cache: 'no-store',
+              })
+              .catch(() => null),
+            client
+              .GET('/api/v1/campaigns/{id}/landing', {
+                params: { path: { id: campaign.id } },
+                cache: 'no-store',
+              })
+              .catch(() => null),
+          ])
+        : [null, null];
     content = campaign ? (
       edit === '1' && canWrite && campaign.status === 'DRAFT' ? (
         <CampaignEditor key={`${campaign.id}-${campaign.revision}`} campaign={campaign} />
@@ -74,6 +83,16 @@ export default async function CampaignsPage({ searchParams }: Props) {
             campaign={campaign}
             canWrite={canWrite}
           />
+          {landing?.data ? (
+            <CampaignLandingEditor
+              key={`landing-${campaign.id}-${landing.data.revision}`}
+              campaign={campaign}
+              editor={landing.data}
+              canWrite={canWrite}
+            />
+          ) : (
+            <Alert tone="danger">دریافت تنظیمات صفحهٔ کمپین ممکن نشد.</Alert>
+          )}
           {promotion?.data ? (
             <CampaignPromotionEditor
               key={`promotion-${campaign.id}-${promotion.data.rule?.expectedVersion ?? 0}`}

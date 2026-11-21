@@ -3,6 +3,19 @@ const messages: Record<string, string> = {
     'تاریخ و ساعت شمسی را با الگوی فرم وارد کنید.',
   'The end time must follow the start time.': 'زمان پایان باید بعد از زمان آغاز باشد.',
   'The campaign end time has passed.': 'زمان پایان کمپین گذشته است.',
+  'The collection has no sellable products.':
+    'این مجموعه محصول قابل فروش ندارد. قواعد یا موجودی را بررسی کنید و دوباره پیش‌نمایش بگیرید.',
+  'Another campaign uses this landing path in the same period.':
+    'آدرس صفحه در این بازه به نوبت دیگری از کمپین اختصاص دارد.',
+  'Banner times must be within the campaign window.':
+    'آغاز و پایان هر جایگاه بنر باید در بازهٔ کمپین قرار بگیرد.',
+  'The landing path is already assigned.': 'این اسلاگ به صفحهٔ دیگری اختصاص دارد.',
+  'The saved landing path and SEO mode are fixed.': 'اسلاگ و نوع صفحه پس از ذخیره ثابت‌اند.',
+  'Select published products within the campaign scope.':
+    'محصولات فعال و داخل محدودهٔ کمپین را انتخاب کنید.',
+  'Select a published banner target.': 'اسلاگ یک دسته یا محصول فعال را وارد کنید.',
+  'A catalog attribute filter is not supported by the current definition.':
+    'کد ویژگی، گزینه‌ها یا بازهٔ عددی را با تعریف فعلی ویژگی در کاتالوگ تطبیق دهید.',
   'Enter valid campaign tracking labels.': 'شناسه و نام ردیابی را بررسی کنید.',
   'Enter a valid campaign channel.': 'نام کانال را بررسی کنید.',
   'This campaign slug or tracking identifier is already in use.':

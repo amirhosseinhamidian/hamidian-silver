@@ -1790,6 +1790,7 @@ model Campaign {
   revisions       CampaignRevision[]
   promotion       CampaignPromotion?
   orderQuotes     OrderPriceQuote[]
+  landing         CampaignLanding?
 
   @@index([status, startsAt])
   @@index([status, endsAt])
@@ -1802,6 +1803,53 @@ enum PromotionKind {
   THRESHOLD
   BUNDLE
   FREE_SHIPPING
+}
+
+enum CampaignLandingMode {
+  TEMPORARY
+  RECURRING
+}
+
+enum CampaignCollectionMode {
+  FILTERED
+  MANUAL
+}
+
+enum CampaignBannerSlot {
+  HOME
+  CATEGORY
+  PRODUCT
+}
+
+model CampaignLanding {
+  campaignId       String                 @id @db.Uuid
+  slug             String                 @db.VarChar(64)
+  seoMode          CampaignLandingMode
+  title            String                 @db.VarChar(150)
+  story            String                 @db.VarChar(3000)
+  collectionMode   CampaignCollectionMode
+  filters          Json
+  manualProductIds String[]               @default([]) @db.Uuid
+  updatedAt        DateTime               @updatedAt @db.Timestamptz(3)
+  campaign         Campaign               @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  placements       CampaignPlacement[]
+
+  @@index([slug, seoMode])
+  @@map("campaign_landings")
+}
+
+model CampaignPlacement {
+  campaignId String             @db.Uuid
+  slot       CampaignBannerSlot
+  targetId   String?            @db.Uuid
+  priority   Int
+  startsAt   DateTime?          @db.Timestamptz(3)
+  endsAt     DateTime?          @db.Timestamptz(3)
+  landing    CampaignLanding    @relation(fields: [campaignId], references: [campaignId], onDelete: Cascade)
+
+  @@id([campaignId, slot])
+  @@index([slot, targetId, priority])
+  @@map("campaign_placements")
 }
 
 model CampaignPromotion {

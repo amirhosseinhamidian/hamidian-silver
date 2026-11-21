@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { CampaignBanner } from '@/components/home/campaign-banner';
+import { getPublicCampaignPlacement } from '@/lib/campaigns/public-campaigns';
 import { notFound, permanentRedirect } from 'next/navigation';
 
 import { ProductViewAnalytics } from '@/components/analytics/conversion-trackers';
@@ -111,7 +113,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     notFound();
   }
 
-  const [relatedProducts, knowledgeArticles] = await Promise.all([
+  const [relatedProducts, knowledgeArticles, campaignBanner] = await Promise.all([
     getPublicRelatedProducts(slug, 1, 8),
     getPublicRelatedGuideArticles({
       product: product.slug,
@@ -119,6 +121,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
       brand: product.brand?.slug,
       limit: 3,
     }),
+    getPublicCampaignPlacement('PRODUCT', product.slug),
   ]);
   const primaryAssignedCategory = selectPrimaryCatalogCategory(
     categories,
@@ -183,6 +186,9 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         id="main-content"
         className="sf-container pb-36 pt-8 sm:pt-10 lg:pb-[var(--sf-section-space)]"
       >
+        {campaignBanner && (
+          <CampaignBanner key={campaignBanner.endsAt} banner={campaignBanner} contained={false} />
+        )}
         <StorefrontBreadcrumbs
           items={productBreadcrumbs}
           className="mb-5 text-[var(--sf-color-muted)] sm:mb-7"

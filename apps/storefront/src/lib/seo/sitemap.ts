@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { getPublicCampaignSitemap } from '@/lib/campaigns/public-campaigns';
 
 import {
   PUBLIC_CONTENT_PAGE_KEYS,
@@ -17,7 +18,10 @@ import { getPublicSeoSitemap, type PublicSeoSitemap } from '@/lib/seo/public-sit
 
 type SitemapProduct = PublicSeoSitemap['products'][number];
 type StorefrontSitemapSources = PublicSeoSitemap &
-  Readonly<{ guideArticles?: readonly PublicGuideArticleSummary[] }>;
+  Readonly<{
+    guideArticles?: readonly PublicGuideArticleSummary[];
+    campaigns?: Awaited<ReturnType<typeof getPublicCampaignSitemap>>;
+  }>;
 
 function sitemapUrl(pathname: string, metadataBase: URL): string {
   return getStorefrontAbsoluteUrl(pathname, metadataBase);
@@ -202,13 +206,21 @@ export function buildStorefrontSitemap(
     });
   }
 
+  for (const campaign of sources.campaigns ?? []) {
+    add({
+      url: sitemapUrl(`/campaigns/${campaign.slug}`, metadataBase),
+      ...lastModifiedFields([campaign.updatedAt]),
+    });
+  }
+
   return [...entries.values()];
 }
 
 export async function getStorefrontSitemap(): Promise<MetadataRoute.Sitemap> {
-  const [sources, guideArticles] = await Promise.all([
+  const [sources, guideArticles, campaigns] = await Promise.all([
     getPublicSeoSitemap(),
     getAllPublicGuideArticles(),
+    getPublicCampaignSitemap(),
   ]);
-  return buildStorefrontSitemap({ ...sources, guideArticles });
+  return buildStorefrontSitemap({ ...sources, guideArticles, campaigns });
 }

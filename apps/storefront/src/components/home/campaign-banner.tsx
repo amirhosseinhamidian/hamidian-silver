@@ -6,7 +6,13 @@ import { useEffect, useState } from 'react';
 import { StorefrontImage } from '@/components/media/storefront-image';
 import type { PublicCampaignBanner } from '@/lib/home/public-campaign-banner';
 
-export function CampaignBanner({ banner }: { banner: PublicCampaignBanner }) {
+export function CampaignBanner({
+  banner,
+  contained = true,
+}: {
+  banner: PublicCampaignBanner;
+  contained?: boolean;
+}) {
   const [expired, setExpired] = useState(false);
 
   useEffect(() => {
@@ -36,7 +42,7 @@ export function CampaignBanner({ banner }: { banner: PublicCampaignBanner }) {
   if (expired) return null;
 
   return (
-    <aside aria-label={banner.name} className="sf-container pt-6">
+    <aside aria-label={banner.name} className={contained ? 'sf-container pt-6' : 'mb-6'}>
       <div className="flex flex-col items-start gap-4 rounded-sm border border-[var(--sf-color-border)] bg-[var(--sf-color-surface)] p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
         {banner.media?.url && (
           <StorefrontImage

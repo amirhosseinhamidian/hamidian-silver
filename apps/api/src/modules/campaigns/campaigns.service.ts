@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { Prisma, type Campaign, type Media } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
@@ -14,6 +15,7 @@ import {
 } from '../growth-attribution/campaign-links.service';
 import { formatTehranDate, parseTehranDate } from './campaign-calendar';
 import { campaignTransition } from './campaign-lifecycle';
+import { CampaignLandingsService } from './campaign-landings.service';
 import type {
   CampaignDetailDto,
   CampaignDraftDto,
@@ -48,6 +50,7 @@ export class CampaignsService {
   constructor(
     private readonly db: PrismaService,
     private readonly mediaUrls: PublicMediaUrlService,
+    @Optional() private readonly landings?: CampaignLandingsService,
   ) {}
 
   async list(page: number): Promise<CampaignListDto> {
@@ -190,6 +193,7 @@ export class CampaignsService {
           throw new BadRequestException('The campaign end time has passed.');
         await this.validateScope(tx, current);
         if (current.mediaId) await this.checkMedia(tx, current.mediaId);
+        await this.landings?.validateForPublication(tx, current);
       }
       return summarize(
         await this.setStatus(tx, current, status, input.action, actorUserId, input.requestId),
@@ -223,18 +227,41 @@ export class CampaignsService {
   }
 
   async publicBanner(now = new Date()): Promise<PublicCampaignDto> {
-    const campaign = await this.db.campaign.findFirst({
-      where: { status: 'ACTIVE', bannerEnabled: true, startsAt: { lte: now }, endsAt: { gt: now } },
-      orderBy: [{ bannerPriority: 'desc' }, { startsAt: 'desc' }, { id: 'asc' }],
-      select: {
-        name: true,
-        message: true,
-        ctaPath: true,
-        ctaLabel: true,
-        media: true,
-        endsAt: true,
-      },
-    });
+    const [campaign, placement] = await Promise.all([
+      this.db.campaign.findFirst({
+        where: {
+          status: 'ACTIVE',
+          bannerEnabled: true,
+          startsAt: { lte: now },
+          endsAt: { gt: now },
+          landing: null,
+        },
+        orderBy: [{ bannerPriority: 'desc' }, { startsAt: 'desc' }, { id: 'asc' }],
+        select: {
+          id: true,
+          startsAt: true,
+          bannerPriority: true,
+          name: true,
+          message: true,
+          ctaPath: true,
+          ctaLabel: true,
+          media: true,
+          endsAt: true,
+        },
+      }),
+      this.landings?.placement('HOME', undefined, now),
+    ]);
+    if (
+      placement &&
+      (!campaign ||
+        placement.priority > campaign.bannerPriority ||
+        (placement.priority === campaign.bannerPriority &&
+          (placement.startsAt > campaign.startsAt ||
+            (placement.startsAt.getTime() === campaign.startsAt.getTime() &&
+              placement.campaignId < campaign.id))))
+    ) {
+      return { banner: placement.banner };
+    }
     return {
       banner: campaign && {
         name: campaign.name,

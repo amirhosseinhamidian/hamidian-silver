@@ -27,24 +27,34 @@ export type MatchingCatalogVariants = {
   }[];
 };
 
-export const catalogStockCte = Prisma.sql`stock AS (
+export function buildCatalogStockCte(defaultWarehouseOnly = false) {
+  return Prisma.sql`stock AS (
       SELECT inventory."variantId", SUM(GREATEST(inventory."onHand" - inventory."reserved", 0)) AS units
       FROM "inventory" AS inventory
       JOIN "warehouses" AS warehouse ON warehouse.id = inventory."warehouseId"
       WHERE warehouse."isActive" AND warehouse."deletedAt" IS NULL
+      ${defaultWarehouseOnly ? Prisma.sql`AND warehouse."isDefault"` : Prisma.empty}
       GROUP BY inventory."variantId"
 )`;
-export const catalogVariantStockSql = Prisma.sql`CASE WHEN variant."inventoryMode" = 'COMPONENTS' THEN COALESCE((
+}
+export const catalogStockCte = buildCatalogStockCte();
+
+export function buildCatalogVariantStockSql(requirePublishedComponents = false) {
+  return Prisma.sql`CASE WHEN variant."inventoryMode" = 'COMPONENTS' THEN COALESCE((
           SELECT MIN(CASE
             WHEN component."isActive" AND component."deletedAt" IS NULL AND component."inventoryMode" = 'OWN' AND recipe.quantity > 0
+              ${requirePublishedComponents ? Prisma.sql`AND component_product.status = 'ACTIVE' AND component_product."deletedAt" IS NULL` : Prisma.empty}
             THEN FLOOR(COALESCE(component_stock.units, 0)::numeric / NULLIF(recipe.quantity, 0))
             ELSE 0
           END)
           FROM "product_variant_components" AS recipe
           JOIN "product_variants" AS component ON component.id = recipe."componentVariantId"
+          ${requirePublishedComponents ? Prisma.sql`JOIN "products" AS component_product ON component_product.id = component."productId"` : Prisma.empty}
           LEFT JOIN stock AS component_stock ON component_stock."variantId" = component.id
           WHERE recipe."bundleVariantId" = variant.id
         ), 0) ELSE COALESCE(own_stock.units, 0) END::bigint`;
+}
+export const catalogVariantStockSql = buildCatalogVariantStockSql();
 export const catalogVariantStockJoins = Prisma.sql`LEFT JOIN stock AS own_stock ON own_stock."variantId" = variant.id
       LEFT JOIN "sizes" AS size ON size.id = variant."sizeId"
       LEFT JOIN "size_groups" AS size_group ON size_group.id = size."groupId"`;

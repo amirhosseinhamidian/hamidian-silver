@@ -433,6 +433,221 @@
         ]
       }
     },
+    "/api/v1/campaigns/public/landing/{slug}": {
+      "get": {
+        "operationId": "CampaignLandingsController_readLanding_v1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCampaignLandingDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CampaignLandings"
+        ]
+      }
+    },
+    "/api/v1/campaigns/public/placement": {
+      "get": {
+        "operationId": "CampaignLandingsController_placement_v1",
+        "parameters": [
+          {
+            "name": "slot",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "HOME",
+                "CATEGORY",
+                "PRODUCT"
+              ]
+            }
+          },
+          {
+            "name": "slug",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 220,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCampaignDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CampaignLandings"
+        ]
+      }
+    },
+    "/api/v1/campaigns/public/sitemap": {
+      "get": {
+        "operationId": "CampaignLandingsController_sitemap_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignSitemapDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CampaignLandings"
+        ]
+      }
+    },
+    "/api/v1/campaigns/{id}/landing": {
+      "get": {
+        "operationId": "CampaignLandingsController_edit_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignLandingEditorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CampaignLandings"
+        ]
+      },
+      "put": {
+        "operationId": "CampaignLandingsController_save_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveCampaignLandingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignLandingEditorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CampaignLandings"
+        ]
+      }
+    },
+    "/api/v1/campaigns/{id}/landing/preview": {
+      "post": {
+        "operationId": "CampaignLandingsController_preview_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignLandingDraftDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignLandingPreviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CampaignLandings"
+        ]
+      }
+    },
     "/api/v1/catalog/public/categories": {
       "get": {
         "operationId": "CatalogController_listPublicCategories_v1",
@@ -11715,6 +11930,31 @@
           "requestId"
         ]
       },
+      "PublicCatalogMatchingVariantDto": {
+        "type": "object",
+        "properties": {
+          "sizeId": {
+            "type": "string",
+            "nullable": true
+          },
+          "lengthMm": {
+            "type": "number",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "availableQuantity": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "sizeId",
+          "lengthMm",
+          "id",
+          "availableQuantity"
+        ]
+      },
       "PublicCatalogMediaDto": {
         "type": "object",
         "properties": {
@@ -11747,104 +11987,6 @@
           "mimeType"
         ]
       },
-      "PublicCatalogCategoryPageDto": {
-        "type": "object",
-        "properties": {
-          "description": {
-            "type": "string",
-            "nullable": true
-          },
-          "parentId": {
-            "type": "string",
-            "nullable": true
-          },
-          "hasProducts": {
-            "type": "boolean"
-          },
-          "image": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PublicCatalogMediaDto"
-              }
-            ]
-          },
-          "featuredImage": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PublicCatalogMediaDto"
-              }
-            ]
-          },
-          "activeProductCount": {
-            "type": "number"
-          },
-          "activeSubtreeProductCount": {
-            "type": "number"
-          },
-          "heroMobileImage": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PublicCatalogMediaDto"
-              }
-            ]
-          },
-          "seoTitle": {
-            "type": "string",
-            "nullable": true
-          },
-          "seoDescription": {
-            "type": "string",
-            "nullable": true
-          },
-          "seoCanonicalPath": {
-            "type": "string",
-            "nullable": true
-          },
-          "seoNoIndex": {
-            "type": "boolean"
-          },
-          "seoOgMedia": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PublicCatalogMediaDto"
-              }
-            ]
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          },
-          "sortOrder": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "description",
-          "parentId",
-          "image",
-          "id",
-          "name",
-          "slug",
-          "sortOrder"
-        ]
-      },
       "PublicCatalogCountryDto": {
         "type": "object",
         "properties": {
@@ -11866,124 +12008,6 @@
           "name",
           "slug",
           "isoCode"
-        ]
-      },
-      "PublicCatalogBrandPageDto": {
-        "type": "object",
-        "properties": {
-          "description": {
-            "type": "string",
-            "nullable": true
-          },
-          "hasProducts": {
-            "type": "boolean"
-          },
-          "image": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PublicCatalogMediaDto"
-              }
-            ]
-          },
-          "heroImage": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PublicCatalogMediaDto"
-              }
-            ]
-          },
-          "heroMobileImage": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PublicCatalogMediaDto"
-              }
-            ]
-          },
-          "originCountry": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PublicCatalogCountryDto"
-              }
-            ]
-          },
-          "seoTitle": {
-            "type": "string",
-            "nullable": true
-          },
-          "seoDescription": {
-            "type": "string",
-            "nullable": true
-          },
-          "seoCanonicalPath": {
-            "type": "string",
-            "nullable": true
-          },
-          "seoNoIndex": {
-            "type": "boolean"
-          },
-          "seoOgMedia": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PublicCatalogMediaDto"
-              }
-            ]
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "description",
-          "image",
-          "originCountry",
-          "id",
-          "name",
-          "slug"
-        ]
-      },
-      "PublicCatalogMatchingVariantDto": {
-        "type": "object",
-        "properties": {
-          "sizeId": {
-            "type": "string",
-            "nullable": true
-          },
-          "lengthMm": {
-            "type": "number",
-            "nullable": true
-          },
-          "id": {
-            "type": "string"
-          },
-          "availableQuantity": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "sizeId",
-          "lengthMm",
-          "id",
-          "availableQuantity"
         ]
       },
       "PublicCatalogBrandDto": {
@@ -12272,6 +12296,89 @@
           "totalPages"
         ]
       },
+      "PublicCampaignLandingDto": {
+        "type": "object",
+        "properties": {
+          "seoMode": {
+            "enum": [
+              "TEMPORARY",
+              "RECURRING"
+            ],
+            "type": "string"
+          },
+          "media": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignMediaDto"
+              }
+            ]
+          },
+          "products": {
+            "$ref": "#/components/schemas/PublicCatalogProductListDto"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "story": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "ctaPath": {
+            "type": "string"
+          },
+          "ctaLabel": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "seoMode",
+          "media",
+          "products",
+          "slug",
+          "title",
+          "story",
+          "active",
+          "ctaPath",
+          "ctaLabel"
+        ]
+      },
+      "CampaignSitemapEntryDto": {
+        "type": "object",
+        "properties": {
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "updatedAt",
+          "slug"
+        ]
+      },
+      "CampaignSitemapDto": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignSitemapEntryDto"
+            }
+          }
+        },
+        "required": [
+          "entries"
+        ]
+      },
       "PublicCatalogFacetFilterDto": {
         "type": "object",
         "properties": {
@@ -12304,6 +12411,463 @@
         },
         "required": [
           "code"
+        ]
+      },
+      "CampaignCollectionFiltersDto": {
+        "type": "object",
+        "properties": {
+          "categories": {
+            "uniqueItems": true,
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 180,
+              "minLength": 1
+            }
+          },
+          "brands": {
+            "uniqueItems": true,
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 180,
+              "minLength": 1
+            }
+          },
+          "minPriceToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "maxPriceToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "attributes": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogFacetFilterDto"
+            }
+          },
+          "sort": {
+            "enum": [
+              "newest",
+              "price-asc",
+              "price-desc",
+              "name-asc",
+              "availability",
+              "best-selling",
+              "featured"
+            ],
+            "type": "string"
+          },
+          "minimumQuantity": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 999
+          }
+        }
+      },
+      "CampaignPlacementDraftDto": {
+        "type": "object",
+        "properties": {
+          "slot": {
+            "enum": [
+              "HOME",
+              "CATEGORY",
+              "PRODUCT"
+            ],
+            "type": "string"
+          },
+          "targetSlug": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 220
+          },
+          "startsTehran": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 16,
+            "maxLength": 24
+          },
+          "endsTehran": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 16,
+            "maxLength": 24
+          },
+          "priority": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "slot",
+          "priority"
+        ]
+      },
+      "CampaignLandingDraftDto": {
+        "type": "object",
+        "properties": {
+          "seoMode": {
+            "enum": [
+              "TEMPORARY",
+              "RECURRING"
+            ],
+            "type": "string"
+          },
+          "collectionMode": {
+            "enum": [
+              "FILTERED",
+              "MANUAL"
+            ],
+            "type": "string"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/CampaignCollectionFiltersDto"
+          },
+          "manualProductSlugs": {
+            "uniqueItems": true,
+            "maxItems": 48,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 220,
+              "minLength": 1
+            }
+          },
+          "placements": {
+            "uniqueItems": true,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignPlacementDraftDto"
+            }
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "story": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 3000
+          }
+        },
+        "required": [
+          "seoMode",
+          "collectionMode",
+          "filters",
+          "manualProductSlugs",
+          "placements",
+          "slug",
+          "title",
+          "story"
+        ]
+      },
+      "CampaignLandingEditorDto": {
+        "type": "object",
+        "properties": {
+          "landing": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignLandingDraftDto"
+              }
+            ]
+          },
+          "revision": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "landing",
+          "revision"
+        ]
+      },
+      "SaveCampaignLandingDto": {
+        "type": "object",
+        "properties": {
+          "seoMode": {
+            "enum": [
+              "TEMPORARY",
+              "RECURRING"
+            ],
+            "type": "string"
+          },
+          "collectionMode": {
+            "enum": [
+              "FILTERED",
+              "MANUAL"
+            ],
+            "type": "string"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/CampaignCollectionFiltersDto"
+          },
+          "manualProductSlugs": {
+            "uniqueItems": true,
+            "maxItems": 48,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 220,
+              "minLength": 1
+            }
+          },
+          "placements": {
+            "uniqueItems": true,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignPlacementDraftDto"
+            }
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "story": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 3000
+          },
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "seoMode",
+          "collectionMode",
+          "filters",
+          "manualProductSlugs",
+          "placements",
+          "slug",
+          "title",
+          "story",
+          "expectedRevision"
+        ]
+      },
+      "CampaignLandingPreviewDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "total"
+        ]
+      },
+      "PublicCatalogCategoryPageDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "parentId": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasProducts": {
+            "type": "boolean"
+          },
+          "image": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "featuredImage": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "activeProductCount": {
+            "type": "number"
+          },
+          "activeSubtreeProductCount": {
+            "type": "number"
+          },
+          "heroMobileImage": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "description",
+          "parentId",
+          "image",
+          "id",
+          "name",
+          "slug",
+          "sortOrder"
+        ]
+      },
+      "PublicCatalogBrandPageDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasProducts": {
+            "type": "boolean"
+          },
+          "image": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "heroImage": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "heroMobileImage": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "originCountry": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogCountryDto"
+              }
+            ]
+          },
+          "seoTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoCanonicalPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "seoNoIndex": {
+            "type": "boolean"
+          },
+          "seoOgMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicCatalogMediaDto"
+              }
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "image",
+          "originCountry",
+          "id",
+          "name",
+          "slug"
         ]
       },
       "PublicCatalogFacetsQueryDto": {

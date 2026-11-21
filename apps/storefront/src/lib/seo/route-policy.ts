@@ -72,6 +72,18 @@ export function resolveStorefrontSeoRoutePolicy(
     };
   }
 
+  if (/^\/campaigns\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalizedPath)) {
+    const page = canonicalPage(searchParams);
+    const boundedPage =
+      page !== null && page <= 1000 && searchParams.getAll('page').length === 1 ? page : null;
+    return {
+      canonicalPath: withPage(normalizedPath, boundedPage),
+      index: [...searchParams.keys()].every((key) => CAMPAIGN_PARAMETERS.has(key.toLowerCase())),
+      follow: true,
+      reason: 'public-page',
+    };
+  }
+
   const catalogDocument = isCatalogDocument(normalizedPath);
   if (catalogDocument || isGuideDocument(normalizedPath)) {
     const isListing = catalogDocument

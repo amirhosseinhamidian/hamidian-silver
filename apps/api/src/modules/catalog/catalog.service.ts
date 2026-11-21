@@ -20,7 +20,11 @@ import {
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
 import { readActiveCategoryProductCounts } from './catalog-category-counts';
-import { buildPublicCatalogFacetsQuery, type CatalogFacetPageRow } from './catalog-facets-query';
+import {
+  buildPublicCatalogFacetsQuery,
+  type CampaignCollectionSelection,
+  type CatalogFacetPageRow,
+} from './catalog-facets-query';
 import { CATALOG_RANKING_VERSION, isCommercialCatalogSort } from './catalog-ranking';
 import { catalogHierarchyTransaction } from './catalog-hierarchy-transaction';
 import { CatalogAttributesService } from './catalog-attributes.service';
@@ -1225,25 +1229,7 @@ export class CatalogService {
     const listing = await this.prisma.$transaction(
       async (reader) => {
         const [result] = await reader.$queryRaw<CatalogFacetPageRow[]>(statement);
-        if (result.invalidAttributeFilter) {
-          throw new BadRequestException(
-            'A catalog attribute filter is not supported by the current definition.',
-          );
-        }
-        const products = await this.readPublicProductPage(
-          reader,
-          result.items.map(({ id }) => id),
-          page,
-          pageSize,
-          Number(result.total),
-          new Map(result.items.map(({ id, availableQuantity }) => [id, availableQuantity])),
-          new Map(
-            result.items.flatMap(({ id, availableQuantity, variants }) =>
-              variants.length ? [[id, { availableQuantity, variants }] as const] : [],
-            ),
-          ),
-          new Map(result.items.map((item) => [item.id, item])),
-        );
+        const products = await this.hydrateFacetPage(reader, result, page, pageSize);
         const requestedSort = query.sort;
         const ranking = isCommercialCatalogSort(requestedSort)
           ? {
@@ -1261,6 +1247,46 @@ export class CatalogService {
     );
     if (search && page === 1) await this.recordCatalogSearch(search, listing.total === 0);
     return listing;
+  }
+
+  async readCampaignCollection(
+    reader: Pick<PrismaService, '$queryRaw' | 'product'>,
+    query: PublicCatalogFacetsQueryDto,
+    selection: CampaignCollectionSelection,
+    page = 1,
+    pageSize = 24,
+  ) {
+    const [result] = await reader.$queryRaw<CatalogFacetPageRow[]>(
+      buildPublicCatalogFacetsQuery({ ...query, page, pageSize }, undefined, selection),
+    );
+    return this.hydrateFacetPage(reader, result, page, pageSize || 1);
+  }
+
+  private async hydrateFacetPage(
+    reader: Pick<PrismaService, 'product'>,
+    result: CatalogFacetPageRow,
+    page: number,
+    pageSize: number,
+  ) {
+    if (result.invalidAttributeFilter) {
+      throw new BadRequestException(
+        'A catalog attribute filter is not supported by the current definition.',
+      );
+    }
+    return this.readPublicProductPage(
+      reader,
+      result.items.map(({ id }) => id),
+      page,
+      pageSize,
+      Number(result.total),
+      new Map(result.items.map(({ id, availableQuantity }) => [id, availableQuantity])),
+      new Map(
+        result.items.flatMap(({ id, availableQuantity, variants }) =>
+          variants.length ? [[id, { availableQuantity, variants }] as const] : [],
+        ),
+      ),
+      new Map(result.items.map((item) => [item.id, item])),
+    );
   }
 
   private async recordCatalogSearch(search: string, withoutResult: boolean): Promise<void> {

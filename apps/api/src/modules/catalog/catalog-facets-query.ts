@@ -8,9 +8,9 @@ import {
 import { catalogRankingSql } from './catalog-ranking';
 import {
   catalogActiveVariantCriteria,
-  catalogStockCte,
+  buildCatalogStockCte,
   catalogVariantStockJoins,
-  catalogVariantStockSql,
+  buildCatalogVariantStockSql,
   type MatchingCatalogVariants,
 } from './catalog-variant-filter';
 import {
@@ -33,9 +33,18 @@ export type CatalogFacetPageRow = {
   qualifiedSales: boolean;
 };
 
+export type CampaignCollectionSelection = Readonly<{
+  allProducts: boolean;
+  productIds: readonly string[];
+  categoryIds: readonly string[];
+  manualProductIds?: readonly string[];
+  minimumQuantity: number;
+}>;
+
 export function buildPublicCatalogFacetsQuery(
   query: PublicCatalogFacetsQueryDto,
   searchMatches?: Prisma.Sql,
+  collection?: CampaignCollectionSelection,
 ): Prisma.Sql {
   const attributes = (query.attributes ?? []).map(({ code, values, min, max }) => ({
     code,
@@ -61,11 +70,13 @@ export function buildPublicCatalogFacetsQuery(
     { scope: 'length', active: lengthActive },
     { scope: 'availability', active: query.availability != null },
   ];
-  const contexts = [
-    'results',
-    ...blocks.filter(({ active }) => active).map(({ scope }) => scope),
-    ...attributes.map(({ code }) => `attribute:${code}`),
-  ];
+  const contexts = collection
+    ? ['results']
+    : [
+        'results',
+        ...blocks.filter(({ active }) => active).map(({ scope }) => scope),
+        ...attributes.map(({ code }) => `attribute:${code}`),
+      ];
   const facetScope = (scope: string) => (contexts.includes(scope) ? scope : 'results');
   const invalidRange = (min: number | null | undefined, max: number | null | undefined) =>
     min != null && max != null && min > max;
@@ -112,6 +123,11 @@ export function buildPublicCatalogFacetsQuery(
   const pageSize = query.pageSize ?? 24;
   const page = query.page ?? 1;
   const hasVariantFilter = sizes.length > 0 || priceActive || weightActive || lengthActive;
+  const uuidArray = (ids: readonly string[]) =>
+    ids.length ? Prisma.sql`ARRAY[${Prisma.join(ids)}]::uuid[]` : Prisma.sql`ARRAY[]::uuid[]`;
+  const manualOrder = collection?.manualProductIds
+    ? Prisma.sql`array_position(${uuidArray(collection.manualProductIds)}, p.id),`
+    : Prisma.empty;
   return Prisma.sql`
     WITH RECURSIVE ${catalogCategorySubtreeCte},
     ${
@@ -146,6 +162,22 @@ export function buildPublicCatalogFacetsQuery(
       ${searchMatches ? Prisma.sql`JOIN ranked_matches ON ranked_matches."productId" = product.id` : Prisma.empty}
       LEFT JOIN "brands" brand ON brand.id = product."brandId" AND brand."isActive" AND brand."deletedAt" IS NULL
       WHERE product.status = 'ACTIVE' AND product."deletedAt" IS NULL
+        ${
+          collection?.manualProductIds
+            ? Prisma.sql`AND product.id = ANY(${uuidArray(collection.manualProductIds)})`
+            : Prisma.empty
+        }
+        ${
+          collection && !collection.allProducts
+            ? Prisma.sql`AND (product.id = ANY(${uuidArray(collection.productIds)}) OR EXISTS (
+              SELECT 1 FROM "product_categories" membership
+              JOIN "categories" scoped_category ON scoped_category.id = membership."categoryId"
+              WHERE membership."productId" = product.id AND scoped_category."isActive"
+                AND scoped_category."deletedAt" IS NULL
+                AND membership."categoryId" = ANY(${uuidArray(collection.categoryIds)})
+            ))`
+            : Prisma.empty
+        }
         ${scopeBrand ? Prisma.sql`AND brand.slug = ${scopeBrand}` : Prisma.empty}
         ${
           scopeCountry
@@ -177,7 +209,7 @@ export function buildPublicCatalogFacetsQuery(
           WHERE scope <> ('attribute:' || attr.code)
         )
     ),
-    ${catalogStockCte},
+    ${buildCatalogStockCte(Boolean(collection))},
     variant_candidates AS MATERIALIZED (
       SELECT variant.id, variant."productId",
         CASE WHEN size."isActive" AND size."deletedAt" IS NULL AND size_group."isActive"
@@ -187,7 +219,7 @@ export function buildPublicCatalogFacetsQuery(
         CASE WHEN COALESCE(variant."salePriceToman", product."salePriceToman") > 0
           THEN COALESCE(variant."salePriceToman", product."salePriceToman") END AS "salePriceToman",
         COALESCE(variant."compareAtPriceToman", product."compareAtPriceToman") AS "compareAtPriceToman",
-        ${catalogVariantStockSql} AS quantity
+        ${buildCatalogVariantStockSql(Boolean(collection))} AS quantity
       FROM scoped_products product
       JOIN "product_variants" variant ON variant."productId" = product.id
       ${catalogVariantStockJoins}
@@ -260,10 +292,16 @@ export function buildPublicCatalogFacetsQuery(
       )`
           : Prisma.empty
       }
+      ${
+        collection
+          ? Prisma.sql`AND v.price IS NOT NULL
+            AND (CASE WHEN p."purchaseMode" = 'COMPOSITE' THEN v.bundle_units ELSE v.units END) >= ${collection.minimumQuantity}`
+          : Prisma.empty
+      }
     ),
     ${ranking.ctes}
     result_page AS (
-      SELECT p.*, row_number() OVER (ORDER BY ${ranking.order}) AS position
+      SELECT p.*, row_number() OVER (ORDER BY ${manualOrder} ${ranking.order}) AS position
       FROM eligible_products p ${ranking.join} WHERE p.scope = 'results'
       ORDER BY position LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}
     ),
@@ -316,7 +354,10 @@ export function buildPublicCatalogFacetsQuery(
         WHERE v.scope = 'results' AND v."productId" = p.id AND v."salePriceToman" = p."salePriceToman"
         ORDER BY v.id LIMIT 1
       ) price ON TRUE), '[]'::jsonb) AS items,
-      jsonb_build_object(
+      ${
+        collection
+          ? Prisma.sql`'{}'::jsonb`
+          : Prisma.sql`jsonb_build_object(
         'categories', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM category_facets o), '[]'::jsonb),
         'brands', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM brand_facets o), '[]'::jsonb),
         'sizes', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM size_facets o), '[]'::jsonb),
@@ -325,6 +366,7 @@ export function buildPublicCatalogFacetsQuery(
         'weightGrams', ${range('weight', Prisma.sql`v."weightGrams"`)},
         'lengthMm', ${range('length', Prisma.sql`v."lengthMm"`)},
         'attributes', COALESCE((SELECT facets FROM attribute_facets), '[]'::jsonb)
-      ) AS facets
+      )`
+      } AS facets
   `;
 }

@@ -40,6 +40,23 @@ describe('resolveStorefrontSeoRoutePolicy', () => {
     ).toMatchObject({ canonicalPath: '/guide', index: false, follow: true });
   });
 
+  it('indexes the clean campaign URL and limits pagination and filter variants', () => {
+    const path = '/campaigns/nowruz';
+    expect(
+      resolveStorefrontSeoRoutePolicy(path, new URLSearchParams('utm_source=email')),
+    ).toMatchObject({ canonicalPath: path, index: true, follow: true });
+    expect(resolveStorefrontSeoRoutePolicy(path, new URLSearchParams('page=2'))).toMatchObject({
+      canonicalPath: `${path}?page=2`,
+      index: false,
+      follow: true,
+    });
+    expect(resolveStorefrontSeoRoutePolicy(path, new URLSearchParams('size=7'))).toMatchObject({
+      canonicalPath: path,
+      index: false,
+      follow: true,
+    });
+  });
+
   it.each(['/products', '/categories/rings', '/brands/cartier', '/guide'])(
     'keeps valid pagination on %s crawlable with a self canonical',
     (pathname) => {

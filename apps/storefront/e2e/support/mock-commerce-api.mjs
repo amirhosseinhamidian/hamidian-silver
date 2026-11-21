@@ -22,6 +22,7 @@ let paymentConfirmedAt = PAID_AT;
 let orderCreated = false;
 let receiptSubmitted = false;
 let apiUnavailable = false;
+let campaignPlacements = false;
 const measuredStages = new Set();
 
 const media = {
@@ -534,8 +535,75 @@ async function handler(request, response) {
     orderCreated = false;
     receiptSubmitted = false;
     apiUnavailable = false;
+    campaignPlacements = false;
     measuredStages.clear();
     return json(response, 200, { reset: true });
+  }
+
+  if (request.method === 'POST' && url.pathname === '/__e2e/campaign-placements') {
+    campaignPlacements = Boolean((await body(request)).enabled);
+    return json(response, 200, { campaignPlacements });
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/v1/campaigns/public/sitemap') {
+    return json(response, 200, {
+      entries: campaignPlacements ? [{ slug: 'nowruz', updatedAt: CREATED_AT }] : [],
+    });
+  }
+
+  if (
+    request.method === 'GET' &&
+    ['/api/v1/campaigns/public/banner', '/api/v1/campaigns/public/placement'].includes(url.pathname)
+  ) {
+    const slug = url.searchParams.get('slug');
+    const slot = url.searchParams.get('slot');
+    const matches =
+      url.pathname.endsWith('/banner') ||
+      (slot === 'CATEGORY' && slug === 'rings') ||
+      (slot === 'PRODUCT' && slug === 'silver-ring');
+    return json(response, 200, {
+      banner:
+        campaignPlacements && matches
+          ? {
+              name: 'کمپین نوروز',
+              message: 'مجموعهٔ نوروزی',
+              ctaPath: '/campaigns/nowruz',
+              ctaLabel: 'دیدن مجموعه',
+              endsAt: '2099-03-22T12:00:00.000Z',
+              media: { ...media, id: PRODUCT_ID },
+            }
+          : null,
+    });
+  }
+
+  if (request.method === 'GET' && url.pathname.startsWith('/api/v1/campaigns/public/landing/')) {
+    const slug = url.pathname.split('/').at(-1);
+    const page = Number(url.searchParams.get('page') ?? '1');
+    if (
+      !['nowruz', 'weekend', 'archived-nowruz', 'empty-collection'].includes(slug) ||
+      page > (slug === 'nowruz' ? 2 : 1)
+    ) {
+      return json(response, 404, { message: 'Campaign landing not found.' });
+    }
+    const hasProducts = slug !== 'archived-nowruz' && slug !== 'empty-collection';
+    const count = hasProducts ? (slug === 'nowruz' ? 2 : 1) : 0;
+    return json(response, 200, {
+      slug,
+      title: slug === 'nowruz' ? 'مجموعهٔ نوروز' : 'مجموعهٔ آزمایشی',
+      story: 'انتخاب‌هایی برای هدیه دادن.',
+      seoMode: slug === 'weekend' ? 'TEMPORARY' : 'RECURRING',
+      active: slug !== 'archived-nowruz',
+      media: { ...media, id: PRODUCT_ID },
+      ctaPath: '/products',
+      ctaLabel: 'دیدن همهٔ محصولات',
+      products: {
+        total: count,
+        page,
+        pageSize: 1,
+        totalPages: count,
+        items: hasProducts ? [page === 1 ? product : seoProduct] : [],
+      },
+    });
   }
 
   if (request.method === 'GET' && url.pathname === '/__e2e/measurement-stages') {
@@ -605,6 +673,19 @@ async function handler(request, response) {
       subtitle: null,
       body: null,
       sections: [],
+    });
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/v1/site-settings/public/homepage') {
+    return json(response, 200, {
+      primaryHeroSlides: [],
+      secondaryHero: null,
+      newProducts: [product],
+      featuredCategories: [],
+      popularProducts: [],
+      featuredBrands: [],
+      manufacturerCountriesEnabled: false,
+      manufacturerCountries: [],
     });
   }
 

@@ -1,6 +1,8 @@
 import Link from 'next/link';
 
 import { CatalogFacetedListing } from '@/components/catalog/catalog-faceted-listing';
+import { CampaignBanner } from '@/components/home/campaign-banner';
+import type { PublicCampaignBanner } from '@/lib/home/public-campaign-banner';
 import { RelatedKnowledgeSection } from '@/components/guide/related-knowledge-section';
 import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
@@ -23,6 +25,7 @@ type CatalogCollectionPageProps = Readonly<{
   filters: CatalogFacetFilters;
   scope: CatalogFacetScope;
   products: CatalogListing;
+  campaignBanner?: PublicCampaignBanner | null;
   breadcrumbs?: readonly Readonly<{ label: string; href: string }>[];
   collectionLinks?: readonly Readonly<{
     label: string;
@@ -100,6 +103,7 @@ export function CatalogCollectionPage({
   filters,
   scope,
   products,
+  campaignBanner,
   breadcrumbs,
   collectionLinks = [],
   contextLinkGroups = [],
@@ -116,6 +120,8 @@ export function CatalogCollectionPage({
         mobileImage={mobileImage}
         breadcrumbs={breadcrumbs}
       />
+
+      {campaignBanner && <CampaignBanner key={campaignBanner.endsAt} banner={campaignBanner} />}
 
       <div className="sf-container">
         {collectionLinks.length ? (

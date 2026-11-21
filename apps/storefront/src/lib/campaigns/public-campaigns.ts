@@ -1,0 +1,52 @@
+import type { components } from '@hamidian/contracts';
+import { cache } from 'react';
+
+import { createServerApiClient } from '@/lib/api/server-client';
+
+function campaignClient() {
+  const apiOrigin = process.env.HAMIDIAN_API_ORIGIN;
+  return apiOrigin ? createServerApiClient({ apiOrigin }) : null;
+}
+
+export const getPublicCampaignLanding = cache(async (slug: string, page: number) => {
+  const client = campaignClient();
+  if (!client) throw new Error('The campaign API origin is unavailable.');
+  const result = await client.GET('/api/v1/campaigns/public/landing/{slug}', {
+    params: { path: { slug }, query: { page } },
+    cache: 'no-store',
+  });
+  if (result.response.status === 404) return null;
+  if (!result.data) throw new Error('Cannot load the campaign landing.');
+  return result.data;
+});
+
+export async function getPublicCampaignPlacement(slot: 'CATEGORY' | 'PRODUCT', slug: string) {
+  const client = campaignClient();
+  if (!client) return null;
+  try {
+    const result = await client.GET('/api/v1/campaigns/public/placement', {
+      params: { query: { slot, slug } },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(1_500),
+    });
+    return result.data?.banner ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getPublicCampaignSitemap(): Promise<
+  components['schemas']['CampaignSitemapEntryDto'][]
+> {
+  const client = campaignClient();
+  if (!client) return [];
+  try {
+    const result = await client.GET('/api/v1/campaigns/public/sitemap', {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(3_000),
+    });
+    return result.data?.entries ?? [];
+  } catch {
+    return [];
+  }
+}

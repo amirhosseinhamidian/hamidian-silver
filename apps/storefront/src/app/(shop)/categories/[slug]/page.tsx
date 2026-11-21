@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 
 import { CatalogCollectionPage } from '@/components/catalog/catalog-collection-page';
+import { getPublicCampaignPlacement } from '@/lib/campaigns/public-campaigns';
 import {
   hasCatalogFacetFilters,
   isCatalogPageOutOfRange,
@@ -84,9 +85,10 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   }
   if (filters.page > maxCatalogFacetPage) notFound();
 
-  const [products, knowledgeArticles] = await Promise.all([
+  const [products, knowledgeArticles, campaignBanner] = await Promise.all([
     getPublicFacetedCatalog(filters, scope),
     getPublicRelatedGuideArticles({ categories: [slug], limit: 3 }),
+    getPublicCampaignPlacement('CATEGORY', category.slug),
   ]);
 
   if (!hasCatalogFacetFilters(filters) && isCatalogPageOutOfRange(filters, products)) {
@@ -104,6 +106,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       filters={filters}
       scope={scope}
       products={products}
+      campaignBanner={campaignBanner}
       knowledgeArticles={knowledgeArticles}
       breadcrumbs={buildCategoryBreadcrumbItems(categories, category)}
       collectionLinks={categories

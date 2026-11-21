@@ -1,0 +1,196 @@
+import { ApiProperty, ApiPropertyOptional, PickType } from '@nestjs/swagger';
+import { Transform, Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+import {
+  CampaignBannerSlot,
+  CampaignCollectionMode,
+  CampaignLandingMode,
+} from '../../../generated/prisma/enums';
+import { PublicCatalogFacetsQueryDto } from '../../catalog/dto/public-catalog-facets.dto';
+import { PublicCatalogSort } from '../../catalog/dto/public-catalog-query.dto';
+import { PublicCatalogProductListDto } from '../../catalog/dto/public-catalog-response.dto';
+import { CampaignMediaDto } from './campaign.dto';
+
+const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export class CampaignCollectionFiltersDto extends PickType(PublicCatalogFacetsQueryDto, [
+  'categories',
+  'brands',
+  'attributes',
+  'minPriceToman',
+  'maxPriceToman',
+]) {
+  @ApiPropertyOptional({ enum: PublicCatalogSort })
+  @IsOptional()
+  @Type(() => Object)
+  @IsEnum(PublicCatalogSort)
+  sort?: PublicCatalogSort;
+
+  @ApiPropertyOptional({ type: Number, minimum: 1, maximum: 999 })
+  @IsOptional()
+  @Type(() => Object)
+  @IsInt()
+  @Min(1)
+  @Max(999)
+  minimumQuantity?: number;
+}
+
+export class CampaignPlacementDraftDto {
+  @ApiProperty({ enum: CampaignBannerSlot })
+  @IsEnum(CampaignBannerSlot)
+  slot!: CampaignBannerSlot;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 220)
+  targetSlug?: string | null;
+
+  @Type(() => Object)
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  priority!: number;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @Type(() => Object)
+  @IsString()
+  @Length(16, 24)
+  startsTehran?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @Type(() => Object)
+  @IsString()
+  @Length(16, 24)
+  endsTehran?: string | null;
+}
+
+export class CampaignLandingDraftDto {
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 64)
+  @Matches(slugPattern)
+  slug!: string;
+
+  @ApiProperty({ enum: CampaignLandingMode })
+  @IsEnum(CampaignLandingMode)
+  seoMode!: CampaignLandingMode;
+
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 150)
+  title!: string;
+
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 3000)
+  story!: string;
+
+  @ApiProperty({ enum: CampaignCollectionMode })
+  @IsEnum(CampaignCollectionMode)
+  collectionMode!: CampaignCollectionMode;
+
+  @ApiProperty({ type: () => CampaignCollectionFiltersDto })
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CampaignCollectionFiltersDto)
+  filters!: CampaignCollectionFiltersDto;
+
+  @ApiProperty({ type: String, isArray: true, maxItems: 48 })
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(48)
+  @IsString({ each: true })
+  @Length(1, 220, { each: true })
+  manualProductSlugs!: string[];
+
+  @ApiProperty({ type: () => CampaignPlacementDraftDto, isArray: true, maxItems: 3 })
+  @IsArray()
+  @ArrayMaxSize(3)
+  @ArrayUnique((placement: CampaignPlacementDraftDto) => placement?.slot)
+  @IsObject({ each: true })
+  @ValidateNested({ each: true })
+  @Type(() => CampaignPlacementDraftDto)
+  placements!: CampaignPlacementDraftDto[];
+}
+
+export class SaveCampaignLandingDto extends CampaignLandingDraftDto {
+  @Type(() => Object)
+  @IsInt()
+  @Min(1)
+  expectedRevision!: number;
+}
+
+export class CampaignLandingEditorDto {
+  @ApiProperty({ type: () => CampaignLandingDraftDto, nullable: true })
+  landing!: CampaignLandingDraftDto | null;
+
+  revision!: number;
+}
+
+export class CampaignPlacementQueryDto {
+  @ApiProperty({ enum: CampaignBannerSlot })
+  @IsEnum(CampaignBannerSlot)
+  slot!: CampaignBannerSlot;
+
+  @ApiPropertyOptional({ type: String, maxLength: 220 })
+  @IsOptional()
+  @IsString()
+  @Length(1, 220)
+  slug?: string;
+}
+
+export class CampaignLandingPreviewDto {
+  total!: number;
+}
+
+export class PublicCampaignLandingDto {
+  slug!: string;
+  title!: string;
+  story!: string;
+
+  @ApiProperty({ enum: CampaignLandingMode })
+  seoMode!: CampaignLandingMode;
+
+  active!: boolean;
+
+  @ApiProperty({ type: () => CampaignMediaDto, nullable: true })
+  media!: CampaignMediaDto | null;
+
+  ctaPath!: string;
+  ctaLabel!: string;
+
+  @ApiProperty({ type: () => PublicCatalogProductListDto })
+  products!: PublicCatalogProductListDto;
+}
+
+export class CampaignSitemapEntryDto {
+  slug!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  updatedAt!: string;
+}
+
+export class CampaignSitemapDto {
+  @ApiProperty({ type: () => CampaignSitemapEntryDto, isArray: true })
+  entries!: CampaignSitemapEntryDto[];
+}

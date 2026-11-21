@@ -6,6 +6,7 @@ import { isDirectAttribution, normalizeAttributionToken } from './attribution';
 import type { CampaignLinkDto, CreateCampaignLinkDto } from './dto/attribution.dto';
 
 const publicPath = /^\/(?:$|(?:products|categories|brands|guide)(?:\/[^/]+)?\/?$)/;
+const campaignLandingPath = /^\/campaigns\/[a-z0-9]+(?:-[a-z0-9]+)*\/?$/;
 const destinationParameters = new Set(['page', 'category', 'brand', 'country', 'sort']);
 
 export function parseCampaignDestination(origin: string, destination: string): URL {
@@ -17,13 +18,22 @@ export function parseCampaignDestination(origin: string, destination: string): U
     throw new BadRequestException('Choose a public storefront path.');
   }
   const url = new URL(destination, origin);
-  if (url.origin !== origin || !publicPath.test(url.pathname) || /%2f|%5c/i.test(url.pathname)) {
+  const landing = campaignLandingPath.test(url.pathname);
+  if (
+    url.origin !== origin ||
+    (!publicPath.test(url.pathname) && !landing) ||
+    /%2f|%5c/i.test(url.pathname)
+  ) {
     throw new BadRequestException('Choose a public storefront path.');
   }
   for (const [key] of url.searchParams) {
     if (key.toLowerCase().startsWith('utm_'))
       throw new ConflictException('The destination already contains tracking parameters.');
-    if (!destinationParameters.has(key) || url.searchParams.getAll(key).length > 1) {
+    if (
+      !destinationParameters.has(key) ||
+      (landing && key !== 'page') ||
+      url.searchParams.getAll(key).length > 1
+    ) {
       throw new BadRequestException(
         'The destination contains an unsupported or repeated parameter.',
       );

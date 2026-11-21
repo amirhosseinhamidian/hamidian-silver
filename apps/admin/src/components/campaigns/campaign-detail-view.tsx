@@ -38,6 +38,7 @@ const historyLabels: Record<string, string> = {
   EDIT: 'ویرایش پیش‌نویس',
   PUBLISH: 'انتشار خودکار',
   EXPIRE: 'پایان خودکار',
+  LANDING_EDIT: 'ویرایش صفحه و مجموعه',
 };
 
 export function CampaignDetailView({

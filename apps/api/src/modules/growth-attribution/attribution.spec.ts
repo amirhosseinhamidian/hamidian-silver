@@ -186,7 +186,15 @@ describe('campaign links', () => {
     '/products?UTM_SOURCE=old',
     '/products?page=2&page=3',
     '/products/%2fcheckout',
+    '/campaigns',
+    '/campaigns/nowruz?category=rings',
   ])('rejects invalid or conflicting destination %s', (destination) =>
     expect(() => buildCampaignUrl(origin, { ...campaign, destination })).toThrow(),
   );
+  it('creates a tracking link to a campaign landing', () => {
+    const link = buildCampaignUrl(origin, { ...campaign, destination: '/campaigns/nowruz' });
+    const url = new URL(link.url);
+    expect(url.pathname).toBe('/campaigns/nowruz');
+    expect(url.searchParams.get('utm_id')).toBe(campaign.campaignId);
+  });
 });
