@@ -342,6 +342,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['finance.read'],
       },
       {
+        id: 'growth',
+        label: 'داشبورد رشد',
+        shortLabel: 'رشد',
+        href: '/growth',
+        icon: 'finance',
+        description: 'مسیر خرید، فروش قطعی و هزینهٔ کمپین‌ها',
+        roadmapStage: 31,
+        permissions: ['finance.read'],
+      },
+      {
         id: 'suppliers',
         label: 'تأمین‌کنندگان',
         shortLabel: 'تأمین',

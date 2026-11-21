@@ -1396,6 +1396,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/growth-attribution/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GrowthAttributionController_readDashboard_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/growth-attribution/dashboard/costs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GrowthAttributionController_readCosts_v1"];
+        put?: never;
+        post: operations["GrowthAttributionController_recordCost_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/growth-attribution/measurement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GrowthAttributionController_measure_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -4921,6 +4969,102 @@ export interface components {
             limit: number;
             total: number;
         };
+        GrowthDashboardMetricsDto: {
+            conversionPercent: number | null;
+            averageOrderToman: number | null;
+            recordedSpendToman: number | null;
+            recordedSpendPerConfirmedOrderToman: number | null;
+            measuredVisits: number | null;
+            itemListViews: number | null;
+            itemSelections: number | null;
+            itemViews: number | null;
+            cartAdds: number | null;
+            checkouts: number | null;
+            confirmedCustomers: number;
+            submittedOrders: number;
+            confirmedOrders: number;
+            confirmedSubmissions: number;
+            collectedToman: number;
+            refundedToman: number;
+            netCollectedToman: number;
+        };
+        GrowthDashboardGroupDto: {
+            conversionPercent: number | null;
+            averageOrderToman: number | null;
+            recordedSpendToman: number | null;
+            recordedSpendPerConfirmedOrderToman: number | null;
+            measuredVisits: number | null;
+            itemListViews: number | null;
+            itemSelections: number | null;
+            itemViews: number | null;
+            cartAdds: number | null;
+            checkouts: number | null;
+            source: string | null;
+            medium: string | null;
+            campaign: string | null;
+            campaignId: string | null;
+            confirmedCustomers: number;
+            submittedOrders: number;
+            confirmedOrders: number;
+            confirmedSubmissions: number;
+            collectedToman: number;
+            refundedToman: number;
+            netCollectedToman: number;
+        };
+        GrowthDashboardDto: {
+            period: components["schemas"]["GrowthRevenuePeriodDto"];
+            totals: components["schemas"]["GrowthDashboardMetricsDto"];
+            items: components["schemas"]["GrowthDashboardGroupDto"][];
+            page: number;
+            limit: number;
+            total: number;
+        };
+        GrowthCostDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            day: string;
+            note: string | null;
+            /** Format: date-time */
+            recordedAt: string;
+            campaignId: string;
+            campaign: string;
+            source: string;
+            medium: string;
+            amountToman: number;
+        };
+        GrowthCostsDto: {
+            items: components["schemas"]["GrowthCostDto"][];
+            page: number;
+            limit: number;
+            total: number;
+        };
+        RecordGrowthCostDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            day: string;
+            amountToman: number;
+            note?: string;
+            campaignId: string;
+            source: string;
+            medium: string;
+        };
+        GrowthMeasurementDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            visitId: string;
+            /** @enum {string} */
+            stage: "view_item_list" | "select_item" | "view_item" | "add_to_cart" | "begin_checkout";
+            /** @enum {string} */
+            device: "desktop" | "mobile" | "tablet";
+            productSlugs: string[];
+            source?: string;
+            medium?: string;
+            campaign?: string;
+            campaignId?: string;
+        };
         CreateWarehouseDto: {
             code: string;
             name: string;
@@ -5150,6 +5294,8 @@ export interface components {
         };
         CreateOrderDto: {
             attribution?: components["schemas"]["SessionAttributionDto"];
+            /** @enum {string} */
+            growthDevice?: "desktop" | "mobile" | "tablet";
             customerNote?: string;
             /** Format: uuid */
             shippingCarrierId?: string;
@@ -8914,6 +9060,112 @@ export interface operations {
             };
             /** @description Invalid reporting period, filters or pagination. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthAttributionController_readDashboard_v1: {
+        parameters: {
+            query: {
+                /** @description First included calendar day in Asia/Tehran. */
+                from: string;
+                /** @description Last included calendar day in Asia/Tehran. */
+                to: string;
+                category?: string;
+                device?: "desktop" | "mobile" | "tablet" | "unknown";
+                page?: number;
+                limit?: number;
+                source?: string;
+                medium?: string;
+                campaignId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthDashboardDto"];
+                };
+            };
+        };
+    };
+    GrowthAttributionController_readCosts_v1: {
+        parameters: {
+            query: {
+                /** @description First included calendar day in Asia/Tehran. */
+                from: string;
+                /** @description Last included calendar day in Asia/Tehran. */
+                to: string;
+                category?: string;
+                device?: "desktop" | "mobile" | "tablet" | "unknown";
+                page?: number;
+                limit?: number;
+                source?: string;
+                medium?: string;
+                campaignId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthCostsDto"];
+                };
+            };
+        };
+    };
+    GrowthAttributionController_recordCost_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordGrowthCostDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthCostDto"];
+                };
+            };
+        };
+    };
+    GrowthAttributionController_measure_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrowthMeasurementDto"];
+            };
+        };
+        responses: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };

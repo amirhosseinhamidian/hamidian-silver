@@ -22,6 +22,7 @@ let paymentConfirmedAt = PAID_AT;
 let orderCreated = false;
 let receiptSubmitted = false;
 let apiUnavailable = false;
+const measuredStages = new Set();
 
 const media = {
   url: `${MOCK_API_ORIGIN}/media/silver-ring.png`,
@@ -533,7 +534,12 @@ async function handler(request, response) {
     orderCreated = false;
     receiptSubmitted = false;
     apiUnavailable = false;
+    measuredStages.clear();
     return json(response, 200, { reset: true });
+  }
+
+  if (request.method === 'GET' && url.pathname === '/__e2e/measurement-stages') {
+    return json(response, 200, [...measuredStages]);
   }
 
   if (request.method === 'POST' && url.pathname === '/__e2e/approve-receipt') {
@@ -680,6 +686,16 @@ async function handler(request, response) {
 
   if (request.method === 'POST' && url.pathname === '/api/v1/catalog/public/search/facets') {
     return json(response, 200, facetedProducts(await body(request)));
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/v1/growth-attribution/measurement') {
+    const measurement = await body(request);
+    if (typeof measurement?.stage !== 'string') {
+      return json(response, 400, { message: 'A measurement stage is required.' });
+    }
+    measuredStages.add(measurement.stage);
+    response.writeHead(204);
+    return response.end();
   }
 
   if (request.method === 'GET' && url.pathname === '/api/v1/catalog/public/products/silver-ring') {

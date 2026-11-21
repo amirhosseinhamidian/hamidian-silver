@@ -16,6 +16,7 @@ import { FormField } from '@/components/ui/form-field';
 import { Select } from '@/components/ui/select';
 import { trackBeginCheckout } from '@/lib/analytics/commerce-events';
 import { trackFunnelEvent } from '@/lib/analytics/funnel-tracker';
+import { growthDevice } from '@/lib/analytics/growth-measurement';
 import { submittedOrderEvent } from '@/lib/analytics/order-funnel';
 import { attributionForOrder } from '@/lib/analytics/session-attribution';
 import { AUTHENTICATION_SUCCEEDED_EVENT, openAuthModal } from '@/lib/auth/events';
@@ -439,10 +440,15 @@ export function CheckoutFlow({
               customerNote,
             );
         const attribution = attributionForOrder();
+        const device = growthDevice();
         const orderResponse = await fetch('/api/checkout/order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(attribution ? { ...orderBody, attribution } : orderBody),
+          body: JSON.stringify({
+            ...orderBody,
+            ...(attribution ? { attribution } : {}),
+            ...(device ? { growthDevice: device } : {}),
+          }),
         });
         if (!orderResponse.ok) {
           if (orderResponse.status === 401) setAuth({ status: 'anonymous', expired: true });

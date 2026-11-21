@@ -6,6 +6,7 @@ import {
   ArrayUnique,
   IsArray,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -19,6 +20,7 @@ import {
 } from 'class-validator';
 import { PlatingType } from '../../../generated/prisma/enums';
 import { SessionAttributionDto } from '../../growth-attribution/dto/attribution.dto';
+import { growthDevices } from '../../growth-attribution/dto/growth-dashboard.dto';
 
 export class CreateOrderAddressDto {
   @IsString()
@@ -64,6 +66,11 @@ export class CreateOrderDto {
   @ApiPropertyOptional({ type: () => SessionAttributionDto })
   @Allow()
   attribution?: unknown;
+
+  @ApiPropertyOptional({ enum: [...growthDevices] })
+  @IsOptional()
+  @IsIn(growthDevices)
+  growthDevice?: (typeof growthDevices)[number];
 
   @IsOptional()
   @IsString()

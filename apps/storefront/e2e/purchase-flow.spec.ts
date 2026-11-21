@@ -39,6 +39,13 @@ test('OTP → product → cart → checkout → card-to-card receipt', async ({ 
     await expect
       .poll(funnelNames)
       .toEqual(expect.arrayContaining(['view_item_list', 'select_item', 'view_item']));
+    await expect
+      .poll(async () => {
+        const response = await request.get('http://127.0.0.1:4311/__e2e/measurement-stages');
+        expect(response.ok()).toBeTruthy();
+        return response.json();
+      })
+      .toContain('view_item');
   });
 
   await test.step('sign in with OTP', async () => {
@@ -83,6 +90,7 @@ test('OTP → product → cart → checkout → card-to-card receipt', async ({ 
     );
     await page.getByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }).click();
     expect((await orderRequest).postDataJSON()).toMatchObject({
+      growthDevice: expect.stringMatching(/^(desktop|mobile|tablet)$/),
       attribution: {
         version: 1,
         touches: [{ source: 'newsletter', medium: 'email', campaign: 'winter-sale' }],

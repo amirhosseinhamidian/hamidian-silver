@@ -11,6 +11,7 @@ import {
   type FunnelEvent,
   type FunnelEventInput,
 } from '@/lib/analytics/funnel-contract';
+import { sendGrowthMeasurement } from '@/lib/analytics/growth-measurement';
 
 const SESSION_IDLE_MS = 30 * 60_000;
 const ORDER_EVENT_RETENTION_MS = 90 * 24 * 60 * 60_000;
@@ -104,6 +105,7 @@ function storeEvent(input: FunnelEventInput, options: TrackOptions): boolean {
     FUNNEL_SESSION_KEY,
     JSON.stringify({ ...session, lastActivity: now }),
   );
+  sendGrowthMeasurement(event);
 
   if (
     input.name !== 'purchase_confirmed' ||

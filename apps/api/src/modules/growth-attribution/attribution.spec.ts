@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '../../generated/prisma/client';
 import { AttributionModel } from '../../generated/prisma/enums';
+import { IS_PUBLIC_KEY } from '../auth/public.decorator';
 import { PERMISSIONS_KEY } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CreateOrderDto } from '../orders/dto/create-order.dto';
@@ -35,11 +36,25 @@ describe('growth revenue reporting', () => {
     for (const handler of [
       GrowthAttributionController.prototype.summary,
       GrowthAttributionController.prototype.events,
+      GrowthAttributionController.prototype.readDashboard,
+      GrowthAttributionController.prototype.readCosts,
     ]) {
       expect(Reflect.getMetadata(PERMISSIONS_KEY, handler)).toEqual([
         PERMISSION_CODES.FINANCE_READ,
       ]);
     }
+  });
+
+  it('restricts cost writes and makes only measurement public', () => {
+    expect(
+      Reflect.getMetadata(PERMISSIONS_KEY, GrowthAttributionController.prototype.recordCost),
+    ).toEqual([PERMISSION_CODES.FINANCE_READ, PERMISSION_CODES.FINANCE_WRITE]);
+    expect(
+      Reflect.getMetadata(IS_PUBLIC_KEY, GrowthAttributionController.prototype.recordCost),
+    ).toBeUndefined();
+    expect(Reflect.getMetadata(IS_PUBLIC_KEY, GrowthAttributionController.prototype.measure)).toBe(
+      true,
+    );
   });
 
   it('validates dates and bounds the reporting period', () => {

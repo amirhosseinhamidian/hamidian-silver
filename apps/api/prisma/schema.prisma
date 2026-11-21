@@ -1709,6 +1709,7 @@ model Order {
   supplierPayables      SupplierPayable[]
   financeSnapshot       OrderFinanceSnapshot?
   attribution           OrderAttribution?
+  growthDevice          String?                       @db.VarChar(12)
   returns               OrderReturn[]
   supplierCredits       SupplierCredit[]
   costEntries           OrderCostEntry[]
@@ -1739,8 +1740,41 @@ model CampaignLinkIdentity {
   id        String   @id @db.VarChar(64)
   campaign  String   @unique @db.VarChar(96)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
+  costs     GrowthCampaignCost[]
 
   @@map("campaign_link_identities")
+}
+
+model GrowthCampaignCost {
+  id           String               @id @db.Uuid
+  campaignId   String               @db.VarChar(64)
+  source       String               @db.VarChar(96)
+  medium       String               @db.VarChar(96)
+  day          DateTime             @db.Date
+  amountToman  Int
+  note         String?              @db.VarChar(160)
+  recordedAt   DateTime             @default(now()) @db.Timestamptz(3)
+  campaign     CampaignLinkIdentity @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+
+  @@index([day])
+  @@index([campaignId, day])
+  @@map("growth_campaign_costs")
+}
+
+model GrowthFunnelEvent {
+  id           String   @id @db.Uuid
+  visitId      String   @db.Uuid
+  stage        String   @db.VarChar(24)
+  device       String   @db.VarChar(12)
+  source       String?  @db.VarChar(96)
+  medium       String?  @db.VarChar(96)
+  campaign     String?  @db.VarChar(96)
+  campaignId   String?  @db.VarChar(64)
+  productSlugs String[] @db.VarChar(180)
+  recordedAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([recordedAt])
+  @@map("growth_funnel_events")
 }
 
 model OrderAttribution {

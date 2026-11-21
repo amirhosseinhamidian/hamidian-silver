@@ -1,7 +1,11 @@
 import { Prisma } from '../../generated/prisma/client';
+import type { GrowthDashboardQueryDto } from './dto/growth-dashboard.dto';
 import { type GrowthRevenueQueryDto, RevenueEventKind as Kind } from './dto/growth-revenue.dto';
 
-export function growthRevenueEvents(query: GrowthRevenueQueryDto) {
+export function growthRevenueEvents(
+  query: GrowthRevenueQueryDto,
+  scope?: Pick<GrowthDashboardQueryDto, 'category' | 'device'>,
+) {
   const within = (time: Prisma.Sql) =>
     Prisma.sql`${time} >= report_period.starts_at AND ${time} < report_period.ends_before`;
   const source = query.source ? Prisma.sql`AND attribution.source = ${query.source}` : Prisma.empty;
@@ -9,6 +13,22 @@ export function growthRevenueEvents(query: GrowthRevenueQueryDto) {
   const campaign = query.campaignId
     ? Prisma.sql`AND attribution."campaignId" = ${query.campaignId}`
     : Prisma.empty;
+  const category = scope?.category
+    ? Prisma.sql`AND EXISTS (
+        SELECT 1 FROM "order_items" item
+        JOIN "product_variants" variant ON variant.id = item."variantId"
+        JOIN "product_categories" membership ON membership."productId" = variant."productId"
+        JOIN "categories" category ON category.id = membership."categoryId"
+        WHERE item."orderId" = orders.id AND category.slug = ${scope.category}
+          AND category."isActive" AND category."deletedAt" IS NULL
+      )`
+    : Prisma.empty;
+  const device =
+    scope?.device === 'unknown'
+      ? Prisma.sql`AND orders."growthDevice" IS NULL`
+      : scope?.device
+        ? Prisma.sql`AND orders."growthDevice" = ${scope.device}`
+        : Prisma.empty;
 
   return Prisma.sql`
     WITH report_period AS (
@@ -113,7 +133,7 @@ export function growthRevenueEvents(query: GrowthRevenueQueryDto) {
       JOIN "orders" AS orders ON orders.id = activity."orderId"
       LEFT JOIN "order_finance_snapshots" AS finance ON finance."orderId" = orders.id AND activity.kind = ${Kind.PURCHASE_CONFIRMED}
       LEFT JOIN "order_attributions" AS attribution ON attribution."orderId" = orders.id
-      WHERE TRUE ${source} ${medium} ${campaign}
+      WHERE TRUE ${source} ${medium} ${campaign} ${category} ${device}
     )
   `;
 }

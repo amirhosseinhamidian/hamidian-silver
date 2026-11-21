@@ -4344,6 +4344,291 @@
         ]
       }
     },
+    "/api/v1/growth-attribution/dashboard": {
+      "get": {
+        "operationId": "GrowthAttributionController_readDashboard_v1",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "First included calendar day in Asia/Tehran.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Last included calendar day in Asia/Tehran.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 180,
+              "type": "string"
+            }
+          },
+          {
+            "name": "device",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "desktop",
+                "mobile",
+                "tablet",
+                "unknown"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "source",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 96,
+              "type": "string"
+            }
+          },
+          {
+            "name": "medium",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 96,
+              "type": "string"
+            }
+          },
+          {
+            "name": "campaignId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrowthDashboardDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "GrowthAttribution"
+        ]
+      }
+    },
+    "/api/v1/growth-attribution/dashboard/costs": {
+      "get": {
+        "operationId": "GrowthAttributionController_readCosts_v1",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "First included calendar day in Asia/Tehran.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Last included calendar day in Asia/Tehran.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 180,
+              "type": "string"
+            }
+          },
+          {
+            "name": "device",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "desktop",
+                "mobile",
+                "tablet",
+                "unknown"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "source",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 96,
+              "type": "string"
+            }
+          },
+          {
+            "name": "medium",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 96,
+              "type": "string"
+            }
+          },
+          {
+            "name": "campaignId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrowthCostsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "GrowthAttribution"
+        ]
+      },
+      "post": {
+        "operationId": "GrowthAttributionController_recordCost_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordGrowthCostDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrowthCostDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "GrowthAttribution"
+        ]
+      }
+    },
+    "/api/v1/growth-attribution/measurement": {
+      "post": {
+        "operationId": "GrowthAttributionController_measure_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrowthMeasurementDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GrowthAttribution"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "HealthController_check_v1",
@@ -14512,6 +14797,417 @@
           "total"
         ]
       },
+      "GrowthDashboardMetricsDto": {
+        "type": "object",
+        "properties": {
+          "conversionPercent": {
+            "type": "number",
+            "nullable": true
+          },
+          "averageOrderToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "recordedSpendToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "recordedSpendPerConfirmedOrderToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "measuredVisits": {
+            "type": "number",
+            "nullable": true
+          },
+          "itemListViews": {
+            "type": "number",
+            "nullable": true
+          },
+          "itemSelections": {
+            "type": "number",
+            "nullable": true
+          },
+          "itemViews": {
+            "type": "number",
+            "nullable": true
+          },
+          "cartAdds": {
+            "type": "number",
+            "nullable": true
+          },
+          "checkouts": {
+            "type": "number",
+            "nullable": true
+          },
+          "confirmedCustomers": {
+            "type": "number"
+          },
+          "submittedOrders": {
+            "type": "number"
+          },
+          "confirmedOrders": {
+            "type": "number"
+          },
+          "confirmedSubmissions": {
+            "type": "number"
+          },
+          "collectedToman": {
+            "type": "number"
+          },
+          "refundedToman": {
+            "type": "number"
+          },
+          "netCollectedToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "conversionPercent",
+          "averageOrderToman",
+          "recordedSpendToman",
+          "recordedSpendPerConfirmedOrderToman",
+          "measuredVisits",
+          "itemListViews",
+          "itemSelections",
+          "itemViews",
+          "cartAdds",
+          "checkouts",
+          "confirmedCustomers",
+          "submittedOrders",
+          "confirmedOrders",
+          "confirmedSubmissions",
+          "collectedToman",
+          "refundedToman",
+          "netCollectedToman"
+        ]
+      },
+      "GrowthDashboardGroupDto": {
+        "type": "object",
+        "properties": {
+          "conversionPercent": {
+            "type": "number",
+            "nullable": true
+          },
+          "averageOrderToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "recordedSpendToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "recordedSpendPerConfirmedOrderToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "measuredVisits": {
+            "type": "number",
+            "nullable": true
+          },
+          "itemListViews": {
+            "type": "number",
+            "nullable": true
+          },
+          "itemSelections": {
+            "type": "number",
+            "nullable": true
+          },
+          "itemViews": {
+            "type": "number",
+            "nullable": true
+          },
+          "cartAdds": {
+            "type": "number",
+            "nullable": true
+          },
+          "checkouts": {
+            "type": "number",
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "nullable": true
+          },
+          "medium": {
+            "type": "string",
+            "nullable": true
+          },
+          "campaign": {
+            "type": "string",
+            "nullable": true
+          },
+          "campaignId": {
+            "type": "string",
+            "nullable": true
+          },
+          "confirmedCustomers": {
+            "type": "number"
+          },
+          "submittedOrders": {
+            "type": "number"
+          },
+          "confirmedOrders": {
+            "type": "number"
+          },
+          "confirmedSubmissions": {
+            "type": "number"
+          },
+          "collectedToman": {
+            "type": "number"
+          },
+          "refundedToman": {
+            "type": "number"
+          },
+          "netCollectedToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "conversionPercent",
+          "averageOrderToman",
+          "recordedSpendToman",
+          "recordedSpendPerConfirmedOrderToman",
+          "measuredVisits",
+          "itemListViews",
+          "itemSelections",
+          "itemViews",
+          "cartAdds",
+          "checkouts",
+          "source",
+          "medium",
+          "campaign",
+          "campaignId",
+          "confirmedCustomers",
+          "submittedOrders",
+          "confirmedOrders",
+          "confirmedSubmissions",
+          "collectedToman",
+          "refundedToman",
+          "netCollectedToman"
+        ]
+      },
+      "GrowthDashboardDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/GrowthRevenuePeriodDto"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/GrowthDashboardMetricsDto"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrowthDashboardGroupDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "period",
+          "totals",
+          "items",
+          "page",
+          "limit",
+          "total"
+        ]
+      },
+      "GrowthCostDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "campaignId": {
+            "type": "string"
+          },
+          "campaign": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "medium": {
+            "type": "string"
+          },
+          "amountToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "day",
+          "note",
+          "recordedAt",
+          "campaignId",
+          "campaign",
+          "source",
+          "medium",
+          "amountToman"
+        ]
+      },
+      "GrowthCostsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrowthCostDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "limit",
+          "total"
+        ]
+      },
+      "RecordGrowthCostDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "day": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{3}-\\d{2}-\\d{2}$",
+            "format": "date"
+          },
+          "amountToman": {
+            "type": "number",
+            "minimum": -2147483647,
+            "maximum": 2147483647
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "campaignId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "medium": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          }
+        },
+        "required": [
+          "id",
+          "day",
+          "amountToman",
+          "campaignId",
+          "source",
+          "medium"
+        ]
+      },
+      "GrowthMeasurementDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "visitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stage": {
+            "enum": [
+              "view_item_list",
+              "select_item",
+              "view_item",
+              "add_to_cart",
+              "begin_checkout"
+            ],
+            "type": "string"
+          },
+          "device": {
+            "enum": [
+              "desktop",
+              "mobile",
+              "tablet"
+            ],
+            "type": "string"
+          },
+          "productSlugs": {
+            "minItems": 1,
+            "maxItems": 24,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 180,
+              "minLength": 1
+            }
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "medium": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "campaignId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "id",
+          "visitId",
+          "stage",
+          "device",
+          "productSlugs"
+        ]
+      },
       "CreateWarehouseDto": {
         "type": "object",
         "properties": {
@@ -15417,6 +16113,14 @@
         "properties": {
           "attribution": {
             "$ref": "#/components/schemas/SessionAttributionDto"
+          },
+          "growthDevice": {
+            "enum": [
+              "desktop",
+              "mobile",
+              "tablet"
+            ],
+            "type": "string"
           },
           "customerNote": {
             "type": "string",

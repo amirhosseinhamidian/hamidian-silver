@@ -522,6 +522,7 @@ export class OrdersService {
           grandTotalToman,
           customerNote,
           reservationExpiresAt,
+          ...(dto.growthDevice ? { growthDevice: dto.growthDevice } : {}),
           ...(attribution ? { attribution: { create: attribution } } : {}),
           shippingAddress: {
             create: shippingAddress,
