@@ -24,6 +24,7 @@ type SummaryCounters = Omit<
   | 'marketingChannelCostToman'
 >;
 type SummaryRow = Record<keyof SummaryCounters, bigint> & {
+  campaignDiscountToman: bigint | null;
   paymentChannelFeeToman: bigint | null;
   shippingProviderCostToman: bigint | null;
 };
@@ -72,6 +73,7 @@ export class GrowthRevenueService {
         COALESCE(SUM("merchandiseToman"), 0) AS "merchandiseToman",
         COALESCE(SUM("platingToman"), 0) AS "platingToman",
         COALESCE(SUM("orderDiscountToman"), 0) AS "orderDiscountToman",
+        SUM("campaignDiscountToman") AS "campaignDiscountToman",
         COALESCE(SUM("shippingChargedToman"), 0) AS "shippingChargedToman",
         COALESCE(SUM("taxToman"), 0) AS "taxToman",
         COALESCE(SUM("amountToman") FILTER (WHERE kind = ${Kind.PURCHASE_CONFIRMED}), 0) AS "collectedToman",
@@ -80,7 +82,8 @@ export class GrowthRevenueService {
         SUM("amountToman") FILTER (WHERE kind = ${Kind.SHIPPING_PROVIDER_COST}) AS "shippingProviderCostToman"
       FROM attributed
     `);
-    const { paymentChannelFeeToman, shippingProviderCostToman, ...counts } = row;
+    const { campaignDiscountToman, paymentChannelFeeToman, shippingProviderCostToman, ...counts } =
+      row;
     const totals = Object.fromEntries(
       Object.entries(counts).map(([key, value]) => [key, Number(value)]),
     ) as SummaryCounters;
@@ -93,7 +96,7 @@ export class GrowthRevenueService {
         paymentChannelFeeToman === null ? null : Number(paymentChannelFeeToman),
       shippingProviderCostToman:
         shippingProviderCostToman === null ? null : Number(shippingProviderCostToman),
-      campaignDiscountToman: null,
+      campaignDiscountToman: campaignDiscountToman === null ? null : Number(campaignDiscountToman),
       walletAppliedToman: null,
       marketingChannelCostToman: null,
     };

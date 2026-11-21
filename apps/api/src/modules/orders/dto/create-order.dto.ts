@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   Allow,
+  ArrayMaxSize,
   ArrayMinSize,
   ArrayUnique,
   IsArray,
@@ -62,7 +63,29 @@ export class CreateOrderItemDto {
   platingType?: PlatingType;
 }
 
+export class PromotionEstimateRequestDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @ArrayUnique((item: CreateOrderItemDto) => `${item.variantId}:${item.platingType ?? 'NONE'}`)
+  @ValidateNested({ each: true })
+  @Type(() => CreateOrderItemDto)
+  items!: CreateOrderItemDto[];
+}
+
 export class CreateOrderDto {
+  @IsOptional()
+  @Type(() => Object)
+  @IsString()
+  @MaxLength(32)
+  couponCode?: string;
+
+  @IsOptional()
+  @Type(() => Object)
+  @IsString()
+  @MaxLength(160)
+  quoteToken?: string;
+
   @ApiPropertyOptional({ type: () => SessionAttributionDto })
   @Allow()
   attribution?: unknown;

@@ -2228,6 +2228,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders/promotion-estimate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OrdersController_estimate_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/price-quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OrdersController_quote_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orders/me": {
         parameters: {
             query?: never;
@@ -2622,6 +2654,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["OperationalIncidentsController_addNote_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/promotions/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PromotionsController_listPublic_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/promotions/{campaignId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PromotionsController_read_v1"];
+        put: operations["PromotionsController_save_v1"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5551,6 +5615,8 @@ export interface components {
             attribution?: components["schemas"]["SessionAttributionDto"];
             /** @enum {string} */
             growthDevice?: "desktop" | "mobile" | "tablet";
+            couponCode?: string;
+            quoteToken?: string;
             customerNote?: string;
             /** Format: uuid */
             shippingCarrierId?: string;
@@ -5664,6 +5730,32 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        PromotionEstimateRequestDto: {
+            items: components["schemas"]["CreateOrderItemDto"][];
+        };
+        PromotionEstimateDto: {
+            campaignName: string | null;
+            merchandiseTotalToman: number;
+            platingTotalToman: number;
+            discountTotalToman: number;
+            shippingTotalToman: number;
+            shippingDiscountToman: number;
+            walletAppliedToman: number;
+            payableToman: number;
+        };
+        CheckoutPriceQuoteDto: {
+            campaignName: string | null;
+            /** Format: date-time */
+            expiresAt: string;
+            quoteToken: string;
+            merchandiseTotalToman: number;
+            platingTotalToman: number;
+            discountTotalToman: number;
+            shippingTotalToman: number;
+            shippingDiscountToman: number;
+            walletAppliedToman: number;
+            payableToman: number;
+        };
         CustomerOrderSummaryDto: {
             /** @enum {string} */
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
@@ -5776,6 +5868,36 @@ export interface components {
         };
         AddOperationalIncidentNoteDto: {
             note: string;
+        };
+        PublicPromotionDto: {
+            /** @enum {string} */
+            kind: "PERCENT" | "FIXED" | "THRESHOLD" | "BUNDLE" | "FREE_SHIPPING";
+            productIds: string[];
+            categoryIds: string[];
+            /** Format: date-time */
+            endsAt: string;
+            name: string;
+            allProducts: boolean;
+        };
+        PublicPromotionsDto: {
+            items: components["schemas"]["PublicPromotionDto"][];
+            available: boolean;
+        };
+        SavePromotionDto: {
+            /** @enum {string} */
+            kind: "PERCENT" | "FIXED" | "THRESHOLD" | "BUNDLE" | "FREE_SHIPPING";
+            bundleProductSlugs: string[];
+            couponCode?: string | null;
+            maxUses?: number | null;
+            value: number;
+            minSubtotalToman: number;
+            maxDiscountToman: number;
+            maxDiscountBps: number;
+            priority: number;
+            expectedVersion: number;
+        };
+        AdminPromotionDto: {
+            rule: components["schemas"]["SavePromotionDto"] | null;
         };
         PublicCardToCardSettingsDto: {
             cardNumber: string | null;
@@ -10726,6 +10848,52 @@ export interface operations {
             };
         };
     };
+    OrdersController_estimate_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionEstimateRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionEstimateDto"];
+                };
+            };
+        };
+    };
+    OrdersController_quote_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrderDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckoutPriceQuoteDto"];
+                };
+            };
+        };
+    };
     OrdersController_listMyOrders_v1: {
         parameters: {
             query?: {
@@ -11310,6 +11478,71 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    PromotionsController_listPublic_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPromotionsDto"];
+                };
+            };
+        };
+    };
+    PromotionsController_read_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPromotionDto"];
+                };
+            };
+        };
+    };
+    PromotionsController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavePromotionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPromotionDto"];
+                };
             };
         };
     };

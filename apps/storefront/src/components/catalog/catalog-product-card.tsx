@@ -7,6 +7,7 @@ import { CatalogWishlistButton } from '@/components/wishlist/catalog-wishlist-bu
 import type { PublicCatalogProductSummary } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
+import { ProductPromotion } from '@/lib/promotions/promotion-context';
 
 type CatalogProductCardProps = Readonly<{
   product: PublicCatalogProductSummary;
@@ -116,6 +117,10 @@ export function CatalogProductCard({
             </p>
           ) : null}
         </div>
+
+        {product.isAvailable && (
+          <ProductPromotion id={product.id} categories={product.categories} />
+        )}
 
         <div className="sf-catalog-card__action mt-auto pt-3 sm:pt-4">
           <ButtonLink

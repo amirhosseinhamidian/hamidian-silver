@@ -51,6 +51,21 @@ export async function createCheckoutOrder(request: Request): Promise<Response> {
   return responseFromApi(response, data ?? error);
 }
 
+export async function quoteCheckoutOrder(request: Request): Promise<Response> {
+  const accessToken = await getSessionToken();
+  if (!accessToken) return authenticationRequired();
+  try {
+    const body = (await request.json()) as CreateOrderBody;
+    const { data, error, response } = await createApiClient(accessToken).POST(
+      '/api/v1/orders/price-quote',
+      { body },
+    );
+    return responseFromApi(response, data ?? error);
+  } catch {
+    return Response.json({ message: 'Checkout quote is unavailable.' }, { status: 502 });
+  }
+}
+
 export async function initiateCheckoutPayment(request: Request): Promise<Response> {
   const accessToken = await getSessionToken();
 

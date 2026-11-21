@@ -14,6 +14,10 @@ import { resolveHumanAuditEvent, sanitizeAuditText } from './audit-event';
 import { AuditService, type RecordAuditLogInput } from './audit.service';
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const READ_ONLY_POST_ACTIONS = new Set([
+  'POST /orders/price-quote',
+  'POST /orders/promotion-estimate',
+]);
 const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
 
 type AuditedRequest = Request & RequestWithAuth;
@@ -55,6 +59,7 @@ export class AuditTrailInterceptor implements NestInterceptor {
 
     const startedAt = Date.now();
     const target = describeAuditTarget(request.originalUrl || request.url, method);
+    if (READ_ONLY_POST_ACTIONS.has(target.action)) return next.handle();
     const base = {
       actorUserId: principal.userId,
       action: target.action,

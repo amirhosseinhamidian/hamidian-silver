@@ -5,6 +5,8 @@ import type { StorefrontAnnouncement } from '@/components/layout/storefront-anno
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 import type { ReactNode } from 'react';
+import { PromotionProvider } from '@/lib/promotions/promotion-context';
+import { getPublicPromotions } from '@/lib/promotions/public-promotions';
 
 type ShopLayoutProps = Readonly<{
   children: ReactNode;
@@ -12,7 +14,10 @@ type ShopLayoutProps = Readonly<{
 
 export default async function ShopLayout({ children }: ShopLayoutProps) {
   const authenticated = Boolean((await cookies()).get(SESSION_COOKIE_NAME)?.value);
-  const settings = await getPublicSiteSettings();
+  const [settings, promotions] = await Promise.all([
+    getPublicSiteSettings(),
+    getPublicPromotions(),
+  ]);
   const announcement: StorefrontAnnouncement = {
     enabled: settings.announcement.enabled,
     message: settings.announcement.message ?? '',
@@ -47,7 +52,7 @@ export default async function ShopLayout({ children }: ShopLayoutProps) {
         },
       }}
     >
-      {children}
+      <PromotionProvider promotions={promotions}>{children}</PromotionProvider>
     </StorefrontShell>
   );
 }

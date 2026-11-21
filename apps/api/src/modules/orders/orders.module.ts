@@ -3,6 +3,7 @@ import { DatabaseModule } from '../../infrastructure/database/database.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ShippingPricingModule } from '../shipping/shipping-pricing.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { PromotionsModule } from '../promotions/promotions.module';
 import { FulfillmentReadinessController } from './fulfillment-readiness.controller';
 import { FulfillmentReadinessService } from './fulfillment-readiness.service';
 import { OperationsWorkQueueController } from './operations-work-queue.controller';
@@ -20,7 +21,13 @@ import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 
 @Module({
-  imports: [DatabaseModule, NotificationsModule, CatalogModule, ShippingPricingModule],
+  imports: [
+    DatabaseModule,
+    NotificationsModule,
+    CatalogModule,
+    ShippingPricingModule,
+    PromotionsModule,
+  ],
   controllers: [
     OrdersController,
     OrderReturnsController,

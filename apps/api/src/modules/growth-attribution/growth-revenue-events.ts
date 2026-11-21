@@ -126,12 +126,14 @@ export function growthRevenueEvents(
         CASE WHEN activity.kind = ${Kind.PURCHASE_CONFIRMED} THEN COALESCE(finance."merchandiseRevenueToman", orders."merchandiseTotalToman") END AS "merchandiseToman",
         CASE WHEN activity.kind = ${Kind.PURCHASE_CONFIRMED} THEN COALESCE(finance."platingRevenueToman", orders."platingTotalToman") END AS "platingToman",
         CASE WHEN activity.kind = ${Kind.PURCHASE_CONFIRMED} THEN COALESCE(finance."discountToman", orders."discountTotalToman") END AS "orderDiscountToman",
+        CASE WHEN price_quote."campaignId" IS NOT NULL THEN price_quote."merchandiseDiscountToman" + price_quote."shippingDiscountToman" END AS "campaignDiscountToman",
         CASE WHEN activity.kind = ${Kind.PURCHASE_CONFIRMED} THEN COALESCE(finance."shippingChargedToman", orders."shippingTotalToman") END AS "shippingChargedToman",
         CASE WHEN activity.kind = ${Kind.PURCHASE_CONFIRMED} THEN COALESCE(finance."taxToman", orders."taxTotalToman") END AS "taxToman",
         activity.kind = ${Kind.PURCHASE_CONFIRMED} AND finance."orderId" IS NULL AS "missingFinanceSnapshot"
       FROM activity
       JOIN "orders" AS orders ON orders.id = activity."orderId"
       LEFT JOIN "order_finance_snapshots" AS finance ON finance."orderId" = orders.id AND activity.kind = ${Kind.PURCHASE_CONFIRMED}
+      LEFT JOIN "order_price_quotes" AS price_quote ON price_quote."orderId" = orders.id AND activity.kind = ${Kind.PURCHASE_CONFIRMED}
       LEFT JOIN "order_attributions" AS attribution ON attribution."orderId" = orders.id
       WHERE TRUE ${source} ${medium} ${campaign} ${category} ${device}
     )

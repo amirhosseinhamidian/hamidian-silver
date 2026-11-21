@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import type { components } from '@hamidian/contracts';
+import { useEffect, useState } from 'react';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
@@ -11,11 +13,55 @@ import { QuantityControl } from '@/components/ui/quantity-control';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
 import { useCart } from '@/lib/cart/cart-store';
+import { usePromotions } from '@/lib/promotions/promotion-context';
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
 
 export default function CartPage() {
   const { items, itemCount, subtotalToman, setQuantity, removeItem } = useCart();
+
+  const { items: publicOffers } = usePromotions();
+  const [estimate, setEstimate] = useState<{
+    request: string;
+    value: components['schemas']['PromotionEstimateDto'];
+  } | null>(null);
+  const request =
+    items.length > 0 && publicOffers.length > 0
+      ? JSON.stringify({
+          items: items.map(({ variantId, quantity, platingType }) => ({
+            variantId,
+            quantity,
+            ...(platingType ? { platingType } : {}),
+          })),
+        })
+      : null;
+
+  useEffect(() => {
+    if (!request) return;
+    const controller = new AbortController();
+    void fetch('/api/cart/promotion-estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: request,
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (response.ok) {
+          const value = (await response.json()) as components['schemas']['PromotionEstimateDto'];
+          if (!controller.signal.aborted) setEstimate({ request, value });
+        }
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [request]);
+  const offer =
+    estimate?.request === request && estimate?.value.discountTotalToman ? estimate.value : null;
+  const cartTotal = offer?.payableToman ?? subtotalToman;
+  const discount = offer && (
+    <p className="mt-1 text-xs text-[var(--sf-color-muted)]">
+      {offer.campaignName} · {formatTomanPrice(offer.discountTotalToman)} تخفیف
+    </p>
+  );
 
   if (items.length === 0) {
     return (
@@ -149,8 +195,9 @@ export default function CartPage() {
           <h2 className="text-lg font-medium">خلاصه سبد</h2>
           <div className="mt-5 flex items-center justify-between gap-4 text-sm">
             <span className="text-[var(--sf-color-muted)]">مجموع کالاها</span>
-            <span className="text-xl font-semibold">{formatTomanPrice(subtotalToman)}</span>
+            <span className="text-xl font-semibold">{formatTomanPrice(cartTotal)}</span>
           </div>
+          {discount}
           <div className="mt-6 grid gap-3">
             <ButtonLink href="/checkout" variant="solid" className="w-full">
               ثبت سفارش
@@ -171,7 +218,8 @@ export default function CartPage() {
             <div>
               <p className="text-xs text-[var(--sf-color-muted)]">مجموع</p>
 
-              <p className="text-xl font-bold">{formatTomanPrice(subtotalToman)}</p>
+              <p className="text-xl font-bold">{formatTomanPrice(cartTotal)}</p>
+              {discount}
             </div>
 
             <ButtonLink href="/checkout" variant="solid" className="flex-1">

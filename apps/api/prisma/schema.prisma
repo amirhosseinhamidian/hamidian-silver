@@ -74,6 +74,7 @@ model User {
   supplierSourceChangesAcknowledged   SupplierProductSourceChange[]       @relation("SupplierSourceChangeAcknowledger")
   ownedCampaigns                      Campaign[]
   campaignRevisions                   CampaignRevision[]
+  editedPromotions                    CampaignPromotion[]
 
   @@index([isActive])
   @@index([deletedAt])
@@ -1712,6 +1713,7 @@ model Order {
   supplierPayables      SupplierPayable[]
   financeSnapshot       OrderFinanceSnapshot?
   attribution           OrderAttribution?
+  priceQuote            OrderPriceQuote?
   growthDevice          String?                       @db.VarChar(12)
   returns               OrderReturn[]
   supplierCredits       SupplierCredit[]
@@ -1786,10 +1788,54 @@ model Campaign {
   tracking        CampaignLinkIdentity @relation(fields: [trackingId], references: [id], onDelete: Restrict)
   media           Media?               @relation(fields: [mediaId], references: [id], onDelete: Restrict)
   revisions       CampaignRevision[]
+  promotion       CampaignPromotion?
+  orderQuotes     OrderPriceQuote[]
 
   @@index([status, startsAt])
   @@index([status, endsAt])
   @@map("campaigns")
+}
+
+enum PromotionKind {
+  PERCENT
+  FIXED
+  THRESHOLD
+  BUNDLE
+  FREE_SHIPPING
+}
+
+model CampaignPromotion {
+  campaignId          String        @id @db.Uuid
+  kind                PromotionKind
+  value               Int
+  minSubtotalToman    Int
+  maxDiscountToman    Int
+  maxDiscountBps      Int
+  priority            Int
+  bundleProductIds    String[]      @default([]) @db.Uuid
+  couponCode          String?       @unique @db.VarChar(32)
+  maxUses             Int?
+  version             Int           @default(1)
+  actorUserId         String        @db.Uuid
+  updatedAt           DateTime      @updatedAt @db.Timestamptz(3)
+  campaign            Campaign      @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  actor               User          @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@map("campaign_promotions")
+}
+
+model OrderPriceQuote {
+  orderId                 String    @id @db.Uuid
+  tokenHash               String    @db.Char(64)
+  campaignId              String?   @db.Uuid
+  merchandiseDiscountToman Int
+  shippingDiscountToman    Int
+  snapshot                Json
+  order                   Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  campaign                Campaign? @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+
+  @@index([campaignId])
+  @@map("order_price_quotes")
 }
 
 model CampaignRevision {

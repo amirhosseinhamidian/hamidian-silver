@@ -32,6 +32,7 @@ import {
   type PublicShippingPricing,
 } from '@/lib/shipping/public-shipping-pricing';
 
+type CheckoutPriceQuote = components['schemas']['CheckoutPriceQuoteDto'];
 type CurrentUser = components['schemas']['CurrentUserResponseDto'];
 type CustomerOrderDetail = components['schemas']['CustomerOrderDetailDto'];
 type PaymentInitiationResponse = components['schemas']['PaymentInitiationResponseDto'];
@@ -146,9 +147,11 @@ async function readError(response: Response): Promise<{ message: string; code: s
 export function CheckoutFlow({
   shippingPricing = null,
   shippingOptions = [],
+  promotionsAvailable = false,
 }: Readonly<{
   shippingPricing?: PublicShippingPricing | null;
   shippingOptions?: readonly PublicShippingOption[];
+  promotionsAvailable?: boolean;
 }>) {
   const router = useRouter();
   const { items, itemCount, subtotalToman, clearCart } = useCart();
@@ -179,6 +182,8 @@ export function CheckoutFlow({
   } | null>(null);
   const [cardToCardModalOpen, setCardToCardModalOpen] = useState(false);
   const [customerNote, setCustomerNote] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [quote, setQuote] = useState<{ key: string; quote: CheckoutPriceQuote } | null>(null);
   const paymentIdempotencyKey = useRef<string | null>(null);
 
   const selectedAddress = useMemo(
@@ -389,6 +394,25 @@ export function CheckoutFlow({
     return payload;
   }
 
+  function orderDraft(addressId: string | undefined) {
+    const carrierId = selectedShippingOption?.id;
+    const address = addressId
+      ? { userAddressId: addressId }
+      : {
+          shippingAddress: {
+            recipientName: addressFields.recipientName.trim(),
+            phone: toAsciiDigits(addressFields.phone),
+            province: addressFields.province,
+            city: addressFields.city,
+            addressLine: addressFields.addressLine.trim(),
+            postalCode: digitsOnly(addressFields.postalCode, 10),
+          },
+        };
+    const base = buildCreateOrderBody(items, address, carrierId, customerNote);
+    const coupon = couponCode.trim();
+    return { ...base, ...(promotionsAvailable && coupon ? { couponCode: coupon } : {}) };
+  }
+
   async function submitCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!bankGateway && paymentMethod === 'gateway') return;
@@ -407,7 +431,7 @@ export function CheckoutFlow({
     setCheckoutLoading(true);
     setCheckoutError(null);
 
-    let phase: 'order' | 'payment' = 'order';
+    let phase: 'quote' | 'order' | 'payment' = 'order';
     try {
       let orderId = pendingOrderId;
       let orderNumber = completedOrderNumber;
@@ -422,23 +446,37 @@ export function CheckoutFlow({
           if (!userAddressId) return;
         }
 
-        const orderBody = userAddressId
-          ? buildCreateOrderBody(items, { userAddressId }, selectedShippingOption?.id, customerNote)
-          : buildCreateOrderBody(
-              items,
-              {
-                shippingAddress: {
-                  recipientName: addressFields.recipientName.trim(),
-                  phone: toAsciiDigits(addressFields.phone),
-                  province: addressFields.province,
-                  city: addressFields.city,
-                  addressLine: addressFields.addressLine.trim(),
-                  postalCode: digitsOnly(addressFields.postalCode, 10),
-                },
-              },
-              selectedShippingOption?.id,
-              customerNote,
+        const orderBody = orderDraft(userAddressId);
+        const quoteKey = JSON.stringify(orderBody);
+        const agreedQuote = quote?.key === quoteKey ? quote.quote : null;
+        if (
+          promotionsAvailable &&
+          (!agreedQuote || Date.parse(agreedQuote.expiresAt) <= Date.now())
+        ) {
+          phase = 'quote';
+          setQuote(null);
+          const quoteResponse = await fetch('/api/checkout/price-quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: quoteKey,
+          });
+          if (!quoteResponse.ok) {
+            if (quoteResponse.status === 401) setAuth({ status: 'anonymous', expired: true });
+            setCheckoutError(
+              quoteResponse.status === 400 && orderBody.couponCode
+                ? 'کد تخفیف برای این سبد قابل استفاده نیست.'
+                : 'قیمت پیشنهادی آماده نشد. سبد و روش ارسال را بررسی کنید.',
             );
+            return;
+          }
+          const newQuote = (await quoteResponse.json()) as CheckoutPriceQuote;
+          if (!newQuote.quoteToken || !Number.isSafeInteger(newQuote.payableToman)) {
+            setCheckoutError('مبلغ پیشنهادی معتبری دریافت نشد.');
+            return;
+          }
+          setQuote({ key: quoteKey, quote: newQuote });
+          return;
+        }
         const attribution = attributionForOrder();
         const device = growthDevice();
         const orderResponse = await fetch('/api/checkout/order', {
@@ -446,6 +484,7 @@ export function CheckoutFlow({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...orderBody,
+            ...(agreedQuote ? { quoteToken: agreedQuote.quoteToken } : {}),
             ...(attribution ? { attribution } : {}),
             ...(device ? { growthDevice: device } : {}),
           }),
@@ -453,6 +492,11 @@ export function CheckoutFlow({
         if (!orderResponse.ok) {
           if (orderResponse.status === 401) setAuth({ status: 'anonymous', expired: true });
           const orderError = await readError(orderResponse);
+          if (orderError.code === 'ORDER_PRICE_QUOTE_CHANGED') {
+            setQuote(null);
+            setCheckoutError('قیمت یا شرایط تخفیف تغییر کرده است. مبلغ را دوباره بررسی کنید.');
+            return;
+          }
           if (
             orderResponse.status === 404 ||
             (orderResponse.status === 409 &&
@@ -489,8 +533,9 @@ export function CheckoutFlow({
         setCompletedOrderNumber(order.orderNumber);
         if (
           (!selectedShippingOption && !shippingPricing) ||
-          order.shippingTotalToman !== estimatedShippingToman ||
-          order.grandTotalToman !== estimatedTotalToman
+          order.shippingTotalToman !==
+            (agreedQuote?.shippingTotalToman ?? estimatedShippingToman) ||
+          order.grandTotalToman !== (agreedQuote?.payableToman ?? estimatedTotalToman)
         ) {
           setPriceChange({
             previousTotalToman: estimatedTotalToman,
@@ -569,11 +614,13 @@ export function CheckoutFlow({
       setPendingOrderTotalToman(null);
       setPendingOrderShippingToman(null);
     } catch {
-      setUncertainCheckout(phase);
+      if (phase !== 'quote') setUncertainCheckout(phase);
       setCheckoutError(
-        phase === 'payment'
-          ? 'وضعیت آغاز پرداخت مشخص نیست. پرداخت را تکرار نکنید؛ ابتدا سفارش را در حساب کاربری بررسی کنید.'
-          : 'پاسخ ثبت سفارش دریافت نشد. پیش از تلاش دوباره، سفارش‌های خود را در حساب کاربری بررسی کنید.',
+        phase === 'quote'
+          ? 'ارتباط برای دریافت قیمت پیشنهادی برقرار نشد. دوباره تلاش کنید.'
+          : phase === 'payment'
+            ? 'وضعیت آغاز پرداخت مشخص نیست. پرداخت را تکرار نکنید؛ ابتدا سفارش را در حساب کاربری بررسی کنید.'
+            : 'پاسخ ثبت سفارش دریافت نشد. پیش از تلاش دوباره، سفارش‌های خود را در حساب کاربری بررسی کنید.',
       );
     } finally {
       setCheckoutLoading(false);
@@ -641,8 +688,11 @@ export function CheckoutFlow({
     })),
     { value: NEW_ADDRESS_VALUE, label: 'افزودن آدرس جدید' },
   ];
-  const payableAmount = pendingOrderTotalToman ?? estimatedTotalToman;
-  const displayedShippingToman = pendingOrderShippingToman ?? estimatedShippingToman;
+  const currentQuote =
+    quote?.key === JSON.stringify(orderDraft(selectedAddress?.id)) ? quote.quote : null;
+  const payableAmount = pendingOrderTotalToman ?? currentQuote?.payableToman ?? estimatedTotalToman;
+  const displayedShippingToman =
+    pendingOrderShippingToman ?? currentQuote?.shippingTotalToman ?? estimatedShippingToman;
   const shippingIsCollect = selectedShippingOption?.pricingMode === 'COLLECT';
 
   return (
@@ -1002,6 +1052,23 @@ export function CheckoutFlow({
             </label>
           </div>
         </fieldset>
+        {promotionsAvailable && !pendingOrderId && (
+          <FormField id="checkout-coupon" label="کد تخفیف">
+            {(control) => (
+              <Input
+                {...control}
+                dir="ltr"
+                maxLength={32}
+                autoComplete="off"
+                value={couponCode}
+                onChange={(event) => {
+                  setCouponCode(event.currentTarget.value);
+                  setQuote(null);
+                }}
+              />
+            )}
+          </FormField>
+        )}
       </section>
 
       <aside className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-12px_36px_rgb(17_17_17/0.1)] lg:sticky lg:inset-auto lg:top-20 lg:z-auto lg:h-fit lg:border lg:p-5 lg:shadow-none">
@@ -1011,10 +1078,26 @@ export function CheckoutFlow({
             <span className="text-[var(--sf-color-muted)]">
               جمع سبد ({new Intl.NumberFormat('fa-IR').format(itemCount)} کالا)
             </span>
-            <span>{formatTomanPrice(subtotalToman)}</span>
+            <span>
+              {formatTomanPrice(
+                currentQuote
+                  ? currentQuote.merchandiseTotalToman + currentQuote.platingTotalToman
+                  : subtotalToman,
+              )}
+            </span>
           </div>
+          {currentQuote && currentQuote.discountTotalToman > 0 && (
+            <div className="flex items-center justify-between gap-4">
+              <span>تخفیف {currentQuote.campaignName}</span>
+              <span>{formatTomanPrice(currentQuote.discountTotalToman)}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-4">
-            <span className="text-[var(--sf-color-muted)]">هزینه ارسال</span>
+            <span className="text-[var(--sf-color-muted)]">
+              {currentQuote && currentQuote.shippingDiscountToman > 0
+                ? 'ارسال با تخفیف کمپین'
+                : 'هزینه ارسال'}
+            </span>
             <span>
               {shippingIsCollect
                 ? 'پس‌کرایه'
@@ -1071,13 +1154,15 @@ export function CheckoutFlow({
             >
               {priceChange
                 ? 'تأیید مبلغ جدید و پرداخت'
-                : paymentMethod === 'card_to_card'
-                  ? pendingOrderId
-                    ? 'ادامه پرداخت کارت‌به‌کارت'
-                    : 'ثبت سفارش و پرداخت کارت‌به‌کارت'
-                  : pendingOrderId
-                    ? 'تلاش مجدد برای پرداخت'
-                    : 'ثبت سفارش و پرداخت'}
+                : promotionsAvailable && !pendingOrderId && !currentQuote
+                  ? 'بررسی مبلغ نهایی'
+                  : paymentMethod === 'card_to_card'
+                    ? pendingOrderId
+                      ? 'ادامه پرداخت کارت‌به‌کارت'
+                      : 'ثبت سفارش و پرداخت کارت‌به‌کارت'
+                    : pendingOrderId
+                      ? 'تلاش مجدد برای پرداخت'
+                      : 'ثبت سفارش و پرداخت'}
             </Button>
           )}
         </div>

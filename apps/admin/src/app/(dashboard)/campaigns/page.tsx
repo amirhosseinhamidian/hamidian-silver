@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 
 import { CampaignDetailView } from '@/components/campaigns/campaign-detail-view';
+import { CampaignPromotionEditor } from '@/components/campaigns/campaign-promotion-editor';
 import { CampaignEditor } from '@/components/campaigns/campaign-editor';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -54,15 +55,36 @@ export default async function CampaignsPage({ searchParams }: Props) {
             .catch(() => null)
         : null;
     const campaign = result?.data;
+    const promotion =
+      campaign && !(edit === '1' && canWrite && campaign.status === 'DRAFT')
+        ? await client
+            .GET('/api/v1/promotions/{campaignId}', {
+              params: { path: { campaignId: campaign.id } },
+              cache: 'no-store',
+            })
+            .catch(() => null)
+        : null;
     content = campaign ? (
       edit === '1' && canWrite && campaign.status === 'DRAFT' ? (
         <CampaignEditor key={`${campaign.id}-${campaign.revision}`} campaign={campaign} />
       ) : (
-        <CampaignDetailView
-          key={`${campaign.id}-${campaign.revision}`}
-          campaign={campaign}
-          canWrite={canWrite}
-        />
+        <>
+          <CampaignDetailView
+            key={`${campaign.id}-${campaign.revision}`}
+            campaign={campaign}
+            canWrite={canWrite}
+          />
+          {promotion?.data ? (
+            <CampaignPromotionEditor
+              key={`promotion-${campaign.id}-${promotion.data.rule?.expectedVersion ?? 0}`}
+              id={campaign.id}
+              rule={promotion.data.rule}
+              editable={canWrite && campaign.status === 'DRAFT'}
+            />
+          ) : (
+            <Alert tone="danger">دریافت قانون تخفیف ممکن نشد.</Alert>
+          )}
+        </>
       )
     ) : (
       <Alert tone="danger">

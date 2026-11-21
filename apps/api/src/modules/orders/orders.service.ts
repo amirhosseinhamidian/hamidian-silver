@@ -21,6 +21,13 @@ import { normalizeIranianMobile } from '../auth/phone-normalizer';
 import { attachHumanAuditEvent } from '../audit/audit-event';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { attributionPolicy, buildOrderAttribution } from '../growth-attribution/attribution';
+import {
+  createQuoteToken,
+  matchesQuote,
+  parseQuoteToken,
+  quoteTokenHash,
+} from '../promotions/promotion-quote';
+import { normalizeCoupon, PromotionsService } from '../promotions/promotions.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { ShippingPricingService } from '../shipping/shipping-pricing.service';
 import { ShippingCarriersService } from '../shipping/shipping-carriers.service';
@@ -390,13 +397,27 @@ export class OrdersService {
     @Optional() private readonly shippingPricing?: ShippingPricingService,
     @Optional() private readonly shippingCarriers?: ShippingCarriersService,
     @Optional() private readonly outbox?: NotificationOutboxService,
+    @Optional() private readonly promotions?: PromotionsService,
   ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
     this.assertUniqueItemSelections(dto.items);
     const customerNote = dto.customerNote?.trim() || null;
+    const quote = dto.quoteToken ? parseQuoteToken(dto.quoteToken) : null;
+    if ((dto.quoteToken && !quote) || (dto.couponCode && !quote)) throw this.quoteChanged();
+    const tokenHash = dto.quoteToken ? quoteTokenHash(dto.quoteToken) : null;
 
     const order = await this.prisma.$transaction(async (transaction) => {
+      if (quote && tokenHash) {
+        await transaction.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${quote.orderId}, 0))`;
+        const existing = await transaction.order.findFirst({
+          where: { id: quote.orderId, userId, priceQuote: { tokenHash } },
+          select: CUSTOMER_ORDER_DETAIL_SELECT,
+        });
+        if (existing) return existing;
+        if (quote.expiresAt <= Date.now() || !this.promotions) throw this.quoteChanged();
+        if (quote.campaignId) await this.promotions.lockCampaign(transaction, quote.campaignId);
+      }
       const shippingAddress = await this.resolveShippingAddress(transaction, userId, dto);
 
       const warehouse = await transaction.warehouse.findFirst({
@@ -414,92 +435,22 @@ export class OrdersService {
         throw new BadRequestException('No active default warehouse is configured.');
       }
 
-      const variantIds = [...new Set(dto.items.map(({ variantId }) => variantId))];
-      const variants = await transaction.productVariant.findMany({
-        where: {
-          id: {
-            in: variantIds,
-          },
-          isActive: true,
-          deletedAt: null,
-          product: {
-            status: ProductStatus.ACTIVE,
-            deletedAt: null,
-          },
-        },
-        include: {
-          size: true,
-          product: {
-            include: {
-              suppliers: {
-                where: {
-                  isActive: true,
-                  supplier: {
-                    isActive: true,
-                    deletedAt: null,
-                  },
-                },
-                orderBy: [{ isPreferred: 'desc' }, { updatedAt: 'desc' }],
-                take: 1,
-                include: {
-                  supplier: true,
-                },
-              },
-            },
-          },
-          platingOptions: {
-            where: {
-              isActive: true,
-              platingRate: {
-                isActive: true,
-              },
-            },
-            include: {
-              platingRate: true,
-            },
-          },
-        },
-      });
-
-      if (variants.length !== variantIds.length) {
-        throw new NotFoundException('One or more product variants were not found.');
+      const { preparedItems, shippingSelection, totals, promotion, binding } =
+        await this.priceOrder(transaction, userId, dto, shippingAddress, Boolean(quote));
+      if (
+        quote &&
+        (quote.campaignId !== (promotion?.campaignId ?? null) ||
+          !matchesQuote(this.quoteSecret(), quote, binding, new Date()))
+      ) {
+        throw this.quoteChanged();
       }
-
-      const variantById = new Map(variants.map((variant) => [variant.id, variant]));
-      const preparedItems = dto.items.map((item) => {
-        const variant = variantById.get(item.variantId);
-
-        if (!variant) {
-          throw new NotFoundException('Product variant was not found.');
-        }
-
-        return this.prepareOrderItem(item, variant);
-      });
-
-      const merchandiseTotalToman = preparedItems.reduce(
-        (total, item) => total + item.unitSalePriceToman * item.quantity,
-        0,
-      );
-      const platingTotalToman = preparedItems.reduce(
-        (total, item) => total + item.unitPlatingPriceToman * item.quantity,
-        0,
-      );
-      const cartSubtotalToman = merchandiseTotalToman + platingTotalToman;
-      const shippingSelection = await this.resolveShippingSelection(
-        dto.shippingCarrierId,
-        cartSubtotalToman,
-        shippingAddress,
-        transaction,
-      );
-      const shippingTotalToman = shippingSelection.costToman;
-      const grandTotalToman = merchandiseTotalToman + platingTotalToman + shippingTotalToman;
-
-      this.assertSafeTomanAmount(merchandiseTotalToman);
-      this.assertSafeTomanAmount(platingTotalToman);
-      this.assertSafeTomanAmount(shippingTotalToman);
-      this.assertSafeTomanAmount(grandTotalToman);
-
-      const orderId = randomUUID();
+      const {
+        merchandiseTotalToman,
+        platingTotalToman,
+        shippingTotalToman,
+        payableToman: grandTotalToman,
+      } = totals;
+      const orderId = quote?.orderId ?? randomUUID();
       const orderNumber = `HS-${orderId.replaceAll('-', '').slice(0, 16).toUpperCase()}`;
       const reservationExpiresAt = new Date(Date.now() + RESERVATION_TTL_MINUTES * 60 * 1000);
       const attribution = await buildOrderAttribution(
@@ -520,6 +471,32 @@ export class OrdersService {
           shippingTotalToman,
           ...shippingSelection.snapshot,
           grandTotalToman,
+          ...(quote && tokenHash
+            ? {
+                discountTotalToman: totals.discountTotalToman,
+                priceQuote: {
+                  create: {
+                    tokenHash,
+                    campaignId: promotion?.campaignId ?? null,
+                    merchandiseDiscountToman: totals.discountTotalToman,
+                    shippingDiscountToman: totals.shippingDiscountToman,
+                    snapshot: {
+                      version: 1,
+                      ...totals,
+                      baseShippingToman: shippingSelection.costToman,
+                      rule: promotion?.rule ?? null,
+                      items: preparedItems.map((item) => ({
+                        variantId: item.variantId,
+                        quantity: item.quantity,
+                        unitSalePriceToman: item.unitSalePriceToman,
+                        unitPlatingPriceToman: item.unitPlatingPriceToman,
+                        platingType: item.platingType ?? null,
+                      })),
+                    },
+                  },
+                },
+              }
+            : {}),
           customerNote,
           reservationExpiresAt,
           ...(dto.growthDevice ? { growthDevice: dto.growthDevice } : {}),
@@ -575,6 +552,226 @@ export class OrdersService {
     });
 
     return this.toCustomerOrder(order, null);
+  }
+
+  async estimatePromotions(items: CreateOrderItemDto[]) {
+    this.assertUniqueItemSelections(items);
+    return this.prisma.$transaction(async (tx) => {
+      const { lines, merchandiseTotalToman, platingTotalToman } = await this.preparePricingItems(
+        tx,
+        items,
+      );
+      const promotion = await this.promotions?.apply(tx, lines, 0, new Date(), null);
+      return this.promotionTotals(merchandiseTotalToman, platingTotalToman, 0, promotion);
+    });
+  }
+
+  async quotePrice(userId: string, dto: CreateOrderDto) {
+    if (dto.items.length > 100)
+      throw new BadRequestException('A quote can contain up to 100 lines.');
+    this.assertUniqueItemSelections(dto.items);
+    return this.prisma.$transaction(async (tx) => {
+      const address = await this.resolveShippingAddress(tx, userId, dto);
+      const priced = await this.priceOrder(tx, userId, dto, address, true);
+      if (priced.binding.coupon && !priced.promotion) {
+        throw new BadRequestException('The coupon is unavailable for this basket.');
+      }
+      return {
+        ...priced.totals,
+        ...createQuoteToken(
+          this.quoteSecret(),
+          priced.promotion?.campaignId ?? null,
+          priced.binding,
+          new Date(),
+        ),
+      };
+    });
+  }
+
+  private quoteSecret() {
+    const secret = this.config?.get<string>('OTP_PEPPER');
+    if (!secret) throw new Error('Checkout quote signing is unavailable.');
+    return secret;
+  }
+
+  private quoteChanged() {
+    return new DomainException(
+      ErrorCode.ORDER_PRICE_QUOTE_CHANGED,
+      'The checkout quote changed or expired.',
+    );
+  }
+
+  private async preparePricingItems(
+    transaction: Prisma.TransactionClient,
+    items: CreateOrderItemDto[],
+  ) {
+    const variantIds = [...new Set(items.map(({ variantId }) => variantId))];
+    const variants = await transaction.productVariant.findMany({
+      where: {
+        id: {
+          in: variantIds,
+        },
+        isActive: true,
+        deletedAt: null,
+        product: {
+          status: ProductStatus.ACTIVE,
+          deletedAt: null,
+        },
+      },
+      include: {
+        size: true,
+        product: {
+          include: {
+            categories: {
+              where: { category: { isActive: true, deletedAt: null } },
+              select: { categoryId: true },
+            },
+            suppliers: {
+              where: {
+                isActive: true,
+                supplier: {
+                  isActive: true,
+                  deletedAt: null,
+                },
+              },
+              orderBy: [{ isPreferred: 'desc' }, { updatedAt: 'desc' }],
+              take: 1,
+              include: {
+                supplier: true,
+              },
+            },
+          },
+        },
+        platingOptions: {
+          where: {
+            isActive: true,
+            platingRate: {
+              isActive: true,
+            },
+          },
+          include: {
+            platingRate: true,
+          },
+        },
+      },
+    });
+
+    if (variants.length !== variantIds.length) {
+      throw new NotFoundException('One or more product variants were not found.');
+    }
+
+    const variantById = new Map(variants.map((variant) => [variant.id, variant]));
+    const preparedItems = items.map((item) => {
+      const variant = variantById.get(item.variantId);
+
+      if (!variant) {
+        throw new NotFoundException('Product variant was not found.');
+      }
+
+      return this.prepareOrderItem(item, variant);
+    });
+
+    const merchandiseTotalToman = preparedItems.reduce(
+      (total, item) => total + item.unitSalePriceToman * item.quantity,
+      0,
+    );
+    const platingTotalToman = preparedItems.reduce(
+      (total, item) => total + item.unitPlatingPriceToman * item.quantity,
+      0,
+    );
+    this.assertSafeTomanAmount(merchandiseTotalToman);
+    this.assertSafeTomanAmount(platingTotalToman);
+    const lines = preparedItems.map((item) => {
+      const variant = variantById.get(item.variantId)!;
+      return {
+        productId: variant.productId,
+        categoryIds: variant.product.categories?.map(({ categoryId }) => categoryId) ?? [],
+        unitSalePriceToman: item.unitSalePriceToman,
+        quantity: item.quantity,
+      };
+    });
+    return { preparedItems, lines, merchandiseTotalToman, platingTotalToman };
+  }
+
+  private async priceOrder(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    dto: CreateOrderDto,
+    address: CreateOrderAddressDto,
+    usePromotions: boolean,
+  ) {
+    const { preparedItems, lines, merchandiseTotalToman, platingTotalToman } =
+      await this.preparePricingItems(tx, dto.items);
+    const shippingSelection = await this.resolveShippingSelection(
+      dto.shippingCarrierId,
+      merchandiseTotalToman + platingTotalToman,
+      address,
+      tx,
+    );
+    const baseShipping = shippingSelection.costToman;
+    const coupon = usePromotions ? normalizeCoupon(dto.couponCode) : null;
+    const promotion = usePromotions
+      ? await this.promotions?.apply(tx, lines, baseShipping, new Date(), coupon, userId)
+      : null;
+    const totals = this.promotionTotals(
+      merchandiseTotalToman,
+      platingTotalToman,
+      baseShipping,
+      promotion,
+    );
+    const binding = {
+      userId,
+      address,
+      coupon,
+      shippingCarrierId: dto.shippingCarrierId ?? null,
+      shippingSelection,
+      totals,
+      promotion,
+      items: preparedItems.map(
+        ({ variantId, quantity, platingType, unitSalePriceToman, unitPlatingPriceToman }) => ({
+          variantId,
+          quantity,
+          platingType,
+          unitSalePriceToman,
+          unitPlatingPriceToman,
+        }),
+      ),
+    };
+    return { preparedItems, shippingSelection, promotion, totals, binding };
+  }
+
+  private promotionTotals(
+    merchandiseTotalToman: number,
+    platingTotalToman: number,
+    baseShippingToman: number,
+    promotion?: {
+      merchandiseDiscountToman: number;
+      shippingDiscountToman: number;
+      campaignName: string;
+    } | null,
+  ) {
+    const discountTotalToman = promotion?.merchandiseDiscountToman ?? 0;
+    const shippingDiscountToman = promotion?.shippingDiscountToman ?? 0;
+    const shippingTotalToman = baseShippingToman - shippingDiscountToman;
+    const walletAppliedToman = 0;
+    const payableToman =
+      merchandiseTotalToman +
+      platingTotalToman -
+      discountTotalToman +
+      shippingTotalToman -
+      walletAppliedToman;
+    this.assertSafeTomanAmount(baseShippingToman);
+    this.assertSafeTomanAmount(payableToman);
+    return {
+      merchandiseTotalToman,
+      platingTotalToman,
+      discountTotalToman,
+      shippingTotalToman,
+      shippingDiscountToman,
+      walletAppliedToman,
+      payableToman,
+      campaignName: promotion?.campaignName ?? null,
+    };
   }
 
   private async resolveInitialShippingCostToman(
