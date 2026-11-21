@@ -25,6 +25,9 @@ it('reconciles confirmed revenue and dated adjustments with the order lifecycle'
         const user = await db.user.create({
           data: { phone: `+0${suffix.replace(/\D/g, '').slice(0, 16)}` },
         });
+        const reviewer = await db.user.create({
+          data: { phone: `+1${suffix.replace(/\D/g, '').slice(0, 16)}` },
+        });
         const warehouse = await db.warehouse.create({
           data: { code: `growth-${suffix}`, name: 'Growth report fixture' },
         });
@@ -40,6 +43,22 @@ it('reconciles confirmed revenue and dated adjustments with the order lifecycle'
         };
         const report = new GrowthRevenueService(db as unknown as PrismaService);
         const query = { from: '2026-11-20', to: '2026-11-20', campaignId };
+        const receiptData = Uint8Array.from([1, 2, 3]);
+        const receiptMetadata = {
+          receiptData,
+          receiptMimeType: 'image/png',
+          receiptOriginalName: 'receipt.png',
+          receiptSizeBytes: receiptData.byteLength,
+        };
+
+        function gatewayMetadata(label: string) {
+          const authority = `${label}-${suffix}`;
+          return {
+            authority,
+            paymentUrl: `https://payment.example.test/${authority}`,
+            providerReference: `reference-${authority}`,
+          };
+        }
 
         function order(values: Partial<Prisma.OrderUncheckedCreateInput>) {
           return db.order.create({
@@ -100,11 +119,13 @@ it('reconciles confirmed revenue and dated adjustments with the order lifecycle'
               paidAt: start,
               amountToman: 1750,
               refundedAmountToman: 150,
+              refundAllocatedToman: 230,
               attempts: {
                 create: [
                   {
                     idempotencyKey: `${suffix}-first`,
                     provider: 'irandargah',
+                    ...gatewayMetadata('first'),
                     status: PaymentAttemptStatus.VERIFIED,
                     verifiedAt: start,
                     amountToman: 1750,
@@ -112,6 +133,7 @@ it('reconciles confirmed revenue and dated adjustments with the order lifecycle'
                   {
                     idempotencyKey: `${suffix}-duplicate`,
                     provider: 'irandargah',
+                    ...gatewayMetadata('duplicate'),
                     status: PaymentAttemptStatus.VERIFIED,
                     verifiedAt: during,
                     amountToman: 1750,
@@ -125,12 +147,16 @@ it('reconciles confirmed revenue and dated adjustments with the order lifecycle'
                     amountToman: 100,
                     status: PaymentRefundStatus.CONFIRMED,
                     confirmedAt: during,
+                    confirmedByUserId: reviewer.id,
+                    externalReference: `refund-${suffix}`,
                   },
                   {
                     idempotencyKey: `${suffix}-late-refund`,
                     amountToman: 50,
                     status: PaymentRefundStatus.CONFIRMED,
                     confirmedAt: end,
+                    confirmedByUserId: reviewer.id,
+                    externalReference: `late-refund-${suffix}`,
                   },
                   {
                     idempotencyKey: `${suffix}-pending-refund`,
@@ -184,9 +210,11 @@ it('reconciles confirmed revenue and dated adjustments with the order lifecycle'
                   provider: 'card_to_card',
                   amountToman: 500,
                   status: PaymentAttemptStatus.FAILED,
+                  ...receiptMetadata,
                   receiptUploadedAt: during,
                   receiptRejectedAt: during,
                   failureCode: 'CARD_TO_CARD_RECEIPT_REJECTED',
+                  failureMessage: 'The receipt amount did not match the order.',
                 },
               },
             },
@@ -203,12 +231,14 @@ it('reconciles confirmed revenue and dated adjustments with the order lifecycle'
                   provider: 'card_to_card',
                   amountToman: 500,
                   status: PaymentAttemptStatus.AWAITING_REVIEW,
+                  ...receiptMetadata,
                   receiptUploadedAt: during,
                 },
               },
             },
           },
         });
+        const lateGateway = gatewayMetadata('late');
         await order({
           status: OrderStatus.CANCELLED,
           cancelledAt: during,
@@ -220,13 +250,14 @@ it('reconciles confirmed revenue and dated adjustments with the order lifecycle'
                 create: {
                   idempotencyKey: `${suffix}-late-callback`,
                   provider: 'irandargah',
+                  ...lateGateway,
                   amountToman: 500,
                   status: PaymentAttemptStatus.RECONCILIATION_REQUIRED,
                   verifiedAt: during,
                   reconciliation: {
                     create: {
                       provider: 'irandargah',
-                      providerReference: `late-${suffix}`,
+                      providerReference: lateGateway.providerReference,
                       amountToman: 500,
                       detectedOrderStatus: OrderStatus.CANCELLED,
                       reason: 'Provider verified after cancellation',
@@ -239,6 +270,7 @@ it('reconciles confirmed revenue and dated adjustments with the order lifecycle'
           },
         });
         const approvedReceipt = await order({
+          createdAt: before,
           status: OrderStatus.PAID,
           paidAt: during,
           payment: {
@@ -252,9 +284,12 @@ it('reconciles confirmed revenue and dated adjustments with the order lifecycle'
                   provider: 'card_to_card',
                   amountToman: 500,
                   status: PaymentAttemptStatus.VERIFIED,
+                  ...receiptMetadata,
+                  providerReference: `card-${suffix}`,
                   verifiedAt: during,
                   receiptUploadedAt: before,
                   receiptVerifiedAt: during,
+                  receiptVerifiedByUserId: reviewer.id,
                 },
               },
             },
@@ -276,7 +311,7 @@ it('reconciles confirmed revenue and dated adjustments with the order lifecycle'
         const summary = await report.summary(query);
         expect(summary).toMatchObject({
           currency: 'TOMAN',
-          submittedOrderCount: 4,
+          submittedOrderCount: 3,
           paidOrderCount: 2,
           attributedPaidOrderCount: 2,
           deliveredPaidOrderCount: 1,
