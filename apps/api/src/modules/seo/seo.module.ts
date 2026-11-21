@@ -13,16 +13,19 @@ import { SearchConsoleController } from './search-console/search-console.control
 import { SearchConsoleSyncStore } from './search-console/search-console-sync.store';
 import { SearchConsoleSyncWorker } from './search-console/search-console-sync.worker';
 import { SearchConsoleService } from './search-console/search-console.service';
+import { SearchOverviewController } from './search-console/search-overview.controller';
+import { SearchOverviewService } from './search-console/search-overview.service';
 
 @Module({
   imports: [DatabaseModule, CatalogModule],
-  controllers: [SeoController, SearchConsoleController],
+  controllers: [SeoController, SearchConsoleController, SearchOverviewController],
   providers: [
     SeoRedirectsService,
     SeoSitemapService,
     SearchConsoleService,
     SearchConsoleSyncStore,
     SearchConsoleSyncWorker,
+    SearchOverviewService,
     {
       provide: SEARCH_CONSOLE_CLIENT,
       inject: [ConfigService],

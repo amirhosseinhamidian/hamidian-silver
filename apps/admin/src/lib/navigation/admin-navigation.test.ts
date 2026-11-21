@@ -68,6 +68,7 @@ describe('admin navigation', () => {
       'roles',
       'shipping-settings',
       'settings',
+      'seo',
       'audit',
     ]);
   });

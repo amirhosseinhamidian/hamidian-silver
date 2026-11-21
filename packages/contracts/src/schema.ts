@@ -3460,6 +3460,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/seo/search-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchOverviewController_overview_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/search-overview/rows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchOverviewController_rows_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/supplier-imports/sources": {
         parameters: {
             query?: never;
@@ -6274,6 +6306,70 @@ export interface components {
         SearchConsoleSitemapsDto: {
             items: components["schemas"]["SearchConsoleSitemapDto"][];
             property: string;
+        };
+        SearchOverviewSyncDto: {
+            /** Format: date-time */
+            lastSuccessAt: string | null;
+            /** Format: date */
+            latestSyncedDate: string | null;
+            /** Format: date-time */
+            pausedUntil: string | null;
+            /** @enum {string|null} */
+            lastRunStatus: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | null;
+            lastErrorCode: string | null;
+            enabled: boolean;
+            scheduledForType: boolean;
+        };
+        SearchOverviewMetricsDto: {
+            ctr: number | null;
+            averagePosition: number | null;
+            clicks: number;
+            impressions: number;
+        };
+        SearchOverviewPeriodDto: {
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            metrics: components["schemas"]["SearchOverviewMetricsDto"] | null;
+            days: number;
+            syncedDays: number;
+            dataDays: number;
+        };
+        SearchOverviewDto: {
+            property: string | null;
+            /** @enum {string} */
+            searchType: "web" | "image" | "video" | "news";
+            /** @enum {string} */
+            scope: "property" | "device" | "brand";
+            /** @enum {string} */
+            timeZone: "America/Los_Angeles";
+            sync: components["schemas"]["SearchOverviewSyncDto"];
+            current: components["schemas"]["SearchOverviewPeriodDto"];
+            previous: components["schemas"]["SearchOverviewPeriodDto"];
+            change: components["schemas"]["SearchOverviewMetricsDto"] | null;
+            daily: components["schemas"]["SearchOverviewPeriodDto"][];
+            weekly: components["schemas"]["SearchOverviewPeriodDto"][];
+        };
+        SearchOverviewRowDto: {
+            ctr: number | null;
+            averagePosition: number | null;
+            clicks: number;
+            impressions: number;
+            label: string;
+        };
+        SearchOverviewRowsDto: {
+            /** @enum {string} */
+            kind: "query" | "page";
+            /** @enum {string} */
+            aggregation: "byProperty" | "byPage";
+            items: components["schemas"]["SearchOverviewRowDto"][];
+            available: boolean;
+            syncedDays: number;
+            cappedDays: number;
+            page: number;
+            limit: number;
+            total: number;
         };
         Object: Record<string, never>;
         UpdateSupplierCategoryMappingDto: {
@@ -12213,6 +12309,62 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchConsoleSitemapsDto"];
+                };
+            };
+        };
+    };
+    SearchOverviewController_overview_v1: {
+        parameters: {
+            query: {
+                startDate: string;
+                endDate: string;
+                searchType?: "web" | "image" | "video" | "news";
+                device?: "DESKTOP" | "MOBILE" | "TABLET";
+                brand?: "BRANDED" | "NON_BRANDED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchOverviewDto"];
+                };
+            };
+        };
+    };
+    SearchOverviewController_rows_v1: {
+        parameters: {
+            query: {
+                startDate: string;
+                endDate: string;
+                searchType?: "web" | "image" | "video" | "news";
+                device?: "DESKTOP" | "MOBILE" | "TABLET";
+                brand?: "BRANDED" | "NON_BRANDED";
+                kind: "query" | "page";
+                q?: string;
+                sort?: "clicks" | "impressions" | "ctr" | "position" | "label";
+                direction?: "asc" | "desc";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchOverviewRowsDto"];
                 };
             };
         };

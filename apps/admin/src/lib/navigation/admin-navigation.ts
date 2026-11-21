@@ -449,6 +449,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['settings.read'],
       },
       {
+        id: 'seo',
+        label: 'عملکرد جست‌وجو',
+        shortLabel: 'سئو',
+        href: '/seo',
+        icon: 'content',
+        description: 'روند نمایش و کلیک در گوگل',
+        roadmapStage: 32,
+        permissions: ['settings.read'],
+      },
+      {
         id: 'audit',
         label: 'گزارش فعالیت',
         shortLabel: 'Audit',

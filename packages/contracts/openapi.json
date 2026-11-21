@@ -9005,6 +9005,237 @@
         ]
       }
     },
+    "/api/v1/seo/search-overview": {
+      "get": {
+        "operationId": "SearchOverviewController_overview_v1",
+        "parameters": [
+          {
+            "name": "startDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "searchType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "web",
+              "type": "string",
+              "enum": [
+                "web",
+                "image",
+                "video",
+                "news"
+              ]
+            }
+          },
+          {
+            "name": "device",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DESKTOP",
+                "MOBILE",
+                "TABLET"
+              ]
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BRANDED",
+                "NON_BRANDED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchOverviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
+    "/api/v1/seo/search-overview/rows": {
+      "get": {
+        "operationId": "SearchOverviewController_rows_v1",
+        "parameters": [
+          {
+            "name": "startDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "searchType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "web",
+              "type": "string",
+              "enum": [
+                "web",
+                "image",
+                "video",
+                "news"
+              ]
+            }
+          },
+          {
+            "name": "device",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DESKTOP",
+                "MOBILE",
+                "TABLET"
+              ]
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BRANDED",
+                "NON_BRANDED"
+              ]
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "query",
+                "page"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 160,
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "clicks",
+              "type": "string",
+              "enum": [
+                "clicks",
+                "impressions",
+                "ctr",
+                "position",
+                "label"
+              ]
+            }
+          },
+          {
+            "name": "direction",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 5000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchOverviewRowsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
     "/api/v1/supplier-imports/sources": {
       "get": {
         "operationId": "SupplierImportsController_listSources_v1",
@@ -20181,6 +20412,276 @@
         "required": [
           "items",
           "property"
+        ]
+      },
+      "SearchOverviewSyncDto": {
+        "type": "object",
+        "properties": {
+          "lastSuccessAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "latestSyncedDate": {
+            "type": "string",
+            "nullable": true,
+            "format": "date"
+          },
+          "pausedUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "lastRunStatus": {
+            "nullable": true,
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED"
+            ],
+            "type": "string"
+          },
+          "lastErrorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "scheduledForType": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "lastSuccessAt",
+          "latestSyncedDate",
+          "pausedUntil",
+          "lastRunStatus",
+          "lastErrorCode",
+          "enabled",
+          "scheduledForType"
+        ]
+      },
+      "SearchOverviewMetricsDto": {
+        "type": "object",
+        "properties": {
+          "ctr": {
+            "type": "number",
+            "nullable": true
+          },
+          "averagePosition": {
+            "type": "number",
+            "nullable": true
+          },
+          "clicks": {
+            "type": "number"
+          },
+          "impressions": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "ctr",
+          "averagePosition",
+          "clicks",
+          "impressions"
+        ]
+      },
+      "SearchOverviewPeriodDto": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "metrics": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SearchOverviewMetricsDto"
+              }
+            ]
+          },
+          "days": {
+            "type": "number"
+          },
+          "syncedDays": {
+            "type": "number"
+          },
+          "dataDays": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate",
+          "metrics",
+          "days",
+          "syncedDays",
+          "dataDays"
+        ]
+      },
+      "SearchOverviewDto": {
+        "type": "object",
+        "properties": {
+          "property": {
+            "type": "string",
+            "nullable": true
+          },
+          "searchType": {
+            "enum": [
+              "web",
+              "image",
+              "video",
+              "news"
+            ],
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "property",
+              "device",
+              "brand"
+            ],
+            "type": "string"
+          },
+          "timeZone": {
+            "type": "string",
+            "enum": [
+              "America/Los_Angeles"
+            ]
+          },
+          "sync": {
+            "$ref": "#/components/schemas/SearchOverviewSyncDto"
+          },
+          "current": {
+            "$ref": "#/components/schemas/SearchOverviewPeriodDto"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/SearchOverviewPeriodDto"
+          },
+          "change": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SearchOverviewMetricsDto"
+              }
+            ]
+          },
+          "daily": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchOverviewPeriodDto"
+            }
+          },
+          "weekly": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchOverviewPeriodDto"
+            }
+          }
+        },
+        "required": [
+          "property",
+          "searchType",
+          "scope",
+          "timeZone",
+          "sync",
+          "current",
+          "previous",
+          "change",
+          "daily",
+          "weekly"
+        ]
+      },
+      "SearchOverviewRowDto": {
+        "type": "object",
+        "properties": {
+          "ctr": {
+            "type": "number",
+            "nullable": true
+          },
+          "averagePosition": {
+            "type": "number",
+            "nullable": true
+          },
+          "clicks": {
+            "type": "number"
+          },
+          "impressions": {
+            "type": "number"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ctr",
+          "averagePosition",
+          "clicks",
+          "impressions",
+          "label"
+        ]
+      },
+      "SearchOverviewRowsDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "query",
+              "page"
+            ],
+            "type": "string"
+          },
+          "aggregation": {
+            "enum": [
+              "byProperty",
+              "byPage"
+            ],
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchOverviewRowDto"
+            }
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "syncedDays": {
+            "type": "number"
+          },
+          "cappedDays": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "aggregation",
+          "items",
+          "available",
+          "syncedDays",
+          "cappedDays",
+          "page",
+          "limit",
+          "total"
         ]
       },
       "Object": {
