@@ -4,6 +4,7 @@ import type { Prisma } from '../src/generated/prisma/client';
 import {
   AttributionModel,
   OrderStatus,
+  PaymentAttemptStatus,
   PaymentRefundStatus,
   PaymentStatus,
   ProductStatus,
@@ -48,7 +49,9 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
         const scoped = {
           $queryRaw: db.$queryRaw.bind(db),
           $transaction: (run: (tx: Prisma.TransactionClient) => Promise<unknown>) => run(db),
+          campaignLinkIdentity: db.campaignLinkIdentity,
           growthFunnelEvent: db.growthFunnelEvent,
+          orderPriceQuote: db.orderPriceQuote,
         } as unknown as PrismaService;
         const dashboard = new GrowthDashboardService(scoped);
         const measurement = new GrowthMeasurementService(scoped);
@@ -140,9 +143,9 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
           });
         }
 
-        await order(before, inPeriod, 'desktop', true);
-        await order(inPeriod, inPeriod, 'mobile');
-        await order(inPeriod, null, 'mobile');
+        const first = await order(before, inPeriod, 'desktop', true);
+        const second = await order(inPeriod, inPeriod, 'mobile');
+        const pending = await order(inPeriod, null, 'mobile');
         const observed = {
           visitId: randomUUID(),
           stage: 'view_item' as const,
@@ -216,6 +219,137 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
           await dashboard.read({ ...period, from: '2026-11-21', to: '2026-11-21' }),
         ).toMatchObject({
           totals: { confirmedOrders: 0, refundedToman: 500, netCollectedToman: -500 },
+        });
+
+        const lifecycle = await db.campaign.create({
+          data: {
+            slug: campaignId,
+            name: 'گزارش بازده نمونه',
+            goal: 'تطبیق گزارش',
+            channel: medium,
+            ownerId: user.id,
+            trackingId: campaignId,
+            budgetToman: 6_000,
+            plannedChannelCostToman: 3_000,
+            allProducts: true,
+            startsAt: before,
+            endsAt: after,
+            message: 'کمپین آزمایشی',
+          },
+        });
+        const cancelled = await order(inPeriod, null, 'mobile');
+        await db.order.update({
+          where: { id: cancelled.id },
+          data: {
+            status: OrderStatus.CANCELLED,
+            cancelledAt: inPeriod,
+            payment: {
+              update: {
+                status: PaymentStatus.CANCELLED,
+                attempts: {
+                  create: {
+                    idempotencyKey: `rejected-${suffix}`,
+                    provider: 'card_to_card',
+                    amountToman: 10_000,
+                    status: PaymentAttemptStatus.FAILED,
+                    receiptData: Uint8Array.from([1, 2, 3]),
+                    receiptMimeType: 'image/png',
+                    receiptOriginalName: 'receipt.png',
+                    receiptSizeBytes: 3,
+                    receiptUploadedAt: inPeriod,
+                    receiptRejectedAt: inPeriod,
+                    failureCode: 'CARD_TO_CARD_RECEIPT_REJECTED',
+                    failureMessage: 'The receipt amount did not match the order.',
+                  },
+                },
+              },
+            },
+          },
+        });
+        const otherCampaignId = `other-${suffix}`;
+        await db.campaignLinkIdentity.create({
+          data: { id: otherCampaignId, campaign: otherCampaignId },
+        });
+        const moved = await order(inPeriod, null, 'mobile');
+        await db.orderAttribution.update({
+          where: { orderId: moved.id },
+          data: {
+            campaignId: otherCampaignId,
+            campaign: otherCampaignId,
+            lastTouch: { ...touch, campaignId: otherCampaignId, campaign: otherCampaignId },
+          },
+        });
+        await db.orderPriceQuote.createMany({
+          data: [
+            { orderId: first.id, merchandiseDiscountToman: 1000, shippingDiscountToman: 0 },
+            { orderId: second.id, merchandiseDiscountToman: 0, shippingDiscountToman: 300 },
+            { orderId: pending.id, merchandiseDiscountToman: 200, shippingDiscountToman: 0 },
+            { orderId: cancelled.id, merchandiseDiscountToman: 550, shippingDiscountToman: 0 },
+          ].map((item) => ({
+            ...item,
+            campaignId: lifecycle.id,
+            tokenHash: '0'.repeat(64),
+            snapshot: { version: 1 },
+          })),
+        });
+        const performance = await dashboard.campaignPerformance(campaignId, period);
+        expect(performance).toMatchObject({
+          totals: { submittedOrders: 3, confirmedOrders: 2, measuredVisits: 1 },
+          newCustomers: 1,
+          cacToman: 4_000,
+          roas: 5,
+          merchandiseDiscountToman: 1_000,
+          shippingDiscountToman: 300,
+          consumedCreditToman: null,
+          issuedRewardToman: null,
+          outstandingRewardCommitmentToman: null,
+          budget: {
+            budgetToman: 6_000,
+            lifetimeMediaSpendToman: 4_000,
+            lifetimeCommittedDiscountToman: 1_500,
+            unpaidDiscountCommitmentToman: 200,
+            mediaVarianceToman: 1_000,
+            budgetVarianceToman: -500,
+          },
+        });
+        expect(performance.history).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ kind: 'cancellation', orderId: cancelled.id }),
+            expect.objectContaining({
+              kind: 'attribution',
+              orderId: moved.id,
+              firstCampaignId: campaignId,
+              lastCampaignId: otherCampaignId,
+              selectedCampaignId: otherCampaignId,
+            }),
+          ]),
+        );
+        const nextDay = { from: '2026-11-21', to: '2026-11-21' };
+        await expect(dashboard.campaignPerformance(campaignId, nextDay)).resolves.toMatchObject({
+          totals: { confirmedOrders: 0, refundedToman: 500 },
+          cacToman: null,
+          roas: null,
+          merchandiseDiscountToman: 0,
+          budget: performance.budget,
+        });
+        await expect(dashboard.campaignPerformance(otherCampaignId, period)).resolves.toMatchObject(
+          {
+            budget: null,
+            merchandiseDiscountToman: null,
+            cacToman: null,
+            roas: null,
+          },
+        );
+        const previous = await order(before, before, 'desktop');
+        await db.orderAttribution.update({
+          where: { orderId: previous.id },
+          data: { campaignId: otherCampaignId, campaign: otherCampaignId },
+        });
+        await expect(dashboard.campaignPerformance(campaignId, period)).resolves.toMatchObject({
+          totals: { confirmedOrders: 2 },
+          newCustomers: 0,
+          cacToman: null,
+          roas: 5,
         });
         throw rollback;
       },

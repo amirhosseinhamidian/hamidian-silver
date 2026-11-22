@@ -2,6 +2,22 @@ import { Prisma } from '../../generated/prisma/client';
 import type { GrowthDashboardQueryDto } from './dto/growth-dashboard.dto';
 import { type GrowthRevenueQueryDto, RevenueEventKind as Kind } from './dto/growth-revenue.dto';
 
+export const confirmedGrowthOrders = Prisma.sql`
+  SELECT orders.id, orders."userId", orders."paidAt", orders."deliveredAt",
+    payment.id AS "paymentId", payment."amountToman"
+  FROM "orders" AS orders
+  JOIN "payments" AS payment ON payment."orderId" = orders.id
+  WHERE orders."paidAt" IS NOT NULL AND payment.status IN ('PAID', 'PARTIALLY_REFUNDED', 'REFUNDED')
+`;
+
+export function growthReportPeriodSql({ from, to }: Pick<GrowthRevenueQueryDto, 'from' | 'to'>) {
+  return Prisma.sql`
+    SELECT
+      ${from}::date::timestamp AT TIME ZONE 'Asia/Tehran' AS starts_at,
+      (${to}::date + 1)::timestamp AT TIME ZONE 'Asia/Tehran' AS ends_before
+  `;
+}
+
 export function growthRevenueEvents(
   query: GrowthRevenueQueryDto,
   scope?: Pick<GrowthDashboardQueryDto, 'category' | 'device'>,
@@ -32,14 +48,9 @@ export function growthRevenueEvents(
 
   return Prisma.sql`
     WITH report_period AS (
-      SELECT
-        ${query.from}::date::timestamp AT TIME ZONE 'Asia/Tehran' AS starts_at,
-        (${query.to}::date + 1)::timestamp AT TIME ZONE 'Asia/Tehran' AS ends_before
+      ${growthReportPeriodSql(query)}
     ), confirmed_orders AS NOT MATERIALIZED (
-      SELECT orders.id, orders."paidAt", orders."deliveredAt", payment.id AS "paymentId", payment."amountToman"
-      FROM "orders" AS orders
-      JOIN "payments" AS payment ON payment."orderId" = orders.id
-      WHERE orders."paidAt" IS NOT NULL AND payment.status IN ('PAID', 'PARTIALLY_REFUNDED', 'REFUNDED')
+      ${confirmedGrowthOrders}
     ), activity AS (
       SELECT orders.id AS "entityId", orders.id AS "orderId", ${Kind.ORDER_SUBMITTED}::text AS kind,
         orders."createdAt" AS "occurredAt", orders."grandTotalToman" AS amount, NULL::text AS provider, FALSE AS "awaitingReview"

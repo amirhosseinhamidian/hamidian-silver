@@ -2,11 +2,18 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type { GrowthCampaignCost, Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { attachHumanAuditEvent } from '../audit/audit-event';
+import { committedDiscount, promotionUsage } from '../promotions/promotion-budget';
+import type {
+  GrowthCampaignHistoryItemDto,
+  GrowthCampaignPerformanceDto,
+  GrowthCampaignPerformanceQueryDto,
+} from './dto/growth-campaign-performance.dto';
 import type {
   GrowthCostDto,
   GrowthCostsDto,
@@ -16,6 +23,10 @@ import type {
   RecordGrowthCostDto,
 } from './dto/growth-dashboard.dto';
 import { growthDashboardQuery } from './growth-dashboard-query';
+import {
+  growthCampaignHistoryQuery,
+  growthCampaignPerformanceQuery,
+} from './growth-campaign-performance-query';
 import { growthRevenuePeriod } from './growth-revenue.service';
 
 type DashboardRow = {
@@ -39,6 +50,19 @@ type DashboardRow = {
   ordersWithRecordedSpend: bigint;
   recordedSpendToman: bigint | null;
 };
+
+type CampaignPerformanceRow = {
+  newCustomers: bigint;
+  merchandiseDiscountToman: bigint;
+  shippingDiscountToman: bigint;
+  lifetimeMediaSpendToman: bigint | null;
+};
+
+type CampaignHistoryRow = Omit<GrowthCampaignHistoryItemDto, 'occurredAt'> & {
+  occurredAt: Date;
+};
+
+const campaignHistoryPageSize = 25;
 
 function exactNumber(value: bigint): number {
   const number = Number(value);
@@ -102,10 +126,17 @@ export class GrowthDashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
   async read(query: GrowthDashboardQueryDto): Promise<GrowthDashboardDto> {
+    return this.readDashboard(this.prisma, query);
+  }
+
+  private async readDashboard(
+    db: Prisma.TransactionClient,
+    query: GrowthDashboardQueryDto,
+  ): Promise<GrowthDashboardDto> {
     const period = growthRevenuePeriod(query);
     const page = query.page ?? 1;
     const limit = query.limit ?? 25;
-    const [summary, ...groups] = await this.prisma.$queryRaw<DashboardRow[]>(
+    const [summary, ...groups] = await db.$queryRaw<DashboardRow[]>(
       growthDashboardQuery(query, page, limit),
     );
     return {
@@ -121,6 +152,105 @@ export class GrowthDashboardService {
       page,
       limit,
       total: exactNumber(summary.total),
+    };
+  }
+
+  async campaignPerformance(
+    campaignId: string,
+    query: GrowthCampaignPerformanceQueryDto,
+  ): Promise<GrowthCampaignPerformanceDto> {
+    const period = growthRevenuePeriod(query);
+    const page = query.page ?? 1;
+    return this.prisma.$transaction(
+      async (db) => {
+        const identity = await db.campaignLinkIdentity.findUnique({
+          where: { id: campaignId },
+          select: {
+            campaign: true,
+            lifecycle: {
+              select: { id: true, name: true, budgetToman: true, plannedChannelCostToman: true },
+            },
+          },
+        });
+        if (!identity) throw new NotFoundException('Campaign link identity not found.');
+        const campaign = identity.lifecycle;
+        const [{ totals }, [stats], history] = await Promise.all([
+          this.readDashboard(db, { ...period, campaignId, limit: 1 }),
+          db.$queryRaw<CampaignPerformanceRow[]>(
+            growthCampaignPerformanceQuery(query, campaignId, campaign?.id ?? null),
+          ),
+          db.$queryRaw<CampaignHistoryRow[]>(
+            growthCampaignHistoryQuery(query, campaignId, page, campaignHistoryPageSize),
+          ),
+        ]);
+        const newCustomers = exactNumber(stats.newCustomers);
+        const spend = totals.recordedSpendToman;
+        const comparableSpend =
+          spend !== null && spend > 0 && totals.recordedSpendPerConfirmedOrderToman !== null
+            ? spend
+            : null;
+        const budget = campaign
+          ? await this.campaignBudget(db, campaign, stats.lifetimeMediaSpendToman)
+          : null;
+        return {
+          campaignId,
+          campaign: campaign?.name ?? identity.campaign,
+          period,
+          totals,
+          newCustomers,
+          cacToman:
+            comparableSpend !== null && newCustomers > 0
+              ? Math.round(comparableSpend / newCustomers)
+              : null,
+          roas: comparableSpend === null ? null : totals.netCollectedToman / comparableSpend,
+          merchandiseDiscountToman: campaign ? exactNumber(stats.merchandiseDiscountToman) : null,
+          shippingDiscountToman: campaign ? exactNumber(stats.shippingDiscountToman) : null,
+          consumedCreditToman: null,
+          issuedRewardToman: null,
+          outstandingRewardCommitmentToman: null,
+          budget,
+          history: history.slice(0, campaignHistoryPageSize).map((item) => ({
+            ...item,
+            occurredAt: item.occurredAt.toISOString(),
+          })),
+          page,
+          hasMoreHistory: history.length > campaignHistoryPageSize,
+        };
+      },
+      { isolationLevel: 'RepeatableRead' },
+    );
+  }
+
+  private async campaignBudget(
+    db: Prisma.TransactionClient,
+    campaign: { id: string; budgetToman: number; plannedChannelCostToman: number | null },
+    mediaSpend: bigint | null,
+  ) {
+    const [committed, unpaid] = await Promise.all([
+      promotionUsage(db, campaign.id),
+      promotionUsage(db, campaign.id, { paidAt: null }),
+    ]);
+    const lifetimeCommittedDiscountToman = committedDiscount(committed);
+    const lifetimeMediaSpendToman = mediaSpend === null ? null : exactNumber(mediaSpend);
+    const comparableSpend = mediaSpend !== null && mediaSpend >= 0n ? mediaSpend : null;
+    return {
+      budgetToman: campaign.budgetToman,
+      plannedChannelCostToman: campaign.plannedChannelCostToman,
+      lifetimeMediaSpendToman,
+      lifetimeCommittedDiscountToman,
+      unpaidDiscountCommitmentToman: committedDiscount(unpaid),
+      mediaVarianceToman:
+        comparableSpend === null || campaign.plannedChannelCostToman === null
+          ? null
+          : exactNumber(comparableSpend - BigInt(campaign.plannedChannelCostToman)),
+      budgetVarianceToman:
+        comparableSpend === null
+          ? null
+          : exactNumber(
+              comparableSpend +
+                BigInt(lifetimeCommittedDiscountToman) -
+                BigInt(campaign.budgetToman),
+            ),
     };
   }
 

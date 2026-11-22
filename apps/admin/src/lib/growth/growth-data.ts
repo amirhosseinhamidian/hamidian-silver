@@ -43,6 +43,23 @@ export async function loadGrowthDashboard(filters: GrowthFilters) {
   };
 }
 
+export async function loadCampaignPerformance(
+  campaignId: string,
+  query: Pick<GrowthFilters, 'from' | 'to' | 'page'>,
+) {
+  try {
+    const client = await apiClient();
+    if (!client) return { report: null, status: 401 };
+    const result = await client.GET('/api/v1/growth-attribution/dashboard/campaigns/{campaignId}', {
+      params: { path: { campaignId }, query },
+      cache: 'no-store',
+    });
+    return { report: result.data ?? null, status: result.response.status };
+  } catch {
+    return { report: null, status: 502 };
+  }
+}
+
 export async function loadGrowthExport(filters: GrowthFilters): Promise<{
   data: GrowthDashboard | null;
   status: number;

@@ -1588,6 +1588,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/growth-attribution/dashboard/campaigns/{campaignId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GrowthAttributionController_campaignPerformance_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/growth-attribution/dashboard/costs": {
         parameters: {
             query?: never;
@@ -5565,6 +5581,46 @@ export interface components {
             page: number;
             limit: number;
             total: number;
+        };
+        GrowthCampaignBudgetDto: {
+            plannedChannelCostToman: number | null;
+            lifetimeMediaSpendToman: number | null;
+            mediaVarianceToman: number | null;
+            budgetVarianceToman: number | null;
+            budgetToman: number;
+            lifetimeCommittedDiscountToman: number;
+            unpaidDiscountCommitmentToman: number;
+        };
+        GrowthCampaignHistoryItemDto: {
+            /** @enum {string} */
+            kind: "attribution" | "cancellation";
+            /** Format: uuid */
+            orderId: string;
+            /** Format: date-time */
+            occurredAt: string;
+            model: string | null;
+            policyVersion: number | null;
+            firstCampaignId: string | null;
+            lastCampaignId: string | null;
+            selectedCampaignId: string | null;
+        };
+        GrowthCampaignPerformanceDto: {
+            period: components["schemas"]["GrowthRevenuePeriodDto"];
+            totals: components["schemas"]["GrowthDashboardMetricsDto"];
+            cacToman: number | null;
+            roas: number | null;
+            merchandiseDiscountToman: number | null;
+            shippingDiscountToman: number | null;
+            consumedCreditToman: number | null;
+            issuedRewardToman: number | null;
+            outstandingRewardCommitmentToman: number | null;
+            budget: components["schemas"]["GrowthCampaignBudgetDto"] | null;
+            history: components["schemas"]["GrowthCampaignHistoryItemDto"][];
+            campaignId: string;
+            campaign: string;
+            newCustomers: number;
+            page: number;
+            hasMoreHistory: boolean;
         };
         GrowthCostDto: {
             /** Format: uuid */
@@ -10139,6 +10195,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GrowthDashboardDto"];
+                };
+            };
+        };
+    };
+    GrowthAttributionController_campaignPerformance_v1: {
+        parameters: {
+            query: {
+                /** @description First included calendar day in Asia/Tehran. */
+                from: string;
+                /** @description Last included calendar day in Asia/Tehran. */
+                to: string;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthCampaignPerformanceDto"];
                 };
             };
         };

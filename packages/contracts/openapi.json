@@ -4949,6 +4949,69 @@
         ]
       }
     },
+    "/api/v1/growth-attribution/dashboard/campaigns/{campaignId}": {
+      "get": {
+        "operationId": "GrowthAttributionController_campaignPerformance_v1",
+        "parameters": [
+          {
+            "name": "campaignId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z0-9][a-z0-9._-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "First included calendar day in Asia/Tehran.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Last included calendar day in Asia/Tehran.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrowthCampaignPerformanceDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "GrowthAttribution"
+        ]
+      }
+    },
     "/api/v1/growth-attribution/dashboard/costs": {
       "get": {
         "operationId": "GrowthAttributionController_readCosts_v1",
@@ -17289,6 +17352,182 @@
           "page",
           "limit",
           "total"
+        ]
+      },
+      "GrowthCampaignBudgetDto": {
+        "type": "object",
+        "properties": {
+          "plannedChannelCostToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "lifetimeMediaSpendToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "mediaVarianceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "budgetVarianceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "budgetToman": {
+            "type": "number"
+          },
+          "lifetimeCommittedDiscountToman": {
+            "type": "number"
+          },
+          "unpaidDiscountCommitmentToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "plannedChannelCostToman",
+          "lifetimeMediaSpendToman",
+          "mediaVarianceToman",
+          "budgetVarianceToman",
+          "budgetToman",
+          "lifetimeCommittedDiscountToman",
+          "unpaidDiscountCommitmentToman"
+        ]
+      },
+      "GrowthCampaignHistoryItemDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "attribution",
+              "cancellation"
+            ],
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "policyVersion": {
+            "type": "number",
+            "nullable": true
+          },
+          "firstCampaignId": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastCampaignId": {
+            "type": "string",
+            "nullable": true
+          },
+          "selectedCampaignId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "kind",
+          "orderId",
+          "occurredAt",
+          "model",
+          "policyVersion",
+          "firstCampaignId",
+          "lastCampaignId",
+          "selectedCampaignId"
+        ]
+      },
+      "GrowthCampaignPerformanceDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/GrowthRevenuePeriodDto"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/GrowthDashboardMetricsDto"
+          },
+          "cacToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "roas": {
+            "type": "number",
+            "nullable": true
+          },
+          "merchandiseDiscountToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "shippingDiscountToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "consumedCreditToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "issuedRewardToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "outstandingRewardCommitmentToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "budget": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GrowthCampaignBudgetDto"
+              }
+            ]
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrowthCampaignHistoryItemDto"
+            }
+          },
+          "campaignId": {
+            "type": "string"
+          },
+          "campaign": {
+            "type": "string"
+          },
+          "newCustomers": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMoreHistory": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "period",
+          "totals",
+          "cacToman",
+          "roas",
+          "merchandiseDiscountToman",
+          "shippingDiscountToman",
+          "consumedCreditToman",
+          "issuedRewardToman",
+          "outstandingRewardCommitmentToman",
+          "budget",
+          "history",
+          "campaignId",
+          "campaign",
+          "newCustomers",
+          "page",
+          "hasMoreHistory"
         ]
       },
       "GrowthCostDto": {

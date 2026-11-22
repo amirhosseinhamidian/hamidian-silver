@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -11,6 +11,11 @@ import { Public } from '../auth/public.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CampaignLinksService } from './campaign-links.service';
 import { CampaignLinkDto, CreateCampaignLinkDto } from './dto/attribution.dto';
+import {
+  GrowthCampaignPerformanceDto,
+  GrowthCampaignPerformancePathDto,
+  GrowthCampaignPerformanceQueryDto,
+} from './dto/growth-campaign-performance.dto';
 import {
   GrowthCostDto,
   GrowthCostsDto,
@@ -68,6 +73,16 @@ export class GrowthAttributionController {
   @ApiOkResponse({ type: GrowthDashboardDto })
   readDashboard(@Query() query: GrowthDashboardQueryDto) {
     return this.dashboard.read(query);
+  }
+
+  @Get('dashboard/campaigns/:campaignId')
+  @RequirePermissions(PERMISSION_CODES.FINANCE_READ)
+  @ApiOkResponse({ type: GrowthCampaignPerformanceDto })
+  campaignPerformance(
+    @Param() path: GrowthCampaignPerformancePathDto,
+    @Query() query: GrowthCampaignPerformanceQueryDto,
+  ) {
+    return this.dashboard.campaignPerformance(path.campaignId, query);
   }
 
   @Get('dashboard/costs')

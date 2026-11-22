@@ -16,9 +16,13 @@ export function committedDiscount(usage: {
   return (usage._sum.merchandiseDiscountToman ?? 0) + (usage._sum.shippingDiscountToman ?? 0);
 }
 
-export function promotionUsage(tx: Prisma.TransactionClient, campaignId: string) {
+export function promotionUsage(
+  tx: Prisma.TransactionClient,
+  campaignId: string,
+  order: Prisma.OrderWhereInput = {},
+) {
   return tx.orderPriceQuote.aggregate({
-    where: { campaignId, order: countedPromotionOrders },
+    where: { campaignId, order: { ...order, ...countedPromotionOrders } },
     _sum: { merchandiseDiscountToman: true, shippingDiscountToman: true },
     _count: { _all: true },
   });

@@ -214,7 +214,16 @@ export function GrowthDashboardView({
                           </bdi>
                         </td>
                         <td className={cell}>
-                          <bdi>{row.campaign ?? '—'}</bdi>
+                          {row.campaignId ? (
+                            <Link
+                              className="underline"
+                              href={`/growth/campaigns/${encodeURIComponent(row.campaignId)}?${new URLSearchParams({ from: filters.from, to: filters.to })}`}
+                            >
+                              <bdi>{row.campaign ?? row.campaignId}</bdi>
+                            </Link>
+                          ) : (
+                            <bdi>{row.campaign ?? '—'}</bdi>
+                          )}
                           {row.campaignId ? (
                             <bdi className="block text-xs text-[var(--admin-color-muted)]">
                               {row.campaignId}

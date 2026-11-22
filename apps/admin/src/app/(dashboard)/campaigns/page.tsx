@@ -168,6 +168,15 @@ export default async function CampaignsPage({ searchParams }: Props) {
               </ButtonLink>
             ))}
           </nav>
+          {user.permissions.includes('finance.read') && (
+            <ButtonLink
+              href={`/growth/campaigns/${encodeURIComponent(campaign.trackingId)}`}
+              variant="outline"
+              size="sm"
+            >
+              گزارش عملکرد کمپین
+            </ButtonLink>
+          )}
           {panel}
         </>
       );
