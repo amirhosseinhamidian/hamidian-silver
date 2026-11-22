@@ -314,6 +314,38 @@
         ]
       }
     },
+    "/api/v1/campaigns/product-options": {
+      "get": {
+        "operationId": "CampaignsController_selectProducts_v1",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minLength": 2,
+              "maxLength": 96,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignProductOptionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
     "/api/v1/campaigns/{id}": {
       "get": {
         "operationId": "CampaignsController_detail_v1",
@@ -383,6 +415,46 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CampaignSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
+    "/api/v1/campaigns/{id}/simulation": {
+      "post": {
+        "operationId": "CampaignsController_simulate_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignSimulationInputDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignSimulationDto"
                 }
               }
             }
@@ -11505,6 +11577,77 @@
           "hasMore"
         ]
       },
+      "CampaignProductOptionDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ]
+      },
+      "CampaignProductOptionsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignProductOptionDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CampaignBudgetDto": {
+        "type": "object",
+        "properties": {
+          "remainingUses": {
+            "type": "number",
+            "nullable": true
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "discountBudgetToman": {
+            "type": "number"
+          },
+          "committedDiscountToman": {
+            "type": "number"
+          },
+          "remainingDiscountToman": {
+            "type": "number"
+          },
+          "usedOrders": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "remainingUses",
+          "blockers",
+          "warnings",
+          "discountBudgetToman",
+          "committedDiscountToman",
+          "remainingDiscountToman",
+          "usedOrders"
+        ]
+      },
       "CampaignRevisionDto": {
         "type": "object",
         "properties": {
@@ -11568,6 +11711,21 @@
             "items": {
               "type": "string"
             }
+          },
+          "plannedChannelCostToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "audience": {
+            "enum": [
+              "ALL_CUSTOMERS",
+              "FIRST_PURCHASE",
+              "RETURNING"
+            ],
+            "type": "string"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/CampaignBudgetDto"
           },
           "ctaPath": {
             "type": "string",
@@ -11653,6 +11811,9 @@
           "endsAt",
           "productSlugs",
           "categorySlugs",
+          "plannedChannelCostToman",
+          "audience",
+          "budget",
           "ctaPath",
           "ctaLabel",
           "media",
@@ -11697,6 +11858,20 @@
               "maxLength": 180,
               "minLength": 1
             }
+          },
+          "plannedChannelCostToman": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "audience": {
+            "enum": [
+              "ALL_CUSTOMERS",
+              "FIRST_PURCHASE",
+              "RETURNING"
+            ],
+            "type": "string"
           },
           "mediaId": {
             "type": "string",
@@ -11817,6 +11992,20 @@
               "minLength": 1
             }
           },
+          "plannedChannelCostToman": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "audience": {
+            "enum": [
+              "ALL_CUSTOMERS",
+              "FIRST_PURCHASE",
+              "RETURNING"
+            ],
+            "type": "string"
+          },
           "mediaId": {
             "type": "string",
             "nullable": true,
@@ -11899,6 +12088,99 @@
           "message",
           "bannerEnabled",
           "bannerPriority"
+        ]
+      },
+      "CampaignBasketLineDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "unitSalePriceToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "slug",
+          "quantity",
+          "unitSalePriceToman"
+        ]
+      },
+      "CampaignSimulationInputDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "uniqueItems": true,
+            "minItems": 1,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignBasketLineDto"
+            }
+          },
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "shippingToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "hasPaidOrder": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "expectedRevision",
+          "shippingToman",
+          "hasPaidOrder"
+        ]
+      },
+      "CampaignSimulationDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "merchandiseToman": {
+            "type": "number"
+          },
+          "eligibleSubtotalToman": {
+            "type": "number"
+          },
+          "shippingToman": {
+            "type": "number"
+          },
+          "merchandiseDiscountToman": {
+            "type": "number"
+          },
+          "shippingDiscountToman": {
+            "type": "number"
+          },
+          "payableToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "reason",
+          "merchandiseToman",
+          "eligibleSubtotalToman",
+          "shippingToman",
+          "merchandiseDiscountToman",
+          "shippingDiscountToman",
+          "payableToman"
         ]
       },
       "CampaignTransitionDto": {

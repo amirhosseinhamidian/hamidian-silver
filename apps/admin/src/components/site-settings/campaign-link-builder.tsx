@@ -42,7 +42,11 @@ const fields = [
   required: boolean;
 }[];
 
-export function CampaignLinkBuilder() {
+export function CampaignLinkBuilder({
+  campaign,
+}: {
+  campaign?: Pick<CreateLink, 'campaignId' | 'campaign' | 'destination' | 'medium'>;
+} = {}) {
   const formId = useId();
   const [pending, setPending] = useState(false);
   const [link, setLink] = useState('');
@@ -115,6 +119,15 @@ export function CampaignLinkBuilder() {
                   name={name}
                   dir="ltr"
                   placeholder={example}
+                  defaultValue={
+                    name === 'campaignId' ||
+                    name === 'campaign' ||
+                    name === 'destination' ||
+                    name === 'medium'
+                      ? campaign?.[name]
+                      : undefined
+                  }
+                  readOnly={Boolean(campaign && (name === 'campaignId' || name === 'campaign'))}
                   maxLength={maxLength}
                   required={required}
                 />

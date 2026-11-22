@@ -6,6 +6,16 @@ export type CampaignMedia = components['schemas']['CampaignMediaDto'];
 export type CampaignDraft = components['schemas']['CreateCampaignDto'];
 export type CampaignAction = components['schemas']['CampaignTransitionDto']['action'];
 
+export const campaignAudienceLabels: Record<CampaignDetail['audience'], string> = {
+  ALL_CUSTOMERS: 'همهٔ مشتریان',
+  FIRST_PURCHASE: 'مشتری بدون خرید پرداخت‌شده',
+  RETURNING: 'مشتری دارای خرید پرداخت‌شده',
+};
+
+export const campaignAudienceOptions = Object.entries(campaignAudienceLabels).map(
+  ([value, label]) => ({ value, label }),
+);
+
 export const campaignStatusLabels: Record<CampaignSummary['status'], string> = {
   DRAFT: 'پیش‌نویس',
   APPROVED: 'تأییدشده',

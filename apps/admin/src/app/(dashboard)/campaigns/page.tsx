@@ -2,9 +2,11 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 
 import { CampaignDetailView } from '@/components/campaigns/campaign-detail-view';
+import { CampaignBudgetReview } from '@/components/campaigns/campaign-budget-review';
 import { CampaignLandingEditor } from '@/components/campaigns/campaign-landing-editor';
 import { CampaignPromotionEditor } from '@/components/campaigns/campaign-promotion-editor';
 import { CampaignEditor } from '@/components/campaigns/campaign-editor';
+import { CampaignLinkBuilder } from '@/components/site-settings/campaign-link-builder';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
@@ -22,6 +24,7 @@ type Props = {
     history?: string;
     create?: string;
     edit?: string;
+    step?: string;
   }>;
 };
 
@@ -38,7 +41,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
     returnTo: '/campaigns',
   });
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
-  const { id, create, page, history, edit } = await searchParams;
+  const { id, create, page, history, edit, step } = await searchParams;
   const canWrite = user.permissions.includes('settings.write');
   const client = createAdminApiClient(token);
 
@@ -73,43 +76,108 @@ export default async function CampaignsPage({ searchParams }: Props) {
               .catch(() => null),
           ])
         : [null, null];
-    content = campaign ? (
-      edit === '1' && canWrite && campaign.status === 'DRAFT' ? (
-        <CampaignEditor key={`${campaign.id}-${campaign.revision}`} campaign={campaign} />
-      ) : (
-        <>
-          <CampaignDetailView
-            key={`${campaign.id}-${campaign.revision}`}
+    if (campaign) {
+      const editing = edit === '1' && canWrite && campaign.status === 'DRAFT';
+      const currentStep =
+        step === 'landing' || step === 'promotion' || (step === 'links' && canWrite)
+          ? step
+          : 'review';
+      const url = `/campaigns?id=${campaign.id}`;
+      let panel;
+      if (editing) {
+        panel = <CampaignEditor key={`${campaign.id}-${campaign.revision}`} campaign={campaign} />;
+      } else if (currentStep === 'landing') {
+        panel = landing?.data ? (
+          <CampaignLandingEditor
+            key={`landing-${campaign.id}-${landing.data.revision}`}
             campaign={campaign}
+            editor={landing.data}
             canWrite={canWrite}
           />
-          {landing?.data ? (
-            <CampaignLandingEditor
-              key={`landing-${campaign.id}-${landing.data.revision}`}
+        ) : (
+          <Alert tone="danger">دریافت تنظیمات صفحهٔ کمپین ممکن نشد.</Alert>
+        );
+      } else if (currentStep === 'promotion') {
+        panel = promotion?.data ? (
+          <CampaignPromotionEditor
+            key={`promotion-${campaign.id}-${promotion.data.rule?.expectedVersion ?? 0}`}
+            id={campaign.id}
+            rule={promotion.data.rule}
+            editable={canWrite && campaign.status === 'DRAFT'}
+          />
+        ) : (
+          <Alert tone="danger">دریافت قانون تخفیف ممکن نشد.</Alert>
+        );
+      } else if (currentStep === 'links') {
+        const destination = landing?.data?.landing?.slug;
+        panel = (
+          <CampaignLinkBuilder
+            campaign={{
+              destination: destination
+                ? `/campaigns/${destination}`
+                : (campaign.ctaPath ?? '/products'),
+              campaignId: campaign.trackingId,
+              campaign: campaign.trackingLabel,
+              medium: campaign.channel,
+            }}
+          />
+        );
+      } else {
+        panel = (
+          <>
+            <CampaignBudgetReview
+              key={`budget-${campaign.revision}`}
               campaign={campaign}
-              editor={landing.data}
+              rule={promotion?.data?.rule ?? null}
+            />
+            {!promotion?.data && <Alert tone="danger">دریافت قانون تخفیف ممکن نشد.</Alert>}
+            <CampaignDetailView
+              key={`${campaign.id}-${campaign.revision}`}
+              campaign={campaign}
               canWrite={canWrite}
             />
-          ) : (
-            <Alert tone="danger">دریافت تنظیمات صفحهٔ کمپین ممکن نشد.</Alert>
-          )}
-          {promotion?.data ? (
-            <CampaignPromotionEditor
-              key={`promotion-${campaign.id}-${promotion.data.rule?.expectedVersion ?? 0}`}
-              id={campaign.id}
-              rule={promotion.data.rule}
-              editable={canWrite && campaign.status === 'DRAFT'}
-            />
-          ) : (
-            <Alert tone="danger">دریافت قانون تخفیف ممکن نشد.</Alert>
-          )}
+          </>
+        );
+      }
+      const steps = [
+        { id: 'landing', title: 'صفحه و مجموعه' },
+        { id: 'promotion', title: 'قانون و کوپن' },
+        { id: 'review', title: 'پیش‌نمایش و انتشار' },
+        ...(canWrite ? [{ id: 'links', title: 'ساخت لینک' }] : []),
+      ];
+      content = (
+        <>
+          <nav className="flex flex-wrap gap-2" aria-label="مراحل کمپین">
+            {campaign.status === 'DRAFT' && canWrite && (
+              <ButtonLink
+                href={`${url}&edit=1`}
+                variant={editing ? 'secondary' : 'outline'}
+                aria-current={editing ? 'step' : undefined}
+              >
+                اطلاعات کمپین
+              </ButtonLink>
+            )}
+            {steps.map(({ id, title }) => (
+              <ButtonLink
+                key={id}
+                href={`${url}&step=${id}`}
+                variant={!editing && currentStep === id ? 'secondary' : 'outline'}
+                aria-current={!editing && currentStep === id ? 'step' : undefined}
+              >
+                {title}
+              </ButtonLink>
+            ))}
+          </nav>
+          {panel}
         </>
-      )
-    ) : (
-      <Alert tone="danger">
-        {result?.response.status === 404 ? 'کمپین پیدا نشد.' : 'دریافت کمپین ممکن نشد.'}
-      </Alert>
-    );
+      );
+    } else {
+      content = (
+        <Alert tone="danger">
+          {result?.response.status === 404 ? 'کمپین پیدا نشد.' : 'دریافت کمپین ممکن نشد.'}
+        </Alert>
+      );
+    }
   } else {
     const result = await client
       .GET('/api/v1/campaigns', {

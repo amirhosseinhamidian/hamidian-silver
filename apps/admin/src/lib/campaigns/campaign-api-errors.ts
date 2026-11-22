@@ -18,6 +18,30 @@ const messages: Record<string, string> = {
     'کد ویژگی، گزینه‌ها یا بازهٔ عددی را با تعریف فعلی ویژگی در کاتالوگ تطبیق دهید.',
   'Enter valid campaign tracking labels.': 'شناسه و نام ردیابی را بررسی کنید.',
   'Enter a valid campaign channel.': 'نام کانال را بررسی کنید.',
+  'The planned channel cost exceeds the campaign budget.':
+    'هزینهٔ برنامه‌ریزی‌شدهٔ کانال از کل بودجهٔ کمپین بیشتر است.',
+  'The discount budget is below existing commitments.':
+    'سقف تخفیف از تخفیف‌های تعهدشدهٔ سفارش‌های قبلی کمتر است.',
+  'No discount budget remains for this campaign.':
+    'بودجه‌ای برای تخفیف نمانده است. سقف کمپین یا هزینهٔ کانال را بررسی کنید.',
+  'The promotion has reached its redemption limit.': 'سقف تعداد استفاده از این قانون پر شده است.',
+  'Configure a promotion for the selected audience.':
+    'برای گروه مخاطب انتخاب‌شده، ابتدا قانون تخفیف را ذخیره کنید.',
+  'Choose active bundle products in the campaign scope.':
+    'محصولات فعال بسته را از محدودهٔ همین کمپین انتخاب کنید.',
+  'The remaining budget can reduce the discount below its per-order cap.':
+    'بودجهٔ باقی‌مانده ممکن است تخفیف را از سقف تعیین‌شده برای هر سفارش کمتر کند.',
+  'The percentage cap reduces the configured discount rate.':
+    'سقف درصدی، نرخ واردشده برای قانون را کاهش می‌دهد.',
+  'An automatic promotion overlaps this period. Only one rule can apply.':
+    'یک تخفیف خودکار دیگر با این بازه هم‌پوشانی دارد. خرید با یک قانون قیمت‌گذاری می‌شود.',
+  'The sample basket total exceeds the allowed amount.': 'جمع سبد نمونه از حد مجاز بیشتر است.',
+  'Choose available products for the sample basket.': 'برای سبد نمونه محصولات فعال را انتخاب کنید.',
+  'No promotion has been saved for this campaign.': 'برای این کمپین هنوز قانون تخفیف ثبت نشده است.',
+  'The sample customer is outside the promotion audience.':
+    'مشتری نمونه در گروه مخاطب تعیین‌شده قرار نمی‌گیرد.',
+  'The sample basket does not meet the promotion conditions.':
+    'سبد نمونه شرایط دریافت تخفیف را ندارد.',
   'This campaign slug or tracking identifier is already in use.':
     'اسلاگ یا شناسهٔ ردیابی قبلاً استفاده شده است.',
   'This campaign identifier or name is already assigned to another campaign.':
@@ -39,6 +63,10 @@ const messages: Record<string, string> = {
   'This transition is unavailable for the current campaign status.':
     'این عملیات برای وضعیت فعلی کمپین در دسترس نیست.',
 };
+
+export function campaignMessage(message: string, fallback: string) {
+  return Object.hasOwn(messages, message) ? messages[message] : fallback;
+}
 
 export async function campaignError(response: Response): Promise<string> {
   const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;

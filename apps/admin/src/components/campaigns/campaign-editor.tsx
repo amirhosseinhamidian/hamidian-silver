@@ -10,8 +10,10 @@ import { Card } from '@/components/ui/card';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
 import { MoneyInput } from '@/components/ui/money-input';
+import { Select } from '@/components/ui/select';
 import { campaignError } from '@/lib/campaigns/campaign-api-errors';
 import {
+  campaignAudienceOptions,
   isCampaignId,
   type CampaignDetail,
   type CampaignDraft,
@@ -23,6 +25,14 @@ import {
 } from '@/lib/presentation/formatters';
 
 import { CampaignPreview } from './campaign-preview';
+import { CampaignProductSearch } from './campaign-product-search';
+
+function parseSlugs(value: string) {
+  return value
+    .split(/[\n,،]/)
+    .map((slug) => slug.trim())
+    .filter(Boolean);
+}
 
 export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
   const router = useRouter();
@@ -31,6 +41,7 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
   const [message, setMessage] = useState(campaign?.message ?? '');
   const [ctaLabel, setCtaLabel] = useState(campaign?.ctaLabel ?? '');
   const [allProducts, setAllProducts] = useState(campaign?.allProducts ?? true);
+  const [productSlugs, setProductSlugs] = useState(campaign?.productSlugs.join('\n') ?? '');
   const [bannerEnabled, setBannerEnabled] = useState(campaign?.bannerEnabled ?? false);
   const [preview, setPreview] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -42,21 +53,20 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
     if (pending || uploading) return;
     const fields = new FormData(event.currentTarget);
     const value = (field: string) => String(fields.get(field) ?? '').trim();
-    const slugs = (field: string) =>
-      value(field)
-        .split(/[\n,،]/)
-        .map((slug) => slug.trim())
-        .filter(Boolean);
     const budgetToman = parseAdminMoneyInput(value('budgetToman'));
+    const plannedCost = value('plannedChannelCostToman');
+    const plannedChannelCostToman = parseAdminMoneyInput(plannedCost);
     const priority = toAsciiDigits(value('bannerPriority'));
     const bannerPriority = /^\d{1,3}$/.test(priority) ? Number(priority) : -1;
     if (
       budgetToman === null ||
       budgetToman > 2_147_483_647 ||
+      (plannedCost !== '' &&
+        (plannedChannelCostToman === null || plannedChannelCostToman > budgetToman)) ||
       bannerPriority < 0 ||
       bannerPriority > 100
     ) {
-      setError('بودجه یا اولویت نمایش را بررسی کنید.');
+      setError('بودجه، سهم هزینهٔ کانال یا اولویت نمایش را بررسی کنید.');
       return;
     }
     const draft: Omit<CampaignDraft, 'slug' | 'trackingId' | 'trackingLabel'> = {
@@ -65,13 +75,15 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
       allProducts,
       bannerEnabled,
       budgetToman,
+      plannedChannelCostToman,
+      audience: value('audience') as CampaignDraft['audience'],
       bannerPriority,
       goal: value('goal'),
       channel: value('channel'),
       startsTehran: value('startsTehran'),
       endsTehran: value('endsTehran'),
-      productSlugs: allProducts ? [] : slugs('productSlugs'),
-      categorySlugs: allProducts ? [] : slugs('categorySlugs'),
+      productSlugs: allProducts ? [] : parseSlugs(productSlugs),
+      categorySlugs: allProducts ? [] : parseSlugs(value('categorySlugs')),
       mediaId: media?.id ?? null,
       ctaLabel: ctaLabel.trim() || null,
       ctaPath: value('ctaPath') || null,
@@ -99,7 +111,7 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
       }
       const result = (await response.json()) as { id?: string };
       if (!result.id || !isCampaignId(result.id)) throw new Error('Invalid campaign response.');
-      router.replace(`/campaigns?id=${result.id}`);
+      router.replace(`/campaigns?id=${result.id}&step=${campaign ? 'review' : 'landing'}`);
       router.refresh();
     } catch {
       setError('ذخیرهٔ کمپین ممکن نشد. دوباره تلاش کنید.');
@@ -177,13 +189,36 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
               </FormField>
             </>
           )}
-          <FormField id="campaign-budget" label="بودجهٔ برنامه‌ریزی‌شده (تومان)" required>
+          <FormField id="campaign-budget" label="سقف کل بودجه (تومان)" required>
             {(control) => (
               <MoneyInput
                 {...control}
                 name="budgetToman"
                 defaultValue={campaign?.budgetToman ?? 0}
                 required
+              />
+            )}
+          </FormField>
+          <FormField
+            id="campaign-channel-cost"
+            label="هزینهٔ برنامه‌ریزی‌شدهٔ کانال (تومان)"
+            hint="این مبلغ از سقف بودجهٔ تخفیف کم می‌شود. اگر هنوز مشخص نیست، خالی بگذارید."
+          >
+            {(control) => (
+              <MoneyInput
+                {...control}
+                name="plannedChannelCostToman"
+                defaultValue={campaign?.plannedChannelCostToman ?? ''}
+              />
+            )}
+          </FormField>
+          <FormField id="campaign-audience" label="گروه مخاطب تخفیف">
+            {(control) => (
+              <Select
+                {...control}
+                name="audience"
+                options={campaignAudienceOptions}
+                defaultValue={campaign?.audience ?? 'ALL_CUSTOMERS'}
               />
             )}
           </FormField>
@@ -247,6 +282,17 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
               />
               همهٔ محصولات
             </label>
+            {!allProducts && (
+              <div className="sm:col-span-2">
+                <CampaignProductSearch
+                  selected={parseSlugs(productSlugs)}
+                  onSelect={(slug) =>
+                    setProductSlugs([...parseSlugs(productSlugs), slug].join('\n'))
+                  }
+                  disabled={pending || parseSlugs(productSlugs).length >= 50}
+                />
+              </div>
+            )}
             <FormField
               id="campaign-products"
               label="اسلاگ محصولات"
@@ -258,7 +304,8 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
                   name="productSlugs"
                   dir="ltr"
                   disabled={allProducts}
-                  defaultValue={campaign?.productSlugs.join('\n')}
+                  value={productSlugs}
+                  onChange={(event) => setProductSlugs(event.currentTarget.value)}
                 />
               )}
             </FormField>

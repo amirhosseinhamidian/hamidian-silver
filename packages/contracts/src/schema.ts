@@ -132,6 +132,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaigns/product-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignsController_selectProducts_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/campaigns/{id}": {
         parameters: {
             query?: never;
@@ -146,6 +162,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["CampaignsController_update_v1"];
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/simulation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CampaignsController_simulate_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/campaigns/{id}/transitions": {
@@ -4263,6 +4295,22 @@ export interface components {
             page: number;
             hasMore: boolean;
         };
+        CampaignProductOptionDto: {
+            slug: string;
+            name: string;
+        };
+        CampaignProductOptionsDto: {
+            items: components["schemas"]["CampaignProductOptionDto"][];
+        };
+        CampaignBudgetDto: {
+            remainingUses: number | null;
+            blockers: string[];
+            warnings: string[];
+            discountBudgetToman: number;
+            committedDiscountToman: number;
+            remainingDiscountToman: number;
+            usedOrders: number;
+        };
         CampaignRevisionDto: {
             actorUserId: string | null;
             /** Format: date-time */
@@ -4282,6 +4330,10 @@ export interface components {
             endsAt: string;
             productSlugs: string[];
             categorySlugs: string[];
+            plannedChannelCostToman: number | null;
+            /** @enum {string} */
+            audience: "ALL_CUSTOMERS" | "FIRST_PURCHASE" | "RETURNING";
+            budget: components["schemas"]["CampaignBudgetDto"];
             ctaPath: string | null;
             ctaLabel: string | null;
             media: components["schemas"]["CampaignMediaDto"] | null;
@@ -4308,6 +4360,9 @@ export interface components {
         CreateCampaignDto: {
             productSlugs: string[];
             categorySlugs: string[];
+            plannedChannelCostToman?: number | null;
+            /** @enum {string} */
+            audience?: "ALL_CUSTOMERS" | "FIRST_PURCHASE" | "RETURNING";
             /** Format: uuid */
             mediaId?: string | null;
             ctaPath?: string | null;
@@ -4329,6 +4384,9 @@ export interface components {
         UpdateCampaignDto: {
             productSlugs: string[];
             categorySlugs: string[];
+            plannedChannelCostToman?: number | null;
+            /** @enum {string} */
+            audience?: "ALL_CUSTOMERS" | "FIRST_PURCHASE" | "RETURNING";
             /** Format: uuid */
             mediaId?: string | null;
             ctaPath?: string | null;
@@ -4344,6 +4402,26 @@ export interface components {
             message: string;
             bannerEnabled: boolean;
             bannerPriority: number;
+        };
+        CampaignBasketLineDto: {
+            slug: string;
+            quantity: number;
+            unitSalePriceToman: number;
+        };
+        CampaignSimulationInputDto: {
+            items: components["schemas"]["CampaignBasketLineDto"][];
+            expectedRevision: number;
+            shippingToman: number;
+            hasPaidOrder: boolean;
+        };
+        CampaignSimulationDto: {
+            reason: string | null;
+            merchandiseToman: number;
+            eligibleSubtotalToman: number;
+            shippingToman: number;
+            merchandiseDiscountToman: number;
+            shippingDiscountToman: number;
+            payableToman: number;
         };
         CampaignTransitionDto: {
             /** @enum {string} */
@@ -7250,6 +7328,27 @@ export interface operations {
             };
         };
     };
+    CampaignsController_selectProducts_v1: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignProductOptionsDto"];
+                };
+            };
+        };
+    };
     CampaignsController_detail_v1: {
         parameters: {
             query?: {
@@ -7294,6 +7393,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CampaignSummaryDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_simulate_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignSimulationInputDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignSimulationDto"];
                 };
             };
         };

@@ -14,8 +14,9 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { CampaignStatus } from '../../../generated/prisma/enums';
+import { CampaignAudience, CampaignStatus } from '../../../generated/prisma/enums';
 import { CampaignAction } from '../campaign-lifecycle';
+import { CampaignBudgetDto } from './campaign-operations.dto';
 
 function Trimmed() {
   return Transform(({ value }: { value: unknown }) =>
@@ -75,6 +76,19 @@ export class CampaignDraftDto {
   @Min(0)
   @Max(2_147_483_647)
   budgetToman!: number;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 0, maximum: 2_147_483_647 })
+  @IsOptional()
+  @Type(() => Object)
+  @IsInt()
+  @Min(0)
+  @Max(2_147_483_647)
+  plannedChannelCostToman?: number | null;
+
+  @ApiPropertyOptional({ enum: CampaignAudience })
+  @IsOptional()
+  @IsEnum(CampaignAudience)
+  audience?: CampaignAudience;
 
   @Trimmed()
   @Type(() => Object)
@@ -235,6 +249,16 @@ export class CampaignDetailDto extends CampaignSummaryDto {
   categorySlugs!: string[];
 
   budgetToman!: number;
+
+  @ApiProperty({ type: Number, nullable: true })
+  plannedChannelCostToman!: number | null;
+
+  @ApiProperty({ enum: CampaignAudience })
+  audience!: CampaignAudience;
+
+  @ApiProperty({ type: () => CampaignBudgetDto })
+  budget!: CampaignBudgetDto;
+
   message!: string;
   bannerEnabled!: boolean;
   bannerPriority!: number;

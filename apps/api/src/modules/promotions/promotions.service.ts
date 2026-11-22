@@ -7,12 +7,19 @@ import {
 import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { attachHumanAuditEvent } from '../audit/audit-event';
-import { calculatePromotion, isPromotionTarget, type PromotionLine } from './promotion-engine';
+import {
+  calculatePromotion,
+  isPromotionTarget,
+  matchesPromotionAudience,
+  type PromotionLine,
+} from './promotion-engine';
+import {
+  committedDiscount,
+  countedPromotionOrders,
+  discountBudget,
+  promotionUsage,
+} from './promotion-budget';
 import type { AdminPromotionDto, PublicPromotionsDto, SavePromotionDto } from './dto/promotion.dto';
-
-const countedOrders = {
-  OR: [{ status: { notIn: ['CANCELLED', 'EXPIRED'] } }, { paidAt: { not: null } }],
-} satisfies Prisma.OrderWhereInput;
 
 export function normalizeCoupon(value: string | undefined | null) {
   const coupon = value?.trim().toUpperCase() || null;
@@ -97,7 +104,7 @@ export class PromotionsService {
         if ((campaign.promotion?.version ?? 0) !== input.expectedVersion) {
           throw new ConflictException('The promotion changed. Reload the campaign.');
         }
-        if (campaign.budgetToman <= 0)
+        if (discountBudget(campaign) <= 0)
           throw new BadRequestException('Set a campaign budget before configuring a promotion.');
 
         const products = await tx.product.findMany({
@@ -139,6 +146,31 @@ export class PromotionsService {
           where: { campaignId },
           create: { ...data, campaignId },
           update: { ...data, version: { increment: 1 } },
+        });
+        const { revision } = await tx.campaign.update({
+          where: { id: campaignId },
+          data: { revision: { increment: 1 } },
+          select: { revision: true },
+        });
+        await tx.campaignRevision.create({
+          data: {
+            campaignId,
+            version: revision,
+            action: 'PROMOTION_EDIT',
+            actorUserId,
+            snapshot: {
+              kind: updated.kind,
+              value: updated.value,
+              minSubtotalToman: updated.minSubtotalToman,
+              maxDiscountToman: updated.maxDiscountToman,
+              maxDiscountBps: updated.maxDiscountBps,
+              priority: updated.priority,
+              bundleProductIds: updated.bundleProductIds,
+              hasCoupon: updated.couponCode !== null,
+              maxUses: updated.maxUses,
+              promotionVersion: updated.version,
+            },
+          },
         });
         return attachHumanAuditEvent(
           {
@@ -184,6 +216,8 @@ export class PromotionsService {
             productIds: true,
             categoryIds: true,
             budgetToman: true,
+            plannedChannelCostToman: true,
+            audience: true,
             endsAt: true,
           },
         },
@@ -194,7 +228,7 @@ export class PromotionsService {
           by: ['campaignId'],
           where: {
             campaignId: { in: candidates.map(({ campaignId }) => campaignId) },
-            order: countedOrders,
+            order: countedPromotionOrders,
           },
           _sum: { merchandiseDiscountToman: true, shippingDiscountToman: true },
           _count: { _all: true },
@@ -203,16 +237,19 @@ export class PromotionsService {
     const usedByCampaign = new Map(usage.map((row) => [row.campaignId, row]));
     const available = candidates.filter(({ campaign, campaignId, maxUses }) => {
       const used = usedByCampaign.get(campaignId);
-      const committed =
-        (used?._sum.merchandiseDiscountToman ?? 0) + (used?._sum.shippingDiscountToman ?? 0);
+      const committed = used ? committedDiscount(used) : 0;
       return (
-        committed < campaign.budgetToman && (maxUses === null || (used?._count._all ?? 0) < maxUses)
+        committed < discountBudget(campaign) &&
+        (maxUses === null || (used?._count._all ?? 0) < maxUses)
       );
     });
     return {
       available: available.length > 0,
       items: available
-        .filter(({ couponCode }) => couponCode === null)
+        .filter(
+          ({ couponCode, campaign }) =>
+            couponCode === null && campaign.audience === 'ALL_CUSTOMERS',
+        )
         .map(({ kind, campaign, bundleProductIds }) => ({
           name: campaign.name,
           kind,
@@ -237,29 +274,31 @@ export class PromotionsService {
       include: { campaign: true },
       orderBy: [{ priority: 'desc' }, { campaignId: 'asc' }],
     });
+    let hasPaidOrder: boolean | undefined;
     for (const rule of candidates) {
       const eligible = lines.filter((line) => isPromotionTarget(rule.campaign, line));
       if (eligible.length === 0) continue;
-      const where = { campaignId: rule.campaignId, order: countedOrders };
-      const usage = await tx.orderPriceQuote.aggregate({
-        where,
-        _sum: { merchandiseDiscountToman: true, shippingDiscountToman: true },
-        _count: { _all: true },
-      });
+      if (rule.campaign.audience !== 'ALL_CUSTOMERS' && userId && hasPaidOrder === undefined) {
+        hasPaidOrder = Boolean(
+          await tx.order.findFirst({
+            where: { userId, paidAt: { not: null } },
+            select: { id: true },
+          }),
+        );
+      }
+      if (!matchesPromotionAudience(rule.campaign.audience, hasPaidOrder)) continue;
+      const usage = await promotionUsage(tx, rule.campaignId);
       if (rule.maxUses !== null && usage._count._all >= rule.maxUses) continue;
       if (
-        coupon &&
+        (coupon || rule.campaign.audience === 'FIRST_PURCHASE') &&
         userId &&
         (await tx.orderPriceQuote.count({
-          where: { ...where, order: { ...countedOrders, userId } },
+          where: { campaignId: rule.campaignId, order: { ...countedPromotionOrders, userId } },
         }))
       )
         continue;
 
-      const remaining =
-        rule.campaign.budgetToman -
-        (usage._sum.merchandiseDiscountToman ?? 0) -
-        (usage._sum.shippingDiscountToman ?? 0);
+      const remaining = discountBudget(rule.campaign) - committedDiscount(usage);
       const amounts = calculatePromotion(rule, eligible, shippingToman, remaining);
       if (amounts) {
         return {
@@ -277,6 +316,12 @@ export class PromotionsService {
             priority: rule.priority,
             bundleProductIds: rule.bundleProductIds,
             budgetToman: rule.campaign.budgetToman,
+            ...(rule.campaign.plannedChannelCostToman === null
+              ? {}
+              : { plannedChannelCostToman: rule.campaign.plannedChannelCostToman }),
+            ...(rule.campaign.audience === 'ALL_CUSTOMERS'
+              ? {}
+              : { audience: rule.campaign.audience }),
             maxUses: rule.maxUses,
             coupon: rule.couponCode !== null,
             eligibleProductIds: [...new Set(eligible.map(({ productId }) => productId))].sort(),

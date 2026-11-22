@@ -39,6 +39,7 @@ const historyLabels: Record<string, string> = {
   PUBLISH: 'انتشار خودکار',
   EXPIRE: 'پایان خودکار',
   LANDING_EDIT: 'ویرایش صفحه و مجموعه',
+  PROMOTION_EDIT: 'ویرایش قانون تخفیف',
 };
 
 export function CampaignDetailView({
@@ -55,7 +56,7 @@ export function CampaignDetailView({
 
   async function transition(action: CampaignAction) {
     if (pending) return;
-    if (action === 'END' && !window.confirm('کمپین پایان یابد؟')) return;
+    if (action === 'END' && !window.confirm('پایان کمپین قطعی است. کمپین پایان یابد؟')) return;
     const requestId = requests.current.get(action) ?? crypto.randomUUID();
     requests.current.set(action, requestId);
     setPending(action);
@@ -101,7 +102,7 @@ export function CampaignDetailView({
         ? 'همهٔ محصولات'
         : [...campaign.productSlugs, ...campaign.categorySlugs].join('، '),
     ],
-    ['بودجهٔ برنامه‌ریزی‌شده', formatAdminToman(campaign.budgetToman)],
+    ['سقف کل بودجه', formatAdminToman(campaign.budgetToman)],
     [
       'نمایش بنر',
       campaign.bannerEnabled
@@ -134,6 +135,11 @@ export function CampaignDetailView({
         {canWrite && statusActions[campaign.status].length > 0 && (
           <div className="mt-5 space-y-3">
             {error && <Alert tone="danger">{error}</Alert>}
+            {campaign.status === 'PAUSED' && (
+              <p className="text-sm">
+                می‌توانید با همین تنظیمات دوباره زمان‌بندی کنید یا برای اصلاح به پیش‌نویس برگردید.
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
               {campaign.status === 'DRAFT' && (
                 <ButtonLink href={`${url}&edit=1`} variant="outline">
@@ -145,7 +151,11 @@ export function CampaignDetailView({
                   key={action}
                   variant={action === 'END' ? 'danger' : 'secondary'}
                   loading={pending === action}
-                  disabled={pending !== null}
+                  disabled={
+                    pending !== null ||
+                    (campaign.budget.blockers.length > 0 &&
+                      (action === 'APPROVE' || action === 'SCHEDULE' || action === 'RESUME'))
+                  }
                   onClick={() => void transition(action)}
                 >
                   {campaignActionLabels[action]}

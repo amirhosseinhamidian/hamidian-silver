@@ -1760,37 +1760,45 @@ enum CampaignStatus {
   ENDED
 }
 
+enum CampaignAudience {
+  ALL_CUSTOMERS
+  FIRST_PURCHASE
+  RETURNING
+}
+
 model Campaign {
-  id              String               @id @default(uuid()) @db.Uuid
-  slug            String               @unique @db.VarChar(64)
-  name            String               @db.VarChar(150)
-  goal            String               @db.VarChar(500)
-  channel         String               @db.VarChar(96)
-  ownerId         String               @db.Uuid
-  trackingId      String               @unique @db.VarChar(64)
-  status          CampaignStatus       @default(DRAFT)
-  allProducts     Boolean
-  productIds      String[]             @default([]) @db.Uuid
-  categoryIds     String[]             @default([]) @db.Uuid
-  startsAt        DateTime             @db.Timestamptz(3)
-  endsAt          DateTime             @db.Timestamptz(3)
-  budgetToman     Int
-  message         String               @db.VarChar(500)
-  bannerEnabled   Boolean              @default(false)
-  bannerPriority  Int                  @default(0)
-  mediaId         String?              @db.Uuid
-  ctaPath         String?              @db.VarChar(1000)
-  ctaLabel        String?              @db.VarChar(80)
-  revision        Int                  @default(1)
-  createdAt       DateTime             @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime             @updatedAt @db.Timestamptz(3)
-  owner           User                 @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  tracking        CampaignLinkIdentity @relation(fields: [trackingId], references: [id], onDelete: Restrict)
-  media           Media?               @relation(fields: [mediaId], references: [id], onDelete: Restrict)
-  revisions       CampaignRevision[]
-  promotion       CampaignPromotion?
-  orderQuotes     OrderPriceQuote[]
-  landing         CampaignLanding?
+  id                      String               @id @default(uuid()) @db.Uuid
+  slug                    String               @unique @db.VarChar(64)
+  name                    String               @db.VarChar(150)
+  goal                    String               @db.VarChar(500)
+  channel                 String               @db.VarChar(96)
+  ownerId                 String               @db.Uuid
+  trackingId              String               @unique @db.VarChar(64)
+  status                  CampaignStatus       @default(DRAFT)
+  allProducts             Boolean
+  productIds              String[]             @default([]) @db.Uuid
+  categoryIds             String[]             @default([]) @db.Uuid
+  startsAt                DateTime             @db.Timestamptz(3)
+  endsAt                  DateTime             @db.Timestamptz(3)
+  budgetToman             Int
+  plannedChannelCostToman Int?
+  audience                CampaignAudience     @default(ALL_CUSTOMERS)
+  message                 String               @db.VarChar(500)
+  bannerEnabled           Boolean              @default(false)
+  bannerPriority          Int                  @default(0)
+  mediaId                 String?              @db.Uuid
+  ctaPath                 String?              @db.VarChar(1000)
+  ctaLabel                String?              @db.VarChar(80)
+  revision                Int                  @default(1)
+  createdAt               DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime             @updatedAt @db.Timestamptz(3)
+  owner                   User                 @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  tracking                CampaignLinkIdentity @relation(fields: [trackingId], references: [id], onDelete: Restrict)
+  media                   Media?               @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  revisions               CampaignRevision[]
+  promotion               CampaignPromotion?
+  orderQuotes             OrderPriceQuote[]
+  landing                 CampaignLanding?
 
   @@index([status, startsAt])
   @@index([status, endsAt])

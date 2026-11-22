@@ -1,4 +1,12 @@
-import type { Campaign, CampaignPromotion } from '../../generated/prisma/client';
+import type { Campaign, CampaignAudience, CampaignPromotion } from '../../generated/prisma/client';
+
+export function matchesPromotionAudience(audience: CampaignAudience, hasPaidOrder?: boolean) {
+  return (
+    audience === 'ALL_CUSTOMERS' ||
+    (audience === 'FIRST_PURCHASE' && hasPaidOrder === false) ||
+    (audience === 'RETURNING' && hasPaidOrder === true)
+  );
+}
 
 export type PromotionLine = Readonly<{
   productId: string;

@@ -13,9 +13,12 @@ import {
   ensureCampaignLinkIdentity,
   parseCampaignDestination,
 } from '../growth-attribution/campaign-links.service';
+import { committedDiscount, discountBudget, promotionUsage } from '../promotions/promotion-budget';
 import { formatTehranDate, parseTehranDate } from './campaign-calendar';
 import { campaignTransition } from './campaign-lifecycle';
 import { CampaignLandingsService } from './campaign-landings.service';
+import { campaignBudget, simulateCampaign } from './campaign-operations';
+import type { CampaignSimulationInputDto } from './dto/campaign-operations.dto';
 import type {
   CampaignDetailDto,
   CampaignDraftDto,
@@ -68,6 +71,7 @@ export class CampaignsService {
       include: {
         tracking: { select: { campaign: true } },
         media: true,
+        promotion: true,
         revisions: {
           orderBy: { version: 'desc' },
           skip: (historyPage - 1) * pageSize,
@@ -76,7 +80,7 @@ export class CampaignsService {
       },
     });
     if (!campaign) throw new NotFoundException('Campaign not found.');
-    const [products, categories] = await Promise.all([
+    const [products, categories, budget] = await Promise.all([
       this.db.product.findMany({
         where: { id: { in: campaign.productIds } },
         select: { slug: true },
@@ -87,6 +91,7 @@ export class CampaignsService {
         select: { slug: true },
         orderBy: { slug: 'asc' },
       }),
+      campaignBudget(this.db, campaign, campaign.promotion, { warnings: true }),
     ]);
     return {
       ...summarize(campaign),
@@ -98,6 +103,9 @@ export class CampaignsService {
       productSlugs: products.map(({ slug }) => slug),
       categorySlugs: categories.map(({ slug }) => slug),
       budgetToman: campaign.budgetToman,
+      plannedChannelCostToman: campaign.plannedChannelCostToman,
+      audience: campaign.audience,
+      budget,
       message: campaign.message,
       bannerEnabled: campaign.bannerEnabled,
       bannerPriority: campaign.bannerPriority,
@@ -116,6 +124,38 @@ export class CampaignsService {
       historyPage,
       hasMoreHistory: campaign.revisions.length > pageSize,
     };
+  }
+
+  async selectProducts(query: string) {
+    const items = await this.db.product.findMany({
+      where: {
+        status: 'ACTIVE',
+        deletedAt: null,
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { slug: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      select: { slug: true, name: true },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      take: 12,
+    });
+    return { items };
+  }
+
+  async simulate(id: string, input: CampaignSimulationInputDto) {
+    return this.db.$transaction(
+      async (tx) => {
+        const campaign = await tx.campaign.findUnique({
+          where: { id },
+          include: { promotion: true },
+        });
+        if (!campaign) throw new NotFoundException('Campaign not found.');
+        this.assertRevision(campaign, input.expectedRevision);
+        return simulateCampaign(tx, campaign, campaign.promotion, input);
+      },
+      { isolationLevel: 'RepeatableRead' },
+    );
   }
 
   async create(input: CreateCampaignDto, actorUserId: string): Promise<CampaignSummaryDto> {
@@ -153,7 +193,12 @@ export class CampaignsService {
       if (current.status !== 'DRAFT')
         throw new ConflictException('Only draft campaigns can be edited.');
 
-      const draft = await this.prepareDraft(tx, input);
+      const draft = await this.prepareDraft(tx, input, current);
+      if (
+        discountBudget(draft) < discountBudget(current) &&
+        discountBudget(draft) < committedDiscount(await promotionUsage(tx, id))
+      )
+        throw new BadRequestException('The discount budget is below existing commitments.');
       const campaign = await tx.campaign.update({
         where: { id },
         data: { ...draft, revision: { increment: 1 } },
@@ -194,6 +239,9 @@ export class CampaignsService {
         await this.validateScope(tx, current);
         if (current.mediaId) await this.checkMedia(tx, current.mediaId);
         await this.landings?.validateForPublication(tx, current);
+        const rule = await tx.campaignPromotion.findUnique({ where: { campaignId: id } });
+        const budget = await campaignBudget(tx, current, rule);
+        if (budget.blockers.length) throw new BadRequestException(budget.blockers[0]);
       }
       return summarize(
         await this.setStatus(tx, current, status, input.action, actorUserId, input.requestId),
@@ -274,13 +322,23 @@ export class CampaignsService {
     };
   }
 
-  private async prepareDraft(tx: Prisma.TransactionClient, input: CampaignDraftDto) {
+  private async prepareDraft(
+    tx: Prisma.TransactionClient,
+    input: CampaignDraftDto,
+    current?: Campaign,
+  ) {
     const startsAt = parseTehranDate(input.startsTehran);
     const endsAt = parseTehranDate(input.endsTehran);
     if (startsAt >= endsAt)
       throw new BadRequestException('The end time must follow the start time.');
     const channel = normalizeAttributionToken(input.channel);
     if (!channel) throw new BadRequestException('Enter a valid campaign channel.');
+    const plannedChannelCostToman =
+      input.plannedChannelCostToman === undefined
+        ? (current?.plannedChannelCostToman ?? null)
+        : input.plannedChannelCostToman;
+    if (plannedChannelCostToman !== null && plannedChannelCostToman > input.budgetToman)
+      throw new BadRequestException('The planned channel cost exceeds the campaign budget.');
 
     const productSlugs = [...new Set(input.productSlugs)];
     const categorySlugs = [...new Set(input.categorySlugs)];
@@ -327,6 +385,8 @@ export class CampaignsService {
       startsAt,
       endsAt,
       budgetToman: input.budgetToman,
+      plannedChannelCostToman,
+      audience: input.audience ?? current?.audience ?? 'ALL_CUSTOMERS',
       message: input.message,
       bannerEnabled: input.bannerEnabled,
       bannerPriority: input.bannerPriority,

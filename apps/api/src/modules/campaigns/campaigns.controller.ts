@@ -18,6 +18,12 @@ import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CampaignsService } from './campaigns.service';
 import {
+  CampaignProductOptionsDto,
+  CampaignProductQueryDto,
+  CampaignSimulationDto,
+  CampaignSimulationInputDto,
+} from './dto/campaign-operations.dto';
+import {
   CampaignDetailDto,
   CampaignListDto,
   CampaignPageQueryDto,
@@ -45,6 +51,13 @@ export class CampaignsController {
   @ApiOkResponse({ type: CampaignListDto })
   list(@Query() query: CampaignPageQueryDto): Promise<CampaignListDto> {
     return this.campaigns.list(query.page ?? 1);
+  }
+
+  @Get('product-options')
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_READ)
+  @ApiOkResponse({ type: CampaignProductOptionsDto })
+  selectProducts(@Query() query: CampaignProductQueryDto): Promise<CampaignProductOptionsDto> {
+    return this.campaigns.selectProducts(query.q);
   }
 
   @Get(':id')
@@ -76,6 +89,17 @@ export class CampaignsController {
     @CurrentPrincipal() actor: AuthenticatedPrincipal,
   ): Promise<CampaignSummaryDto> {
     return this.campaigns.update(id, input, actor.userId);
+  }
+
+  @Post(':id/simulation')
+  @HttpCode(200)
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_READ)
+  @ApiOkResponse({ type: CampaignSimulationDto })
+  simulate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() input: CampaignSimulationInputDto,
+  ): Promise<CampaignSimulationDto> {
+    return this.campaigns.simulate(id, input);
   }
 
   @Post(':id/transitions')

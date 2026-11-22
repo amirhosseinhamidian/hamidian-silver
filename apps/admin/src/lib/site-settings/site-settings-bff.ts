@@ -33,6 +33,16 @@ export async function forwardSiteSettingsJson(
   }
 }
 
+export async function readSiteSettingsJson(path: string): Promise<Response> {
+  const accessToken = await token();
+  if (!accessToken) return Response.json({ message: 'Authentication required.' }, { status: 401 });
+  try {
+    return upstreamResponse(await requestAdminCatalog(path, accessToken));
+  } catch {
+    return Response.json({ message: 'Site settings service is unavailable.' }, { status: 502 });
+  }
+}
+
 export async function forwardSiteMediaUpload(request: Request): Promise<Response> {
   const accessToken = await token();
   if (!accessToken) return Response.json({ message: 'Authentication required.' }, { status: 401 });
