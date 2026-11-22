@@ -3236,6 +3236,86 @@ export interface paths {
         patch: operations["ProfileController_setDefaultAddress_v1"];
         trace?: never;
     };
+    "/api/v1/reward-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RewardPoliciesController_list_v1"];
+        put?: never;
+        post: operations["RewardPoliciesController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RewardPoliciesController_active_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RewardPoliciesController_read_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/simulation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RewardPoliciesController_simulate_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/{version}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RewardPoliciesController_publish_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/shipping/pricing/public": {
         parameters: {
             query?: never;
@@ -6312,6 +6392,140 @@ export interface components {
             id: string;
             /** Format: date-time */
             deletedAt: string;
+        };
+        RewardPolicyVersionDto: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            requestedEffectiveAt: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            publishedById: string | null;
+            /** Format: date-time */
+            effectiveAt: string | null;
+            version: number;
+            enabled: boolean;
+            createdById: string;
+        };
+        RewardPolicyListDto: {
+            items: components["schemas"]["RewardPolicyVersionDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        RewardEligibilityDto: {
+            allowCoupon: boolean;
+            allowedCategoryIds: string[];
+            excludedCategoryIds: string[];
+            excludedProductIds: string[];
+        };
+        RewardBudgetDto: {
+            rewardPerOrderToman: number;
+            rewardPerCustomerPeriodToman: number;
+            rewardPerPeriodToman: number;
+            incentivesPerOrderToman: number;
+            incentivesPerCustomerPeriodToman: number;
+            incentivesPerPeriodToman: number;
+        };
+        RewardGrantRuleDto: {
+            code: string;
+            enabled: boolean;
+            priority: number;
+            minimumToman: number;
+            maximumExclusiveToman?: number | null;
+            capToman: number;
+            /** @enum {string} */
+            purchaseRank: "ANY" | "FIRST" | "SECOND" | "THIRD_OR_LATER";
+            /** @enum {string} */
+            method: "PERCENT" | "FIXED";
+            value: number;
+        };
+        RewardRedemptionBandDto: {
+            code: string;
+            enabled: boolean;
+            priority: number;
+            minimumToman: number;
+            maximumExclusiveToman?: number | null;
+            capToman: number;
+            rateBps: number;
+        };
+        RewardPolicyDefinitionDto: {
+            enabled: boolean;
+            expiryDays: number;
+            grantEligibility: components["schemas"]["RewardEligibilityDto"];
+            redemptionEligibility: components["schemas"]["RewardEligibilityDto"];
+            budget: components["schemas"]["RewardBudgetDto"];
+            grantRules: components["schemas"]["RewardGrantRuleDto"][];
+            redemptionBands: components["schemas"]["RewardRedemptionBandDto"][];
+        };
+        RewardPolicyDetailDto: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            requestedEffectiveAt: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            publishedById: string | null;
+            /** Format: date-time */
+            effectiveAt: string | null;
+            definition: components["schemas"]["RewardPolicyDefinitionDto"];
+            version: number;
+            enabled: boolean;
+            createdById: string;
+        };
+        ActiveRewardPolicyDto: {
+            policy: components["schemas"]["RewardPolicyDetailDto"] | null;
+        };
+        CreateRewardPolicyDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** Format: date-time */
+            requestedEffectiveAt?: string | null;
+            definition: components["schemas"]["RewardPolicyDefinitionDto"];
+        };
+        RewardSampleLineDto: {
+            /** Format: uuid */
+            productId: string;
+            categoryIds: string[];
+            merchandiseToman: number;
+            directDiscountToman: number;
+            settledCreditToman: number;
+            refundedCashToman: number;
+        };
+        RewardPeriodUsageDto: {
+            customerRewardsToman: number;
+            periodRewardsToman: number;
+            customerIncentivesToman: number;
+            periodIncentivesToman: number;
+        };
+        RewardPolicySimulationRequestDto: {
+            lines: components["schemas"]["RewardSampleLineDto"][];
+            /** @enum {string} */
+            outcome: "UNPAID" | "PAID" | "CANCELLED" | "FULLY_RETURNED";
+            previousCompletedPurchases: number;
+            couponApplied: boolean;
+            shippingDiscountToman: number;
+            otherOrderIncentivesToman: number;
+            availableCreditToman: number;
+            campaignRedemptionCapToman?: number | null;
+            usage: components["schemas"]["RewardPeriodUsageDto"];
+            version: number;
+        };
+        RewardSimulationDto: {
+            /** @enum {string} */
+            purchaseRank: "FIRST" | "SECOND" | "THIRD_OR_LATER";
+            grantRuleCode: string | null;
+            redemptionBandCode: string | null;
+            version: number;
+            enabled: boolean;
+            rewardBaseToman: number;
+            redemptionBaseToman: number;
+            calculatedRewardToman: number;
+            estimatedRewardToman: number;
+            maxRedemptionToman: number;
+            existingOrderIncentivesToman: number;
+            remainingRewardBudgetToman: number;
+            existingIncentivesExceedLimit: boolean;
+            expiryDays: number;
         };
         ShippingPricingSettingsDto: {
             /** @enum {string} */
@@ -12722,6 +12936,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerAddressDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPolicyListDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRewardPolicyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_active_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveRewardPolicyDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_read_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_simulate_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RewardPolicySimulationRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardSimulationDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_publish_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPolicyDetailDto"];
                 };
             };
         };

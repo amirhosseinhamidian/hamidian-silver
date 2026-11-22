@@ -20,6 +20,7 @@ import { PlatingModule } from './modules/plating/plating.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ProfileModule } from './modules/profile/profile.module';
+import { RewardPoliciesModule } from './modules/reward-policies/reward-policies.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
 import { SiteSettingsModule } from './modules/site-settings/site-settings.module';
 import { SeoModule } from './modules/seo/seo.module';
@@ -55,6 +56,7 @@ import { UserManagementModule } from './modules/user-management/user-management.
     OrdersModule,
     PaymentsModule,
     ProfileModule,
+    RewardPoliciesModule,
     ShippingModule,
     SiteSettingsModule,
     SeoModule,

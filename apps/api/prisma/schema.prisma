@@ -74,6 +74,8 @@ model User {
   supplierSourceChangesAcknowledged   SupplierProductSourceChange[]       @relation("SupplierSourceChangeAcknowledger")
   ownedCampaigns                      Campaign[]
   campaignRevisions                   CampaignRevision[]
+  rewardPolicyDrafts                  RewardPolicyVersion[]         @relation("RewardPolicyCreator")
+  rewardPolicyPublications            RewardPolicyVersion[]         @relation("RewardPolicyPublisher")
   editedPromotions                    CampaignPromotion[]
 
   @@index([isActive])
@@ -1908,6 +1910,23 @@ model CampaignRevision {
   @@id([campaignId, version])
   @@unique([campaignId, requestId])
   @@map("campaign_revisions")
+}
+
+model RewardPolicyVersion {
+  version              Int       @id @default(autoincrement())
+  requestId            String    @unique @db.Uuid
+  definition           Json
+  createdAt            DateTime  @default(now()) @db.Timestamptz(3)
+  createdById          String    @db.Uuid
+  requestedEffectiveAt DateTime? @db.Timestamptz(3)
+  publishedAt          DateTime? @db.Timestamptz(3)
+  publishedById        String?   @db.Uuid
+  effectiveAt          DateTime? @db.Timestamptz(3)
+  createdBy            User      @relation("RewardPolicyCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  publishedBy          User?     @relation("RewardPolicyPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
+
+  @@index([effectiveAt, version])
+  @@map("reward_policy_versions")
 }
 
 model GrowthCampaignCost {
