@@ -76,6 +76,10 @@ model User {
   campaignRevisions                   CampaignRevision[]
   rewardPolicyDrafts                  RewardPolicyVersion[]         @relation("RewardPolicyCreator")
   rewardPolicyPublications            RewardPolicyVersion[]         @relation("RewardPolicyPublisher")
+  walletLots                          WalletLot[]
+  walletReservations                  WalletReservation[]
+  walletOperations                    WalletOperation[]            @relation("WalletOwner")
+  walletCorrections                   WalletOperation[]            @relation("WalletActor")
   editedPromotions                    CampaignPromotion[]
 
   @@index([isActive])
@@ -1716,6 +1720,8 @@ model Order {
   financeSnapshot       OrderFinanceSnapshot?
   attribution           OrderAttribution?
   priceQuote            OrderPriceQuote?
+  walletRewardLots      WalletLot[]
+  walletReservations    WalletReservation[]
   growthDevice          String?                       @db.VarChar(12)
   returns               OrderReturn[]
   supplierCredits       SupplierCredit[]
@@ -1924,9 +1930,123 @@ model RewardPolicyVersion {
   effectiveAt          DateTime? @db.Timestamptz(3)
   createdBy            User      @relation("RewardPolicyCreator", fields: [createdById], references: [id], onDelete: Restrict)
   publishedBy          User?     @relation("RewardPolicyPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
+  walletLots           WalletLot[]
 
   @@index([effectiveAt, version])
   @@map("reward_policy_versions")
+}
+
+enum WalletSource {
+  PURCHASE
+  REFERRAL
+}
+
+enum WalletBucket {
+  PENDING
+  AVAILABLE
+  RESERVED
+  CAPTURED
+  EXPIRED
+  REVOKED
+}
+
+enum WalletOperationKind {
+  GRANT
+  ACTIVATE
+  RESERVE
+  RELEASE
+  CAPTURE
+  EXPIRE
+  REVOKE_GRANT
+  REVERSE_CAPTURE
+}
+
+enum WalletReservationStatus {
+  RESERVED
+  CAPTURED
+  RELEASED
+}
+
+model WalletLot {
+  id            String              @id @default(uuid()) @db.Uuid
+  userId        String              @db.Uuid
+  orderId       String              @db.Uuid
+  policyVersion Int
+  source        WalletSource
+  sourceKey     String              @db.VarChar(128)
+  grantedToman  Int
+  pendingToman  Int
+  availableToman Int                @default(0)
+  reservedToman  Int                @default(0)
+  capturedToman  Int                @default(0)
+  expiredToman   Int                @default(0)
+  revokedToman   Int                @default(0)
+  expiresAt      DateTime           @db.Timestamptz(3)
+  activatedAt    DateTime?          @db.Timestamptz(3)
+  createdAt      DateTime           @default(now()) @db.Timestamptz(3)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order          Order              @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  policy         RewardPolicyVersion @relation(fields: [policyVersion], references: [version], onDelete: Restrict)
+  entries        WalletLedgerEntry[]
+
+  @@unique([source, sourceKey])
+  @@index([userId, expiresAt, id])
+  @@index([orderId])
+  @@map("wallet_lots")
+}
+
+model WalletReservation {
+  id          String                  @id @default(uuid()) @db.Uuid
+  userId      String                  @db.Uuid
+  orderId     String                  @db.Uuid
+  amountToman Int
+  status      WalletReservationStatus @default(RESERVED)
+  createdAt   DateTime                @default(now()) @db.Timestamptz(3)
+  resolvedAt  DateTime?               @db.Timestamptz(3)
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order       Order                   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  entries     WalletLedgerEntry[]
+
+  @@index([userId, status])
+  @@index([orderId])
+  @@map("wallet_reservations")
+}
+
+model WalletOperation {
+  id             String              @id @default(uuid()) @db.Uuid
+  sequence       BigInt              @unique @default(autoincrement())
+  userId         String              @db.Uuid
+  idempotencyKey String              @db.VarChar(128)
+  fingerprint    String              @db.Char(64)
+  kind           WalletOperationKind
+  actorUserId    String?             @db.Uuid
+  reason         String?             @db.VarChar(250)
+  recordedAt     DateTime            @default(now()) @db.Timestamptz(3)
+  user           User                @relation("WalletOwner", fields: [userId], references: [id], onDelete: Restrict)
+  actor          User?               @relation("WalletActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  entries        WalletLedgerEntry[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, sequence])
+  @@map("wallet_operations")
+}
+
+model WalletLedgerEntry {
+  id            String             @id @default(uuid()) @db.Uuid
+  operationId   String             @db.Uuid
+  lotId         String             @db.Uuid
+  reservationId String?            @db.Uuid
+  amountToman   Int
+  fromBucket    WalletBucket?
+  toBucket      WalletBucket
+  operation     WalletOperation    @relation(fields: [operationId], references: [id], onDelete: Restrict)
+  lot           WalletLot          @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  reservation   WalletReservation? @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+
+  @@index([operationId])
+  @@index([lotId])
+  @@index([reservationId, fromBucket])
+  @@map("wallet_ledger_entries")
 }
 
 model GrowthCampaignCost {

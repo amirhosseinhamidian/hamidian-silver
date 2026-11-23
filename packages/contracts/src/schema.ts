@@ -4260,6 +4260,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletController_balance_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletController_adminBalance_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/{userId}/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletController_history_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/{userId}/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["WalletController_correct_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7398,6 +7462,64 @@ export interface components {
         };
         UpdateAdminRolePermissionsDto: {
             permissionCodes: ("catalog.read" | "catalog.write" | "inventory.read" | "inventory.write" | "orders.read" | "orders.status.write" | "orders.tracking.write" | "orders.cancel" | "cms.read" | "cms.write" | "pricing.read" | "pricing.write" | "finance.read" | "finance.write" | "settings.read" | "settings.write" | "users.read" | "users.write" | "audit.read")[];
+        };
+        WalletBalanceDto: {
+            /** Format: date-time */
+            nextExpiryAt: string | null;
+            pendingToman: number;
+            availableToman: number;
+            reservedToman: number;
+        };
+        WalletMovementDto: {
+            /** Format: uuid */
+            lotId: string;
+            /** Format: uuid */
+            originOrderId: string;
+            /** @enum {string} */
+            source: "PURCHASE" | "REFERRAL";
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            reservationId: string | null;
+            /** Format: uuid */
+            reservationOrderId: string | null;
+            /** @enum {string|null} */
+            fromBucket: "PENDING" | "AVAILABLE" | "RESERVED" | "CAPTURED" | "EXPIRED" | "REVOKED" | null;
+            /** @enum {string} */
+            toBucket: "PENDING" | "AVAILABLE" | "RESERVED" | "CAPTURED" | "EXPIRED" | "REVOKED";
+            sourceKey: string;
+            policyVersion: number;
+            amountToman: number;
+        };
+        WalletOperationDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "GRANT" | "ACTIVATE" | "RESERVE" | "RELEASE" | "CAPTURE" | "EXPIRE" | "REVOKE_GRANT" | "REVERSE_CAPTURE";
+            /** Format: date-time */
+            recordedAt: string;
+            /** Format: uuid */
+            actorUserId: string | null;
+            reason: string | null;
+            movements: components["schemas"]["WalletMovementDto"][];
+        };
+        WalletLedgerPageDto: {
+            items: components["schemas"]["WalletOperationDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        WalletCorrectionDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** @enum {string} */
+            kind: "REVOKE_GRANT" | "REVERSE_CAPTURE";
+            /**
+             * Format: uuid
+             * @description Lot ID for REVOKE_GRANT or reservation ID for REVERSE_CAPTURE.
+             */
+            targetId: string;
+            amountToman: number;
+            reason: string;
         };
     };
     responses: never;
@@ -14462,6 +14584,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminRoleManagementSnapshotDto"];
+                };
+            };
+        };
+    };
+    WalletController_balance_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletBalanceDto"];
+                };
+            };
+        };
+    };
+    WalletController_adminBalance_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletBalanceDto"];
+                };
+            };
+        };
+    };
+    WalletController_history_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletLedgerPageDto"];
+                };
+            };
+        };
+    };
+    WalletController_correct_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WalletCorrectionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletOperationDto"];
                 };
             };
         };

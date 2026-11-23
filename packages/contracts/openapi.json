@@ -11229,6 +11229,137 @@
           "AdminRoleManagement"
         ]
       }
+    },
+    "/api/v1/wallet": {
+      "get": {
+        "operationId": "WalletController_balance_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletBalanceDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallet/admin/{userId}": {
+      "get": {
+        "operationId": "WalletController_adminBalance_v1",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletBalanceDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallet/admin/{userId}/ledger": {
+      "get": {
+        "operationId": "WalletController_history_v1",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletLedgerPageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallet/admin/{userId}/corrections": {
+      "post": {
+        "operationId": "WalletController_correct_v1",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalletCorrectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletOperationDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Wallet"
+        ]
+      }
     }
   },
   "info": {
@@ -24918,6 +25049,219 @@
         },
         "required": [
           "permissionCodes"
+        ]
+      },
+      "WalletBalanceDto": {
+        "type": "object",
+        "properties": {
+          "nextExpiryAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "pendingToman": {
+            "type": "number"
+          },
+          "availableToman": {
+            "type": "number"
+          },
+          "reservedToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "nextExpiryAt",
+          "pendingToman",
+          "availableToman",
+          "reservedToman"
+        ]
+      },
+      "WalletMovementDto": {
+        "type": "object",
+        "properties": {
+          "lotId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "originOrderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "enum": [
+              "PURCHASE",
+              "REFERRAL"
+            ],
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reservationId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "reservationOrderId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "fromBucket": {
+            "nullable": true,
+            "enum": [
+              "PENDING",
+              "AVAILABLE",
+              "RESERVED",
+              "CAPTURED",
+              "EXPIRED",
+              "REVOKED"
+            ],
+            "type": "string"
+          },
+          "toBucket": {
+            "enum": [
+              "PENDING",
+              "AVAILABLE",
+              "RESERVED",
+              "CAPTURED",
+              "EXPIRED",
+              "REVOKED"
+            ],
+            "type": "string"
+          },
+          "sourceKey": {
+            "type": "string"
+          },
+          "policyVersion": {
+            "type": "number"
+          },
+          "amountToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "lotId",
+          "originOrderId",
+          "source",
+          "expiresAt",
+          "reservationId",
+          "reservationOrderId",
+          "fromBucket",
+          "toBucket",
+          "sourceKey",
+          "policyVersion",
+          "amountToman"
+        ]
+      },
+      "WalletOperationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "enum": [
+              "GRANT",
+              "ACTIVATE",
+              "RESERVE",
+              "RELEASE",
+              "CAPTURE",
+              "EXPIRE",
+              "REVOKE_GRANT",
+              "REVERSE_CAPTURE"
+            ],
+            "type": "string"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actorUserId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "movements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletMovementDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "recordedAt",
+          "actorUserId",
+          "reason",
+          "movements"
+        ]
+      },
+      "WalletLedgerPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletOperationDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "hasMore"
+        ]
+      },
+      "WalletCorrectionDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "enum": [
+              "REVOKE_GRANT",
+              "REVERSE_CAPTURE"
+            ],
+            "type": "string"
+          },
+          "targetId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Lot ID for REVOKE_GRANT or reservation ID for REVERSE_CAPTURE."
+          },
+          "amountToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 250
+          }
+        },
+        "required": [
+          "requestId",
+          "kind",
+          "targetId",
+          "amountToman",
+          "reason"
         ]
       }
     }

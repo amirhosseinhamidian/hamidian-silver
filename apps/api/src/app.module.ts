@@ -26,6 +26,7 @@ import { SiteSettingsModule } from './modules/site-settings/site-settings.module
 import { SeoModule } from './modules/seo/seo.module';
 import { SupplierImportsModule } from './modules/supplier-imports/supplier-imports.module';
 import { UserManagementModule } from './modules/user-management/user-management.module';
+import { WalletModule } from './modules/wallet/wallet.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { UserManagementModule } from './modules/user-management/user-management.
     SeoModule,
     SupplierImportsModule,
     UserManagementModule,
+    WalletModule,
   ],
   providers: [
     {
