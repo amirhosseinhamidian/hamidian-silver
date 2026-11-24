@@ -17,6 +17,13 @@ const modes = [
   { value: 'immediate', label: 'بلافاصله پس از تحویل' },
 ];
 
+function readDays(input: string): number | null {
+  const value = toAsciiDigits(input.trim());
+  if (!/^\d+$/.test(value)) return null;
+  const days = Number(value);
+  return days >= 1 && days <= 3_650 ? days : null;
+}
+
 export function RewardActivationTimingForm({
   initialTiming,
   canWrite,
@@ -29,31 +36,33 @@ export function RewardActivationTimingForm({
   const [days, setDays] = useState(
     timing.activationDelayDays ? String(timing.activationDelayDays) : '',
   );
+  const [expiryInput, setExpiryInput] = useState(String(initialTiming.expiryDays));
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(false);
-  const request = useRef<{ requestId: string; activationDelayDays: number } | null>(null);
+  const request = useRef<{
+    requestId: string;
+    activationDelayDays: number;
+    expiryDays: number;
+  } | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || conflict) return;
-    const input = toAsciiDigits(days.trim());
-    const activationDelayDays = mode === 'immediate' ? 0 : Number(input);
+    const activationDelayDays = mode === 'immediate' ? 0 : readDays(days);
+    const expiryDays = readDays(expiryInput);
     setError('');
     setSaved(false);
-    if (
-      mode === 'scheduled' &&
-      (!/^\d+$/.test(input) ||
-        !Number.isInteger(activationDelayDays) ||
-        activationDelayDays < 1 ||
-        activationDelayDays > 3_650)
-    ) {
-      setError('تعداد روز را به‌صورت عدد صحیح بین ۱ و ۳۶۵۰ وارد کنید.');
+    if (activationDelayDays === null || expiryDays === null) {
+      setError('زمان فعال‌سازی و مهلت مصرف را با عدد صحیح بین ۱ و ۳۶۵۰ وارد کنید.');
       return;
     }
-    if (request.current?.activationDelayDays !== activationDelayDays) {
-      request.current = { requestId: crypto.randomUUID(), activationDelayDays };
+    if (
+      request.current?.activationDelayDays !== activationDelayDays ||
+      request.current?.expiryDays !== expiryDays
+    ) {
+      request.current = { requestId: crypto.randomUUID(), activationDelayDays, expiryDays };
     }
 
     setBusy(true);
@@ -89,7 +98,7 @@ export function RewardActivationTimingForm({
   }
 
   return (
-    <Card title="زمان قابل مصرف شدن پاداش" className="max-w-2xl">
+    <Card title="فعال‌سازی و انقضای پاداش" className="max-w-2xl">
       <div className="space-y-4">
         <p className="text-sm">
           زمان فعال فعلی{' '}
@@ -98,6 +107,10 @@ export function RewardActivationTimingForm({
               ? 'بلافاصله پس از تحویل'
               : `${formatAdminInteger(timing.activationDelayDays)} روز پس از تحویل`}
           </strong>
+        </p>
+        <p className="text-sm">
+          مهلت مصرف فعلی از زمان صدور اعتبار{' '}
+          <strong>{formatAdminInteger(timing.expiryDays)} روز</strong>
         </p>
         <p className="text-sm leading-6 text-[var(--admin-color-muted)]">
           درخواست مرجوعی باز، فعال‌سازی را تا تعیین تکلیف آن به تعویق می‌اندازد.
@@ -134,6 +147,23 @@ export function RewardActivationTimingForm({
                   )}
                 </FormField>
               )}
+              <FormField
+                id="reward-expiry-days"
+                label="مهلت مصرف از صدور اعتبار به روز"
+                hint="این مقدار برای بسته‌های جدید طبق نسخهٔ سیاستِ سفارش اعمال می‌شود."
+                required
+              >
+                {(props) => (
+                  <Input
+                    {...props}
+                    value={expiryInput}
+                    onChange={(event) => setExpiryInput(event.target.value)}
+                    inputMode="numeric"
+                    maxLength={4}
+                    required
+                  />
+                )}
+              </FormField>
               <Button type="submit" loading={busy}>
                 ذخیره و انتشار
               </Button>
@@ -144,7 +174,7 @@ export function RewardActivationTimingForm({
                 بارگیری تنظیم فعال
               </ButtonLink>
             )}
-            {saved && <Alert tone="success">زمان فعال‌سازی ذخیره شد.</Alert>}
+            {saved && <Alert tone="success">زمان‌بندی پاداش ذخیره شد.</Alert>}
           </form>
         )}
       </div>

@@ -20,7 +20,10 @@ import type {
   SimulateRewardPolicyDto,
   UpdateRewardActivationTimingDto,
 } from './dto/reward-policy.dto';
-import { DEFAULT_REWARD_ACTIVATION_DELAY_DAYS } from './dto/reward-policy.dto';
+import {
+  DEFAULT_REWARD_ACTIVATION_DELAY_DAYS,
+  DEFAULT_REWARD_EXPIRY_DAYS,
+} from './dto/reward-policy.dto';
 import {
   calculateRewardPolicy,
   RewardPolicyValidationError,
@@ -36,7 +39,7 @@ const emptyEligibility = {
 };
 const disabledDefinition: RewardPolicyDefinitionDto = {
   enabled: false,
-  expiryDays: 270,
+  expiryDays: DEFAULT_REWARD_EXPIRY_DAYS,
   grantEligibility: emptyEligibility,
   redemptionEligibility: emptyEligibility,
   grantRules: [],
@@ -78,6 +81,7 @@ function activationTiming(policy: RewardPolicyDetailDto | null): RewardActivatio
     policyVersion: policy?.version ?? null,
     activationDelayDays:
       policy?.definition.activationDelayDays ?? DEFAULT_REWARD_ACTIVATION_DELAY_DAYS,
+    expiryDays: policy?.definition.expiryDays ?? DEFAULT_REWARD_EXPIRY_DAYS,
   };
 }
 
@@ -140,7 +144,8 @@ export class RewardPoliciesService {
         if (
           existing.createdById !== actorUserId ||
           !existing.publishedAt ||
-          definitionOf(existing).activationDelayDays !== input.activationDelayDays
+          definitionOf(existing).activationDelayDays !== input.activationDelayDays ||
+          (input.expiryDays !== undefined && definitionOf(existing).expiryDays !== input.expiryDays)
         ) {
           throw new ConflictException('This request key was already used with different values.');
         }
@@ -155,12 +160,16 @@ export class RewardPoliciesService {
       if (previous.policyVersion !== input.expectedPolicyVersion) {
         throw new ConflictException('The active policy changed. Reload before saving.');
       }
-      if (previous.activationDelayDays === input.activationDelayDays) return previous;
+      const expiryDays = input.expiryDays ?? previous.expiryDays;
+      const activationChanged = previous.activationDelayDays !== input.activationDelayDays;
+      const expiryChanged = previous.expiryDays !== expiryDays;
+      if (!activationChanged && !expiryChanged) return previous;
 
       const definition = JSON.parse(
         JSON.stringify({
           ...(policy?.definition ?? disabledDefinition),
           activationDelayDays: input.activationDelayDays,
+          expiryDays,
         }),
       ) as Prisma.InputJsonObject;
       const inserted = await tx.rewardPolicyVersion.createMany({
@@ -178,16 +187,30 @@ export class RewardPoliciesService {
       if (!inserted.count) throw new ConflictException('This request key is already in use.');
       const updated = await tx.rewardPolicyVersion.findUniqueOrThrow({ where: { requestId } });
       return attachHumanAuditEvent(activationTiming(detail(updated)), {
-        title: 'زمان فعال‌سازی پاداش خرید تغییر کرد.',
+        title: 'زمان‌بندی پاداش خرید تغییر کرد.',
         operationType: 'UPDATE',
         entityName: String(updated.version),
         changes: [
-          {
-            field: 'activationDelayDays',
-            label: 'روز پس از تحویل',
-            before: previous.activationDelayDays,
-            after: input.activationDelayDays,
-          },
+          ...(activationChanged
+            ? [
+                {
+                  field: 'activationDelayDays',
+                  label: 'روز پس از تحویل',
+                  before: previous.activationDelayDays,
+                  after: input.activationDelayDays,
+                },
+              ]
+            : []),
+          ...(expiryChanged
+            ? [
+                {
+                  field: 'expiryDays',
+                  label: 'مهلت مصرف به روز',
+                  before: previous.expiryDays,
+                  after: expiryDays,
+                },
+              ]
+            : []),
         ],
       });
     });

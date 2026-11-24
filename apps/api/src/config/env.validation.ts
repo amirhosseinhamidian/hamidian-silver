@@ -28,6 +28,7 @@ const optionalKavenegarTemplate = Joi.string()
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
   PURCHASE_REWARD_WORKER_ENABLED: Joi.boolean().default(false),
+  WALLET_MAINTENANCE_ENABLED: Joi.boolean().default(false),
   HOST: Joi.string().default('0.0.0.0'),
   PORT: Joi.number().port().default(3000),
   HTTP_REQUEST_TIMEOUT_MS: Joi.number().integer().min(1000).max(120000).default(30000),

@@ -2187,6 +2187,34 @@ model WalletLedgerEntry {
   @@map("wallet_ledger_entries")
 }
 
+enum WalletReconciliationSubject {
+  LOT
+  RESERVATION
+}
+
+enum WalletReconciliationCode {
+  LEDGER_MISMATCH
+  RESERVATION_MISMATCH
+  SETTLEMENT_MISMATCH
+  RECEIPT_PENDING
+  PAYMENT_UNCERTAIN
+  RESERVATION_OVERDUE
+}
+
+model WalletReconciliationIssue {
+  subject    WalletReconciliationSubject
+  subjectId  String                     @db.Uuid
+  userId     String                     @db.Uuid
+  orderId    String                     @db.Uuid
+  code       WalletReconciliationCode
+  detectedAt DateTime                   @db.Timestamptz(3)
+  resolvedAt DateTime?                  @db.Timestamptz(3)
+
+  @@id([subject, subjectId])
+  @@index([resolvedAt, detectedAt, subject, subjectId], map: "wallet_reconciliation_issues_report_idx")
+  @@map("wallet_reconciliation_issues")
+}
+
 model GrowthCampaignCost {
   id           String               @id @db.Uuid
   campaignId   String               @db.VarChar(64)

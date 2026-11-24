@@ -29,7 +29,12 @@ export default async function RewardPoliciesPage() {
 
   return (
     <main className="admin-container space-y-6 py-6 sm:py-8 lg:py-10">
-      <h1 className="text-2xl font-black sm:text-3xl">پاداش خرید</h1>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-black sm:text-3xl">پاداش خرید</h1>
+        <ButtonLink href="/reward-policies/maintenance" variant="outline" size="sm">
+          گزارش تعهدات و تطبیق کیف پول
+        </ButtonLink>
+      </header>
       {timing ? (
         <RewardActivationTimingForm
           initialTiming={timing}

@@ -1620,6 +1620,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/wallet/admin/maintenance/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletMaintenanceController_report_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reward-policies": {
         parameters: {
             query?: never;
@@ -5943,6 +5959,41 @@ export interface components {
             /** Format: uuid */
             orderId: string;
         };
+        WalletCommitmentTotalsDto: {
+            availableToman: number;
+            pendingToman: number;
+            reservedToman: number;
+            expiredToman: number;
+            capturedToman: number;
+            revokedToman: number;
+            awaitingExpiryToman: number;
+        };
+        WalletReconciliationIssueDto: {
+            /** @enum {string} */
+            subject: "LOT" | "RESERVATION";
+            /** Format: uuid */
+            subjectId: string;
+            /** Format: uuid */
+            userId: string;
+            /** Format: uuid */
+            orderId: string;
+            orderNumber: string | null;
+            /** @enum {string} */
+            code: "LEDGER_MISMATCH" | "RESERVATION_MISMATCH" | "SETTLEMENT_MISMATCH" | "RECEIPT_PENDING" | "PAYMENT_UNCERTAIN" | "RESERVATION_OVERDUE";
+            /** Format: date-time */
+            detectedAt: string;
+            /** Format: date-time */
+            resolvedAt: string | null;
+        };
+        WalletMaintenanceReportDto: {
+            /** Format: date-time */
+            asOf: string;
+            totals: components["schemas"]["WalletCommitmentTotalsDto"];
+            issues: components["schemas"]["WalletReconciliationIssueDto"][];
+            enabled: boolean;
+            page: number;
+            hasMore: boolean;
+        };
         RewardPolicyVersionDto: {
             /** Format: date-time */
             createdAt: string;
@@ -6033,12 +6084,14 @@ export interface components {
         RewardActivationTimingDto: {
             policyVersion: number | null;
             activationDelayDays: number;
+            expiryDays: number;
         };
         UpdateRewardActivationTimingDto: {
             /** Format: uuid */
             requestId: string;
             expectedPolicyVersion: number | null;
             activationDelayDays: number;
+            expiryDays?: number;
         };
         CreateRewardPolicyDto: {
             /** Format: uuid */
@@ -10993,6 +11046,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RetriedPurchaseRewardJobDto"];
+                };
+            };
+        };
+    };
+    WalletMaintenanceController_report_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                status?: "open" | "resolved";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletMaintenanceReportDto"];
                 };
             };
         };

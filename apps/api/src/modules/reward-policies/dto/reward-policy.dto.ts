@@ -27,6 +27,8 @@ const ranks = ['ANY', 'FIRST', 'SECOND', 'THIRD_OR_LATER'] as const;
 const methods = ['PERCENT', 'FIXED'] as const;
 const outcomes = ['UNPAID', 'PAID', 'CANCELLED', 'FULLY_RETURNED'] as const;
 export const DEFAULT_REWARD_ACTIVATION_DELAY_DAYS = 7;
+export const DEFAULT_REWARD_EXPIRY_DAYS = 270;
+const MAX_REWARD_EXPIRY_DAYS = 3_650;
 const MAX_REWARD_ACTIVATION_DELAY_DAYS = 3_650;
 
 function Integer(minimum = 0, maximum = TOMAN_INT_MAX) {
@@ -141,7 +143,7 @@ export class RewardPolicyDefinitionDto {
   @BooleanField()
   enabled!: boolean;
 
-  @Integer(1, 3_650)
+  @Integer(1, MAX_REWARD_EXPIRY_DAYS)
   expiryDays!: number;
 
   @ApiPropertyOptional({
@@ -202,6 +204,9 @@ export class RewardActivationTimingDto {
 
   @ApiProperty({ type: Number, minimum: 0, maximum: MAX_REWARD_ACTIVATION_DELAY_DAYS })
   activationDelayDays!: number;
+
+  @ApiProperty({ type: Number, minimum: 1, maximum: MAX_REWARD_EXPIRY_DAYS })
+  expiryDays!: number;
 }
 
 export class UpdateRewardActivationTimingDto {
@@ -218,6 +223,14 @@ export class UpdateRewardActivationTimingDto {
 
   @Integer(0, MAX_REWARD_ACTIVATION_DELAY_DAYS)
   activationDelayDays!: number;
+
+  @ApiPropertyOptional({ type: Number, minimum: 1, maximum: MAX_REWARD_EXPIRY_DAYS })
+  @ValidateIf((_object, value) => value !== undefined)
+  @Type(() => Object)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_REWARD_EXPIRY_DAYS)
+  expiryDays?: number;
 }
 
 export class CreateRewardPolicyDto {

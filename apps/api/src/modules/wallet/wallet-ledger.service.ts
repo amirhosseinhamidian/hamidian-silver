@@ -87,7 +87,7 @@ function assertAmount(amount: number) {
     throw new BadRequestException('Wallet amount must be positive integer toman.');
 }
 
-function exactToman(total: bigint) {
+export function exactWalletToman(total: bigint) {
   const numeric = Number(total);
   if (!Number.isSafeInteger(numeric))
     throw new ServiceUnavailableException('Wallet balance exceeds the supported reporting range.');
@@ -114,9 +114,9 @@ export class WalletLedgerService {
       FROM "wallet_lots" WHERE "userId" = ${userId}::uuid
     `;
     return {
-      pendingToman: exactToman(balance.pending),
-      availableToman: exactToman(balance.available),
-      reservedToman: exactToman(balance.reserved),
+      pendingToman: exactWalletToman(balance.pending),
+      availableToman: exactWalletToman(balance.available),
+      reservedToman: exactWalletToman(balance.reserved),
       nextExpiryAt: balance.nextExpiryAt?.toISOString() ?? null,
     };
   }

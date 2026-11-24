@@ -13,6 +13,8 @@ import { PermissionsGuard } from '../src/modules/authorization/permissions.guard
 import { PERMISSION_CODES } from '../src/modules/authorization/rbac.constants';
 import { bucketField } from '../src/modules/wallet/wallet-ledger';
 import { WalletLedgerService } from '../src/modules/wallet/wallet-ledger.service';
+import { WalletMaintenanceReportService } from '../src/modules/wallet/wallet-maintenance-report.service';
+import { WalletMaintenanceController } from '../src/modules/wallet/wallet-maintenance.controller';
 import { WalletController } from '../src/modules/wallet/wallet.controller';
 
 it('serializes concurrent spend, preserves append-only movements and reconciles the wallet snapshot', async () => {
@@ -189,8 +191,14 @@ it('serializes concurrent spend, preserves append-only movements and reconciles 
     ).rejects.toThrow('exceeds the remaining capture');
 
     const module = await Test.createTestingModule({
-      controllers: [WalletController],
-      providers: [{ provide: WalletLedgerService, useValue: wallet }],
+      controllers: [WalletController, WalletMaintenanceController],
+      providers: [
+        { provide: WalletLedgerService, useValue: wallet },
+        {
+          provide: WalletMaintenanceReportService,
+          useValue: new WalletMaintenanceReportService(db, new ConfigService()),
+        },
+      ],
     }).compile();
     app = module.createNestApplication<INestApplication<App>>();
     configureApiRouting(app);
@@ -232,6 +240,11 @@ it('serializes concurrent spend, preserves append-only movements and reconciles 
       .expect(200)
       .expect({ pendingToman: 0, availableToman: 0, reservedToman: 0, nextExpiryAt: null });
     await api.get(`${admin}/ledger`).set('x-test-role', 'customer').expect(403);
+    const maintenance = '/api/v1/wallet/admin/maintenance/report';
+    await api.get(maintenance).set('x-test-role', 'customer').expect(403);
+    await api.get(`${maintenance}?status=invalid`).set('x-test-role', 'reader').expect(400);
+    const report = await api.get(maintenance).set('x-test-role', 'reader').expect(200);
+    expect(report.body).toMatchObject({ page: 1, totals: { reservedToman: expect.any(Number) } });
     await api
       .post(`${admin}/corrections`)
       .set('x-test-role', 'reader')

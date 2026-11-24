@@ -239,6 +239,29 @@ it('authorizes policy publication and previews immutable versions across an effe
     await expect(policies.read(immediate.body.policyVersion)).resolves.toMatchObject({
       definition: { ...definition, activationDelayDays: 0 },
     });
+    const expiryInput = {
+      requestId: randomUUID(),
+      expectedPolicyVersion: immediate.body.policyVersion,
+      activationDelayDays: 0,
+      expiryDays: 180,
+    };
+    await api
+      .patch(timingPath)
+      .set('x-test-role', 'writer')
+      .send({ ...expiryInput, expiryDays: 0 })
+      .expect(400);
+    const shorter = await api
+      .patch(timingPath)
+      .set('x-test-role', 'writer')
+      .send(expiryInput)
+      .expect(200);
+    expect(shorter.body).toMatchObject({ activationDelayDays: 0, expiryDays: 180 });
+    await expect(policies.read(shorter.body.policyVersion)).resolves.toMatchObject({
+      definition: { ...definition, activationDelayDays: 0, expiryDays: 180 },
+    });
+    await expect(policies.read(immediate.body.policyVersion)).resolves.toMatchObject({
+      definition: { expiryDays: definition.expiryDays },
+    });
     await expect(policies.read(version)).resolves.toMatchObject({ definition });
   } finally {
     try {

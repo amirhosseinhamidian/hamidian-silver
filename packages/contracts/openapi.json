@@ -4729,6 +4729,50 @@
         ]
       }
     },
+    "/api/v1/wallet/admin/maintenance/report": {
+      "get": {
+        "operationId": "WalletMaintenanceController_report_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "resolved"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletMaintenanceReportDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "WalletMaintenance"
+        ]
+      }
+    },
     "/api/v1/reward-policies": {
       "get": {
         "operationId": "RewardPoliciesController_list_v1",
@@ -18396,6 +18440,134 @@
           "orderId"
         ]
       },
+      "WalletCommitmentTotalsDto": {
+        "type": "object",
+        "properties": {
+          "availableToman": {
+            "type": "number"
+          },
+          "pendingToman": {
+            "type": "number"
+          },
+          "reservedToman": {
+            "type": "number"
+          },
+          "expiredToman": {
+            "type": "number"
+          },
+          "capturedToman": {
+            "type": "number"
+          },
+          "revokedToman": {
+            "type": "number"
+          },
+          "awaitingExpiryToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "availableToman",
+          "pendingToman",
+          "reservedToman",
+          "expiredToman",
+          "capturedToman",
+          "revokedToman",
+          "awaitingExpiryToman"
+        ]
+      },
+      "WalletReconciliationIssueDto": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "enum": [
+              "LOT",
+              "RESERVATION"
+            ],
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "code": {
+            "enum": [
+              "LEDGER_MISMATCH",
+              "RESERVATION_MISMATCH",
+              "SETTLEMENT_MISMATCH",
+              "RECEIPT_PENDING",
+              "PAYMENT_UNCERTAIN",
+              "RESERVATION_OVERDUE"
+            ],
+            "type": "string"
+          },
+          "detectedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resolvedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "subject",
+          "subjectId",
+          "userId",
+          "orderId",
+          "orderNumber",
+          "code",
+          "detectedAt",
+          "resolvedAt"
+        ]
+      },
+      "WalletMaintenanceReportDto": {
+        "type": "object",
+        "properties": {
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/WalletCommitmentTotalsDto"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletReconciliationIssueDto"
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "asOf",
+          "totals",
+          "issues",
+          "enabled",
+          "page",
+          "hasMore"
+        ]
+      },
       "RewardPolicyVersionDto": {
         "type": "object",
         "properties": {
@@ -18786,11 +18958,17 @@
             "type": "number",
             "minimum": 0,
             "maximum": 3650
+          },
+          "expiryDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 3650
           }
         },
         "required": [
           "policyVersion",
-          "activationDelayDays"
+          "activationDelayDays",
+          "expiryDays"
         ]
       },
       "UpdateRewardActivationTimingDto": {
@@ -18808,6 +18986,11 @@
           "activationDelayDays": {
             "type": "number",
             "minimum": 0,
+            "maximum": 3650
+          },
+          "expiryDays": {
+            "type": "number",
+            "minimum": 1,
             "maximum": 3650
           }
         },

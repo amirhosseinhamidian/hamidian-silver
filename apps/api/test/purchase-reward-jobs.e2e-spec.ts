@@ -1,9 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { resolve } from 'node:path';
-import { promisify } from 'node:util';
-import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { OrderFinanceService } from '../src/modules/finance/order-finance.service';
 import { PaymentRefundsService } from '../src/modules/finance/payment-refunds.service';
 import type { CreateOrderDto } from '../src/modules/orders/dto/create-order.dto';
@@ -15,55 +11,16 @@ import { RewardPoliciesService } from '../src/modules/reward-policies/reward-pol
 import { PurchaseRewardWorker } from '../src/modules/wallet/purchase-reward.worker';
 import { WalletCheckoutService } from '../src/modules/wallet/wallet-checkout.service';
 import { WalletLedgerService } from '../src/modules/wallet/wallet-ledger.service';
+import { createIsolatedTestDatabase } from './support/isolated-test-database';
 
 const minute = 60_000;
 const day = 24 * 60 * minute;
-const execFileAsync = promisify(execFile);
-
-async function createRewardTestDatabase() {
-  const config = new ConfigService();
-  const databaseUrl = new URL(config.getOrThrow<string>('DATABASE_URL'));
-  const databaseName = `hamidian_reward_test_${randomUUID().replaceAll('-', '')}`;
-  databaseUrl.pathname = `/${databaseName}`;
-  databaseUrl.searchParams.set('schema', 'public');
-
-  const admin = new PrismaService(config);
-  try {
-    await admin.$executeRawUnsafe(`CREATE DATABASE "${databaseName}" TEMPLATE template0`);
-  } catch (error) {
-    await admin.$disconnect();
-    throw error;
-  }
-
-  const db = new PrismaService(new ConfigService({ DATABASE_URL: databaseUrl.toString() }));
-  const close = async () => {
-    try {
-      await db.$disconnect();
-      await admin.$executeRawUnsafe(`DROP DATABASE "${databaseName}"`);
-    } finally {
-      await admin.$disconnect();
-    }
-  };
-
-  try {
-    await execFileAsync('pnpm', ['exec', 'prisma', 'migrate', 'deploy'], {
-      cwd: resolve(__dirname, '../../..'),
-      env: { ...process.env, DATABASE_URL: databaseUrl.toString() },
-      timeout: 90_000,
-    });
-    return { db, close };
-  } catch (error) {
-    await close();
-    throw error;
-  }
-}
-
 it('keeps payments committed across worker failure and issues and activates each valid reward once', async () => {
   const config = new ConfigService({
     SHIPPING_PROVIDER: 'disabled',
     MANUAL_SHIPPING_COST_TOMAN: 0,
   });
-  const { db, close } = await createRewardTestDatabase();
+  const { db, close } = await createIsolatedTestDatabase();
   const policies = new RewardPoliciesService(db);
   const ledger = new WalletLedgerService(db);
   const checkout = new WalletCheckoutService(policies, ledger);
