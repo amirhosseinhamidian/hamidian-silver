@@ -720,6 +720,84 @@
         ]
       }
     },
+    "/api/v1/campaigns/{id}/quota": {
+      "get": {
+        "operationId": "CampaignQuotasController_get_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 220,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignQuotaAdminDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CampaignQuotas"
+        ]
+      },
+      "put": {
+        "operationId": "CampaignQuotasController_save_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveCampaignQuotaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignQuotaAdminDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CampaignQuotas"
+        ]
+      }
+    },
     "/api/v1/catalog/public/categories": {
       "get": {
         "operationId": "CatalogController_listPublicCategories_v1",
@@ -12717,6 +12795,39 @@
           "name"
         ]
       },
+      "PublicCampaignQuotaDto": {
+        "type": "object",
+        "properties": {
+          "campaignId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "sold": {
+            "type": "integer"
+          },
+          "remaining": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "campaignId",
+          "name",
+          "endsAt",
+          "limit",
+          "sold",
+          "remaining"
+        ]
+      },
       "PublicCatalogMediaDto": {
         "type": "object",
         "properties": {
@@ -12936,6 +13047,9 @@
                 "$ref": "#/components/schemas/CatalogCampaignOfferDto"
               }
             ]
+          },
+          "campaignQuota": {
+            "$ref": "#/components/schemas/PublicCampaignQuotaDto"
           },
           "compareAtPriceToman": {
             "type": "number",
@@ -13456,6 +13570,79 @@
         },
         "required": [
           "total"
+        ]
+      },
+      "CampaignQuotaAdminDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "manualSold": {
+            "type": "integer"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "siteSold": {
+            "type": "integer"
+          },
+          "reserved": {
+            "type": "integer"
+          },
+          "remaining": {
+            "type": "integer"
+          },
+          "sellableStock": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "limit",
+          "manualSold",
+          "revision",
+          "siteSold",
+          "reserved",
+          "remaining",
+          "sellableStock"
+        ]
+      },
+      "SaveCampaignQuotaDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "manualSold": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "slug",
+          "limit",
+          "manualSold",
+          "expectedRevision"
         ]
       },
       "PublicCatalogCategoryPageDto": {
@@ -14391,6 +14578,9 @@
                 "$ref": "#/components/schemas/CatalogCampaignOfferDto"
               }
             ]
+          },
+          "campaignQuota": {
+            "$ref": "#/components/schemas/PublicCampaignQuotaDto"
           },
           "compareAtPriceToman": {
             "type": "number",

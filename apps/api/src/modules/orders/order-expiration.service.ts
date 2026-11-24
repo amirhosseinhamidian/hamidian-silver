@@ -2,6 +2,7 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
 import { InventoryMovementType, OrderStatus, PaymentStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { releaseCampaignQuota } from '../campaigns/campaign-quota';
 import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
 
 const DEFAULT_BATCH_SIZE = 100;
@@ -67,6 +68,7 @@ export class OrderExpirationService {
           warehouseId: true,
           status: true,
           reservationExpiresAt: true,
+          campaignQuotaRestricted: true,
           payment: {
             select: {
               status: true,
@@ -123,6 +125,7 @@ export class OrderExpirationService {
         return false;
       }
 
+      if (order.campaignQuotaRestricted) await releaseCampaignQuota(transaction, order.id);
       await this.releaseReservedInventory(transaction, order.warehouseId, order.id, order.items);
 
       const paymentCancelled = await transaction.payment.updateMany({

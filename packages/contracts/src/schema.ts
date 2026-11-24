@@ -276,6 +276,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaigns/{id}/quota": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignQuotasController_get_v1"];
+        put: operations["CampaignQuotasController_save_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/public/categories": {
         parameters: {
             query?: never;
@@ -4626,6 +4642,16 @@ export interface components {
             price: components["schemas"]["CampaignUnitPriceDto"] | null;
             name: string;
         };
+        PublicCampaignQuotaDto: {
+            /** Format: uuid */
+            campaignId: string;
+            name: string;
+            /** Format: date-time */
+            endsAt: string;
+            limit: number;
+            sold: number;
+            remaining: number;
+        };
         PublicCatalogMediaDto: {
             /** Format: uri */
             url: string | null;
@@ -4673,6 +4699,7 @@ export interface components {
             defaultSalePriceToman?: number | null;
             defaultCompareAtPriceToman?: number | null;
             campaignOffer?: components["schemas"]["CatalogCampaignOfferDto"] | null;
+            campaignQuota?: components["schemas"]["PublicCampaignQuotaDto"];
             compareAtPriceToman: number | null;
             /** @enum {string} */
             sizeMode: "NONE" | "FREE_SIZE" | "SIZED";
@@ -4776,6 +4803,23 @@ export interface components {
         };
         CampaignLandingPreviewDto: {
             total: number;
+        };
+        CampaignQuotaAdminDto: {
+            slug: string;
+            name: string;
+            limit: number;
+            manualSold: number;
+            revision: number;
+            siteSold: number;
+            reserved: number;
+            remaining: number;
+            sellableStock: number;
+        };
+        SaveCampaignQuotaDto: {
+            slug: string;
+            limit: number;
+            manualSold: number;
+            expectedRevision: number;
         };
         PublicCatalogCategoryPageDto: {
             description: string | null;
@@ -4976,6 +5020,7 @@ export interface components {
             defaultSalePriceToman?: number | null;
             defaultCompareAtPriceToman?: number | null;
             campaignOffer?: components["schemas"]["CatalogCampaignOfferDto"] | null;
+            campaignQuota?: components["schemas"]["PublicCampaignQuotaDto"];
             compareAtPriceToman: number | null;
             /** @enum {string} */
             sizeMode: "NONE" | "FREE_SIZE" | "SIZED";
@@ -8018,6 +8063,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CampaignLandingPreviewDto"];
+                };
+            };
+        };
+    };
+    CampaignQuotasController_get_v1: {
+        parameters: {
+            query: {
+                slug: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignQuotaAdminDto"];
+                };
+            };
+        };
+    };
+    CampaignQuotasController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveCampaignQuotaDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignQuotaAdminDto"];
                 };
             };
         };

@@ -16,6 +16,7 @@ import {
 import { committedDiscount, discountBudget, promotionUsage } from '../promotions/promotion-budget';
 import { formatTehranDate, parseTehranDate } from './campaign-calendar';
 import { campaignTransition } from './campaign-lifecycle';
+import { assertExclusiveQuotaWindow } from './campaign-quota';
 import { CampaignLandingsService } from './campaign-landings.service';
 import { campaignBudget, simulateCampaign } from './campaign-operations';
 import type { CampaignSimulationInputDto } from './dto/campaign-operations.dto';
@@ -199,6 +200,21 @@ export class CampaignsService {
         discountBudget(draft) < committedDiscount(await promotionUsage(tx, id))
       )
         throw new BadRequestException('The discount budget is below existing commitments.');
+      if (
+        draft.startsAt.getTime() !== current.startsAt.getTime() ||
+        draft.endsAt.getTime() !== current.endsAt.getTime()
+      ) {
+        const quotas = await tx.campaignQuota.findMany({
+          where: { campaignId: id },
+          select: { productId: true },
+        });
+        await assertExclusiveQuotaWindow(
+          tx,
+          id,
+          draft,
+          quotas.map(({ productId }) => productId),
+        );
+      }
       const campaign = await tx.campaign.update({
         where: { id },
         data: { ...draft, revision: { increment: 1 } },

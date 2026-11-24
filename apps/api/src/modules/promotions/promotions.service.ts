@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { planQuotaAllocations } from '../campaigns/campaign-quota';
 import { attachHumanAuditEvent } from '../audit/audit-event';
 import {
   calculatePromotion,
@@ -391,8 +392,17 @@ export class PromotionsService {
       const remaining = discountBudget(rule.campaign) - committedDiscount(usage);
       const amounts = calculatePromotion(rule, eligible, shippingToman, remaining);
       if (amounts) {
+        const quotaAllocations = await planQuotaAllocations(
+          tx,
+          rule.campaignId,
+          rule.kind === 'BUNDLE'
+            ? eligible.filter(({ productId }) => rule.bundleProductIds.includes(productId))
+            : eligible,
+        );
+        if (!quotaAllocations) continue;
         return {
           ...amounts,
+          ...(quotaAllocations.length ? { quotaAllocations } : {}),
           campaignId: rule.campaignId,
           campaignName: rule.campaign.name,
           rule: {

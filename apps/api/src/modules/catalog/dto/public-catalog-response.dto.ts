@@ -5,6 +5,7 @@ import {
   SizeMode,
   VariantInventoryMode,
 } from '../../../generated/prisma/enums';
+import { PublicCampaignQuotaDto } from '../../campaigns/dto/campaign-quota.dto';
 import { CatalogCampaignOfferDto } from '../../promotions/dto/promotion.dto';
 import { PublicTypedCatalogAttributeDto } from './catalog-attribute.dto';
 import { PublicCatalogSort } from './public-catalog-query.dto';
@@ -227,6 +228,9 @@ export class PublicCatalogProductSummaryDto {
 
   @ApiPropertyOptional({ type: () => CatalogCampaignOfferDto, nullable: true })
   campaignOffer?: CatalogCampaignOfferDto | null;
+
+  @ApiPropertyOptional({ type: () => PublicCampaignQuotaDto })
+  campaignQuota?: PublicCampaignQuotaDto;
 
   @ApiProperty({ nullable: true })
   compareAtPriceToman!: number | null;

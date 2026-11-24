@@ -14,6 +14,7 @@ const line = { productId: 'ring', categoryIds: ['silver'], quantity: 1, unitSale
 describe('campaign pricing for the catalog', () => {
   const candidate = {
     ...cap,
+    campaignId: 'campaign',
     kind: 'PERCENT' as const,
     couponCode: null,
     remainingToman: 5_000,

@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
+import { PromotionsModule } from '../promotions/promotions.module';
+import { CampaignQuotasController } from './campaign-quotas.controller';
+import { CampaignQuotasService } from './campaign-quotas.service';
 import { CatalogModule } from '../catalog/catalog.module';
 import { CampaignPublisher } from './campaign-publisher';
 import { CampaignLandingsController } from './campaign-landings.controller';
@@ -8,8 +11,8 @@ import { CampaignsController } from './campaigns.controller';
 import { CampaignsService } from './campaigns.service';
 
 @Module({
-  imports: [DatabaseModule, CatalogModule],
-  controllers: [CampaignsController, CampaignLandingsController],
-  providers: [CampaignsService, CampaignPublisher, CampaignLandingsService],
+  imports: [DatabaseModule, CatalogModule, PromotionsModule],
+  controllers: [CampaignsController, CampaignLandingsController, CampaignQuotasController],
+  providers: [CampaignsService, CampaignPublisher, CampaignLandingsService, CampaignQuotasService],
 })
 export class CampaignsModule {}

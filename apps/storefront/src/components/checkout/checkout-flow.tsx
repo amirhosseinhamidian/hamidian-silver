@@ -170,6 +170,7 @@ export function CheckoutFlow({
   const [priceChange, setPriceChange] = useState<CheckoutPriceChange | null>(null);
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
   const [staleCart, setStaleCart] = useState(false);
+  const [quotaUnavailable, setQuotaUnavailable] = useState(false);
   const [uncertainCheckout, setUncertainCheckout] = useState<'order' | 'payment' | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('gateway');
   const [shippingCarrierId, setShippingCarrierId] = useState(shippingOptions[0]?.id ?? '');
@@ -425,6 +426,7 @@ export function CheckoutFlow({
       items.length === 0 ||
       checkoutLoading ||
       uncertainCheckout ||
+      quotaUnavailable ||
       staleCart
     )
       return;
@@ -574,13 +576,19 @@ export function CheckoutFlow({
         }),
       });
       if (!paymentResponse.ok) {
+        const paymentError = await readError(paymentResponse);
+        if (paymentError.code === 'CAMPAIGN_QUOTA_UNAVAILABLE') {
+          setQuotaUnavailable(true);
+          setCheckoutError(paymentError.message);
+          return;
+        }
         if (paymentResponse.status === 401) setAuth({ status: 'anonymous', expired: true });
         if (paymentResponse.status >= 500 || paymentResponse.status === 409)
           setUncertainCheckout('payment');
         setCheckoutError(
           paymentResponse.status >= 500 || paymentResponse.status === 409
             ? 'وضعیت آغاز پرداخت مشخص نیست. پیش از هر اقدام دوباره، سفارش را در حساب کاربری بررسی کنید.'
-            : `${(await readError(paymentResponse)).message} سفارش ${toPersianDigits(orderNumber ?? '')} ثبت شده است.`,
+            : `${paymentError.message} سفارش ${toPersianDigits(orderNumber ?? '')} ثبت شده است.`,
         );
         return;
       }
@@ -1133,7 +1141,7 @@ export function CheckoutFlow({
               {formatTomanPrice(priceChange?.orderTotalToman ?? payableAmount)}
             </strong>
           </div>
-          {uncertainCheckout || staleCart ? (
+          {uncertainCheckout || staleCart || quotaUnavailable ? (
             <ButtonLink
               href={
                 staleCart

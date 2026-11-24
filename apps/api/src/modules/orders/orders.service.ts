@@ -19,6 +19,7 @@ import {
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { normalizeIranianMobile } from '../auth/phone-normalizer';
 import { attachHumanAuditEvent } from '../audit/audit-event';
+import { releaseCampaignQuota } from '../campaigns/campaign-quota';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { attributionPolicy, buildOrderAttribution } from '../growth-attribution/attribution';
 import {
@@ -471,6 +472,12 @@ export class OrdersService {
           shippingTotalToman,
           ...shippingSelection.snapshot,
           grandTotalToman,
+          ...(promotion?.quotaAllocations?.length
+            ? {
+                campaignQuotaRestricted: true,
+                campaignQuotaAllocations: { createMany: { data: promotion.quotaAllocations } },
+              }
+            : {}),
           ...(quote && tokenHash
             ? {
                 discountTotalToman: totals.discountTotalToman,
@@ -1226,6 +1233,7 @@ export class OrdersService {
         );
       }
 
+      if (order.campaignQuotaRestricted) await releaseCampaignQuota(transaction, order.id);
       const quantitiesByVariant = await resolveVariantInventoryRequirements(
         transaction,
         order.items,

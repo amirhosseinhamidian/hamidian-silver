@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
+import { CampaignQuotaProgress } from '@/components/catalog/campaign-quota-progress';
 import { CatalogPrice } from '@/components/catalog/catalog-price';
 import { ButtonLink } from '@/components/ui/button';
 import { CatalogWishlistButton } from '@/components/wishlist/catalog-wishlist-button';
@@ -114,6 +115,7 @@ export function CatalogProductCard({
           )}
         </div>
 
+        {product.campaignQuota && <CampaignQuotaProgress quota={product.campaignQuota} />}
         <div className="sf-catalog-card__action mt-auto pt-3 sm:pt-4">
           <ButtonLink
             href={`/products/${product.slug}`}

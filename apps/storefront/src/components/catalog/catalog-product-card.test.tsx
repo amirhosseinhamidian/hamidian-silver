@@ -87,6 +87,32 @@ describe('CatalogProductCard', () => {
     expect(screen.queryByText(formatTomanPrice(1_500_000))).not.toBeInTheDocument();
   });
 
+  it('keeps ordinary purchase available when the campaign quota is full', () => {
+    render(
+      <CatalogProductCard
+        product={{
+          ...product,
+          campaignQuota: {
+            campaignId: '10000000-0000-4000-8000-000000000011',
+            name: 'جشنواره',
+            endsAt: new Date(Date.now() + 60_000).toISOString(),
+            limit: 3,
+            sold: 2,
+            remaining: 0,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('progressbar', { name: 'فروش سهمیهٔ جشنواره' })).toHaveAttribute(
+      'value',
+      '2',
+    );
+    expect(screen.getByText('سهمیهٔ کمپین در دسترس نیست')).toBeInTheDocument();
+    expect(screen.getByText(formatTomanPrice(800_000))).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'مشاهده و خرید' })).toBeInTheDocument();
+  });
+
   it('labels an unavailable product without presenting a purchase action', () => {
     render(
       <CatalogProductCard

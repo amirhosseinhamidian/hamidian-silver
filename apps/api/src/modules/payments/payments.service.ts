@@ -23,6 +23,11 @@ import {
   PaymentStatus,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import {
+  captureCampaignQuota,
+  reacquireCampaignQuota,
+  releaseQuotaAfterFailedAttempt,
+} from '../campaigns/campaign-quota';
 import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
 import { OrderCostsService } from '../finance/order-costs.service';
 import { OrderFinanceService } from '../finance/order-finance.service';
@@ -41,6 +46,13 @@ import {
 const CARD_TO_CARD_PROVIDER = 'card_to_card';
 const MAX_RECEIPT_SIZE_BYTES = 10 * 1024 * 1024;
 const RECEIPT_REVIEW_HOLD_MS = 7 * 24 * 60 * 60 * 1000;
+const INCONCLUSIVE_VERIFICATION_CODES = new Set([
+  'AMOUNT_MISMATCH',
+  'AUTHORITY_MISMATCH',
+  'ORDER_ID_MISMATCH',
+  'INVALID_CALLBACK',
+  'INVALID_RESPONSE',
+]);
 
 export type PaymentReceiptUpload = {
   buffer: Buffer;
@@ -58,6 +70,7 @@ type InitiationContext = {
   status: PaymentAttemptStatus;
   provider: string;
   isNew: boolean;
+  campaignQuotaRestricted?: boolean;
 };
 
 @Injectable()
@@ -164,6 +177,13 @@ export class PaymentsService {
       };
     }
 
+    if (context.status === PaymentAttemptStatus.FAILED) {
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
+        'This idempotency key belongs to a failed payment attempt. Use a new key.',
+      );
+    }
+
     if (context.paymentUrl && context.authority) {
       return {
         attemptId: context.attemptId,
@@ -171,13 +191,6 @@ export class PaymentsService {
         authority: context.authority,
         paymentUrl: context.paymentUrl,
       };
-    }
-
-    if (context.status === PaymentAttemptStatus.FAILED) {
-      throw new DomainException(
-        ErrorCode.PAYMENT_FAILED,
-        'This idempotency key belongs to a failed payment attempt. Use a new key.',
-      );
     }
 
     if (!context.isNew && context.status === PaymentAttemptStatus.CREATED) {
@@ -206,16 +219,13 @@ export class PaymentsService {
       initiated = await this.gateway.initiate(gatewayInput);
     } catch (error) {
       if (!isPaymentInitiationUnknownError(error)) {
-        await this.prisma.paymentAttempt.updateMany({
-          where: {
-            id: context.attemptId,
-            status: PaymentAttemptStatus.CREATED,
-          },
-          data: {
-            status: PaymentAttemptStatus.FAILED,
-            failureMessage: 'Payment initiation failed.',
-          },
-        });
+        await this.failAttempt(
+          context.attemptId,
+          PaymentAttemptStatus.CREATED,
+          'Payment initiation failed.',
+          undefined,
+          context.campaignQuotaRestricted ? orderId : undefined,
+        );
       }
 
       throw error;
@@ -370,17 +380,20 @@ export class PaymentsService {
     if (!verification.success) {
       this.assertGatewayFailureResult(verification.code, verification.message);
 
-      const failed = await this.prisma.paymentAttempt.updateMany({
-        where: {
-          id: attempt.id,
-          status: attempt.status,
-        },
-        data: {
-          status: PaymentAttemptStatus.FAILED,
-          failureCode: verification.code,
-          failureMessage: verification.message ?? 'Payment verification failed.',
-        },
-      });
+      if (
+        attempt.payment.order.campaignQuotaRestricted &&
+        (!verification.code || INCONCLUSIVE_VERIFICATION_CODES.has(verification.code))
+      ) {
+        throw new DomainException(ErrorCode.PAYMENT_FAILED, 'Payment could not be verified.');
+      }
+
+      const failed = await this.failAttempt(
+        attempt.id,
+        attempt.status,
+        verification.message ?? 'Payment verification failed.',
+        verification.code,
+        attempt.payment.order.campaignQuotaRestricted ? attempt.payment.orderId : undefined,
+      );
 
       if (failed.count === 1) {
         throw new DomainException(ErrorCode.PAYMENT_FAILED, 'Payment verification failed.');
@@ -454,6 +467,28 @@ export class PaymentsService {
     }
   }
 
+  private async failAttempt(
+    id: string,
+    expectedStatus: PaymentAttemptStatus,
+    failureMessage: string,
+    failureCode: string | undefined,
+    quotaOrderId: string | undefined,
+  ) {
+    const update = (tx: Prisma.TransactionClient) =>
+      tx.paymentAttempt.updateMany({
+        where: { id, status: expectedStatus },
+        data: { status: PaymentAttemptStatus.FAILED, failureCode, failureMessage },
+      });
+
+    if (!quotaOrderId) return update(this.prisma);
+    return this.prisma.$transaction(async (tx) => {
+      await lockOrderRowForUpdate(tx, quotaOrderId);
+      const failed = await update(tx);
+      if (failed.count === 1) await releaseQuotaAfterFailedAttempt(tx, quotaOrderId);
+      return failed;
+    });
+  }
+
   async submitCardToCardReceipt(
     userId: string,
     orderId: string,
@@ -473,6 +508,7 @@ export class PaymentsService {
           status: true,
           grandTotalToman: true,
           reservationExpiresAt: true,
+          campaignQuotaRestricted: true,
         },
       });
 
@@ -555,6 +591,7 @@ export class PaymentsService {
         };
       }
 
+      if (order.campaignQuotaRestricted) await reacquireCampaignQuota(transaction, order.id);
       await transaction.paymentAttempt.updateMany({
         where: {
           paymentId: payment.id,
@@ -731,26 +768,33 @@ export class PaymentsService {
     }
 
     return this.prisma.$transaction(async (transaction) => {
-      const attempt = await transaction.paymentAttempt.findUnique({
-        where: { id: attemptId },
-        select: {
-          id: true,
-          provider: true,
-          status: true,
-          receiptData: true,
-          failureCode: true,
-          paymentId: true,
-          payment: {
-            select: {
-              status: true,
-              orderId: true,
-              order: {
-                select: { status: true },
+      const readAttempt = () =>
+        transaction.paymentAttempt.findUnique({
+          where: { id: attemptId },
+          select: {
+            id: true,
+            provider: true,
+            status: true,
+            receiptData: true,
+            failureCode: true,
+            paymentId: true,
+            payment: {
+              select: {
+                status: true,
+                orderId: true,
+                order: {
+                  select: { status: true, campaignQuotaRestricted: true },
+                },
               },
             },
           },
-        },
-      });
+        });
+
+      let attempt = await readAttempt();
+      if (attempt?.payment.order.campaignQuotaRestricted) {
+        await lockOrderRowForUpdate(transaction, attempt.payment.orderId);
+        attempt = await readAttempt();
+      }
 
       if (!attempt || attempt.provider !== CARD_TO_CARD_PROVIDER || !attempt.receiptData) {
         throw new NotFoundException('Payment receipt was not found.');
@@ -797,6 +841,9 @@ export class PaymentsService {
       if (reopenedPayment.count !== 1) {
         throw new ConflictException('Payment state changed during receipt rejection.');
       }
+
+      if (attempt.payment.order.campaignQuotaRestricted)
+        await releaseQuotaAfterFailedAttempt(transaction, attempt.payment.orderId);
 
       await this.outbox?.enqueueOrderEvent(transaction, {
         type: NotificationOutboxEventType.PAYMENT_RECEIPT_REJECTED,
@@ -887,6 +934,7 @@ export class PaymentsService {
           status: true,
           grandTotalToman: true,
           reservationExpiresAt: true,
+          campaignQuotaRestricted: true,
         },
       });
 
@@ -982,6 +1030,7 @@ export class PaymentsService {
         };
       }
 
+      if (order.campaignQuotaRestricted) await reacquireCampaignQuota(transaction, order.id);
       const attempt = await transaction.paymentAttempt.create({
         data: {
           paymentId: payment.id,
@@ -1000,6 +1049,7 @@ export class PaymentsService {
         status: attempt.status,
         provider,
         isNew: true,
+        campaignQuotaRestricted: order.campaignQuotaRestricted,
       };
     });
   }
@@ -1013,22 +1063,29 @@ export class PaymentsService {
   ) {
     const isManualReceipt = authority === null;
     return this.prisma.$transaction(async (transaction) => {
-      const attempt = await transaction.paymentAttempt.findUnique({
-        where: {
-          id: attemptId,
-        },
-        include: {
-          payment: {
-            include: {
-              order: {
-                include: {
-                  items: true,
+      const readAttempt = () =>
+        transaction.paymentAttempt.findUnique({
+          where: {
+            id: attemptId,
+          },
+          include: {
+            payment: {
+              include: {
+                order: {
+                  include: {
+                    items: true,
+                  },
                 },
               },
             },
           },
-        },
-      });
+        });
+
+      let attempt = await readAttempt();
+      if (attempt?.payment.order.campaignQuotaRestricted) {
+        await lockOrderRowForUpdate(transaction, attempt.payment.orderId);
+        attempt = await readAttempt();
+      }
 
       if (!attempt) {
         throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment attempt was not found.');
@@ -1144,6 +1201,7 @@ export class PaymentsService {
         );
       }
 
+      if (order.campaignQuotaRestricted) await captureCampaignQuota(transaction, order.id);
       await this.commitReservedInventory(transaction, order.warehouseId, order.id, order.items);
 
       await transaction.orderStatusHistory.create({

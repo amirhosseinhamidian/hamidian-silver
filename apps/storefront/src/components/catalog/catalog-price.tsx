@@ -1,7 +1,7 @@
 'use client';
 
 import type { components } from '@hamidian/contracts';
-import { useEffect, useState } from 'react';
+import { useCampaignExpiration } from '@/components/catalog/use-campaign-expiration';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
@@ -31,28 +31,8 @@ export function CatalogPrice({
   priceClassName: string;
   details?: boolean;
 }) {
-  const endsAt = offer?.endsAt;
-  const [expired, setExpired] = useState<string | undefined>();
-  useEffect(() => {
-    if (!endsAt) return;
-    const expiry = Date.parse(endsAt);
-    if (!Number.isFinite(expiry)) return;
-    let timer: number;
-    function schedule() {
-      const delay = expiry - Date.now();
-      timer = window.setTimeout(
-        () => {
-          if (Date.now() >= expiry) setExpired(endsAt);
-          else schedule();
-        },
-        Math.min(2_147_483_647, Math.max(0, delay)),
-      );
-    }
-    schedule();
-    return () => window.clearTimeout(timer);
-  }, [endsAt]);
-
-  const active = endsAt && endsAt !== expired ? offer : null;
+  const expired = useCampaignExpiration(offer?.endsAt);
+  const active = expired ? null : offer;
   const price = active?.price;
   const previous = price?.regularToman ?? (active ? null : compare);
   const percent = price?.discountPercent ?? getDiscountPercent(previous, sale);

@@ -5,6 +5,7 @@ import { CampaignDetailView } from '@/components/campaigns/campaign-detail-view'
 import { CampaignBudgetReview } from '@/components/campaigns/campaign-budget-review';
 import { CampaignLandingEditor } from '@/components/campaigns/campaign-landing-editor';
 import { CampaignPromotionEditor } from '@/components/campaigns/campaign-promotion-editor';
+import { CampaignQuotaEditor } from '@/components/campaigns/campaign-quota-editor';
 import { CampaignProductPricePreview } from '@/components/campaigns/campaign-product-price-preview';
 import { CampaignEditor } from '@/components/campaigns/campaign-editor';
 import { CampaignLinkBuilder } from '@/components/site-settings/campaign-link-builder';
@@ -106,6 +107,12 @@ export default async function CampaignsPage({ searchParams }: Props) {
               id={campaign.id}
               rule={promotion.data.rule}
               editable={canWrite && campaign.status === 'DRAFT'}
+            />
+            <CampaignQuotaEditor
+              key={`quota-${campaign.id}`}
+              campaignId={campaign.id}
+              canWrite={canWrite}
+              canAdd={['DRAFT', 'APPROVED', 'SCHEDULED'].includes(campaign.status)}
             />
             <CampaignProductPricePreview
               key={`prices-${campaign.id}-${campaign.revision}`}

@@ -3,6 +3,7 @@ import { DomainException } from '../../common/errors/domain-exception';
 import { ErrorCode } from '../../common/errors/error-codes';
 import { lockOrderRowForUpdate } from '../../common/order-row-lock';
 import { OrderStatus, PaymentAttemptStatus, PaymentStatus } from '../../generated/prisma/enums';
+import { releaseQuotaAfterFailedAttempt } from '../campaigns/campaign-quota';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import {
   PaymentInitiationRecoveryResolution,
@@ -185,6 +186,12 @@ export class PaymentInitiationRecoveryService {
 
         return this.resolveExisting(current, dto);
       }
+
+      if (
+        attempt.payment.order.campaignQuotaRestricted &&
+        dto.resolution === PaymentInitiationRecoveryResolution.ABANDONED
+      )
+        await releaseQuotaAfterFailedAttempt(transaction, attempt.payment.orderId);
 
       return transaction.paymentAttempt.findUniqueOrThrow({
         where: {

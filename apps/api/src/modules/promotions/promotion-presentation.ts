@@ -7,6 +7,7 @@ type ProductTarget = Pick<PromotionLine, 'productId' | 'categoryIds'>;
 
 export type CatalogPromotionCandidate = Pick<
   CampaignPromotion,
+  | 'campaignId'
   | 'kind'
   | 'value'
   | 'minSubtotalToman'
@@ -26,6 +27,7 @@ export function selectCatalogPromotion(
   candidates: readonly CatalogPromotionCandidate[],
   target: ProductTarget,
   regularToman: number | null,
+  blockedCampaignId?: string,
 ): CatalogCampaignOfferDto | null {
   if (regularToman === null || regularToman === 0 || !isNonNegativeTomanInt(regularToman))
     return null;
@@ -34,6 +36,7 @@ export function selectCatalogPromotion(
   let conditional: CatalogCampaignOfferDto | null = null;
   for (const rule of candidates) {
     if (
+      rule.campaignId === blockedCampaignId ||
       rule.remainingToman <= 0 ||
       !isPromotionTarget(rule.campaign, target) ||
       (rule.kind === 'BUNDLE' && !rule.bundleProductIds.includes(target.productId))

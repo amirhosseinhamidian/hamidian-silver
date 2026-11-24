@@ -1,0 +1,336 @@
+import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'node:crypto';
+import { PrismaService } from '../src/infrastructure/database/prisma.service';
+import { CampaignQuotasService } from '../src/modules/campaigns/campaign-quotas.service';
+import { CatalogService } from '../src/modules/catalog/catalog.service';
+import { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
+import type { CreateOrderDto } from '../src/modules/orders/dto/create-order.dto';
+import { OrderExpirationService } from '../src/modules/orders/order-expiration.service';
+import { OrderReturnsService } from '../src/modules/orders/order-returns.service';
+import { OrdersService } from '../src/modules/orders/orders.service';
+import type { PaymentGateway } from '../src/modules/payments/payment-gateway.port';
+import { PaymentsService } from '../src/modules/payments/payments.service';
+import { PromotionsService } from '../src/modules/promotions/promotions.service';
+
+it('serializes quota claims with inventory, releases failed payments, and preserves captured sales on returns', async () => {
+  const config = new ConfigService({
+    OTP_PEPPER: 'campaign-quota-test',
+    MANUAL_SHIPPING_COST_TOMAN: 700,
+    SHIPPING_PROVIDER: 'disabled',
+  });
+  const db = new PrismaService(config);
+  const promotions = new PromotionsService(db);
+  const quotas = new CampaignQuotasService(db, promotions);
+  const catalog = new CatalogService(db, new PublicMediaUrlService(config), undefined, promotions);
+  const orders = new OrdersService(
+    db,
+    undefined,
+    config,
+    undefined,
+    undefined,
+    undefined,
+    promotions,
+  );
+  const returns = new OrderReturnsService(db);
+  const expiration = new OrderExpirationService(db);
+  let failureCode: string | null = 'INVALID_RESPONSE';
+  const gateway: PaymentGateway = {
+    providerCode: 'test',
+    async initiate({ attemptId }) {
+      return { authority: attemptId, paymentUrl: 'https://payments.example.test/pay' };
+    },
+    async verify({ authority }) {
+      return failureCode
+        ? { success: false, code: failureCode }
+        : { success: true, referenceId: authority };
+    },
+  };
+  const payments = new PaymentsService(db, config, gateway);
+  const slug = `quota-${randomUUID()}`;
+  const anotherSlug = `${slug}-other`;
+  const tracking = { trackingId: { in: [slug, anotherSlug] } };
+  const phoneSuffix = BigInt(`0x${slug.slice(5).replaceAll('-', '').slice(0, 12)}`).toString();
+  const phones = [`+0${phoneSuffix}1`, `+0${phoneSuffix}2`];
+  const orderFilter = { user: { phone: { in: phones } } };
+  const receipt = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const card = phoneSuffix.padStart(16, '0');
+  try {
+    const buyers = await Promise.all(phones.map((phone) => db.user.create({ data: { phone } })));
+    const manager = buyers[0].id;
+    const warehouse =
+      (await db.warehouse.findFirst({
+        where: { isDefault: true, isActive: true, deletedAt: null },
+      })) ??
+      (await db.warehouse.create({
+        data: { code: slug, name: 'Campaign quota test', isDefault: true },
+      }));
+    const product = await db.product.create({
+      data: {
+        slug,
+        name: 'محصول سهمیه‌دار',
+        status: 'ACTIVE',
+        salePriceToman: 20_000,
+        variants: { create: [{ sku: slug }, { sku: anotherSlug }] },
+      },
+      include: { variants: true },
+    });
+    await db.inventory.createMany({
+      data: product.variants.map(({ id }) => ({
+        variantId: id,
+        warehouseId: warehouse.id,
+        onHand: 2,
+      })),
+    });
+    const campaignData = {
+      ownerId: manager,
+      name: 'کمپین آزمایشی',
+      goal: 'آزمون سهمیه',
+      channel: 'email',
+      allProducts: false,
+      productIds: [product.id],
+      budgetToman: 100_000,
+      startsAt: new Date(Date.now() - 60_000),
+      endsAt: new Date(Date.now() + 120_000),
+      message: 'دادهٔ آزمایش',
+    };
+    const campaignIds: string[] = [];
+    for (const trackingId of [slug, anotherSlug]) {
+      await db.campaignLinkIdentity.create({ data: { id: trackingId, campaign: trackingId } });
+      const { id } = await db.campaign.create({
+        data: { ...campaignData, slug: trackingId, trackingId },
+      });
+      campaignIds.push(id);
+      await promotions.save(
+        id,
+        {
+          kind: 'PERCENT',
+          value: 1_000,
+          minSubtotalToman: 0,
+          maxDiscountToman: 10_000,
+          maxDiscountBps: 2_000,
+          priority: 10,
+          bundleProductSlugs: [],
+          expectedVersion: 0,
+        },
+        manager,
+      );
+    }
+    const [campaignId, overlappingId] = campaignIds;
+    const update = (limit: number, manualSold: number, expectedRevision: number, id = campaignId) =>
+      quotas.save(id, { slug, limit, manualSold, expectedRevision }, manager);
+
+    await expect(update(5, 1, 0)).rejects.toThrow('exceeds sellable stock');
+    await expect(update(2, 1, 0)).resolves.toMatchObject({
+      manualSold: 1,
+      siteSold: 0,
+      reserved: 0,
+      remaining: 1,
+    });
+    await expect(update(1, 0, 0, overlappingId)).rejects.toThrow('same period');
+    await expect(update(2, 1, 0)).rejects.toThrow('quota changed');
+    await expect(db.order.count({ where: orderFilter })).resolves.toBe(0);
+    await expect(db.payment.count({ where: { order: orderFilter } })).resolves.toBe(0);
+    await expect(
+      db.inventory.findMany({
+        where: { variant: { productId: product.id } },
+        select: { onHand: true, reserved: true },
+      }),
+    ).resolves.toEqual([
+      { onHand: 2, reserved: 0 },
+      { onHand: 2, reserved: 0 },
+    ]);
+
+    await db.campaign.update({ where: { id: campaignId }, data: { status: 'ACTIVE' } });
+    const baskets = product.variants.map(
+      ({ id: variantId }) =>
+        ({
+          shippingAddress: {
+            recipientName: 'کاربر آزمون',
+            phone: '09121234567',
+            province: 'تهران',
+            city: 'تهران',
+            addressLine: 'نشانی ساختگی آزمون',
+            postalCode: '1234567890',
+          },
+          items: [{ variantId, quantity: 1 }],
+        }) satisfies CreateOrderDto,
+    );
+    const quotes = await Promise.all(
+      buyers.map(({ id }, index) => orders.quotePrice(id, baskets[index])),
+    );
+    for (const quote of quotes) expect(quote.discountTotalToman).toBe(2_000);
+    const submissions = await Promise.allSettled(
+      buyers.map(({ id }, index) =>
+        orders.createOrder(id, {
+          ...baskets[index],
+          quoteToken: quotes[index].quoteToken,
+        }),
+      ),
+    );
+    expect(submissions.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
+    const winner = submissions.findIndex(({ status }) => status === 'fulfilled');
+    const loser = 1 - winner;
+    expect(submissions[loser]).toMatchObject({
+      status: 'rejected',
+      reason: { code: 'ORDER_PRICE_QUOTE_CHANGED' },
+    });
+    const buyerId = buyers[winner].id;
+    const pending = await db.order.findFirstOrThrow({ where: { userId: buyerId } });
+    expect(pending.campaignQuotaRestricted).toBe(true);
+
+    const full = await catalog.getPublicProduct(slug);
+    expect(full.campaignQuota).toMatchObject({ sold: 1, remaining: 0 });
+    expect(full.campaignOffer).toBeNull();
+    await expect(orders.quotePrice(buyers[loser].id, baskets[loser])).resolves.toMatchObject({
+      discountTotalToman: 0,
+    });
+
+    const declined = await payments.initiateOrderPayment(buyerId, pending.id, {
+      idempotencyKey: randomUUID(),
+    });
+    expect(declined.authority).toBeDefined();
+    await expect(
+      payments.verifyCallback(declined.attemptId, declined.authority!),
+    ).rejects.toMatchObject({ code: 'PAYMENT_FAILED' });
+    await expect(quotas.get(campaignId, slug)).resolves.toMatchObject({
+      reserved: 1,
+      remaining: 0,
+    });
+    failureCode = 'DECLINED';
+    await expect(
+      payments.verifyCallback(declined.attemptId, declined.authority!),
+    ).rejects.toMatchObject({ code: 'PAYMENT_FAILED' });
+    await expect(quotas.get(campaignId, slug)).resolves.toMatchObject({
+      reserved: 0,
+      remaining: 1,
+    });
+
+    await update(2, 2, 1);
+    await expect(
+      payments.initiateOrderPayment(buyerId, pending.id, { idempotencyKey: randomUUID() }),
+    ).rejects.toMatchObject({
+      code: 'CAMPAIGN_QUOTA_UNAVAILABLE',
+    });
+    await update(2, 1, 2);
+    await db.cardToCardAccount.create({
+      data: {
+        cardNumber: card,
+        ibanNumber: card.padStart(24, '0'),
+        holderName: 'Quota test',
+        bankName: 'Test',
+        isActive: true,
+      },
+    });
+    const payment = await payments.submitCardToCardReceipt(buyerId, pending.id, randomUUID(), {
+      buffer: receipt,
+      mimetype: 'image/png',
+      originalname: 'receipt.png',
+      size: receipt.length,
+    });
+    await expect(quotas.get(campaignId, slug)).resolves.toMatchObject({ reserved: 1, siteSold: 0 });
+    await payments.rejectCardToCardReceipt(payment.attemptId, manager, 'test rejection');
+    await expect(
+      payments.rejectCardToCardReceipt(payment.attemptId, manager, 'test rejection'),
+    ).resolves.toMatchObject({ alreadyRejected: true });
+    await expect(quotas.get(campaignId, slug)).resolves.toMatchObject({
+      reserved: 0,
+      remaining: 1,
+    });
+
+    failureCode = null;
+    const retry = await payments.initiateOrderPayment(buyerId, pending.id, {
+      idempotencyKey: randomUUID(),
+    });
+    expect(retry.authority).toBeDefined();
+    const confirmations = await Promise.all(
+      [0, 1].map(() => payments.verifyCallback(retry.attemptId, retry.authority!)),
+    );
+    expect(confirmations.every(({ success }) => success)).toBe(true);
+    await expect(quotas.get(campaignId, slug)).resolves.toMatchObject({
+      reserved: 0,
+      remaining: 0,
+      siteSold: 1,
+    });
+    const shipped = await db.order.update({
+      where: { id: pending.id },
+      data: { status: 'SHIPPED' },
+      include: { items: true },
+    });
+    expect(shipped.grandTotalToman).toBe(pending.grandTotalToman);
+    const returned = await returns.create(pending.id, manager, {
+      reason: 'Test return',
+      items: [{ orderItemId: shipped.items[0].id, quantity: 1 }],
+    });
+    await returns.receive(returned.id, manager, {
+      items: [{ returnItemId: returned.items[0].id, disposition: 'RESTOCK' }],
+    });
+    await expect(quotas.get(campaignId, slug)).resolves.toMatchObject({
+      reserved: 0,
+      remaining: 0,
+      siteSold: 1,
+      sellableStock: 4,
+    });
+
+    await update(2, 0, 3);
+    const createPending = async () => {
+      const id = buyers[loser].id;
+      const quote = await orders.quotePrice(id, baskets[loser]);
+      expect(quote.discountTotalToman).toBe(2_000);
+      return orders.createOrder(id, { ...baskets[loser], quoteToken: quote.quoteToken });
+    };
+    const cancelled = await createPending();
+    await orders.cancelOrder(cancelled.id, {}, manager);
+    await expect(quotas.get(campaignId, slug)).resolves.toMatchObject({
+      reserved: 0,
+      remaining: 1,
+    });
+    const expiring = await createPending();
+    const order = await db.order.findUniqueOrThrow({ where: { id: expiring.id } });
+    await expect(
+      expiration.expireOrder(expiring.id, new Date(order.reservationExpiresAt.getTime() + 1)),
+    ).resolves.toBe(true);
+    await expect(quotas.get(campaignId, slug)).resolves.toMatchObject({
+      reserved: 0,
+      remaining: 1,
+    });
+    await expect(
+      db.campaignQuotaChange.findMany({
+        where: { quota: { campaignId }, actorUserId: manager },
+        orderBy: { revision: 'asc' },
+        select: { manualSold: true },
+      }),
+    ).resolves.toEqual([1, 2, 1, 0].map((manualSold) => ({ manualSold })));
+  } finally {
+    try {
+      await db.$transaction([
+        db.inventoryMovement.deleteMany({
+          where: { inventory: { variant: { product: { slug } } } },
+        }),
+        db.orderReturnItem.deleteMany({ where: { orderReturn: { order: orderFilter } } }),
+        db.orderReturn.deleteMany({ where: { order: orderFilter } }),
+        db.paymentAttempt.deleteMany({ where: { payment: { order: orderFilter } } }),
+        db.payment.deleteMany({ where: { order: orderFilter } }),
+        db.campaignQuotaAllocation.deleteMany({ where: { order: orderFilter } }),
+        db.campaignQuotaChange.deleteMany({ where: { quota: { campaign: tracking } } }),
+        db.campaignQuota.deleteMany({ where: { campaign: tracking } }),
+        db.orderPriceQuote.deleteMany({ where: { order: orderFilter } }),
+        db.orderStatusHistory.deleteMany({ where: { order: orderFilter } }),
+        db.orderAddress.deleteMany({ where: { order: orderFilter } }),
+        db.orderItem.deleteMany({ where: { order: orderFilter } }),
+        db.order.deleteMany({ where: orderFilter }),
+        db.inventory.deleteMany({ where: { variant: { product: { slug } } } }),
+        db.productVariant.deleteMany({ where: { product: { slug } } }),
+        db.product.deleteMany({ where: { slug } }),
+        db.campaignPromotion.deleteMany({ where: { campaign: tracking } }),
+        db.campaignRevision.deleteMany({ where: { campaign: tracking } }),
+        db.campaign.deleteMany({ where: tracking }),
+        db.campaignLinkIdentity.deleteMany({ where: { id: { in: [slug, anotherSlug] } } }),
+        db.cardToCardAccount.deleteMany({ where: { cardNumber: card } }),
+        db.warehouse.deleteMany({ where: { code: slug } }),
+        db.user.deleteMany({ where: { phone: { in: phones } } }),
+      ]);
+    } finally {
+      await db.$disconnect();
+    }
+  }
+}, 30_000);

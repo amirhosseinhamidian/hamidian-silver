@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FiAlertCircle } from 'react-icons/fi';
 
+import { CampaignQuotaProgress } from '@/components/catalog/campaign-quota-progress';
 import { CatalogPrice } from '@/components/catalog/catalog-price';
 import { StockNotificationButton } from '@/components/catalog/stock-notification-button';
 import { PlatingTypeIndicator } from '@/components/plating/plating-type-indicator';
@@ -220,6 +221,7 @@ export function ProductPurchasePanel({
           راهنمای انتخاب سایز
         </Link>
       </div>
+      {product.campaignQuota && <CampaignQuotaProgress quota={product.campaignQuota} />}
 
       {hasMultipleVariants ? (
         <fieldset ref={variantSelectorRef} className="mt-5 scroll-mt-28">

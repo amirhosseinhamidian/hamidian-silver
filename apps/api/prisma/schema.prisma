@@ -81,6 +81,7 @@ model User {
   walletOperations                    WalletOperation[]            @relation("WalletOwner")
   walletCorrections                   WalletOperation[]            @relation("WalletActor")
   editedPromotions                    CampaignPromotion[]
+  campaignQuotaChanges CampaignQuotaChange[]
 
   @@index([isActive])
   @@index([deletedAt])
@@ -771,6 +772,7 @@ model Product {
   guideArticles                  GuideArticleProduct[]
   supplierImportDraft SupplierProductImportDraft?
   seoUrls          SeoUrlInventory[]
+  campaignQuotas CampaignQuota[]
 
   @@index([brandId])
   @@index([countryId])
@@ -1731,6 +1733,8 @@ model Order {
   operationalIncidents  OperationalIncident[]
   adminNotificationDeliveries AdminOrderNotificationDelivery[]
   shippingCarrierLogoSnapshot Media?                  @relation("OrderShippingCarrierLogoSnapshot", fields: [shippingCarrierLogoMediaIdSnapshot], references: [id], onDelete: SetNull)
+  campaignQuotaRestricted Boolean @default(false)
+  campaignQuotaAllocations CampaignQuotaAllocation[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -1807,6 +1811,7 @@ model Campaign {
   promotion               CampaignPromotion?
   orderQuotes             OrderPriceQuote[]
   landing                 CampaignLanding?
+  quotas CampaignQuota[]
 
   @@index([status, startsAt])
   @@index([status, endsAt])
@@ -1900,6 +1905,57 @@ model OrderPriceQuote {
 
   @@index([campaignId])
   @@map("order_price_quotes")
+}
+
+enum CampaignQuotaAllocationState {
+  RESERVED
+  CAPTURED
+  RELEASED
+}
+
+model CampaignQuota {
+  id            String                    @id @default(uuid()) @db.Uuid
+  campaignId    String                    @db.Uuid
+  productId     String                    @db.Uuid
+  limit         Int
+  manualSold    Int                       @default(0)
+  revision      Int                       @default(1)
+  campaign      Campaign                  @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  product       Product                   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  allocations   CampaignQuotaAllocation[]
+  changes       CampaignQuotaChange[]
+
+  @@unique([campaignId, productId])
+  @@index([productId])
+  @@map("campaign_quotas")
+}
+
+model CampaignQuotaAllocation {
+  quotaId  String                        @db.Uuid
+  orderId  String                        @db.Uuid
+  quantity Int
+  state    CampaignQuotaAllocationState  @default(RESERVED)
+  quota    CampaignQuota                 @relation(fields: [quotaId], references: [id], onDelete: Restrict)
+  order    Order                         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@id([quotaId, orderId])
+  @@index([orderId])
+  @@index([quotaId, state])
+  @@map("campaign_quota_allocations")
+}
+
+model CampaignQuotaChange {
+  quotaId     String        @db.Uuid
+  revision    Int
+  limit       Int
+  manualSold  Int
+  actorUserId String        @db.Uuid
+  recordedAt  DateTime      @default(now()) @db.Timestamptz(3)
+  quota       CampaignQuota @relation(fields: [quotaId], references: [id], onDelete: Restrict)
+  actor       User          @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@id([quotaId, revision])
+  @@map("campaign_quota_changes")
 }
 
 model CampaignRevision {

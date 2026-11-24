@@ -18,6 +18,7 @@ import {
   VariantInventoryMode,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { readPublicQuotas } from '../campaigns/campaign-quota';
 import { selectCatalogPromotion } from '../promotions/promotion-presentation';
 import { PromotionsService } from '../promotions/promotions.service';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
@@ -74,7 +75,7 @@ type PublicNamedSuggestionRow = {
 
 type CatalogPricingReader = Pick<
   PrismaService,
-  'product' | 'campaignPromotion' | 'orderPriceQuote'
+  'product' | 'campaignPromotion' | 'orderPriceQuote' | 'campaignQuota' | 'campaignQuotaAllocation'
 >;
 
 function promotionTarget(product: {
@@ -1468,12 +1469,20 @@ export class CatalogService {
 
       return product ? [product] : [];
     });
-    const promotions = orderedPageProducts.length
-      ? await this.promotions?.catalogPromotions(reader)
-      : undefined;
+    const [promotions, quotas] =
+      this.promotions && orderedPageProducts.length
+        ? await Promise.all([
+            this.promotions.catalogPromotions(reader),
+            readPublicQuotas(
+              reader,
+              orderedPageProducts.map(({ id }) => id),
+            ),
+          ])
+        : [];
 
     return {
       items: orderedPageProducts.map((product) => {
+        const campaignQuota = quotas?.get(product.id);
         const match = matches?.get(product.id);
         const facetPrice = facetPrices?.get(product.id);
         const availableQuantity =
@@ -1536,9 +1545,15 @@ export class CatalogService {
             : (lowestPricedVariant?.compareAtPriceToman ?? product.compareAtPriceToman),
           defaultSalePriceToman: product.salePriceToman,
           defaultCompareAtPriceToman: product.compareAtPriceToman,
+          ...(campaignQuota ? { campaignQuota } : {}),
           campaignOffer:
             availableQuantity > 0 && promotions
-              ? selectCatalogPromotion(promotions, promotionTarget(product), product.salePriceToman)
+              ? selectCatalogPromotion(
+                  promotions,
+                  promotionTarget(product),
+                  product.salePriceToman,
+                  campaignQuota?.remaining === 0 ? campaignQuota.campaignId : undefined,
+                )
               : null,
           sizeMode: product.sizeMode,
           brand,
@@ -2012,8 +2027,13 @@ export class CatalogService {
         category.id === product.primaryCategoryId && category.isActive && !category.deletedAt,
     )?.category.id;
     const typedAttributes = await this.catalogAttributes?.listPublicValues(product.id);
-    const promotions =
-      availableQuantity > 0 ? await this.promotions?.catalogPromotions(this.prisma) : undefined;
+    const [promotions, quotas] = this.promotions
+      ? await Promise.all([
+          availableQuantity > 0 ? this.promotions.catalogPromotions(this.prisma) : undefined,
+          readPublicQuotas(this.prisma, [product.id]),
+        ])
+      : [];
+    const campaignQuota = quotas?.get(product.id);
     const target = promotionTarget(product);
 
     return {
@@ -2040,8 +2060,14 @@ export class CatalogService {
           : null,
       salePriceToman: product.salePriceToman,
       compareAtPriceToman: product.compareAtPriceToman,
+      ...(campaignQuota ? { campaignQuota } : {}),
       campaignOffer: promotions
-        ? selectCatalogPromotion(promotions, target, product.salePriceToman)
+        ? selectCatalogPromotion(
+            promotions,
+            target,
+            product.salePriceToman,
+            campaignQuota?.remaining === 0 ? campaignQuota.campaignId : undefined,
+          )
         : null,
       purchaseMode: product.purchaseMode,
       sizeMode: product.sizeMode,
@@ -2128,7 +2154,12 @@ export class CatalogService {
         ...variant,
         campaignOffer:
           promotions && variant.isAvailable
-            ? selectCatalogPromotion(promotions, target, variant.salePriceToman)
+            ? selectCatalogPromotion(
+                promotions,
+                target,
+                variant.salePriceToman,
+                campaignQuota?.remaining === 0 ? campaignQuota.campaignId : undefined,
+              )
             : null,
       })),
       media,
@@ -2308,10 +2339,18 @@ export class CatalogService {
       },
     });
 
-    const promotions = products.length
-      ? await this.promotions?.catalogPromotions(this.prisma)
-      : undefined;
+    const [promotions, quotas] =
+      this.promotions && products.length
+        ? await Promise.all([
+            this.promotions.catalogPromotions(this.prisma),
+            readPublicQuotas(
+              this.prisma,
+              products.map(({ id }) => id),
+            ),
+          ])
+        : [];
     return products.map((product) => {
+      const campaignQuota = quotas?.get(product.id);
       const availableQuantity = productAvailableQuantity(
         product.purchaseMode,
         product.variants.map((variant) => variantAvailableQuantity(variant, product.sizeMode)),
@@ -2338,9 +2377,15 @@ export class CatalogService {
         compareAtPriceToman: prices[0]?.compare ?? product.compareAtPriceToman,
         defaultSalePriceToman: product.salePriceToman,
         defaultCompareAtPriceToman: product.compareAtPriceToman,
+        ...(campaignQuota ? { campaignQuota } : {}),
         campaignOffer:
           availableQuantity > 0 && promotions
-            ? selectCatalogPromotion(promotions, promotionTarget(product), product.salePriceToman)
+            ? selectCatalogPromotion(
+                promotions,
+                promotionTarget(product),
+                product.salePriceToman,
+                campaignQuota?.remaining === 0 ? campaignQuota.campaignId : undefined,
+              )
             : null,
         sizeMode: product.sizeMode,
         brand:
