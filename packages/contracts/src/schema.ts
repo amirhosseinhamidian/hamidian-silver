@@ -3636,6 +3636,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/referrals/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralsController_checkout_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/referrals/code": {
         parameters: {
             query?: never;
@@ -3742,6 +3758,86 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["ReferralRewardPoliciesController_publish_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-risk/policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralRiskController_policiesPage_v1"];
+        put?: never;
+        post: operations["ReferralRiskController_publish_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-risk/simulation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReferralRiskController_simulate_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-risk/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralRiskController_queue_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-risk/cases/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralRiskController_detail_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-risk/cases/{id}/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReferralRiskController_review_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7057,6 +7153,8 @@ export interface components {
         CreateOrderDto: {
             /** @description Apply the maximum eligible wallet credit. */
             useWalletCredit?: boolean;
+            /** @description Apply the eligible introductory referral credit. */
+            useReferralCredit?: boolean;
             attribution?: components["schemas"]["SessionAttributionDto"];
             /** @enum {string} */
             growthDevice?: "desktop" | "mobile" | "tablet";
@@ -7142,6 +7240,8 @@ export interface components {
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
             /** @description Wallet credit included in the order snapshot. */
             walletAppliedToman?: number;
+            /** @description Introductory referral credit included in discountTotalToman. */
+            referralDiscountToman?: number;
             payment: components["schemas"]["CustomerOrderPaymentDto"] | null;
             trackingCode: string | null;
             shippingMethodName: string | null;
@@ -7200,6 +7300,8 @@ export interface components {
         };
         CheckoutPriceQuoteDto: {
             campaignName: string | null;
+            /** @description Introductory referral credit included in discountTotalToman. */
+            referralDiscountToman?: number;
             /** @enum {string|null} */
             walletUnavailableReason?: "MINIMUM_CASH" | "POLICY_DISABLED" | "NO_AVAILABLE_CREDIT" | "COUPON_EXCLUDED" | "NO_ELIGIBLE_ITEMS" | "POLICY_LIMIT" | null;
             /** Format: date-time */
@@ -7218,6 +7320,8 @@ export interface components {
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
             /** @description Wallet credit included in the order snapshot. */
             walletAppliedToman?: number;
+            /** @description Introductory referral credit included in discountTotalToman. */
+            referralDiscountToman?: number;
             payment: components["schemas"]["CustomerOrderPaymentDto"] | null;
             trackingCode: string | null;
             shippingMethodName: string | null;
@@ -7494,7 +7598,11 @@ export interface components {
             incoming: components["schemas"]["ReceivedReferralDto"] | null;
             outgoing: components["schemas"]["OutgoingReferralPageDto"];
             enabled: boolean;
+            referrerEligible: boolean;
             attributionDays: number;
+        };
+        ReferralCheckoutAvailabilityDto: {
+            available: boolean;
         };
         IssuedReferralCodeDto: {
             code: string;
@@ -7625,6 +7733,124 @@ export interface components {
         ReferralRewardPreviewDto: {
             recipients: components["schemas"]["ReferralRewardPreviewLineDto"][];
             totalToman: number;
+        };
+        ReferralRiskSignalDto: {
+            /** @enum {string} */
+            code: "SELF_REFERRAL" | "SHARED_DEVICE" | "SHARED_NETWORK" | "SHARED_ADDRESS" | "SHARED_RECIPIENT" | "VERIFIED_PAYMENT_REUSE" | "REFERRAL_FREQUENCY" | "CANCELLED_ORDERS" | "FAST_PAYMENT";
+            enabled: boolean;
+            windowDays: number;
+            weight: number;
+            threshold: number;
+        };
+        ReferralRiskExceptionDto: {
+            /** Format: uuid */
+            attributionId: string;
+            codes: ("SELF_REFERRAL" | "SHARED_DEVICE" | "SHARED_NETWORK" | "SHARED_ADDRESS" | "SHARED_RECIPIENT" | "VERIFIED_PAYMENT_REUSE" | "REFERRAL_FREQUENCY" | "CANCELLED_ORDERS" | "FAST_PAYMENT")[];
+            /** Format: date-time */
+            until: string;
+            reason: string;
+        };
+        ReferralRiskPolicyDto: {
+            minSignals: number;
+            reviewAt: number;
+            holdAt: number;
+            rejectAt: number;
+            reviewHours: number;
+            retentionDays: number;
+            signals: components["schemas"]["ReferralRiskSignalDto"][];
+            exceptions: components["schemas"]["ReferralRiskExceptionDto"][];
+        };
+        ReferralRiskPolicyRecordDto: {
+            version: number | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            /** Format: uuid */
+            publishedById: string | null;
+            definition: components["schemas"]["ReferralRiskPolicyDto"];
+        };
+        ReferralRiskPolicyOverviewDto: {
+            active: components["schemas"]["ReferralRiskPolicyRecordDto"];
+            history: components["schemas"]["ReferralRiskPolicyRecordDto"][];
+            hasMore: boolean;
+            page: number;
+        };
+        PublishReferralRiskPolicyDto: {
+            /** Format: uuid */
+            requestId: string;
+            expectedVersion: number | null;
+            definition: components["schemas"]["ReferralRiskPolicyDto"];
+        };
+        ReferralRiskMetricDto: {
+            /** @enum {string} */
+            code: "SELF_REFERRAL" | "SHARED_DEVICE" | "SHARED_NETWORK" | "SHARED_ADDRESS" | "SHARED_RECIPIENT" | "VERIFIED_PAYMENT_REUSE" | "REFERRAL_FREQUENCY" | "CANCELLED_ORDERS" | "FAST_PAYMENT";
+            value: number;
+        };
+        SimulateReferralRiskDto: {
+            definition: components["schemas"]["ReferralRiskPolicyDto"];
+            /** Format: uuid */
+            attributionId?: string;
+            metrics: components["schemas"]["ReferralRiskMetricDto"][];
+        };
+        ReferralRiskEvidenceDto: {
+            /** @enum {string} */
+            code: "SELF_REFERRAL" | "SHARED_DEVICE" | "SHARED_NETWORK" | "SHARED_ADDRESS" | "SHARED_RECIPIENT" | "VERIFIED_PAYMENT_REUSE" | "REFERRAL_FREQUENCY" | "CANCELLED_ORDERS" | "FAST_PAYMENT";
+            value: number;
+            weight: number;
+        };
+        ReferralRiskPreviewDto: {
+            /** @enum {string} */
+            action: "ALLOW" | "REVIEW" | "HOLD" | "REJECT";
+            /** @enum {string} */
+            confidence: "LOW" | "MEDIUM" | "HIGH";
+            evidence: components["schemas"]["ReferralRiskEvidenceDto"][];
+            score: number;
+        };
+        ReferralRiskReviewDto: {
+            /** @enum {string} */
+            fromAction: "ALLOW" | "REVIEW" | "HOLD" | "REJECT";
+            /** @enum {string} */
+            action: "ALLOW" | "REVIEW" | "HOLD" | "REJECT";
+            /** Format: uuid */
+            actorUserId: string;
+            /** Format: date-time */
+            recordedAt: string;
+            revision: number;
+            reason: string;
+        };
+        ReferralRiskCaseDto: {
+            /** Format: uuid */
+            attributionId: string;
+            policyVersion: number | null;
+            /** Format: uuid */
+            orderId: string;
+            /** @enum {string} */
+            autoAction: "ALLOW" | "REVIEW" | "HOLD" | "REJECT";
+            /** @enum {string} */
+            action: "ALLOW" | "REVIEW" | "HOLD" | "REJECT";
+            /** @enum {string} */
+            confidence: "LOW" | "MEDIUM" | "HIGH";
+            /** Format: date-time */
+            assessedAt: string;
+            /** Format: date-time */
+            dueAt: string | null;
+            /** Format: date-time */
+            expiresAt: string;
+            evidence: components["schemas"]["ReferralRiskEvidenceDto"][] | null;
+            reviews: components["schemas"]["ReferralRiskReviewDto"][];
+            score: number;
+            revision: number;
+            overdue: boolean;
+        };
+        ReferralRiskQueueDto: {
+            items: components["schemas"]["ReferralRiskCaseDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        ReviewReferralRiskDto: {
+            expectedRevision: number;
+            /** @enum {string} */
+            action: "ALLOW" | "HOLD" | "REJECT";
+            reason: string;
         };
         ShippingPricingSettingsDto: {
             /** @enum {string} */
@@ -14690,6 +14916,25 @@ export interface operations {
             };
         };
     };
+    ReferralsController_checkout_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralCheckoutAvailabilityDto"];
+                };
+            };
+        };
+    };
     ReferralsController_issueCode_v1: {
         parameters: {
             query?: never;
@@ -14859,6 +15104,141 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReferralPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    ReferralRiskController_policiesPage_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRiskPolicyOverviewDto"];
+                };
+            };
+        };
+    };
+    ReferralRiskController_publish_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishReferralRiskPolicyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRiskPolicyRecordDto"];
+                };
+            };
+        };
+    };
+    ReferralRiskController_simulate_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulateReferralRiskDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRiskPreviewDto"];
+                };
+            };
+        };
+    };
+    ReferralRiskController_queue_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                queue?: "open" | "resolved" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRiskQueueDto"];
+                };
+            };
+        };
+    };
+    ReferralRiskController_detail_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRiskCaseDto"];
+                };
+            };
+        };
+    };
+    ReferralRiskController_review_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewReferralRiskDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRiskCaseDto"];
                 };
             };
         };

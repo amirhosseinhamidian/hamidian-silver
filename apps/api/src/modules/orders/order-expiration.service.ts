@@ -40,7 +40,10 @@ export class OrderExpirationService {
         ...(this.walletCheckout
           ? {
               NOT: {
-                walletAppliedToman: { gt: 0 },
+                OR: [
+                  { walletAppliedToman: { gt: 0 } },
+                  { referralCheckoutAttributionId: { not: null } },
+                ],
                 payment: {
                   is: {
                     OR: [
@@ -98,6 +101,7 @@ export class OrderExpirationService {
           id: true,
           userId: true,
           walletAppliedToman: true,
+          referralCheckoutAttributionId: true,
           warehouseId: true,
           status: true,
           reservationExpiresAt: true,
@@ -128,12 +132,18 @@ export class OrderExpirationService {
         order.payment &&
         order.payment.status !== PaymentStatus.PENDING &&
         order.payment.status !== PaymentStatus.CANCELLED &&
-        !(order.walletAppliedToman && order.payment.status === PaymentStatus.REFUNDED)
+        !(
+          (order.walletAppliedToman || order.referralCheckoutAttributionId) &&
+          order.payment.status === PaymentStatus.REFUNDED
+        )
       ) {
         return false;
       }
 
-      if (order.walletAppliedToman && this.walletCheckout) {
+      if (
+        (order.walletAppliedToman || order.referralCheckoutAttributionId) &&
+        this.walletCheckout
+      ) {
         await lockOrderRowForUpdate(transaction, order.id);
         if (await this.walletCheckout.hasOpenPayment(transaction, order.id)) return false;
       }

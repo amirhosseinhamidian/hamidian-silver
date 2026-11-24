@@ -191,6 +191,11 @@ export class PromotionEstimateDto {
 export class CheckoutPriceQuoteDto extends PromotionEstimateDto {
   quoteToken!: string;
 
+  @ApiPropertyOptional({
+    description: 'Introductory referral credit included in discountTotalToman.',
+  })
+  referralDiscountToman?: number;
+
   @ApiPropertyOptional({ enum: [...walletQuoteReasons], nullable: true })
   walletUnavailableReason?: WalletPreviewDto['walletUnavailableReason'];
 

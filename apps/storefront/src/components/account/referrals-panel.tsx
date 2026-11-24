@@ -253,6 +253,10 @@ export function ReferralsPanel() {
           <h2 id="own-referral" className="text-lg font-bold">
             کد معرفی من
           </h2>
+          <p className="text-sm">
+            برای معرفی دوستان باید دست‌کم یک سفارش پرداخت‌شده و تحویل‌گرفته‌شده داشته باشید. شرط
+            دریافت پاداش معرف، تکمیل خرید اول دوست و تأیید شرایط آن است.
+          </p>
           {ownCode ? (
             <>
               <label htmlFor="my-referral-code" className="block text-sm">
@@ -266,7 +270,8 @@ export function ReferralsPanel() {
               )}
             </>
           ) : (
-            available && (
+            available &&
+            data.referrerEligible && (
               <Button
                 loading={busy === 'code'}
                 disabled={Boolean(busy)}
@@ -278,6 +283,11 @@ export function ReferralsPanel() {
           )}
           {!available && !ownCode && (
             <p className="text-sm">هنوز کدی برای این حساب صادر نشده است.</p>
+          )}
+          {available && !data.referrerEligible && (
+            <ButtonLink href="/account" variant="text">
+              مشاهدهٔ سفارش‌های من
+            </ButtonLink>
           )}
         </section>
         <section className={sectionClass} aria-labelledby="received-referral">
@@ -301,6 +311,9 @@ export function ReferralsPanel() {
               <p className="text-sm">
                 کد را پیش از اولین پرداخت قطعی ثبت کنید. مهلت خرید پس از ثبت کد{' '}
                 {persianNumber.format(data.attributionDays)} روز است.
+              </p>
+              <p className="text-sm">
+                اعتبار خرید اول در صورت احراز شرایط، هنگام پرداخت همان سفارش اعمال می‌شود.
               </p>
               <label htmlFor="received-referral-code" className="block text-sm">
                 کد دوست

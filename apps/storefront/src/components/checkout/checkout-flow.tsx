@@ -36,9 +36,11 @@ import {
 } from '@/lib/shipping/public-shipping-pricing';
 
 type CheckoutPriceQuote = components['schemas']['CheckoutPriceQuoteDto'] &
-  Partial<Pick<WalletPreview, 'walletUnavailableReason'>>;
+  Partial<Pick<WalletPreview, 'walletUnavailableReason'>> & { referralDiscountToman?: number };
 type CurrentUser = components['schemas']['CurrentUserResponseDto'];
-type CustomerOrderDetail = components['schemas']['CustomerOrderDetailDto'];
+type CustomerOrderDetail = components['schemas']['CustomerOrderDetailDto'] & {
+  referralDiscountToman?: number;
+};
 type PaymentInitiationResponse = components['schemas']['PaymentInitiationResponseDto'];
 type AuthState =
   | { status: 'checking' }
@@ -152,10 +154,12 @@ export function CheckoutFlow({
   shippingPricing = null,
   shippingOptions = [],
   promotionsAvailable = false,
+  referralAvailable = false,
 }: Readonly<{
   shippingPricing?: PublicShippingPricing | null;
   shippingOptions?: readonly PublicShippingOption[];
   promotionsAvailable?: boolean;
+  referralAvailable?: boolean;
 }>) {
   const router = useRouter();
   const { items, itemCount, subtotalToman, clearCart } = useCart();
@@ -172,6 +176,7 @@ export function CheckoutFlow({
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [pendingOrderTotalToman, setPendingOrderTotalToman] = useState<number | null>(null);
   const [pendingOrderShippingToman, setPendingOrderShippingToman] = useState<number | null>(null);
+  const [pendingReferralDiscountToman, setPendingReferralDiscountToman] = useState(0);
   const [priceChange, setPriceChange] = useState<CheckoutPriceChange | null>(null);
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
   const [staleCart, setStaleCart] = useState(false);
@@ -421,6 +426,7 @@ export function CheckoutFlow({
       ...base,
       ...(promotionsAvailable && coupon ? { couponCode: coupon } : {}),
       ...(useWalletCredit ? { useWalletCredit: true } : {}),
+      ...(referralAvailable ? { useReferralCredit: true } : {}),
     };
   }
 
@@ -463,7 +469,7 @@ export function CheckoutFlow({
         const quoteKey = JSON.stringify(orderBody);
         const agreedQuote = quote?.key === quoteKey ? quote.quote : null;
         if (
-          (promotionsAvailable || useWalletCredit) &&
+          (promotionsAvailable || useWalletCredit || referralAvailable) &&
           (!agreedQuote || Date.parse(agreedQuote.expiresAt) <= Date.now())
         ) {
           phase = 'quote';
@@ -553,6 +559,7 @@ export function CheckoutFlow({
         if (useWalletCredit) wallet.refresh();
         setPendingOrderTotalToman(order.grandTotalToman);
         setPendingOrderShippingToman(order.shippingTotalToman);
+        setPendingReferralDiscountToman(order.referralDiscountToman ?? 0);
         setCompletedOrderNumber(order.orderNumber);
         if (
           (!selectedShippingOption && !shippingPricing) ||
@@ -601,7 +608,8 @@ export function CheckoutFlow({
         const paymentError = await readError(paymentResponse);
         if (
           paymentError.code === 'CAMPAIGN_QUOTA_UNAVAILABLE' ||
-          paymentError.code === 'WALLET_CREDIT_UNAVAILABLE'
+          paymentError.code === 'WALLET_CREDIT_UNAVAILABLE' ||
+          paymentError.code === 'REFERRAL_CHECKOUT_UNAVAILABLE'
         ) {
           setQuotaUnavailable(true);
           setCheckoutError(paymentError.message);
@@ -623,6 +631,7 @@ export function CheckoutFlow({
         setPendingOrderId(null);
         setPendingOrderTotalToman(null);
         setPendingOrderShippingToman(null);
+        setPendingReferralDiscountToman(0);
         setCompletedOrderNumber(orderNumber);
         return;
       }
@@ -646,6 +655,7 @@ export function CheckoutFlow({
       setPendingOrderId(null);
       setPendingOrderTotalToman(null);
       setPendingOrderShippingToman(null);
+      setPendingReferralDiscountToman(0);
     } catch {
       if (phase !== 'quote') setUncertainCheckout(phase);
       setCheckoutError(
@@ -727,6 +737,12 @@ export function CheckoutFlow({
   const displayedShippingToman =
     pendingOrderShippingToman ?? currentQuote?.shippingTotalToman ?? estimatedShippingToman;
   const shippingIsCollect = selectedShippingOption?.pricingMode === 'COLLECT';
+  const referralDiscountToman = pendingOrderId
+    ? pendingReferralDiscountToman
+    : (currentQuote?.referralDiscountToman ?? 0);
+  const campaignDiscountToman = currentQuote
+    ? currentQuote.discountTotalToman - (currentQuote.referralDiscountToman ?? 0)
+    : 0;
 
   return (
     <form
@@ -1103,6 +1119,13 @@ export function CheckoutFlow({
           </FormField>
         )}
         <div className="mt-4 space-y-3" aria-label="اعتبار کیف پول">
+          {referralAvailable && !pendingOrderId && (
+            <p className="text-sm">
+              {currentQuote && !referralDiscountToman
+                ? 'شرایط اعمال اعتبار معرفی برای این سفارش برقرار نیست.'
+                : 'مبلغ اعتبار معرفی خرید اول در پیش‌نمایش پرداخت مشخص می‌شود.'}
+            </p>
+          )}
           {wallet.state.status === 'ready' && <WalletBalanceView balance={wallet.state.balance} />}
           {wallet.state.status === 'loading' && (
             <p role="status" className="text-sm">
@@ -1161,10 +1184,16 @@ export function CheckoutFlow({
               )}
             </span>
           </div>
-          {currentQuote && currentQuote.discountTotalToman > 0 && (
+          {currentQuote && campaignDiscountToman > 0 && (
             <div className="flex items-center justify-between gap-4">
               <span>تخفیف {currentQuote.campaignName}</span>
-              <span>{formatTomanPrice(currentQuote.discountTotalToman)}</span>
+              <span>{formatTomanPrice(campaignDiscountToman)}</span>
+            </div>
+          )}
+          {referralDiscountToman > 0 && (
+            <div className="flex items-center justify-between gap-4" role="status">
+              <span>اعتبار معرفی خرید اول</span>
+              <span>{formatTomanPrice(referralDiscountToman)}</span>
             </div>
           )}
           {useWalletCredit && currentQuote && (
@@ -1239,7 +1268,9 @@ export function CheckoutFlow({
             >
               {priceChange
                 ? 'تأیید مبلغ جدید و پرداخت'
-                : (promotionsAvailable || useWalletCredit) && !pendingOrderId && !currentQuote
+                : (promotionsAvailable || useWalletCredit || referralAvailable) &&
+                    !pendingOrderId &&
+                    !currentQuote
                   ? 'بررسی مبلغ نهایی'
                   : paymentMethod === 'card_to_card'
                     ? pendingOrderId

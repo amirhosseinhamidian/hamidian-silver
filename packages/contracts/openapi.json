@@ -9788,6 +9788,27 @@
         ]
       }
     },
+    "/api/v1/referrals/checkout": {
+      "get": {
+        "operationId": "ReferralsController_checkout_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralCheckoutAvailabilityDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Referrals"
+        ]
+      }
+    },
     "/api/v1/referrals/code": {
       "post": {
         "operationId": "ReferralsController_issueCode_v1",
@@ -10040,6 +10061,213 @@
         },
         "tags": [
           "ReferralRewardPolicies"
+        ]
+      }
+    },
+    "/api/v1/referral-risk/policies": {
+      "get": {
+        "operationId": "ReferralRiskController_policiesPage_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralRiskPolicyOverviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ReferralRisk"
+        ]
+      },
+      "post": {
+        "operationId": "ReferralRiskController_publish_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishReferralRiskPolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralRiskPolicyRecordDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ReferralRisk"
+        ]
+      }
+    },
+    "/api/v1/referral-risk/simulation": {
+      "post": {
+        "operationId": "ReferralRiskController_simulate_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulateReferralRiskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralRiskPreviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ReferralRisk"
+        ]
+      }
+    },
+    "/api/v1/referral-risk/cases": {
+      "get": {
+        "operationId": "ReferralRiskController_queue_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "queue",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "resolved",
+                "all"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralRiskQueueDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ReferralRisk"
+        ]
+      }
+    },
+    "/api/v1/referral-risk/cases/{id}": {
+      "get": {
+        "operationId": "ReferralRiskController_detail_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralRiskCaseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ReferralRisk"
+        ]
+      }
+    },
+    "/api/v1/referral-risk/cases/{id}/decisions": {
+      "post": {
+        "operationId": "ReferralRiskController_review_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewReferralRiskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralRiskCaseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ReferralRisk"
         ]
       }
     },
@@ -22717,6 +22945,10 @@
             "type": "boolean",
             "description": "Apply the maximum eligible wallet credit."
           },
+          "useReferralCredit": {
+            "type": "boolean",
+            "description": "Apply the eligible introductory referral credit."
+          },
           "attribution": {
             "$ref": "#/components/schemas/SessionAttributionDto"
           },
@@ -23065,6 +23297,10 @@
             "type": "number",
             "description": "Wallet credit included in the order snapshot."
           },
+          "referralDiscountToman": {
+            "type": "number",
+            "description": "Introductory referral credit included in discountTotalToman."
+          },
           "payment": {
             "nullable": true,
             "type": "object",
@@ -23305,6 +23541,10 @@
             "type": "string",
             "nullable": true
           },
+          "referralDiscountToman": {
+            "type": "number",
+            "description": "Introductory referral credit included in discountTotalToman."
+          },
           "walletUnavailableReason": {
             "nullable": true,
             "enum": [
@@ -23377,6 +23617,10 @@
           "walletAppliedToman": {
             "type": "number",
             "description": "Wallet credit included in the order snapshot."
+          },
+          "referralDiscountToman": {
+            "type": "number",
+            "description": "Introductory referral credit included in discountTotalToman."
           },
           "payment": {
             "nullable": true,
@@ -24429,6 +24673,9 @@
           "enabled": {
             "type": "boolean"
           },
+          "referrerEligible": {
+            "type": "boolean"
+          },
           "attributionDays": {
             "type": "number"
           }
@@ -24438,7 +24685,19 @@
           "incoming",
           "outgoing",
           "enabled",
+          "referrerEligible",
           "attributionDays"
+        ]
+      },
+      "ReferralCheckoutAvailabilityDto": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "available"
         ]
       },
       "IssuedReferralCodeDto": {
@@ -24981,6 +25240,540 @@
         "required": [
           "recipients",
           "totalToman"
+        ]
+      },
+      "ReferralRiskSignalDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "enum": [
+              "SELF_REFERRAL",
+              "SHARED_DEVICE",
+              "SHARED_NETWORK",
+              "SHARED_ADDRESS",
+              "SHARED_RECIPIENT",
+              "VERIFIED_PAYMENT_REUSE",
+              "REFERRAL_FREQUENCY",
+              "CANCELLED_ORDERS",
+              "FAST_PAYMENT"
+            ],
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "windowDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 90
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "threshold": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 86400
+          }
+        },
+        "required": [
+          "code",
+          "enabled",
+          "windowDays",
+          "weight",
+          "threshold"
+        ]
+      },
+      "ReferralRiskExceptionDto": {
+        "type": "object",
+        "properties": {
+          "attributionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codes": {
+            "type": "array",
+            "uniqueItems": true,
+            "minItems": 1,
+            "maxItems": 9,
+            "items": {
+              "type": "string",
+              "enum": [
+                "SELF_REFERRAL",
+                "SHARED_DEVICE",
+                "SHARED_NETWORK",
+                "SHARED_ADDRESS",
+                "SHARED_RECIPIENT",
+                "VERIFIED_PAYMENT_REUSE",
+                "REFERRAL_FREQUENCY",
+                "CANCELLED_ORDERS",
+                "FAST_PAYMENT"
+              ]
+            }
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 250
+          }
+        },
+        "required": [
+          "attributionId",
+          "codes",
+          "until",
+          "reason"
+        ]
+      },
+      "ReferralRiskPolicyDto": {
+        "type": "object",
+        "properties": {
+          "minSignals": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 9
+          },
+          "reviewAt": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 900
+          },
+          "holdAt": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 900
+          },
+          "rejectAt": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 900
+          },
+          "reviewHours": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 720
+          },
+          "retentionDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 90
+          },
+          "signals": {
+            "uniqueItems": true,
+            "minItems": 9,
+            "maxItems": 9,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRiskSignalDto"
+            }
+          },
+          "exceptions": {
+            "uniqueItems": true,
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRiskExceptionDto"
+            }
+          }
+        },
+        "required": [
+          "minSignals",
+          "reviewAt",
+          "holdAt",
+          "rejectAt",
+          "reviewHours",
+          "retentionDays",
+          "signals",
+          "exceptions"
+        ]
+      },
+      "ReferralRiskPolicyRecordDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "nullable": true
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "publishedById": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/ReferralRiskPolicyDto"
+          }
+        },
+        "required": [
+          "version",
+          "publishedAt",
+          "publishedById",
+          "definition"
+        ]
+      },
+      "ReferralRiskPolicyOverviewDto": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "$ref": "#/components/schemas/ReferralRiskPolicyRecordDto"
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRiskPolicyRecordDto"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "active",
+          "history",
+          "hasMore",
+          "page"
+        ]
+      },
+      "PublishReferralRiskPolicyDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1
+          },
+          "definition": {
+            "$ref": "#/components/schemas/ReferralRiskPolicyDto"
+          }
+        },
+        "required": [
+          "requestId",
+          "expectedVersion",
+          "definition"
+        ]
+      },
+      "ReferralRiskMetricDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "enum": [
+              "SELF_REFERRAL",
+              "SHARED_DEVICE",
+              "SHARED_NETWORK",
+              "SHARED_ADDRESS",
+              "SHARED_RECIPIENT",
+              "VERIFIED_PAYMENT_REUSE",
+              "REFERRAL_FREQUENCY",
+              "CANCELLED_ORDERS",
+              "FAST_PAYMENT"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "code",
+          "value"
+        ]
+      },
+      "SimulateReferralRiskDto": {
+        "type": "object",
+        "properties": {
+          "definition": {
+            "$ref": "#/components/schemas/ReferralRiskPolicyDto"
+          },
+          "attributionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metrics": {
+            "uniqueItems": true,
+            "maxItems": 9,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRiskMetricDto"
+            }
+          }
+        },
+        "required": [
+          "definition",
+          "metrics"
+        ]
+      },
+      "ReferralRiskEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "enum": [
+              "SELF_REFERRAL",
+              "SHARED_DEVICE",
+              "SHARED_NETWORK",
+              "SHARED_ADDRESS",
+              "SHARED_RECIPIENT",
+              "VERIFIED_PAYMENT_REUSE",
+              "REFERRAL_FREQUENCY",
+              "CANCELLED_ORDERS",
+              "FAST_PAYMENT"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "weight": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "value",
+          "weight"
+        ]
+      },
+      "ReferralRiskPreviewDto": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "enum": [
+              "ALLOW",
+              "REVIEW",
+              "HOLD",
+              "REJECT"
+            ],
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ],
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRiskEvidenceDto"
+            }
+          },
+          "score": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "action",
+          "confidence",
+          "evidence",
+          "score"
+        ]
+      },
+      "ReferralRiskReviewDto": {
+        "type": "object",
+        "properties": {
+          "fromAction": {
+            "enum": [
+              "ALLOW",
+              "REVIEW",
+              "HOLD",
+              "REJECT"
+            ],
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "ALLOW",
+              "REVIEW",
+              "HOLD",
+              "REJECT"
+            ],
+            "type": "string"
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revision": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "fromAction",
+          "action",
+          "actorUserId",
+          "recordedAt",
+          "revision",
+          "reason"
+        ]
+      },
+      "ReferralRiskCaseDto": {
+        "type": "object",
+        "properties": {
+          "attributionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "policyVersion": {
+            "type": "number",
+            "nullable": true
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "autoAction": {
+            "enum": [
+              "ALLOW",
+              "REVIEW",
+              "HOLD",
+              "REJECT"
+            ],
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "ALLOW",
+              "REVIEW",
+              "HOLD",
+              "REJECT"
+            ],
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ],
+            "type": "string"
+          },
+          "assessedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dueAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evidence": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRiskEvidenceDto"
+            }
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRiskReviewDto"
+            }
+          },
+          "score": {
+            "type": "number"
+          },
+          "revision": {
+            "type": "number"
+          },
+          "overdue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "attributionId",
+          "policyVersion",
+          "orderId",
+          "autoAction",
+          "action",
+          "confidence",
+          "assessedAt",
+          "dueAt",
+          "expiresAt",
+          "evidence",
+          "reviews",
+          "score",
+          "revision",
+          "overdue"
+        ]
+      },
+      "ReferralRiskQueueDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRiskCaseDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "hasMore"
+        ]
+      },
+      "ReviewReferralRiskDto": {
+        "type": "object",
+        "properties": {
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "action": {
+            "enum": [
+              "ALLOW",
+              "HOLD",
+              "REJECT"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 250
+          }
+        },
+        "required": [
+          "expectedRevision",
+          "action",
+          "reason"
         ]
       },
       "ShippingPricingSettingsDto": {

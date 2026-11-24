@@ -49,6 +49,7 @@ export class WalletCheckoutService {
     lines: readonly PromotionLine[],
     payableBeforeWalletToman: number,
     promotion?: CheckoutPromotion | null,
+    appliedDiscounts?: readonly number[],
   ): Promise<WalletQuote> {
     const cashCap = payableBeforeWalletToman - MIN_WALLET_CASH_PAYMENT_TOMAN;
     if (cashCap <= 0) return { allocation: null, reason: 'MINIMUM_CASH' };
@@ -70,7 +71,7 @@ export class WalletCheckoutService {
     }
 
     const merchandise = lines.map((line) => line.unitSalePriceToman * line.quantity);
-    const discounts = allocateCheckoutDiscount(lines, promotion);
+    const discounts = appliedDiscounts ?? allocateCheckoutDiscount(lines, promotion);
     const redemption = calculateRedemption(
       policy.definition,
       lines.map(({ productId, categoryIds }, index) => ({

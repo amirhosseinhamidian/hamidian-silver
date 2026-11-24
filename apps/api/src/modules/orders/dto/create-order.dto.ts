@@ -81,6 +81,15 @@ export class CreateOrderDto {
   @IsBoolean()
   useWalletCredit?: boolean;
 
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Apply the eligible introductory referral credit.',
+  })
+  @IsOptional()
+  @Type(() => Object)
+  @IsBoolean()
+  useReferralCredit?: boolean;
+
   @IsOptional()
   @Type(() => Object)
   @IsString()

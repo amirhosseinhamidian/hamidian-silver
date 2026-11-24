@@ -442,9 +442,20 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
               {order.platingTotalToman > 0 ? (
                 <TotalRow label="هزینه آبکاری" value={order.platingTotalToman} />
               ) : null}
-              {order.discountTotalToman > 0 ? (
-                <TotalRow label="تخفیف" value={order.discountTotalToman} negative />
+              {order.discountTotalToman > (order.referralDiscountToman ?? 0) ? (
+                <TotalRow
+                  label="تخفیف"
+                  value={order.discountTotalToman - (order.referralDiscountToman ?? 0)}
+                  negative
+                />
               ) : null}
+              {Boolean(order.referralDiscountToman) && (
+                <TotalRow
+                  label="اعتبار معرفی خرید اول"
+                  value={order.referralDiscountToman ?? 0}
+                  negative
+                />
+              )}
               {order.walletAppliedToman ? (
                 <TotalRow label="اعتبار کیف پول" value={order.walletAppliedToman} negative />
               ) : null}

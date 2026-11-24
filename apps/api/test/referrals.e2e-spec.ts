@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { ReferralsService } from '../src/modules/referrals/referrals.service';
 import { createIsolatedTestDatabase } from './support/isolated-test-database';
+import { seedReferralPurchase } from './support/referral-purchase';
 
 it('stores one attribution before first payment, confirms it once and never grants credit', async () => {
   const { db, close } = await createIsolatedTestDatabase();
@@ -41,6 +42,25 @@ it('stores one attribution before first payment, confirms it once and never gran
         await tx.payment.update({ where: { orderId }, data: { status: 'PAID', paidAt } });
       });
     }
+    await expect(referrals.overview(first.id, 1)).resolves.toMatchObject({
+      referrerEligible: false,
+      code: null,
+    });
+    await expect(referrals.issueCode(first.id)).rejects.toMatchObject({
+      code: 'REFERRAL_REFERRER_PURCHASE_REQUIRED',
+    });
+    await confirm((await order(first.id)).id);
+    await expect(referrals.issueCode(first.id)).rejects.toMatchObject({
+      code: 'REFERRAL_REFERRER_PURCHASE_REQUIRED',
+    });
+    const oldCode = await db.referralCode.create({
+      data: { userId: expired.id, code: 'ABCDEFGHIJKLMNOPQRSTUVWX' },
+    });
+    await expect(referrals.claim(buyer.id, oldCode.code)).rejects.toMatchObject({
+      code: 'REFERRAL_REFERRER_PURCHASE_REQUIRED',
+    });
+    const firstPurchase = await seedReferralPurchase(db, first.id);
+    const secondPurchase = await seedReferralPurchase(db, second.id);
     const firstCode = await referrals.issueCode(first.id);
     const secondCode = await referrals.issueCode(second.id);
     expect(firstCode.code).toMatch(/^[A-Za-z0-9_-]{24}$/);
@@ -73,6 +93,12 @@ it('stores one attribution before first payment, confirms it once and never gran
     );
     if (!accepted) throw new Error('Expected a referral to be accepted');
     expect(accepted.claim.status).toBe('PENDING');
+    await expect(
+      db.referralAttribution.findUnique({ where: { id: accepted.claim.id } }),
+    ).resolves.toMatchObject({
+      referrerPurchaseOrderId:
+        accepted.referrer.id === first.id ? firstPurchase.id : secondPurchase.id,
+    });
     await expect(referrals.claim(buyer.id, accepted.code.code)).resolves.toMatchObject({
       id: accepted.claim.id,
     });

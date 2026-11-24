@@ -102,6 +102,11 @@ export class CustomerOrderSummaryDto {
 
   @ApiPropertyOptional({ description: 'Wallet credit included in the order snapshot.' })
   walletAppliedToman?: number;
+
+  @ApiPropertyOptional({
+    description: 'Introductory referral credit included in discountTotalToman.',
+  })
+  referralDiscountToman?: number;
   shippingTotalToman!: number;
   taxTotalToman!: number;
   grandTotalToman!: number;

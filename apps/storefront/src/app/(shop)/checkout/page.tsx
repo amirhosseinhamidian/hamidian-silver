@@ -1,5 +1,6 @@
 import { getPublicPromotions } from '@/lib/promotions/public-promotions';
 import { CheckoutFlow } from '@/components/checkout/checkout-flow';
+import { getReferralCheckoutAvailability } from '@/lib/referrals/bff';
 import {
   getPublicShippingOptions,
   getPublicShippingPricing,
@@ -8,9 +9,10 @@ import {
 export const dynamic = 'force-dynamic';
 
 export default async function CheckoutPage() {
-  const [shippingOptions, promotions] = await Promise.all([
+  const [shippingOptions, promotions, referralAvailable] = await Promise.all([
     getPublicShippingOptions(),
     getPublicPromotions(),
+    getReferralCheckoutAvailability(),
   ]);
   const e2eShippingPricing =
     process.env.STOREFRONT_E2E === 'true' ? await getPublicShippingPricing() : null;
@@ -25,6 +27,7 @@ export default async function CheckoutPage() {
         shippingOptions={shippingOptions}
         shippingPricing={e2eShippingPricing}
         promotionsAvailable={promotions.available}
+        referralAvailable={referralAvailable}
       />
     </main>
   );

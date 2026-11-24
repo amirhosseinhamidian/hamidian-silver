@@ -4,6 +4,7 @@ import { allocateCheckoutToman, returnedLineCredit } from './wallet-checkout';
 
 export type PurchaseRewardBasis = {
   couponApplied: boolean;
+  referralAllowsPurchaseReward?: boolean;
   shippingDiscountToman: number;
   items: Array<{
     variantId: string;

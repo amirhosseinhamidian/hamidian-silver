@@ -36,6 +36,8 @@ import { ShippingCarriersService } from '../shipping/shipping-carriers.service';
 import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
 import { WalletCheckoutService } from '../wallet/wallet-checkout.service';
 import { allocateCheckoutDiscount } from '../wallet/wallet-checkout';
+import { quoteReferralCheckout } from '../referrals/referral-checkout';
+import { lockReferralBuyer } from '../referrals/referral-eligibility';
 import type { PurchaseRewardBasis } from '../wallet/purchase-reward-basis';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderAddressDto, CreateOrderDto, CreateOrderItemDto } from './dto/create-order.dto';
@@ -154,6 +156,7 @@ const CUSTOMER_ORDER_LIST_SELECT = {
   platingTotalToman: true,
   discountTotalToman: true,
   walletAppliedToman: true,
+  referralDiscountToman: true,
   shippingTotalToman: true,
   shippingCarrierNameSnapshot: true,
   shippingCarrierTrackingUrlSnapshot: true,
@@ -414,7 +417,10 @@ export class OrdersService {
     this.assertUniqueItemSelections(dto.items);
     const customerNote = dto.customerNote?.trim() || null;
     const quote = dto.quoteToken ? parseQuoteToken(dto.quoteToken) : null;
-    if ((dto.quoteToken || dto.couponCode || dto.useWalletCredit) && !quote)
+    if (
+      (dto.quoteToken || dto.couponCode || dto.useWalletCredit || dto.useReferralCredit) &&
+      !quote
+    )
       throw this.quoteChanged();
     const tokenHash = dto.quoteToken ? quoteTokenHash(dto.quoteToken) : null;
 
@@ -427,6 +433,8 @@ export class OrdersService {
         });
         if (existing) return existing;
         if (quote.expiresAt <= Date.now() || !this.promotions) throw this.quoteChanged();
+        // Match payment's buyer, campaign, and referral budget lock order.
+        if (dto.useReferralCredit) await lockReferralBuyer(transaction, userId);
         if (quote.campaignId) await this.promotions.lockCampaign(transaction, quote.campaignId);
       }
       const shippingAddress = await this.resolveShippingAddress(transaction, userId, dto);
@@ -446,8 +454,17 @@ export class OrdersService {
         throw new BadRequestException('No active default warehouse is configured.');
       }
 
-      const { preparedItems, lines, shippingSelection, totals, promotion, wallet, binding } =
-        await this.priceOrder(transaction, userId, dto, shippingAddress, Boolean(quote));
+      const {
+        preparedItems,
+        lines,
+        shippingSelection,
+        totals,
+        promotion,
+        wallet,
+        binding,
+        referral,
+        discounts,
+      } = await this.priceOrder(transaction, userId, dto, shippingAddress, Boolean(quote), true);
       if (
         quote &&
         (quote.campaignId !== (promotion?.campaignId ?? null) ||
@@ -463,7 +480,13 @@ export class OrdersService {
       } = totals;
       const orderId = quote?.orderId ?? randomUUID();
       const orderNumber = `HS-${orderId.replaceAll('-', '').slice(0, 16).toUpperCase()}`;
-      const reservationExpiresAt = new Date(Date.now() + RESERVATION_TTL_MINUTES * 60 * 1000);
+      const inventoryExpiresAt = Date.now() + RESERVATION_TTL_MINUTES * 60 * 1000;
+      const reservationExpiresAt = new Date(
+        referral
+          ? Math.min(inventoryExpiresAt, Date.parse(referral.expiresAt))
+          : inventoryExpiresAt,
+      );
+      if (+reservationExpiresAt <= Date.now()) throw this.quoteChanged();
       const attribution = await buildOrderAttribution(
         transaction,
         dto.attribution,
@@ -471,10 +494,10 @@ export class OrdersService {
       );
 
       const campaignProducts = new Set(promotion?.rule.eligibleProductIds);
-      const discounts = allocateCheckoutDiscount(lines, promotion);
       const purchaseRewardBasis = {
         couponApplied: promotion?.rule.coupon ?? false,
         shippingDiscountToman: totals.shippingDiscountToman,
+        ...(referral ? { referralAllowsPurchaseReward: referral.allowPurchaseReward } : {}),
         items: preparedItems.map((item, index) => ({
           variantId: item.variantId,
           platingType: item.platingType ?? null,
@@ -497,6 +520,14 @@ export class OrdersService {
           grandTotalToman,
           purchaseRewardBasis,
           ...(wallet ? { walletAppliedToman: wallet.amountToman } : {}),
+          ...(referral
+            ? {
+                referralCheckoutAttributionId: referral.attributionId,
+                referralCheckoutRuleCode: referral.ruleCode,
+                referralCheckoutExpiresAt: new Date(referral.expiresAt),
+                referralDiscountToman: referral.amountToman,
+              }
+            : {}),
           ...(promotion?.quotaAllocations?.length
             ? {
                 campaignQuotaRestricted: true,
@@ -510,13 +541,14 @@ export class OrdersService {
                   create: {
                     tokenHash,
                     campaignId: promotion?.campaignId ?? null,
-                    merchandiseDiscountToman: totals.discountTotalToman,
+                    merchandiseDiscountToman: promotion?.merchandiseDiscountToman ?? 0,
                     shippingDiscountToman: totals.shippingDiscountToman,
                     snapshot: {
                       version: 1,
                       ...totals,
                       baseShippingToman: shippingSelection.costToman,
                       rule: promotion?.rule ?? null,
+                      ...(referral ? { referral } : {}),
                       ...(wallet
                         ? {
                             walletPolicyVersion: wallet.policyVersion,
@@ -782,6 +814,7 @@ export class OrdersService {
     dto: CreateOrderDto,
     address: CreateOrderAddressDto,
     usePromotions: boolean,
+    reserveReferral = false,
   ) {
     const { preparedItems, lines, merchandiseTotalToman, platingTotalToman } =
       await this.preparePricingItems(tx, dto.items);
@@ -796,14 +829,45 @@ export class OrdersService {
     const promotion = usePromotions
       ? await this.promotions?.apply(tx, lines, baseShipping, new Date(), coupon, userId)
       : null;
-    const beforeWallet = this.promotionTotals(
+    const campaignTotals = this.promotionTotals(
       merchandiseTotalToman,
       platingTotalToman,
       baseShipping,
       promotion,
     );
+    const campaignDiscounts = allocateCheckoutDiscount(lines, promotion);
+    const referral =
+      dto.useReferralCredit && this.config?.get<boolean>('REFERRALS_ENABLED', false) === true
+        ? await quoteReferralCheckout(tx, {
+            userId,
+            lines,
+            discounts: campaignDiscounts,
+            payableToman: campaignTotals.payableToman,
+            campaignId: promotion?.campaignId ?? null,
+            couponApplied: promotion?.rule.coupon ?? false,
+            reserve: reserveReferral,
+          })
+        : null;
+    const discounts = referral
+      ? campaignDiscounts.map((amount, index) => amount + referral.lineAmounts[index])
+      : campaignDiscounts;
+    const beforeWallet = referral
+      ? {
+          ...campaignTotals,
+          referralDiscountToman: referral.amountToman,
+          discountTotalToman: campaignTotals.discountTotalToman + referral.amountToman,
+          payableToman: campaignTotals.payableToman - referral.amountToman,
+        }
+      : campaignTotals;
     const walletPreview = dto.useWalletCredit
-      ? await this.walletCheckout?.quote(tx, userId, lines, beforeWallet.payableToman, promotion)
+      ? await this.walletCheckout?.quote(
+          tx,
+          userId,
+          lines,
+          beforeWallet.payableToman,
+          promotion,
+          discounts,
+        )
       : null;
     const wallet = walletPreview?.allocation ?? null;
     const totals = wallet
@@ -822,6 +886,7 @@ export class OrdersService {
       totals,
       promotion,
       ...(dto.useWalletCredit ? { wallet: wallet ?? null } : {}),
+      ...(dto.useReferralCredit ? { referral } : {}),
       items: preparedItems.map(
         ({ variantId, quantity, platingType, unitSalePriceToman, unitPlatingPriceToman }) => ({
           variantId,
@@ -840,6 +905,8 @@ export class OrdersService {
       totals,
       wallet,
       binding,
+      referral,
+      discounts,
       walletUnavailableReason: walletPreview ? walletPreview.reason : ('POLICY_DISABLED' as const),
     };
   }
@@ -963,6 +1030,7 @@ export class OrdersService {
       payment,
       items: selectedItems,
       returnAuthorizedAt,
+      referralDiscountToman,
       shippingCarrierNameSnapshot,
       shippingCarrierTrackingUrlSnapshot,
       shippingPricingModeSnapshot,
@@ -986,6 +1054,7 @@ export class OrdersService {
 
     return {
       ...summary,
+      ...(referralDiscountToman ? { referralDiscountToman } : {}),
       returnAuthorized: returnAuthorizedAt !== null,
       trackingCode: shipment?.trackingCode ?? null,
       shippingMethodName: shipment
@@ -1307,7 +1376,10 @@ export class OrdersService {
         );
       }
 
-      if (order.walletAppliedToman && this.walletCheckout) {
+      if (
+        (order.walletAppliedToman || order.referralCheckoutAttributionId) &&
+        this.walletCheckout
+      ) {
         await lockOrderRowForUpdate(transaction, order.id);
         if (await this.walletCheckout.hasOpenPayment(transaction, order.id)) {
           throw new DomainException(

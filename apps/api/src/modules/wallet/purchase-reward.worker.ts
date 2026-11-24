@@ -252,6 +252,9 @@ export class PurchaseRewardWorker {
     if (!policy?.enabled) return this.skip(tx, job, 'POLICY_DISABLED', now);
 
     const basis = resolvePurchaseRewardBasis(order);
+    if (basis.referralAllowsPurchaseReward === false) {
+      return this.skip(tx, job, 'REFERRAL_COMBINATION_EXCLUDED', now);
+    }
     const previousCompletedPurchases = await previousPurchases(
       tx,
       order.userId,

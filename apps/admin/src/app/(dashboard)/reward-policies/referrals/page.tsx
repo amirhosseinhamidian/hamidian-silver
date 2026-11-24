@@ -53,9 +53,14 @@ export default async function ReferralRewardPoliciesPage({
     <main className="admin-container space-y-6 py-6 sm:py-8 lg:py-10">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-black sm:text-3xl">سیاست پاداش معرفی</h1>
-        <ButtonLink href="/reward-policies" size="sm" variant="outline">
-          پاداش خرید
-        </ButtonLink>
+        <nav aria-label="عملیات معرفی" className="flex flex-wrap gap-2">
+          <ButtonLink href="/reward-policies/referral-risk" size="sm" variant="outline">
+            بررسی ریسک معرفی
+          </ButtonLink>
+          <ButtonLink href="/reward-policies" size="sm" variant="outline">
+            پاداش خرید
+          </ButtonLink>
+        </nav>
       </header>
       {!history ? (
         <Alert

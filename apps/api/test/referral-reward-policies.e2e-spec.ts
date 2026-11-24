@@ -15,6 +15,7 @@ import { ReferralRewardPoliciesController } from '../src/modules/referrals/refer
 import { ReferralRewardPoliciesService } from '../src/modules/referrals/referral-reward-policies.service';
 import { ReferralsService } from '../src/modules/referrals/referrals.service';
 import { createIsolatedTestDatabase } from './support/isolated-test-database';
+import { seedReferralPurchase } from './support/referral-purchase';
 
 it('simulates without writes, restricts publication, and preserves previously attributed versions', async () => {
   const { db, close } = await createIsolatedTestDatabase();
@@ -56,6 +57,7 @@ it('simulates without writes, restricts publication, and preserves previously at
         },
       ],
     };
+    await seedReferralPurchase(db, referrer.id);
     const { code } = await referrals.issueCode(referrer.id);
     await referrals.claim(legacy.id, code);
     const module = await Test.createTestingModule({

@@ -11,6 +11,8 @@ import type {
   ReferralOverviewDto,
 } from './dto/referral.dto';
 import { effectiveReferralRewardPolicy } from './referral-reward-policies.service';
+import { findQualifyingReferralPurchase, lockReferralBuyer } from './referral-eligibility';
+import { referralCheckoutAvailable } from './referral-checkout';
 
 const dayMs = 86_400_000;
 const pageSize = 20;
@@ -20,13 +22,18 @@ const historySelect = {
   expiresAt: true,
   firstOrderId: true,
   firstPaidAt: true,
+  firstOrder: { select: { referralCheckoutAttributionId: true } },
 } satisfies Prisma.ReferralAttributionSelect;
 type Claim = Prisma.ReferralAttributionGetPayload<{ select: typeof historySelect }>;
 type Identity = { isActive: boolean; deletedAt: Date | null; phoneVerifiedAt: Date | null };
 
 function historyItem(claim: Claim, now: Date): ReferralHistoryItemDto {
   const paid = claim.firstPaidAt;
-  const qualifyingPayment = paid && paid >= claim.claimedAt && paid < claim.expiresAt ? paid : null;
+  const discountWasReserved = claim.firstOrder?.referralCheckoutAttributionId === claim.id;
+  const qualifyingPayment =
+    paid && paid >= claim.claimedAt && (paid < claim.expiresAt || discountWasReserved)
+      ? paid
+      : null;
   return {
     id: claim.id,
     claimedAt: claim.claimedAt.toISOString(),
@@ -66,8 +73,13 @@ export class ReferralsService {
     };
   }
 
+  async checkout(userId: string) {
+    return { available: this.enabled() && (await referralCheckoutAvailable(this.db, userId)) };
+  }
+
   async overview(userId: string, page: number): Promise<ReferralOverviewDto> {
-    const [code, incoming, outgoing] = await Promise.all([
+    const now = new Date();
+    const [code, incoming, outgoing, purchase] = await Promise.all([
       this.db.referralCode.findUnique({ where: { userId }, select: { code: true } }),
       this.db.referralAttribution.findUnique({
         where: { referredUserId: userId },
@@ -80,12 +92,13 @@ export class ReferralsService {
         take: pageSize + 1,
         select: historySelect,
       }),
+      findQualifyingReferralPurchase(this.db, userId, now),
     ]);
-    const now = new Date();
     return {
       enabled: this.enabled(),
       attributionDays: this.policy().attributionDays,
-      code: code?.code ?? null,
+      referrerEligible: Boolean(purchase),
+      code: purchase ? (code?.code ?? null) : null,
       incoming: incoming ? received(incoming, now) : null,
       outgoing: {
         items: outgoing.slice(0, pageSize).map((claim) => historyItem(claim, now)),
@@ -102,6 +115,9 @@ export class ReferralsService {
       select: { isActive: true, deletedAt: true, phoneVerifiedAt: true },
     });
     this.requireIdentity(user, this.policy().requireVerifiedPhone);
+    if (!(await findQualifyingReferralPurchase(this.db, userId, new Date()))) {
+      throw new DomainException(ErrorCode.REFERRAL_REFERRER_PURCHASE_REQUIRED);
+    }
 
     const existing = await this.db.referralCode.findUnique({
       where: { userId },
@@ -125,7 +141,7 @@ export class ReferralsService {
     await this.checkWriteLimit(userId);
     return this.db.$transaction(async (tx) => {
       // Match the lock used by the order payment outbox and the referral payment trigger.
-      await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended('purchase-reward-order:' || ${userId}::uuid::text, 0))`;
+      await lockReferralBuyer(tx, userId);
       const [{ now }] = await tx.$queryRaw<Array<{ now: Date }>>`
         SELECT clock_timestamp()::timestamptz(3) AS now
       `;
@@ -162,6 +178,10 @@ export class ReferralsService {
         }
         return received(existing, now);
       }
+      const referrerPurchase = await findQualifyingReferralPurchase(tx, inviter.userId, now);
+      if (!referrerPurchase) {
+        throw new DomainException(ErrorCode.REFERRAL_REFERRER_PURCHASE_REQUIRED);
+      }
       if (
         policy.maxAccountAgeDays &&
         +now - +identity.createdAt > policy.maxAccountAgeDays * dayMs
@@ -187,6 +207,7 @@ export class ReferralsService {
         data: {
           referredUserId: userId,
           referrerUserId: inviter.userId,
+          referrerPurchaseOrderId: referrerPurchase.id,
           policySnapshot: policy,
           rewardPolicyVersion: rewardPolicy?.version ?? null,
           claimedAt: now,

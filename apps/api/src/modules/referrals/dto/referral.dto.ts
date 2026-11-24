@@ -58,6 +58,7 @@ class OutgoingReferralPageDto {
 
 export class ReferralOverviewDto {
   enabled!: boolean;
+  referrerEligible!: boolean;
   attributionDays!: number;
 
   @ApiProperty({ type: String, nullable: true })
@@ -68,4 +69,8 @@ export class ReferralOverviewDto {
 
   @ApiProperty({ type: () => OutgoingReferralPageDto })
   outgoing!: OutgoingReferralPageDto;
+}
+
+export class ReferralCheckoutAvailabilityDto {
+  available!: boolean;
 }

@@ -82,6 +82,9 @@ model User {
   referralRequestLimit                ReferralRequestLimit?
   referralRewardDrafts                ReferralRewardPolicyVersion[] @relation("ReferralRewardPolicyCreator")
   referralRewardPublications          ReferralRewardPolicyVersion[] @relation("ReferralRewardPolicyPublisher")
+  referralRiskObservation             ReferralRiskObservation?
+  referralRiskPublications            ReferralRiskPolicyVersion[]
+  referralRiskReviews                 ReferralRiskReview[]
   walletLots                          WalletLot[]
   walletReservations                  WalletReservation[]
   walletOperations                    WalletOperation[]            @relation("WalletOwner")
@@ -1738,6 +1741,13 @@ model Order {
   purchaseRewardBasis   Json?
   purchaseRewardJob     PurchaseRewardJob?
   firstReferralPurchase ReferralAttribution?
+  referralPurchaseEvidence ReferralAttribution[] @relation("ReferralReferrerPurchase")
+  referralCheckoutAttributionId String?             @db.Uuid
+  referralDiscountToman Int                         @default(0)
+  referralCheckoutRuleCode String?                   @db.VarChar(40)
+  referralCheckoutExpiresAt DateTime?                @db.Timestamptz(3)
+  referralCheckoutReleasedAt DateTime?               @db.Timestamptz(3)
+  referralCheckoutAttribution ReferralAttribution?   @relation("ReferralCheckoutOrders", fields: [referralCheckoutAttributionId], references: [id], onDelete: Restrict)
   growthDevice          String?                       @db.VarChar(12)
   returns               OrderReturn[]
   supplierCredits       SupplierCredit[]
@@ -2094,6 +2104,7 @@ model ReferralCode {
 model ReferralAttribution {
   id                   String    @id @default(uuid()) @db.Uuid
   referrerUserId       String    @db.Uuid
+  referrerPurchaseOrderId String? @db.Uuid
   referredUserId       String    @unique @db.Uuid
   policySnapshot       Json
   claimedAt            DateTime  @db.Timestamptz(3)
@@ -2104,11 +2115,91 @@ model ReferralAttribution {
   referrer             User      @relation("ReferralReferrer", fields: [referrerUserId], references: [id], onDelete: Restrict)
   referred             User      @relation("ReferralReferred", fields: [referredUserId], references: [id], onDelete: Restrict)
   firstOrder           Order?    @relation(fields: [firstOrderId], references: [id], onDelete: Restrict)
+  referrerPurchaseOrder Order?   @relation("ReferralReferrerPurchase", fields: [referrerPurchaseOrderId], references: [id], onDelete: Restrict)
+  checkoutOrders       Order[]   @relation("ReferralCheckoutOrders")
   rewardPolicy         ReferralRewardPolicyVersion? @relation(fields: [rewardPolicyVersion], references: [version], onDelete: Restrict)
+  riskAssessment       ReferralRiskAssessment?
 
   @@index([referrerUserId, claimedAt, id], map: "referral_attributions_history_idx")
   @@index([rewardPolicyVersion])
+  @@index([referrerPurchaseOrderId])
   @@map("referral_attributions")
+}
+
+enum ReferralRiskAction {
+  ALLOW
+  REVIEW
+  HOLD
+  REJECT
+}
+
+enum ReferralRiskConfidence {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model ReferralRiskPolicyVersion {
+  version       Int      @id @default(autoincrement())
+  requestId     String   @unique @db.Uuid
+  definition    Json
+  publishedAt   DateTime @default(now()) @db.Timestamptz(3)
+  publishedById String   @db.Uuid
+  publishedBy   User     @relation(fields: [publishedById], references: [id], onDelete: Restrict)
+  assessments   ReferralRiskAssessment[]
+
+  @@map("referral_risk_policy_versions")
+}
+
+model ReferralRiskObservation {
+  userId      String   @id @db.Uuid
+  deviceHash  String?  @db.Char(64)
+  networkHash String?  @db.Char(64)
+  recordedAt  DateTime @db.Timestamptz(3)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([recordedAt])
+  @@index([deviceHash, recordedAt])
+  @@index([networkHash, recordedAt])
+  @@map("referral_risk_observations")
+}
+
+model ReferralRiskAssessment {
+  attributionId String                 @id @db.Uuid
+  orderId       String                 @db.Uuid
+  policyVersion Int?
+  policySnapshot Json
+  autoAction    ReferralRiskAction
+  action        ReferralRiskAction
+  confidence    ReferralRiskConfidence
+  score         Int
+  revision      Int                    @default(1)
+  assessedAt    DateTime               @db.Timestamptz(3)
+  dueAt         DateTime?              @db.Timestamptz(3)
+  expiresAt     DateTime               @db.Timestamptz(3)
+  evidence      Json?
+  attribution   ReferralAttribution    @relation(fields: [attributionId], references: [id], onDelete: Restrict)
+  policy        ReferralRiskPolicyVersion? @relation(fields: [policyVersion], references: [version], onDelete: Restrict)
+  reviews       ReferralRiskReview[]
+
+  @@index([action, dueAt, assessedAt], map: "referral_risk_queue_idx")
+  @@index([expiresAt])
+  @@map("referral_risk_assessments")
+}
+
+model ReferralRiskReview {
+  attributionId String                  @db.Uuid
+  revision      Int
+  fromAction    ReferralRiskAction
+  action        ReferralRiskAction
+  reason        String                  @db.VarChar(250)
+  actorUserId   String                  @db.Uuid
+  recordedAt    DateTime                @default(now()) @db.Timestamptz(3)
+  assessment    ReferralRiskAssessment  @relation(fields: [attributionId], references: [attributionId], onDelete: Restrict)
+  actor         User                    @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@id([attributionId, revision])
+  @@map("referral_risk_reviews")
 }
 
 model ReferralRewardPolicyVersion {

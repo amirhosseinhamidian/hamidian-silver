@@ -10,6 +10,7 @@ test('prefills an invite link and registers it only after the customer confirms'
     route.fulfill({
       json: {
         enabled: true,
+        referrerEligible: false,
         code: null,
         attributionDays: 30,
         incoming: null,
@@ -35,6 +36,8 @@ test('prefills an invite link and registers it only after the customer confirms'
   await waitForClientHydration(page);
   await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute('content', /noindex/);
   await expect(page.getByRole('textbox', { name: 'کد دوست' })).toHaveValue(code);
+  await expect(page.getByText(/دست‌کم یک سفارش پرداخت‌شده و تحویل‌گرفته‌شده/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'دریافت کد معرفی' })).toHaveCount(0);
   expect(writes).toBe(0);
   await expectNoHorizontalOverflow(page);
 

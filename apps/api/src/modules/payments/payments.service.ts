@@ -33,6 +33,11 @@ import { OrderCostsService } from '../finance/order-costs.service';
 import { OrderFinanceService } from '../finance/order-finance.service';
 import { AdminOrderNotificationOutboxService } from '../notifications/admin-order-notification-outbox.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
+import {
+  assertReferralPayment,
+  reacquireReferralCheckout,
+  releaseReferralCheckoutAfterFailure,
+} from '../referrals/referral-checkout';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PAYMENT_GATEWAY_CODES } from './payment-gateway.constants';
 import { isPaymentInitiationUnknownError } from './payment-initiation-unknown.error';
@@ -73,6 +78,7 @@ type InitiationContext = {
   isNew: boolean;
   campaignQuotaRestricted?: boolean;
   walletAppliedToman?: number;
+  referralCheckoutAttributionId?: string | null;
 };
 
 @Injectable()
@@ -227,12 +233,15 @@ export class PaymentsService {
           PaymentAttemptStatus.CREATED,
           'Payment initiation failed.',
           undefined,
-          context.campaignQuotaRestricted || context.walletAppliedToman
+          context.campaignQuotaRestricted ||
+            context.walletAppliedToman ||
+            context.referralCheckoutAttributionId
             ? {
                 id: orderId,
                 userId,
                 campaignQuotaRestricted: context.campaignQuotaRestricted,
                 walletAppliedToman: context.walletAppliedToman ?? 0,
+                referralCheckoutAttributionId: context.referralCheckoutAttributionId,
               }
             : undefined,
         );
@@ -391,7 +400,11 @@ export class PaymentsService {
       this.assertGatewayFailureResult(verification.code, verification.message);
 
       // A verification error does not itself prove the provider never collected funds.
-      if (attempt.payment.order.walletAppliedToman && !verification.definitiveFailure) {
+      if (
+        (attempt.payment.order.walletAppliedToman ||
+          attempt.payment.order.referralCheckoutAttributionId) &&
+        !verification.definitiveFailure
+      ) {
         throw new DomainException(ErrorCode.PAYMENT_FAILED, 'نتیجهٔ پرداخت در حال بررسی است.');
       }
       if (
@@ -406,7 +419,9 @@ export class PaymentsService {
         attempt.status,
         verification.message ?? 'Payment verification failed.',
         verification.code,
-        attempt.payment.order.campaignQuotaRestricted || attempt.payment.order.walletAppliedToman
+        attempt.payment.order.campaignQuotaRestricted ||
+          attempt.payment.order.walletAppliedToman ||
+          attempt.payment.order.referralCheckoutAttributionId
           ? attempt.payment.order
           : undefined,
       );
@@ -494,6 +509,7 @@ export class PaymentsService {
           userId: string;
           campaignQuotaRestricted?: boolean;
           walletAppliedToman: number;
+          referralCheckoutAttributionId?: string | null;
         }
       | undefined,
   ) {
@@ -510,6 +526,7 @@ export class PaymentsService {
       if (failed.count === 1) {
         if (order.campaignQuotaRestricted) await releaseQuotaAfterFailedAttempt(tx, order.id);
         await this.walletCheckout?.releaseAfterFailure(tx, order);
+        await releaseReferralCheckoutAfterFailure(tx, order);
       }
       return failed;
     });
@@ -536,6 +553,8 @@ export class PaymentsService {
           reservationExpiresAt: true,
           campaignQuotaRestricted: true,
           walletAppliedToman: true,
+          referralCheckoutAttributionId: true,
+          referralCheckoutExpiresAt: true,
           userId: true,
         },
       });
@@ -817,6 +836,7 @@ export class PaymentsService {
                     status: true,
                     campaignQuotaRestricted: true,
                     walletAppliedToman: true,
+                    referralCheckoutAttributionId: true,
                   },
                 },
               },
@@ -827,7 +847,8 @@ export class PaymentsService {
       let attempt = await readAttempt();
       if (
         attempt?.payment.order.campaignQuotaRestricted ||
-        attempt?.payment.order.walletAppliedToman
+        attempt?.payment.order.walletAppliedToman ||
+        attempt?.payment.order.referralCheckoutAttributionId
       ) {
         await lockOrderRowForUpdate(transaction, attempt.payment.orderId);
         attempt = await readAttempt();
@@ -882,6 +903,7 @@ export class PaymentsService {
       if (attempt.payment.order.campaignQuotaRestricted)
         await releaseQuotaAfterFailedAttempt(transaction, attempt.payment.orderId);
       await this.walletCheckout?.releaseAfterFailure(transaction, attempt.payment.order);
+      await releaseReferralCheckoutAfterFailure(transaction, attempt.payment.order);
 
       await this.outbox?.enqueueOrderEvent(transaction, {
         type: NotificationOutboxEventType.PAYMENT_RECEIPT_REJECTED,
@@ -974,6 +996,8 @@ export class PaymentsService {
           reservationExpiresAt: true,
           campaignQuotaRestricted: true,
           walletAppliedToman: true,
+          referralCheckoutAttributionId: true,
+          referralCheckoutExpiresAt: true,
           userId: true,
         },
       });
@@ -1091,6 +1115,7 @@ export class PaymentsService {
         isNew: true,
         campaignQuotaRestricted: order.campaignQuotaRestricted,
         walletAppliedToman: order.walletAppliedToman,
+        referralCheckoutAttributionId: order.referralCheckoutAttributionId,
       };
     });
   }
@@ -1102,15 +1127,39 @@ export class PaymentsService {
       userId: string;
       campaignQuotaRestricted: boolean;
       walletAppliedToman: number;
+      referralCheckoutAttributionId?: string | null;
+      referralCheckoutExpiresAt?: Date | null;
     },
   ) {
-    if (order.walletAppliedToman && (await this.walletCheckout?.hasOpenPayment(tx, order.id))) {
+    if (
+      (order.walletAppliedToman || order.referralCheckoutAttributionId) &&
+      (await this.walletCheckout?.hasOpenPayment(tx, order.id))
+    ) {
       throw new DomainException(
         ErrorCode.PAYMENT_FAILED,
         'نتیجهٔ تلاش قبلی برای پرداخت هنوز مشخص نشده است.',
       );
     }
+    try {
+      await assertReferralPayment(tx, order);
+      if (order.referralCheckoutExpiresAt && order.referralCheckoutExpiresAt <= new Date()) {
+        throw new ConflictException('مهلت استفاده از اعتبار معرفی پایان یافته است.');
+      }
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw new DomainException(ErrorCode.REFERRAL_CHECKOUT_UNAVAILABLE, error.message);
+      }
+      throw error;
+    }
     if (order.campaignQuotaRestricted) await reacquireCampaignQuota(tx, order.id);
+    try {
+      await reacquireReferralCheckout(tx, order);
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw new DomainException(ErrorCode.REFERRAL_CHECKOUT_UNAVAILABLE, error.message);
+      }
+      throw error;
+    }
     await this.walletCheckout?.reacquire(tx, order);
   }
 
@@ -1144,7 +1193,8 @@ export class PaymentsService {
       let attempt = await readAttempt();
       if (
         attempt?.payment.order.campaignQuotaRestricted ||
-        attempt?.payment.order.walletAppliedToman
+        attempt?.payment.order.walletAppliedToman ||
+        attempt?.payment.order.referralCheckoutAttributionId
       ) {
         await lockOrderRowForUpdate(transaction, attempt.payment.orderId);
         attempt = await readAttempt();
@@ -1240,6 +1290,7 @@ export class PaymentsService {
         );
       }
 
+      await assertReferralPayment(transaction, order);
       const paidAt = new Date();
       const claimed = await transaction.order.updateMany({
         where: {

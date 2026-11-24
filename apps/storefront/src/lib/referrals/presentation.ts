@@ -13,6 +13,7 @@ export type ReceivedReferral = ReferralHistoryItem & { firstOrderId: string | nu
 
 export type ReferralOverview = {
   enabled: boolean;
+  referrerEligible: boolean;
   attributionDays: number;
   code: string | null;
   incoming: ReceivedReferral | null;
@@ -27,6 +28,8 @@ const messages: Record<string, string> = {
   REFERRAL_ALREADY_CLAIMED: 'قبلاً یک کد معرفی برای این حساب ثبت شده است.',
   REFERRAL_FIRST_PURCHASE_EXISTS: 'مهلت ثبت کد با تأیید اولین پرداخت این حساب پایان یافته است.',
   REFERRAL_ACCOUNT_INELIGIBLE: 'این حساب شرایط ثبت معرفی را ندارد.',
+  REFERRAL_REFERRER_PURCHASE_REQUIRED:
+    'صدور و استفاده از کد معرفی به یک خرید پرداخت‌شده و تحویل‌گرفته‌شدهٔ معرف نیاز دارد.',
   BAD_REQUEST: 'کد معرفی را کامل و بدون فاصله وارد کنید.',
 };
 

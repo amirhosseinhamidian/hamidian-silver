@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
 import {
@@ -85,11 +86,13 @@ function SelectField({
   label,
   value,
   options,
+  onValueChange,
 }: Readonly<{
   name: string;
   label: string;
   value: string;
   options: readonly { value: string; label: string }[];
+  onValueChange?: (value: string) => void;
 }>) {
   return (
     <FormField id={name} label={label} required>
@@ -98,6 +101,7 @@ function SelectField({
           {...props}
           name={name}
           defaultValue={value}
+          onChange={onValueChange ? (event) => onValueChange(event.target.value) : undefined}
           required
           className="min-h-10 rounded border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] px-3 text-sm"
         >
@@ -130,6 +134,7 @@ export function ReferralRuleFields({
   index,
   rule,
 }: Readonly<{ index: number; rule: ReferralRule }>) {
+  const [recipient, setRecipient] = useState<string>(rule.recipient);
   const key = `rule-${index}-`;
   return (
     <div className="space-y-4">
@@ -152,6 +157,7 @@ export function ReferralRuleFields({
           label="دریافت‌کنندهٔ پاداش"
           value={rule.recipient}
           options={referralRecipients}
+          onValueChange={setRecipient}
         />
         <SelectField
           name={`${key}rank`}
@@ -190,7 +196,11 @@ export function ReferralRuleFields({
         />
         <NumberField
           name={`${key}expiry`}
-          label="مهلت مصرف از صدور به روز"
+          label={
+            recipient === 'REFERRED'
+              ? 'مهلت استفاده از زمان ثبت کد به روز'
+              : 'مهلت مصرف از زمان صدور پاداش به روز'
+          }
           value={rule.expiryDays}
         />
         <NumberField
@@ -201,6 +211,11 @@ export function ReferralRuleFields({
         <DateField name={`${key}starts`} label="شروع اثر قانون" value={rule.startsAt} />
         <DateField name={`${key}ends`} label="پایان اثر قانون" value={rule.endsAt} />
       </div>
+      <p className="text-sm">
+        {recipient === 'REFERRED'
+          ? 'اعتبار معرفی‌شونده در پرداخت خرید اول واجد شرایط اعمال می‌شود.'
+          : 'پاداش معرف پس از تحویل خرید اول دوست و تأیید شرایط آن قابل صدور است.'}
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <IdsField
           name={`${key}categories`}
