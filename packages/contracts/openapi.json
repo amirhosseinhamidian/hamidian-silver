@@ -9840,6 +9840,209 @@
         ]
       }
     },
+    "/api/v1/referral-reward-policies": {
+      "get": {
+        "operationId": "ReferralRewardPoliciesController_list_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralPolicyListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ReferralRewardPolicies"
+        ]
+      },
+      "post": {
+        "operationId": "ReferralRewardPoliciesController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReferralRewardDraftDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralPolicyDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ReferralRewardPolicies"
+        ]
+      }
+    },
+    "/api/v1/referral-reward-policies/scopes": {
+      "get": {
+        "operationId": "ReferralRewardPoliciesController_scopes_v1",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "category",
+                "campaign"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 80,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReferralScopeDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ReferralRewardPolicies"
+        ]
+      }
+    },
+    "/api/v1/referral-reward-policies/{version}": {
+      "get": {
+        "operationId": "ReferralRewardPoliciesController_read_v1",
+        "parameters": [
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minimum": 1,
+              "maximum": 2147483647,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralPolicyDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ReferralRewardPolicies"
+        ]
+      }
+    },
+    "/api/v1/referral-reward-policies/simulation": {
+      "post": {
+        "operationId": "ReferralRewardPoliciesController_simulate_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulateReferralRewardPolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralRewardPreviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ReferralRewardPolicies"
+        ]
+      }
+    },
+    "/api/v1/referral-reward-policies/{version}/publish": {
+      "post": {
+        "operationId": "ReferralRewardPoliciesController_publish_v1",
+        "parameters": [
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minimum": 1,
+              "maximum": 2147483647,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralPolicyDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ReferralRewardPolicies"
+        ]
+      }
+    },
     "/api/v1/shipping/pricing/public": {
       "get": {
         "operationId": "ShippingController_getPublicPricing_v1",
@@ -24263,6 +24466,521 @@
         },
         "required": [
           "code"
+        ]
+      },
+      "ReferralPolicyVersionDto": {
+        "type": "object",
+        "properties": {
+          "createdById": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestedEffectiveAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "effectiveAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "publishedById": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "version": {
+            "type": "number"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "createdById",
+          "createdAt",
+          "requestedEffectiveAt",
+          "publishedAt",
+          "effectiveAt",
+          "publishedById",
+          "version",
+          "enabled"
+        ]
+      },
+      "ReferralRewardRuleDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "maxLength": 40
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "priority": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "minimumToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "maximumExclusiveToman": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "capToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "purchaseRank": {
+            "enum": [
+              "ANY",
+              "FIRST",
+              "SECOND",
+              "THIRD_OR_LATER"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "enum": [
+              "PERCENT",
+              "FIXED"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "recipient": {
+            "enum": [
+              "REFERRER",
+              "REFERRED"
+            ],
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "expiryDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 3650
+          },
+          "maxUsesPerRecipient": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "periodBudgetToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "campaignIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowedCategoryIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowCampaign": {
+            "type": "boolean"
+          },
+          "allowCoupon": {
+            "type": "boolean"
+          },
+          "allowPurchaseReward": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "enabled",
+          "priority",
+          "minimumToman",
+          "capToman",
+          "purchaseRank",
+          "method",
+          "value",
+          "recipient",
+          "expiryDays",
+          "maxUsesPerRecipient",
+          "periodBudgetToman",
+          "campaignIds",
+          "allowedCategoryIds",
+          "allowCampaign",
+          "allowCoupon",
+          "allowPurchaseReward"
+        ]
+      },
+      "ReferralRewardDefinitionDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "periodBudgetToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "rules": {
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRewardRuleDto"
+            }
+          }
+        },
+        "required": [
+          "enabled",
+          "periodBudgetToman",
+          "rules"
+        ]
+      },
+      "ReferralPolicyDetailDto": {
+        "type": "object",
+        "properties": {
+          "createdById": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestedEffectiveAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "effectiveAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "publishedById": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/ReferralRewardDefinitionDto"
+          },
+          "version": {
+            "type": "number"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "createdById",
+          "createdAt",
+          "requestedEffectiveAt",
+          "publishedAt",
+          "effectiveAt",
+          "publishedById",
+          "definition",
+          "version",
+          "enabled"
+        ]
+      },
+      "ReferralPolicyListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralPolicyVersionDto"
+            }
+          },
+          "active": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferralPolicyDetailDto"
+              }
+            ]
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "active",
+          "page",
+          "hasMore"
+        ]
+      },
+      "ReferralScopeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "CreateReferralRewardDraftDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestedEffectiveAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/ReferralRewardDefinitionDto"
+          }
+        },
+        "required": [
+          "requestId",
+          "definition"
+        ]
+      },
+      "ReferralRewardLineDto": {
+        "type": "object",
+        "properties": {
+          "eligibleToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "categoryIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "eligibleToman",
+          "categoryIds"
+        ]
+      },
+      "ReferralRewardUseDto": {
+        "type": "object",
+        "properties": {
+          "recipientUses": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "committedToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "ruleCode": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$"
+          }
+        },
+        "required": [
+          "recipientUses",
+          "committedToman",
+          "ruleCode"
+        ]
+      },
+      "ReferralRewardSampleDto": {
+        "type": "object",
+        "properties": {
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "purchaseRank": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "confirmed": {
+            "type": "boolean"
+          },
+          "couponApplied": {
+            "type": "boolean"
+          },
+          "purchaseRewardApplied": {
+            "type": "boolean"
+          },
+          "campaignId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "lines": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRewardLineDto"
+            }
+          },
+          "usage": {
+            "uniqueItems": true,
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRewardUseDto"
+            }
+          },
+          "programCommittedToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "remainingIncentiveToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "occurredAt",
+          "purchaseRank",
+          "confirmed",
+          "couponApplied",
+          "purchaseRewardApplied",
+          "campaignId",
+          "lines",
+          "usage",
+          "programCommittedToman",
+          "remainingIncentiveToman"
+        ]
+      },
+      "SimulateReferralRewardPolicyDto": {
+        "type": "object",
+        "properties": {
+          "definition": {
+            "$ref": "#/components/schemas/ReferralRewardDefinitionDto"
+          },
+          "sample": {
+            "$ref": "#/components/schemas/ReferralRewardSampleDto"
+          }
+        },
+        "required": [
+          "definition",
+          "sample"
+        ]
+      },
+      "ReferralRewardPreviewLineDto": {
+        "type": "object",
+        "properties": {
+          "recipient": {
+            "enum": [
+              "REFERRER",
+              "REFERRED"
+            ],
+            "type": "string"
+          },
+          "ruleCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "enum": [
+              "AWARDED",
+              "PROGRAM_DISABLED",
+              "UNCONFIRMED",
+              "NO_MATCH",
+              "USE_LIMIT",
+              "BUDGET_LIMIT",
+              "VALUE_LIMIT"
+            ],
+            "type": "string"
+          },
+          "expiryDays": {
+            "type": "number",
+            "nullable": true
+          },
+          "eligibleToman": {
+            "type": "number"
+          },
+          "amountToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "recipient",
+          "ruleCode",
+          "reason",
+          "expiryDays",
+          "eligibleToman",
+          "amountToman"
+        ]
+      },
+      "ReferralRewardPreviewDto": {
+        "type": "object",
+        "properties": {
+          "recipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRewardPreviewLineDto"
+            }
+          },
+          "totalToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "recipients",
+          "totalToman"
         ]
       },
       "ShippingPricingSettingsDto": {

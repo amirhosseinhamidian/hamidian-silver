@@ -80,6 +80,8 @@ model User {
   sentReferrals                       ReferralAttribution[]        @relation("ReferralReferrer")
   receivedReferral                    ReferralAttribution?         @relation("ReferralReferred")
   referralRequestLimit                ReferralRequestLimit?
+  referralRewardDrafts                ReferralRewardPolicyVersion[] @relation("ReferralRewardPolicyCreator")
+  referralRewardPublications          ReferralRewardPolicyVersion[] @relation("ReferralRewardPolicyPublisher")
   walletLots                          WalletLot[]
   walletReservations                  WalletReservation[]
   walletOperations                    WalletOperation[]            @relation("WalletOwner")
@@ -2098,12 +2100,33 @@ model ReferralAttribution {
   expiresAt            DateTime  @db.Timestamptz(3)
   firstOrderId         String?   @unique @db.Uuid
   firstPaidAt          DateTime? @db.Timestamptz(3)
+  rewardPolicyVersion  Int?
   referrer             User      @relation("ReferralReferrer", fields: [referrerUserId], references: [id], onDelete: Restrict)
   referred             User      @relation("ReferralReferred", fields: [referredUserId], references: [id], onDelete: Restrict)
   firstOrder           Order?    @relation(fields: [firstOrderId], references: [id], onDelete: Restrict)
+  rewardPolicy         ReferralRewardPolicyVersion? @relation(fields: [rewardPolicyVersion], references: [version], onDelete: Restrict)
 
   @@index([referrerUserId, claimedAt, id], map: "referral_attributions_history_idx")
+  @@index([rewardPolicyVersion])
   @@map("referral_attributions")
+}
+
+model ReferralRewardPolicyVersion {
+  version              Int      @id @default(autoincrement())
+  requestId            String   @unique @db.Uuid
+  definition           Json
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
+  createdById          String   @db.Uuid
+  requestedEffectiveAt DateTime? @db.Timestamptz(3)
+  publishedAt          DateTime? @db.Timestamptz(3)
+  publishedById        String?  @db.Uuid
+  effectiveAt          DateTime? @db.Timestamptz(3)
+  createdBy            User     @relation("ReferralRewardPolicyCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  publishedBy          User?    @relation("ReferralRewardPolicyPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
+  attributions         ReferralAttribution[]
+
+  @@index([effectiveAt, version])
+  @@map("referral_reward_policy_versions")
 }
 
 model ReferralRequestLimit {

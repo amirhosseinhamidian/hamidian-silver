@@ -3668,6 +3668,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/referral-reward-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralRewardPoliciesController_list_v1"];
+        put?: never;
+        post: operations["ReferralRewardPoliciesController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-reward-policies/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralRewardPoliciesController_scopes_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-reward-policies/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralRewardPoliciesController_read_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-reward-policies/simulation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReferralRewardPoliciesController_simulate_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-reward-policies/{version}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReferralRewardPoliciesController_publish_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/shipping/pricing/public": {
         parameters: {
             query?: never;
@@ -7421,6 +7501,130 @@ export interface components {
         };
         ReferralClaimDto: {
             code: string;
+        };
+        ReferralPolicyVersionDto: {
+            /** Format: uuid */
+            createdById: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            requestedEffectiveAt: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            /** Format: date-time */
+            effectiveAt: string | null;
+            /** Format: uuid */
+            publishedById: string | null;
+            version: number;
+            enabled: boolean;
+        };
+        ReferralRewardRuleDto: {
+            code: string;
+            enabled: boolean;
+            priority: number;
+            minimumToman: number;
+            maximumExclusiveToman?: number | null;
+            capToman: number;
+            /** @enum {string} */
+            purchaseRank: "ANY" | "FIRST" | "SECOND" | "THIRD_OR_LATER";
+            /** @enum {string} */
+            method: "PERCENT" | "FIXED";
+            value: number;
+            /** @enum {string} */
+            recipient: "REFERRER" | "REFERRED";
+            /** Format: date-time */
+            startsAt?: string | null;
+            /** Format: date-time */
+            endsAt?: string | null;
+            expiryDays: number;
+            maxUsesPerRecipient: number;
+            periodBudgetToman: number;
+            campaignIds: string[];
+            allowedCategoryIds: string[];
+            allowCampaign: boolean;
+            allowCoupon: boolean;
+            allowPurchaseReward: boolean;
+        };
+        ReferralRewardDefinitionDto: {
+            enabled: boolean;
+            periodBudgetToman: number;
+            rules: components["schemas"]["ReferralRewardRuleDto"][];
+        };
+        ReferralPolicyDetailDto: {
+            /** Format: uuid */
+            createdById: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            requestedEffectiveAt: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            /** Format: date-time */
+            effectiveAt: string | null;
+            /** Format: uuid */
+            publishedById: string | null;
+            definition: components["schemas"]["ReferralRewardDefinitionDto"];
+            version: number;
+            enabled: boolean;
+        };
+        ReferralPolicyListDto: {
+            items: components["schemas"]["ReferralPolicyVersionDto"][];
+            active: components["schemas"]["ReferralPolicyDetailDto"] | null;
+            page: number;
+            hasMore: boolean;
+        };
+        ReferralScopeDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        CreateReferralRewardDraftDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** Format: date-time */
+            requestedEffectiveAt?: string | null;
+            definition: components["schemas"]["ReferralRewardDefinitionDto"];
+        };
+        ReferralRewardLineDto: {
+            eligibleToman: number;
+            categoryIds: string[];
+        };
+        ReferralRewardUseDto: {
+            recipientUses: number;
+            committedToman: number;
+            ruleCode: string;
+        };
+        ReferralRewardSampleDto: {
+            /** Format: date-time */
+            occurredAt: string;
+            purchaseRank: number;
+            confirmed: boolean;
+            couponApplied: boolean;
+            purchaseRewardApplied: boolean;
+            /** Format: uuid */
+            campaignId: string | null;
+            lines: components["schemas"]["ReferralRewardLineDto"][];
+            usage: components["schemas"]["ReferralRewardUseDto"][];
+            programCommittedToman: number;
+            remainingIncentiveToman: number;
+        };
+        SimulateReferralRewardPolicyDto: {
+            definition: components["schemas"]["ReferralRewardDefinitionDto"];
+            sample: components["schemas"]["ReferralRewardSampleDto"];
+        };
+        ReferralRewardPreviewLineDto: {
+            /** @enum {string} */
+            recipient: "REFERRER" | "REFERRED";
+            ruleCode: string | null;
+            /** @enum {string} */
+            reason: "AWARDED" | "PROGRAM_DISABLED" | "UNCONFIRMED" | "NO_MATCH" | "USE_LIMIT" | "BUDGET_LIMIT" | "VALUE_LIMIT";
+            expiryDays: number | null;
+            eligibleToman: number;
+            amountToman: number;
+        };
+        ReferralRewardPreviewDto: {
+            recipients: components["schemas"]["ReferralRewardPreviewLineDto"][];
+            totalToman: number;
         };
         ShippingPricingSettingsDto: {
             /** @enum {string} */
@@ -14524,6 +14728,137 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReceivedReferralDto"];
+                };
+            };
+        };
+    };
+    ReferralRewardPoliciesController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralPolicyListDto"];
+                };
+            };
+        };
+    };
+    ReferralRewardPoliciesController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateReferralRewardDraftDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    ReferralRewardPoliciesController_scopes_v1: {
+        parameters: {
+            query: {
+                kind: "category" | "campaign";
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralScopeDto"][];
+                };
+            };
+        };
+    };
+    ReferralRewardPoliciesController_read_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    ReferralRewardPoliciesController_simulate_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulateReferralRewardPolicyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRewardPreviewDto"];
+                };
+            };
+        };
+    };
+    ReferralRewardPoliciesController_publish_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralPolicyDetailDto"];
                 };
             };
         };

@@ -32,6 +32,9 @@ export default async function RewardPoliciesPage() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-black sm:text-3xl">پاداش خرید</h1>
         <nav aria-label="عملیات پاداش و کیف پول" className="flex flex-wrap gap-2">
+          <ButtonLink href="/reward-policies/referrals" variant="outline" size="sm">
+            سیاست پاداش معرفی
+          </ButtonLink>
           <ButtonLink href="/reward-policies/wallet-operations" variant="outline" size="sm">
             مدیریت کیف پول مشتری
           </ButtonLink>

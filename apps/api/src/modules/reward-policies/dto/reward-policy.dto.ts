@@ -31,7 +31,7 @@ export const DEFAULT_REWARD_EXPIRY_DAYS = 270;
 const MAX_REWARD_EXPIRY_DAYS = 3_650;
 const MAX_REWARD_ACTIVATION_DELAY_DAYS = 3_650;
 
-function Integer(minimum = 0, maximum = TOMAN_INT_MAX) {
+export function Integer(minimum = 0, maximum = TOMAN_INT_MAX) {
   return applyDecorators(
     ApiProperty({ type: Number, minimum, maximum }),
     Type(() => Object),
@@ -41,7 +41,7 @@ function Integer(minimum = 0, maximum = TOMAN_INT_MAX) {
   );
 }
 
-function Ids(maxItems: number) {
+export function Ids(maxItems: number) {
   return applyDecorators(
     ApiProperty({ type: String, isArray: true, maxItems }),
     IsArray(),
@@ -51,7 +51,7 @@ function Ids(maxItems: number) {
   );
 }
 
-function BooleanField() {
+export function BooleanField() {
   return applyDecorators(
     ApiProperty({ type: Boolean }),
     Type(() => Object),

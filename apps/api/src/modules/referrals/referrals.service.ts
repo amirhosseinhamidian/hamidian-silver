@@ -10,6 +10,7 @@ import type {
   ReferralHistoryItemDto,
   ReferralOverviewDto,
 } from './dto/referral.dto';
+import { effectiveReferralRewardPolicy } from './referral-reward-policies.service';
 
 const dayMs = 86_400_000;
 const pageSize = 20;
@@ -178,11 +179,16 @@ export class ReferralsService {
       });
       if (purchased) throw new DomainException(ErrorCode.REFERRAL_FIRST_PURCHASE_EXISTS);
 
+      const rewardPolicy = await tx.referralRewardPolicyVersion.findFirst({
+        ...effectiveReferralRewardPolicy(now),
+        select: { version: true },
+      });
       const attribution = await tx.referralAttribution.create({
         data: {
           referredUserId: userId,
           referrerUserId: inviter.userId,
           policySnapshot: policy,
+          rewardPolicyVersion: rewardPolicy?.version ?? null,
           claimedAt: now,
           expiresAt: new Date(+now + policy.attributionDays * dayMs),
         },

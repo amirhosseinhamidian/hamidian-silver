@@ -91,7 +91,7 @@ function eligibility(selector: RewardEligibilityDto, couponApplied: boolean) {
   };
 }
 
-function percentage(amount: number, bps: number) {
+export function percentage(amount: number, bps: number) {
   return Math.floor((amount * bps) / basisPointsPerUnit);
 }
 
