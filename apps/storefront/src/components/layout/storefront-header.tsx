@@ -1,3 +1,5 @@
+import { CampaignNavigationItem } from '@/components/layout/campaign-navigation-item';
+import type { PublicCampaignBanner } from '@/lib/home/public-campaign-banner';
 import { StorefrontAnnouncementBar } from '@/components/layout/storefront-announcement';
 import {
   getInitialCountdownSeconds,
@@ -22,6 +24,8 @@ export type StorefrontNavigationCategory = Readonly<{
 
 type StorefrontHeaderProps = Readonly<{
   announcement?: StorefrontAnnouncement | null;
+  campaignCountdown?: PublicCampaignBanner | null;
+  campaignNavigation?: PublicCampaignBanner | null;
   navigationCategories?: readonly StorefrontNavigationCategory[];
   authenticated?: boolean;
 }>;
@@ -51,6 +55,8 @@ function IconLink({
 
 export function StorefrontHeader({
   announcement,
+  campaignCountdown,
+  campaignNavigation,
   navigationCategories = [],
   authenticated = false,
 }: StorefrontHeaderProps) {
@@ -63,6 +69,13 @@ export function StorefrontHeader({
       <StorefrontAnnouncementBar
         announcement={announcement}
         initialRemainingSeconds={initialRemainingSeconds}
+        campaign={campaignCountdown}
+        campaignSeconds={
+          campaignCountdown
+            ? (getInitialCountdownSeconds({ mode: 'deadline', endsAt: campaignCountdown.endsAt }) ??
+              0)
+            : 0
+        }
       />
 
       <div className="hidden border-b border-[var(--sf-color-border)] lg:block">
@@ -127,7 +140,10 @@ export function StorefrontHeader({
             className="flex items-center justify-start gap-1 lg:col-start-3 lg:row-start-1 lg:justify-self-end"
           >
             <div className="lg:hidden">
-              <StorefrontMobileMenu navigationCategories={navigationCategories} />
+              <StorefrontMobileMenu
+                navigationCategories={navigationCategories}
+                campaign={campaignNavigation}
+              />
             </div>
             <StorefrontSearch />
           </div>
@@ -156,6 +172,8 @@ export function StorefrontHeader({
               <li>
                 <Link href="/">خانه</Link>
               </li>
+
+              {campaignNavigation && <CampaignNavigationItem campaign={campaignNavigation} />}
 
               {navigationCategories.map((category) => (
                 <li key={category.id}>

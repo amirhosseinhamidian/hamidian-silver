@@ -46,6 +46,12 @@ export class CustomerOrderItemDto {
   variantId!: string;
   quantity!: number;
   productNameSnapshot!: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' })
+  campaignIdSnapshot?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  campaignNameSnapshot?: string | null;
   productSlug!: string;
 
   @ApiProperty({ type: () => CustomerOrderMediaDto, nullable: true })

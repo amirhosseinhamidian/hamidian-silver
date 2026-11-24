@@ -131,18 +131,28 @@ it('serializes a limited promotion and reconciles current campaign prices with C
     });
     const saved = await db.order.findFirstOrThrow({
       where: { userId: users[winner].id },
-      include: { priceQuote: true },
+      include: { priceQuote: true, items: true },
     });
     expect(saved).toMatchObject({
       discountTotalToman: 2_000,
       grandTotalToman: 6_700,
+      items: [{ campaignIdSnapshot: campaign.id, campaignNameSnapshot: campaign.name }],
       priceQuote: {
         campaignId: campaign.id,
         snapshot: { discountTotalToman: 2_000, rule: { kind: 'FIXED', version: 1 } },
       },
     });
 
-    await db.campaign.update({ where: { id: campaign.id }, data: { status: 'DRAFT' } });
+    await expect(orders.getMyOrder(users[winner].id, saved.id)).resolves.toMatchObject({
+      items: [{ campaignIdSnapshot: campaign.id, campaignNameSnapshot: campaign.name }],
+    });
+    await db.campaign.update({
+      where: { id: campaign.id },
+      data: { status: 'DRAFT', name: 'نام تازهٔ کمپین' },
+    });
+    await expect(orders.getMyOrder(users[winner].id, saved.id)).resolves.toMatchObject({
+      items: [{ campaignNameSnapshot: campaign.name }],
+    });
     await promotions.save(
       campaign.id,
       {
@@ -231,6 +241,10 @@ it('serializes a limited promotion and reconciles current campaign prices with C
     expect(listing.items.find(({ id }) => id === product.id)).toMatchObject({
       defaultSalePriceToman: 10_000,
       campaignOffer: { price: { regularToman: 10_000, finalToman: 9_000 } },
+    });
+    const suggestions = await catalog.listPublicProductSuggestions(product.slug);
+    expect(suggestions.items.find(({ id }) => id === product.id)).toMatchObject({
+      campaignOffer: { campaignId: campaign.id, price: { finalToman: 9_000 } },
     });
     const variantPrice = (current: Awaited<ReturnType<CatalogService['getPublicProduct']>>) =>
       current.variants.find(({ id }) => id === second.id)?.campaignOffer?.price;

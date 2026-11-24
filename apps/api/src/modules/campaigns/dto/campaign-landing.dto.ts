@@ -9,6 +9,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Matches,
   Max,
@@ -19,6 +20,7 @@ import {
   CampaignBannerSlot,
   CampaignCollectionMode,
   CampaignLandingMode,
+  CampaignNavigationEffect,
 } from '../../../generated/prisma/enums';
 import { PublicCatalogFacetsQueryDto } from '../../catalog/dto/public-catalog-facets.dto';
 import { PublicCatalogSort } from '../../catalog/dto/public-catalog-query.dto';
@@ -47,6 +49,50 @@ export class CampaignCollectionFiltersDto extends PickType(PublicCatalogFacetsQu
   @Min(1)
   @Max(999)
   minimumQuantity?: number;
+}
+
+export class CampaignPlacementAppearanceDto {
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  mediaId?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  mobileMediaId?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  stillMediaId?: string | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 48, maximum: 320 })
+  @IsOptional()
+  @Type(() => Object)
+  @IsInt()
+  @Min(48)
+  @Max(320)
+  desktopHeight?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 48, maximum: 320 })
+  @IsOptional()
+  @Type(() => Object)
+  @IsInt()
+  @Min(48)
+  @Max(320)
+  mobileHeight?: number | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9a-f]{6}$/i)
+  textColor?: string | null;
+
+  @ApiPropertyOptional({ enum: CampaignNavigationEffect, nullable: true })
+  @IsOptional()
+  @IsEnum(CampaignNavigationEffect)
+  navigationEffect?: CampaignNavigationEffect | null;
 }
 
 export class CampaignPlacementDraftDto {
@@ -80,6 +126,13 @@ export class CampaignPlacementDraftDto {
   @IsString()
   @Length(16, 24)
   endsTehran?: string | null;
+
+  @ApiPropertyOptional({ type: () => CampaignPlacementAppearanceDto })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CampaignPlacementAppearanceDto)
+  appearance?: CampaignPlacementAppearanceDto;
 }
 
 export class CampaignLandingDraftDto {
@@ -123,9 +176,9 @@ export class CampaignLandingDraftDto {
   @Length(1, 220, { each: true })
   manualProductSlugs!: string[];
 
-  @ApiProperty({ type: () => CampaignPlacementDraftDto, isArray: true, maxItems: 3 })
+  @ApiProperty({ type: () => CampaignPlacementDraftDto, isArray: true, maxItems: 5 })
   @IsArray()
-  @ArrayMaxSize(3)
+  @ArrayMaxSize(5)
   @ArrayUnique((placement: CampaignPlacementDraftDto) => placement?.slot)
   @IsObject({ each: true })
   @ValidateNested({ each: true })
@@ -140,11 +193,28 @@ export class SaveCampaignLandingDto extends CampaignLandingDraftDto {
   expectedRevision!: number;
 }
 
+export class CampaignPlacementMediaDto {
+  @ApiProperty({ enum: CampaignBannerSlot })
+  slot!: CampaignBannerSlot;
+
+  @ApiProperty({ type: () => CampaignMediaDto, nullable: true })
+  media!: CampaignMediaDto | null;
+
+  @ApiProperty({ type: () => CampaignMediaDto, nullable: true })
+  mobileMedia!: CampaignMediaDto | null;
+
+  @ApiProperty({ type: () => CampaignMediaDto, nullable: true })
+  stillMedia!: CampaignMediaDto | null;
+}
+
 export class CampaignLandingEditorDto {
   @ApiProperty({ type: () => CampaignLandingDraftDto, nullable: true })
   landing!: CampaignLandingDraftDto | null;
 
   revision!: number;
+
+  @ApiPropertyOptional({ type: () => CampaignPlacementMediaDto, isArray: true })
+  placementMedia?: CampaignPlacementMediaDto[];
 }
 
 export class CampaignPlacementQueryDto {

@@ -30,6 +30,7 @@ import {
   CampaignSummaryDto,
   CampaignTransitionDto,
   CreateCampaignDto,
+  PublicCampaignActivityDto,
   PublicCampaignDto,
   UpdateCampaignDto,
 } from './dto/campaign.dto';
@@ -44,6 +45,14 @@ export class CampaignsController {
   @ApiOkResponse({ type: PublicCampaignDto })
   publicBanner(): Promise<PublicCampaignDto> {
     return this.campaigns.publicBanner();
+  }
+
+  @Get('public/activity')
+  @Public()
+  @Header('Cache-Control', 'no-store')
+  @ApiOkResponse({ type: PublicCampaignActivityDto })
+  publicActivity(): Promise<PublicCampaignActivityDto> {
+    return this.campaigns.publicActivity();
   }
 
   @Get()

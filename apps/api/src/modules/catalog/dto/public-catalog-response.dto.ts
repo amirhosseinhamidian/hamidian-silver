@@ -324,6 +324,12 @@ export class PublicCatalogProductSuggestionDto {
   name!: string;
   slug!: string;
 
+  @ApiPropertyOptional({ type: () => CatalogCampaignOfferDto, nullable: true })
+  campaignOffer?: CatalogCampaignOfferDto | null;
+
+  @ApiPropertyOptional({ type: () => PublicCampaignQuotaDto })
+  campaignQuota?: PublicCampaignQuotaDto;
+
   @ApiProperty({ type: Number, nullable: true })
   salePriceToman!: number | null;
 

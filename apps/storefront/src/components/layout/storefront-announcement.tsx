@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
+import { CampaignArtwork } from '@/components/home/campaign-artwork';
+import { useCampaignVisibility } from '@/lib/campaigns/campaign-visibility';
+import type { PublicCampaignBanner } from '@/lib/home/public-campaign-banner';
 import { FiArrowLeft } from 'react-icons/fi';
 
 import {
@@ -19,6 +22,8 @@ export type {
 type StorefrontAnnouncementBarProps = Readonly<{
   announcement?: StorefrontAnnouncement | null;
   initialRemainingSeconds?: number | null;
+  campaign?: PublicCampaignBanner | null;
+  campaignSeconds?: number;
 }>;
 
 const numberFormatter = new Intl.NumberFormat('fa-IR', {
@@ -102,10 +107,65 @@ function Countdown({
   );
 }
 
+function countdownTextBackground(color: string) {
+  const rgb = color
+    .slice(1)
+    .match(/../g)
+    ?.map((value) => Number.parseInt(value, 16) / 255);
+  if (!rgb || rgb.length !== 3) return '#161616';
+  const [red, green, blue] = rgb.map((value) =>
+    value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4,
+  );
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue >= 0.179 ? '#000000' : '#ffffff';
+}
+
 export function StorefrontAnnouncementBar({
   announcement,
   initialRemainingSeconds = null,
+  campaign,
+  campaignSeconds = 0,
 }: StorefrontAnnouncementBarProps) {
+  const campaignVisible = useCampaignVisibility(campaign?.campaignId, campaign?.endsAt);
+  if (campaign && campaignVisible && campaignSeconds > 0) {
+    const campaignAnnouncement: StorefrontAnnouncement = {
+      enabled: true,
+      message: campaign.message,
+      countdown: { mode: 'deadline', endsAt: campaign.endsAt },
+    };
+    const color = campaign.textColor ?? '#ffffff';
+    const backgroundColor = countdownTextBackground(color);
+    const heights = {
+      '--campaign-height': `${campaign.mobileHeight ?? 88}px`,
+      '--campaign-desktop-height': `${campaign.desktopHeight ?? 96}px`,
+    } as CSSProperties;
+
+    return (
+      <aside aria-label={campaign.name} className="relative isolate" style={heights}>
+        <CampaignArtwork
+          key={`${campaign.media?.url}:${campaign.mobileMedia?.url}:${campaign.stillMedia?.url}`}
+          artwork={campaign}
+          sizes="100vw"
+          className="absolute inset-0 -z-10"
+        />
+        <div className="bg-[var(--sf-color-ink)] absolute inset-0 -z-20" aria-hidden="true" />
+        <div className="sf-container pointer-events-none relative flex min-h-[var(--campaign-height)] items-center justify-center py-2 sm:min-h-[var(--campaign-desktop-height)]">
+          <div
+            className="pointer-events-auto flex flex-wrap items-center justify-center gap-x-5 gap-y-2 rounded-sm px-4 py-2 text-center text-sm leading-6 [overflow-wrap:anywhere]"
+            style={{ color, backgroundColor }}
+          >
+            <span>{campaign.message || campaign.name}</span>
+            <Countdown announcement={campaignAnnouncement} initialSeconds={campaignSeconds} />
+            {campaign.ctaPath && campaign.ctaLabel && (
+              <Link href={campaign.ctaPath} className="border-b border-current font-semibold">
+                {campaign.ctaLabel}
+              </Link>
+            )}
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
   if (!announcement?.enabled || !announcement.message.trim()) {
     return null;
   }

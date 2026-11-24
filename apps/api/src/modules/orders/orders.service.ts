@@ -118,6 +118,8 @@ const CUSTOMER_ORDER_ITEM_SELECT = {
   variantId: true,
   quantity: true,
   productNameSnapshot: true,
+  campaignIdSnapshot: true,
+  campaignNameSnapshot: true,
   variantNameSnapshot: true,
   skuSnapshot: true,
   sizeLabelSnapshot: true,
@@ -370,6 +372,7 @@ type AdminOrderListRecord = Prisma.OrderGetPayload<{
 }>;
 
 type PreparedOrderItem = {
+  productId: string;
   variantId: string;
   quantity: number;
   productNameSnapshot: string;
@@ -460,6 +463,7 @@ export class OrdersService {
         attributionPolicy(this.config),
       );
 
+      const campaignProducts = new Set(promotion?.rule.eligibleProductIds);
       const order = await transaction.order.create({
         data: {
           id: orderId,
@@ -516,6 +520,15 @@ export class OrdersService {
               variantId: item.variantId,
               quantity: item.quantity,
               productNameSnapshot: item.productNameSnapshot,
+              ...(promotion &&
+              campaignProducts.has(item.productId) &&
+              (promotion.rule.kind !== 'BUNDLE' ||
+                promotion.rule.bundleProductIds.includes(item.productId))
+                ? {
+                    campaignIdSnapshot: promotion.campaignId,
+                    campaignNameSnapshot: promotion.campaignName,
+                  }
+                : {}),
               variantNameSnapshot: item.variantNameSnapshot,
               skuSnapshot: item.skuSnapshot,
               sizeLabelSnapshot: item.sizeLabelSnapshot,
@@ -1367,6 +1380,7 @@ export class OrdersService {
     item: CreateOrderItemDto,
     variant: {
       id: string;
+      productId: string;
       sku: string;
       name: string | null;
       weightGrams: { toString(): string } | null;
@@ -1433,6 +1447,7 @@ export class OrdersService {
     this.assertSafeTomanAmount(lineTotalToman);
 
     return {
+      productId: variant.productId,
       variantId: variant.id,
       quantity: item.quantity,
       productNameSnapshot: variant.product.name,

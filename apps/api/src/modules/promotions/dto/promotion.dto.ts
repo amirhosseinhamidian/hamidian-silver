@@ -128,6 +128,9 @@ export class CampaignUnitPriceDto {
 }
 
 export class CatalogCampaignOfferDto {
+  @ApiPropertyOptional({ type: String, format: 'uuid' })
+  campaignId?: string;
+
   name!: string;
 
   @ApiProperty({ format: 'date-time' })

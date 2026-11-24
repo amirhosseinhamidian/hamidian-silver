@@ -14,7 +14,8 @@ import type {
   PublicCatalogProductSuggestion,
   PublicCatalogProductSuggestions,
 } from '@/lib/catalog/public-catalog';
-import { formatTomanPrice } from '@/lib/catalog/presentation';
+import { CatalogPrice } from '@/components/catalog/catalog-price';
+import { CampaignQuotaProgress } from '@/components/catalog/campaign-quota-progress';
 import { normalizeCatalogSearchText } from '@/lib/catalog/search-normalization';
 
 type SuggestionStatus = 'idle' | 'loading' | 'success' | 'empty' | 'error';
@@ -403,14 +404,25 @@ export function StorefrontSearch() {
                                             sizes="56px"
                                           />
                                         </span>
-                                        <span className="min-w-0">
+                                        <div className="min-w-0">
                                           <span className="block truncate text-sm font-medium">
                                             {suggestion.name}
                                           </span>
-                                          <span className="mt-1 block text-xs text-[var(--sf-color-muted)]">
-                                            {formatTomanPrice(suggestion.salePriceToman)}
-                                          </span>
-                                        </span>
+                                          <CatalogPrice
+                                            sale={suggestion.salePriceToman}
+                                            offer={suggestion.campaignOffer}
+                                            priceClassName="mt-1 text-xs text-[var(--sf-color-muted)]"
+                                          />
+                                          {suggestion.campaignQuota && (
+                                            <CampaignQuotaProgress
+                                              quota={suggestion.campaignQuota}
+                                              showName={
+                                                suggestion.campaignQuota.campaignId !==
+                                                suggestion.campaignOffer?.campaignId
+                                              }
+                                            />
+                                          )}
+                                        </div>
                                       </Link>
                                     </DialogPrimitive.Close>
                                   </li>

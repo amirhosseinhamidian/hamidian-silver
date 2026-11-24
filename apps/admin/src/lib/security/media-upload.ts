@@ -1,4 +1,5 @@
 export const ADMIN_MEDIA_UPLOAD_LIMIT_BYTES = 10 * 1024 * 1024;
+const CAMPAIGN_GIF_LIMIT_BYTES = 4 * 1024 * 1024;
 const MULTIPART_OVERHEAD_LIMIT_BYTES = 64 * 1024;
 const ALLOWED_MEDIA_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
 const ALLOWED_FIELDS = new Set(['file', 'altText']);
@@ -10,7 +11,10 @@ function errorResponse(message: string, status: number): ValidatedMediaUpload {
   return { ok: false, response: Response.json({ message }, { status }) };
 }
 
-export async function validateMediaUploadRequest(request: Request): Promise<ValidatedMediaUpload> {
+export async function validateMediaUploadRequest(
+  request: Request,
+  allowCampaignGif = false,
+): Promise<ValidatedMediaUpload> {
   const contentType = request.headers.get('content-type')?.toLowerCase() ?? '';
   if (!contentType.startsWith('multipart/form-data;') || !contentType.includes('boundary=')) {
     return errorResponse('A multipart media upload is required.', 415);
@@ -52,7 +56,11 @@ export async function validateMediaUploadRequest(request: Request): Promise<Vali
   if (file.size > ADMIN_MEDIA_UPLOAD_LIMIT_BYTES) {
     return errorResponse('The media upload exceeds the 10 MB limit.', 413);
   }
-  if (!ALLOWED_MEDIA_TYPES.has(file.type.toLowerCase())) {
+  const isCampaignGif = allowCampaignGif && file.type.toLowerCase() === 'image/gif';
+  if (isCampaignGif && file.size > CAMPAIGN_GIF_LIMIT_BYTES) {
+    return errorResponse('The campaign GIF exceeds the 4 MB limit.', 413);
+  }
+  if (!isCampaignGif && !ALLOWED_MEDIA_TYPES.has(file.type.toLowerCase())) {
     return errorResponse('Only JPEG, PNG, WebP, and AVIF images are supported.', 415);
   }
 

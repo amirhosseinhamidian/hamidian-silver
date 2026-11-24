@@ -196,6 +196,11 @@ function OrderItemCard({ item }: Readonly<{ item: AdminOrderItem }>) {
             </div>
             <Badge tone="neutral">{formatAdminInteger(item.quantity)} عدد</Badge>
           </div>
+          {item.campaignName && (
+            <div className="mt-2">
+              <Badge tone="neutral">{item.campaignName}</Badge>
+            </div>
+          )}
           {item.productSlug ? (
             <ButtonLink
               href={storefrontProductUrl(item.productSlug)}

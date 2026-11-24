@@ -31,6 +31,8 @@ export type CustomerOrderItem = Readonly<{
   variantId: string;
   quantity: number;
   productNameSnapshot: string;
+  campaignIdSnapshot?: string | null;
+  campaignNameSnapshot?: string | null;
   productSlug: string;
   primaryMedia: PublicCatalogMedia | null;
   fallbackSrc: string | null;

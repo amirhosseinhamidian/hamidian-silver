@@ -115,7 +115,12 @@ export function CatalogProductCard({
           )}
         </div>
 
-        {product.campaignQuota && <CampaignQuotaProgress quota={product.campaignQuota} />}
+        {product.campaignQuota && (
+          <CampaignQuotaProgress
+            quota={product.campaignQuota}
+            showName={product.campaignQuota.campaignId !== product.campaignOffer?.campaignId}
+          />
+        )}
         <div className="sf-catalog-card__action mt-auto pt-3 sm:pt-4">
           <ButtonLink
             href={`/products/${product.slug}`}

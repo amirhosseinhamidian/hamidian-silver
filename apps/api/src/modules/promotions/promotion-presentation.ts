@@ -52,6 +52,7 @@ export function selectCatalogPromotion(
     if (rule.kind === 'FREE_SHIPPING') conditions.push('SHIPPING');
 
     const offer: CatalogCampaignOfferDto = {
+      campaignId: rule.campaignId,
       name: rule.campaign.name,
       endsAt: rule.campaign.endsAt.toISOString(),
       conditions,

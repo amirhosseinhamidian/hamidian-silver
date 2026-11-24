@@ -7,20 +7,25 @@ export function useCampaignExpiration(endsAt: string | undefined) {
   useEffect(() => {
     if (!endsAt) return;
     const expiry = Date.parse(endsAt);
-    if (!Number.isFinite(expiry)) return;
+
     let timer: number;
     function schedule() {
+      window.clearTimeout(timer);
       const delay = expiry - Date.now();
-      timer = window.setTimeout(
-        () => {
-          if (Date.now() >= expiry) setExpired(endsAt);
-          else schedule();
-        },
-        Math.min(2_147_483_647, Math.max(0, delay)),
-      );
+      if (!Number.isFinite(expiry) || delay <= 0) {
+        setExpired(endsAt);
+        return;
+      }
+      timer = window.setTimeout(schedule, Math.min(2_147_483_647, delay));
     }
-    schedule();
-    return () => window.clearTimeout(timer);
+    timer = window.setTimeout(schedule, 0);
+    window.addEventListener('pageshow', schedule);
+    document.addEventListener('visibilitychange', schedule);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('pageshow', schedule);
+      document.removeEventListener('visibilitychange', schedule);
+    };
   }, [endsAt]);
 
   return Boolean(endsAt && endsAt === expired);

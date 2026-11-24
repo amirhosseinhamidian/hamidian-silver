@@ -252,6 +252,27 @@
         ]
       }
     },
+    "/api/v1/campaigns/public/activity": {
+      "get": {
+        "operationId": "CampaignsController_publicActivity_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCampaignActivityDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
     "/api/v1/campaigns": {
       "get": {
         "operationId": "CampaignsController_list_v1",
@@ -559,7 +580,9 @@
               "enum": [
                 "HOME",
                 "CATEGORY",
-                "PRODUCT"
+                "PRODUCT",
+                "COUNTDOWN",
+                "NAVIGATION"
               ]
             }
           },
@@ -9544,6 +9567,51 @@
         ]
       }
     },
+    "/api/v1/site-settings/campaign-media": {
+      "post": {
+        "operationId": "SiteSettingsController_uploadCampaignMedia_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "altText": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSiteMediaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SiteSettings"
+        ]
+      }
+    },
     "/api/v1/site-settings/pages/media": {
       "post": {
         "operationId": "SiteSettingsController_uploadContentPageMedia_v1",
@@ -11933,6 +12001,10 @@
       "CampaignBannerDto": {
         "type": "object",
         "properties": {
+          "campaignId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "endsAt": {
             "type": "string",
             "format": "date-time"
@@ -11953,6 +12025,45 @@
                 "$ref": "#/components/schemas/CampaignMediaDto"
               }
             ]
+          },
+          "mobileMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignMediaDto"
+              }
+            ]
+          },
+          "stillMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignMediaDto"
+              }
+            ]
+          },
+          "desktopHeight": {
+            "type": "number",
+            "nullable": true
+          },
+          "mobileHeight": {
+            "type": "number",
+            "nullable": true
+          },
+          "textColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "navigationEffect": {
+            "nullable": true,
+            "enum": [
+              "SOLID",
+              "GRADIENT",
+              "ANIMATED"
+            ],
+            "type": "string"
           },
           "name": {
             "type": "string"
@@ -11985,6 +12096,20 @@
         },
         "required": [
           "banner"
+        ]
+      },
+      "PublicCampaignActivityDto": {
+        "type": "object",
+        "properties": {
+          "activeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "activeIds"
         ]
       },
       "CampaignSummaryDto": {
@@ -12752,6 +12877,10 @@
       "CatalogCampaignOfferDto": {
         "type": "object",
         "properties": {
+          "campaignId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "endsAt": {
             "type": "string",
             "format": "date-time"
@@ -13365,6 +13494,52 @@
           }
         }
       },
+      "CampaignPlacementAppearanceDto": {
+        "type": "object",
+        "properties": {
+          "mediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "mobileMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "stillMediaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "desktopHeight": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 48,
+            "maximum": 320
+          },
+          "mobileHeight": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 48,
+            "maximum": 320
+          },
+          "textColor": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "navigationEffect": {
+            "nullable": true,
+            "enum": [
+              "SOLID",
+              "GRADIENT",
+              "ANIMATED"
+            ],
+            "type": "string"
+          }
+        }
+      },
       "CampaignPlacementDraftDto": {
         "type": "object",
         "properties": {
@@ -13372,7 +13547,9 @@
             "enum": [
               "HOME",
               "CATEGORY",
-              "PRODUCT"
+              "PRODUCT",
+              "COUNTDOWN",
+              "NAVIGATION"
             ],
             "type": "string"
           },
@@ -13393,6 +13570,9 @@
             "nullable": true,
             "minLength": 16,
             "maxLength": 24
+          },
+          "appearance": {
+            "$ref": "#/components/schemas/CampaignPlacementAppearanceDto"
           },
           "priority": {
             "type": "number",
@@ -13437,7 +13617,7 @@
           },
           "placements": {
             "uniqueItems": true,
-            "maxItems": 3,
+            "maxItems": 5,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CampaignPlacementDraftDto"
@@ -13470,6 +13650,54 @@
           "story"
         ]
       },
+      "CampaignPlacementMediaDto": {
+        "type": "object",
+        "properties": {
+          "slot": {
+            "enum": [
+              "HOME",
+              "CATEGORY",
+              "PRODUCT",
+              "COUNTDOWN",
+              "NAVIGATION"
+            ],
+            "type": "string"
+          },
+          "media": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignMediaDto"
+              }
+            ]
+          },
+          "mobileMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignMediaDto"
+              }
+            ]
+          },
+          "stillMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignMediaDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "slot",
+          "media",
+          "mobileMedia",
+          "stillMedia"
+        ]
+      },
       "CampaignLandingEditorDto": {
         "type": "object",
         "properties": {
@@ -13481,6 +13709,12 @@
                 "$ref": "#/components/schemas/CampaignLandingDraftDto"
               }
             ]
+          },
+          "placementMedia": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignPlacementMediaDto"
+            }
           },
           "revision": {
             "type": "number"
@@ -13523,7 +13757,7 @@
           },
           "placements": {
             "uniqueItems": true,
-            "maxItems": 3,
+            "maxItems": 5,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CampaignPlacementDraftDto"
@@ -14164,6 +14398,18 @@
       "PublicCatalogProductSuggestionDto": {
         "type": "object",
         "properties": {
+          "campaignOffer": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogCampaignOfferDto"
+              }
+            ]
+          },
+          "campaignQuota": {
+            "$ref": "#/components/schemas/PublicCampaignQuotaDto"
+          },
           "salePriceToman": {
             "type": "number",
             "nullable": true
@@ -19608,6 +19854,15 @@
       "CustomerOrderItemDto": {
         "type": "object",
         "properties": {
+          "campaignIdSnapshot": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "campaignNameSnapshot": {
+            "type": "string",
+            "nullable": true
+          },
           "primaryMedia": {
             "nullable": true,
             "type": "object",

@@ -117,6 +117,18 @@ it('publishes only qualifying products, limits banner placements and archives a 
       },
       owner.id,
     );
+    const assets = await Promise.all(
+      ['gif', 'webp', 'png'].map((extension) =>
+        db.media.create({
+          data: {
+            storageKey: `catalog/${slug}-${extension}.${extension}`,
+            mimeType: `image/${extension}`,
+            sizeBytes: 128,
+            altText: 'تصویر کمپین آزمایشی',
+          },
+        }),
+      ),
+    );
     const input = {
       slug,
       seoMode: 'RECURRING',
@@ -140,6 +152,20 @@ it('publishes only qualifying products, limits banner placements and archives a 
           endsTehran: formatTehranDate(bannerEnd),
         },
         { slot: 'PRODUCT', priority: 30, targetSlug: ring.slug },
+        {
+          slot: 'COUNTDOWN',
+          priority: 40,
+          endsTehran: formatTehranDate(bannerEnd),
+          appearance: {
+            mediaId: assets[0].id,
+            mobileMediaId: assets[1].id,
+            stillMediaId: assets[2].id,
+            desktopHeight: 120,
+            mobileHeight: 64,
+            textColor: '#ffffff',
+          },
+        },
+        { slot: 'NAVIGATION', priority: 40, appearance: { navigationEffect: 'ANIMATED' } },
       ],
     } satisfies CampaignLandingDraftDto;
 
@@ -151,6 +177,12 @@ it('publishes only qualifying products, limits banner placements and archives a 
         manualProductSlugs: [remote.slug, ring.slug],
       }),
     ).resolves.toEqual({ total: 1 });
+    await expect(
+      landings.preview(created.id, {
+        ...input,
+        placements: [{ slot: 'COUNTDOWN', priority: 0, appearance: { mediaId: assets[0].id } }],
+      }),
+    ).rejects.toThrow('static fallback');
     const saved = await landings.save(created.id, { ...input, expectedRevision: 1 }, owner.id);
     await expect(landings.publicLanding(slug, 1, now)).rejects.toThrow('not found');
     await expect(
@@ -194,6 +226,25 @@ it('publishes only qualifying products, limits banner placements and archives a 
     await expect(landings.placement('PRODUCT', ring.slug, now)).resolves.toMatchObject({
       banner: { ctaPath: `/campaigns/${slug}` },
     });
+    await expect(landings.placement('COUNTDOWN', undefined, now)).resolves.toMatchObject({
+      banner: {
+        campaignId: created.id,
+        media: { id: assets[0].id },
+        mobileMedia: { id: assets[1].id },
+        stillMedia: { id: assets[2].id },
+        desktopHeight: 120,
+        mobileHeight: 64,
+      },
+    });
+    await expect(landings.placement('COUNTDOWN', undefined, bannerEnd)).resolves.toBeNull();
+    await expect(landings.placement('NAVIGATION', undefined, now)).resolves.toMatchObject({
+      banner: { campaignId: created.id, navigationEffect: 'ANIMATED' },
+    });
+    expect((await campaigns.publicActivity(now)).activeIds).toContain(created.id);
+    await db.campaign.update({ where: { id: created.id }, data: { status: 'PAUSED' } });
+    await expect(landings.placement('NAVIGATION', undefined, now)).resolves.toBeNull();
+    expect((await campaigns.publicActivity(now)).activeIds).not.toContain(created.id);
+    await db.campaign.update({ where: { id: created.id }, data: { status: 'ACTIVE' } });
     await expect(landings.sitemap(now)).resolves.toMatchObject({
       entries: expect.arrayContaining([expect.objectContaining({ slug })]),
     });
@@ -219,6 +270,7 @@ it('publishes only qualifying products, limits banner placements and archives a 
       await db.$transaction([
         db.campaignPlacement.deleteMany({ where: { landing: { slug } } }),
         db.campaignLanding.deleteMany({ where: { slug } }),
+        db.media.deleteMany({ where: { storageKey: { startsWith: `catalog/${slug}-` } } }),
         db.campaignRevision.deleteMany({ where: { campaign: { trackingId: slug } } }),
         db.campaign.deleteMany({ where: { trackingId: slug } }),
         db.campaignLinkIdentity.deleteMany({ where: { id: slug } }),

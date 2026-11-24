@@ -443,6 +443,9 @@ model Media {
   guideTopicSeoOgImages           GuideTopic[]              @relation("GuideTopicSeoOg")
   guideBlockPrimaryMedia          GuideArticleBlock[]       @relation("GuideBlockPrimaryMedia")
   campaignBanners                 Campaign[]
+  campaignPlacementImages        CampaignPlacement[] @relation("CampaignPlacementMedia")
+  campaignPlacementMobileImages  CampaignPlacement[] @relation("CampaignPlacementMobileMedia")
+  campaignPlacementStillImages   CampaignPlacement[] @relation("CampaignPlacementStillMedia")
 
   @@index([deletedAt])
   @@map("media")
@@ -1840,6 +1843,14 @@ enum CampaignBannerSlot {
   HOME
   CATEGORY
   PRODUCT
+  COUNTDOWN
+  NAVIGATION
+}
+
+enum CampaignNavigationEffect {
+  SOLID
+  GRADIENT
+  ANIMATED
 }
 
 model CampaignLanding {
@@ -1867,6 +1878,17 @@ model CampaignPlacement {
   startsAt   DateTime?          @db.Timestamptz(3)
   endsAt     DateTime?          @db.Timestamptz(3)
   landing    CampaignLanding    @relation(fields: [campaignId], references: [campaignId], onDelete: Cascade)
+
+  mediaId          String?                   @db.Uuid
+  mobileMediaId    String?                   @db.Uuid
+  stillMediaId     String?                   @db.Uuid
+  desktopHeight    Int?
+  mobileHeight     Int?
+  textColor        String?                   @db.VarChar(7)
+  navigationEffect CampaignNavigationEffect?
+  media            Media?                    @relation("CampaignPlacementMedia", fields: [mediaId], references: [id], onDelete: Restrict)
+  mobileMedia      Media?                    @relation("CampaignPlacementMobileMedia", fields: [mobileMediaId], references: [id], onDelete: Restrict)
+  stillMedia       Media?                    @relation("CampaignPlacementStillMedia", fields: [stillMediaId], references: [id], onDelete: Restrict)
 
   @@id([campaignId, slot])
   @@index([slot, targetId, priority])
@@ -2177,6 +2199,8 @@ model OrderItem {
   variantId               String            @db.Uuid
   quantity                Int
   productNameSnapshot     String            @db.VarChar(200)
+  campaignIdSnapshot      String?           @db.Uuid
+  campaignNameSnapshot    String?           @db.VarChar(150)
   variantNameSnapshot     String?           @db.VarChar(150)
   skuSnapshot             String            @db.VarChar(100)
   sizeLabelSnapshot       String?           @db.VarChar(100)

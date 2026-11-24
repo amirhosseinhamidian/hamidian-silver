@@ -83,6 +83,7 @@ it('locks transitions across transactions, reuses tracking and expires the banne
     expect(concurrent.reduce((sum, count) => sum + count, 0)).toBe(1);
     await expect(campaigns.publicBanner(start)).resolves.toEqual({
       banner: {
+        campaignId: created.id,
         name: draft.name,
         message: draft.message,
         endsAt: end.toISOString(),

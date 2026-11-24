@@ -221,7 +221,12 @@ export function ProductPurchasePanel({
           راهنمای انتخاب سایز
         </Link>
       </div>
-      {product.campaignQuota && <CampaignQuotaProgress quota={product.campaignQuota} />}
+      {product.campaignQuota && (
+        <CampaignQuotaProgress
+          quota={product.campaignQuota}
+          showName={product.campaignQuota.campaignId !== product.campaignOffer?.campaignId}
+        />
+      )}
 
       {hasMultipleVariants ? (
         <fieldset ref={variantSelectorRef} className="mt-5 scroll-mt-28">

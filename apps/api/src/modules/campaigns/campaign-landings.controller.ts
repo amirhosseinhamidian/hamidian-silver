@@ -49,7 +49,7 @@ export class CampaignLandingsController {
   @Header('Cache-Control', 'no-store')
   @ApiOkResponse({ type: PublicCampaignDto })
   async placement(@Query() query: CampaignPlacementQueryDto): Promise<PublicCampaignDto> {
-    if (query.slot !== 'HOME' && !query.slug)
+    if ((query.slot === 'CATEGORY' || query.slot === 'PRODUCT') && !query.slug)
       throw new BadRequestException('A category or product slug is required.');
     if (query.slug?.includes('\0')) throw new BadRequestException('Invalid slug.');
     const result = await this.landings.placement(query.slot, query.slug);

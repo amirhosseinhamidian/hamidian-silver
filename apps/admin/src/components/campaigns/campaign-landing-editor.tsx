@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { SiteMediaField } from '@/components/site-settings/site-media-field';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input, Textarea } from '@/components/ui/form-control';
@@ -24,11 +25,26 @@ type Draft = components['schemas']['CampaignLandingDraftDto'];
 type Editor = components['schemas']['CampaignLandingEditorDto'];
 type AttributeMode = 'choices' | 'range';
 type Slot = Draft['placements'][number]['slot'];
+type PlacementMedia = components['schemas']['CampaignPlacementMediaDto'];
+type MediaKey = 'media' | 'mobileMedia' | 'stillMedia';
+
+const assetFields: ReadonlyArray<{ key: MediaKey; label: string }> = [
+  { key: 'media', label: 'تصویر دسکتاپ' },
+  { key: 'mobileMedia', label: 'تصویر موبایل' },
+  { key: 'stillMedia', label: 'تصویر ثابت جایگزین GIF' },
+];
+const navigationEffects = [
+  { value: 'SOLID', label: 'رنگ ثابت' },
+  { value: 'GRADIENT', label: 'گرادیان ثابت' },
+  { value: 'ANIMATED', label: 'گرادیان با حرکت کوتاه' },
+] as const;
 
 const slotLabels: Record<Slot, string> = {
   HOME: 'صفحهٔ نخست',
   CATEGORY: 'صفحهٔ دسته',
   PRODUCT: 'صفحهٔ محصول',
+  COUNTDOWN: 'نوار سراسری شمارش معکوس',
+  NAVIGATION: 'منوی بالای فروشگاه',
 };
 const slots = Object.keys(slotLabels) as Slot[];
 const labels = {
@@ -80,6 +96,24 @@ export function CampaignLandingEditor({
   const [enabledSlots, setEnabledSlots] = useState<Slot[]>(
     draft?.placements.map(({ slot }) => slot) ?? [],
   );
+  const [placementMedia, setPlacementMedia] = useState<Partial<Record<Slot, PlacementMedia>>>(() =>
+    Object.fromEntries((editor.placementMedia ?? []).map((entry) => [entry.slot, entry])),
+  );
+  const [altTexts, setAltTexts] = useState<Record<string, string>>({});
+  const [uploads, setUploads] = useState<string[]>([]);
+  function changeMedia(slot: Slot, key: MediaKey, media: PlacementMedia[MediaKey]) {
+    setPlacementMedia((current) => ({
+      ...current,
+      [slot]: {
+        slot,
+        media: null,
+        mobileMedia: null,
+        stillMedia: null,
+        ...current[slot],
+        [key]: media,
+      },
+    }));
+  }
   const [attributeRows, setAttributeRows] = useState(() =>
     (draft?.filters.attributes ?? []).map((filter, key) => ({
       key,
@@ -133,12 +167,32 @@ export function CampaignLandingEditor({
         targetSlug: text(`target-${slot}`) || null,
         startsTehran: text(`start-${slot}`) || null,
         endsTehran: text(`end-${slot}`) || null,
+        appearance:
+          slot === 'NAVIGATION'
+            ? {
+                navigationEffect: (
+                  navigationEffects.find(({ value }) => value === text('navigation-effect')) ??
+                  navigationEffects[0]
+                ).value,
+              }
+            : {
+                mediaId: placementMedia[slot]?.media?.id ?? null,
+                mobileMediaId: placementMedia[slot]?.mobileMedia?.id ?? null,
+                stillMediaId: placementMedia[slot]?.stillMedia?.id ?? null,
+                ...(slot === 'COUNTDOWN'
+                  ? {
+                      desktopHeight: readOptionalNumber(text('countdown-desktop-height')),
+                      mobileHeight: readOptionalNumber(text('countdown-mobile-height')),
+                      textColor: text('countdown-text-color') || null,
+                    }
+                  : {}),
+              },
       })),
     };
   }
 
   async function submit(action: 'preview' | 'save', form?: HTMLFormElement | null) {
-    if (busy || (editable && !form?.reportValidity())) return;
+    if (busy || uploads.length || (editable && !form?.reportValidity())) return;
     setBusy(action);
     setCount(null);
     setError(null);
@@ -502,7 +556,7 @@ export function CampaignLandingEditor({
                   </label>
                   {enabledSlots.includes(slot) && (
                     <div className="grid gap-3 sm:grid-cols-2">
-                      {slot !== 'HOME' && (
+                      {(slot === 'CATEGORY' || slot === 'PRODUCT') && (
                         <FormField
                           id={`target-${slot}`}
                           label="اسلاگ مقصد"
@@ -556,6 +610,107 @@ export function CampaignLandingEditor({
                           />
                         )}
                       </FormField>
+                      {slot === 'NAVIGATION' && (
+                        <FormField id="navigation-effect" label="جلوهٔ منو">
+                          {(control) => (
+                            <Select
+                              {...control}
+                              name={control.id}
+                              options={navigationEffects}
+                              defaultValue={saved?.appearance?.navigationEffect ?? 'SOLID'}
+                            />
+                          )}
+                        </FormField>
+                      )}
+                      {slot === 'COUNTDOWN' && (
+                        <>
+                          {(
+                            [
+                              [
+                                'countdown-desktop-height',
+                                'حداقل ارتفاع دسکتاپ (پیکسل)',
+                                saved?.appearance?.desktopHeight,
+                              ],
+                              [
+                                'countdown-mobile-height',
+                                'حداقل ارتفاع موبایل (پیکسل)',
+                                saved?.appearance?.mobileHeight,
+                              ],
+                            ] as const
+                          ).map(([id, label, value]) => (
+                            <FormField key={id} id={id} label={label} hint="از ۴۸ تا ۳۲۰">
+                              {(control) => (
+                                <Input
+                                  {...control}
+                                  name={control.id}
+                                  type="number"
+                                  min={48}
+                                  max={320}
+                                  defaultValue={value ?? undefined}
+                                />
+                              )}
+                            </FormField>
+                          ))}
+                          <FormField id="countdown-text-color" label="رنگ متن">
+                            {(control) => (
+                              <Input
+                                {...control}
+                                name={control.id}
+                                type="color"
+                                defaultValue={saved?.appearance?.textColor ?? '#ffffff'}
+                              />
+                            )}
+                          </FormField>
+                          <p className="text-xs text-[var(--admin-color-muted)] sm:col-span-2">
+                            لینک نوار از دکمهٔ کمپین خوانده می‌شود. در صورت خالی بودن آن، صفحهٔ
+                            کمپین باز می‌شود.
+                          </p>
+                        </>
+                      )}
+                      {slot !== 'NAVIGATION' &&
+                        assetFields.map(({ key, label }) => {
+                          const id = `${slot}-${key}`;
+                          const media = placementMedia[slot]?.[key] ?? null;
+                          const altText = altTexts[id] ?? media?.altText ?? '';
+                          return (
+                            <div key={key} className="space-y-2">
+                              <FormField id={id} label={`متن جایگزین برای بارگذاری ${label}`}>
+                                {(control) => (
+                                  <Input
+                                    {...control}
+                                    value={altText}
+                                    maxLength={255}
+                                    onChange={(event) => {
+                                      const value = event.currentTarget.value;
+                                      setAltTexts((current) => ({ ...current, [id]: value }));
+                                    }}
+                                  />
+                                )}
+                              </FormField>
+                              <SiteMediaField
+                                label={label}
+                                media={media}
+                                altText={altText}
+                                hint={
+                                  key === 'stillMedia'
+                                    ? 'در صورت استفاده از GIF، تصویر ثابت الزامی است.'
+                                    : 'GIF حداکثر ۴ مگابایت یا تصویر ثابت'
+                                }
+                                allowCampaignGif={key !== 'stillMedia'}
+                                uploadUrl="/api/campaigns/media"
+                                onUploaded={(file) => changeMedia(slot, key, file)}
+                                onClear={() => changeMedia(slot, key, null)}
+                                onPendingChange={(pending) =>
+                                  setUploads((current) =>
+                                    pending
+                                      ? [...current, id]
+                                      : current.filter((item) => item !== id),
+                                  )
+                                }
+                              />
+                            </div>
+                          );
+                        })}
                     </div>
                   )}
                 </div>
@@ -566,13 +721,17 @@ export function CampaignLandingEditor({
         {error && <Alert tone="danger">{error}</Alert>}
         {countLabel && <Alert tone={count ? 'success' : 'warning'}>{countLabel}</Alert>}
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" loading={busy === 'save'} disabled={busy === 'preview'}>
+          <Button
+            type="submit"
+            loading={busy === 'save'}
+            disabled={busy === 'preview' || uploads.length > 0}
+          >
             ذخیرهٔ صفحه و مجموعه
           </Button>
           <Button
             variant="outline"
             loading={busy === 'preview'}
-            disabled={busy === 'save'}
+            disabled={busy === 'save' || uploads.length > 0}
             onClick={() => void submit('preview', formRef.current)}
           >
             پیش‌نمایش تعداد محصولات

@@ -15,6 +15,7 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CatalogService } from '../catalog/catalog.service';
 import { PublicCatalogAvailability } from '../catalog/dto/public-catalog-facets.dto';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
+import { validateCampaignPlacementAppearance } from './campaign-placement-appearance';
 import { formatTehranDate, parseTehranDate } from './campaign-calendar';
 import type { CampaignBannerDto } from './dto/campaign.dto';
 import type {
@@ -26,6 +27,7 @@ import type {
   SaveCampaignLandingDto,
 } from './dto/campaign-landing.dto';
 
+const placementMedia = { media: true, mobileMedia: true, stillMedia: true } as const;
 const productPageSize = 24;
 const emptyProducts = { items: [], total: 0, totalPages: 0, page: 1, pageSize: productPageSize };
 const activeWindow = (now: Date) =>
@@ -50,7 +52,7 @@ export class CampaignLandingsService {
   async editor(campaignId: string): Promise<CampaignLandingEditorDto> {
     const campaign = await this.db.campaign.findUnique({
       where: { id: campaignId },
-      select: { revision: true, landing: { include: { placements: true } } },
+      select: { revision: true, landing: { include: { placements: { include: placementMedia } } } },
     });
     if (!campaign) throw new NotFoundException('Campaign not found.');
     const landing = campaign.landing;
@@ -84,6 +86,16 @@ export class CampaignLandingsService {
     const slugs = new Map(products.map((row) => [row.id, row.slug]));
     return {
       revision: campaign.revision,
+      placementMedia: landing.placements
+        .filter(
+          ({ mediaId, mobileMediaId, stillMediaId }) => mediaId || mobileMediaId || stillMediaId,
+        )
+        .map((row) => ({
+          slot: row.slot,
+          media: this.media(row.media),
+          mobileMedia: this.media(row.mobileMedia),
+          stillMedia: this.media(row.stillMedia),
+        })),
       landing: {
         slug: landing.slug,
         seoMode: landing.seoMode,
@@ -100,6 +112,15 @@ export class CampaignLandingsService {
               ?.slug ?? row.targetId,
           startsTehran: row.startsAt ? formatTehranDate(row.startsAt) : null,
           endsTehran: row.endsAt ? formatTehranDate(row.endsAt) : null,
+          appearance: {
+            mediaId: row.mediaId,
+            mobileMediaId: row.mobileMediaId,
+            stillMediaId: row.stillMediaId,
+            desktopHeight: row.desktopHeight,
+            mobileHeight: row.mobileHeight,
+            textColor: row.textColor,
+            navigationEffect: row.navigationEffect,
+          },
         })),
       },
     };
@@ -304,7 +325,10 @@ export class CampaignLandingsService {
             ],
             landing: { campaign: { ...activeWindow(now), bannerEnabled: true } },
           },
-          include: { landing: { include: { campaign: { include: { media: true } } } } },
+          include: {
+            ...placementMedia,
+            landing: { include: { campaign: { include: { media: true } } } },
+          },
           orderBy: [
             { priority: 'desc' },
             { landing: { campaign: { startsAt: 'desc' } } },
@@ -324,12 +348,25 @@ export class CampaignLandingsService {
             startsAt: campaign.startsAt,
             campaignId: campaign.id,
             banner: {
+              campaignId: campaign.id,
               name: campaign.name,
               message: campaign.message,
               endsAt: endsAt.toISOString(),
-              ctaPath: `/campaigns/${candidate.landing.slug}`,
-              ctaLabel: 'دیدن مجموعه',
-              media: this.media(campaign.media),
+              ctaPath:
+                slot === 'COUNTDOWN' && campaign.ctaPath
+                  ? campaign.ctaPath
+                  : `/campaigns/${candidate.landing.slug}`,
+              ctaLabel: slot === 'COUNTDOWN' ? (campaign.ctaLabel ?? 'دیدن مجموعه') : 'دیدن مجموعه',
+              media:
+                slot === 'NAVIGATION'
+                  ? null
+                  : (this.media(candidate.media) ?? this.media(campaign.media)),
+              mobileMedia: this.media(candidate.mobileMedia),
+              stillMedia: this.media(candidate.stillMedia),
+              desktopHeight: candidate.desktopHeight,
+              mobileHeight: candidate.mobileHeight,
+              textColor: candidate.textColor,
+              navigationEffect: candidate.navigationEffect,
             } satisfies CampaignBannerDto,
           };
         }
@@ -396,8 +433,8 @@ export class CampaignLandingsService {
     for (const inputPlacement of input.placements) {
       const { slot, priority } = inputPlacement;
       const targetSlug = inputPlacement.targetSlug?.trim();
-      if (slot === 'HOME' && targetSlug)
-        throw new BadRequestException('The homepage placement does not take a target.');
+      if (slot !== 'CATEGORY' && slot !== 'PRODUCT' && targetSlug)
+        throw new BadRequestException('This placement does not take a target.');
       const targetId = await this.resolveTarget(tx, slot, targetSlug);
       if (targetSlug && !targetId)
         throw new BadRequestException('Select a published banner target.');
@@ -405,6 +442,7 @@ export class CampaignLandingsService {
         slot,
         priority,
         targetId,
+        ...(await validateCampaignPlacementAppearance(tx, slot, inputPlacement.appearance)),
         startsAt: inputPlacement.startsTehran ? parseTehranDate(inputPlacement.startsTehran) : null,
         endsAt: inputPlacement.endsTehran ? parseTehranDate(inputPlacement.endsTehran) : null,
       };
@@ -492,7 +530,7 @@ export class CampaignLandingsService {
     slot: CampaignBannerSlot,
     slug?: string,
   ) {
-    if (!slug || slot === 'HOME') return null;
+    if (!slug || (slot !== 'CATEGORY' && slot !== 'PRODUCT')) return null;
     const record =
       slot === 'CATEGORY'
         ? await tx.category.findFirst({

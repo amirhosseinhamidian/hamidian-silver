@@ -4,10 +4,13 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import Link from 'next/link';
 import { FiMenu, FiX } from 'react-icons/fi';
 
+import { CampaignNavigationItem } from '@/components/layout/campaign-navigation-item';
+import type { PublicCampaignBanner } from '@/lib/home/public-campaign-banner';
 import type { StorefrontNavigationCategory } from '@/components/layout/storefront-header';
 
 type StorefrontMobileMenuProps = Readonly<{
   navigationCategories: readonly StorefrontNavigationCategory[];
+  campaign?: PublicCampaignBanner | null;
 }>;
 
 const utilityLinks = [
@@ -23,7 +26,10 @@ const utilityLinks = [
   { href: '/about', label: 'درباره گالری حمیدیان' },
 ] as const;
 
-export function StorefrontMobileMenu({ navigationCategories }: StorefrontMobileMenuProps) {
+export function StorefrontMobileMenu({
+  navigationCategories,
+  campaign,
+}: StorefrontMobileMenuProps) {
   return (
     <DialogPrimitive.Root>
       <DialogPrimitive.Trigger asChild>
@@ -85,6 +91,8 @@ export function StorefrontMobileMenu({ navigationCategories }: StorefrontMobileM
                   </Link>
                 </DialogPrimitive.Close>
               </li>
+
+              {campaign && <CampaignNavigationItem campaign={campaign} mobile />}
 
               {navigationCategories.map((category) => (
                 <li key={category.id}>

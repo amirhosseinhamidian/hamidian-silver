@@ -1,3 +1,4 @@
+import type { PublicCampaignBanner } from '@/lib/home/public-campaign-banner';
 import {
   StorefrontFooter,
   type StorefrontFooterContent,
@@ -12,6 +13,8 @@ type StorefrontShellProps = Readonly<{
   children: ReactNode;
   footerContent?: StorefrontFooterContent | null;
   announcement?: StorefrontAnnouncement | null;
+  campaignCountdown?: PublicCampaignBanner | null;
+  campaignNavigation?: PublicCampaignBanner | null;
   navigationCategories?: readonly StorefrontNavigationCategory[];
   authenticated?: boolean;
 }>;
@@ -20,6 +23,8 @@ export function StorefrontShell({
   children,
   footerContent,
   announcement,
+  campaignCountdown,
+  campaignNavigation,
   navigationCategories = [],
   authenticated = false,
 }: StorefrontShellProps) {
@@ -35,6 +40,8 @@ export function StorefrontShell({
       <StorefrontHeader
         authenticated={authenticated}
         announcement={announcement}
+        campaignCountdown={campaignCountdown}
+        campaignNavigation={campaignNavigation}
         navigationCategories={navigationCategories}
       />
       <div className="flex-1">{children}</div>

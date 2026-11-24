@@ -1669,6 +1669,9 @@ export class CatalogService {
               slug: true,
               salePriceToman: true,
               compareAtPriceToman: true,
+              categories: {
+                select: { category: { select: { id: true, isActive: true, deletedAt: true } } },
+              },
               media: {
                 orderBy: { sortOrder: 'asc' },
                 select: {
@@ -1691,6 +1694,53 @@ export class CatalogService {
         : [];
     const productById = new Map(products.map((product) => [product.id, product] as const));
 
+    const [promotions, quotas] =
+      this.promotions && productIds.length
+        ? await Promise.all([
+            this.promotions.catalogPromotions(this.prisma),
+            readPublicQuotas(this.prisma, productIds),
+          ])
+        : [];
+    const campaignOffers = new Map<
+      string,
+      NonNullable<ReturnType<typeof selectCatalogPromotion>>
+    >();
+    if (promotions?.length) {
+      for (const product of products) {
+        const quota = quotas?.get(product.id);
+        const offer = selectCatalogPromotion(
+          promotions,
+          promotionTarget(product),
+          product.salePriceToman,
+          quota?.remaining === 0 ? quota.campaignId : undefined,
+        );
+        if (offer) campaignOffers.set(product.id, offer);
+      }
+    }
+    const stockProducts = campaignOffers.size
+      ? await this.prisma.product.findMany({
+          where: { id: { in: [...campaignOffers.keys()] }, ...publicCatalogProductWhere },
+          select: {
+            id: true,
+            purchaseMode: true,
+            sizeMode: true,
+            variants: { where: { isActive: true, deletedAt: null }, select: availabilitySelect },
+          },
+        })
+      : [];
+    const availableProductIds = new Set(
+      stockProducts
+        .filter(
+          (product) =>
+            productAvailableQuantity(
+              product.purchaseMode,
+              product.variants.map((variant) =>
+                variantAvailableQuantity(variant, product.sizeMode),
+              ),
+            ) > 0,
+        )
+        .map(({ id }) => id),
+    );
     return {
       items: productIds.flatMap((productId) => {
         const product = productById.get(productId);
@@ -1699,6 +1749,10 @@ export class CatalogService {
           product.media.find((item) => item.isPrimary && !item.media.deletedAt) ??
           product.media.find((item) => !item.media.deletedAt);
 
+        const campaignQuota = quotas?.get(productId);
+        const campaignOffer = availableProductIds.has(productId)
+          ? campaignOffers.get(productId)
+          : undefined;
         return [
           {
             id: product.id,
@@ -1706,6 +1760,8 @@ export class CatalogService {
             slug: product.slug,
             salePriceToman: product.salePriceToman,
             compareAtPriceToman: product.compareAtPriceToman,
+            ...(campaignQuota ? { campaignQuota } : {}),
+            ...(campaignOffer ? { campaignOffer } : {}),
             primaryMedia: primaryMedia
               ? {
                   url: this.publicMediaUrl.resolve(primaryMedia.media.storageKey),

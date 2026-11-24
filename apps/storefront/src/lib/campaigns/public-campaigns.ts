@@ -20,7 +20,10 @@ export const getPublicCampaignLanding = cache(async (slug: string, page: number)
   return result.data;
 });
 
-export async function getPublicCampaignPlacement(slot: 'CATEGORY' | 'PRODUCT', slug: string) {
+export async function getPublicCampaignPlacement(
+  slot: 'CATEGORY' | 'PRODUCT' | 'COUNTDOWN' | 'NAVIGATION',
+  slug?: string,
+) {
   const client = campaignClient();
   if (!client) return null;
   try {
@@ -48,5 +51,19 @@ export async function getPublicCampaignSitemap(): Promise<
     return result.data?.entries ?? [];
   } catch {
     return [];
+  }
+}
+
+export async function getPublicCampaignActivity() {
+  const client = campaignClient();
+  if (!client) return null;
+  try {
+    const { data } = await client.GET('/api/v1/campaigns/public/activity', {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(1_500),
+    });
+    return data ?? null;
+  } catch {
+    return null;
   }
 }

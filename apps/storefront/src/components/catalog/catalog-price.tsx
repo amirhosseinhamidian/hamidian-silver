@@ -1,7 +1,8 @@
 'use client';
 
 import type { components } from '@hamidian/contracts';
-import { useCampaignExpiration } from '@/components/catalog/use-campaign-expiration';
+import { CampaignTag } from '@/components/catalog/campaign-tag';
+import { useCampaignVisibility } from '@/lib/campaigns/campaign-visibility';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
@@ -31,8 +32,8 @@ export function CatalogPrice({
   priceClassName: string;
   details?: boolean;
 }) {
-  const expired = useCampaignExpiration(offer?.endsAt);
-  const active = expired ? null : offer;
+  const visible = useCampaignVisibility(offer?.campaignId, offer?.endsAt);
+  const active = visible ? offer : null;
   const price = active?.price;
   const previous = price?.regularToman ?? (active ? null : compare);
   const percent = price?.discountPercent ?? getDiscountPercent(previous, sale);
@@ -40,6 +41,11 @@ export function CatalogPrice({
 
   return (
     <>
+      {active && (
+        <div>
+          <CampaignTag name={active.name} />
+        </div>
+      )}
       {percent !== null && (
         <div className="flex items-center justify-end gap-2 text-xs text-[var(--sf-color-muted)]">
           <del className="line-through">
@@ -56,7 +62,6 @@ export function CatalogPrice({
       )}
       {active && !price && active.conditions.length > 0 && (
         <p className="text-xs leading-5 text-[var(--sf-color-muted)]">
-          {active.name} ·{' '}
           {active.conditions
             .map((condition) =>
               condition === 'MINIMUM' && active.minimumToman !== null

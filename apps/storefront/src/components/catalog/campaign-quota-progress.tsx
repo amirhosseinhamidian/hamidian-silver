@@ -1,20 +1,24 @@
 'use client';
 
 import type { components } from '@hamidian/contracts';
-import { useCampaignExpiration } from '@/components/catalog/use-campaign-expiration';
+import { CampaignTag } from '@/components/catalog/campaign-tag';
+import { useCampaignVisibility } from '@/lib/campaigns/campaign-visibility';
 
 const number = new Intl.NumberFormat('fa-IR');
 
 export function CampaignQuotaProgress({
   quota,
+  showName = false,
 }: {
+  showName?: boolean;
   quota: components['schemas']['PublicCampaignQuotaDto'];
 }) {
-  const expired = useCampaignExpiration(quota.endsAt);
-  if (expired) return null;
+  const visible = useCampaignVisibility(quota.campaignId, quota.endsAt);
+  if (!visible) return null;
 
   return (
     <div className="mt-3 space-y-1 text-start text-xs leading-5 text-[var(--sf-color-muted)]">
+      {showName && <CampaignTag name={quota.name} />}
       <div className="flex flex-wrap justify-between gap-x-2">
         <span>{number.format(quota.sold)} فروش‌رفته</span>
         <span>

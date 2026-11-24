@@ -290,6 +290,19 @@ export class CampaignsService {
     });
   }
 
+  async publicActivity(now = new Date()) {
+    const campaigns = await this.db.campaign.findMany({
+      where: {
+        status: 'ACTIVE',
+        startsAt: { lte: now },
+        endsAt: { gt: now },
+        OR: [{ bannerEnabled: true }, { promotion: { isNot: null } }],
+      },
+      select: { id: true },
+    });
+    return { activeIds: campaigns.map(({ id }) => id) };
+  }
+
   async publicBanner(now = new Date()): Promise<PublicCampaignDto> {
     const [campaign, placement] = await Promise.all([
       this.db.campaign.findFirst({
@@ -328,6 +341,7 @@ export class CampaignsService {
     }
     return {
       banner: campaign && {
+        campaignId: campaign.id,
         name: campaign.name,
         message: campaign.message,
         ctaPath: campaign.ctaPath,
@@ -430,7 +444,7 @@ export class CampaignsService {
 
   private async checkMedia(tx: Prisma.TransactionClient, id: string) {
     const media = await tx.media.findFirst({
-      where: { id, deletedAt: null, mimeType: { startsWith: 'image/' } },
+      where: { id, deletedAt: null, mimeType: { startsWith: 'image/', not: 'image/gif' } },
       select: { id: true },
     });
     if (!media) throw new BadRequestException('Choose an available campaign image.');

@@ -56,6 +56,27 @@ describe('LocalMediaStorageService', () => {
     expect(stored.storageKey).toMatch(/^catalog\/\d{4}\/\d{2}\/front-view-ring-[\da-f-]+\.png$/);
   });
 
+  it('accepts a complete GIF for campaign uploads only', async () => {
+    const buffer = Buffer.from(
+      '47494638396101000100800000000000ffffff21f90401000000002c00000000010001000002024401003b',
+      'hex',
+    );
+    const file = {
+      buffer,
+      mimetype: 'image/gif',
+      originalname: 'campaign.gif',
+      size: buffer.length,
+    };
+    await expect(service.storeImage(file)).rejects.toThrow('supported');
+    const stored = await service.storeImage(file, 'campaign', true);
+    expect(stored.mimeType).toBe('image/gif');
+    await expect(readFile(join(rootPath, stored.storageKey))).resolves.toEqual(buffer);
+    const truncated = buffer.subarray(0, buffer.length - 1);
+    await expect(
+      service.storeImage({ ...file, buffer: truncated, size: truncated.length }, 'campaign', true),
+    ).rejects.toThrow('valid campaign GIF');
+  });
+
   it('rejects a claimed image whose bytes do not match the MIME type', async () => {
     await expect(
       service.storeImage({

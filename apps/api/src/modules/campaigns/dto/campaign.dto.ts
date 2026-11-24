@@ -14,7 +14,11 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { CampaignAudience, CampaignStatus } from '../../../generated/prisma/enums';
+import {
+  CampaignAudience,
+  CampaignNavigationEffect,
+  CampaignStatus,
+} from '../../../generated/prisma/enums';
 import { CampaignAction } from '../campaign-lifecycle';
 import { CampaignBudgetDto } from './campaign-operations.dto';
 
@@ -280,6 +284,9 @@ export class CampaignDetailDto extends CampaignSummaryDto {
 }
 
 export class CampaignBannerDto {
+  @ApiPropertyOptional({ type: String, format: 'uuid' })
+  campaignId?: string;
+
   name!: string;
   message!: string;
 
@@ -294,9 +301,32 @@ export class CampaignBannerDto {
 
   @ApiProperty({ type: () => CampaignMediaDto, nullable: true })
   media!: CampaignMediaDto | null;
+
+  @ApiPropertyOptional({ type: () => CampaignMediaDto, nullable: true })
+  mobileMedia?: CampaignMediaDto | null;
+
+  @ApiPropertyOptional({ type: () => CampaignMediaDto, nullable: true })
+  stillMedia?: CampaignMediaDto | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  desktopHeight?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  mobileHeight?: number | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  textColor?: string | null;
+
+  @ApiPropertyOptional({ enum: CampaignNavigationEffect, nullable: true })
+  navigationEffect?: CampaignNavigationEffect | null;
 }
 
 export class PublicCampaignDto {
   @ApiProperty({ type: () => CampaignBannerDto, nullable: true })
   banner!: CampaignBannerDto | null;
+}
+
+export class PublicCampaignActivityDto {
+  @ApiProperty({ type: String, isArray: true })
+  activeIds!: string[];
 }

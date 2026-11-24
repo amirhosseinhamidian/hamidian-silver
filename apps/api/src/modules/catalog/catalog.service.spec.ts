@@ -1149,6 +1149,7 @@ describe('CatalogService', () => {
     });
 
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(3);
+    expect(prisma.product.findMany).toHaveBeenCalledTimes(1);
     expect(prisma.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ id: { in: [firstId, secondId] } }),
