@@ -10,10 +10,12 @@ export function CampaignArtwork({
   artwork,
   className,
   sizes,
+  preload = false,
 }: {
   artwork: Artwork;
   className: string;
   sizes: string;
+  preload?: boolean;
 }) {
   const [playing, setPlaying] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -62,6 +64,7 @@ export function CampaignArtwork({
           }
           fill
           unoptimized
+          preload={preload}
           sizes={sizes}
           className="object-cover"
           onError={() => setFailed(true)}

@@ -8,11 +8,24 @@ import { CampaignPublisher } from './campaign-publisher';
 import { CampaignLandingsController } from './campaign-landings.controller';
 import { CampaignLandingsService } from './campaign-landings.service';
 import { CampaignsController } from './campaigns.controller';
+import { FestivalDesignController } from './festival-design.controller';
+import { FestivalDesignService } from './festival-design.service';
 import { CampaignsService } from './campaigns.service';
 
 @Module({
   imports: [DatabaseModule, CatalogModule, PromotionsModule],
-  controllers: [CampaignsController, CampaignLandingsController, CampaignQuotasController],
-  providers: [CampaignsService, CampaignPublisher, CampaignLandingsService, CampaignQuotasService],
+  controllers: [
+    CampaignsController,
+    CampaignLandingsController,
+    CampaignQuotasController,
+    FestivalDesignController,
+  ],
+  providers: [
+    CampaignsService,
+    CampaignPublisher,
+    CampaignLandingsService,
+    CampaignQuotasService,
+    FestivalDesignService,
+  ],
 })
 export class CampaignsModule {}

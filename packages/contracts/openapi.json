@@ -539,6 +539,44 @@
             }
           },
           {
+            "name": "scopeCategory",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 180,
+              "type": "string"
+            }
+          },
+          {
+            "name": "scopeBrand",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 180,
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "newest",
+              "type": "string",
+              "enum": [
+                "newest",
+                "price-asc",
+                "price-desc",
+                "name-asc",
+                "availability",
+                "best-selling",
+                "featured"
+              ]
+            }
+          },
+          {
             "name": "page",
             "required": false,
             "in": "query",
@@ -547,6 +585,38 @@
               "maximum": 10000,
               "default": 1,
               "type": "number"
+            }
+          },
+          {
+            "name": "minPriceToman",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 2147483647,
+              "type": "number"
+            }
+          },
+          {
+            "name": "maxPriceToman",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 2147483647,
+              "type": "number"
+            }
+          },
+          {
+            "name": "productsOnly",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^1$",
+              "type": "string",
+              "enum": [
+                "1"
+              ]
             }
           }
         ],
@@ -818,6 +888,154 @@
         },
         "tags": [
           "CampaignQuotas"
+        ]
+      }
+    },
+    "/api/v1/campaigns/{id}/design": {
+      "get": {
+        "operationId": "FestivalDesignController_edit_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FestivalDesignEditorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "FestivalDesign"
+        ]
+      },
+      "put": {
+        "operationId": "FestivalDesignController_save_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveFestivalDesignDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FestivalDesignEditorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "FestivalDesign"
+        ]
+      }
+    },
+    "/api/v1/campaigns/{id}/design/restore": {
+      "post": {
+        "operationId": "FestivalDesignController_restore_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreFestivalDesignDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FestivalDesignEditorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "FestivalDesign"
+        ]
+      }
+    },
+    "/api/v1/campaigns/{id}/design/preview": {
+      "post": {
+        "operationId": "FestivalDesignController_preview_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FestivalDesignDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FestivalPreviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "FestivalDesign"
         ]
       }
     },
@@ -12826,6 +13044,73 @@
           "requestId"
         ]
       },
+      "PublicCatalogFacetOptionDto": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "value",
+          "label",
+          "count"
+        ]
+      },
+      "FestivalThemeDto": {
+        "type": "object",
+        "properties": {
+          "decoration": {
+            "enum": [
+              "NONE",
+              "DOTS",
+              "LINES"
+            ],
+            "type": "string"
+          },
+          "motion": {
+            "enum": [
+              "STILL",
+              "SOFT"
+            ],
+            "type": "string"
+          },
+          "background": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "surface": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "foreground": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "accent": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "gradient": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          }
+        },
+        "required": [
+          "decoration",
+          "motion",
+          "background",
+          "surface",
+          "foreground",
+          "accent"
+        ]
+      },
       "PublicCatalogMatchingVariantDto": {
         "type": "object",
         "properties": {
@@ -13247,6 +13532,205 @@
           "isAvailable"
         ]
       },
+      "FestivalEntryDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "maxPriceToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "actionPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "PublicFestivalHeroSlideDto": {
+        "type": "object",
+        "properties": {
+          "media": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignMediaDto"
+              }
+            ]
+          },
+          "mobileMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignMediaDto"
+              }
+            ]
+          },
+          "stillMedia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignMediaDto"
+              }
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "subtitle": {
+            "type": "string"
+          },
+          "actionLabel": {
+            "type": "string"
+          },
+          "actionPath": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "media",
+          "mobileMedia",
+          "stillMedia",
+          "title"
+        ]
+      },
+      "PublicFestivalCategoryDto": {
+        "type": "object",
+        "properties": {
+          "media": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignMediaDto"
+              }
+            ]
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "media",
+          "slug",
+          "name"
+        ]
+      },
+      "PublicFestivalSectionDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "HERO",
+              "COUNTDOWN",
+              "HIGHLIGHTS",
+              "CATEGORIES",
+              "DISCOUNTS",
+              "PICKS",
+              "LOW_QUOTA",
+              "BUDGET",
+              "OFFERS",
+              "PRODUCTS",
+              "FAQ"
+            ],
+            "type": "string"
+          },
+          "layout": {
+            "enum": [
+              "GRID",
+              "STRIP"
+            ],
+            "type": "string"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogProductSummaryDto"
+            }
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalEntryDto"
+            }
+          },
+          "slides": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicFestivalHeroSlideDto"
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicFestivalCategoryDto"
+            }
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "layout",
+          "title"
+        ]
+      },
+      "PublicFestivalDesignDto": {
+        "type": "object",
+        "properties": {
+          "refreshAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "filterCategories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogFacetOptionDto"
+            }
+          },
+          "filterBrands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicCatalogFacetOptionDto"
+            }
+          },
+          "theme": {
+            "$ref": "#/components/schemas/FestivalThemeDto"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicFestivalSectionDto"
+            }
+          }
+        },
+        "required": [
+          "filterCategories",
+          "filterBrands",
+          "theme",
+          "sections"
+        ]
+      },
       "PublicCatalogRankingDto": {
         "type": "object",
         "properties": {
@@ -13327,6 +13811,17 @@
               "RECURRING"
             ],
             "type": "string"
+          },
+          "campaignId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "design": {
+            "$ref": "#/components/schemas/PublicFestivalDesignDto"
           },
           "media": {
             "nullable": true,
@@ -13879,6 +14374,316 @@
           "expectedRevision"
         ]
       },
+      "FestivalHeroSlideDto": {
+        "type": "object",
+        "properties": {
+          "mediaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mobileMediaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stillMediaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "subtitle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "actionLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "actionPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220
+          }
+        },
+        "required": [
+          "mediaId",
+          "title"
+        ]
+      },
+      "FestivalSectionDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "HERO",
+              "COUNTDOWN",
+              "HIGHLIGHTS",
+              "CATEGORIES",
+              "DISCOUNTS",
+              "PICKS",
+              "LOW_QUOTA",
+              "BUDGET",
+              "OFFERS",
+              "PRODUCTS",
+              "FAQ"
+            ],
+            "type": "string"
+          },
+          "layout": {
+            "enum": [
+              "GRID",
+              "STRIP"
+            ],
+            "type": "string"
+          },
+          "slugs": {
+            "uniqueItems": true,
+            "maxItems": 24,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 220,
+              "minLength": 1
+            }
+          },
+          "entries": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalEntryDto"
+            }
+          },
+          "slides": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalHeroSlideDto"
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "startsTehran": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 16
+          },
+          "endsTehran": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 16
+          },
+          "threshold": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "kind",
+          "layout",
+          "enabled",
+          "title"
+        ]
+      },
+      "FestivalDesignDto": {
+        "type": "object",
+        "properties": {
+          "theme": {
+            "$ref": "#/components/schemas/FestivalThemeDto"
+          },
+          "sections": {
+            "uniqueItems": true,
+            "maxItems": 11,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalSectionDto"
+            }
+          },
+          "schemaVersion": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          }
+        },
+        "required": [
+          "theme",
+          "sections",
+          "schemaVersion"
+        ]
+      },
+      "FestivalThemePresetDto": {
+        "type": "object",
+        "properties": {
+          "theme": {
+            "$ref": "#/components/schemas/FestivalThemeDto"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "theme",
+          "name"
+        ]
+      },
+      "FestivalDesignRevisionDto": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "number"
+          },
+          "recordedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision",
+          "recordedAt"
+        ]
+      },
+      "FestivalDesignEditorDto": {
+        "type": "object",
+        "properties": {
+          "design": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FestivalDesignDto"
+              }
+            ]
+          },
+          "presets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalThemePresetDto"
+            }
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalDesignRevisionDto"
+            }
+          },
+          "media": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignMediaDto"
+            }
+          },
+          "revision": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "design",
+          "presets",
+          "history",
+          "media",
+          "revision"
+        ]
+      },
+      "SaveFestivalDesignDto": {
+        "type": "object",
+        "properties": {
+          "theme": {
+            "$ref": "#/components/schemas/FestivalThemeDto"
+          },
+          "sections": {
+            "uniqueItems": true,
+            "maxItems": 11,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalSectionDto"
+            }
+          },
+          "schemaVersion": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "saveThemeAs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "theme",
+          "sections",
+          "schemaVersion",
+          "expectedRevision"
+        ]
+      },
+      "RestoreFestivalDesignDto": {
+        "type": "object",
+        "properties": {
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "revision": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "expectedRevision",
+          "revision"
+        ]
+      },
+      "FestivalPreviewDto": {
+        "type": "object",
+        "properties": {
+          "design": {
+            "$ref": "#/components/schemas/PublicFestivalDesignDto"
+          },
+          "products": {
+            "$ref": "#/components/schemas/PublicCatalogProductListDto"
+          },
+          "title": {
+            "type": "string"
+          },
+          "story": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "campaignId": {
+            "type": "string"
+          },
+          "endsAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "design",
+          "products",
+          "title",
+          "story",
+          "slug",
+          "campaignId",
+          "endsAt"
+        ]
+      },
       "PublicCatalogCategoryPageDto": {
         "type": "object",
         "properties": {
@@ -14192,25 +14997,6 @@
             "default": "newest"
           }
         }
-      },
-      "PublicCatalogFacetOptionDto": {
-        "type": "object",
-        "properties": {
-          "value": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string"
-          },
-          "count": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "value",
-          "label",
-          "count"
-        ]
       },
       "PublicCatalogFacetRangeDto": {
         "type": "object",

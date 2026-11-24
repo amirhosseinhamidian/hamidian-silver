@@ -39,6 +39,7 @@ export type CampaignCollectionSelection = Readonly<{
   categoryIds: readonly string[];
   manualProductIds?: readonly string[];
   minimumQuantity: number;
+  includeFilterOptions?: boolean;
 }>;
 
 export function buildPublicCatalogFacetsQuery(
@@ -128,6 +129,10 @@ export function buildPublicCatalogFacetsQuery(
   const manualOrder = collection?.manualProductIds
     ? Prisma.sql`array_position(${uuidArray(collection.manualProductIds)}, p.id),`
     : Prisma.empty;
+  const categoryAndBrandFacets = Prisma.sql`
+    'categories', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM category_facets o), '[]'::jsonb),
+    'brands', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM brand_facets o), '[]'::jsonb)
+  `;
   return Prisma.sql`
     WITH RECURSIVE ${catalogCategorySubtreeCte},
     ${
@@ -356,10 +361,11 @@ export function buildPublicCatalogFacetsQuery(
       ) price ON TRUE), '[]'::jsonb) AS items,
       ${
         collection
-          ? Prisma.sql`'{}'::jsonb`
+          ? collection.includeFilterOptions
+            ? Prisma.sql`jsonb_build_object(${categoryAndBrandFacets})`
+            : Prisma.sql`'{}'::jsonb`
           : Prisma.sql`jsonb_build_object(
-        'categories', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM category_facets o), '[]'::jsonb),
-        'brands', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM brand_facets o), '[]'::jsonb),
+        ${categoryAndBrandFacets},
         'sizes', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.count DESC, o.value) FROM size_facets o), '[]'::jsonb),
         'availability', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.value) FROM availability_facets o), '[]'::jsonb),
         'priceToman', ${range('price', Prisma.sql`v."salePriceToman"`)},

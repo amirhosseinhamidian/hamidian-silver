@@ -58,6 +58,14 @@ const messages: Record<string, string> = {
     'پارامترهای مسیر مقصد را بررسی کنید.',
   'The destination already contains tracking parameters.':
     'پارامترهای ردیابی را از مسیر مقصد بردارید.',
+  'Keep section dates inside the campaign window.': 'زمان هر بخش باید داخل بازهٔ کمپین باشد.',
+  'Keep the full product list enabled throughout the campaign.':
+    'بخش همهٔ محصولات باید در سراسر کمپین فعال باشد.',
+  'Set a maximum price for each budget group.': 'برای هر گروه بودجه سقف قیمت تعیین کنید.',
+  'Use a text color that contrasts with all festival backgrounds.':
+    'رنگ متن را طوری انتخاب کنید که روی هر دو پس‌زمینه و گرادیان خوانا باشد.',
+  'Choose supported media with alternative text and a static fallback for GIFs.':
+    'تصویر باید متن جایگزین داشته باشد. برای GIF، تصویر ثابت هم انتخاب کنید.',
   'The campaign changed. Reload it before submitting.': 'کمپین تغییر کرده است. صفحه را تازه کنید.',
   'Only draft campaigns can be edited.': 'ویرایش برای پیش‌نویس در دسترس است.',
   'This transition is unavailable for the current campaign status.':

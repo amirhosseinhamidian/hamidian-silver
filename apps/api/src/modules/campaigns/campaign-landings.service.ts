@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import {
   Prisma,
@@ -13,7 +14,12 @@ import {
 } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CatalogService } from '../catalog/catalog.service';
-import { PublicCatalogAvailability } from '../catalog/dto/public-catalog-facets.dto';
+import {
+  emptyCampaignProducts,
+  readCampaignProducts,
+  type CampaignProductFilters,
+} from './campaign-collection';
+import { FestivalDesignService, readFestivalDesign } from './festival-design.service';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { validateCampaignPlacementAppearance } from './campaign-placement-appearance';
 import { formatTehranDate, parseTehranDate } from './campaign-calendar';
@@ -29,7 +35,7 @@ import type {
 
 const placementMedia = { media: true, mobileMedia: true, stillMedia: true } as const;
 const productPageSize = 24;
-const emptyProducts = { items: [], total: 0, totalPages: 0, page: 1, pageSize: productPageSize };
+const emptyProducts = emptyCampaignProducts();
 const activeWindow = (now: Date) =>
   ({
     status: 'ACTIVE',
@@ -47,6 +53,7 @@ export class CampaignLandingsService {
     private readonly db: PrismaService,
     private readonly catalog: CatalogService,
     private readonly mediaUrls: PublicMediaUrlService,
+    @Optional() private readonly festivals?: FestivalDesignService,
   ) {}
 
   async editor(campaignId: string): Promise<CampaignLandingEditorDto> {
@@ -241,6 +248,7 @@ export class CampaignLandingsService {
         throw new ConflictException('Another campaign uses this landing path in the same period.');
     }
     for (const placement of landing.placements) this.checkWindow(campaign, placement);
+    await this.festivals?.checkPublish(tx, campaign, landing);
     const { total } = await this.readCollection(tx, campaign, landing, 1, 0);
     if (total === 0) throw new BadRequestException('The collection has no sellable products.');
   }
@@ -249,6 +257,8 @@ export class CampaignLandingsService {
     slug: string,
     page: number,
     now = new Date(),
+    selected: CampaignProductFilters = {},
+    productsOnly = false,
   ): Promise<PublicCampaignLandingDto> {
     return this.db.$transaction(
       async (tx) => {
@@ -259,14 +269,45 @@ export class CampaignLandingsService {
         });
         const landing = live ?? (page === 1 ? await this.archivedLanding(tx, slug, now) : null);
         if (!landing) throw new NotFoundException('Campaign landing not found.');
-        const products = live
-          ? await this.publicCollection(tx, landing.campaign, landing, page)
+        const design = live && !productsOnly ? readFestivalDesign(landing.design) : null;
+        const rebase = Object.values(selected).some((value) => value !== undefined);
+        const loaded = live
+          ? await this.publicCollection(
+              tx,
+              landing.campaign,
+              landing,
+              page,
+              productPageSize,
+              selected,
+              Boolean(design && this.festivals && !rebase),
+            )
           : emptyProducts;
+        const { facets: _facets, ...products } = loaded;
         if (page > 1 && page > products.totalPages)
           throw new NotFoundException('Collection page not found.');
+        const projected =
+          design && this.festivals
+            ? await this.festivals.project(
+                tx,
+                landing.campaign,
+                landing,
+                design,
+                loaded,
+                now,
+                false,
+                rebase,
+              )
+            : null;
         return {
           slug: landing.slug,
           title: landing.title,
+          ...(projected
+            ? {
+                design: projected,
+                campaignId: landing.campaignId,
+                endsAt: landing.campaign.endsAt.toISOString(),
+              }
+            : {}),
           story: landing.story,
           seoMode: landing.seoMode,
           active: Boolean(live),
@@ -487,27 +528,12 @@ export class CampaignLandingsService {
     },
     page: number,
     pageSize: number,
+    selected: CampaignProductFilters = {},
+    includeFilterOptions = false,
   ) {
-    const { minimumQuantity = 1, ...filters } = landing.filters as CampaignCollectionFiltersDto;
-    return this.catalog.readCampaignCollection(
-      tx,
-      {
-        ...filters,
-        availability: PublicCatalogAvailability.IN_STOCK,
-        minPriceToman: filters.minPriceToman ?? 1,
-      },
-      {
-        allProducts: campaign.allProducts,
-        productIds: campaign.productIds,
-        categoryIds: campaign.categoryIds,
-        minimumQuantity,
-        ...(landing.collectionMode === 'MANUAL'
-          ? { manualProductIds: landing.manualProductIds }
-          : {}),
-      },
-      page,
-      pageSize,
-    );
+    return readCampaignProducts(this.catalog, tx, campaign, landing, page, pageSize, selected, {
+      includeFilterOptions,
+    });
   }
 
   private async publicCollection(
@@ -516,9 +542,19 @@ export class CampaignLandingsService {
     landing: CampaignLanding,
     page: number,
     pageSize = productPageSize,
+    selected: CampaignProductFilters = {},
+    includeFilterOptions = false,
   ) {
     try {
-      return await this.readCollection(tx, campaign, landing, page, pageSize);
+      return await this.readCollection(
+        tx,
+        campaign,
+        landing,
+        page,
+        pageSize,
+        selected,
+        includeFilterOptions,
+      );
     } catch (error) {
       if (error instanceof BadRequestException) return emptyProducts;
       throw error;

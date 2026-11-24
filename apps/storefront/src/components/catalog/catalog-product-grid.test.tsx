@@ -142,6 +142,31 @@ describe('CatalogProductGrid', () => {
     expect(screen.getByText('انگشتر اول')).toBeInTheDocument();
   });
 
+  it('loads the next festival page with its filters after automatic loading is paused', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(productPage([secondProduct], 2, 2)));
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <CatalogProductGrid
+        filters={filters}
+        initialProducts={productPage([firstProduct], 1, 2)}
+        paginationPath="/campaigns/yalda"
+        campaignRequest={{ pathname: '/api/campaigns/yalda/products', query: 'category=rings' }}
+        autoLoad={false}
+      />,
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    const page = screen.getByRole('link', { name: 'رفتن به صفحه ۲' });
+    expect(page).toHaveAttribute('href', '/campaigns/yalda?category=rings&page=2');
+    expect(page).toHaveAttribute('rel', 'nofollow');
+    fireEvent.click(screen.getByRole('button', { name: 'نمایش محصولات بیشتر' }));
+    expect(await screen.findByText('انگشتر دوم')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith('/api/campaigns/yalda/products?category=rings&page=2', {
+      cache: 'no-store',
+      signal: expect.any(AbortSignal),
+    });
+  });
+
   it('prioritizes only the first initial product image when requested', () => {
     render(
       <CatalogProductGrid

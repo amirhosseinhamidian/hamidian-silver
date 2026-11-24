@@ -19,7 +19,7 @@ import type { AuthenticatedPrincipal } from '../authorization/authorization.type
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CampaignLandingsService } from './campaign-landings.service';
-import { CampaignPageQueryDto, PublicCampaignDto } from './dto/campaign.dto';
+import { PublicCampaignDto } from './dto/campaign.dto';
 import {
   CampaignLandingDraftDto,
   CampaignLandingEditorDto,
@@ -27,6 +27,7 @@ import {
   CampaignPlacementQueryDto,
   CampaignSitemapDto,
   PublicCampaignLandingDto,
+  PublicCampaignLandingQueryDto,
   SaveCampaignLandingDto,
 } from './dto/campaign-landing.dto';
 
@@ -38,10 +39,11 @@ export class CampaignLandingsController {
   @Get('public/landing/:slug')
   @Header('Cache-Control', 'no-store')
   @ApiOkResponse({ type: PublicCampaignLandingDto })
-  readLanding(@Param('slug') slug: string, @Query() query: CampaignPageQueryDto) {
+  readLanding(@Param('slug') slug: string, @Query() query: PublicCampaignLandingQueryDto) {
     if (slug.length > 64 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || (query.page ?? 1) > 1000)
       throw new NotFoundException('Campaign landing not found.');
-    return this.landings.publicLanding(slug, query.page ?? 1);
+    const { page, productsOnly, ...filters } = query;
+    return this.landings.publicLanding(slug, page ?? 1, new Date(), filters, productsOnly === '1');
   }
 
   @Public()

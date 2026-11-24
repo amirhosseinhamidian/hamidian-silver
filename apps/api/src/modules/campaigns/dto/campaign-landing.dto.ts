@@ -26,6 +26,7 @@ import { PublicCatalogFacetsQueryDto } from '../../catalog/dto/public-catalog-fa
 import { PublicCatalogSort } from '../../catalog/dto/public-catalog-query.dto';
 import { PublicCatalogProductListDto } from '../../catalog/dto/public-catalog-response.dto';
 import { CampaignMediaDto } from './campaign.dto';
+import { PublicFestivalDesignDto } from './festival-design.dto';
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -233,6 +234,41 @@ export class CampaignLandingPreviewDto {
   total!: number;
 }
 
+export class PublicCampaignLandingQueryDto extends PickType(PublicCatalogFacetsQueryDto, [
+  'scopeCategory',
+  'scopeBrand',
+  'sort',
+]) {
+  @ApiPropertyOptional({ type: Number, minimum: 1, maximum: 10_000, default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10_000)
+  page?: number;
+
+  @ApiPropertyOptional({ type: Number, minimum: 1, maximum: 2147483647 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2147483647)
+  minPriceToman?: number;
+
+  @ApiPropertyOptional({ type: Number, minimum: 1, maximum: 2147483647 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2147483647)
+  maxPriceToman?: number;
+
+  @ApiPropertyOptional({ type: String, enum: ['1'] })
+  @IsOptional()
+  @Matches(/^1$/)
+  productsOnly?: string;
+}
+
 export class PublicCampaignLandingDto {
   slug!: string;
   title!: string;
@@ -242,6 +278,15 @@ export class PublicCampaignLandingDto {
   seoMode!: CampaignLandingMode;
 
   active!: boolean;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid' })
+  campaignId?: string;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time' })
+  endsAt?: string;
+
+  @ApiPropertyOptional({ type: () => PublicFestivalDesignDto })
+  design?: PublicFestivalDesignDto;
 
   @ApiProperty({ type: () => CampaignMediaDto, nullable: true })
   media!: CampaignMediaDto | null;

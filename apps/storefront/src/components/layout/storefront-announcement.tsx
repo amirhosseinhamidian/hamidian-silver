@@ -31,10 +31,11 @@ const numberFormatter = new Intl.NumberFormat('fa-IR', {
   useGrouping: false,
 });
 
-function Countdown({
+export function Countdown({
   announcement,
   initialSeconds,
-}: Readonly<{ announcement: StorefrontAnnouncement; initialSeconds: number }>) {
+  large = false,
+}: Readonly<{ announcement: StorefrontAnnouncement; initialSeconds: number; large?: boolean }>) {
   const [remainingSeconds, setRemainingSeconds] = useState(initialSeconds);
 
   useEffect(() => {
@@ -97,7 +98,11 @@ function Countdown({
     <span
       aria-label="شمارش معکوس"
       dir="rtl"
-      className="inline-flex items-baseline gap-2 text-xs sm:text-sm"
+      className={
+        large
+          ? 'inline-flex flex-wrap items-baseline gap-3 text-lg font-semibold sm:text-3xl'
+          : 'inline-flex items-baseline gap-2 text-xs sm:text-sm'
+      }
     >
       <span>{numberFormatter.format(days)} روز</span>
       <span>{numberFormatter.format(hours)} ساعت</span>

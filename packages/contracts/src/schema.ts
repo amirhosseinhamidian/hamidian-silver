@@ -308,6 +308,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaigns/{id}/design": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FestivalDesignController_edit_v1"];
+        put: operations["FestivalDesignController_save_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/design/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FestivalDesignController_restore_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/design/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FestivalDesignController_preview_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/public/categories": {
         parameters: {
             query?: never;
@@ -4666,6 +4714,22 @@ export interface components {
             /** Format: uuid */
             requestId: string;
         };
+        PublicCatalogFacetOptionDto: {
+            value: string;
+            label: string;
+            count: number;
+        };
+        FestivalThemeDto: {
+            /** @enum {string} */
+            decoration: "NONE" | "DOTS" | "LINES";
+            /** @enum {string} */
+            motion: "STILL" | "SOFT";
+            background: string;
+            surface: string;
+            foreground: string;
+            accent: string;
+            gradient?: string;
+        };
         PublicCatalogMatchingVariantDto: {
             sizeId: string | null;
             lengthMm: number | null;
@@ -4758,6 +4822,45 @@ export interface components {
             availableQuantity: number;
             isAvailable: boolean;
         };
+        FestivalEntryDto: {
+            title: string;
+            body?: string;
+            maxPriceToman?: number;
+            actionPath?: string;
+        };
+        PublicFestivalHeroSlideDto: {
+            media: components["schemas"]["CampaignMediaDto"] | null;
+            mobileMedia: components["schemas"]["CampaignMediaDto"] | null;
+            stillMedia: components["schemas"]["CampaignMediaDto"] | null;
+            title: string;
+            subtitle?: string;
+            actionLabel?: string;
+            actionPath?: string;
+        };
+        PublicFestivalCategoryDto: {
+            media: components["schemas"]["CampaignMediaDto"] | null;
+            slug: string;
+            name: string;
+        };
+        PublicFestivalSectionDto: {
+            /** @enum {string} */
+            kind: "HERO" | "COUNTDOWN" | "HIGHLIGHTS" | "CATEGORIES" | "DISCOUNTS" | "PICKS" | "LOW_QUOTA" | "BUDGET" | "OFFERS" | "PRODUCTS" | "FAQ";
+            /** @enum {string} */
+            layout: "GRID" | "STRIP";
+            products?: components["schemas"]["PublicCatalogProductSummaryDto"][];
+            entries?: components["schemas"]["FestivalEntryDto"][];
+            slides?: components["schemas"]["PublicFestivalHeroSlideDto"][];
+            categories?: components["schemas"]["PublicFestivalCategoryDto"][];
+            title: string;
+        };
+        PublicFestivalDesignDto: {
+            /** Format: date-time */
+            refreshAt?: string;
+            filterCategories: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            filterBrands: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            theme: components["schemas"]["FestivalThemeDto"];
+            sections: components["schemas"]["PublicFestivalSectionDto"][];
+        };
         PublicCatalogRankingDto: {
             /** @example 1 */
             version: number;
@@ -4777,6 +4880,11 @@ export interface components {
         PublicCampaignLandingDto: {
             /** @enum {string} */
             seoMode: "TEMPORARY" | "RECURRING";
+            /** Format: uuid */
+            campaignId?: string;
+            /** Format: date-time */
+            endsAt?: string;
+            design?: components["schemas"]["PublicFestivalDesignDto"];
             media: components["schemas"]["CampaignMediaDto"] | null;
             products: components["schemas"]["PublicCatalogProductListDto"];
             slug: string;
@@ -4889,6 +4997,74 @@ export interface components {
             manualSold: number;
             expectedRevision: number;
         };
+        FestivalHeroSlideDto: {
+            /** Format: uuid */
+            mediaId: string;
+            /** Format: uuid */
+            mobileMediaId?: string;
+            /** Format: uuid */
+            stillMediaId?: string;
+            title: string;
+            subtitle?: string;
+            actionLabel?: string;
+            actionPath?: string;
+        };
+        FestivalSectionDto: {
+            /** @enum {string} */
+            kind: "HERO" | "COUNTDOWN" | "HIGHLIGHTS" | "CATEGORIES" | "DISCOUNTS" | "PICKS" | "LOW_QUOTA" | "BUDGET" | "OFFERS" | "PRODUCTS" | "FAQ";
+            /** @enum {string} */
+            layout: "GRID" | "STRIP";
+            slugs?: string[];
+            entries?: components["schemas"]["FestivalEntryDto"][];
+            slides?: components["schemas"]["FestivalHeroSlideDto"][];
+            enabled: boolean;
+            title: string;
+            startsTehran?: string;
+            endsTehran?: string;
+            threshold?: number;
+        };
+        FestivalDesignDto: {
+            theme: components["schemas"]["FestivalThemeDto"];
+            sections: components["schemas"]["FestivalSectionDto"][];
+            /** @enum {number} */
+            schemaVersion: 1;
+        };
+        FestivalThemePresetDto: {
+            theme: components["schemas"]["FestivalThemeDto"];
+            name: string;
+        };
+        FestivalDesignRevisionDto: {
+            revision: number;
+            recordedAt: string;
+        };
+        FestivalDesignEditorDto: {
+            design: components["schemas"]["FestivalDesignDto"] | null;
+            presets: components["schemas"]["FestivalThemePresetDto"][];
+            history: components["schemas"]["FestivalDesignRevisionDto"][];
+            media: components["schemas"]["CampaignMediaDto"][];
+            revision: number;
+        };
+        SaveFestivalDesignDto: {
+            theme: components["schemas"]["FestivalThemeDto"];
+            sections: components["schemas"]["FestivalSectionDto"][];
+            /** @enum {number} */
+            schemaVersion: 1;
+            expectedRevision: number;
+            saveThemeAs?: string;
+        };
+        RestoreFestivalDesignDto: {
+            expectedRevision: number;
+            revision: number;
+        };
+        FestivalPreviewDto: {
+            design: components["schemas"]["PublicFestivalDesignDto"];
+            products: components["schemas"]["PublicCatalogProductListDto"];
+            title: string;
+            story: string;
+            slug: string;
+            campaignId: string;
+            endsAt: string;
+        };
         PublicCatalogCategoryPageDto: {
             description: string | null;
             parentId: string | null;
@@ -4954,11 +5130,6 @@ export interface components {
              * @enum {string}
              */
             sort: "newest" | "price-asc" | "price-desc" | "name-asc" | "availability" | "best-selling" | "featured";
-        };
-        PublicCatalogFacetOptionDto: {
-            value: string;
-            label: string;
-            count: number;
         };
         PublicCatalogFacetRangeDto: {
             min: number;
@@ -8027,7 +8198,13 @@ export interface operations {
     CampaignLandingsController_readLanding_v1: {
         parameters: {
             query?: {
+                scopeCategory?: string;
+                scopeBrand?: string;
+                sort?: "newest" | "price-asc" | "price-desc" | "name-asc" | "availability" | "best-selling" | "featured";
                 page?: number;
+                minPriceToman?: number;
+                maxPriceToman?: number;
+                productsOnly?: "1";
             };
             header?: never;
             path: {
@@ -8203,6 +8380,102 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CampaignQuotaAdminDto"];
+                };
+            };
+        };
+    };
+    FestivalDesignController_edit_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalDesignEditorDto"];
+                };
+            };
+        };
+    };
+    FestivalDesignController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveFestivalDesignDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalDesignEditorDto"];
+                };
+            };
+        };
+    };
+    FestivalDesignController_restore_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreFestivalDesignDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalDesignEditorDto"];
+                };
+            };
+        };
+    };
+    FestivalDesignController_preview_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FestivalDesignDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalPreviewDto"];
                 };
             };
         };

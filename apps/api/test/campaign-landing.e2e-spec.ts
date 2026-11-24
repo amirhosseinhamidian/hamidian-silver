@@ -5,6 +5,8 @@ import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { formatTehranDate } from '../src/modules/campaigns/campaign-calendar';
 import { CampaignLandingsService } from '../src/modules/campaigns/campaign-landings.service';
 import { CampaignsService } from '../src/modules/campaigns/campaigns.service';
+import { FestivalDesignService } from '../src/modules/campaigns/festival-design.service';
+import type { FestivalDesignDto } from '../src/modules/campaigns/dto/festival-design.dto';
 import type { CampaignLandingDraftDto } from '../src/modules/campaigns/dto/campaign-landing.dto';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
@@ -13,7 +15,9 @@ it('publishes only qualifying products, limits banner placements and archives a 
   const config = new ConfigService();
   const db = new PrismaService(config);
   const media = new PublicMediaUrlService(config);
-  const landings = new CampaignLandingsService(db, new CatalogService(db, media), media);
+  const catalog = new CatalogService(db, media);
+  const festivals = new FestivalDesignService(db, catalog, media);
+  const landings = new CampaignLandingsService(db, catalog, media, festivals);
   const campaigns = new CampaignsService(db, media, landings);
   const slug = `landing-${randomUUID()}`;
   const phone = `+0${BigInt(`0x${randomUUID().replaceAll('-', '').slice(0, 12)}`)}`;
@@ -188,6 +192,83 @@ it('publishes only qualifying products, limits banner placements and archives a 
     await expect(
       landings.save(created.id, { ...input, expectedRevision: 1 }, owner.id),
     ).rejects.toThrow('current draft');
+    const editor = await festivals.editor(created.id);
+    const design = {
+      schemaVersion: 1,
+      theme: editor.presets[0].theme,
+      sections: [
+        {
+          kind: 'HERO',
+          enabled: true,
+          title: 'جشنواره',
+          layout: 'GRID',
+          slides: [{ mediaId: assets[0].id, stillMediaId: assets[2].id, title: 'هدیهٔ نقره' }],
+        },
+        {
+          kind: 'CATEGORIES',
+          enabled: true,
+          title: 'انتخاب دسته',
+          layout: 'GRID',
+          slugs: [child.slug],
+        },
+        {
+          kind: 'FAQ',
+          enabled: true,
+          title: 'پرسش‌ها',
+          layout: 'GRID',
+          startsTehran: formatTehranDate(bannerEnd),
+          entries: [{ title: 'زمان پایان', body: 'پایان در تاریخ اعلام‌شده' }],
+        },
+        { kind: 'PRODUCTS', enabled: true, title: 'همهٔ محصولات', layout: 'GRID' },
+      ],
+    } satisfies FestivalDesignDto;
+    await expect(festivals.preview(created.id, design)).resolves.toMatchObject({
+      products: { total: 2 },
+      design: {
+        sections: expect.arrayContaining([
+          {
+            kind: 'FAQ',
+            title: 'پرسش‌ها',
+            layout: 'GRID',
+            entries: [{ title: 'زمان پایان', body: 'پایان در تاریخ اعلام‌شده' }],
+          },
+        ]),
+      },
+    });
+    const firstDesign = await festivals.save(
+      created.id,
+      { ...design, expectedRevision: saved.revision },
+      owner.id,
+    );
+    await expect(
+      festivals.save(created.id, { ...design, expectedRevision: saved.revision }, owner.id),
+    ).rejects.toThrow('current draft');
+    const secondDesign = await festivals.save(
+      created.id,
+      {
+        ...design,
+        theme: editor.presets[1].theme,
+        expectedRevision: firstDesign.revision,
+      },
+      owner.id,
+    );
+    const restoredDesign = await festivals.restore(
+      created.id,
+      secondDesign.revision,
+      firstDesign.revision,
+      owner.id,
+    );
+    expect(restoredDesign.design?.theme).toEqual(design.theme);
+    expect(restoredDesign.history.map(({ revision }) => revision)).toEqual([
+      restoredDesign.revision,
+      secondDesign.revision,
+      firstDesign.revision,
+    ]);
+    expect(
+      await db.festivalDesignAsset.count({
+        where: { campaignId: created.id, mediaId: assets[0].id },
+      }),
+    ).toBe(3);
     const move = (action: 'APPROVE' | 'SCHEDULE', expectedRevision: number) =>
       campaigns.transition(
         created.id,
@@ -199,12 +280,12 @@ it('publishes only qualifying products, limits banner placements and archives a 
       where: { id: { in: selectedIds } },
       data: { salePriceToman: 1_100_000 },
     });
-    await expect(move('APPROVE', saved.revision)).rejects.toThrow('no sellable products');
+    await expect(move('APPROVE', restoredDesign.revision)).rejects.toThrow('no sellable products');
     await db.product.updateMany({
       where: { id: { in: selectedIds } },
       data: { salePriceToman: 850_000 },
     });
-    const approved = await move('APPROVE', saved.revision);
+    const approved = await move('APPROVE', restoredDesign.revision);
     await move('SCHEDULE', approved.revision);
     await campaigns.advance(now);
 
@@ -214,6 +295,27 @@ it('publishes only qualifying products, limits banner placements and archives a 
     expect(page.products.items.every(({ salePriceToman }) => salePriceToman === 850_000)).toBe(
       true,
     );
+    expect(page.design?.sections.map(({ kind }) => kind)).toEqual([
+      'HERO',
+      'CATEGORIES',
+      'PRODUCTS',
+    ]);
+    expect(page.design?.refreshAt).toBe(bannerEnd.toISOString());
+    expect(page.design?.filterCategories).toEqual(
+      expect.arrayContaining([expect.objectContaining({ value: child.slug, count: 2 })]),
+    );
+    expect(page.design?.filterBrands).toEqual([
+      expect.objectContaining({ value: brand.slug, count: 2 }),
+    ]);
+    expect(page.design?.sections.find(({ kind }) => kind === 'CATEGORIES')?.categories).toEqual([
+      expect.objectContaining({ slug: child.slug }),
+    ]);
+    await expect(landings.publicLanding(slug, 1, bannerEnd)).resolves.toMatchObject({
+      design: { sections: expect.arrayContaining([expect.objectContaining({ kind: 'FAQ' })]) },
+    });
+    const filtered = await landings.publicLanding(slug, 1, now, { maxPriceToman: 800_000 }, true);
+    expect(filtered.products.total).toBe(0);
+    expect(filtered.design).toBeUndefined();
     await expect(landings.publicLanding(slug, 2, now)).rejects.toThrow('page not found');
     await expect(campaigns.publicBanner(now)).resolves.toMatchObject({
       banner: { ctaPath: `/campaigns/${slug}` },
@@ -270,8 +372,8 @@ it('publishes only qualifying products, limits banner placements and archives a 
       await db.$transaction([
         db.campaignPlacement.deleteMany({ where: { landing: { slug } } }),
         db.campaignLanding.deleteMany({ where: { slug } }),
-        db.media.deleteMany({ where: { storageKey: { startsWith: `catalog/${slug}-` } } }),
         db.campaignRevision.deleteMany({ where: { campaign: { trackingId: slug } } }),
+        db.media.deleteMany({ where: { storageKey: { startsWith: `catalog/${slug}-` } } }),
         db.campaign.deleteMany({ where: { trackingId: slug } }),
         db.campaignLinkIdentity.deleteMany({ where: { id: slug } }),
         db.catalogProductAttributeValue.deleteMany({ where: { attributeCode: `${slug}-style` } }),

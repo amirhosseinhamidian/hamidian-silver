@@ -33,7 +33,17 @@ type CatalogProductGridProps = Readonly<{
   prioritizeFirstImage?: boolean;
   facetScope?: CatalogFacetScope;
   paused?: boolean;
+  campaignRequest?: Readonly<{ pathname: string; query: string }>;
+  autoLoad?: boolean;
 }>;
+
+let campaignPosition: {
+  key: string;
+  products: PublicCatalogProductSummary[];
+  nextPage: number;
+  totalPages: number;
+  scrollY: number;
+} | null = null;
 
 function buildProductsRequestHref(filters: CatalogFilters, page: number): string {
   const searchParams = new URLSearchParams({ page: String(page) });
@@ -104,6 +114,8 @@ export function CatalogProductGrid({
   prioritizeFirstImage = false,
   facetScope,
   paused = false,
+  campaignRequest,
+  autoLoad = true,
 }: CatalogProductGridProps) {
   const [products, setProducts] = useState<PublicCatalogProductSummary[]>(initialProducts.items);
   const [nextPage, setNextPage] = useState(initialProducts.page + 1);
@@ -125,11 +137,37 @@ export function CatalogProductGrid({
   const hasMore = nextPage <= totalPages;
   const noFollowPagination =
     facetScope && (filters.sort !== 'newest' || hasCatalogFacetFilters(filters));
-  const nextPageHref = facetScope
-    ? buildFacetedCatalogHref(paginationPath, { ...filters, page: nextPage })
-    : paginationPath === '/products'
-      ? buildCatalogHref(filters, { page: nextPage })
-      : buildCatalogCollectionHref(paginationPath, filters, { page: nextPage });
+  const campaignKey = campaignRequest
+    ? `${campaignRequest.pathname}?${campaignRequest.query}:${initialProducts.page}`
+    : null;
+  const campaignHref = campaignRequest ? new URLSearchParams(campaignRequest.query) : null;
+  campaignHref?.set('page', String(nextPage));
+  const nextPageHref = campaignHref
+    ? `${paginationPath}?${campaignHref}`
+    : facetScope
+      ? buildFacetedCatalogHref(paginationPath, { ...filters, page: nextPage })
+      : paginationPath === '/products'
+        ? buildCatalogHref(filters, { page: nextPage })
+        : buildCatalogCollectionHref(paginationPath, filters, { page: nextPage });
+
+  useEffect(() => {
+    const position = campaignPosition;
+    if (!campaignKey || position?.key !== campaignKey) return;
+    let scrollFrame: number | undefined;
+    const frame = window.requestAnimationFrame(() => {
+      campaignPosition = null;
+      setProducts(position.products);
+      nextPageRef.current = position.nextPage;
+      totalPagesRef.current = position.totalPages;
+      setNextPage(position.nextPage);
+      setTotalPages(position.totalPages);
+      scrollFrame = window.requestAnimationFrame(() => window.scrollTo(0, position.scrollY));
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (scrollFrame !== undefined) window.cancelAnimationFrame(scrollFrame);
+    };
+  }, [campaignKey]);
 
   useEffect(
     () => () => {
@@ -156,7 +194,11 @@ export function CatalogProductGrid({
 
     try {
       let href = buildProductsRequestHref(filters, pageToLoad);
-      if (facetScope) {
+      if (campaignRequest) {
+        const query = new URLSearchParams(campaignRequest.query);
+        query.set('page', String(pageToLoad));
+        href = `${campaignRequest.pathname}?${query}`;
+      } else if (facetScope) {
         const query = catalogFacetSearchParams({ ...filters, page: pageToLoad });
         if (facetScope.category) query.set('scopeCategory', facetScope.category);
         if (facetScope.brand) query.set('scopeBrand', facetScope.brand);
@@ -191,7 +233,7 @@ export function CatalogProductGrid({
         setLoading(false);
       }
     }
-  }, [facetScope, filters, paused]);
+  }, [campaignRequest, facetScope, filters, paused]);
 
   useEffect(() => {
     const freshProducts = products.filter((product) => !measuredProducts.current.has(product.id));
@@ -202,7 +244,8 @@ export function CatalogProductGrid({
   useEffect(() => {
     const sentinel = sentinelRef.current;
 
-    if (!sentinel || !hasMore || error || typeof IntersectionObserver === 'undefined') return;
+    if (!autoLoad || !sentinel || !hasMore || error || typeof IntersectionObserver === 'undefined')
+      return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -214,7 +257,7 @@ export function CatalogProductGrid({
     observer.observe(sentinel);
 
     return () => observer.disconnect();
-  }, [error, hasMore, loadNextPage]);
+  }, [autoLoad, error, hasMore, loadNextPage]);
 
   return (
     <>
@@ -226,7 +269,18 @@ export function CatalogProductGrid({
             fallbackSrc={initialFallbackSources[product.id]}
             imageSizes={imageSizes}
             preloadImage={prioritizeFirstImage && index === 0}
-            onSelect={() => measureCatalogProducts('select_item', list, [product])}
+            onSelect={() => {
+              if (campaignKey) {
+                campaignPosition = {
+                  key: campaignKey,
+                  products,
+                  nextPage: nextPageRef.current,
+                  totalPages: totalPagesRef.current,
+                  scrollY: window.scrollY,
+                };
+              }
+              measureCatalogProducts('select_item', list, [product]);
+            }}
           />
         ))}
       </ul>
@@ -261,7 +315,11 @@ export function CatalogProductGrid({
               </Button>
               <a
                 href={nextPageHref}
-                rel={noFollowPagination ? 'nofollow' : undefined}
+                rel={
+                  noFollowPagination || (campaignRequest && campaignRequest.query)
+                    ? 'nofollow'
+                    : undefined
+                }
                 className="text-xs text-[var(--sf-color-muted)] underline underline-offset-4"
               >
                 رفتن به صفحه {persianNumber.format(nextPage)}

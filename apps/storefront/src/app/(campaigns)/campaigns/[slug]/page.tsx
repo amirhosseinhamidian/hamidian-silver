@@ -1,6 +1,15 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { FestivalLanding } from '@/components/campaigns/festival-landing';
+import { FestivalProducts } from '@/components/campaigns/festival-products';
+import { getInitialCountdownSeconds } from '@/components/layout/storefront-announcement-config';
+import {
+  campaignFilterParams,
+  campaignFilters,
+  campaignPageHref,
+  hasCampaignFilters,
+} from '@/lib/campaigns/campaign-filters';
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
 import { StorefrontImage } from '@/components/media/storefront-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
@@ -26,20 +35,27 @@ async function readLanding(props: Props) {
   const [{ slug }, searchParams] = await Promise.all([props.params, props.searchParams]);
   const page = pageNumber(searchParams.page);
   if (!page || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 64) return null;
-  const landing = await getPublicCampaignLanding(slug, page);
-  return landing ? { landing, page, searchParams } : null;
+  const filters = campaignFilters(searchParams);
+  const filterQuery = campaignFilterParams(filters).toString();
+  const landing = await getPublicCampaignLanding(slug, page, filterQuery);
+  return landing ? { landing, page, searchParams, filters, filterQuery } : null;
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const result = await readLanding(props);
   if (!result) return { title: 'کمپین یافت نشد', robots: { index: false, follow: false } };
-  const { landing, searchParams } = result;
+  const { landing, searchParams, filters } = result;
   return buildStorefrontPageMetadata(await getPublicSiteSettings(), {
     pathname: `/campaigns/${landing.slug}`,
     searchParams,
     title: landing.title,
     description: landing.story.slice(0, 160),
-    seoNoIndex: landing.seoMode !== 'RECURRING' || !landing.active || landing.products.total === 0,
+    ...(hasCampaignFilters(filters) ? { seoCanonicalPath: `/campaigns/${landing.slug}` } : {}),
+    seoNoIndex:
+      hasCampaignFilters(filters) ||
+      landing.seoMode !== 'RECURRING' ||
+      !landing.active ||
+      landing.products.total === 0,
     fallbackMedia: landing.media,
   });
 }
@@ -47,11 +63,43 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function CampaignLandingPage(props: Props) {
   const result = await readLanding(props);
   if (!result) notFound();
-  const { landing, page } = result;
+  const { landing, page, filters, filterQuery } = result;
   const pathname = `/campaigns/${landing.slug}`;
   const hasProducts = landing.active && landing.products.total > 0;
-  const previousPage = page === 2 ? pathname : `${pathname}?page=${page - 1}`;
-  const nextPage = `${pathname}?page=${page + 1}`;
+  if (landing.design && landing.campaignId && landing.endsAt) {
+    return (
+      <FestivalLanding
+        design={landing.design}
+        campaignId={landing.campaignId}
+        endsAt={landing.endsAt}
+        initialSeconds={
+          getInitialCountdownSeconds({ mode: 'deadline', endsAt: landing.endsAt }) ?? 0
+        }
+        title={landing.title}
+        story={landing.story}
+        pathname={pathname}
+        breadcrumbs={
+          <StorefrontBreadcrumbs
+            items={[
+              { label: 'خانه', href: '/' },
+              { label: landing.title, href: pathname },
+            ]}
+          />
+        }
+      >
+        <FestivalProducts
+          key={`${pathname}?${filterQuery}:${page}`}
+          filterCategories={landing.design.filterCategories}
+          filterBrands={landing.design.filterBrands}
+          slug={landing.slug}
+          filters={filters}
+          products={landing.products}
+        />
+      </FestivalLanding>
+    );
+  }
+  const previousPage = campaignPageHref(pathname, filters, page - 1);
+  const nextPage = campaignPageHref(pathname, filters, page + 1);
 
   return (
     <main id="main-content" className="sf-container pb-20 pt-7 sm:pt-10">

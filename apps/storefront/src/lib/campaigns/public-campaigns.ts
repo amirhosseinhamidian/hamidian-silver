@@ -1,6 +1,7 @@
 import type { components } from '@hamidian/contracts';
 import { cache } from 'react';
 
+import { campaignFilters } from './campaign-filters';
 import { createServerApiClient } from '@/lib/api/server-client';
 
 function campaignClient() {
@@ -8,18 +9,31 @@ function campaignClient() {
   return apiOrigin ? createServerApiClient({ apiOrigin }) : null;
 }
 
-export const getPublicCampaignLanding = cache(async (slug: string, page: number) => {
+async function readPublicCampaignLanding(
+  slug: string,
+  page: number,
+  filterQuery = '',
+  productsOnly = false,
+) {
   const client = campaignClient();
   if (!client) throw new Error('The campaign API origin is unavailable.');
   const result = await client.GET('/api/v1/campaigns/public/landing/{slug}', {
-    params: { path: { slug }, query: { page } },
+    params: {
+      path: { slug },
+      query: {
+        page,
+        ...campaignFilters(Object.fromEntries(new URLSearchParams(filterQuery))),
+        ...(productsOnly ? { productsOnly: '1' } : {}),
+      },
+    },
     cache: 'no-store',
   });
   if (result.response.status === 404) return null;
   if (!result.data) throw new Error('Cannot load the campaign landing.');
   return result.data;
-});
+}
 
+export const getPublicCampaignLanding = cache(readPublicCampaignLanding);
 export async function getPublicCampaignPlacement(
   slot: 'CATEGORY' | 'PRODUCT' | 'COUNTDOWN' | 'NAVIGATION',
   slug?: string,

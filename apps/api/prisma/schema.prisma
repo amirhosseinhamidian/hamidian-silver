@@ -442,6 +442,7 @@ model Media {
   guideTopicCoverImages           GuideTopic[]              @relation("GuideTopicCover")
   guideTopicSeoOgImages           GuideTopic[]              @relation("GuideTopicSeoOg")
   guideBlockPrimaryMedia          GuideArticleBlock[]       @relation("GuideBlockPrimaryMedia")
+  festivalDesignAssets    FestivalDesignAsset[]
   campaignBanners                 Campaign[]
   campaignPlacementImages        CampaignPlacement[] @relation("CampaignPlacementMedia")
   campaignPlacementMobileImages  CampaignPlacement[] @relation("CampaignPlacementMobileMedia")
@@ -1862,12 +1863,33 @@ model CampaignLanding {
   collectionMode   CampaignCollectionMode
   filters          Json
   manualProductIds String[]               @default([]) @db.Uuid
+  design           Json?
   updatedAt        DateTime               @updatedAt @db.Timestamptz(3)
   campaign         Campaign               @relation(fields: [campaignId], references: [id], onDelete: Restrict)
   placements       CampaignPlacement[]
 
   @@index([slug, seoMode])
   @@map("campaign_landings")
+}
+
+model FestivalDesignAsset {
+  campaignId String           @db.Uuid
+  version    Int
+  mediaId    String           @db.Uuid
+  revision   CampaignRevision @relation(fields: [campaignId, version], references: [campaignId, version], onDelete: Cascade)
+  media      Media            @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@id([campaignId, version, mediaId])
+  @@index([mediaId])
+  @@map("festival_design_assets")
+}
+
+model FestivalThemeTemplate {
+  name      String   @id @db.VarChar(80)
+  theme     Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@map("festival_theme_templates")
 }
 
 model CampaignPlacement {
@@ -1990,6 +2012,8 @@ model CampaignRevision {
   recordedAt  DateTime @default(now()) @db.Timestamptz(3)
   campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Restrict)
   actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  festivalAssets FestivalDesignAsset[]
 
   @@id([campaignId, version])
   @@unique([campaignId, requestId])

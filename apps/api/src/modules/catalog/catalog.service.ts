@@ -1280,7 +1280,8 @@ export class CatalogService {
     const [result] = await reader.$queryRaw<CatalogFacetPageRow[]>(
       buildPublicCatalogFacetsQuery({ ...query, page, pageSize }, undefined, selection),
     );
-    return this.hydrateFacetPage(reader, result, page, pageSize || 1);
+    const products = await this.hydrateFacetPage(reader, result, page, pageSize || 1);
+    return { ...products, facets: result.facets };
   }
 
   private async hydrateFacetPage(

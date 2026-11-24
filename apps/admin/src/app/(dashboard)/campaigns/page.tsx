@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 
 import { CampaignDetailView } from '@/components/campaigns/campaign-detail-view';
 import { CampaignBudgetReview } from '@/components/campaigns/campaign-budget-review';
+import { FestivalDesigner } from '@/components/campaigns/festival-designer';
 import { CampaignLandingEditor } from '@/components/campaigns/campaign-landing-editor';
 import { CampaignPromotionEditor } from '@/components/campaigns/campaign-promotion-editor';
 import { CampaignQuotaEditor } from '@/components/campaigns/campaign-quota-editor';
@@ -61,7 +62,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
             .catch(() => null)
         : null;
     const campaign = result?.data;
-    const [promotion, landing] =
+    const [promotion, landing, festival] =
       campaign && !(edit === '1' && canWrite && campaign.status === 'DRAFT')
         ? await Promise.all([
             client
@@ -76,8 +77,16 @@ export default async function CampaignsPage({ searchParams }: Props) {
                 cache: 'no-store',
               })
               .catch(() => null),
+            step === 'landing'
+              ? client
+                  .GET('/api/v1/campaigns/{id}/design', {
+                    params: { path: { id: campaign.id } },
+                    cache: 'no-store',
+                  })
+                  .catch(() => null)
+              : null,
           ])
-        : [null, null];
+        : [null, null, null];
     if (campaign) {
       const editing = edit === '1' && canWrite && campaign.status === 'DRAFT';
       const currentStep =
@@ -90,12 +99,25 @@ export default async function CampaignsPage({ searchParams }: Props) {
         panel = <CampaignEditor key={`${campaign.id}-${campaign.revision}`} campaign={campaign} />;
       } else if (currentStep === 'landing') {
         panel = landing?.data ? (
-          <CampaignLandingEditor
-            key={`landing-${campaign.id}-${landing.data.revision}`}
-            campaign={campaign}
-            editor={landing.data}
-            canWrite={canWrite}
-          />
+          <>
+            <CampaignLandingEditor
+              key={`landing-${campaign.id}-${landing.data.revision}`}
+              campaign={campaign}
+              editor={landing.data}
+              canWrite={canWrite}
+            />
+            {landing.data.landing &&
+              (festival?.data ? (
+                <FestivalDesigner
+                  key={`festival-${campaign.id}-${festival.data.revision}`}
+                  campaignId={campaign.id}
+                  editor={festival.data}
+                  editable={canWrite && campaign.status === 'DRAFT'}
+                />
+              ) : (
+                <Alert tone="danger">دریافت طرح جشنواره ممکن نشد.</Alert>
+              ))}
+          </>
         ) : (
           <Alert tone="danger">دریافت تنظیمات صفحهٔ کمپین ممکن نشد.</Alert>
         );

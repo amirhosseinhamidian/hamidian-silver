@@ -296,7 +296,11 @@ export class CampaignsService {
         status: 'ACTIVE',
         startsAt: { lte: now },
         endsAt: { gt: now },
-        OR: [{ bannerEnabled: true }, { promotion: { isNot: null } }],
+        OR: [
+          { bannerEnabled: true },
+          { promotion: { isNot: null } },
+          { landing: { design: { not: Prisma.DbNull } } },
+        ],
       },
       select: { id: true },
     });
