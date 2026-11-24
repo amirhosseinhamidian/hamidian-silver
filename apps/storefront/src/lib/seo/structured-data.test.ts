@@ -248,6 +248,50 @@ describe('storefront structured data', () => {
     });
   });
 
+  it('uses a public direct offer for the selected SKU and retains the ordinary price for conditional discounts', () => {
+    const variant = {
+      id: 'variant-1',
+      sku: 'RING-50',
+      name: null,
+      weightGrams: null,
+      salePriceToman: 900_000,
+      compareAtPriceToman: null,
+      inventoryMode: 'OWN',
+      size: null,
+      availableQuantity: 1,
+      isAvailable: true,
+      platingOptions: [],
+    } satisfies PublicCatalogProductDetail['variants'][number];
+    const offer = {
+      name: 'جشنواره',
+      endsAt: '2026-12-01T00:00:00.000Z',
+      minimumToman: null,
+    };
+    const discounted = {
+      ...variant,
+      campaignOffer: {
+        ...offer,
+        conditions: [],
+        price: {
+          regularToman: 900_000,
+          finalToman: 810_000,
+          discountToman: 90_000,
+          discountPercent: 10,
+        },
+      },
+    };
+    expect(
+      buildProductStructuredData({ ...product, variants: [discounted] }, settings, origin),
+    ).toMatchObject({ offers: { price: 8_100_000 } });
+    const conditional = {
+      ...variant,
+      campaignOffer: { ...offer, conditions: ['COUPON' as const], price: null },
+    };
+    expect(
+      buildProductStructuredData({ ...product, variants: [conditional] }, settings, origin),
+    ).toMatchObject({ offers: { price: 9_000_000 } });
+  });
+
   it('builds ProductGroup markup with public SKU and sized variants', () => {
     const variantProduct = {
       ...product,

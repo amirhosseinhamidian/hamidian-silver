@@ -1,13 +1,10 @@
 import Link from 'next/link';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
-import { DiscountBadge } from '@/components/catalog/discount-badge';
+import { CatalogPrice } from '@/components/catalog/catalog-price';
 import { ButtonLink } from '@/components/ui/button';
 import { CatalogWishlistButton } from '@/components/wishlist/catalog-wishlist-button';
 import type { PublicCatalogProductSummary } from '@/lib/catalog/public-catalog';
-import { formatTomanPrice } from '@/lib/catalog/presentation';
-import { getDiscountPercent } from '@/lib/catalog/pricing';
-import { ProductPromotion } from '@/lib/promotions/promotion-context';
 
 type CatalogProductCardProps = Readonly<{
   product: PublicCatalogProductSummary;
@@ -26,14 +23,22 @@ export function CatalogProductCard({
   preloadImage = false,
   onSelect,
 }: CatalogProductCardProps) {
+  const sale =
+    product.defaultSalePriceToman === undefined
+      ? product.salePriceToman
+      : product.defaultSalePriceToman;
+  const compare =
+    product.defaultCompareAtPriceToman === undefined
+      ? product.compareAtPriceToman
+      : product.defaultCompareAtPriceToman;
   const wishlistItem = {
     productId: product.id,
     slug: product.slug,
     name: product.name,
     brandName: product.brand?.name ?? null,
     media: product.primaryMedia,
-    salePriceToman: product.salePriceToman,
-    compareAtPriceToman: product.compareAtPriceToman,
+    salePriceToman: sale,
+    compareAtPriceToman: compare,
   };
 
   return (
@@ -99,28 +104,15 @@ export function CatalogProductCard({
         ) : null}
 
         <div className="mt-3 flex flex-col items-center gap-1">
-          {product.compareAtPriceToman &&
-          product.salePriceToman &&
-          product.compareAtPriceToman > product.salePriceToman ? (
-            <div className="flex items-center gap-2 text-xs text-[var(--sf-color-muted)]">
-              <span className="line-through">{formatTomanPrice(product.compareAtPriceToman)}</span>
-
-              <DiscountBadge
-                percent={getDiscountPercent(product.compareAtPriceToman, product.salePriceToman)!}
-              />
-            </div>
-          ) : null}
-
-          {product.isAvailable || product.salePriceToman !== null ? (
-            <p className="text-xs font-medium sm:text-base">
-              {formatTomanPrice(product.salePriceToman)}
-            </p>
-          ) : null}
+          {(product.isAvailable || sale !== null) && (
+            <CatalogPrice
+              sale={sale}
+              compare={compare}
+              offer={product.campaignOffer}
+              priceClassName="text-xs font-medium sm:text-base"
+            />
+          )}
         </div>
-
-        {product.isAvailable && (
-          <ProductPromotion id={product.id} categories={product.categories} />
-        )}
 
         <div className="sf-catalog-card__action mt-auto pt-3 sm:pt-4">
           <ButtonLink

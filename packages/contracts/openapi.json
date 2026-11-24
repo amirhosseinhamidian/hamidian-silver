@@ -2866,6 +2866,135 @@
         ]
       }
     },
+    "/api/v1/promotions/public": {
+      "get": {
+        "operationId": "PromotionsController_listPublic_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicPromotionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Promotions"
+        ]
+      }
+    },
+    "/api/v1/promotions/{campaignId}": {
+      "get": {
+        "operationId": "PromotionsController_read_v1",
+        "parameters": [
+          {
+            "name": "campaignId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPromotionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Promotions"
+        ]
+      },
+      "put": {
+        "operationId": "PromotionsController_save_v1",
+        "parameters": [
+          {
+            "name": "campaignId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavePromotionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPromotionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Promotions"
+        ]
+      }
+    },
+    "/api/v1/promotions/{campaignId}/product-preview": {
+      "get": {
+        "operationId": "PromotionsController_previewProduct_v1",
+        "parameters": [
+          {
+            "name": "campaignId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 220,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignProductPricePreviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Promotions"
+        ]
+      }
+    },
     "/api/v1/finance/supplier-payables": {
       "get": {
         "operationId": "SupplierPayablesController_list_v1",
@@ -7617,95 +7746,6 @@
         },
         "tags": [
           "OperationalIncidents"
-        ]
-      }
-    },
-    "/api/v1/promotions/public": {
-      "get": {
-        "operationId": "PromotionsController_listPublic_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicPromotionsDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Promotions"
-        ]
-      }
-    },
-    "/api/v1/promotions/{campaignId}": {
-      "get": {
-        "operationId": "PromotionsController_read_v1",
-        "parameters": [
-          {
-            "name": "campaignId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminPromotionDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Promotions"
-        ]
-      },
-      "put": {
-        "operationId": "PromotionsController_save_v1",
-        "parameters": [
-          {
-            "name": "campaignId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SavePromotionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminPromotionDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Promotions"
         ]
       }
     },
@@ -12608,6 +12648,75 @@
           "availableQuantity"
         ]
       },
+      "CampaignUnitPriceDto": {
+        "type": "object",
+        "properties": {
+          "regularToman": {
+            "type": "number"
+          },
+          "discountToman": {
+            "type": "number"
+          },
+          "discountPercent": {
+            "type": "number"
+          },
+          "finalToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "regularToman",
+          "discountToman",
+          "discountPercent",
+          "finalToman"
+        ]
+      },
+      "CatalogCampaignOfferDto": {
+        "type": "object",
+        "properties": {
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "COUPON",
+                "CUSTOMER",
+                "MINIMUM",
+                "ORDER_AMOUNT",
+                "BUNDLE",
+                "SHIPPING"
+              ]
+            }
+          },
+          "minimumToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "price": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignUnitPriceDto"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "endsAt",
+          "conditions",
+          "minimumToman",
+          "price",
+          "name"
+        ]
+      },
       "PublicCatalogMediaDto": {
         "type": "object",
         "properties": {
@@ -12810,6 +12919,23 @@
           "salePriceToman": {
             "type": "number",
             "nullable": true
+          },
+          "defaultSalePriceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "defaultCompareAtPriceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "campaignOffer": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogCampaignOfferDto"
+              }
+            ]
           },
           "compareAtPriceToman": {
             "type": "number",
@@ -14031,6 +14157,15 @@
             "type": "number",
             "nullable": true
           },
+          "campaignOffer": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogCampaignOfferDto"
+              }
+            ]
+          },
           "size": {
             "nullable": true,
             "type": "object",
@@ -14239,6 +14374,23 @@
           "salePriceToman": {
             "type": "number",
             "nullable": true
+          },
+          "defaultSalePriceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "defaultCompareAtPriceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "campaignOffer": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogCampaignOfferDto"
+              }
+            ]
           },
           "compareAtPriceToman": {
             "type": "number",
@@ -15844,6 +15996,213 @@
           "pinned",
           "weight",
           "expectedRevision"
+        ]
+      },
+      "PublicPromotionDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "PERCENT",
+              "FIXED",
+              "THRESHOLD",
+              "BUNDLE",
+              "FREE_SHIPPING"
+            ],
+            "type": "string"
+          },
+          "productIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "categoryIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "allProducts": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "productIds",
+          "categoryIds",
+          "endsAt",
+          "name",
+          "allProducts"
+        ]
+      },
+      "PublicPromotionsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicPromotionDto"
+            }
+          },
+          "available": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "available"
+        ]
+      },
+      "SavePromotionDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "PERCENT",
+              "FIXED",
+              "THRESHOLD",
+              "BUNDLE",
+              "FREE_SHIPPING"
+            ],
+            "type": "string"
+          },
+          "bundleProductSlugs": {
+            "uniqueItems": true,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 220
+            }
+          },
+          "couponCode": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 32
+          },
+          "maxUses": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "minSubtotalToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "maxDiscountToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "maxDiscountBps": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000
+          },
+          "priority": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "kind",
+          "bundleProductSlugs",
+          "value",
+          "minSubtotalToman",
+          "maxDiscountToman",
+          "maxDiscountBps",
+          "priority",
+          "expectedVersion"
+        ]
+      },
+      "AdminPromotionDto": {
+        "type": "object",
+        "properties": {
+          "rule": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SavePromotionDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "rule"
+        ]
+      },
+      "CampaignProductPriceRowDto": {
+        "type": "object",
+        "properties": {
+          "variantId": {
+            "type": "string",
+            "nullable": true
+          },
+          "regularToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "offer": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogCampaignOfferDto"
+              }
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "variantId",
+          "regularToman",
+          "offer",
+          "label",
+          "active"
+        ]
+      },
+      "CampaignProductPricePreviewDto": {
+        "type": "object",
+        "properties": {
+          "prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignProductPriceRowDto"
+            }
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "prices",
+          "name"
         ]
       },
       "MarkSupplierPayablePaidDto": {
@@ -19951,160 +20310,6 @@
         },
         "required": [
           "note"
-        ]
-      },
-      "PublicPromotionDto": {
-        "type": "object",
-        "properties": {
-          "kind": {
-            "enum": [
-              "PERCENT",
-              "FIXED",
-              "THRESHOLD",
-              "BUNDLE",
-              "FREE_SHIPPING"
-            ],
-            "type": "string"
-          },
-          "productIds": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "categoryIds": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "endsAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "name": {
-            "type": "string"
-          },
-          "allProducts": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "kind",
-          "productIds",
-          "categoryIds",
-          "endsAt",
-          "name",
-          "allProducts"
-        ]
-      },
-      "PublicPromotionsDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PublicPromotionDto"
-            }
-          },
-          "available": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "items",
-          "available"
-        ]
-      },
-      "SavePromotionDto": {
-        "type": "object",
-        "properties": {
-          "kind": {
-            "enum": [
-              "PERCENT",
-              "FIXED",
-              "THRESHOLD",
-              "BUNDLE",
-              "FREE_SHIPPING"
-            ],
-            "type": "string"
-          },
-          "bundleProductSlugs": {
-            "uniqueItems": true,
-            "maxItems": 10,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "maxLength": 220
-            }
-          },
-          "couponCode": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 32
-          },
-          "maxUses": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 1,
-            "maximum": 1000000
-          },
-          "value": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "minSubtotalToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "maxDiscountToman": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 2147483647
-          },
-          "maxDiscountBps": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 5000
-          },
-          "priority": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "expectedVersion": {
-            "type": "number",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "kind",
-          "bundleProductSlugs",
-          "value",
-          "minSubtotalToman",
-          "maxDiscountToman",
-          "maxDiscountBps",
-          "priority",
-          "expectedVersion"
-        ]
-      },
-      "AdminPromotionDto": {
-        "type": "object",
-        "properties": {
-          "rule": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/SavePromotionDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "rule"
         ]
       },
       "PublicCardToCardSettingsDto": {

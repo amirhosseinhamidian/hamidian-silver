@@ -38,25 +38,3 @@ export function PromotionProvider({
 export function usePromotions() {
   return useContext(PromotionContext);
 }
-
-export function ProductPromotion({
-  id,
-  categories,
-}: {
-  id: string;
-  categories: readonly { id: string }[];
-}) {
-  const { items } = usePromotions();
-  const offer = items.find(
-    (item) =>
-      item.allProducts ||
-      item.productIds.includes(id) ||
-      categories.some((category) => item.categoryIds.includes(category.id)),
-  );
-  return offer ? (
-    <p className="text-xs text-[var(--sf-color-muted)]">
-      {offer.name} ·{' '}
-      {offer.kind === 'FREE_SHIPPING' ? 'ارسال رایگان با شرایط کمپین' : 'تخفیف با شرایط سبد'}
-    </p>
-  ) : null;
-}

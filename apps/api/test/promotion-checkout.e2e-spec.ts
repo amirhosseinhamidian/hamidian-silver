@@ -2,11 +2,13 @@ import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 
 import { PrismaService } from '../src/infrastructure/database/prisma.service';
+import { CatalogService } from '../src/modules/catalog/catalog.service';
+import { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
 import { OrdersService } from '../src/modules/orders/orders.service';
 import { PromotionsService } from '../src/modules/promotions/promotions.service';
 import type { CreateOrderDto } from '../src/modules/orders/dto/create-order.dto';
 
-it('serializes a limited promotion, replays one order and preserves its original price', async () => {
+it('serializes a limited promotion and reconciles current campaign prices with Checkout snapshots', async () => {
   const config = new ConfigService({
     OTP_PEPPER: 'promotion-quote-test',
     MANUAL_SHIPPING_COST_TOMAN: 700,
@@ -188,6 +190,93 @@ it('serializes a limited promotion, replays one order and preserves its original
     await expect(
       db.inventory.findUniqueOrThrow({ where: { id: inventory.id } }),
     ).resolves.toMatchObject({ reserved: 1 });
+
+    const catalog = new CatalogService(
+      db,
+      new PublicMediaUrlService(config),
+      undefined,
+      promotions,
+    );
+    await db.campaign.update({
+      where: { id: campaign.id },
+      data: { budgetToman: 100_000, audience: 'ALL_CUSTOMERS' },
+    });
+    await promotions.save(
+      campaign.id,
+      {
+        kind: 'PERCENT',
+        value: 1_000,
+        minSubtotalToman: 0,
+        maxDiscountToman: 10_000,
+        maxDiscountBps: 5_000,
+        priority: 100,
+        bundleProductSlugs: [],
+        expectedVersion: 2,
+      },
+      buyer.id,
+    );
+    await db.campaign.update({ where: { id: campaign.id }, data: { status: 'ACTIVE' } });
+    await db.inventory.update({ where: { id: inventory.id }, data: { onHand: 5 } });
+    const single = await catalog.getPublicProduct(product.slug);
+    expect(single.campaignOffer?.price).toMatchObject({ regularToman: 10_000, finalToman: 9_000 });
+    expect(single.variants[0].campaignOffer?.price).toEqual(single.campaignOffer?.price);
+
+    const second = await db.productVariant.create({
+      data: { productId: product.id, sku: `${trackingId}-second`, salePriceToman: 7_000 },
+    });
+    await db.inventory.create({
+      data: { warehouseId: warehouse.id, variantId: second.id, onHand: 4 },
+    });
+    const listing = await catalog.listPublicProducts({ q: product.slug });
+    expect(listing.items.find(({ id }) => id === product.id)).toMatchObject({
+      defaultSalePriceToman: 10_000,
+      campaignOffer: { price: { regularToman: 10_000, finalToman: 9_000 } },
+    });
+    const variantPrice = (current: Awaited<ReturnType<CatalogService['getPublicProduct']>>) =>
+      current.variants.find(({ id }) => id === second.id)?.campaignOffer?.price;
+    expect(variantPrice(await catalog.getPublicProduct(product.slug))).toMatchObject({
+      regularToman: 7_000,
+      finalToman: 6_300,
+    });
+    const secondBasket = { ...basket, items: [{ variantId: second.id, quantity: 1 }] };
+    const beforeChange = await orders.quotePrice(other.id, secondBasket);
+    expect(beforeChange).toMatchObject({ discountTotalToman: 700, payableToman: 7_000 });
+
+    await db.product.update({ where: { id: product.id }, data: { salePriceToman: 12_000 } });
+    await db.productVariant.update({ where: { id: second.id }, data: { salePriceToman: 8_000 } });
+    const changed = await catalog.getPublicProduct(product.slug);
+    expect(changed.campaignOffer?.price).toMatchObject({
+      regularToman: 12_000,
+      finalToman: 10_800,
+    });
+    expect(variantPrice(changed)).toMatchObject({ regularToman: 8_000, finalToman: 7_200 });
+    const preview = await promotions.productPricePreview(campaign.id, product.slug);
+    expect(preview.prices).toHaveLength(3);
+    expect(preview.prices[0].offer?.price).toEqual(changed.campaignOffer?.price);
+    expect(preview.prices.find(({ variantId }) => variantId === second.id)?.offer?.price).toEqual(
+      variantPrice(changed),
+    );
+
+    await expect(
+      orders.createOrder(other.id, { ...secondBasket, quoteToken: beforeChange.quoteToken }),
+    ).rejects.toThrow('quote changed');
+    const newQuote = await orders.quotePrice(other.id, secondBasket);
+    const newOrder = await orders.createOrder(other.id, {
+      ...secondBasket,
+      quoteToken: newQuote.quoteToken,
+    });
+    expect(newOrder.grandTotalToman).toBe(7_900);
+    await db.productVariant.update({ where: { id: second.id }, data: { salePriceToman: 9_000 } });
+    await expect(
+      db.orderPriceQuote.findUniqueOrThrow({ where: { orderId: newOrder.id } }),
+    ).resolves.toMatchObject({
+      merchandiseDiscountToman: 800,
+      snapshot: {
+        payableToman: 7_900,
+        rule: { version: 3 },
+        items: [{ unitSalePriceToman: 8_000 }],
+      },
+    });
   } finally {
     try {
       await db.$transaction([
@@ -196,9 +285,11 @@ it('serializes a limited promotion, replays one order and preserves its original
         db.orderAddress.deleteMany({ where: { order: { user: buyers } } }),
         db.orderItem.deleteMany({ where: { order: { user: buyers } } }),
         db.order.deleteMany({ where: { user: buyers } }),
-        db.inventoryMovement.deleteMany({ where: { inventory: { variant: { sku: trackingId } } } }),
-        db.inventory.deleteMany({ where: { variant: { sku: trackingId } } }),
-        db.productVariant.deleteMany({ where: { sku: trackingId } }),
+        db.inventoryMovement.deleteMany({
+          where: { inventory: { variant: { product: { slug: trackingId } } } },
+        }),
+        db.inventory.deleteMany({ where: { variant: { product: { slug: trackingId } } } }),
+        db.productVariant.deleteMany({ where: { product: { slug: trackingId } } }),
         db.product.deleteMany({ where: { slug: trackingId } }),
         db.warehouse.deleteMany({ where: { code: warehouseCode } }),
         db.campaignPromotion.deleteMany({ where: { campaign: { trackingId } } }),

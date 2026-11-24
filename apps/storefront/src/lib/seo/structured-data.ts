@@ -449,7 +449,8 @@ export function buildProductStructuredData(
         const variantLabel = variant.size?.label?.trim() || variant.name?.trim() || null;
         const offer = buildOffer(
           canonicalUrl,
-          variant.salePriceToman,
+          (variant.isAvailable ? variant.campaignOffer?.price?.finalToman : undefined) ??
+            variant.salePriceToman,
           variant.isAvailable,
           settings,
           metadataBase,
@@ -473,7 +474,9 @@ export function buildProductStructuredData(
   const onlyVariant = product.variants[0];
   const offer = buildOffer(
     canonicalUrl,
-    onlyVariant?.salePriceToman ?? product.salePriceToman,
+    (onlyVariant?.isAvailable ? onlyVariant.campaignOffer?.price?.finalToman : undefined) ??
+      onlyVariant?.salePriceToman ??
+      product.salePriceToman,
     onlyVariant?.isAvailable ?? product.isAvailable,
     settings,
     metadataBase,

@@ -1,4 +1,5 @@
 import { calculatePromotion, isPromotionTarget } from './promotion-engine';
+import { selectCatalogPromotion } from './promotion-presentation';
 import { createQuoteToken, matchesQuote, parseQuoteToken } from './promotion-quote';
 
 const cap = {
@@ -9,6 +10,77 @@ const cap = {
   bundleProductIds: [],
 };
 const line = { productId: 'ring', categoryIds: ['silver'], quantity: 1, unitSalePriceToman: 5_005 };
+
+describe('campaign pricing for the catalog', () => {
+  const candidate = {
+    ...cap,
+    kind: 'PERCENT' as const,
+    couponCode: null,
+    remainingToman: 5_000,
+    campaign: {
+      name: 'Ring sale',
+      audience: 'ALL_CUSTOMERS' as const,
+      allProducts: false,
+      productIds: ['ring'],
+      categoryIds: [],
+      endsAt: new Date('2026-11-30T00:00:00Z'),
+    },
+  };
+
+  it('prices the default and each variant from their own current prices', () => {
+    const offer = (price: number) => selectCatalogPromotion([candidate], line, price)?.price;
+    expect(offer(5_005)).toMatchObject({
+      regularToman: 5_005,
+      discountToman: 500,
+      finalToman: 4_505,
+    });
+    expect(offer(8_000)).toMatchObject({
+      regularToman: 8_000,
+      discountToman: 800,
+      finalToman: 7_200,
+    });
+    expect(offer(10_000)).toMatchObject({
+      regularToman: 10_000,
+      discountToman: 1_000,
+      finalToman: 9_000,
+    });
+    expect(offer(6_000)).toMatchObject({
+      regularToman: 6_000,
+      discountToman: 600,
+      finalToman: 5_400,
+    });
+  });
+
+  it('shows conditions without a price for cart, coupon and customer rules', () => {
+    const variants = [
+      { ...candidate, minSubtotalToman: 1 },
+      { ...candidate, kind: 'FIXED' as const },
+      { ...candidate, kind: 'BUNDLE' as const, bundleProductIds: ['ring', 'chain'] },
+      { ...candidate, kind: 'FREE_SHIPPING' as const },
+      { ...candidate, couponCode: 'PRIVATE' },
+      { ...candidate, campaign: { ...candidate.campaign, audience: 'FIRST_PURCHASE' as const } },
+    ];
+    for (const rule of variants)
+      expect(selectCatalogPromotion([rule], line, 5_005)).toMatchObject({ price: null });
+    expect(
+      selectCatalogPromotion([{ ...candidate, couponCode: 'PRIVATE' }], line, 5_005),
+    ).not.toHaveProperty('couponCode');
+    expect(selectCatalogPromotion([candidate], line, null)).toBeNull();
+    expect(selectCatalogPromotion([candidate], { ...line, productId: 'chain' }, 5_005)).toBeNull();
+  });
+
+  it('respects priority when a cart rule would win for a single unit', () => {
+    const fixed = { ...candidate, kind: 'FIXED' as const };
+    expect(selectCatalogPromotion([fixed, candidate], line, 5_005)).toMatchObject({
+      conditions: ['ORDER_AMOUNT'],
+      price: null,
+    });
+    expect(
+      selectCatalogPromotion([{ ...fixed, minSubtotalToman: 10_000 }, candidate], line, 5_005)
+        ?.price,
+    ).toMatchObject({ discountToman: 500 });
+  });
+});
 
 describe('promotion amounts', () => {
   it('uses integer rounding and every economic cap', () => {

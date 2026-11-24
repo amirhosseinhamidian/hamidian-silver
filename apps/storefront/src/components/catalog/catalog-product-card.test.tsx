@@ -59,6 +59,34 @@ describe('CatalogProductCard', () => {
     expect(screen.getAllByText(formatTomanPrice(800_000))).toHaveLength(1);
   });
 
+  it('shows the campaign price based on the default instead of the matched variant or compare price', () => {
+    render(
+      <CatalogProductCard
+        product={{
+          ...product,
+          defaultSalePriceToman: 1_100_000,
+          defaultCompareAtPriceToman: 1_500_000,
+          campaignOffer: {
+            name: 'جشنواره',
+            endsAt: new Date(Date.now() + 60_000).toISOString(),
+            conditions: [],
+            minimumToman: null,
+            price: {
+              regularToman: 1_100_000,
+              discountToman: 110_000,
+              finalToman: 990_000,
+              discountPercent: 10,
+            },
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText(formatTomanPrice(1_100_000))).toHaveClass('line-through');
+    expect(screen.getByText(formatTomanPrice(990_000))).toBeInTheDocument();
+    expect(screen.queryByText(formatTomanPrice(800_000))).not.toBeInTheDocument();
+    expect(screen.queryByText(formatTomanPrice(1_500_000))).not.toBeInTheDocument();
+  });
+
   it('labels an unavailable product without presenting a purchase action', () => {
     render(
       <CatalogProductCard

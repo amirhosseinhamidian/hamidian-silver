@@ -18,6 +18,8 @@ import {
   VariantInventoryMode,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { selectCatalogPromotion } from '../promotions/promotion-presentation';
+import { PromotionsService } from '../promotions/promotions.service';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
 import { readActiveCategoryProductCounts } from './catalog-category-counts';
 import {
@@ -70,6 +72,23 @@ type PublicNamedSuggestionRow = {
   slug: string;
 };
 
+type CatalogPricingReader = Pick<
+  PrismaService,
+  'product' | 'campaignPromotion' | 'orderPriceQuote'
+>;
+
+function promotionTarget(product: {
+  id: string;
+  categories: { category: { id: string; isActive: boolean; deletedAt: Date | null } }[];
+}) {
+  return {
+    productId: product.id,
+    categoryIds: product.categories
+      .filter(({ category }) => category.isActive && !category.deletedAt)
+      .map(({ category }) => category.id),
+  };
+}
+
 @Injectable()
 export class CatalogService {
   private readonly logger = new Logger(CatalogService.name);
@@ -79,6 +98,7 @@ export class CatalogService {
     private readonly prisma: PrismaService,
     private readonly publicMediaUrl: PublicMediaUrlService,
     @Optional() private readonly catalogAttributes?: CatalogAttributesService,
+    @Optional() private readonly promotions?: PromotionsService,
   ) {}
 
   async createBrand(dto: CreateBrandDto) {
@@ -1250,7 +1270,7 @@ export class CatalogService {
   }
 
   async readCampaignCollection(
-    reader: Pick<PrismaService, '$queryRaw' | 'product'>,
+    reader: CatalogPricingReader & Pick<PrismaService, '$queryRaw'>,
     query: PublicCatalogFacetsQueryDto,
     selection: CampaignCollectionSelection,
     page = 1,
@@ -1263,7 +1283,7 @@ export class CatalogService {
   }
 
   private async hydrateFacetPage(
-    reader: Pick<PrismaService, 'product'>,
+    reader: CatalogPricingReader,
     result: CatalogFacetPageRow,
     page: number,
     pageSize: number,
@@ -1305,7 +1325,7 @@ export class CatalogService {
   }
 
   private async readPublicProductPage(
-    reader: Pick<PrismaService, 'product'>,
+    reader: CatalogPricingReader,
     pageProductIds: string[],
     page: number,
     pageSize: number,
@@ -1448,6 +1468,9 @@ export class CatalogService {
 
       return product ? [product] : [];
     });
+    const promotions = orderedPageProducts.length
+      ? await this.promotions?.catalogPromotions(reader)
+      : undefined;
 
     return {
       items: orderedPageProducts.map((product) => {
@@ -1511,6 +1534,12 @@ export class CatalogService {
           compareAtPriceToman: facetPrice
             ? facetPrice.compareAtPriceToman
             : (lowestPricedVariant?.compareAtPriceToman ?? product.compareAtPriceToman),
+          defaultSalePriceToman: product.salePriceToman,
+          defaultCompareAtPriceToman: product.compareAtPriceToman,
+          campaignOffer:
+            availableQuantity > 0 && promotions
+              ? selectCatalogPromotion(promotions, promotionTarget(product), product.salePriceToman)
+              : null,
           sizeMode: product.sizeMode,
           brand,
           categories: product.categories
@@ -1983,6 +2012,9 @@ export class CatalogService {
         category.id === product.primaryCategoryId && category.isActive && !category.deletedAt,
     )?.category.id;
     const typedAttributes = await this.catalogAttributes?.listPublicValues(product.id);
+    const promotions =
+      availableQuantity > 0 ? await this.promotions?.catalogPromotions(this.prisma) : undefined;
+    const target = promotionTarget(product);
 
     return {
       id: product.id,
@@ -2008,6 +2040,9 @@ export class CatalogService {
           : null,
       salePriceToman: product.salePriceToman,
       compareAtPriceToman: product.compareAtPriceToman,
+      campaignOffer: promotions
+        ? selectCatalogPromotion(promotions, target, product.salePriceToman)
+        : null,
       purchaseMode: product.purchaseMode,
       sizeMode: product.sizeMode,
       defaultPlatingType: product.defaultPlatingType,
@@ -2089,7 +2124,13 @@ export class CatalogService {
               isoCode: product.country.isoCode,
             }
           : null,
-      variants,
+      variants: variants.map((variant) => ({
+        ...variant,
+        campaignOffer:
+          promotions && variant.isAvailable
+            ? selectCatalogPromotion(promotions, target, variant.salePriceToman)
+            : null,
+      })),
       media,
       attributes: product.attributes,
       ...(typedAttributes?.length ? { typedAttributes } : {}),
@@ -2267,6 +2308,9 @@ export class CatalogService {
       },
     });
 
+    const promotions = products.length
+      ? await this.promotions?.catalogPromotions(this.prisma)
+      : undefined;
     return products.map((product) => {
       const availableQuantity = productAvailableQuantity(
         product.purchaseMode,
@@ -2292,6 +2336,12 @@ export class CatalogService {
         ...(product.updatedAt ? { updatedAt: product.updatedAt.toISOString() } : {}),
         salePriceToman: prices[0]?.sale ?? product.salePriceToman,
         compareAtPriceToman: prices[0]?.compare ?? product.compareAtPriceToman,
+        defaultSalePriceToman: product.salePriceToman,
+        defaultCompareAtPriceToman: product.compareAtPriceToman,
+        campaignOffer:
+          availableQuantity > 0 && promotions
+            ? selectCatalogPromotion(promotions, promotionTarget(product), product.salePriceToman)
+            : null,
         sizeMode: product.sizeMode,
         brand:
           product.brand?.isActive && !product.brand.deletedAt

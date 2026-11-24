@@ -19,7 +19,13 @@ import {
   discountBudget,
   promotionUsage,
 } from './promotion-budget';
-import type { AdminPromotionDto, PublicPromotionsDto, SavePromotionDto } from './dto/promotion.dto';
+import type {
+  AdminPromotionDto,
+  CampaignProductPricePreviewDto,
+  PublicPromotionsDto,
+  SavePromotionDto,
+} from './dto/promotion.dto';
+import { selectCatalogPromotion } from './promotion-presentation';
 
 export function normalizeCoupon(value: string | undefined | null) {
   const coupon = value?.trim().toUpperCase() || null;
@@ -200,12 +206,39 @@ export class PromotionsService {
   }
 
   async publicPromotions(now = new Date()): Promise<PublicPromotionsDto> {
-    const candidates = await this.db.campaignPromotion.findMany({
+    const available = await this.catalogPromotions(this.db, now);
+    return {
+      available: available.length > 0,
+      items: available
+        .filter(
+          ({ couponCode, campaign }) =>
+            couponCode === null && campaign.audience === 'ALL_CUSTOMERS',
+        )
+        .map(({ kind, campaign, bundleProductIds }) => ({
+          name: campaign.name,
+          kind,
+          allProducts: kind !== 'BUNDLE' && campaign.allProducts,
+          productIds: kind === 'BUNDLE' ? bundleProductIds : campaign.productIds,
+          categoryIds: kind === 'BUNDLE' ? [] : campaign.categoryIds,
+          endsAt: campaign.endsAt.toISOString(),
+        })),
+    };
+  }
+
+  async catalogPromotions(
+    reader: Pick<Prisma.TransactionClient, 'campaignPromotion' | 'orderPriceQuote'>,
+    now = new Date(),
+  ) {
+    const candidates = await reader.campaignPromotion.findMany({
       where: { campaign: this.activeCampaign(now) },
       orderBy: [{ priority: 'desc' }, { campaignId: 'asc' }],
       select: {
         couponCode: true,
         kind: true,
+        value: true,
+        minSubtotalToman: true,
+        maxDiscountToman: true,
+        maxDiscountBps: true,
         campaignId: true,
         maxUses: true,
         bundleProductIds: true,
@@ -224,7 +257,7 @@ export class PromotionsService {
       },
     });
     const usage = candidates.length
-      ? await this.db.orderPriceQuote.groupBy({
+      ? await reader.orderPriceQuote.groupBy({
           by: ['campaignId'],
           where: {
             campaignId: { in: candidates.map(({ campaignId }) => campaignId) },
@@ -235,30 +268,87 @@ export class PromotionsService {
         })
       : [];
     const usedByCampaign = new Map(usage.map((row) => [row.campaignId, row]));
-    const available = candidates.filter(({ campaign, campaignId, maxUses }) => {
-      const used = usedByCampaign.get(campaignId);
+    return candidates.flatMap((rule) => {
+      const used = usedByCampaign.get(rule.campaignId);
       const committed = used ? committedDiscount(used) : 0;
-      return (
-        committed < discountBudget(campaign) &&
-        (maxUses === null || (used?._count._all ?? 0) < maxUses)
-      );
+      const remainingToman = discountBudget(rule.campaign) - committed;
+      if (
+        remainingToman <= 0 ||
+        (rule.maxUses !== null && (used?._count._all ?? 0) >= rule.maxUses)
+      )
+        return [];
+      return [{ ...rule, remainingToman }];
     });
-    return {
-      available: available.length > 0,
-      items: available
-        .filter(
-          ({ couponCode, campaign }) =>
-            couponCode === null && campaign.audience === 'ALL_CUSTOMERS',
-        )
-        .map(({ kind, campaign, bundleProductIds }) => ({
-          name: campaign.name,
-          kind,
-          allProducts: kind !== 'BUNDLE' && campaign.allProducts,
-          productIds: kind === 'BUNDLE' ? bundleProductIds : campaign.productIds,
-          categoryIds: kind === 'BUNDLE' ? [] : campaign.categoryIds,
-          endsAt: campaign.endsAt.toISOString(),
-        })),
-    };
+  }
+
+  async productPricePreview(
+    campaignId: string,
+    slug: string,
+  ): Promise<CampaignProductPricePreviewDto> {
+    return this.db.$transaction(
+      async (tx) => {
+        const [campaign, product] = await Promise.all([
+          tx.campaign.findUnique({ where: { id: campaignId }, include: { promotion: true } }),
+          tx.product.findFirst({
+            where: { slug, deletedAt: null },
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              salePriceToman: true,
+              categories: {
+                where: { category: { isActive: true, deletedAt: null } },
+                select: { categoryId: true },
+              },
+              variants: {
+                where: { deletedAt: null },
+                orderBy: { sku: 'asc' },
+                select: { id: true, name: true, sku: true, salePriceToman: true, isActive: true },
+              },
+            },
+          }),
+        ]);
+        if (!campaign || !product) throw new NotFoundException('Campaign or product not found.');
+        const rule = campaign.promotion;
+        const usage = rule ? await promotionUsage(tx, campaignId) : null;
+        const remainingToman = discountBudget(campaign) - (usage ? committedDiscount(usage) : 0);
+        const candidates =
+          rule && (rule.maxUses === null || (usage?._count._all ?? 0) < rule.maxUses)
+            ? [{ ...rule, campaign, remainingToman }]
+            : [];
+        const target = {
+          productId: product.id,
+          categoryIds: product.categories.map(({ categoryId }) => categoryId),
+        };
+        const row = (
+          variantId: string | null,
+          label: string,
+          active: boolean,
+          regularToman: number | null,
+        ) => ({
+          variantId,
+          label,
+          active,
+          regularToman,
+          offer: selectCatalogPromotion(candidates, target, regularToman),
+        });
+        return {
+          name: product.name,
+          prices: [
+            row(null, 'قیمت پیش‌فرض', product.status === 'ACTIVE', product.salePriceToman),
+            ...product.variants.map((variant) =>
+              row(
+                variant.id,
+                variant.name ? `${variant.name} · ${variant.sku}` : variant.sku,
+                product.status === 'ACTIVE' && variant.isActive,
+                variant.salePriceToman ?? product.salePriceToman,
+              ),
+            ),
+          ],
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
   }
 
   async apply(

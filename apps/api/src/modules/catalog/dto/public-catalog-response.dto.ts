@@ -5,6 +5,7 @@ import {
   SizeMode,
   VariantInventoryMode,
 } from '../../../generated/prisma/enums';
+import { CatalogCampaignOfferDto } from '../../promotions/dto/promotion.dto';
 import { PublicTypedCatalogAttributeDto } from './catalog-attribute.dto';
 import { PublicCatalogSort } from './public-catalog-query.dto';
 
@@ -171,6 +172,9 @@ export class PublicCatalogVariantDto {
   @ApiProperty({ type: Number, nullable: true })
   compareAtPriceToman!: number | null;
 
+  @ApiPropertyOptional({ type: () => CatalogCampaignOfferDto, nullable: true })
+  campaignOffer?: CatalogCampaignOfferDto | null;
+
   @ApiProperty({ type: () => PublicCatalogSizeDto, nullable: true })
   size!: PublicCatalogSizeDto | null;
 
@@ -214,6 +218,15 @@ export class PublicCatalogProductSummaryDto {
 
   @ApiProperty({ type: Number, nullable: true })
   salePriceToman!: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  defaultSalePriceToman?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  defaultCompareAtPriceToman?: number | null;
+
+  @ApiPropertyOptional({ type: () => CatalogCampaignOfferDto, nullable: true })
+  campaignOffer?: CatalogCampaignOfferDto | null;
 
   @ApiProperty({ nullable: true })
   compareAtPriceToman!: number | null;

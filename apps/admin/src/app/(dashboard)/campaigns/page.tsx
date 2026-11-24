@@ -5,6 +5,7 @@ import { CampaignDetailView } from '@/components/campaigns/campaign-detail-view'
 import { CampaignBudgetReview } from '@/components/campaigns/campaign-budget-review';
 import { CampaignLandingEditor } from '@/components/campaigns/campaign-landing-editor';
 import { CampaignPromotionEditor } from '@/components/campaigns/campaign-promotion-editor';
+import { CampaignProductPricePreview } from '@/components/campaigns/campaign-product-price-preview';
 import { CampaignEditor } from '@/components/campaigns/campaign-editor';
 import { CampaignLinkBuilder } from '@/components/site-settings/campaign-link-builder';
 import { Alert } from '@/components/ui/alert';
@@ -99,12 +100,18 @@ export default async function CampaignsPage({ searchParams }: Props) {
         );
       } else if (currentStep === 'promotion') {
         panel = promotion?.data ? (
-          <CampaignPromotionEditor
-            key={`promotion-${campaign.id}-${promotion.data.rule?.expectedVersion ?? 0}`}
-            id={campaign.id}
-            rule={promotion.data.rule}
-            editable={canWrite && campaign.status === 'DRAFT'}
-          />
+          <>
+            <CampaignPromotionEditor
+              key={`promotion-${campaign.id}-${promotion.data.rule?.expectedVersion ?? 0}`}
+              id={campaign.id}
+              rule={promotion.data.rule}
+              editable={canWrite && campaign.status === 'DRAFT'}
+            />
+            <CampaignProductPricePreview
+              key={`prices-${campaign.id}-${campaign.revision}`}
+              campaignId={campaign.id}
+            />
+          </>
         ) : (
           <Alert tone="danger">دریافت قانون تخفیف ممکن نشد.</Alert>
         );

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
+import { PromotionsModule } from '../promotions/promotions.module';
 import { CatalogController } from './catalog.controller';
 import { CatalogAttributesController } from './catalog-attributes.controller';
 import { CatalogAttributesService } from './catalog-attributes.service';
@@ -14,7 +15,7 @@ import { LocalMediaStorageService } from './local-media-storage.service';
 import { PublicMediaUrlService } from './public-media-url.service';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, PromotionsModule],
   controllers: [CatalogController, CatalogAttributesController, CatalogMerchandisingController],
   providers: [
     CatalogService,

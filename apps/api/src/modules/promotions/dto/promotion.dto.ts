@@ -8,6 +8,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Length,
   Max,
   MaxLength,
   Min,
@@ -107,6 +108,67 @@ export class PublicPromotionsDto {
 
   @ApiProperty({ type: () => PublicPromotionDto, isArray: true })
   items!: PublicPromotionDto[];
+}
+
+const campaignConditions = [
+  'COUPON',
+  'CUSTOMER',
+  'MINIMUM',
+  'ORDER_AMOUNT',
+  'BUNDLE',
+  'SHIPPING',
+] as const;
+export type CampaignCondition = (typeof campaignConditions)[number];
+
+export class CampaignUnitPriceDto {
+  regularToman!: number;
+  discountToman!: number;
+  discountPercent!: number;
+  finalToman!: number;
+}
+
+export class CatalogCampaignOfferDto {
+  name!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  endsAt!: string;
+
+  @ApiProperty({ enum: [...campaignConditions], isArray: true })
+  conditions!: CampaignCondition[];
+
+  @ApiProperty({ type: Number, nullable: true })
+  minimumToman!: number | null;
+
+  @ApiProperty({ type: () => CampaignUnitPriceDto, nullable: true })
+  price!: CampaignUnitPriceDto | null;
+}
+
+export class CampaignProductPriceQueryDto {
+  @ApiProperty({ maxLength: 220 })
+  @IsString()
+  @Length(1, 220)
+  slug!: string;
+}
+
+export class CampaignProductPriceRowDto {
+  @ApiProperty({ type: String, nullable: true })
+  variantId!: string | null;
+
+  label!: string;
+  active!: boolean;
+
+  @ApiProperty({ type: Number, nullable: true })
+  regularToman!: number | null;
+
+  @ApiProperty({ type: () => CatalogCampaignOfferDto, nullable: true })
+  offer!: CatalogCampaignOfferDto | null;
+}
+
+export class CampaignProductPricePreviewDto {
+  name!: string;
+
+  @ApiProperty({ type: () => CampaignProductPriceRowDto, isArray: true })
+  prices!: CampaignProductPriceRowDto[];
 }
 
 export class PromotionEstimateDto {

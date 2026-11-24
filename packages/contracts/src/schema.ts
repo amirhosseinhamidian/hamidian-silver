@@ -916,6 +916,54 @@ export interface paths {
         patch: operations["CatalogMerchandisingController_update_v1"];
         trace?: never;
     };
+    "/api/v1/promotions/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PromotionsController_listPublic_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/promotions/{campaignId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PromotionsController_read_v1"];
+        put: operations["PromotionsController_save_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/promotions/{campaignId}/product-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PromotionsController_previewProduct_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/finance/supplier-payables": {
         parameters: {
             query?: never;
@@ -2788,38 +2836,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/promotions/public": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["PromotionsController_listPublic_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/promotions/{campaignId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["PromotionsController_read_v1"];
-        put: operations["PromotionsController_save_v1"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/payments/card-to-card/settings": {
         parameters: {
             query?: never;
@@ -4596,6 +4612,20 @@ export interface components {
             id: string;
             availableQuantity: number;
         };
+        CampaignUnitPriceDto: {
+            regularToman: number;
+            discountToman: number;
+            discountPercent: number;
+            finalToman: number;
+        };
+        CatalogCampaignOfferDto: {
+            /** Format: date-time */
+            endsAt: string;
+            conditions: ("COUPON" | "CUSTOMER" | "MINIMUM" | "ORDER_AMOUNT" | "BUNDLE" | "SHIPPING")[];
+            minimumToman: number | null;
+            price: components["schemas"]["CampaignUnitPriceDto"] | null;
+            name: string;
+        };
         PublicCatalogMediaDto: {
             /** Format: uri */
             url: string | null;
@@ -4640,6 +4670,9 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
             salePriceToman: number | null;
+            defaultSalePriceToman?: number | null;
+            defaultCompareAtPriceToman?: number | null;
+            campaignOffer?: components["schemas"]["CatalogCampaignOfferDto"] | null;
             compareAtPriceToman: number | null;
             /** @enum {string} */
             sizeMode: "NONE" | "FREE_SIZE" | "SIZED";
@@ -4892,6 +4925,7 @@ export interface components {
             lengthMm?: number | null;
             salePriceToman: number | null;
             compareAtPriceToman: number | null;
+            campaignOffer?: components["schemas"]["CatalogCampaignOfferDto"] | null;
             size: components["schemas"]["PublicCatalogSizeDto"] | null;
             /** @enum {string} */
             inventoryMode: "OWN" | "COMPONENTS";
@@ -4939,6 +4973,9 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
             salePriceToman: number | null;
+            defaultSalePriceToman?: number | null;
+            defaultCompareAtPriceToman?: number | null;
+            campaignOffer?: components["schemas"]["CatalogCampaignOfferDto"] | null;
             compareAtPriceToman: number | null;
             /** @enum {string} */
             sizeMode: "NONE" | "FREE_SIZE" | "SIZED";
@@ -5313,6 +5350,47 @@ export interface components {
             /** Format: date-time */
             endsAt?: string | null;
             expectedRevision: number;
+        };
+        PublicPromotionDto: {
+            /** @enum {string} */
+            kind: "PERCENT" | "FIXED" | "THRESHOLD" | "BUNDLE" | "FREE_SHIPPING";
+            productIds: string[];
+            categoryIds: string[];
+            /** Format: date-time */
+            endsAt: string;
+            name: string;
+            allProducts: boolean;
+        };
+        PublicPromotionsDto: {
+            items: components["schemas"]["PublicPromotionDto"][];
+            available: boolean;
+        };
+        SavePromotionDto: {
+            /** @enum {string} */
+            kind: "PERCENT" | "FIXED" | "THRESHOLD" | "BUNDLE" | "FREE_SHIPPING";
+            bundleProductSlugs: string[];
+            couponCode?: string | null;
+            maxUses?: number | null;
+            value: number;
+            minSubtotalToman: number;
+            maxDiscountToman: number;
+            maxDiscountBps: number;
+            priority: number;
+            expectedVersion: number;
+        };
+        AdminPromotionDto: {
+            rule: components["schemas"]["SavePromotionDto"] | null;
+        };
+        CampaignProductPriceRowDto: {
+            variantId: string | null;
+            regularToman: number | null;
+            offer: components["schemas"]["CatalogCampaignOfferDto"] | null;
+            label: string;
+            active: boolean;
+        };
+        CampaignProductPricePreviewDto: {
+            prices: components["schemas"]["CampaignProductPriceRowDto"][];
+            name: string;
         };
         MarkSupplierPayablePaidDto: {
             paymentReference?: string;
@@ -6296,36 +6374,6 @@ export interface components {
         };
         AddOperationalIncidentNoteDto: {
             note: string;
-        };
-        PublicPromotionDto: {
-            /** @enum {string} */
-            kind: "PERCENT" | "FIXED" | "THRESHOLD" | "BUNDLE" | "FREE_SHIPPING";
-            productIds: string[];
-            categoryIds: string[];
-            /** Format: date-time */
-            endsAt: string;
-            name: string;
-            allProducts: boolean;
-        };
-        PublicPromotionsDto: {
-            items: components["schemas"]["PublicPromotionDto"][];
-            available: boolean;
-        };
-        SavePromotionDto: {
-            /** @enum {string} */
-            kind: "PERCENT" | "FIXED" | "THRESHOLD" | "BUNDLE" | "FREE_SHIPPING";
-            bundleProductSlugs: string[];
-            couponCode?: string | null;
-            maxUses?: number | null;
-            value: number;
-            minSubtotalToman: number;
-            maxDiscountToman: number;
-            maxDiscountBps: number;
-            priority: number;
-            expectedVersion: number;
-        };
-        AdminPromotionDto: {
-            rule: components["schemas"]["SavePromotionDto"] | null;
         };
         PublicCardToCardSettingsDto: {
             cardNumber: string | null;
@@ -9376,6 +9424,94 @@ export interface operations {
             };
         };
     };
+    PromotionsController_listPublic_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPromotionsDto"];
+                };
+            };
+        };
+    };
+    PromotionsController_read_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPromotionDto"];
+                };
+            };
+        };
+    };
+    PromotionsController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavePromotionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPromotionDto"];
+                };
+            };
+        };
+    };
+    PromotionsController_previewProduct_v1: {
+        parameters: {
+            query: {
+                slug: string;
+            };
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignProductPricePreviewDto"];
+                };
+            };
+        };
+    };
     SupplierPayablesController_list_v1: {
         parameters: {
             query?: {
@@ -12306,71 +12442,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    PromotionsController_listPublic_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublicPromotionsDto"];
-                };
-            };
-        };
-    };
-    PromotionsController_read_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                campaignId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminPromotionDto"];
-                };
-            };
-        };
-    };
-    PromotionsController_save_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                campaignId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SavePromotionDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminPromotionDto"];
-                };
             };
         };
     };

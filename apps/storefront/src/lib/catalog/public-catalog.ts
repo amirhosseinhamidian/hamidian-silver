@@ -144,6 +144,7 @@ const getPublicCatalogProductsForRequest = cache(
   ): Promise<PublicCatalogProductList> => {
     const client = createPublicCatalogClient();
     const result = await client.GET('/api/v1/catalog/public/products', {
+      cache: 'no-store',
       params: {
         query: {
           page,
@@ -349,6 +350,7 @@ export const getPublicCatalogProduct = cache(
   async (slug: string): Promise<PublicCatalogProductDetail | null> => {
     const client = createPublicCatalogClient();
     const result = await client.GET('/api/v1/catalog/public/products/{slug}', {
+      cache: 'no-store',
       params: {
         path: {
           slug,
@@ -373,6 +375,7 @@ export async function getPublicRelatedProducts(
 ): Promise<PublicCatalogProductList> {
   const client = createPublicCatalogClient();
   const result = await client.GET('/api/v1/catalog/public/products/{slug}/related', {
+    cache: 'no-store',
     params: { path: { slug }, query: { page: String(page), pageSize: String(pageSize) } },
   });
   assertSuccessfulResponse(result.response, result.data, 'related products');

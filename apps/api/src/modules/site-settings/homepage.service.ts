@@ -368,6 +368,7 @@ export class HomepageService {
       shortDescription: product.shortDescription,
       salePriceToman: product.salePriceToman,
       compareAtPriceToman: product.compareAtPriceToman,
+      campaignOffer: product.campaignOffer,
       sizeMode: product.sizeMode,
       brand: product.brand,
       categories: product.categories,

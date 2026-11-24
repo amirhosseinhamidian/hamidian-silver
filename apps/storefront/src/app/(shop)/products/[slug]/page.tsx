@@ -7,7 +7,7 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import { ProductViewAnalytics } from '@/components/analytics/conversion-trackers';
 import { ProductPurchasePanel } from '@/components/cart/product-purchase-panel';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
-import { DiscountBadge } from '@/components/catalog/discount-badge';
+import { CatalogPrice } from '@/components/catalog/catalog-price';
 import { ProductMediaGallery } from '@/components/catalog/product-media-gallery';
 import { RelatedProductsSection } from '@/components/catalog/related-products-section';
 import { RelatedKnowledgeSection } from '@/components/guide/related-knowledge-section';
@@ -24,8 +24,6 @@ import {
   type CatalogSearchParams,
   type PublicCatalogProductDetail,
 } from '@/lib/catalog/public-catalog';
-import { formatTomanPrice } from '@/lib/catalog/presentation';
-import { getDiscountPercent } from '@/lib/catalog/pricing';
 import { getPublicRelatedGuideArticles } from '@/lib/guide/public-guide';
 import { productSeoDescription } from '@/lib/seo/content-copy';
 import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
@@ -232,26 +230,15 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
               <div className="flex flex-col gap-1">
-                {product.compareAtPriceToman &&
-                product.salePriceToman &&
-                product.compareAtPriceToman > product.salePriceToman ? (
-                  <div className="flex items-center gap-3 text-sm text-[var(--sf-color-muted)]">
-                    <span className="line-through">
-                      {formatTomanPrice(product.compareAtPriceToman)}
-                    </span>
-
-                    <DiscountBadge
-                      percent={getDiscountPercent(
-                        product.compareAtPriceToman,
-                        product.salePriceToman,
-                      )!}
-                    />
-                  </div>
-                ) : null}
-
-                <p className="text-2xl font-medium sm:text-3xl">
-                  {formatTomanPrice(product.salePriceToman)}
-                </p>
+                {product.variants.length > 1 && (
+                  <span className="text-xs text-[var(--sf-color-muted)]">قیمت پیش‌فرض محصول</span>
+                )}
+                <CatalogPrice
+                  sale={product.salePriceToman}
+                  compare={product.compareAtPriceToman}
+                  offer={product.campaignOffer}
+                  priceClassName="text-2xl font-medium sm:text-3xl"
+                />
               </div>
               <WishlistButton
                 item={{
