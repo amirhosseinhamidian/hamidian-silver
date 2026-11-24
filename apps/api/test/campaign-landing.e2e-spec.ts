@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { formatTehranDate } from '../src/modules/campaigns/campaign-calendar';
 import { CampaignLandingsService } from '../src/modules/campaigns/campaign-landings.service';
+import { CampaignOperationsCenterService } from '../src/modules/campaigns/campaign-operations-center.service';
 import { CampaignsService } from '../src/modules/campaigns/campaigns.service';
 import { FestivalDesignService } from '../src/modules/campaigns/festival-design.service';
 import type { FestivalDesignDto } from '../src/modules/campaigns/dto/festival-design.dto';
@@ -16,6 +17,7 @@ it('publishes only qualifying products, limits banner placements and archives a 
   const db = new PrismaService(config);
   const media = new PublicMediaUrlService(config);
   const catalog = new CatalogService(db, media);
+  const operations = new CampaignOperationsCenterService(db, catalog);
   const festivals = new FestivalDesignService(db, catalog, media);
   const landings = new CampaignLandingsService(db, catalog, media, festivals);
   const campaigns = new CampaignsService(db, media, landings);
@@ -288,6 +290,10 @@ it('publishes only qualifying products, limits banner placements and archives a 
     const approved = await move('APPROVE', restoredDesign.revision);
     await move('SCHEDULE', approved.revision);
     await campaigns.advance(now);
+    await expect(operations.read(created.id, {}, false, now)).resolves.toMatchObject({
+      publication: 'LIVE',
+      landingSlug: slug,
+    });
 
     const page = await landings.publicLanding(slug, 1, now);
     expect(page).toMatchObject({ active: true, products: { total: 2 } });
@@ -360,6 +366,9 @@ it('publishes only qualifying products, limits banner placements and archives a 
       products: { total: 0, items: [] },
     });
     await expect(landings.placement('PRODUCT', ring.slug, now)).resolves.toBeNull();
+    await expect(operations.read(created.id, {}, false, now)).resolves.toMatchObject({
+      publication: 'EMPTY',
+    });
     expect((await landings.sitemap(now)).entries.some((entry) => entry.slug === slug)).toBe(false);
     await campaigns.advance(end);
     await expect(landings.publicLanding(slug, 1, end)).resolves.toMatchObject({

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { formatTehranDate } from '../src/modules/campaigns/campaign-calendar';
 import type { CampaignAction } from '../src/modules/campaigns/campaign-lifecycle';
+import { resolveHumanAuditEvent } from '../src/modules/audit/audit-event';
 import { CampaignsService } from '../src/modules/campaigns/campaigns.service';
 import { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
 
@@ -92,7 +93,22 @@ it('locks transitions across transactions, reuses tracking and expires the banne
         ctaLabel: draft.ctaLabel,
       },
     });
-    await expect(move('PAUSE', 4)).resolves.toMatchObject({ status: 'PAUSED', revision: 5 });
+    const paused = await move('PAUSE', 4);
+    expect(paused).toMatchObject({ status: 'PAUSED', revision: 5 });
+    expect(
+      resolveHumanAuditEvent(
+        paused,
+        {
+          method: 'POST',
+          resource: 'campaigns',
+          action: 'POST /campaigns/:id/transitions',
+        },
+        'SUCCESS',
+      ),
+    ).toMatchObject({
+      operationType: 'STATUS_CHANGE',
+      changes: [{ field: 'status', before: 'ACTIVE', after: 'PAUSED' }],
+    });
     await expect(campaigns.publicBanner(start)).resolves.toEqual({ banner: null });
     await expect(move('RESUME', 5)).resolves.toMatchObject({ status: 'SCHEDULED', revision: 6 });
     await expect(campaigns.advance(start)).resolves.toBe(1);

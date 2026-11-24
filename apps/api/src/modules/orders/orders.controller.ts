@@ -24,7 +24,7 @@ import {
   CustomerOrderDetailDto,
   CustomerOrderSummaryDto,
 } from './dto/customer-order-response.dto';
-import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import { AdminListOrdersQueryDto, ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrdersService } from './orders.service';
 
@@ -94,7 +94,7 @@ export class OrdersController {
 
   @Get()
   @RequirePermissions(PERMISSION_CODES.ORDERS_READ)
-  listOrders(@Query() query: ListOrdersQueryDto) {
+  listOrders(@Query() query: AdminListOrdersQueryDto) {
     return this.ordersService.listOrders(query);
   }
 

@@ -2,6 +2,11 @@ import { Prisma } from '../../generated/prisma/client';
 import type { GrowthCampaignPerformanceQueryDto } from './dto/growth-campaign-performance.dto';
 import { confirmedGrowthOrders, growthReportPeriodSql } from './growth-revenue-events';
 
+export const confirmedCampaignDiscountSums = Prisma.sql`
+  COALESCE(SUM(quote."merchandiseDiscountToman"), 0)::bigint AS "merchandiseDiscountToman",
+  COALESCE(SUM(quote."shippingDiscountToman"), 0)::bigint AS "shippingDiscountToman"
+`;
+
 export function growthCampaignPerformanceQuery(
   query: GrowthCampaignPerformanceQueryDto,
   trackingId: string,
@@ -24,9 +29,7 @@ export function growthCampaignPerformanceQuery(
         )
     ) AS "newCustomers", discount.*, media."lifetimeMediaSpendToman"
     FROM (
-      SELECT
-        COALESCE(SUM(quote."merchandiseDiscountToman"), 0)::bigint AS "merchandiseDiscountToman",
-        COALESCE(SUM(quote."shippingDiscountToman"), 0)::bigint AS "shippingDiscountToman"
+      SELECT ${confirmedCampaignDiscountSums}
       FROM order_price_quotes quote
       JOIN confirmed_orders paid ON paid.id = quote."orderId"
       CROSS JOIN report_period

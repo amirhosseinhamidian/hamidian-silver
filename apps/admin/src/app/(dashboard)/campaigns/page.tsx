@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 
+import {
+  CampaignOperationsCenter,
+  campaignOrderLabels,
+} from '@/components/campaigns/campaign-operations-center';
 import { CampaignDetailView } from '@/components/campaigns/campaign-detail-view';
 import { CampaignBudgetReview } from '@/components/campaigns/campaign-budget-review';
 import { FestivalDesigner } from '@/components/campaigns/festival-designer';
@@ -28,6 +32,9 @@ type Props = {
     create?: string;
     edit?: string;
     step?: string;
+    orderPage?: string;
+    quotaPage?: string;
+    orderState?: string;
   }>;
 };
 
@@ -44,7 +51,14 @@ export default async function CampaignsPage({ searchParams }: Props) {
     returnTo: '/campaigns',
   });
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
-  const { id, create, page, history, edit, step } = await searchParams;
+  const { id, create, page, history, edit, step, orderPage, quotaPage, orderState } =
+    await searchParams;
+  const canReadOperations = user.permissions.includes('orders.read');
+  const operationsPage = (value?: string) => Math.min(pageNumber(value), 1000);
+  const orderFilter =
+    typeof orderState === 'string' && Object.hasOwn(campaignOrderLabels, orderState)
+      ? (orderState as keyof typeof campaignOrderLabels)
+      : undefined;
   const canWrite = user.permissions.includes('settings.write');
   const client = createAdminApiClient(token);
 
@@ -63,7 +77,9 @@ export default async function CampaignsPage({ searchParams }: Props) {
         : null;
     const campaign = result?.data;
     const [promotion, landing, festival] =
-      campaign && !(edit === '1' && canWrite && campaign.status === 'DRAFT')
+      campaign &&
+      step !== 'operations' &&
+      !(edit === '1' && canWrite && campaign.status === 'DRAFT')
         ? await Promise.all([
             client
               .GET('/api/v1/promotions/{campaignId}', {
@@ -90,13 +106,48 @@ export default async function CampaignsPage({ searchParams }: Props) {
     if (campaign) {
       const editing = edit === '1' && canWrite && campaign.status === 'DRAFT';
       const currentStep =
-        step === 'landing' || step === 'promotion' || (step === 'links' && canWrite)
+        step === 'operations' ||
+        step === 'landing' ||
+        step === 'promotion' ||
+        (step === 'links' && canWrite)
           ? step
           : 'review';
       const url = `/campaigns?id=${campaign.id}`;
       let panel;
       if (editing) {
         panel = <CampaignEditor key={`${campaign.id}-${campaign.revision}`} campaign={campaign} />;
+      } else if (currentStep === 'operations') {
+        const operations = canReadOperations
+          ? await client
+              .GET('/api/v1/campaigns/{id}/operations', {
+                cache: 'no-store',
+                params: {
+                  path: { id: campaign.id },
+                  query: {
+                    orderPage: operationsPage(orderPage),
+                    quotaPage: operationsPage(quotaPage),
+                    orderState: orderFilter,
+                  },
+                },
+              })
+              .catch(() => null)
+          : null;
+        panel = operations?.data ? (
+          <CampaignOperationsCenter
+            campaign={campaign}
+            data={operations.data}
+            orderState={orderFilter}
+            canWrite={canWrite}
+            canEditCatalog={user.permissions.includes('catalog.write')}
+            canReadAudit={user.permissions.includes('audit.read')}
+          />
+        ) : (
+          <Alert tone="danger">
+            {canReadOperations
+              ? 'دریافت داده‌های عملیاتی ممکن نشد.'
+              : 'مشاهدهٔ مرکز عملیات به دسترسی خواندن سفارش‌ها نیاز دارد.'}
+          </Alert>
+        );
       } else if (currentStep === 'landing') {
         panel = landing?.data ? (
           <>
@@ -176,6 +227,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
         );
       }
       const steps = [
+        ...(canReadOperations ? [{ id: 'operations', title: 'مرکز عملیات' }] : []),
         { id: 'landing', title: 'صفحه و مجموعه' },
         { id: 'promotion', title: 'قانون و کوپن' },
         { id: 'review', title: 'پیش‌نمایش و انتشار' },
@@ -204,7 +256,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
               </ButtonLink>
             ))}
           </nav>
-          {user.permissions.includes('finance.read') && (
+          {currentStep !== 'operations' && user.permissions.includes('finance.read') && (
             <ButtonLink
               href={`/growth/campaigns/${encodeURIComponent(campaign.trackingId)}`}
               variant="outline"
@@ -243,7 +295,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
                 className="grid gap-2 py-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-center sm:gap-5"
               >
                 <Link
-                  href={`/campaigns?id=${campaign.id}`}
+                  href={`/campaigns?id=${campaign.id}${canReadOperations ? '&step=operations' : ''}`}
                   className="font-semibold underline-offset-4 hover:underline"
                 >
                   {campaign.name}

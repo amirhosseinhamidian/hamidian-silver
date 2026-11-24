@@ -1039,6 +1039,74 @@
         ]
       }
     },
+    "/api/v1/campaigns/{id}/operations": {
+      "get": {
+        "operationId": "CampaignOperationsCenterController_read_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "quotaPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "orderState",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "CONFIRMED",
+                "RECEIPT_REVIEW",
+                "RECEIPT_REJECTED",
+                "PAYMENT_FAILED",
+                "RECONCILIATION",
+                "CANCELLED",
+                "EXPIRED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignOperationsCenterDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CampaignOperationsCenter"
+        ]
+      }
+    },
     "/api/v1/catalog/public/categories": {
       "get": {
         "operationId": "CatalogController_listPublicCategories_v1",
@@ -7052,6 +7120,15 @@
       "get": {
         "operationId": "OrdersController_listOrders_v1",
         "parameters": [
+          {
+            "name": "orderId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
           {
             "name": "status",
             "required": false,
@@ -14682,6 +14759,266 @@
           "slug",
           "campaignId",
           "endsAt"
+        ]
+      },
+      "CampaignOrderCountsDto": {
+        "type": "object",
+        "properties": {
+          "registered": {
+            "type": "number"
+          },
+          "confirmed": {
+            "type": "number"
+          },
+          "awaitingReceipt": {
+            "type": "number"
+          },
+          "rejectedReceipt": {
+            "type": "number"
+          },
+          "pending": {
+            "type": "number"
+          },
+          "paymentFailed": {
+            "type": "number"
+          },
+          "reconciliation": {
+            "type": "number"
+          },
+          "cancelled": {
+            "type": "number"
+          },
+          "expired": {
+            "type": "number"
+          },
+          "overdueReservations": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "registered",
+          "confirmed",
+          "awaitingReceipt",
+          "rejectedReceipt",
+          "pending",
+          "paymentFailed",
+          "reconciliation",
+          "cancelled",
+          "expired",
+          "overdueReservations"
+        ]
+      },
+      "CampaignOrderOperationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "enum": [
+              "PENDING",
+              "CONFIRMED",
+              "RECEIPT_REVIEW",
+              "RECEIPT_REJECTED",
+              "PAYMENT_FAILED",
+              "RECONCILIATION",
+              "CANCELLED",
+              "EXPIRED"
+            ],
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "discountApplied": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "state",
+          "number",
+          "discountApplied"
+        ]
+      },
+      "CampaignQuotaTotalsDto": {
+        "type": "object",
+        "properties": {
+          "products": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "siteSold": {
+            "type": "number"
+          },
+          "reserved": {
+            "type": "number"
+          },
+          "manualSold": {
+            "type": "number"
+          },
+          "remaining": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "products",
+          "limit",
+          "siteSold",
+          "reserved",
+          "manualSold",
+          "remaining"
+        ]
+      },
+      "CampaignQuotaOperationDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "manualSold": {
+            "type": "integer"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "siteSold": {
+            "type": "integer"
+          },
+          "reserved": {
+            "type": "integer"
+          },
+          "remaining": {
+            "type": "integer"
+          },
+          "sellableStock": {
+            "type": "integer"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stockShortfall": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "limit",
+          "manualSold",
+          "revision",
+          "siteSold",
+          "reserved",
+          "remaining",
+          "sellableStock",
+          "productId",
+          "stockShortfall"
+        ]
+      },
+      "CampaignOperationsFinanceDto": {
+        "type": "object",
+        "properties": {
+          "confirmedMerchandiseDiscountToman": {
+            "type": "number"
+          },
+          "confirmedShippingDiscountToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "confirmedMerchandiseDiscountToman",
+          "confirmedShippingDiscountToman"
+        ]
+      },
+      "CampaignOperationsCenterDto": {
+        "type": "object",
+        "properties": {
+          "orders": {
+            "$ref": "#/components/schemas/CampaignOrderCountsDto"
+          },
+          "orderItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignOrderOperationDto"
+            }
+          },
+          "quota": {
+            "$ref": "#/components/schemas/CampaignQuotaTotalsDto"
+          },
+          "quotaItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignQuotaOperationDto"
+            }
+          },
+          "finance": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignOperationsFinanceDto"
+              }
+            ]
+          },
+          "landingSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "publication": {
+            "enum": [
+              "NO_LANDING",
+              "INACTIVE",
+              "EMPTY",
+              "LIVE",
+              "UNKNOWN"
+            ],
+            "type": "string"
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "orderPage": {
+            "type": "number"
+          },
+          "hasMoreOrders": {
+            "type": "boolean"
+          },
+          "quotaPage": {
+            "type": "number"
+          },
+          "hasMoreQuotas": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "orders",
+          "orderItems",
+          "quota",
+          "quotaItems",
+          "finance",
+          "landingSlug",
+          "publication",
+          "checkedAt",
+          "orderPage",
+          "hasMoreOrders",
+          "quotaPage",
+          "hasMoreQuotas"
         ]
       },
       "PublicCatalogCategoryPageDto": {

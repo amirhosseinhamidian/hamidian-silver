@@ -6,6 +6,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { Prisma, type Campaign, type Media } from '../../generated/prisma/client';
+import { attachHumanAuditEvent } from '../audit/audit-event';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { normalizeAttributionToken } from '../growth-attribution/attribution';
@@ -259,9 +260,16 @@ export class CampaignsService {
         const budget = await campaignBudget(tx, current, rule);
         if (budget.blockers.length) throw new BadRequestException(budget.blockers[0]);
       }
-      return summarize(
+      const updated = summarize(
         await this.setStatus(tx, current, status, input.action, actorUserId, input.requestId),
       );
+      if (input.action !== 'PAUSE') return updated;
+      return attachHumanAuditEvent(updated, {
+        title: `کمپین «${current.name}» متوقف شد.`,
+        entityName: current.name,
+        operationType: 'STATUS_CHANGE',
+        changes: [{ field: 'status', label: 'وضعیت کمپین', before: current.status, after: status }],
+      });
     });
   }
 

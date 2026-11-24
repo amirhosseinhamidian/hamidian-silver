@@ -11,11 +11,12 @@ export type OrderManagementData = Readonly<{
   failed: boolean;
 }>;
 
-export async function loadOrderManagement(): Promise<OrderManagementData> {
+export async function loadOrderManagement(orderId?: string): Promise<OrderManagementData> {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token) throw new Error('Authenticated admin session is required.');
   try {
-    const response = await requestAdminCatalog('/api/v1/orders?limit=100', token);
+    const query = new URLSearchParams(orderId ? { orderId, limit: '1' } : { limit: '100' });
+    const response = await requestAdminCatalog(`/api/v1/orders?${query}`, token);
     if (!response.ok) return { orders: [], failed: true };
     const orders = parseAdminOrders(await readJsonResponse(response));
     return { orders: orders ?? [], failed: orders === null };

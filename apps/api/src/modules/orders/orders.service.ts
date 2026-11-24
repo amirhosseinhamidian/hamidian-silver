@@ -35,7 +35,7 @@ import { ShippingCarriersService } from '../shipping/shipping-carriers.service';
 import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderAddressDto, CreateOrderDto, CreateOrderItemDto } from './dto/create-order.dto';
-import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import { AdminListOrdersQueryDto, ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 const RESERVATION_TTL_MINUTES = 15;
@@ -974,10 +974,11 @@ export class OrdersService {
     };
   }
 
-  async listOrders(query: ListOrdersQueryDto) {
+  async listOrders(query: AdminListOrdersQueryDto) {
     const orders: AdminOrderListRecord[] = await this.prisma.order.findMany({
       where: {
         status: query.status,
+        ...(query.orderId ? { id: query.orderId } : {}),
       },
       take: query.limit ?? 50,
       orderBy: {

@@ -356,6 +356,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaigns/{id}/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignOperationsCenterController_read_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/public/categories": {
         parameters: {
             query?: never;
@@ -5065,6 +5081,70 @@ export interface components {
             campaignId: string;
             endsAt: string;
         };
+        CampaignOrderCountsDto: {
+            registered: number;
+            confirmed: number;
+            awaitingReceipt: number;
+            rejectedReceipt: number;
+            pending: number;
+            paymentFailed: number;
+            reconciliation: number;
+            cancelled: number;
+            expired: number;
+            overdueReservations: number;
+        };
+        CampaignOrderOperationDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** @enum {string} */
+            state: "PENDING" | "CONFIRMED" | "RECEIPT_REVIEW" | "RECEIPT_REJECTED" | "PAYMENT_FAILED" | "RECONCILIATION" | "CANCELLED" | "EXPIRED";
+            number: string;
+            discountApplied: boolean;
+        };
+        CampaignQuotaTotalsDto: {
+            products: number;
+            limit: number;
+            siteSold: number;
+            reserved: number;
+            manualSold: number;
+            remaining: number;
+        };
+        CampaignQuotaOperationDto: {
+            slug: string;
+            name: string;
+            limit: number;
+            manualSold: number;
+            revision: number;
+            siteSold: number;
+            reserved: number;
+            remaining: number;
+            sellableStock: number;
+            /** Format: uuid */
+            productId: string;
+            stockShortfall: number;
+        };
+        CampaignOperationsFinanceDto: {
+            confirmedMerchandiseDiscountToman: number;
+            confirmedShippingDiscountToman: number;
+        };
+        CampaignOperationsCenterDto: {
+            orders: components["schemas"]["CampaignOrderCountsDto"];
+            orderItems: components["schemas"]["CampaignOrderOperationDto"][];
+            quota: components["schemas"]["CampaignQuotaTotalsDto"];
+            quotaItems: components["schemas"]["CampaignQuotaOperationDto"][];
+            finance: components["schemas"]["CampaignOperationsFinanceDto"] | null;
+            landingSlug: string | null;
+            /** @enum {string} */
+            publication: "NO_LANDING" | "INACTIVE" | "EMPTY" | "LIVE" | "UNKNOWN";
+            /** Format: date-time */
+            checkedAt: string;
+            orderPage: number;
+            hasMoreOrders: boolean;
+            quotaPage: number;
+            hasMoreQuotas: boolean;
+        };
         PublicCatalogCategoryPageDto: {
             description: string | null;
             parentId: string | null;
@@ -8476,6 +8556,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FestivalPreviewDto"];
+                };
+            };
+        };
+    };
+    CampaignOperationsCenterController_read_v1: {
+        parameters: {
+            query?: {
+                orderPage?: number;
+                quotaPage?: number;
+                orderState?: "PENDING" | "CONFIRMED" | "RECEIPT_REVIEW" | "RECEIPT_REJECTED" | "PAYMENT_FAILED" | "RECONCILIATION" | "CANCELLED" | "EXPIRED";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOperationsCenterDto"];
                 };
             };
         };
@@ -12230,6 +12335,7 @@ export interface operations {
     OrdersController_listOrders_v1: {
         parameters: {
             query?: {
+                orderId?: string;
                 status?: "CANCELLED" | "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "EXPIRED";
                 limit?: number;
             };

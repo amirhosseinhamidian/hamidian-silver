@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
 import { PromotionsModule } from '../promotions/promotions.module';
+import { CampaignOperationsCenterController } from './campaign-operations-center.controller';
+import { CampaignOperationsCenterService } from './campaign-operations-center.service';
 import { CampaignQuotasController } from './campaign-quotas.controller';
 import { CampaignQuotasService } from './campaign-quotas.service';
 import { CatalogModule } from '../catalog/catalog.module';
@@ -19,6 +21,7 @@ import { CampaignsService } from './campaigns.service';
     CampaignLandingsController,
     CampaignQuotasController,
     FestivalDesignController,
+    CampaignOperationsCenterController,
   ],
   providers: [
     CampaignsService,
@@ -26,6 +29,7 @@ import { CampaignsService } from './campaigns.service';
     CampaignLandingsService,
     CampaignQuotasService,
     FestivalDesignService,
+    CampaignOperationsCenterService,
   ],
 })
 export class CampaignsModule {}

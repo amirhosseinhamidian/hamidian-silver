@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/infrastructure/database/prisma.service';
+import { CampaignOperationsCenterService } from '../src/modules/campaigns/campaign-operations-center.service';
 import { CampaignQuotasService } from '../src/modules/campaigns/campaign-quotas.service';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
@@ -22,6 +23,7 @@ it('serializes quota claims with inventory, releases failed payments, and preser
   const promotions = new PromotionsService(db);
   const quotas = new CampaignQuotasService(db, promotions);
   const catalog = new CatalogService(db, new PublicMediaUrlService(config), undefined, promotions);
+  const operations = new CampaignOperationsCenterService(db, catalog);
   const orders = new OrdersService(
     db,
     undefined,
@@ -140,6 +142,11 @@ it('serializes quota claims with inventory, releases failed payments, and preser
       { onHand: 2, reserved: 0 },
     ]);
 
+    await expect(operations.read(campaignId, {}, false)).resolves.toMatchObject({
+      orders: { registered: 0, confirmed: 0 },
+      quota: { limit: 2, manualSold: 1, siteSold: 0, reserved: 0, remaining: 1 },
+      finance: null,
+    });
     await db.campaign.update({ where: { id: campaignId }, data: { status: 'ACTIVE' } });
     const baskets = product.variants.map(
       ({ id: variantId }) =>
@@ -228,6 +235,10 @@ it('serializes quota claims with inventory, releases failed payments, and preser
       size: receipt.length,
     });
     await expect(quotas.get(campaignId, slug)).resolves.toMatchObject({ reserved: 1, siteSold: 0 });
+    await expect(operations.read(campaignId, {}, true)).resolves.toMatchObject({
+      orders: { awaitingReceipt: 1, rejectedReceipt: 0 },
+      quota: { reserved: 1, manualSold: 1, siteSold: 0 },
+    });
     await payments.rejectCardToCardReceipt(payment.attemptId, manager, 'test rejection');
     await expect(
       payments.rejectCardToCardReceipt(payment.attemptId, manager, 'test rejection'),
@@ -237,6 +248,13 @@ it('serializes quota claims with inventory, releases failed payments, and preser
       remaining: 1,
     });
 
+    await expect(
+      operations.read(campaignId, { orderState: 'RECEIPT_REJECTED' }, true),
+    ).resolves.toMatchObject({
+      orders: { registered: 1, confirmed: 0, awaitingReceipt: 0, rejectedReceipt: 1 },
+      orderItems: [{ id: pending.id, state: 'RECEIPT_REJECTED', discountApplied: true }],
+      finance: { confirmedMerchandiseDiscountToman: 0 },
+    });
     failureCode = null;
     const retry = await payments.initiateOrderPayment(buyerId, pending.id, {
       idempotencyKey: randomUUID(),
@@ -251,6 +269,35 @@ it('serializes quota claims with inventory, releases failed payments, and preser
       remaining: 0,
       siteSold: 1,
     });
+    const anotherOrder = await orders.createOrder(buyers[loser].id, baskets[loser]);
+    await db.orderAttribution.createMany({
+      data: [pending.id, anotherOrder.id].map((orderId) => ({
+        orderId,
+        policyVersion: 1,
+        windowDays: 30,
+        model: 'LAST_NON_DIRECT',
+        firstTouch: {},
+        lastTouch: {},
+        source: 'email',
+        medium: 'email',
+        campaignId: slug,
+        attributedAt: new Date(),
+      })),
+    });
+    await expect(operations.read(campaignId, {}, true)).resolves.toMatchObject({
+      orders: { registered: 2, confirmed: 1, pending: 1, rejectedReceipt: 0 },
+      orderItems: expect.arrayContaining([
+        expect.objectContaining({ id: pending.id, discountApplied: true }),
+        expect.objectContaining({ id: anotherOrder.id, discountApplied: false }),
+      ]),
+      quota: { reserved: 0, manualSold: 1, siteSold: 1 },
+      finance: { confirmedMerchandiseDiscountToman: 2_000, confirmedShippingDiscountToman: 0 },
+    });
+    await expect(orders.listOrders({ orderId: pending.id, limit: 1 })).resolves.toMatchObject([
+      { id: pending.id },
+    ]);
+    await orders.cancelOrder(anotherOrder.id, {}, manager);
+
     const shipped = await db.order.update({
       where: { id: pending.id },
       data: { status: 'SHIPPED' },
@@ -272,6 +319,18 @@ it('serializes quota claims with inventory, releases failed payments, and preser
     });
 
     await update(2, 0, 3);
+    await db.inventory.updateMany({
+      where: { variant: { productId: product.id } },
+      data: { onHand: 0 },
+    });
+    await expect(operations.read(campaignId, {}, false)).resolves.toMatchObject({
+      quotaItems: [{ productId: product.id, remaining: 1, sellableStock: 0, stockShortfall: 1 }],
+    });
+    await db.inventory.updateMany({
+      where: { variant: { productId: product.id } },
+      data: { onHand: 2 },
+    });
+
     const createPending = async () => {
       const id = buyers[loser].id;
       const quote = await orders.quotePrice(id, baskets[loser]);
