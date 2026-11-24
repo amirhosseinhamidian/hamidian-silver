@@ -138,19 +138,23 @@ function calculatedReward(rule: RewardGrantRuleDto | null, base: number) {
 export function calculateRewardPolicy(
   version: number,
   policy: RewardPolicyDefinitionDto,
-  sample: SimulateRewardPolicyDto,
+  sample: SimulateRewardPolicyDto & { otherCustomerOrderIncentivesToman?: number },
 ): RewardSimulationDto {
   const { budget } = policy;
   const { usage } = sample;
+  const otherCustomerOrderIncentivesToman =
+    sample.otherCustomerOrderIncentivesToman ?? sample.otherOrderIncentivesToman;
   if (
     Object.values(usage).some((value) => !Number.isSafeInteger(value) || value < 0) ||
     [
       sample.previousCompletedPurchases,
       sample.shippingDiscountToman,
       sample.otherOrderIncentivesToman,
+      otherCustomerOrderIncentivesToman,
       sample.availableCreditToman,
       sample.campaignRedemptionCapToman ?? 0,
-    ].some((value) => !isNonNegativeTomanInt(value))
+    ].some((value) => !isNonNegativeTomanInt(value)) ||
+    otherCustomerOrderIncentivesToman > sample.otherOrderIncentivesToman
   )
     throw new RewardPolicyValidationError(
       'Sample amounts and counts must be nonnegative integers.',
@@ -215,6 +219,10 @@ export function calculateRewardPolicy(
     sample.campaignRedemptionCapToman ?? undefined,
   );
   const canRedeem = sample.outcome !== 'CANCELLED' && sample.outcome !== 'FULLY_RETURNED';
+  const existingCustomerOrderIncentivesToman =
+    existingOrderIncentivesToman -
+    sample.otherOrderIncentivesToman +
+    otherCustomerOrderIncentivesToman;
   const remainingRewardBudgetToman = Math.min(
     budget.rewardPerOrderToman,
     remaining(budget.rewardPerCustomerPeriodToman, usage.customerRewardsToman),
@@ -222,7 +230,7 @@ export function calculateRewardPolicy(
     remaining(budget.incentivesPerOrderToman, existingOrderIncentivesToman),
     remaining(
       remaining(budget.incentivesPerCustomerPeriodToman, usage.customerIncentivesToman),
-      existingOrderIncentivesToman,
+      existingCustomerOrderIncentivesToman,
     ),
     remaining(
       remaining(budget.incentivesPerPeriodToman, usage.periodIncentivesToman),
@@ -250,7 +258,7 @@ export function calculateRewardPolicy(
     existingIncentivesExceedLimit:
       existingOrderIncentivesToman > budget.incentivesPerOrderToman ||
       usage.customerIncentivesToman >
-        budget.incentivesPerCustomerPeriodToman - existingOrderIncentivesToman ||
+        budget.incentivesPerCustomerPeriodToman - existingCustomerOrderIncentivesToman ||
       usage.periodIncentivesToman > budget.incentivesPerPeriodToman - existingOrderIncentivesToman,
     expiryDays: policy.expiryDays,
   };

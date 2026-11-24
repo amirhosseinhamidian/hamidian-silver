@@ -12,7 +12,7 @@ import {
   allocateCheckoutToman,
   type CheckoutPromotion,
 } from './wallet-checkout';
-import { WalletLedgerService } from './wallet-ledger.service';
+import { spendableWalletLots, WalletLedgerService } from './wallet-ledger.service';
 import { purchaseRewardOrderSelect, resolvePurchaseRewardBasis } from './purchase-reward-basis';
 import { evaluatePurchaseReward, type RecordedPurchaseReward } from './purchase-reward-calculation';
 import type { WalletPreviewDto } from './dto/customer-wallet.dto';
@@ -59,7 +59,7 @@ export class WalletCheckoutService {
     if (!policy?.enabled) return { allocation: null, reason: 'POLICY_DISABLED' };
 
     const balance = await tx.walletLot.aggregate({
-      where: { userId, expiresAt: { gt: now }, availableToman: { gt: 0 } },
+      where: { ...spendableWalletLots(userId, now), availableToman: { gt: 0 } },
       _sum: { availableToman: true },
     });
     const availableToman = Math.min(balance._sum.availableToman ?? 0, TOMAN_INT_MAX);
@@ -221,7 +221,7 @@ export class WalletCheckoutService {
     if (!(await tx.walletLot.findFirst({ where, select: { id: true } }))) return;
     await this.ledger.lockAccount(tx, order.userId);
     const lot = await tx.walletLot.findFirst({ where });
-    if (!lot || lot.expiresAt <= new Date()) return;
+    if (!lot || lot.policyVersion === null || lot.expiresAt <= new Date()) return;
     const remaining = fullyRefunded
       ? 0
       : await this.remainingPurchaseReward(tx, order, lot.policyVersion);

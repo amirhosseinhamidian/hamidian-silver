@@ -8,7 +8,11 @@ import {
 import type { GrowthCampaignCost, Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { attachHumanAuditEvent } from '../audit/audit-event';
-import { committedDiscount, promotionUsage } from '../promotions/promotion-budget';
+import {
+  committedCampaignIncentives,
+  committedDiscount,
+  promotionUsage,
+} from '../promotions/promotion-budget';
 import type {
   GrowthCampaignHistoryItemDto,
   GrowthCampaignPerformanceDto,
@@ -231,6 +235,7 @@ export class GrowthDashboardService {
       promotionUsage(db, campaign.id, { paidAt: null }),
     ]);
     const lifetimeCommittedDiscountToman = committedDiscount(committed);
+    const lifetimeCommittedReferralRewardToman = committed._sum.referralRewardToman ?? 0;
     const lifetimeMediaSpendToman = mediaSpend === null ? null : exactNumber(mediaSpend);
     const comparableSpend = mediaSpend !== null && mediaSpend >= 0n ? mediaSpend : null;
     return {
@@ -238,6 +243,7 @@ export class GrowthDashboardService {
       plannedChannelCostToman: campaign.plannedChannelCostToman,
       lifetimeMediaSpendToman,
       lifetimeCommittedDiscountToman,
+      ...(lifetimeCommittedReferralRewardToman ? { lifetimeCommittedReferralRewardToman } : {}),
       unpaidDiscountCommitmentToman: committedDiscount(unpaid),
       mediaVarianceToman:
         comparableSpend === null || campaign.plannedChannelCostToman === null
@@ -248,7 +254,7 @@ export class GrowthDashboardService {
           ? null
           : exactNumber(
               comparableSpend +
-                BigInt(lifetimeCommittedDiscountToman) -
+                BigInt(committedCampaignIncentives(committed)) -
                 BigInt(campaign.budgetToman),
             ),
     };

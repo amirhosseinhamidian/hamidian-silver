@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -18,6 +18,8 @@ import { TOMAN_INT_MAX } from '../../../common/toman';
 export class CampaignBudgetDto {
   discountBudgetToman!: number;
   committedDiscountToman!: number;
+  @ApiPropertyOptional()
+  committedReferralRewardToman?: number;
   remainingDiscountToman!: number;
   usedOrders!: number;
 

@@ -1,5 +1,10 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
+import { RewardPoliciesModule } from '../reward-policies/reward-policies.module';
+import { WalletModule } from '../wallet/wallet.module';
+import { ReferralGrantWorker } from './referral-grant.worker';
+import { ReferralGrantController } from './referral-grant.controller';
+import { ReferralGrantReportService } from './referral-grant-report.service';
 import { ReferralsController } from './referrals.controller';
 import { ReferralsService } from './referrals.service';
 import { ReferralRewardPoliciesController } from './referral-reward-policies.controller';
@@ -12,8 +17,13 @@ import { ReferralRiskScheduler } from './referral-risk.scheduler';
 import { ReferralRiskService } from './referral-risk.service';
 
 @Module({
-  imports: [DatabaseModule],
-  controllers: [ReferralsController, ReferralRewardPoliciesController, ReferralRiskController],
+  imports: [DatabaseModule, RewardPoliciesModule, WalletModule],
+  controllers: [
+    ReferralsController,
+    ReferralRewardPoliciesController,
+    ReferralRiskController,
+    ReferralGrantController,
+  ],
   providers: [
     ReferralsService,
     ReferralRewardPoliciesService,
@@ -22,6 +32,8 @@ import { ReferralRiskService } from './referral-risk.service';
     ReferralRiskEvidenceService,
     ReferralRiskService,
     ReferralRiskScheduler,
+    ReferralGrantWorker,
+    ReferralGrantReportService,
   ],
 })
 export class ReferralsModule {}

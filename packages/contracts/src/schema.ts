@@ -3844,6 +3844,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/referral-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralGrantController_report_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/shipping/pricing/public": {
         parameters: {
             query?: never;
@@ -4955,6 +4971,7 @@ export interface components {
             items: components["schemas"]["CampaignProductOptionDto"][];
         };
         CampaignBudgetDto: {
+            committedReferralRewardToman?: number;
             remainingUses: number | null;
             blockers: string[];
             warnings: string[];
@@ -6840,6 +6857,7 @@ export interface components {
         GrowthCampaignBudgetDto: {
             plannedChannelCostToman: number | null;
             lifetimeMediaSpendToman: number | null;
+            lifetimeCommittedReferralRewardToman?: number;
             mediaVarianceToman: number | null;
             budgetVarianceToman: number | null;
             budgetToman: number;
@@ -7851,6 +7869,46 @@ export interface components {
             /** @enum {string} */
             action: "ALLOW" | "HOLD" | "REJECT";
             reason: string;
+        };
+        ReferralGrantTotalsDto: {
+            registered: number;
+            converted: number;
+            pending: number;
+            approved: number;
+            rejected: number;
+            expired: number;
+            flagged: number;
+            grantedToman: number;
+            buyerDiscountToman: number;
+            revokedToman: number;
+            recoveryDueToman: number;
+        };
+        ReferralGrantRowDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string | null;
+            /** Format: date-time */
+            claimedAt: string;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
+            /** @enum {string|null} */
+            riskAction: "ALLOW" | "REVIEW" | "HOLD" | "REJECT" | null;
+            policyVersion: number | null;
+            ruleCode: string | null;
+            resultCode: string | null;
+            /** Format: date-time */
+            creditExpiresAt: string | null;
+            grantedToman: number;
+            buyerDiscountToman: number;
+            revokedToman: number;
+            recoveryDueToman: number;
+        };
+        ReferralGrantReportDto: {
+            totals: components["schemas"]["ReferralGrantTotalsDto"];
+            items: components["schemas"]["ReferralGrantRowDto"][];
+            page: number;
+            hasMore: boolean;
         };
         ShippingPricingSettingsDto: {
             /** @enum {string} */
@@ -15239,6 +15297,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReferralRiskCaseDto"];
+                };
+            };
+        };
+    };
+    ReferralGrantController_report_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                days?: 30 | 90 | 365;
+                status?: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralGrantReportDto"];
                 };
             };
         };

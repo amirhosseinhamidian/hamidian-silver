@@ -1,7 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
 import { TOMAN_INT_MAX } from '../../common/toman';
 import type { Campaign, CampaignPromotion, Prisma } from '../../generated/prisma/client';
-import { committedDiscount, discountBudget, promotionUsage } from '../promotions/promotion-budget';
+import {
+  committedCampaignIncentives,
+  committedDiscount,
+  discountBudget,
+  promotionUsage,
+} from '../promotions/promotion-budget';
 import {
   calculatePromotion,
   isPromotionTarget,
@@ -48,7 +53,11 @@ export async function campaignBudget(
   const discountBudgetToman = discountBudget(campaign);
   const usage = rule ? await promotionUsage(tx, campaign.id) : null;
   const committedDiscountToman = usage ? committedDiscount(usage) : 0;
-  const remainingDiscountToman = Math.max(0, discountBudgetToman - committedDiscountToman);
+  const committedReferralRewardToman = usage?._sum.referralRewardToman ?? 0;
+  const remainingDiscountToman = Math.max(
+    0,
+    discountBudgetToman - (usage ? committedCampaignIncentives(usage) : 0),
+  );
   const usedOrders = usage?._count._all ?? 0;
   const remainingUses = rule?.maxUses == null ? null : Math.max(0, rule.maxUses - usedOrders);
   const blockers: string[] = [];
@@ -81,6 +90,7 @@ export async function campaignBudget(
   return {
     discountBudgetToman,
     committedDiscountToman,
+    ...(committedReferralRewardToman ? { committedReferralRewardToman } : {}),
     remainingDiscountToman,
     usedOrders,
     remainingUses,

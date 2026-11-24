@@ -1963,6 +1963,7 @@ model OrderPriceQuote {
   campaignId              String?   @db.Uuid
   merchandiseDiscountToman Int
   shippingDiscountToman    Int
+  referralRewardToman      Int       @default(0)
   snapshot                Json
   order                   Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
   campaign                Campaign? @relation(fields: [campaignId], references: [id], onDelete: Restrict)
@@ -2119,10 +2120,12 @@ model ReferralAttribution {
   checkoutOrders       Order[]   @relation("ReferralCheckoutOrders")
   rewardPolicy         ReferralRewardPolicyVersion? @relation(fields: [rewardPolicyVersion], references: [version], onDelete: Restrict)
   riskAssessment       ReferralRiskAssessment?
+  grantJob             ReferralGrantJob?
 
   @@index([referrerUserId, claimedAt, id], map: "referral_attributions_history_idx")
   @@index([rewardPolicyVersion])
   @@index([referrerPurchaseOrderId])
+  @@index([claimedAt, id])
   @@map("referral_attributions")
 }
 
@@ -2215,6 +2218,7 @@ model ReferralRewardPolicyVersion {
   createdBy            User     @relation("ReferralRewardPolicyCreator", fields: [createdById], references: [id], onDelete: Restrict)
   publishedBy          User?    @relation("ReferralRewardPolicyPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
   attributions         ReferralAttribution[]
+  walletLots           WalletLot[]
 
   @@index([effectiveAt, version])
   @@map("referral_reward_policy_versions")
@@ -2227,6 +2231,35 @@ model ReferralRequestLimit {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("referral_request_limits")
+}
+
+enum ReferralGrantStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+model ReferralGrantJob {
+  attributionId      String              @id @db.Uuid
+  status             ReferralGrantStatus @default(PENDING)
+  nextAttemptAt      DateTime?           @db.Timestamptz(3)
+  attempts           Int                 @default(0)
+  resultCode         String?             @db.VarChar(48)
+  processedAt        DateTime?           @db.Timestamptz(3)
+  budgetAt           DateTime?           @db.Timestamptz(3)
+  ruleCode           String?             @db.VarChar(40)
+  riskRevision       Int?
+  calculation        Json?
+  lotId              String?             @unique @db.Uuid
+  revocationToman    Int                 @default(0)
+  recoveryDueToman   Int                 @default(0)
+  attribution        ReferralAttribution @relation(fields: [attributionId], references: [id], onDelete: Restrict)
+  lot                WalletLot?          @relation(fields: [lotId], references: [id], onDelete: Restrict)
+
+  @@index([nextAttemptAt, attributionId])
+  @@index([budgetAt])
+  @@map("referral_grant_jobs")
 }
 
 enum WalletSource {
@@ -2264,7 +2297,8 @@ model WalletLot {
   id            String              @id @default(uuid()) @db.Uuid
   userId        String              @db.Uuid
   orderId       String              @db.Uuid
-  policyVersion Int
+  policyVersion Int?
+  referralPolicyVersion Int?
   source        WalletSource
   sourceKey     String              @db.VarChar(128)
   grantedToman  Int
@@ -2279,12 +2313,15 @@ model WalletLot {
   createdAt      DateTime           @default(now()) @db.Timestamptz(3)
   user           User               @relation(fields: [userId], references: [id], onDelete: Restrict)
   order          Order              @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  policy         RewardPolicyVersion @relation(fields: [policyVersion], references: [version], onDelete: Restrict)
+  policy         RewardPolicyVersion? @relation(fields: [policyVersion], references: [version], onDelete: Restrict)
+  referralPolicy ReferralRewardPolicyVersion? @relation(fields: [referralPolicyVersion], references: [version], onDelete: Restrict)
+  referralGrantJob ReferralGrantJob?
   entries        WalletLedgerEntry[]
 
   @@unique([source, sourceKey])
   @@index([userId, expiresAt, id])
   @@index([orderId])
+  @@index([referralPolicyVersion])
   @@map("wallet_lots")
 }
 

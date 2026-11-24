@@ -114,6 +114,13 @@ export function CampaignBudgetReview({
             <dt>تخفیف تعهدشدهٔ سفارش‌ها</dt>
             <dd>{formatAdminToman(budget.committedDiscountToman)}</dd>
           </div>
+          {'committedReferralRewardToman' in budget &&
+            typeof budget.committedReferralRewardToman === 'number' && (
+              <div>
+                <dt>پاداش معرف صادرشده</dt>
+                <dd>{formatAdminToman(budget.committedReferralRewardToman)}</dd>
+              </div>
+            )}
           <div>
             <dt>بودجهٔ باقی‌ماندهٔ تخفیف</dt>
             <dd>{formatAdminToman(budget.remainingDiscountToman)}</dd>

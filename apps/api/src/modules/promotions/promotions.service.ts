@@ -15,7 +15,7 @@ import {
   type PromotionLine,
 } from './promotion-engine';
 import {
-  committedDiscount,
+  committedCampaignIncentives,
   countedPromotionOrders,
   discountBudget,
   promotionUsage,
@@ -264,14 +264,18 @@ export class PromotionsService {
             campaignId: { in: candidates.map(({ campaignId }) => campaignId) },
             order: countedPromotionOrders,
           },
-          _sum: { merchandiseDiscountToman: true, shippingDiscountToman: true },
+          _sum: {
+            merchandiseDiscountToman: true,
+            shippingDiscountToman: true,
+            referralRewardToman: true,
+          },
           _count: { _all: true },
         })
       : [];
     const usedByCampaign = new Map(usage.map((row) => [row.campaignId, row]));
     return candidates.flatMap((rule) => {
       const used = usedByCampaign.get(rule.campaignId);
-      const committed = used ? committedDiscount(used) : 0;
+      const committed = used ? committedCampaignIncentives(used) : 0;
       const remainingToman = discountBudget(rule.campaign) - committed;
       if (
         remainingToman <= 0 ||
@@ -312,7 +316,8 @@ export class PromotionsService {
         if (!campaign || !product) throw new NotFoundException('Campaign or product not found.');
         const rule = campaign.promotion;
         const usage = rule ? await promotionUsage(tx, campaignId) : null;
-        const remainingToman = discountBudget(campaign) - (usage ? committedDiscount(usage) : 0);
+        const remainingToman =
+          discountBudget(campaign) - (usage ? committedCampaignIncentives(usage) : 0);
         const candidates =
           rule && (rule.maxUses === null || (usage?._count._all ?? 0) < rule.maxUses)
             ? [{ ...rule, campaign, remainingToman }]
@@ -389,7 +394,7 @@ export class PromotionsService {
       )
         continue;
 
-      const remaining = discountBudget(rule.campaign) - committedDiscount(usage);
+      const remaining = discountBudget(rule.campaign) - committedCampaignIncentives(usage);
       const amounts = calculatePromotion(rule, eligible, shippingToman, remaining);
       if (amounts) {
         const quotaAllocations = await planQuotaAllocations(

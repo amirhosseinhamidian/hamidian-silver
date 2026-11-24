@@ -14,7 +14,11 @@ import {
   ensureCampaignLinkIdentity,
   parseCampaignDestination,
 } from '../growth-attribution/campaign-links.service';
-import { committedDiscount, discountBudget, promotionUsage } from '../promotions/promotion-budget';
+import {
+  committedCampaignIncentives,
+  discountBudget,
+  promotionUsage,
+} from '../promotions/promotion-budget';
 import { formatTehranDate, parseTehranDate } from './campaign-calendar';
 import { campaignTransition } from './campaign-lifecycle';
 import { assertExclusiveQuotaWindow } from './campaign-quota';
@@ -198,7 +202,7 @@ export class CampaignsService {
       const draft = await this.prepareDraft(tx, input, current);
       if (
         discountBudget(draft) < discountBudget(current) &&
-        discountBudget(draft) < committedDiscount(await promotionUsage(tx, id))
+        discountBudget(draft) < committedCampaignIncentives(await promotionUsage(tx, id))
       )
         throw new BadRequestException('The discount budget is below existing commitments.');
       if (

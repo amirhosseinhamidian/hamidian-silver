@@ -5,6 +5,7 @@ import type { PromotionLine } from '../promotions/promotion-engine';
 import { allocateCheckoutToman } from '../wallet/wallet-checkout';
 import { openWalletAttemptStatuses } from '../wallet/wallet-checkout.service';
 import type { ReferralRewardDefinitionDto } from './dto/referral-reward-policy.dto';
+import { lockReferralBudget, referralBudgetUsage } from './referral-budget';
 import { findQualifyingReferralPurchase, lockReferralBuyer } from './referral-eligibility';
 import { evaluateReferralRewards } from './referral-reward-engine';
 
@@ -53,33 +54,6 @@ export async function referralCheckoutAvailable(db: Prisma.TransactionClient, us
   return Boolean(await availableClaim(db, userId, new Date()));
 }
 
-// The Tehran month of order creation owns the reservation, including when payment crosses month end.
-async function committedDiscounts(
-  tx: Prisma.TransactionClient,
-  userId: string,
-  version: number,
-  now: Date,
-) {
-  return tx.$queryRaw<{ ruleCode: string; committed: bigint; uses: bigint }[]>`
-    SELECT o."referralCheckoutRuleCode" AS "ruleCode",
-      SUM(o."referralDiscountToman")::bigint AS committed,
-      COUNT(*) FILTER (WHERE o."userId" = ${userId}::uuid) AS uses
-    FROM "orders" o
-    JOIN "referral_attributions" a ON a.id = o."referralCheckoutAttributionId"
-    WHERE a."rewardPolicyVersion" = ${version}
-      AND o."referralCheckoutReleasedAt" IS NULL
-      AND (o."paidAt" IS NOT NULL OR o.status NOT IN ('CANCELLED', 'EXPIRED'))
-      AND o."createdAt" >= (date_trunc('month', ${now}::timestamptz AT TIME ZONE 'Asia/Tehran') AT TIME ZONE 'Asia/Tehran')
-      AND o."createdAt" < ((date_trunc('month', ${now}::timestamptz AT TIME ZONE 'Asia/Tehran') + interval '1 month') AT TIME ZONE 'Asia/Tehran')
-    GROUP BY o."referralCheckoutRuleCode"
-  `;
-}
-
-async function lockReferralBudget(tx: Prisma.TransactionClient, version: number, month: Date) {
-  await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(
-    'referral-budget:' || ${version}::text || ':' || to_char(${month}::timestamptz AT TIME ZONE 'Asia/Tehran', 'YYYY-MM'), 0))`;
-}
-
 export async function quoteReferralCheckout(
   tx: Prisma.TransactionClient,
   input: {
@@ -100,7 +74,7 @@ export async function quoteReferralCheckout(
   const claim = await availableClaim(tx, input.userId, now);
   if (!claim) return null;
   if (input.reserve) await lockReferralBudget(tx, claim.version, budgetAt);
-  const rows = await committedDiscounts(tx, input.userId, claim.version, budgetAt);
+  const rows = await referralBudgetUsage(tx, input.userId, claim.version, budgetAt);
   const lines = input.lines.map((line, index) => ({
     categoryIds: [...line.categoryIds],
     eligibleToman: line.unitSalePriceToman * line.quantity - input.discounts[index],
@@ -207,7 +181,7 @@ export async function reacquireReferralCheckout(
   );
   if (!claim || !rule) throw unavailable();
   await lockReferralBudget(tx, claim.version, snapshot.createdAt);
-  const rows = await committedDiscounts(tx, order.userId, claim.version, snapshot.createdAt);
+  const rows = await referralBudgetUsage(tx, order.userId, claim.version, snapshot.createdAt);
   const usage = rows.find(({ ruleCode }) => ruleCode === rule.code);
   const amount = BigInt(snapshot.referralDiscountToman);
   if (

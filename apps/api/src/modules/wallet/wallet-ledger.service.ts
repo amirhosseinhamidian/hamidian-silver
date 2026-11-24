@@ -37,6 +37,7 @@ const includeMovements = {
           sourceKey: true,
           expiresAt: true,
           policyVersion: true,
+          referralPolicyVersion: true,
         },
       },
       reservation: { select: { orderId: true } },
@@ -72,7 +73,7 @@ function operationDto(operation: Operation): WalletOperationDto {
       originOrderId: entry.lot.orderId,
       source: entry.lot.source,
       sourceKey: entry.lot.sourceKey,
-      policyVersion: entry.lot.policyVersion,
+      policyVersion: (entry.lot.referralPolicyVersion ?? entry.lot.policyVersion)!,
       expiresAt: entry.lot.expiresAt.toISOString(),
       reservationId: entry.reservationId,
       reservationOrderId: entry.reservation?.orderId ?? null,
@@ -86,6 +87,17 @@ function operationDto(operation: Operation): WalletOperationDto {
 function assertAmount(amount: number) {
   if (!isNonNegativeTomanInt(amount) || amount === 0)
     throw new BadRequestException('Wallet amount must be positive integer toman.');
+}
+
+export function spendableWalletLots(userId: string, now: Date): Prisma.WalletLotWhereInput {
+  return {
+    userId,
+    expiresAt: { gt: now },
+    OR: [
+      { referralGrantJob: null },
+      { referralGrantJob: { recoveryDueToman: 0, nextAttemptAt: null } },
+    ],
+  };
 }
 
 export function exactWalletToman(total: bigint) {
@@ -106,10 +118,13 @@ export class WalletLedgerService {
   async balance(userId: string): Promise<WalletBalanceDto> {
     const [balance] = await this.db.$queryRaw<BalanceRow[]>`
       WITH lots AS (
-        SELECT "pendingToman", "availableToman", "reservedToman", "expiresAt",
-          MIN("expiresAt") FILTER (WHERE "availableToman" > 0 AND "expiresAt" > CURRENT_TIMESTAMP)
+        SELECT "pendingToman", CASE WHEN COALESCE(j."recoveryDueToman", 0) = 0 AND j."nextAttemptAt" IS NULL
+            THEN "availableToman" ELSE 0 END AS "availableToman", "reservedToman", "expiresAt",
+          MIN("expiresAt") FILTER (WHERE "availableToman" > 0 AND "expiresAt" > CURRENT_TIMESTAMP
+            AND COALESCE(j."recoveryDueToman", 0) = 0 AND j."nextAttemptAt" IS NULL)
             OVER () AS next_expiry
-        FROM "wallet_lots" WHERE "userId" = ${userId}::uuid
+        FROM "wallet_lots" l LEFT JOIN "referral_grant_jobs" j ON j."lotId" = l.id
+        WHERE l."userId" = ${userId}::uuid
       )
       SELECT
         COALESCE(SUM("pendingToman") FILTER (WHERE "expiresAt" > CURRENT_TIMESTAMP), 0) AS pending,
@@ -148,9 +163,12 @@ export class WalletLedgerService {
     if (!Number.isFinite(input.expiresAt.valueOf()))
       throw new BadRequestException('Enter a valid wallet expiry.');
     this.assertKey(input.sourceKey);
+    const version = input.referralPolicyVersion ?? input.policyVersion;
+    if (version === undefined)
+      throw new BadRequestException('A wallet grant needs a policy version.');
     const details = [
       input.orderId.toLowerCase(),
-      input.policyVersion,
+      ...(input.referralPolicyVersion === undefined ? [version] : ['referral-policy', version]),
       input.source,
       input.sourceKey,
       input.amountToman,
@@ -175,10 +193,25 @@ export class WalletLedgerService {
             },
             select: { id: true },
           }),
-          db.rewardPolicyVersion.findFirst({
-            where: { version: input.policyVersion, effectiveAt: { lte: now } },
-            select: { definition: true },
-          }),
+          input.referralPolicyVersion === undefined
+            ? db.rewardPolicyVersion.findFirst({
+                where: { version, effectiveAt: { lte: now } },
+                select: { definition: true },
+              })
+            : db.referralRewardPolicyVersion.findFirst({
+                where: {
+                  version: input.referralPolicyVersion,
+                  effectiveAt: { lte: now },
+                  attributions: {
+                    some: {
+                      id: input.sourceKey,
+                      referrerUserId: userId,
+                      firstOrderId: input.orderId,
+                    },
+                  },
+                },
+                select: { definition: true },
+              }),
         ]);
         const definition = policy?.definition;
         if (
@@ -196,6 +229,7 @@ export class WalletLedgerService {
             userId,
             orderId: input.orderId,
             policyVersion: input.policyVersion,
+            referralPolicyVersion: input.referralPolicyVersion,
             source: input.source,
             sourceKey: input.sourceKey,
             grantedToman: input.amountToman,
@@ -251,7 +285,7 @@ export class WalletLedgerService {
         if (previous)
           throw new ConflictException('This order already has a live wallet reservation.');
         const lots = await db.walletLot.findMany({
-          where: { userId, expiresAt: { gt: now }, availableToman: { gt: 0 } },
+          where: { ...spendableWalletLots(userId, now), availableToman: { gt: 0 } },
           orderBy: [{ expiresAt: 'asc' }, { id: 'asc' }],
           select: { id: true, availableToman: true },
         });

@@ -164,6 +164,25 @@ describe('reward policy calculator', () => {
     });
   });
 
+  it('counts another recipient’s order credit only against the shared incentive caps', () => {
+    const input = sample(5_000_000);
+    input.otherOrderIncentivesToman = 30_000;
+    const definition = {
+      ...policy,
+      budget: {
+        ...policy.budget,
+        incentivesPerCustomerPeriodToman: 35_000,
+        incentivesPerOrderToman: 50_000,
+      },
+    };
+    expect(
+      calculateRewardPolicy(1, definition, {
+        ...input,
+        otherCustomerOrderIncentivesToman: 0,
+      }),
+    ).toMatchObject({ existingOrderIncentivesToman: 30_000, estimatedRewardToman: 20_000 });
+  });
+
   it('uses priority, rejects ambiguous rules and applies coupon eligibility independently', () => {
     const override = {
       ...policy.grantRules[1],

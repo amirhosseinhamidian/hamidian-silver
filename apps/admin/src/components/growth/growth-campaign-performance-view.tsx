@@ -140,8 +140,7 @@ export function GrowthCampaignPerformanceView({
               ]}
             />
             <p className="mt-3 text-sm text-[var(--admin-color-muted)]">
-              تخفیف به کمپینی تعلق دارد که مبلغ را در سفارش ثبت کرده است. اطلاعات مصرف اعتبار و صدور
-              پاداش پس از اتصال دفتر کیف پول در دسترس قرار می‌گیرد.
+              تخفیف به کمپینی تعلق دارد که مبلغ را در سفارش ثبت کرده است.
             </p>
           </Card>
           <Card
@@ -156,6 +155,15 @@ export function GrowthCampaignPerformanceView({
                   ['هزینهٔ ثبت‌شدهٔ رسانه', money(budget.lifetimeMediaSpendToman)],
                   ['اختلاف ثبت رسانه با برنامه', money(budget.mediaVarianceToman)],
                   ['مجموع تخفیف تعهدشده', money(budget.lifetimeCommittedDiscountToman)],
+                  ...('lifetimeCommittedReferralRewardToman' in budget &&
+                  typeof budget.lifetimeCommittedReferralRewardToman === 'number'
+                    ? [
+                        [
+                          'پاداش معرف صادرشده',
+                          money(budget.lifetimeCommittedReferralRewardToman),
+                        ] as const,
+                      ]
+                    : []),
                   [
                     'سهم سفارش‌های پرداخت‌نشده از تعهد تخفیف',
                     money(budget.unpaidDiscountCommitmentToman),
@@ -168,8 +176,8 @@ export function GrowthCampaignPerformanceView({
             )}
             {budget && (
               <p className="mt-3 text-sm text-[var(--admin-color-muted)]">
-                اختلاف مثبت یعنی هزینهٔ ثبت‌شده و تعهد تخفیف از سقف گذشته‌اند. سفارش پرداخت‌نشده
-                بخشی از مجموع تعهد است.
+                اختلاف مثبت یعنی هزینهٔ ثبت‌شده و تعهد تخفیف و پاداش معرف از سقف گذشته‌اند. سفارش
+                پرداخت‌نشده بخشی از مجموع تعهد است.
               </p>
             )}
           </Card>

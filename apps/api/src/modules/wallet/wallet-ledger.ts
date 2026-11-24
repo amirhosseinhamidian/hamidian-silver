@@ -16,12 +16,13 @@ export type WalletRequest = {
 
 export type WalletGrant = WalletRequest & {
   orderId: string;
-  policyVersion: number;
-  source: WalletSource;
   sourceKey: string;
   amountToman: number;
   expiresAt: Date;
-};
+} & (
+    | { source: WalletSource; policyVersion: number; referralPolicyVersion?: never }
+    | { source: 'REFERRAL'; referralPolicyVersion: number; policyVersion?: never }
+  );
 
 export type WalletLotRequest = WalletRequest & { lotId: string };
 export type WalletReserve = WalletRequest & { orderId: string; amountToman: number };

@@ -377,6 +377,15 @@ export function CampaignOperationsCenter({
               ['تخفیف ارسال خریدهای تأییدشده', money(finance.confirmedShippingDiscountToman)],
               ['سقف تخفیف کمپین', money(campaign.budget.discountBudgetToman)],
               ['تخفیف تعهدشده', money(campaign.budget.committedDiscountToman)],
+              ...('committedReferralRewardToman' in campaign.budget &&
+              typeof campaign.budget.committedReferralRewardToman === 'number'
+                ? [
+                    [
+                      'پاداش معرف صادرشده',
+                      money(campaign.budget.committedReferralRewardToman),
+                    ] as const,
+                  ]
+                : []),
               ['بودجهٔ تخفیف باقی‌مانده', money(campaign.budget.remainingDiscountToman)],
             ]}
           />

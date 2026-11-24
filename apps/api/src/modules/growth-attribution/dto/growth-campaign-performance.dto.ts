@@ -32,6 +32,8 @@ export class GrowthCampaignBudgetDto {
   lifetimeMediaSpendToman!: number | null;
 
   lifetimeCommittedDiscountToman!: number;
+  @ApiPropertyOptional()
+  lifetimeCommittedReferralRewardToman?: number;
   unpaidDiscountCommitmentToman!: number;
 
   @ApiProperty({ type: Number, nullable: true })

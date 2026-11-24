@@ -54,6 +54,9 @@ export default async function ReferralRewardPoliciesPage({
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-black sm:text-3xl">سیاست پاداش معرفی</h1>
         <nav aria-label="عملیات معرفی" className="flex flex-wrap gap-2">
+          <ButtonLink href="/reward-policies/referral-grants" size="sm" variant="outline">
+            گزارش پاداش معرفی
+          </ButtonLink>
           <ButtonLink href="/reward-policies/referral-risk" size="sm" variant="outline">
             بررسی ریسک معرفی
           </ButtonLink>

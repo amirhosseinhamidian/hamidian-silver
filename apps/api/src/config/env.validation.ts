@@ -31,6 +31,7 @@ export const envValidationSchema = Joi.object({
   WALLET_MAINTENANCE_ENABLED: Joi.boolean().default(false),
   REFERRALS_ENABLED: Joi.boolean().default(false),
   REFERRAL_RISK_WORKER_ENABLED: Joi.boolean().default(false),
+  REFERRAL_GRANT_WORKER_ENABLED: Joi.boolean().default(false),
   REFERRAL_RISK_CONTEXT_SECRET: Joi.string().min(32).empty('').optional(),
   REFERRAL_ATTRIBUTION_DAYS: Joi.number().integer().min(1).max(365).default(30),
   REFERRAL_REQUIRE_VERIFIED_PHONE: Joi.boolean().default(true),

@@ -255,6 +255,15 @@ export class PurchaseRewardWorker {
     if (basis.referralAllowsPurchaseReward === false) {
       return this.skip(tx, job, 'REFERRAL_COMBINATION_EXCLUDED', now);
     }
+    const referral = await tx.referralGrantJob.findFirst({
+      where: { lotId: { not: null }, attribution: { firstOrderId: order.id } },
+      select: { calculation: true },
+    });
+    const referralRule = referral?.calculation as
+      { rule?: { allowPurchaseReward?: boolean } } | undefined;
+    if (referralRule?.rule?.allowPurchaseReward === false) {
+      return this.skip(tx, job, 'REFERRAL_COMBINATION_EXCLUDED', now);
+    }
     const previousCompletedPurchases = await previousPurchases(
       tx,
       order.userId,

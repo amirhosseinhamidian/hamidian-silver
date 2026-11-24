@@ -16,6 +16,7 @@ export type RecordedPurchaseReward = {
   previousCompletedPurchases: number;
   usage: Record<keyof RewardPeriodUsageDto, number>;
   otherOrderIncentivesToman: number;
+  otherCustomerOrderIncentivesToman?: number;
   ruleCode: string | null;
   baseToman: number;
   grantedToman: number;
@@ -28,7 +29,11 @@ export function evaluatePurchaseReward(
   order: PurchaseRewardOrder,
   context: Pick<
     RecordedPurchaseReward,
-    'basis' | 'previousCompletedPurchases' | 'usage' | 'otherOrderIncentivesToman'
+    | 'basis'
+    | 'previousCompletedPurchases'
+    | 'usage'
+    | 'otherOrderIncentivesToman'
+    | 'otherCustomerOrderIncentivesToman'
   >,
 ) {
   return calculateRewardPolicy(version, definition, {
@@ -38,6 +43,7 @@ export function evaluatePurchaseReward(
     couponApplied: context.basis.couponApplied,
     shippingDiscountToman: context.basis.shippingDiscountToman,
     otherOrderIncentivesToman: context.otherOrderIncentivesToman,
+    otherCustomerOrderIncentivesToman: context.otherCustomerOrderIncentivesToman,
     availableCreditToman: 0,
     usage: context.usage,
   });
@@ -79,6 +85,7 @@ export async function purchaseRewardBudget(
     customerIncentives: bigint;
     periodIncentives: bigint;
     otherOrderIncentives: bigint;
+    otherCustomerOrderIncentives: bigint;
   };
   const [row] = await db.$queryRaw<Totals[]>`
     WITH month AS (
@@ -101,13 +108,15 @@ export async function purchaseRewardBudget(
         COALESCE(SUM(l."grantedToman") FILTER (WHERE o.id <> ${orderId}::uuid AND l.source = 'PURCHASE' AND l."userId" = ${userId}::uuid), 0) AS reward_customer,
         COALESCE(SUM(l."grantedToman") FILTER (WHERE o.id <> ${orderId}::uuid), 0) AS incentive_period,
         COALESCE(SUM(l."grantedToman") FILTER (WHERE o.id <> ${orderId}::uuid AND l."userId" = ${userId}::uuid), 0) AS incentive_customer,
-        COALESCE(SUM(l."grantedToman") FILTER (WHERE o.id = ${orderId}::uuid AND l.source = 'REFERRAL'), 0) AS current_incentive
+        COALESCE(SUM(l."grantedToman") FILTER (WHERE o.id = ${orderId}::uuid AND l.source = 'REFERRAL'), 0) AS current_incentive,
+        COALESCE(SUM(l."grantedToman") FILTER (WHERE o.id = ${orderId}::uuid AND l.source = 'REFERRAL' AND l."userId" = ${userId}::uuid), 0) AS current_customer_incentive
       FROM paid_orders o JOIN "wallet_lots" l ON l."orderId" = o.id
     )
     SELECT reward_period::bigint AS "periodRewards", reward_customer::bigint AS "customerRewards",
       (incentive_period + discounts.period)::bigint AS "periodIncentives",
       (incentive_customer + discounts.customer)::bigint AS "customerIncentives",
-      current_incentive::bigint AS "otherOrderIncentives"
+      current_incentive::bigint AS "otherOrderIncentives",
+      current_customer_incentive::bigint AS "otherCustomerOrderIncentives"
     FROM credits CROSS JOIN discounts
   `;
   return {
@@ -118,5 +127,6 @@ export async function purchaseRewardBudget(
       periodIncentivesToman: Number(row.periodIncentives),
     },
     otherOrderIncentivesToman: Number(row.otherOrderIncentives),
+    otherCustomerOrderIncentivesToman: Number(row.otherCustomerOrderIncentives),
   };
 }
