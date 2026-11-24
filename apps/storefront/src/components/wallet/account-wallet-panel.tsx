@@ -7,6 +7,7 @@ import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { formatWalletDate } from '@/lib/wallet/wallet-presentation';
 import type { useWalletBalance } from './use-wallet-balance';
 import { WalletBalanceView } from './wallet-balance';
+import { WalletNotifications } from './wallet-notifications';
 
 type WalletOperation = Pick<
   components['schemas']['WalletOperationDto'],
@@ -94,6 +95,7 @@ export function AccountWalletPanel({
               <p role="alert">دریافت مانده انجام نشد. دوباره تلاش کنید.</p>
             )}
           </div>
+          <WalletNotifications refreshKey={attempt} />
           <section aria-labelledby="wallet-history-heading">
             <h3 id="wallet-history-heading" className="text-lg font-bold">
               تاریخچهٔ اعتبار

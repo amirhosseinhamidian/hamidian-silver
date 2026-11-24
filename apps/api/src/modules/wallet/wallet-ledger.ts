@@ -1,4 +1,16 @@
+import type { Prisma } from '../../generated/prisma/client';
 import type { WalletBucket, WalletSource } from '../../generated/prisma/enums';
+
+export function spendableWalletLots(userId: string, now: Date): Prisma.WalletLotWhereInput {
+  return {
+    userId,
+    expiresAt: { gt: now },
+    OR: [
+      { referralGrantJob: null },
+      { referralGrantJob: { recoveryDueToman: 0, nextAttemptAt: null } },
+    ],
+  };
+}
 
 export const bucketField = {
   PENDING: 'pendingToman',

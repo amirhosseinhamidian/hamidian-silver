@@ -146,6 +146,25 @@ describe('NotificationOutboxWorker', () => {
     });
   });
 
+  it('keeps a dispatch in flight if recording provider acceptance fails', async () => {
+    const { worker, prisma, smsSender } = createWorker();
+    prisma.notificationOutboxEvent.updateMany
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 1 })
+      .mockRejectedValueOnce(new Error('Database temporarily unavailable'));
+
+    await worker.dispatchPending();
+
+    expect(smsSender.sendTemplate).toHaveBeenCalledTimes(1);
+    expect(prisma.notificationOutboxEvent.updateMany).toHaveBeenCalledTimes(3);
+    expect(prisma.notificationOutboxEvent.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: NotificationOutboxStatus.DISPATCHING }),
+        data: expect.objectContaining({ status: NotificationOutboxStatus.SENT }),
+      }),
+    );
+  });
+
   it('passes the order number and tracking code to the shipment template', async () => {
     const { worker, smsSender } = createWorker({
       type: NotificationOutboxEventType.SHIPMENT_TRACKING_AVAILABLE,

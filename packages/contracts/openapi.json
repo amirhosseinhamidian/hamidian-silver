@@ -6771,6 +6771,7 @@
                 "FAILED",
                 "UNKNOWN",
                 "PROCESSING",
+                "SKIPPED",
                 "DISPATCHING",
                 "SENT"
               ]
@@ -6858,6 +6859,106 @@
         },
         "tags": [
           "StockNotifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/wallet": {
+      "get": {
+        "operationId": "WalletCreditNotificationsController_customer_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletCustomerNotificationsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "WalletCreditNotifications"
+        ]
+      },
+      "patch": {
+        "operationId": "WalletCreditNotificationsController_updatePreferences_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalletNotificationPreferencesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletCustomerNotificationsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "WalletCreditNotifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/wallet/settings": {
+      "get": {
+        "operationId": "WalletCreditNotificationsController_settings_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletNotificationSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "WalletCreditNotifications"
+        ]
+      },
+      "patch": {
+        "operationId": "WalletCreditNotificationsController_updateSettings_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWalletNotificationSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletNotificationSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "WalletCreditNotifications"
         ]
       }
     },
@@ -22422,7 +22523,8 @@
               "DISPATCHING",
               "SENT",
               "FAILED",
-              "UNKNOWN"
+              "UNKNOWN",
+              "SKIPPED"
             ],
             "type": "string"
           },
@@ -22491,6 +22593,9 @@
       "NotificationOutboxSummaryDto": {
         "type": "object",
         "properties": {
+          "skipped": {
+            "type": "number"
+          },
           "total": {
             "type": "number"
           },
@@ -22579,6 +22684,148 @@
         "required": [
           "target",
           "subscribed"
+        ]
+      },
+      "WalletExpiryReminderDto": {
+        "type": "object",
+        "properties": {
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "urgent": {
+            "type": "boolean"
+          },
+          "amountToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "expiresAt",
+          "urgent",
+          "amountToman"
+        ]
+      },
+      "WalletCustomerNotificationsDto": {
+        "type": "object",
+        "properties": {
+          "expiryReminder": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WalletExpiryReminderDto"
+              }
+            ]
+          },
+          "smsAvailable": {
+            "type": "boolean"
+          },
+          "expiryReminderAvailable": {
+            "type": "boolean"
+          },
+          "activationSmsEnabled": {
+            "type": "boolean"
+          },
+          "expiryInAppEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expiryReminder",
+          "smsAvailable",
+          "expiryReminderAvailable",
+          "activationSmsEnabled",
+          "expiryInAppEnabled"
+        ]
+      },
+      "WalletNotificationPreferencesDto": {
+        "type": "object",
+        "properties": {
+          "activationSmsEnabled": {
+            "type": "boolean"
+          },
+          "expiryInAppEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "activationSmsEnabled",
+          "expiryInAppEnabled"
+        ]
+      },
+      "WalletNotificationSettingsDto": {
+        "type": "object",
+        "properties": {
+          "activationSmsEnabled": {
+            "type": "boolean"
+          },
+          "expiryInAppEnabled": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "number"
+          },
+          "activationIntervalMinutes": {
+            "type": "number"
+          },
+          "expiryNoticeDays": {
+            "type": "number"
+          },
+          "expiryUrgentDays": {
+            "type": "number"
+          },
+          "activationSmsPreview": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "activationSmsEnabled",
+          "expiryInAppEnabled",
+          "version",
+          "activationIntervalMinutes",
+          "expiryNoticeDays",
+          "expiryUrgentDays",
+          "activationSmsPreview"
+        ]
+      },
+      "UpdateWalletNotificationSettingsDto": {
+        "type": "object",
+        "properties": {
+          "activationSmsEnabled": {
+            "type": "boolean"
+          },
+          "expiryInAppEnabled": {
+            "type": "boolean"
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483646
+          },
+          "activationIntervalMinutes": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1440
+          },
+          "expiryNoticeDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 90
+          },
+          "expiryUrgentDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 90
+          }
+        },
+        "required": [
+          "activationSmsEnabled",
+          "expiryInAppEnabled",
+          "expectedVersion",
+          "activationIntervalMinutes",
+          "expiryNoticeDays",
+          "expiryUrgentDays"
         ]
       },
       "CreateSupplierDto": {

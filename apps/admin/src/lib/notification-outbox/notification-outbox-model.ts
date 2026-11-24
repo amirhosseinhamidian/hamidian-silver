@@ -1,6 +1,6 @@
 export type NotificationOutboxSource = 'CUSTOMER' | 'OPERATIONAL';
 export type NotificationOutboxStatus =
-  'PENDING' | 'PROCESSING' | 'DISPATCHING' | 'SENT' | 'FAILED' | 'UNKNOWN';
+  'PENDING' | 'PROCESSING' | 'DISPATCHING' | 'SENT' | 'FAILED' | 'UNKNOWN' | 'SKIPPED';
 export type NotificationRecoveryResolution = 'RETRY_APPROVED' | 'MARKED_SENT';
 
 export type NotificationRecovery = Readonly<{
@@ -40,6 +40,7 @@ export type NotificationOutboxSummary = Readonly<{
   sent: number;
   failed: number;
   unknown: number;
+  skipped?: number;
 }>;
 
 export type NotificationOutboxSnapshot = Readonly<{
@@ -57,6 +58,7 @@ const STATUSES = new Set<NotificationOutboxStatus>([
   'SENT',
   'FAILED',
   'UNKNOWN',
+  'SKIPPED',
 ]);
 const RESOLUTIONS = new Set<NotificationRecoveryResolution>(['RETRY_APPROVED', 'MARKED_SENT']);
 
@@ -185,6 +187,7 @@ export function parseNotificationOutboxSnapshot(value: unknown): NotificationOut
         nonnegative(summary[key]),
       )
     : null;
+  const skipped = nonnegative(summary?.skipped);
   if (
     !source ||
     !items ||
@@ -204,6 +207,7 @@ export function parseNotificationOutboxSnapshot(value: unknown): NotificationOut
       sent: counts[4]!,
       failed: counts[5]!,
       unknown: counts[6]!,
+      ...(skipped ? { skipped } : {}),
     },
     generatedAt,
   };

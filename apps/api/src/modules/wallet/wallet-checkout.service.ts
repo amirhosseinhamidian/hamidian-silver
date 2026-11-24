@@ -12,7 +12,8 @@ import {
   allocateCheckoutToman,
   type CheckoutPromotion,
 } from './wallet-checkout';
-import { spendableWalletLots, WalletLedgerService } from './wallet-ledger.service';
+import { spendableWalletLots } from './wallet-ledger';
+import { WalletLedgerService } from './wallet-ledger.service';
 import { purchaseRewardOrderSelect, resolvePurchaseRewardBasis } from './purchase-reward-basis';
 import { evaluatePurchaseReward, type RecordedPurchaseReward } from './purchase-reward-calculation';
 import type { WalletPreviewDto } from './dto/customer-wallet.dto';

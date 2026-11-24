@@ -15,6 +15,8 @@ import { OperationalAlertOutboxService } from './operational-alert-outbox.servic
 import { OperationalAlertOutboxWorker } from './operational-alert-outbox.worker';
 import { StockNotificationsController } from './stock-notifications.controller';
 import { StockNotificationsService } from './stock-notifications.service';
+import { WalletCreditNotificationsController } from './wallet-credit-notifications.controller';
+import { WalletCreditNotificationsService } from './wallet-credit-notifications.service';
 
 @Global()
 @Module({
@@ -23,6 +25,7 @@ import { StockNotificationsService } from './stock-notifications.service';
     AdminMessageRecipientsController,
     NotificationOutboxRecoveryController,
     StockNotificationsController,
+    WalletCreditNotificationsController,
   ],
   providers: [
     AdminMessageRecipientsService,
@@ -35,6 +38,7 @@ import { StockNotificationsService } from './stock-notifications.service';
     OperationalAlertOutboxService,
     OperationalAlertOutboxWorker,
     StockNotificationsService,
+    WalletCreditNotificationsService,
   ],
   exports: [
     AdminOrderNotificationOutboxService,

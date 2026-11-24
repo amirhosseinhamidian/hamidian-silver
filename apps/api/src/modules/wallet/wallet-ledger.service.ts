@@ -10,11 +10,13 @@ import { isNonNegativeTomanInt } from '../../common/toman';
 import { Prisma } from '../../generated/prisma/client';
 import type { WalletBucket, WalletOperationKind } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { enqueueWalletCreditActivation } from '../notifications/wallet-credit-notifications.service';
 import type { WalletBalanceDto, WalletLedgerPageDto, WalletOperationDto } from './dto/wallet.dto';
 import {
   allocateWalletAmount,
   bucketField,
   returnedWalletBucket,
+  spendableWalletLots,
   type WalletCorrection,
   type WalletGrant,
   type WalletLotRequest,
@@ -87,17 +89,6 @@ function operationDto(operation: Operation): WalletOperationDto {
 function assertAmount(amount: number) {
   if (!isNonNegativeTomanInt(amount) || amount === 0)
     throw new BadRequestException('Wallet amount must be positive integer toman.');
-}
-
-export function spendableWalletLots(userId: string, now: Date): Prisma.WalletLotWhereInput {
-  return {
-    userId,
-    expiresAt: { gt: now },
-    OR: [
-      { referralGrantJob: null },
-      { referralGrantJob: { recoveryDueToman: 0, nextAttemptAt: null } },
-    ],
-  };
 }
 
 export function exactWalletToman(total: bigint) {
@@ -260,6 +251,7 @@ export class WalletLedgerService {
           where: { id: lot.id },
           data: { activatedAt: context.now },
         });
+        await enqueueWalletCreditActivation(context.db, context.userId, lot, context.now);
       },
       tx,
     );

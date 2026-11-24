@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import {
@@ -14,6 +14,7 @@ import {
   type SendSmsTemplateMessage,
   type SmsSender,
 } from '../auth/sms-sender.port';
+import { WalletCreditNotificationsService } from './wallet-credit-notifications.service';
 
 const DEFAULT_BATCH_SIZE = 50;
 const MAX_BATCH_SIZE = 200;
@@ -43,6 +44,7 @@ export class NotificationOutboxWorker {
     private readonly prisma: PrismaService,
     @Inject(SMS_SENDER) private readonly smsSender: SmsSender,
     config: ConfigService,
+    @Optional() private readonly walletNotifications?: WalletCreditNotificationsService,
   ) {
     this.batchSize = Math.min(
       this.readPositiveInteger(
@@ -201,15 +203,23 @@ export class NotificationOutboxWorker {
           continue;
         }
 
+        const isWalletCredit = event.type === NotificationOutboxEventType.WALLET_CREDIT_ACTIVATED;
         let message: SendSmsMessage | SendSmsTemplateMessage | null;
-
         try {
-          message = await this.buildMessage(
-            event.type,
-            event.aggregateType,
-            event.aggregateId,
-            event.payload,
-          );
+          if (isWalletCredit) {
+            if (!this.walletNotifications || !this.smsSender.sendMessage) {
+              throw new Error('WALLET_SMS_PROVIDER_UNAVAILABLE');
+            }
+            message = await this.walletNotifications.prepareDispatch(event, claimedAt);
+            if (message === null) continue;
+          } else {
+            message = await this.buildMessage(
+              event.type,
+              event.aggregateType,
+              event.aggregateId,
+              event.payload,
+            );
+          }
         } catch (error) {
           await this.failBeforeDispatch(event.id, claimedAt, event.attempts + 1, error);
           continue;
@@ -245,19 +255,12 @@ export class NotificationOutboxWorker {
           continue;
         }
 
-        const dispatching = await this.prisma.notificationOutboxEvent.updateMany({
-          where: {
-            id: event.id,
-            status: NotificationOutboxStatus.PROCESSING,
-            claimedAt,
-          },
-          data: {
-            status: NotificationOutboxStatus.DISPATCHING,
-          },
-        });
-
-        if (dispatching.count !== 1) {
-          continue;
+        if (!isWalletCredit) {
+          const dispatching = await this.prisma.notificationOutboxEvent.updateMany({
+            where: { id: event.id, status: NotificationOutboxStatus.PROCESSING, claimedAt },
+            data: { status: NotificationOutboxStatus.DISPATCHING },
+          });
+          if (dispatching.count !== 1) continue;
         }
 
         try {
@@ -266,35 +269,37 @@ export class NotificationOutboxWorker {
           } else {
             await this.smsSender.sendMessage!(message);
           }
-
-          const sent = await this.prisma.notificationOutboxEvent.updateMany({
-            where: {
-              id: event.id,
-              status: NotificationOutboxStatus.DISPATCHING,
-              claimedAt,
-            },
-            data: {
-              status: NotificationOutboxStatus.SENT,
-              processedAt: new Date(),
-              claimedAt: null,
-              lastError: null,
-            },
-          });
-
-          if (sent.count === 1 && event.aggregateType === 'STOCK_SUBSCRIPTION') {
-            await this.prisma.stockNotificationSubscription.updateMany({
-              where: {
-                id: event.aggregateId,
-                status: StockNotificationStatus.QUEUED,
-              },
-              data: {
-                status: StockNotificationStatus.NOTIFIED,
-                notifiedAt: new Date(),
-              },
-            });
-          }
         } catch (error) {
           await this.settleDispatchFailure(event.id, claimedAt, event.attempts + 1, error);
+          continue;
+        }
+
+        // A failure to record a provider acknowledgement leaves the dispatch for reconciliation.
+        const sent = await this.prisma.notificationOutboxEvent.updateMany({
+          where: {
+            id: event.id,
+            status: NotificationOutboxStatus.DISPATCHING,
+            claimedAt,
+          },
+          data: {
+            status: NotificationOutboxStatus.SENT,
+            processedAt: new Date(),
+            claimedAt: null,
+            lastError: null,
+          },
+        });
+
+        if (sent.count === 1 && event.aggregateType === 'STOCK_SUBSCRIPTION') {
+          await this.prisma.stockNotificationSubscription.updateMany({
+            where: {
+              id: event.aggregateId,
+              status: StockNotificationStatus.QUEUED,
+            },
+            data: {
+              status: StockNotificationStatus.NOTIFIED,
+              notifiedAt: new Date(),
+            },
+          });
         }
       }
     } catch (error) {
@@ -569,6 +574,8 @@ export class NotificationOutboxWorker {
         return null;
       case NotificationOutboxEventType.STOCK_AVAILABLE:
         throw new Error('Stock notification event has an invalid aggregate type.');
+      case NotificationOutboxEventType.WALLET_CREDIT_ACTIVATED:
+        throw new Error('Wallet notification requires the wallet dispatch path.');
     }
   }
 

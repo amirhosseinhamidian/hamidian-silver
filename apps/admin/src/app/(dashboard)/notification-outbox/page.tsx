@@ -1,5 +1,6 @@
 import { NotificationOutboxView } from '@/components/notification-outbox/notification-outbox-view';
 import { Badge } from '@/components/ui/badge';
+import { ButtonLink } from '@/components/ui/button';
 import { requireAdminSession } from '@/lib/auth/session';
 import { loadNotificationOutbox } from '@/lib/notification-outbox/notification-outbox-data';
 import { formatAdminInteger } from '@/lib/presentation/formatters';
@@ -18,7 +19,12 @@ export default async function NotificationOutboxPage() {
           <Badge tone="info">مرحله {formatAdminInteger(36)}</Badge>
           <Badge tone="neutral">ارسال قابل بازیابی</Badge>
         </div>
-        <h1 className="mt-3 text-2xl font-black sm:text-3xl">Notification Outbox</h1>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-black sm:text-3xl">Notification Outbox</h1>
+          <ButtonLink href="/notification-outbox/wallet" variant="outline" size="sm">
+            اعلان‌های کیف پول
+          </ButtonLink>
+        </div>
         <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--admin-color-muted)]">
           سلامت صف پیام‌های مشتری و هشدارهای عملیاتی را پایش کنید و خطاهای قطعی یا نتیجه‌های نامشخص
           را ایمن تعیین تکلیف کنید.

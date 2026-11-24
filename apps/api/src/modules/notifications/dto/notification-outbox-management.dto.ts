@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import {
   NotificationOutboxRecoveryResolution,
@@ -82,6 +82,8 @@ export class NotificationOutboxSummaryDto {
   sent!: number;
   failed!: number;
   unknown!: number;
+  @ApiPropertyOptional()
+  skipped?: number;
 }
 
 export class NotificationOutboxManagementSnapshotDto {

@@ -86,6 +86,7 @@ model User {
   referralRiskPublications            ReferralRiskPolicyVersion[]
   referralRiskReviews                 ReferralRiskReview[]
   walletLots                          WalletLot[]
+  walletNotificationPreference        WalletNotificationPreference?
   walletReservations                  WalletReservation[]
   walletOperations                    WalletOperation[]            @relation("WalletOwner")
   walletCorrections                   WalletOperation[]            @relation("WalletActor")
@@ -2637,6 +2638,7 @@ enum NotificationOutboxEventType {
   ORDER_CANCELLED
   PAYMENT_RECONCILIATION_REQUIRED
   STOCK_AVAILABLE
+  WALLET_CREDIT_ACTIVATED
 }
 
 enum StockNotificationStatus {
@@ -2653,6 +2655,7 @@ enum NotificationOutboxStatus {
   SENT
   FAILED
   UNKNOWN
+  SKIPPED
 }
 
 enum AdminMessageChannel {
@@ -3006,6 +3009,31 @@ model SupplierSettlementItem {
   @@unique([settlementId, payableId])
   @@index([payableId])
   @@map("supplier_settlement_items")
+}
+
+model WalletNotificationSettings {
+  id                        Int       @id @default(1)
+  version                   Int       @default(1)
+  activationSmsEnabled      Boolean   @default(false)
+  activationConsentKey      String?   @db.Uuid
+  activationTemplateVersion String?   @db.VarChar(32)
+  activationIntervalMinutes Int       @default(15)
+  expiryInAppEnabled         Boolean   @default(true)
+  expiryNoticeDays           Int       @default(30)
+  expiryUrgentDays           Int       @default(7)
+
+  @@map("wallet_notification_settings")
+}
+
+model WalletNotificationPreference {
+  userId                 String    @id @db.Uuid
+  activationSmsEnabled   Boolean   @default(false)
+  activationConsentKey   String?   @db.Uuid
+  expiryInAppEnabled     Boolean   @default(true)
+  lastDispatchAt         DateTime? @db.Timestamptz(3)
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallet_notification_preferences")
 }
 
 model NotificationOutboxEvent {

@@ -139,7 +139,7 @@ async function forwardAuthenticatedResponse(
 
 export async function forwardWalletRequest(
   request: Request,
-  resource: 'balance' | 'ledger' | 'estimate',
+  resource: 'balance' | 'ledger' | 'estimate' | 'notifications',
 ) {
   const accessToken = await getSessionToken();
   if (!accessToken) {
@@ -151,16 +151,29 @@ export async function forwardWalletRequest(
       ? '/api/v1/orders/wallet-estimate'
       : resource === 'ledger'
         ? `/api/v1/wallet/ledger?page=${encodeURIComponent(page)}`
-        : '/api/v1/wallet';
+        : resource === 'notifications'
+          ? '/api/v1/notifications/wallet'
+          : '/api/v1/wallet';
   try {
-    const init =
+    const method =
       resource === 'estimate'
-        ? {
-            method: 'POST',
-            body: await request.text(),
-            headers: { 'Content-Type': 'application/json' },
-          }
-        : {};
+        ? 'POST'
+        : resource === 'notifications' && request.method === 'PATCH'
+          ? 'PATCH'
+          : null;
+    if (
+      method === 'PATCH' &&
+      !request.headers.get('content-type')?.startsWith('application/json')
+    ) {
+      return Response.json(null, { status: 415, headers: { 'Cache-Control': 'no-store' } });
+    }
+    const init = method
+      ? {
+          method,
+          body: await request.text(),
+          headers: { 'Content-Type': 'application/json' },
+        }
+      : {};
     return await forwardAuthenticatedResponse(path, accessToken, {
       ...init,
       signal: request.signal,

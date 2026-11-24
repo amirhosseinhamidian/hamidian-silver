@@ -47,6 +47,7 @@ const STATUS: Record<NotificationOutboxStatus, Readonly<{ label: string; tone: B
   SENT: { label: 'ارسال‌شده', tone: 'success' },
   FAILED: { label: 'ناموفق', tone: 'danger' },
   UNKNOWN: { label: 'نامشخص', tone: 'danger' },
+  SKIPPED: { label: 'ارسال‌نشده', tone: 'neutral' },
 };
 
 const EVENT_LABELS: Readonly<Record<string, string>> = {
@@ -60,7 +61,21 @@ const EVENT_LABELS: Readonly<Record<string, string>> = {
   ORDER_CANCELLED: 'لغو سفارش',
   PAYMENT_RECONCILIATION_REQUIRED: 'نیازمند مغایرت‌گیری پرداخت',
   STOCK_AVAILABLE: 'موجودشدن کالا',
+  WALLET_CREDIT_ACTIVATED: 'فعال‌سازی اعتبار کیف پول',
 };
+
+const WALLET_SMS_ERRORS: Readonly<Record<string, string>> = {
+  WALLET_SMS_PHONE_UNAVAILABLE: 'شمارهٔ همراه معتبر و تأییدشده در دسترس نیست.',
+  WALLET_SMS_PROVIDER_UNAVAILABLE: 'سرویس ارسال پیامک کیف پول در دسترس نیست.',
+  WALLET_SMS_ACCOUNT_UNAVAILABLE: 'حساب گیرنده فعال نیست.',
+  WALLET_SMS_DISABLED: 'ارسال برای این رویداد در تنظیمات مجاز نیست.',
+  WALLET_SMS_CREDIT_UNAVAILABLE: 'اعتبار مربوط به این اعلان دیگر واجد شرایط نیست.',
+  WALLET_SMS_INVALID_EVENT: 'اطلاعات رویداد فعال‌سازی معتبر نیست.',
+};
+
+function eventError(item: NotificationOutboxItem) {
+  return item.lastError ? (WALLET_SMS_ERRORS[item.lastError] ?? item.lastError) : null;
+}
 
 function eventLabel(item: NotificationOutboxItem): string {
   return EVENT_LABELS[item.eventType] ?? item.eventType.replaceAll('_', ' ');
@@ -112,7 +127,7 @@ function OutboxDetails({ item }: Readonly<{ item: NotificationOutboxItem }>) {
     <div className="space-y-4">
       {item.lastError ? (
         <Alert tone={item.status === 'UNKNOWN' ? 'warning' : 'danger'} title="آخرین خطای ارسال">
-          {item.lastError}
+          {eventError(item)}
         </Alert>
       ) : null}
       <Card title="چرخه ارسال">
@@ -312,7 +327,7 @@ export function NotificationOutboxView({ snapshot, failed, canRecover }: Props) 
       header: 'آخرین خطا',
       visibility: 'lg',
       cell: (item) => (
-        <span className="line-clamp-2 max-w-72 text-xs">{item.lastError ?? 'بدون خطا'}</span>
+        <span className="line-clamp-2 max-w-72 text-xs">{eventError(item) ?? 'بدون خطا'}</span>
       ),
     },
     {
@@ -367,6 +382,9 @@ export function NotificationOutboxView({ snapshot, failed, canRecover }: Props) 
           tone={data.summary.unknown ? 'warning' : 'neutral'}
         />
         <Kpi label="ارسال‌شده" value={data.summary.sent} tone="success" />
+        {Boolean(data.summary.skipped) && (
+          <Kpi label="ارسال‌نشده" value={data.summary.skipped ?? 0} tone="neutral" />
+        )}
       </section>
       <Card
         title="سلامت چرخه ارسال"
@@ -391,6 +409,15 @@ export function NotificationOutboxView({ snapshot, failed, canRecover }: Props) 
               color: 'var(--admin-color-danger)',
             },
             { label: 'ارسال‌شده', value: data.summary.sent, color: 'var(--admin-color-success)' },
+            ...(data.summary.skipped
+              ? [
+                  {
+                    label: 'ارسال‌نشده',
+                    value: data.summary.skipped,
+                    color: 'var(--admin-color-muted)',
+                  },
+                ]
+              : []),
           ]}
         />
       </Card>
@@ -457,7 +484,7 @@ export function NotificationOutboxView({ snapshot, failed, canRecover }: Props) 
               { label: 'تلاش', value: formatAdminInteger(item.attempts) },
               { label: 'آخرین تغییر', value: formatAdminDateTime(item.updatedAt) },
               { label: 'مرجع', value: item.aggregateType },
-              { label: 'خطا', value: item.lastError ?? 'ندارد' },
+              { label: 'خطا', value: eventError(item) ?? 'ندارد' },
             ]}
             detailsTitle={eventLabel(item)}
             detailsDescription={STATUS[item.status].label}

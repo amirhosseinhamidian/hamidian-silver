@@ -2372,6 +2372,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletCreditNotificationsController_customer_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["WalletCreditNotificationsController_updatePreferences_v1"];
+        trace?: never;
+    };
+    "/api/v1/notifications/wallet/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletCreditNotificationsController_settings_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["WalletCreditNotificationsController_updateSettings_v1"];
+        trace?: never;
+    };
     "/api/v1/pricing/suppliers": {
         parameters: {
             query?: never;
@@ -7026,7 +7058,7 @@ export interface components {
             priority: string | null;
             level: string | null;
             /** @enum {string} */
-            status: "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT" | "FAILED" | "UNKNOWN";
+            status: "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT" | "FAILED" | "UNKNOWN" | "SKIPPED";
             /** Format: date-time */
             nextAttemptAt: string;
             /** Format: date-time */
@@ -7044,6 +7076,7 @@ export interface components {
             attempts: number;
         };
         NotificationOutboxSummaryDto: {
+            skipped?: number;
             total: number;
             pending: number;
             processing: number;
@@ -7068,6 +7101,40 @@ export interface components {
             /** @enum {string} */
             target: "PRODUCT" | "VARIANT";
             subscribed: boolean;
+        };
+        WalletExpiryReminderDto: {
+            /** Format: date-time */
+            expiresAt: string;
+            urgent: boolean;
+            amountToman: number;
+        };
+        WalletCustomerNotificationsDto: {
+            expiryReminder: components["schemas"]["WalletExpiryReminderDto"] | null;
+            smsAvailable: boolean;
+            expiryReminderAvailable: boolean;
+            activationSmsEnabled: boolean;
+            expiryInAppEnabled: boolean;
+        };
+        WalletNotificationPreferencesDto: {
+            activationSmsEnabled: boolean;
+            expiryInAppEnabled: boolean;
+        };
+        WalletNotificationSettingsDto: {
+            activationSmsEnabled: boolean;
+            expiryInAppEnabled: boolean;
+            version: number;
+            activationIntervalMinutes: number;
+            expiryNoticeDays: number;
+            expiryUrgentDays: number;
+            activationSmsPreview: string;
+        };
+        UpdateWalletNotificationSettingsDto: {
+            activationSmsEnabled: boolean;
+            expiryInAppEnabled: boolean;
+            expectedVersion: number;
+            activationIntervalMinutes: number;
+            expiryNoticeDays: number;
+            expiryUrgentDays: number;
         };
         CreateSupplierDto: {
             code: string;
@@ -12967,7 +13034,7 @@ export interface operations {
     NotificationOutboxRecoveryController_list_v1: {
         parameters: {
             query?: {
-                status?: "PENDING" | "FAILED" | "UNKNOWN" | "PROCESSING" | "DISPATCHING" | "SENT";
+                status?: "PENDING" | "FAILED" | "UNKNOWN" | "PROCESSING" | "SKIPPED" | "DISPATCHING" | "SENT";
                 source?: "CUSTOMER" | "OPERATIONAL";
                 limit?: number;
             };
@@ -13024,6 +13091,90 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    WalletCreditNotificationsController_customer_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletCustomerNotificationsDto"];
+                };
+            };
+        };
+    };
+    WalletCreditNotificationsController_updatePreferences_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WalletNotificationPreferencesDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletCustomerNotificationsDto"];
+                };
+            };
+        };
+    };
+    WalletCreditNotificationsController_settings_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletNotificationSettingsDto"];
+                };
+            };
+        };
+    };
+    WalletCreditNotificationsController_updateSettings_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWalletNotificationSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletNotificationSettingsDto"];
+                };
             };
         };
     };

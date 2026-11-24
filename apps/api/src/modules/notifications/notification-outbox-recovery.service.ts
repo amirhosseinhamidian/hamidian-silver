@@ -385,6 +385,7 @@ export class NotificationOutboxRecoveryService {
       countByStatus.set(row.status, (countByStatus.get(row.status) ?? 0) + row._count._all);
     }
     const count = (status: NotificationOutboxStatus) => countByStatus.get(status) ?? 0;
+    const skipped = count(NotificationOutboxStatus.SKIPPED);
     const summary = {
       pending: count(NotificationOutboxStatus.PENDING),
       processing: count(NotificationOutboxStatus.PROCESSING),
@@ -392,6 +393,7 @@ export class NotificationOutboxRecoveryService {
       sent: count(NotificationOutboxStatus.SENT),
       failed: count(NotificationOutboxStatus.FAILED),
       unknown: count(NotificationOutboxStatus.UNKNOWN),
+      ...(skipped ? { skipped } : {}),
     };
     return {
       items,
