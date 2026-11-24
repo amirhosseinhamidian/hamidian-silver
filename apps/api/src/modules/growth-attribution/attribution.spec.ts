@@ -11,7 +11,7 @@ import {
   buildOrderAttribution,
   eligibleAttributionTouches,
 } from './attribution';
-import { buildCampaignUrl } from './campaign-links.service';
+import { buildCampaignUrl, parseCampaignDestination } from './campaign-links.service';
 import { GrowthAttributionController } from './growth-attribution.controller';
 import { growthRevenuePeriod } from './growth-revenue.service';
 
@@ -30,6 +30,21 @@ const campaign = {
   campaignId: 'winter-1',
   content: 'hero',
 };
+
+it('allows an optional gift collection on the gift finder destination', () => {
+  const origin = 'https://silver.example';
+  expect(parseCampaignDestination(origin, '/gift-finder?collection=nowruz').href).toBe(
+    `${origin}/gift-finder?collection=nowruz`,
+  );
+  for (const destination of [
+    '/gift-finder?collection=nowruz&collection=other',
+    '/gift-finder?collection=%2Fproducts',
+    '/gift-finder?category=rings',
+    '/products?collection=nowruz',
+  ]) {
+    expect(() => parseCampaignDestination(origin, destination)).toThrow();
+  }
+});
 
 describe('growth revenue reporting', () => {
   it('requires finance permission for both reporting paths', () => {

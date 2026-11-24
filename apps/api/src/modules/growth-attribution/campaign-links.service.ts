@@ -7,6 +7,8 @@ import type { CampaignLinkDto, CreateCampaignLinkDto } from './dto/attribution.d
 
 const publicPath = /^\/(?:$|(?:products|categories|brands|guide)(?:\/[^/]+)?\/?$)/;
 const campaignLandingPath = /^\/campaigns\/[a-z0-9]+(?:-[a-z0-9]+)*\/?$/;
+const giftFinderPath = /^\/gift-finder\/?$/;
+const collectionSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const destinationParameters = new Set(['page', 'category', 'brand', 'country', 'sort']);
 
 export function parseCampaignDestination(origin: string, destination: string): URL {
@@ -19,21 +21,21 @@ export function parseCampaignDestination(origin: string, destination: string): U
   }
   const url = new URL(destination, origin);
   const landing = campaignLandingPath.test(url.pathname);
+  const giftFinder = giftFinderPath.test(url.pathname);
   if (
     url.origin !== origin ||
-    (!publicPath.test(url.pathname) && !landing) ||
+    (!publicPath.test(url.pathname) && !landing && !giftFinder) ||
     /%2f|%5c/i.test(url.pathname)
   ) {
     throw new BadRequestException('Choose a public storefront path.');
   }
-  for (const [key] of url.searchParams) {
+  for (const [key, value] of url.searchParams) {
     if (key.toLowerCase().startsWith('utm_'))
       throw new ConflictException('The destination already contains tracking parameters.');
-    if (
-      !destinationParameters.has(key) ||
-      (landing && key !== 'page') ||
-      url.searchParams.getAll(key).length > 1
-    ) {
+    const supported = giftFinder
+      ? key === 'collection' && value.length <= 64 && collectionSlug.test(value)
+      : destinationParameters.has(key) && (!landing || key === 'page');
+    if (!supported || url.searchParams.getAll(key).length > 1) {
       throw new BadRequestException(
         'The destination contains an unsupported or repeated parameter.',
       );

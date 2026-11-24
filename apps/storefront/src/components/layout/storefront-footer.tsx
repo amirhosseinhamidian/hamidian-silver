@@ -25,6 +25,7 @@ const storefrontLinks = [
   { label: 'برندها', href: '/brands' },
   { label: 'جدیدترین‌ها', href: '/products?sort=newest' },
   { label: 'دانستنی‌ها', href: '/guide' },
+  { label: 'راهنمای انتخاب هدیه', href: '/gift-finder' },
 ] as const;
 
 const informationLinks = [

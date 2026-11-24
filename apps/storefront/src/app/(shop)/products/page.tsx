@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { CatalogFacetedListing } from '@/components/catalog/catalog-faceted-listing';
 import { CatalogHero } from '@/components/catalog/catalog-hero';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
+import { ButtonLink } from '@/components/ui/button';
 import {
   getCatalogDevHeroImageSrc,
   getCatalogDevProductImageSources,
@@ -63,13 +64,18 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     <main id="main-content" className="pb-[var(--sf-section-space)]">
       <CatalogHero settings={siteSettings} devFallbackSrc={getCatalogDevHeroImageSrc()} />
       <section className="sf-container pt-8" aria-label="فهرست محصولات">
-        <StorefrontBreadcrumbs
-          items={[
-            { label: 'خانه', href: '/' },
-            { label: 'محصولات', href: '/products' },
-          ]}
-          className="mb-6 text-[var(--sf-color-muted)]"
-        />
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <StorefrontBreadcrumbs
+            items={[
+              { label: 'خانه', href: '/' },
+              { label: 'محصولات', href: '/products' },
+            ]}
+            className="text-[var(--sf-color-muted)]"
+          />
+          <ButtonLink href="/gift-finder" variant="outline" size="sm">
+            راهنمای انتخاب هدیه
+          </ButtonLink>
+        </div>
         <CatalogFacetedListing
           path="/products"
           filters={filters}

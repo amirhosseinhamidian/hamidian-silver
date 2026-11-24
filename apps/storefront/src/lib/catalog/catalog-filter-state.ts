@@ -142,7 +142,9 @@ export function buildCatalogCollectionHref(
 export type PublicFacetedCatalog = components['schemas']['PublicFacetedCatalogDto'];
 export type CatalogListing = PublicFacetedCatalog & { invalidFilters?: boolean };
 export type PublicCatalogFacets = components['schemas']['PublicCatalogFacetsDto'];
-export type CatalogFacetQuery = components['schemas']['PublicCatalogFacetsQueryDto'];
+export type CatalogFacetQuery = components['schemas']['PublicCatalogFacetsQueryDto'] & {
+  checkoutStockOnly?: boolean;
+};
 type AttributeFilter = components['schemas']['PublicCatalogFacetFilterDto'];
 
 export type CatalogFacetScope = Readonly<{ category?: string; brand?: string }>;
@@ -153,6 +155,7 @@ export type CatalogFacetFilters = CatalogFilters &
     | 'brands'
     | 'sizeIds'
     | 'availability'
+    | 'checkoutStockOnly'
     | 'minPriceToman'
     | 'maxPriceToman'
     | 'minWeightGrams'
@@ -348,6 +351,7 @@ export function catalogFacetQuery(
     brands: filters.brands ?? (filters.brand ? [filters.brand] : []),
     sizeIds: filters.sizeIds,
     availability: filters.availability,
+    ...(filters.checkoutStockOnly ? { checkoutStockOnly: true } : {}),
     minPriceToman: filters.minPriceToman,
     maxPriceToman: filters.maxPriceToman,
     minWeightGrams: filters.minWeightGrams,

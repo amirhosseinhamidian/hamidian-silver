@@ -124,6 +124,7 @@ export function buildPublicCatalogFacetsQuery(
   const pageSize = query.pageSize ?? 24;
   const page = query.page ?? 1;
   const hasVariantFilter = sizes.length > 0 || priceActive || weightActive || lengthActive;
+  const checkoutStockOnly = query.checkoutStockOnly === true || Boolean(collection);
   const uuidArray = (ids: readonly string[]) =>
     ids.length ? Prisma.sql`ARRAY[${Prisma.join(ids)}]::uuid[]` : Prisma.sql`ARRAY[]::uuid[]`;
   const manualOrder = collection?.manualProductIds
@@ -214,7 +215,7 @@ export function buildPublicCatalogFacetsQuery(
           WHERE scope <> ('attribute:' || attr.code)
         )
     ),
-    ${buildCatalogStockCte(Boolean(collection))},
+    ${buildCatalogStockCte(checkoutStockOnly)},
     variant_candidates AS MATERIALIZED (
       SELECT variant.id, variant."productId",
         CASE WHEN size."isActive" AND size."deletedAt" IS NULL AND size_group."isActive"
@@ -224,7 +225,7 @@ export function buildPublicCatalogFacetsQuery(
         CASE WHEN COALESCE(variant."salePriceToman", product."salePriceToman") > 0
           THEN COALESCE(variant."salePriceToman", product."salePriceToman") END AS "salePriceToman",
         COALESCE(variant."compareAtPriceToman", product."compareAtPriceToman") AS "compareAtPriceToman",
-        ${buildCatalogVariantStockSql(Boolean(collection))} AS quantity
+        ${buildCatalogVariantStockSql(checkoutStockOnly)} AS quantity
       FROM scoped_products product
       JOIN "product_variants" variant ON variant."productId" = product.id
       ${catalogVariantStockJoins}

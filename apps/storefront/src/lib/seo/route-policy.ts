@@ -63,6 +63,10 @@ export function resolveStorefrontSeoRoutePolicy(
 ): StorefrontSeoRoutePolicy {
   const normalizedPath = normalizePathname(pathname);
 
+  if (normalizedPath === '/gift-finder') {
+    return { canonicalPath: normalizedPath, index: false, follow: true, reason: 'catalog-variant' };
+  }
+
   if (PRIVATE_ROUTE_PREFIXES.some((prefix) => isRouteOrChild(normalizedPath, prefix))) {
     return {
       canonicalPath: normalizedPath,

@@ -5,6 +5,7 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNumber,
@@ -64,6 +65,15 @@ export class PublicCatalogFacetFilterDto {
 }
 
 export class PublicCatalogFacetsQueryDto {
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Use the checkout warehouse and published bundle components.',
+  })
+  @IsOptional()
+  @Type(() => Object)
+  @IsBoolean()
+  checkoutStockOnly?: boolean;
+
   @ApiPropertyOptional({ type: Number, minimum: 1, maximum: 1000, default: 1 })
   @IsOptional()
   @Type(() => Object)

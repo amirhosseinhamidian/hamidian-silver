@@ -128,6 +128,8 @@ const facetProducts = [
     item: { ...product, brand: catalogBrand, categories: [catalogChildCategory] },
     weight: 4.25,
     audience: 'women',
+    occasion: 'birthday',
+    style: 'minimal',
     country: 'italy',
   },
   {
@@ -139,17 +141,43 @@ const facetProducts = [
     },
     weight: 6.5,
     audience: 'men',
+    occasion: 'anniversary',
+    style: 'classic',
   },
   {
     item: { ...soldOutProduct, salePriceToman: null },
     weight: null,
     audience: 'women',
+    occasion: 'birthday',
+    style: 'minimal',
+  },
+];
+
+const giftAttributeFixtures = [
+  {
+    key: 'occasion',
+    code: 'gift-occasion',
+    label: 'مناسبت',
+    values: [
+      { value: 'birthday', label: 'تولد' },
+      { value: 'anniversary', label: 'سالگرد' },
+    ],
+  },
+  {
+    key: 'style',
+    code: 'gift-style',
+    label: 'سبک',
+    values: [
+      { value: 'minimal', label: 'مینیمال' },
+      { value: 'classic', label: 'کلاسیک' },
+    ],
   },
 ];
 
 function facetedProducts(query) {
   const matches = (omit) =>
-    facetProducts.filter(({ item, weight, audience, country }) => {
+    facetProducts.filter((record) => {
+      const { item, weight, audience, country } = record;
       const categories = item.categories.map(({ slug }) => slug);
       if (categories.includes('women-rings')) categories.push('rings');
       if (query.scopeCategory && !categories.includes(query.scopeCategory)) return false;
@@ -187,6 +215,15 @@ function facetedProducts(query) {
         omit !== 'intended-for' &&
         query.attributes?.some(
           ({ code, values }) => code === 'intended-for' && !values?.includes(audience),
+        )
+      )
+        return false;
+      if (
+        query.attributes?.some(({ code, values }) =>
+          giftAttributeFixtures.some(
+            (fixture) =>
+              fixture.code === code && omit !== code && !values?.includes(record[fixture.key]),
+          ),
         )
       )
         return false;
@@ -253,8 +290,28 @@ function facetedProducts(query) {
         ]
       : [],
   };
+  for (const fixture of giftAttributeFixtures) {
+    const available = options(
+      fixture.values,
+      matches(fixture.code),
+      (record, value) => record[fixture.key] === value,
+    );
+    if (available.length)
+      facets.attributes.push({
+        code: fixture.code,
+        label: fixture.label,
+        kind: 'SELECT',
+        unit: 'NONE',
+        options: available,
+        range: null,
+      });
+  }
   const { page = 1, pageSize = 24 } = query;
-  const items = matches().map(({ item }) => item);
+  const items = matches().map(({ item }) =>
+    query.sort === 'featured' && query.minPriceToman === 1 && item.slug === 'silver-ring'
+      ? { ...item, defaultSalePriceToman: 1_200_000 }
+      : item,
+  );
   const ranking =
     query.sort === 'best-selling'
       ? { version: 1, requestedSort: 'best-selling', appliedSort: 'newest' }

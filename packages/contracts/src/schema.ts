@@ -5586,6 +5586,8 @@ export interface components {
             slug: string;
         };
         PublicCatalogFacetsQueryDto: {
+            /** @description Use the checkout warehouse and published bundle components. */
+            checkoutStockOnly?: boolean;
             /** @default 1 */
             page: number;
             /** @default 24 */

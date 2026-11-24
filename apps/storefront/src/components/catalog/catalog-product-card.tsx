@@ -5,6 +5,7 @@ import { CampaignQuotaProgress } from '@/components/catalog/campaign-quota-progr
 import { CatalogPrice } from '@/components/catalog/catalog-price';
 import { ButtonLink } from '@/components/ui/button';
 import { CatalogWishlistButton } from '@/components/wishlist/catalog-wishlist-button';
+import { formatTomanPrice } from '@/lib/catalog/presentation';
 import type { PublicCatalogProductSummary } from '@/lib/catalog/public-catalog';
 
 type CatalogProductCardProps = Readonly<{
@@ -14,6 +15,7 @@ type CatalogProductCardProps = Readonly<{
   imageSizes?: string;
   preloadImage?: boolean;
   onSelect?: () => void;
+  showBudgetMatch?: boolean;
 }>;
 
 export function CatalogProductCard({
@@ -23,6 +25,7 @@ export function CatalogProductCard({
   imageSizes = '(min-width: 1024px) 25vw, 50vw',
   preloadImage = false,
   onSelect,
+  showBudgetMatch = false,
 }: CatalogProductCardProps) {
   const sale =
     product.defaultSalePriceToman === undefined
@@ -114,6 +117,12 @@ export function CatalogProductCard({
             />
           )}
         </div>
+
+        {showBudgetMatch && product.salePriceToman !== null && (
+          <p className="mt-2 text-xs leading-5 text-[var(--sf-color-muted)]">
+            واریانت موجود در بودجه از {formatTomanPrice(product.salePriceToman)}
+          </p>
+        )}
 
         {product.campaignQuota && (
           <CampaignQuotaProgress

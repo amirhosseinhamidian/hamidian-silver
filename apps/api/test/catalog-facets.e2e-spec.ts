@@ -265,6 +265,36 @@ it('uses sellable variants and counts distinct products under every other facet'
         await expect(
           service.searchPublicCatalog({ minPriceToman: 10, maxPriceToman: 9 }),
         ).rejects.toThrow('valid ranges');
+
+        const checkoutWarehouse =
+          (await db.warehouse.findFirst({
+            where: { isDefault: true, isActive: true, deletedAt: null },
+          })) ??
+          (await db.warehouse.create({
+            data: { name: 'Checkout fixture', code: `checkout-${suffix}`, isDefault: true },
+          }));
+        await db.inventory.create({
+          data: { warehouseId: checkoutWarehouse.id, variantId: mainVariant.id, onHand: 1 },
+        });
+        const checkoutQuery = {
+          ...query,
+          checkoutStockOnly: true,
+          brands: [a.slug, b.slug],
+          minPriceToman: 1,
+          sort: PublicCatalogSort.FEATURED,
+        };
+        await expect(service.searchPublicCatalog(checkoutQuery)).resolves.toMatchObject({
+          total: 1,
+          items: [{ id: main.id, availableQuantity: 1, salePriceToman: 100_000 }],
+          facets: { priceToman: { min: 100_000, max: 100_000, count: 1 } },
+        });
+        await expect(
+          service.searchPublicCatalog({ ...checkoutQuery, maxPriceToman: 90_000 }),
+        ).resolves.toMatchObject({
+          total: 0,
+          items: [],
+          facets: { priceToman: { min: 100_000, max: 100_000, count: 1 } },
+        });
         throw rollback;
       },
       { timeout: 20_000 },

@@ -16181,6 +16181,10 @@
       "PublicCatalogFacetsQueryDto": {
         "type": "object",
         "properties": {
+          "checkoutStockOnly": {
+            "type": "boolean",
+            "description": "Use the checkout warehouse and published bundle components."
+          },
           "page": {
             "type": "number",
             "minimum": 1,
