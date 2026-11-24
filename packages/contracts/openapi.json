@@ -9756,6 +9756,90 @@
         ]
       }
     },
+    "/api/v1/referrals": {
+      "get": {
+        "operationId": "ReferralsController_overview_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralOverviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Referrals"
+        ]
+      }
+    },
+    "/api/v1/referrals/code": {
+      "post": {
+        "operationId": "ReferralsController_issueCode_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedReferralCodeDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Referrals"
+        ]
+      }
+    },
+    "/api/v1/referrals/claim": {
+      "post": {
+        "operationId": "ReferralsController_claim_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferralClaimDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceivedReferralDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Referrals"
+        ]
+      }
+    },
     "/api/v1/shipping/pricing/public": {
       "get": {
         "operationId": "ShippingController_getPublicPricing_v1",
@@ -24016,6 +24100,169 @@
         "required": [
           "id",
           "deletedAt"
+        ]
+      },
+      "ReceivedReferralDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "FIRST_PURCHASE_CONFIRMED",
+              "EXPIRED"
+            ],
+            "type": "string"
+          },
+          "claimedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "firstPaidAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "firstOrderId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "claimedAt",
+          "expiresAt",
+          "firstPaidAt",
+          "firstOrderId"
+        ]
+      },
+      "ReferralHistoryItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "FIRST_PURCHASE_CONFIRMED",
+              "EXPIRED"
+            ],
+            "type": "string"
+          },
+          "claimedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "firstPaidAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "claimedAt",
+          "expiresAt",
+          "firstPaidAt"
+        ]
+      },
+      "OutgoingReferralPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralHistoryItemDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "hasMore"
+        ]
+      },
+      "ReferralOverviewDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "incoming": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReceivedReferralDto"
+              }
+            ]
+          },
+          "outgoing": {
+            "$ref": "#/components/schemas/OutgoingReferralPageDto"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "attributionDays": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "incoming",
+          "outgoing",
+          "enabled",
+          "attributionDays"
+        ]
+      },
+      "IssuedReferralCodeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "ReferralClaimDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{24}$",
+            "minLength": 24,
+            "maxLength": 24
+          }
+        },
+        "required": [
+          "code"
         ]
       },
       "ShippingPricingSettingsDto": {

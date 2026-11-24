@@ -76,6 +76,10 @@ model User {
   campaignRevisions                   CampaignRevision[]
   rewardPolicyDrafts                  RewardPolicyVersion[]         @relation("RewardPolicyCreator")
   rewardPolicyPublications            RewardPolicyVersion[]         @relation("RewardPolicyPublisher")
+  referralCode                        ReferralCode?
+  sentReferrals                       ReferralAttribution[]        @relation("ReferralReferrer")
+  receivedReferral                    ReferralAttribution?         @relation("ReferralReferred")
+  referralRequestLimit                ReferralRequestLimit?
   walletLots                          WalletLot[]
   walletReservations                  WalletReservation[]
   walletOperations                    WalletOperation[]            @relation("WalletOwner")
@@ -1731,6 +1735,7 @@ model Order {
   walletReservations    WalletReservation[]
   purchaseRewardBasis   Json?
   purchaseRewardJob     PurchaseRewardJob?
+  firstReferralPurchase ReferralAttribution?
   growthDevice          String?                       @db.VarChar(12)
   returns               OrderReturn[]
   supplierCredits       SupplierCredit[]
@@ -2073,6 +2078,41 @@ model PurchaseRewardJob {
   @@index([status, leaseUntil])
   @@index([userId, sequence])
   @@map("purchase_reward_jobs")
+}
+
+model ReferralCode {
+  userId    String   @id @db.Uuid
+  code      String   @unique @db.VarChar(24)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("referral_codes")
+}
+
+model ReferralAttribution {
+  id                   String    @id @default(uuid()) @db.Uuid
+  referrerUserId       String    @db.Uuid
+  referredUserId       String    @unique @db.Uuid
+  policySnapshot       Json
+  claimedAt            DateTime  @db.Timestamptz(3)
+  expiresAt            DateTime  @db.Timestamptz(3)
+  firstOrderId         String?   @unique @db.Uuid
+  firstPaidAt          DateTime? @db.Timestamptz(3)
+  referrer             User      @relation("ReferralReferrer", fields: [referrerUserId], references: [id], onDelete: Restrict)
+  referred             User      @relation("ReferralReferred", fields: [referredUserId], references: [id], onDelete: Restrict)
+  firstOrder           Order?    @relation(fields: [firstOrderId], references: [id], onDelete: Restrict)
+
+  @@index([referrerUserId, claimedAt, id], map: "referral_attributions_history_idx")
+  @@map("referral_attributions")
+}
+
+model ReferralRequestLimit {
+  userId        String   @id @db.Uuid
+  windowStartAt DateTime @db.Timestamptz(3)
+  attempts      Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("referral_request_limits")
 }
 
 enum WalletSource {

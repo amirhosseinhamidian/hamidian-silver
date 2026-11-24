@@ -20,6 +20,7 @@ import { PlatingModule } from './modules/plating/plating.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ProfileModule } from './modules/profile/profile.module';
+import { ReferralsModule } from './modules/referrals/referrals.module';
 import { RewardPoliciesModule } from './modules/reward-policies/reward-policies.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
 import { SiteSettingsModule } from './modules/site-settings/site-settings.module';
@@ -57,6 +58,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
     OrdersModule,
     PaymentsModule,
     ProfileModule,
+    ReferralsModule,
     RewardPoliciesModule,
     ShippingModule,
     SiteSettingsModule,

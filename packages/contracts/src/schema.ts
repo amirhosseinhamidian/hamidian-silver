@@ -3620,6 +3620,54 @@ export interface paths {
         patch: operations["ProfileController_setDefaultAddress_v1"];
         trace?: never;
     };
+    "/api/v1/referrals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralsController_overview_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referrals/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReferralsController_issueCode_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referrals/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReferralsController_claim_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/shipping/pricing/public": {
         parameters: {
             query?: never;
@@ -7329,6 +7377,50 @@ export interface components {
             id: string;
             /** Format: date-time */
             deletedAt: string;
+        };
+        ReceivedReferralDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "PENDING" | "FIRST_PURCHASE_CONFIRMED" | "EXPIRED";
+            /** Format: date-time */
+            claimedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            firstPaidAt: string | null;
+            /** Format: uuid */
+            firstOrderId: string | null;
+        };
+        ReferralHistoryItemDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "PENDING" | "FIRST_PURCHASE_CONFIRMED" | "EXPIRED";
+            /** Format: date-time */
+            claimedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            firstPaidAt: string | null;
+        };
+        OutgoingReferralPageDto: {
+            items: components["schemas"]["ReferralHistoryItemDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        ReferralOverviewDto: {
+            code: string | null;
+            incoming: components["schemas"]["ReceivedReferralDto"] | null;
+            outgoing: components["schemas"]["OutgoingReferralPageDto"];
+            enabled: boolean;
+            attributionDays: number;
+        };
+        IssuedReferralCodeDto: {
+            code: string;
+        };
+        ReferralClaimDto: {
+            code: string;
         };
         ShippingPricingSettingsDto: {
             /** @enum {string} */
@@ -14369,6 +14461,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerAddressDto"];
+                };
+            };
+        };
+    };
+    ReferralsController_overview_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralOverviewDto"];
+                };
+            };
+        };
+    };
+    ReferralsController_issueCode_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedReferralCodeDto"];
+                };
+            };
+        };
+    };
+    ReferralsController_claim_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReferralClaimDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivedReferralDto"];
                 };
             };
         };
