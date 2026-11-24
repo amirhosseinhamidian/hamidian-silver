@@ -193,6 +193,53 @@ it('authorizes policy publication and previews immutable versions across an effe
     await expect(policies.publish(past.version, actor.id)).rejects.toThrow(
       'effective time has passed',
     );
+
+    const timingPath = `${root}/activation-timing`;
+    const timingInput = {
+      requestId: randomUUID(),
+      expectedPolicyVersion: version,
+      activationDelayDays: 3,
+    };
+    const initialTiming = await api.get(timingPath).set('x-test-role', 'reader').expect(200);
+    expect(initialTiming.body).toMatchObject({ policyVersion: version, activationDelayDays: 7 });
+    await api.patch(timingPath).set('x-test-role', 'reader').send(timingInput).expect(403);
+    await api
+      .patch(timingPath)
+      .set('x-test-role', 'writer')
+      .send({ ...timingInput, activationDelayDays: -1 })
+      .expect(400);
+    const delayed = await api
+      .patch(timingPath)
+      .set('x-test-role', 'writer')
+      .send(timingInput)
+      .expect(200);
+    expect(delayed.body).toMatchObject({ activationDelayDays: 3 });
+    expect(delayed.body.policyVersion).not.toBe(version);
+    const replayDelay = await api
+      .patch(timingPath)
+      .set('x-test-role', 'writer')
+      .send(timingInput)
+      .expect(200);
+    expect(replayDelay.body).toEqual(delayed.body);
+    await api
+      .patch(timingPath)
+      .set('x-test-role', 'writer')
+      .send({ ...timingInput, requestId: randomUUID(), activationDelayDays: 0 })
+      .expect(409);
+    const immediate = await api
+      .patch(timingPath)
+      .set('x-test-role', 'writer')
+      .send({
+        requestId: randomUUID(),
+        expectedPolicyVersion: delayed.body.policyVersion,
+        activationDelayDays: 0,
+      })
+      .expect(200);
+    expect(immediate.body).toMatchObject({ activationDelayDays: 0 });
+    await expect(policies.read(immediate.body.policyVersion)).resolves.toMatchObject({
+      definition: { ...definition, activationDelayDays: 0 },
+    });
+    await expect(policies.read(version)).resolves.toMatchObject({ definition });
   } finally {
     try {
       await app.close();

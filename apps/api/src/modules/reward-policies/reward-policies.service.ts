@@ -14,10 +14,13 @@ import type {
   RewardPolicyDefinitionDto,
   RewardPolicyDetailDto,
   RewardPolicyListDto,
+  RewardActivationTimingDto,
   RewardPolicyVersionDto,
   RewardSimulationDto,
   SimulateRewardPolicyDto,
+  UpdateRewardActivationTimingDto,
 } from './dto/reward-policy.dto';
+import { DEFAULT_REWARD_ACTIVATION_DELAY_DAYS } from './dto/reward-policy.dto';
 import {
   calculateRewardPolicy,
   RewardPolicyValidationError,
@@ -25,6 +28,28 @@ import {
 } from './reward-policy-engine';
 
 const pageSize = 25;
+const emptyEligibility = {
+  allowCoupon: false,
+  allowedCategoryIds: [],
+  excludedCategoryIds: [],
+  excludedProductIds: [],
+};
+const disabledDefinition: RewardPolicyDefinitionDto = {
+  enabled: false,
+  expiryDays: 270,
+  grantEligibility: emptyEligibility,
+  redemptionEligibility: emptyEligibility,
+  grantRules: [],
+  redemptionBands: [],
+  budget: {
+    rewardPerOrderToman: 0,
+    rewardPerCustomerPeriodToman: 0,
+    rewardPerPeriodToman: 0,
+    incentivesPerOrderToman: 0,
+    incentivesPerCustomerPeriodToman: 0,
+    incentivesPerPeriodToman: 0,
+  },
+};
 
 function definitionOf(policy: RewardPolicyVersion) {
   // Only validated, immutable definitions written by this module are stored.
@@ -46,6 +71,18 @@ function summary(policy: RewardPolicyVersion): RewardPolicyVersionDto {
 
 function detail(policy: RewardPolicyVersion): RewardPolicyDetailDto {
   return { ...summary(policy), definition: definitionOf(policy) };
+}
+
+function activationTiming(policy: RewardPolicyDetailDto | null): RewardActivationTimingDto {
+  return {
+    policyVersion: policy?.version ?? null,
+    activationDelayDays:
+      policy?.definition.activationDelayDays ?? DEFAULT_REWARD_ACTIVATION_DELAY_DAYS,
+  };
+}
+
+async function lockPolicyPublication(tx: Prisma.TransactionClient) {
+  await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended('reward-policy-publication', 0))`;
 }
 
 function validate<T>(run: () => T): T {
@@ -88,6 +125,72 @@ export class RewardPoliciesService {
       orderBy: [{ effectiveAt: 'desc' }, { version: 'desc' }],
     });
     return { policy: policy ? detail(policy) : null };
+  }
+
+  async getActivationTiming(): Promise<RewardActivationTimingDto> {
+    return activationTiming((await this.active()).policy);
+  }
+
+  async updateActivationTiming(input: UpdateRewardActivationTimingDto, actorUserId: string) {
+    return this.db.$transaction(async (tx) => {
+      await lockPolicyPublication(tx);
+      const requestId = input.requestId.toLowerCase();
+      const existing = await tx.rewardPolicyVersion.findUnique({ where: { requestId } });
+      if (existing) {
+        if (
+          existing.createdById !== actorUserId ||
+          !existing.publishedAt ||
+          definitionOf(existing).activationDelayDays !== input.activationDelayDays
+        ) {
+          throw new ConflictException('This request key was already used with different values.');
+        }
+        return activationTiming(detail(existing));
+      }
+
+      const [{ now }] = await tx.$queryRaw<Array<{ now: Date }>>`
+        SELECT clock_timestamp()::timestamptz(3) AS now
+      `;
+      const { policy } = await this.active(now, tx);
+      const previous = activationTiming(policy);
+      if (previous.policyVersion !== input.expectedPolicyVersion) {
+        throw new ConflictException('The active policy changed. Reload before saving.');
+      }
+      if (previous.activationDelayDays === input.activationDelayDays) return previous;
+
+      const definition = JSON.parse(
+        JSON.stringify({
+          ...(policy?.definition ?? disabledDefinition),
+          activationDelayDays: input.activationDelayDays,
+        }),
+      ) as Prisma.InputJsonObject;
+      const inserted = await tx.rewardPolicyVersion.createMany({
+        data: {
+          requestId,
+          definition,
+          createdAt: now,
+          createdById: actorUserId,
+          publishedAt: now,
+          publishedById: actorUserId,
+          effectiveAt: now,
+        },
+        skipDuplicates: true,
+      });
+      if (!inserted.count) throw new ConflictException('This request key is already in use.');
+      const updated = await tx.rewardPolicyVersion.findUniqueOrThrow({ where: { requestId } });
+      return attachHumanAuditEvent(activationTiming(detail(updated)), {
+        title: 'زمان فعال‌سازی پاداش خرید تغییر کرد.',
+        operationType: 'UPDATE',
+        entityName: String(updated.version),
+        changes: [
+          {
+            field: 'activationDelayDays',
+            label: 'روز پس از تحویل',
+            before: previous.activationDelayDays,
+            after: input.activationDelayDays,
+          },
+        ],
+      });
+    });
   }
 
   async createDraft(
@@ -133,6 +236,7 @@ export class RewardPoliciesService {
 
   async publish(version: number, actorUserId: string): Promise<RewardPolicyDetailDto> {
     return this.db.$transaction(async (tx) => {
+      await lockPolicyPublication(tx);
       const [locked] = await tx.$queryRaw<Array<{ version: number }>>`
         SELECT "version" FROM "reward_policy_versions" WHERE "version" = ${version} FOR UPDATE
       `;

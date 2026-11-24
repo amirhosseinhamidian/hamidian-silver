@@ -36,6 +36,7 @@ import { ShippingCarriersService } from '../shipping/shipping-carriers.service';
 import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
 import { WalletCheckoutService } from '../wallet/wallet-checkout.service';
 import { allocateCheckoutDiscount } from '../wallet/wallet-checkout';
+import type { PurchaseRewardBasis } from '../wallet/purchase-reward-basis';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderAddressDto, CreateOrderDto, CreateOrderItemDto } from './dto/create-order.dto';
 import { AdminListOrdersQueryDto, ListOrdersQueryDto } from './dto/list-orders-query.dto';
@@ -471,6 +472,17 @@ export class OrdersService {
 
       const campaignProducts = new Set(promotion?.rule.eligibleProductIds);
       const discounts = allocateCheckoutDiscount(lines, promotion);
+      const purchaseRewardBasis = {
+        couponApplied: promotion?.rule.coupon ?? false,
+        shippingDiscountToman: totals.shippingDiscountToman,
+        items: preparedItems.map((item, index) => ({
+          variantId: item.variantId,
+          platingType: item.platingType ?? null,
+          productId: item.productId,
+          categoryIds: [...lines[index].categoryIds],
+          directDiscountToman: discounts[index],
+        })),
+      } satisfies PurchaseRewardBasis;
       const order = await transaction.order.create({
         data: {
           id: orderId,
@@ -483,6 +495,7 @@ export class OrdersService {
           shippingTotalToman,
           ...shippingSelection.snapshot,
           grandTotalToman,
+          purchaseRewardBasis,
           ...(wallet ? { walletAppliedToman: wallet.amountToman } : {}),
           ...(promotion?.quotaAllocations?.length
             ? {
@@ -511,14 +524,10 @@ export class OrdersService {
                           }
                         : {}),
                       items: preparedItems.map((item, index) => ({
-                        variantId: item.variantId,
+                        ...purchaseRewardBasis.items[index],
                         quantity: item.quantity,
                         unitSalePriceToman: item.unitSalePriceToman,
                         unitPlatingPriceToman: item.unitPlatingPriceToman,
-                        platingType: item.platingType ?? null,
-                        productId: item.productId,
-                        categoryIds: lines[index].categoryIds,
-                        directDiscountToman: discounts[index],
                         ...(wallet ? { walletAppliedToman: wallet.lineAmounts[index] } : {}),
                       })),
                     },

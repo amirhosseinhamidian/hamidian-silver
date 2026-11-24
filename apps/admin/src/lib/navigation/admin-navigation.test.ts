@@ -64,6 +64,7 @@ describe('admin navigation', () => {
       'supplier-settlements',
       'finance',
       'growth',
+      'reward-policies',
       'users',
       'roles',
       'shipping-settings',

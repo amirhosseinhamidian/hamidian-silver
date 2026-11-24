@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Header, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import type { AuthenticatedPrincipal } from '../authorization/authorization.types';
@@ -7,12 +7,14 @@ import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import {
   ActiveRewardPolicyDto,
   CreateRewardPolicyDto,
+  RewardActivationTimingDto,
   RewardPolicyDetailDto,
   RewardPolicyListDto,
   RewardPolicyPageQueryDto,
   RewardPolicySimulationRequestDto,
   RewardPolicyVersionParamDto,
   RewardSimulationDto,
+  UpdateRewardActivationTimingDto,
 } from './dto/reward-policy.dto';
 import { RewardPoliciesService } from './reward-policies.service';
 
@@ -32,6 +34,24 @@ export class RewardPoliciesController {
   @RequirePermissions(PERMISSION_CODES.FINANCE_READ)
   active() {
     return this.policies.active();
+  }
+
+  @Get('activation-timing')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOkResponse({ type: RewardActivationTimingDto })
+  @RequirePermissions(PERMISSION_CODES.FINANCE_READ)
+  activationTiming() {
+    return this.policies.getActivationTiming();
+  }
+
+  @Patch('activation-timing')
+  @ApiOkResponse({ type: RewardActivationTimingDto })
+  @RequirePermissions(PERMISSION_CODES.FINANCE_READ, PERMISSION_CODES.FINANCE_WRITE)
+  updateActivationTiming(
+    @Body() input: UpdateRewardActivationTimingDto,
+    @CurrentPrincipal() actor: AuthenticatedPrincipal,
+  ) {
+    return this.policies.updateActivationTiming(input, actor.userId);
   }
 
   @Get(':version')

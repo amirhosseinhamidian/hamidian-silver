@@ -376,6 +376,7 @@ it('serializes quota claims with inventory, releases failed payments, and preser
         db.orderStatusHistory.deleteMany({ where: { order: orderFilter } }),
         db.orderAddress.deleteMany({ where: { order: orderFilter } }),
         db.orderItem.deleteMany({ where: { order: orderFilter } }),
+        db.purchaseRewardJob.deleteMany({ where: { order: orderFilter } }),
         db.order.deleteMany({ where: orderFilter }),
         db.inventory.deleteMany({ where: { variant: { product: { slug } } } }),
         db.productVariant.deleteMany({ where: { product: { slug } } }),

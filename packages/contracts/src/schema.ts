@@ -1588,6 +1588,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/wallet/admin/purchase-reward-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PurchaseRewardJobsController_metrics_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/purchase-reward-jobs/{orderId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PurchaseRewardJobsController_retry_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reward-policies": {
         parameters: {
             query?: never;
@@ -1618,6 +1650,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/activation-timing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RewardPoliciesController_activationTiming_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["RewardPoliciesController_updateActivationTiming_v1"];
         trace?: never;
     };
     "/api/v1/reward-policies/{version}": {
@@ -5872,6 +5920,29 @@ export interface components {
             amountToman: number;
             reason: string;
         };
+        PurchaseRewardJobCountDto: {
+            /** @enum {string} */
+            status: "PENDING" | "PROCESSING" | "WAITING" | "COMPLETED" | "SKIPPED" | "DEAD_LETTER";
+            count: number;
+        };
+        DeadLetterPurchaseRewardJobDto: {
+            /** Format: uuid */
+            orderId: string;
+            attempts: number;
+            resultCode: string | null;
+        };
+        PurchaseRewardMetricsDto: {
+            statuses: components["schemas"]["PurchaseRewardJobCountDto"][];
+            due: number;
+            /** Format: date-time */
+            oldestDueAt: string | null;
+            enabled: boolean;
+            deadLetters: components["schemas"]["DeadLetterPurchaseRewardJobDto"][];
+        };
+        RetriedPurchaseRewardJobDto: {
+            /** Format: uuid */
+            orderId: string;
+        };
         RewardPolicyVersionDto: {
             /** Format: date-time */
             createdAt: string;
@@ -5930,6 +6001,11 @@ export interface components {
         RewardPolicyDefinitionDto: {
             enabled: boolean;
             expiryDays: number;
+            /**
+             * @description Days after delivery. Zero activates at the next worker run.
+             * @default 7
+             */
+            activationDelayDays: number;
             grantEligibility: components["schemas"]["RewardEligibilityDto"];
             redemptionEligibility: components["schemas"]["RewardEligibilityDto"];
             budget: components["schemas"]["RewardBudgetDto"];
@@ -5953,6 +6029,16 @@ export interface components {
         };
         ActiveRewardPolicyDto: {
             policy: components["schemas"]["RewardPolicyDetailDto"] | null;
+        };
+        RewardActivationTimingDto: {
+            policyVersion: number | null;
+            activationDelayDays: number;
+        };
+        UpdateRewardActivationTimingDto: {
+            /** Format: uuid */
+            requestId: string;
+            expectedPolicyVersion: number | null;
+            activationDelayDays: number;
         };
         CreateRewardPolicyDto: {
             /** Format: uuid */
@@ -10871,6 +10957,46 @@ export interface operations {
             };
         };
     };
+    PurchaseRewardJobsController_metrics_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseRewardMetricsDto"];
+                };
+            };
+        };
+    };
+    PurchaseRewardJobsController_retry_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetriedPurchaseRewardJobDto"];
+                };
+            };
+        };
+    };
     RewardPoliciesController_list_v1: {
         parameters: {
             query?: {
@@ -10930,6 +11056,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActiveRewardPolicyDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_activationTiming_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardActivationTimingDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_updateActivationTiming_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRewardActivationTimingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardActivationTimingDto"];
                 };
             };
         };

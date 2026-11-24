@@ -19,12 +19,15 @@ import {
   Max,
   Min,
   ValidateNested,
+  ValidateIf,
 } from 'class-validator';
 import { TOMAN_INT_MAX } from '../../../common/toman';
 
 const ranks = ['ANY', 'FIRST', 'SECOND', 'THIRD_OR_LATER'] as const;
 const methods = ['PERCENT', 'FIXED'] as const;
 const outcomes = ['UNPAID', 'PAID', 'CANCELLED', 'FULLY_RETURNED'] as const;
+export const DEFAULT_REWARD_ACTIVATION_DELAY_DAYS = 7;
+const MAX_REWARD_ACTIVATION_DELAY_DAYS = 3_650;
 
 function Integer(minimum = 0, maximum = TOMAN_INT_MAX) {
   return applyDecorators(
@@ -141,6 +144,20 @@ export class RewardPolicyDefinitionDto {
   @Integer(1, 3_650)
   expiryDays!: number;
 
+  @ApiPropertyOptional({
+    type: Number,
+    minimum: 0,
+    maximum: MAX_REWARD_ACTIVATION_DELAY_DAYS,
+    default: DEFAULT_REWARD_ACTIVATION_DELAY_DAYS,
+    description: 'Days after delivery. Zero activates at the next worker run.',
+  })
+  @ValidateIf((_object, value) => value !== undefined)
+  @Type(() => Object)
+  @IsInt()
+  @Min(0)
+  @Max(MAX_REWARD_ACTIVATION_DELAY_DAYS)
+  activationDelayDays?: number;
+
   @ApiProperty({ type: () => RewardEligibilityDto })
   @IsDefined()
   @IsObject()
@@ -177,6 +194,30 @@ export class RewardPolicyDefinitionDto {
   @ValidateNested({ each: true })
   @Type(() => RewardRedemptionBandDto)
   redemptionBands!: RewardRedemptionBandDto[];
+}
+
+export class RewardActivationTimingDto {
+  @ApiProperty({ type: Number, nullable: true })
+  policyVersion!: number | null;
+
+  @ApiProperty({ type: Number, minimum: 0, maximum: MAX_REWARD_ACTIVATION_DELAY_DAYS })
+  activationDelayDays!: number;
+}
+
+export class UpdateRewardActivationTimingDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID('4')
+  requestId!: string;
+
+  @ApiProperty({ type: Number, nullable: true })
+  @ValidateIf((_object, value) => value !== null)
+  @Type(() => Object)
+  @IsInt()
+  @Min(1)
+  expectedPolicyVersion!: number | null;
+
+  @Integer(0, MAX_REWARD_ACTIVATION_DELAY_DAYS)
+  activationDelayDays!: number;
 }
 
 export class CreateRewardPolicyDto {

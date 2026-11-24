@@ -187,6 +187,7 @@ it('reserves once, holds uncertain attempts and restores the exact credit on ret
         userId: user.id,
         warehouseId: warehouse.id,
         status: 'PAID',
+        createdAt: now,
         paidAt: now,
         merchandiseTotalToman: 100_000,
         grandTotalToman: 100_000,

@@ -50,6 +50,7 @@ it('serializes concurrent spend, preserves append-only movements and reconciles 
           userId,
           warehouseId: warehouse.id,
           status: paid ? 'PAID' : 'PENDING_PAYMENT',
+          createdAt: now,
           paidAt: paid ? now : null,
           merchandiseTotalToman: 30_000,
           grandTotalToman: 30_000,

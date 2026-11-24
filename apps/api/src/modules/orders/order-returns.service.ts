@@ -196,6 +196,7 @@ export class OrderReturnsService {
     );
 
     return this.prisma.$transaction(async (transaction) => {
+      if (this.walletCheckout) await lockOrderRowForUpdate(transaction, orderId);
       const order = await transaction.order.findUnique({
         where: {
           id: orderId,

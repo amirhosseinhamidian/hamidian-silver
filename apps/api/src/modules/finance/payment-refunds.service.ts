@@ -275,7 +275,7 @@ export class PaymentRefundsService {
           ? PaymentStatus.REFUNDED
           : PaymentStatus.PARTIALLY_REFUNDED;
       const confirmedAt = new Date();
-      if (this.walletCheckout && nextPaymentStatus === PaymentStatus.REFUNDED) {
+      if (this.walletCheckout) {
         await lockOrderRowForUpdate(transaction, refund.payment.orderId);
       }
       let claimed: { count: number };
@@ -345,15 +345,16 @@ export class PaymentRefundsService {
         throw new ConflictException('Payment refund totals changed; reload and retry.');
       }
 
-      if (this.walletCheckout && nextPaymentStatus === PaymentStatus.REFUNDED) {
+      if (this.walletCheckout) {
         const order = await transaction.order.findUniqueOrThrow({
           where: { id: refund.payment.orderId },
           select: { id: true, userId: true, walletAppliedToman: true, status: true },
         });
         if (
-          order.status === OrderStatus.PAID ||
-          order.status === OrderStatus.PROCESSING ||
-          order.status === OrderStatus.CANCELLED
+          nextPaymentStatus === PaymentStatus.REFUNDED &&
+          (order.status === OrderStatus.PAID ||
+            order.status === OrderStatus.PROCESSING ||
+            order.status === OrderStatus.CANCELLED)
         ) {
           await this.walletCheckout.restore(
             transaction,
@@ -361,13 +362,13 @@ export class PaymentRefundsService {
             order.walletAppliedToman,
             `checkout:full-refund:${refund.id}`,
           );
-          await this.walletCheckout.adjustPurchaseReward(
-            transaction,
-            order,
-            `checkout:reward-refund:${refund.id}`,
-            true,
-          );
         }
+        await this.walletCheckout.adjustPurchaseReward(
+          transaction,
+          order,
+          `checkout:reward-refund:${refund.id}`,
+          nextPaymentStatus === PaymentStatus.REFUNDED,
+        );
       }
 
       return transaction.paymentRefund.findUniqueOrThrow({

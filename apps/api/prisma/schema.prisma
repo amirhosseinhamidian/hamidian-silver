@@ -1729,6 +1729,8 @@ model Order {
   priceQuote            OrderPriceQuote?
   walletRewardLots      WalletLot[]
   walletReservations    WalletReservation[]
+  purchaseRewardBasis   Json?
+  purchaseRewardJob     PurchaseRewardJob?
   growthDevice          String?                       @db.VarChar(12)
   returns               OrderReturn[]
   supplierCredits       SupplierCredit[]
@@ -2034,9 +2036,42 @@ model RewardPolicyVersion {
   createdBy            User      @relation("RewardPolicyCreator", fields: [createdById], references: [id], onDelete: Restrict)
   publishedBy          User?     @relation("RewardPolicyPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
   walletLots           WalletLot[]
+  purchaseRewardJobs   PurchaseRewardJob[]
 
   @@index([effectiveAt, version])
   @@map("reward_policy_versions")
+}
+
+enum PurchaseRewardJobStatus {
+  PENDING
+  PROCESSING
+  WAITING
+  COMPLETED
+  SKIPPED
+  DEAD_LETTER
+}
+
+model PurchaseRewardJob {
+  orderId        String                  @id @db.Uuid
+  userId         String                  @db.Uuid
+  sequence       BigInt                  @unique @default(autoincrement())
+  paidAt         DateTime                @db.Timestamptz(3)
+  status         PurchaseRewardJobStatus @default(PENDING)
+  attempts       Int                     @default(0)
+  nextAttemptAt  DateTime                @db.Timestamptz(3)
+  leaseUntil     DateTime?               @db.Timestamptz(3)
+  leaseToken     String?                 @db.Uuid
+  resultCode     String?                 @db.VarChar(48)
+  policyVersion  Int?
+  calculation    Json?
+  finishedAt     DateTime?               @db.Timestamptz(3)
+  order          Order                   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  policy         RewardPolicyVersion?    @relation(fields: [policyVersion], references: [version], onDelete: Restrict)
+
+  @@index([status, nextAttemptAt, sequence])
+  @@index([status, leaseUntil])
+  @@index([userId, sequence])
+  @@map("purchase_reward_jobs")
 }
 
 enum WalletSource {

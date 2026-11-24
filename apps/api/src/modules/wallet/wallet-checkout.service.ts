@@ -5,18 +5,16 @@ import type { Prisma } from '../../generated/prisma/client';
 import { DomainException } from '../../common/errors/domain-exception';
 import { ErrorCode } from '../../common/errors/error-codes';
 import type { PromotionLine } from '../promotions/promotion-engine';
-import {
-  calculateRedemption,
-  calculateRewardPolicy,
-} from '../reward-policies/reward-policy-engine';
+import { calculateRedemption } from '../reward-policies/reward-policy-engine';
 import { RewardPoliciesService } from '../reward-policies/reward-policies.service';
 import {
   allocateCheckoutDiscount,
   allocateCheckoutToman,
-  returnedLineCredit,
   type CheckoutPromotion,
 } from './wallet-checkout';
 import { WalletLedgerService } from './wallet-ledger.service';
+import { purchaseRewardOrderSelect, resolvePurchaseRewardBasis } from './purchase-reward-basis';
+import { evaluatePurchaseReward, type RecordedPurchaseReward } from './purchase-reward-calculation';
 
 type WalletOrder = { id: string; userId: string; walletAppliedToman: number };
 
@@ -190,7 +188,7 @@ export class WalletCheckoutService {
 
   async adjustPurchaseReward(
     tx: Prisma.TransactionClient,
-    order: WalletOrder,
+    order: Pick<WalletOrder, 'id' | 'userId'>,
     key: string,
     fullyRefunded: boolean,
   ) {
@@ -215,101 +213,41 @@ export class WalletCheckoutService {
 
   private async remainingPurchaseReward(
     tx: Prisma.TransactionClient,
-    order: WalletOrder,
+    order: Pick<WalletOrder, 'id' | 'userId'>,
     version: number,
   ) {
-    const recorded = await tx.order.findUniqueOrThrow({
+    const recordedOrder = await tx.order.findUniqueOrThrow({
       where: { id: order.id },
-      select: {
-        paidAt: true,
-        discountTotalToman: true,
-        priceQuote: { select: { snapshot: true } },
-        items: {
-          orderBy: { id: 'asc' },
-          select: {
-            returnedQuantity: true,
-            quantity: true,
-            unitSalePriceToman: true,
-            walletAppliedToman: true,
-            variantId: true,
-            platingType: true,
-            variant: {
-              select: {
-                productId: true,
-                product: { select: { categories: { select: { categoryId: true } } } },
-              },
-            },
-          },
-        },
-      },
+      select: purchaseRewardOrderSelect,
     });
-    if (!recorded.paidAt) return 0;
+    if (!recordedOrder.paidAt) return 0;
     const { definition } = await this.policies.read(version, tx);
+    const job = await tx.purchaseRewardJob.findUnique({
+      where: { orderId: order.id },
+      select: { calculation: true, policyVersion: true },
+    });
+    if (job?.calculation && job.policyVersion === version) {
+      const applied = evaluatePurchaseReward(
+        version,
+        definition,
+        recordedOrder,
+        job.calculation as unknown as RecordedPurchaseReward,
+      );
+      return applied.estimatedRewardToman;
+    }
+
     const previousCompletedPurchases = await tx.order.count({
       where: {
         userId: order.userId,
         OR: [
-          { paidAt: { lt: recorded.paidAt } },
-          { paidAt: recorded.paidAt, id: { lt: order.id } },
+          { paidAt: { lt: recordedOrder.paidAt } },
+          { paidAt: recordedOrder.paidAt, id: { lt: order.id } },
         ],
       },
     });
-    // WL-04 can pass immutable earning inputs once the award job is available.
-    const quote = recorded.priceQuote?.snapshot as
-      | {
-          rule?: {
-            coupon?: boolean;
-            eligibleProductIds?: string[];
-            kind?: string;
-            bundleProductIds?: string[];
-          } | null;
-          items?: {
-            variantId: string;
-            platingType: string | null;
-            productId?: string;
-            categoryIds?: string[];
-            directDiscountToman?: number;
-          }[];
-        }
-      | null
-      | undefined;
-    const snapshotItems = new Map(
-      quote?.items?.map((line) => [`${line.variantId}:${line.platingType}`, line]),
-    );
-    const gross = recorded.items.map((item) => item.unitSalePriceToman * item.quantity);
-    const discountWeights = gross.map((amount, i) => {
-      const productId = recorded.items[i].variant.productId;
-      return (!quote?.rule?.eligibleProductIds ||
-        quote.rule.eligibleProductIds.includes(productId)) &&
-        (quote?.rule?.kind !== 'BUNDLE' || quote.rule.bundleProductIds?.includes(productId))
-        ? amount
-        : 0;
-    });
-    const discounts = allocateCheckoutToman(recorded.discountTotalToman, discountWeights);
-    const lines = recorded.items.map((item, index) => {
-      const snapshot = snapshotItems.get(`${item.variantId}:${item.platingType}`);
-      const cash =
-        gross[index] -
-        (snapshot?.directDiscountToman ?? discounts[index]) -
-        item.walletAppliedToman;
-      return {
-        productId: snapshot?.productId ?? item.variant.productId,
-        categoryIds:
-          snapshot?.categoryIds ??
-          item.variant.product.categories.map(({ categoryId }) => categoryId),
-        merchandiseToman: cash - returnedLineCredit(cash, item.quantity, 0, item.returnedQuantity),
-        directDiscountToman: 0,
-        settledCreditToman: 0,
-        refundedCashToman: 0,
-      };
-    });
-    return calculateRewardPolicy(version, definition, {
-      outcome: 'PAID',
+    return evaluatePurchaseReward(version, definition, recordedOrder, {
+      basis: resolvePurchaseRewardBasis(recordedOrder),
       previousCompletedPurchases,
-      lines,
-      couponApplied: quote?.rule?.coupon ?? false,
-      availableCreditToman: 0,
-      shippingDiscountToman: 0,
       otherOrderIncentivesToman: 0,
       usage: {
         customerRewardsToman: 0,

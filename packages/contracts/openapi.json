@@ -4678,6 +4678,57 @@
         ]
       }
     },
+    "/api/v1/wallet/admin/purchase-reward-jobs": {
+      "get": {
+        "operationId": "PurchaseRewardJobsController_metrics_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseRewardMetricsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PurchaseRewardJobs"
+        ]
+      }
+    },
+    "/api/v1/wallet/admin/purchase-reward-jobs/{orderId}/retry": {
+      "post": {
+        "operationId": "PurchaseRewardJobsController_retry_v1",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetriedPurchaseRewardJobDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PurchaseRewardJobs"
+        ]
+      }
+    },
     "/api/v1/reward-policies": {
       "get": {
         "operationId": "RewardPoliciesController_list_v1",
@@ -4750,6 +4801,56 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ActiveRewardPolicyDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "RewardPolicies"
+        ]
+      }
+    },
+    "/api/v1/reward-policies/activation-timing": {
+      "get": {
+        "operationId": "RewardPoliciesController_activationTiming_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardActivationTimingDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "RewardPolicies"
+        ]
+      },
+      "patch": {
+        "operationId": "RewardPoliciesController_updateActivationTiming_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRewardActivationTimingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardActivationTimingDto"
                 }
               }
             }
@@ -18204,6 +18305,97 @@
           "reason"
         ]
       },
+      "PurchaseRewardJobCountDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "WAITING",
+              "COMPLETED",
+              "SKIPPED",
+              "DEAD_LETTER"
+            ]
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "status",
+          "count"
+        ]
+      },
+      "DeadLetterPurchaseRewardJobDto": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attempts": {
+            "type": "number"
+          },
+          "resultCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "orderId",
+          "attempts",
+          "resultCode"
+        ]
+      },
+      "PurchaseRewardMetricsDto": {
+        "type": "object",
+        "properties": {
+          "statuses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseRewardJobCountDto"
+            }
+          },
+          "due": {
+            "type": "number"
+          },
+          "oldestDueAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "deadLetters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeadLetterPurchaseRewardJobDto"
+            }
+          }
+        },
+        "required": [
+          "statuses",
+          "due",
+          "oldestDueAt",
+          "enabled",
+          "deadLetters"
+        ]
+      },
+      "RetriedPurchaseRewardJobDto": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "orderId"
+        ]
+      },
       "RewardPolicyVersionDto": {
         "type": "object",
         "properties": {
@@ -18474,6 +18666,13 @@
             "minimum": 1,
             "maximum": 3650
           },
+          "activationDelayDays": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3650,
+            "default": 7,
+            "description": "Days after delivery. Zero activates at the next worker run."
+          },
           "grantEligibility": {
             "$ref": "#/components/schemas/RewardEligibilityDto"
           },
@@ -18574,6 +18773,48 @@
         },
         "required": [
           "policy"
+        ]
+      },
+      "RewardActivationTimingDto": {
+        "type": "object",
+        "properties": {
+          "policyVersion": {
+            "type": "number",
+            "nullable": true
+          },
+          "activationDelayDays": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3650
+          }
+        },
+        "required": [
+          "policyVersion",
+          "activationDelayDays"
+        ]
+      },
+      "UpdateRewardActivationTimingDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedPolicyVersion": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1
+          },
+          "activationDelayDays": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3650
+          }
+        },
+        "required": [
+          "requestId",
+          "expectedPolicyVersion",
+          "activationDelayDays"
         ]
       },
       "CreateRewardPolicyDto": {

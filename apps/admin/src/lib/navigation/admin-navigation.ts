@@ -352,6 +352,16 @@ const NAVIGATION_DEFINITIONS: readonly AdminNavigationGroupDefinition[] = [
         permissions: ['finance.read'],
       },
       {
+        id: 'reward-policies',
+        label: 'پاداش خرید',
+        shortLabel: 'پاداش',
+        href: '/reward-policies',
+        icon: 'finance',
+        description: 'تنظیم زمان فعال‌سازی پاداش خرید',
+        roadmapStage: 31,
+        permissions: ['finance.read'],
+      },
+      {
         id: 'suppliers',
         label: 'تأمین‌کنندگان',
         shortLabel: 'تأمین',
