@@ -103,7 +103,11 @@ export class PurchaseRewardWorker {
     const [statuses, due, deadLetters] = await Promise.all([
       this.db.purchaseRewardJob.groupBy({ by: ['status'], _count: { _all: true } }),
       this.db.purchaseRewardJob.aggregate({
-        where: { status: { in: ['PENDING', 'WAITING'] }, nextAttemptAt: { lte: now } },
+        where: {
+          reviewHeldAt: null,
+          status: { in: ['PENDING', 'WAITING'] },
+          nextAttemptAt: { lte: now },
+        },
         _count: { _all: true },
         _min: { nextAttemptAt: true },
       }),
@@ -131,7 +135,7 @@ export class PurchaseRewardWorker {
     if (job?.status !== 'DEAD_LETTER')
       throw new ConflictException('Only dead-letter reward jobs can be retried.');
     const result = await this.db.purchaseRewardJob.updateMany({
-      where: { orderId, status: 'DEAD_LETTER' },
+      where: { orderId, status: 'DEAD_LETTER', reviewHeldAt: null },
       data: {
         status: job.calculation ? 'WAITING' : 'PENDING',
         nextAttemptAt: now,
@@ -144,13 +148,54 @@ export class PurchaseRewardWorker {
     if (!result.count) throw new ConflictException('The reward job has already changed.');
   }
 
+  async forCustomer(userId: string, page: number) {
+    const pageSize = 25;
+    const rows = await this.db.purchaseRewardJob.findMany({
+      where: { userId },
+      orderBy: [{ reviewHeldAt: { sort: 'desc', nulls: 'last' } }, { sequence: 'desc' }],
+      skip: (page - 1) * pageSize,
+      take: pageSize + 1,
+      select: {
+        orderId: true,
+        status: true,
+        attempts: true,
+        resultCode: true,
+        reviewHeldAt: true,
+        nextAttemptAt: true,
+        order: { select: { orderNumber: true } },
+      },
+    });
+    return {
+      items: rows.slice(0, pageSize).map(({ order, nextAttemptAt, reviewHeldAt, ...job }) => ({
+        ...job,
+        orderNumber: order.orderNumber,
+        nextAttemptAt: nextAttemptAt.toISOString(),
+        reviewHeldAt: reviewHeldAt?.toISOString() ?? null,
+      })),
+      page,
+      hasMore: rows.length > pageSize,
+    };
+  }
+
+  async setReviewHold(orderId: string, hold: boolean, now = new Date()) {
+    const result = await this.db.purchaseRewardJob.updateMany({
+      where: {
+        orderId,
+        status: { in: ['PENDING', 'WAITING', 'DEAD_LETTER'] },
+        reviewHeldAt: hold ? null : { not: null },
+      },
+      data: { reviewHeldAt: hold ? now : null },
+    });
+    if (!result.count) throw new ConflictException('The reward job status or review lock changed.');
+  }
+
   private async claim(now: Date) {
     const token = randomUUID();
     const leaseUntil = new Date(+now + leaseDuration);
     const [job] = await this.db.$queryRaw<Claim[]>`
       WITH candidate AS (
         SELECT due."orderId" FROM "purchase_reward_jobs" due
-        WHERE due.attempts < ${maxAttempts} AND (
+        WHERE due."reviewHeldAt" IS NULL AND due.attempts < ${maxAttempts} AND (
           (due.status IN ('PENDING', 'WAITING') AND due."nextAttemptAt" <= ${now})
           OR (due.status = 'PROCESSING' AND due."leaseUntil" <= ${now})
         ) AND (due.calculation IS NOT NULL OR NOT EXISTS (

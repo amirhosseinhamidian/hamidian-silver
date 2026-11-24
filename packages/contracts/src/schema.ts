@@ -1540,6 +1540,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/wallet/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletController_customerHistory_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/wallet/admin/{userId}": {
         parameters: {
             query?: never;
@@ -1602,6 +1618,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/purchase-reward-jobs/customers/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PurchaseRewardJobsController_customerJobs_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/purchase-reward-jobs/{orderId}/review-hold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PurchaseRewardJobsController_reviewHold_v1"];
         trace?: never;
     };
     "/api/v1/wallet/admin/purchase-reward-jobs/{orderId}/retry": {
@@ -2718,6 +2766,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["OrdersController_estimate_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/wallet-estimate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OrdersController_estimateWallet_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5881,9 +5945,41 @@ export interface components {
         WalletBalanceDto: {
             /** Format: date-time */
             nextExpiryAt: string | null;
+            nextExpiryToman?: number;
             pendingToman: number;
             availableToman: number;
             reservedToman: number;
+        };
+        CustomerWalletMovementDto: {
+            /** Format: uuid */
+            lotId: string;
+            /** @enum {string} */
+            source: "PURCHASE" | "REFERRAL";
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            reservationOrderId: string | null;
+            /** @enum {string|null} */
+            fromBucket: "PENDING" | "AVAILABLE" | "RESERVED" | "CAPTURED" | "EXPIRED" | "REVOKED" | null;
+            /** @enum {string} */
+            toBucket: "PENDING" | "AVAILABLE" | "RESERVED" | "CAPTURED" | "EXPIRED" | "REVOKED";
+            amountToman: number;
+            /** Format: uuid */
+            originOrderId: string | null;
+        };
+        CustomerWalletOperationDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "GRANT" | "ACTIVATE" | "RESERVE" | "RELEASE" | "CAPTURE" | "EXPIRE" | "REVOKE_GRANT" | "REVERSE_CAPTURE";
+            /** Format: date-time */
+            recordedAt: string;
+            movements: components["schemas"]["CustomerWalletMovementDto"][];
+        };
+        CustomerWalletLedgerDto: {
+            items: components["schemas"]["CustomerWalletOperationDto"][];
+            page: number;
+            hasMore: boolean;
         };
         WalletMovementDto: {
             /** Format: uuid */
@@ -5955,6 +6051,22 @@ export interface components {
             enabled: boolean;
             deadLetters: components["schemas"]["DeadLetterPurchaseRewardJobDto"][];
         };
+        CustomerRewardJobDto: {
+            /** Format: uuid */
+            orderId: string;
+            attempts: number;
+            resultCode: string | null;
+            /** @enum {string} */
+            status: "PENDING" | "PROCESSING" | "WAITING" | "COMPLETED" | "SKIPPED" | "DEAD_LETTER";
+            /** Format: date-time */
+            nextAttemptAt: string;
+            /** Format: date-time */
+            reviewHeldAt: string | null;
+        };
+        CustomerRewardJobsPageDto: {
+            items: components["schemas"]["CustomerRewardJobDto"][];
+        };
+        RewardReviewHoldDto: Record<string, never>;
         RetriedPurchaseRewardJobDto: {
             /** Format: uuid */
             orderId: string;
@@ -6953,8 +7065,15 @@ export interface components {
             walletAppliedToman: number;
             payableToman: number;
         };
+        WalletPreviewDto: {
+            /** @enum {string|null} */
+            walletUnavailableReason: "MINIMUM_CASH" | "POLICY_DISABLED" | "NO_AVAILABLE_CREDIT" | "COUPON_EXCLUDED" | "NO_ELIGIBLE_ITEMS" | "POLICY_LIMIT" | null;
+            walletAppliedToman: number;
+        };
         CheckoutPriceQuoteDto: {
             campaignName: string | null;
+            /** @enum {string|null} */
+            walletUnavailableReason?: "MINIMUM_CASH" | "POLICY_DISABLED" | "NO_AVAILABLE_CREDIT" | "COUPON_EXCLUDED" | "NO_ELIGIBLE_ITEMS" | "POLICY_LIMIT" | null;
             /** Format: date-time */
             expiresAt: string;
             quoteToken: string;
@@ -10941,6 +11060,27 @@ export interface operations {
             };
         };
     };
+    WalletController_customerHistory_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerWalletLedgerDto"];
+                };
+            };
+        };
+    };
     WalletController_adminBalance_v1: {
         parameters: {
             query?: never;
@@ -11025,6 +11165,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PurchaseRewardMetricsDto"];
+                };
+            };
+        };
+    };
+    PurchaseRewardJobsController_customerJobs_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerRewardJobsPageDto"];
+                };
+            };
+        };
+    };
+    PurchaseRewardJobsController_reviewHold_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RewardReviewHoldDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetriedPurchaseRewardJobDto"];
                 };
             };
         };
@@ -12860,6 +13048,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PromotionEstimateDto"];
+                };
+            };
+        };
+    };
+    OrdersController_estimateWallet_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionEstimateRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletPreviewDto"];
                 };
             };
         };

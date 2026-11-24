@@ -7,6 +7,8 @@ import type { KeyboardEvent } from 'react';
 import { AccountAddressesPanel } from '@/components/account/account-addresses-panel';
 import { AccountOrdersPanel } from '@/components/account/account-orders-panel';
 import { AccountProfilePanel } from '@/components/account/account-profile-panel';
+import { AccountWalletPanel } from '@/components/wallet/account-wallet-panel';
+import { useWalletBalance } from '@/components/wallet/use-wallet-balance';
 import type {
   CustomerAddress,
   CustomerOrder,
@@ -18,9 +20,10 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AUTHENTICATION_SUCCEEDED_EVENT, openAuthModal } from '@/lib/auth/events';
+import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { cn } from '@/lib/ui/cn';
 
-type AccountTab = 'profile' | 'addresses' | 'orders';
+type AccountTab = 'profile' | 'addresses' | 'orders' | 'wallet';
 type AccountState =
   | { status: 'loading' }
   | { status: 'anonymous' }
@@ -36,6 +39,7 @@ type AccountState =
 const TABS: ReadonlyArray<Readonly<{ id: AccountTab; label: string }>> = [
   { id: 'orders', label: 'سفارش‌ها' },
   { id: 'addresses', label: 'آدرس‌ها' },
+  { id: 'wallet', label: 'کیف پول' },
   { id: 'profile', label: 'اطلاعات حساب' },
 ];
 
@@ -47,10 +51,12 @@ async function readJson<Value>(response: Response): Promise<Value> {
 export function AccountDashboard() {
   const [activeTab, setActiveTab] = useState<AccountTab>('orders');
   const [state, setState] = useState<AccountState>({ status: 'loading' });
+  const wallet = useWalletBalance(state.status === 'ready');
   const tabRefs = useRef<Record<AccountTab, HTMLButtonElement | null>>({
     orders: null,
     addresses: null,
     profile: null,
+    wallet: null,
   });
 
   useEffect(() => {
@@ -149,6 +155,23 @@ export function AccountDashboard() {
 
   return (
     <div className="grid gap-8 pt-8 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-12">
+      {activeTab !== 'wallet' && wallet.state.status === 'ready' && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-sm border border-[var(--sf-color-border)] px-4 py-2 md:col-span-2">
+          <p className="text-sm">
+            اعتبار قابل مصرف{' '}
+            <strong>{formatTomanPrice(wallet.state.balance.availableToman)}</strong>
+          </p>
+          <Button
+            variant="text"
+            onClick={() => {
+              setActiveTab('wallet');
+              requestAnimationFrame(() => tabRefs.current.wallet?.focus());
+            }}
+          >
+            مشاهدهٔ کیف پول
+          </Button>
+        </div>
+      )}
       <div
         role="tablist"
         aria-label="بخش‌های حساب کاربری"
@@ -210,6 +233,7 @@ export function AccountDashboard() {
           />
         ) : null}
         {activeTab === 'orders' ? <AccountOrdersPanel orders={state.orders} /> : null}
+        {activeTab === 'wallet' ? <AccountWalletPanel wallet={wallet} /> : null}
       </div>
     </div>
   );

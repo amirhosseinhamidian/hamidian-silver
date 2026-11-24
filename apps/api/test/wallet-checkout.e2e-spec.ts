@@ -230,6 +230,11 @@ it('reserves once, holds uncertain attempts and restores the exact credit on ret
       payableToman: 10_000,
       discountTotalToman: 2_000,
       walletAppliedToman: 28_000,
+      walletUnavailableReason: null,
+    });
+    await expect(orders.estimateWallet(user.id, body.items)).resolves.toMatchObject({
+      walletAppliedToman: expect.any(Number),
+      walletUnavailableReason: null,
     });
     await expect(ledger.balance(user.id)).resolves.toMatchObject({
       availableToman: 50_000,

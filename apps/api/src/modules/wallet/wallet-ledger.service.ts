@@ -57,6 +57,7 @@ type BalanceRow = {
   available: bigint;
   reserved: bigint;
   nextExpiryAt: Date | null;
+  nextExpiryToman: bigint;
 };
 
 function operationDto(operation: Operation): WalletOperationDto {
@@ -104,20 +105,26 @@ export class WalletLedgerService {
 
   async balance(userId: string): Promise<WalletBalanceDto> {
     const [balance] = await this.db.$queryRaw<BalanceRow[]>`
+      WITH lots AS (
+        SELECT "pendingToman", "availableToman", "reservedToman", "expiresAt",
+          MIN("expiresAt") FILTER (WHERE "availableToman" > 0 AND "expiresAt" > CURRENT_TIMESTAMP)
+            OVER () AS next_expiry
+        FROM "wallet_lots" WHERE "userId" = ${userId}::uuid
+      )
       SELECT
         COALESCE(SUM("pendingToman") FILTER (WHERE "expiresAt" > CURRENT_TIMESTAMP), 0) AS pending,
         COALESCE(SUM("availableToman") FILTER (WHERE "expiresAt" > CURRENT_TIMESTAMP), 0) AS available,
         COALESCE(SUM("reservedToman"), 0) AS reserved,
-        MIN("expiresAt") FILTER (
-          WHERE "availableToman" > 0 AND "expiresAt" > CURRENT_TIMESTAMP
-        ) AS "nextExpiryAt"
-      FROM "wallet_lots" WHERE "userId" = ${userId}::uuid
+        MIN(next_expiry) AS "nextExpiryAt",
+        COALESCE(SUM("availableToman") FILTER (WHERE "expiresAt" = next_expiry), 0) AS "nextExpiryToman"
+      FROM lots
     `;
     return {
       pendingToman: exactWalletToman(balance.pending),
       availableToman: exactWalletToman(balance.available),
       reservedToman: exactWalletToman(balance.reserved),
       nextExpiryAt: balance.nextExpiryAt?.toISOString() ?? null,
+      nextExpiryToman: exactWalletToman(balance.nextExpiryToman),
     };
   }
 

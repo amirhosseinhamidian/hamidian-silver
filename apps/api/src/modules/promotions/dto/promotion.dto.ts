@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { walletQuoteReasons, type WalletPreviewDto } from '../../wallet/dto/customer-wallet.dto';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -189,6 +190,9 @@ export class PromotionEstimateDto {
 
 export class CheckoutPriceQuoteDto extends PromotionEstimateDto {
   quoteToken!: string;
+
+  @ApiPropertyOptional({ enum: [...walletQuoteReasons], nullable: true })
+  walletUnavailableReason?: WalletPreviewDto['walletUnavailableReason'];
 
   @ApiProperty({ format: 'date-time' })
   expiresAt!: string;

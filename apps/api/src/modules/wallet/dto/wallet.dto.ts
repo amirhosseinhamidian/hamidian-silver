@@ -11,6 +11,9 @@ export class WalletBalanceDto {
 
   @ApiProperty({ type: String, nullable: true, format: 'date-time' })
   nextExpiryAt!: string | null;
+
+  @ApiPropertyOptional({ type: Number })
+  nextExpiryToman?: number;
 }
 
 export class WalletLedgerQueryDto {

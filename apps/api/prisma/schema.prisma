@@ -2062,6 +2062,7 @@ model PurchaseRewardJob {
   leaseUntil     DateTime?               @db.Timestamptz(3)
   leaseToken     String?                 @db.Uuid
   resultCode     String?                 @db.VarChar(48)
+  reviewHeldAt   DateTime?               @db.Timestamptz(3)
   policyVersion  Int?
   calculation    Json?
   finishedAt     DateTime?               @db.Timestamptz(3)

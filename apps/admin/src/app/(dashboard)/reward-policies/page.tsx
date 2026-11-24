@@ -31,9 +31,17 @@ export default async function RewardPoliciesPage() {
     <main className="admin-container space-y-6 py-6 sm:py-8 lg:py-10">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-black sm:text-3xl">پاداش خرید</h1>
-        <ButtonLink href="/reward-policies/maintenance" variant="outline" size="sm">
-          گزارش تعهدات و تطبیق کیف پول
-        </ButtonLink>
+        <nav aria-label="عملیات پاداش و کیف پول" className="flex flex-wrap gap-2">
+          <ButtonLink href="/reward-policies/wallet-operations" variant="outline" size="sm">
+            مدیریت کیف پول مشتری
+          </ButtonLink>
+          <ButtonLink href="/reward-policies/history" variant="outline" size="sm">
+            تاریخچهٔ تنظیمات
+          </ButtonLink>
+          <ButtonLink href="/reward-policies/maintenance" variant="outline" size="sm">
+            گزارش تعهدات و تطبیق کیف پول
+          </ButtonLink>
+        </nav>
       </header>
       {timing ? (
         <RewardActivationTimingForm

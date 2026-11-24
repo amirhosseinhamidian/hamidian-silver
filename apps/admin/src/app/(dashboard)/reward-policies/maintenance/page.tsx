@@ -125,6 +125,13 @@ export default async function WalletMaintenancePage({
                       {issue.resolvedAt && (
                         <span>تعیین تکلیف در {formatAdminDateTime(issue.resolvedAt)}</span>
                       )}
+                      <ButtonLink
+                        href={`/reward-policies/wallet-operations?userId=${encodeURIComponent(issue.userId)}`}
+                        variant="outline"
+                        size="sm"
+                      >
+                        کیف پول مشتری
+                      </ButtonLink>
                       {user.permissions.includes('orders.read') ? (
                         <ButtonLink
                           href={`/orders?orderId=${encodeURIComponent(issue.orderId)}`}

@@ -15,8 +15,19 @@ import {
 import { WalletLedgerService } from './wallet-ledger.service';
 import { purchaseRewardOrderSelect, resolvePurchaseRewardBasis } from './purchase-reward-basis';
 import { evaluatePurchaseReward, type RecordedPurchaseReward } from './purchase-reward-calculation';
+import type { WalletPreviewDto } from './dto/customer-wallet.dto';
 
 type WalletOrder = { id: string; userId: string; walletAppliedToman: number };
+type WalletAllocation = {
+  policyVersion: number;
+  bandCode: string | null;
+  amountToman: number;
+  lineAmounts: number[];
+};
+type WalletQuote = {
+  allocation: WalletAllocation | null;
+  reason: WalletPreviewDto['walletUnavailableReason'];
+};
 
 export const openWalletAttemptStatuses = [
   'CREATED',
@@ -38,20 +49,25 @@ export class WalletCheckoutService {
     lines: readonly PromotionLine[],
     payableBeforeWalletToman: number,
     promotion?: CheckoutPromotion | null,
-  ) {
+  ): Promise<WalletQuote> {
     const cashCap = payableBeforeWalletToman - MIN_WALLET_CASH_PAYMENT_TOMAN;
-    if (cashCap <= 0) return null;
+    if (cashCap <= 0) return { allocation: null, reason: 'MINIMUM_CASH' };
 
     const now = new Date();
     const { policy } = await this.policies.active(now, tx);
-    if (!policy?.enabled) return null;
+    if (!policy?.enabled) return { allocation: null, reason: 'POLICY_DISABLED' };
 
     const balance = await tx.walletLot.aggregate({
       where: { userId, expiresAt: { gt: now }, availableToman: { gt: 0 } },
       _sum: { availableToman: true },
     });
     const availableToman = Math.min(balance._sum.availableToman ?? 0, TOMAN_INT_MAX);
-    if (!availableToman) return null;
+    if (!availableToman) return { allocation: null, reason: 'NO_AVAILABLE_CREDIT' };
+
+    const couponApplied = promotion?.rule.coupon ?? false;
+    if (couponApplied && !policy.definition.redemptionEligibility.allowCoupon) {
+      return { allocation: null, reason: 'COUPON_EXCLUDED' };
+    }
 
     const merchandise = lines.map((line) => line.unitSalePriceToman * line.quantity);
     const discounts = allocateCheckoutDiscount(lines, promotion);
@@ -63,17 +79,25 @@ export class WalletCheckoutService {
         merchandiseToman: merchandise[index],
         directDiscountToman: discounts[index],
       })),
-      promotion?.rule.coupon ?? false,
+      couponApplied,
       availableToman,
       cashCap,
     );
-    if (!redemption.maximumToman) return null;
+    if (!redemption.maximumToman) {
+      return {
+        allocation: null,
+        reason: redemption.redemptionBaseToman ? 'POLICY_LIMIT' : 'NO_ELIGIBLE_ITEMS',
+      };
+    }
 
     return {
-      policyVersion: policy.version,
-      bandCode: redemption.bandCode,
-      amountToman: redemption.maximumToman,
-      lineAmounts: allocateCheckoutToman(redemption.maximumToman, redemption.weights),
+      allocation: {
+        policyVersion: policy.version,
+        bandCode: redemption.bandCode,
+        amountToman: redemption.maximumToman,
+        lineAmounts: allocateCheckoutToman(redemption.maximumToman, redemption.weights),
+      },
+      reason: null,
     };
   }
 

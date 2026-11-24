@@ -19,6 +19,7 @@ import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderDto, PromotionEstimateRequestDto } from './dto/create-order.dto';
 import { CheckoutPriceQuoteDto, PromotionEstimateDto } from '../promotions/dto/promotion.dto';
+import { WalletPreviewDto } from '../wallet/dto/customer-wallet.dto';
 import {
   CustomerOrderCountDto,
   CustomerOrderDetailDto,
@@ -45,6 +46,17 @@ export class OrdersController {
   @ApiOkResponse({ type: PromotionEstimateDto })
   estimate(@Body() dto: PromotionEstimateRequestDto): Promise<PromotionEstimateDto> {
     return this.ordersService.estimatePromotions(dto.items);
+  }
+
+  @Post('wallet-estimate')
+  @HttpCode(200)
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOkResponse({ type: WalletPreviewDto })
+  estimateWallet(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Body() dto: PromotionEstimateRequestDto,
+  ): Promise<WalletPreviewDto> {
+    return this.ordersService.estimateWallet(principal.userId, dto.items);
   }
 
   @Post('price-quote')

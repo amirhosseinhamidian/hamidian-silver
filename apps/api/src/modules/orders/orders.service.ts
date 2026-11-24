@@ -625,6 +625,29 @@ export class OrdersService {
     });
   }
 
+  async estimateWallet(userId: string, items: CreateOrderItemDto[]) {
+    this.assertUniqueItemSelections(items);
+    return this.prisma.$transaction(async (tx) => {
+      const { lines, merchandiseTotalToman, platingTotalToman } = await this.preparePricingItems(
+        tx,
+        items,
+      );
+      const promotion = await this.promotions?.apply(tx, lines, 0, new Date(), null, userId);
+      const totals = this.promotionTotals(merchandiseTotalToman, platingTotalToman, 0, promotion);
+      const preview = await this.walletCheckout?.quote(
+        tx,
+        userId,
+        lines,
+        totals.payableToman,
+        promotion,
+      );
+      return {
+        walletAppliedToman: preview?.allocation?.amountToman ?? 0,
+        walletUnavailableReason: preview ? preview.reason : ('POLICY_DISABLED' as const),
+      };
+    });
+  }
+
   async quotePrice(userId: string, dto: CreateOrderDto) {
     if (dto.items.length > 100)
       throw new BadRequestException('A quote can contain up to 100 lines.');
@@ -637,6 +660,7 @@ export class OrdersService {
       }
       return {
         ...priced.totals,
+        ...(dto.useWalletCredit ? { walletUnavailableReason: priced.walletUnavailableReason } : {}),
         ...createQuoteToken(
           this.quoteSecret(),
           priced.promotion?.campaignId ?? null,
@@ -778,9 +802,10 @@ export class OrdersService {
       baseShipping,
       promotion,
     );
-    const wallet = dto.useWalletCredit
+    const walletPreview = dto.useWalletCredit
       ? await this.walletCheckout?.quote(tx, userId, lines, beforeWallet.payableToman, promotion)
       : null;
+    const wallet = walletPreview?.allocation ?? null;
     const totals = wallet
       ? {
           ...beforeWallet,
@@ -807,7 +832,16 @@ export class OrdersService {
         }),
       ),
     };
-    return { preparedItems, lines, shippingSelection, promotion, totals, wallet, binding };
+    return {
+      preparedItems,
+      lines,
+      shippingSelection,
+      promotion,
+      totals,
+      wallet,
+      binding,
+      walletUnavailableReason: walletPreview ? walletPreview.reason : ('POLICY_DISABLED' as const),
+    };
   }
 
   private promotionTotals(

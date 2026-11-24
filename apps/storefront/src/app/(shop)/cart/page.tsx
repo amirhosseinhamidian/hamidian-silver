@@ -10,6 +10,7 @@ import { PlatingTypeIndicator } from '@/components/plating/plating-type-indicato
 import { ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QuantityControl } from '@/components/ui/quantity-control';
+import { CartWalletPreview } from '@/components/wallet/cart-wallet-preview';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { getDiscountPercent } from '@/lib/catalog/pricing';
 import { useCart } from '@/lib/cart/cart-store';
@@ -25,16 +26,14 @@ export default function CartPage() {
     request: string;
     value: components['schemas']['PromotionEstimateDto'];
   } | null>(null);
-  const request =
-    items.length > 0 && publicOffers.length > 0
-      ? JSON.stringify({
-          items: items.map(({ variantId, quantity, platingType }) => ({
-            variantId,
-            quantity,
-            ...(platingType ? { platingType } : {}),
-          })),
-        })
-      : null;
+  const cartRequest = JSON.stringify({
+    items: items.map(({ variantId, quantity, platingType }) => ({
+      variantId,
+      quantity,
+      ...(platingType ? { platingType } : {}),
+    })),
+  });
+  const request = items.length > 0 && publicOffers.length > 0 ? cartRequest : null;
 
   useEffect(() => {
     if (!request) return;
@@ -96,7 +95,7 @@ export default function CartPage() {
       </header>
 
       <div className="grid gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-14">
-        <ul className="divide-y divide-[var(--sf-color-border)]">
+        <ul className="divide-y divide-[var(--sf-color-border)] lg:row-span-2">
           {items.map((item) => {
             const lineTotal =
               (item.unitSalePriceToman + item.unitPlatingPriceToman) * item.quantity;
@@ -204,6 +203,7 @@ export default function CartPage() {
             </ButtonLink>
           </div>
         </aside>
+        <CartWalletPreview request={cartRequest} />
         <div
           className="
             fixed inset-x-0 bottom-0 z-40

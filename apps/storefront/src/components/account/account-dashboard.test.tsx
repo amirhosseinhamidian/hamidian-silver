@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 describe('AccountDashboard', () => {
-  it('renders three prominent tabs and product thumbnails in order history', async () => {
+  it('renders the account tabs and product thumbnails in order history', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ id: 'user-1', phone: '+989121234567' }))
@@ -69,17 +69,20 @@ describe('AccountDashboard', () => {
             },
           ],
         }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ availableToman: 0, pendingToman: 0, reservedToman: 0, nextExpiryAt: null }),
       );
     vi.stubGlobal('fetch', fetchMock);
 
     render(<AccountDashboard />);
 
     const tabs = await screen.findAllByRole('tab');
-    expect(tabs).toHaveLength(3);
+    expect(tabs).toHaveLength(4);
     expect(tabs[0]).toHaveAccessibleName('سفارش‌ها ۱');
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
     expect(tabs[0]).toHaveAttribute('tabindex', '0');
-    expect(tabs[2]).toHaveAccessibleName('اطلاعات حساب');
+    expect(screen.getByRole('tab', { name: 'کیف پول' })).toBeInTheDocument();
     for (const tab of tabs) {
       expect(tab).toHaveClass('text-base', 'font-bold', 'sm:text-lg');
     }
@@ -104,10 +107,11 @@ describe('AccountDashboard', () => {
     expect(tabs[1]).toHaveAttribute('aria-selected', 'true');
 
     fireEvent.keyDown(tabs[1], { key: 'End' });
-    expect(tabs[2]).toHaveFocus();
-    expect(tabs[2]).toHaveAttribute('aria-selected', 'true');
+    const profileTab = screen.getByRole('tab', { name: 'اطلاعات حساب' });
+    expect(profileTab).toHaveFocus();
+    expect(profileTab).toHaveAttribute('aria-selected', 'true');
 
-    fireEvent.keyDown(tabs[2], { key: 'Home' });
+    fireEvent.keyDown(profileTab, { key: 'Home' });
     expect(tabs[0]).toHaveFocus();
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
 
@@ -131,9 +135,9 @@ describe('AccountDashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'خروج از حساب کاربری' }));
     const logoutDialog = screen.getByRole('dialog', { name: 'خروج از حساب کاربری' });
     expect(within(logoutDialog).getByRole('button', { name: 'تأیید خروج' })).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
     fireEvent.click(within(logoutDialog).getByRole('button', { name: 'انصراف' }));
     expect(screen.getByLabelText(/^نام\s*\*?$/)).toHaveAttribute('placeholder', 'مثلاً امیرحسین');
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
   });
 });

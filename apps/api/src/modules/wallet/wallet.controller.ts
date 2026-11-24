@@ -13,6 +13,7 @@ import {
   WalletOperationDto,
 } from './dto/wallet.dto';
 import { WalletLedgerService } from './wallet-ledger.service';
+import { CustomerWalletLedgerDto } from './dto/customer-wallet.dto';
 
 @Controller({ path: 'wallet', version: '1' })
 export class WalletController {
@@ -23,6 +24,45 @@ export class WalletController {
   @ApiOkResponse({ type: WalletBalanceDto })
   balance(@CurrentPrincipal() principal: AuthenticatedPrincipal) {
     return this.wallet.balance(principal.userId);
+  }
+
+  @Get('ledger')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOkResponse({ type: CustomerWalletLedgerDto })
+  async customerHistory(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Query() query: WalletLedgerQueryDto,
+  ): Promise<CustomerWalletLedgerDto> {
+    const result = await this.wallet.history(principal.userId, query.page ?? 1);
+    return {
+      ...result,
+      items: result.items.map(({ id, kind, recordedAt, movements }) => ({
+        id,
+        kind,
+        recordedAt,
+        movements: movements.map(
+          ({
+            lotId,
+            source,
+            originOrderId,
+            expiresAt,
+            reservationOrderId,
+            amountToman,
+            fromBucket,
+            toBucket,
+          }) => ({
+            lotId,
+            source,
+            originOrderId: source === 'PURCHASE' ? originOrderId : null,
+            expiresAt,
+            reservationOrderId,
+            amountToman,
+            fromBucket,
+            toBucket,
+          }),
+        ),
+      })),
+    };
   }
 
   @Get('admin/:userId')

@@ -14,6 +14,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
 import { Select } from '@/components/ui/select';
+import { useWalletBalance } from '@/components/wallet/use-wallet-balance';
+import { WalletBalanceView } from '@/components/wallet/wallet-balance';
 import { trackBeginCheckout } from '@/lib/analytics/commerce-events';
 import { trackFunnelEvent } from '@/lib/analytics/funnel-tracker';
 import { growthDevice } from '@/lib/analytics/growth-measurement';
@@ -23,6 +25,7 @@ import { AUTHENTICATION_SUCCEEDED_EVENT, openAuthModal } from '@/lib/auth/events
 import { formatShippingToman, formatTomanPrice } from '@/lib/catalog/presentation';
 import { useCart } from '@/lib/cart/cart-store';
 import { buildCreateOrderBody } from '@/lib/checkout/checkout-payload';
+import { walletReason, type WalletPreview } from '@/lib/wallet/wallet-presentation';
 import { cityOptionsFor, PROVINCE_OPTIONS } from '@/lib/checkout/iran-locations';
 import {
   calculateShippingOptionCost,
@@ -32,7 +35,8 @@ import {
   type PublicShippingPricing,
 } from '@/lib/shipping/public-shipping-pricing';
 
-type CheckoutPriceQuote = components['schemas']['CheckoutPriceQuoteDto'];
+type CheckoutPriceQuote = components['schemas']['CheckoutPriceQuoteDto'] &
+  Partial<Pick<WalletPreview, 'walletUnavailableReason'>>;
 type CurrentUser = components['schemas']['CurrentUserResponseDto'];
 type CustomerOrderDetail = components['schemas']['CustomerOrderDetailDto'];
 type PaymentInitiationResponse = components['schemas']['PaymentInitiationResponseDto'];
@@ -156,6 +160,7 @@ export function CheckoutFlow({
   const router = useRouter();
   const { items, itemCount, subtotalToman, clearCart } = useCart();
   const [auth, setAuth] = useState<AuthState>({ status: 'checking' });
+  const wallet = useWalletBalance(auth.status === 'authenticated');
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [addressesLoading, setAddressesLoading] = useState(true);
   const [addressError, setAddressError] = useState<string | null>(null);
@@ -505,6 +510,7 @@ export function CheckoutFlow({
             orderError.code === 'WALLET_CREDIT_UNAVAILABLE'
           ) {
             setQuote(null);
+            wallet.refresh();
             setCheckoutError(
               useWalletCredit
                 ? 'قیمت، تخفیف یا اعتبار تغییر کرده است. مبلغ را دوباره بررسی کنید.'
@@ -544,6 +550,7 @@ export function CheckoutFlow({
         amountDueToman = order.grandTotalToman;
         void trackFunnelEvent(submittedOrderEvent(order));
         setPendingOrderId(order.id);
+        if (useWalletCredit) wallet.refresh();
         setPendingOrderTotalToman(order.grandTotalToman);
         setPendingOrderShippingToman(order.shippingTotalToman);
         setCompletedOrderNumber(order.orderNumber);
@@ -590,6 +597,7 @@ export function CheckoutFlow({
         }),
       });
       if (!paymentResponse.ok) {
+        if (useWalletCredit) wallet.refresh();
         const paymentError = await readError(paymentResponse);
         if (
           paymentError.code === 'CAMPAIGN_QUOTA_UNAVAILABLE' ||
@@ -1094,20 +1102,48 @@ export function CheckoutFlow({
             )}
           </FormField>
         )}
-        {!pendingOrderId && (
-          <label className="mt-4 flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={useWalletCredit}
-              disabled={checkoutLoading}
-              onChange={(event) => {
-                setUseWalletCredit(event.currentTarget.checked);
-                setQuote(null);
-              }}
-            />
-            استفاده از اعتبار کیف پول
-          </label>
-        )}
+        <div className="mt-4 space-y-3" aria-label="اعتبار کیف پول">
+          {wallet.state.status === 'ready' && <WalletBalanceView balance={wallet.state.balance} />}
+          {wallet.state.status === 'loading' && (
+            <p role="status" className="text-sm">
+              در حال دریافت ماندهٔ کیف پول…
+            </p>
+          )}
+          {wallet.state.status === 'error' && (
+            <p role="status" className="text-sm">
+              دریافت ماندهٔ کیف پول انجام نشد.{' '}
+              <Button type="button" variant="text" onClick={wallet.refresh}>
+                تلاش دوباره
+              </Button>
+            </p>
+          )}
+          {!pendingOrderId && (
+            <>
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={useWalletCredit}
+                  disabled={checkoutLoading}
+                  onChange={(event) => {
+                    setUseWalletCredit(event.currentTarget.checked);
+                    setQuote(null);
+                  }}
+                />
+                استفاده از اعتبار کیف پول
+              </label>
+              {useWalletCredit && !currentQuote && (
+                <p className="text-xs">
+                  مبلغ قابل مصرف را پس از تکمیل اطلاعات ارسال، در پیش‌نمایش پرداخت ببینید.
+                </p>
+              )}
+              {useWalletCredit && currentQuote && currentQuote.walletAppliedToman === 0 && (
+                <p role="status" className="text-sm">
+                  {walletReason(currentQuote.walletUnavailableReason)}
+                </p>
+              )}
+            </>
+          )}
+        </div>
       </section>
 
       <aside className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-12px_36px_rgb(17_17_17/0.1)] lg:sticky lg:inset-auto lg:top-20 lg:z-auto lg:h-fit lg:border lg:p-5 lg:shadow-none">
@@ -1137,7 +1173,7 @@ export function CheckoutFlow({
               <span>
                 {currentQuote.walletAppliedToman > 0
                   ? formatTomanPrice(currentQuote.walletAppliedToman)
-                  : 'برای این سفارش قابل استفاده نیست'}
+                  : 'قابل استفاده نیست'}
               </span>
             </div>
           )}

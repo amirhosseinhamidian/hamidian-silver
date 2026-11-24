@@ -17,6 +17,7 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const READ_ONLY_POST_ACTIONS = new Set([
   'POST /orders/price-quote',
   'POST /orders/promotion-estimate',
+  'POST /orders/wallet-estimate',
   'POST /campaigns/:id/landing/preview',
   'POST /campaigns/:id/simulation',
   'POST /reward-policies/simulation',

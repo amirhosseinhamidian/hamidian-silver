@@ -156,6 +156,16 @@ it('keeps payments committed across worker failure and issues and activates each
     ).resolves.toBe(2);
 
     const failedAt = new Date();
+    await worker.setReviewHold(jobs[0].orderId, true, failedAt);
+    await expect(worker.run(failedAt)).resolves.toMatchObject({ claimed: 0 });
+    await expect(worker.forCustomer(buyer.id, 1)).resolves.toMatchObject({
+      items: [
+        expect.objectContaining({ orderId: jobs[0].orderId, reviewHeldAt: failedAt.toISOString() }),
+        expect.any(Object),
+      ],
+    });
+    await expect(worker.setReviewHold(jobs[0].orderId, true)).rejects.toThrow();
+    await worker.setReviewHold(jobs[0].orderId, false);
     jest.spyOn(policies, 'active').mockRejectedValueOnce(new Error('simulated worker failure'));
     await expect(worker.run(failedAt)).resolves.toMatchObject({ claimed: 1, retry: 1 });
     await expect(db.walletLot.count({ where: { userId: buyer.id } })).resolves.toBe(0);

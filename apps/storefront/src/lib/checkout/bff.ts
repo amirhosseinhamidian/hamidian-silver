@@ -137,6 +137,39 @@ async function forwardAuthenticatedResponse(
   });
 }
 
+export async function forwardWalletRequest(
+  request: Request,
+  resource: 'balance' | 'ledger' | 'estimate',
+) {
+  const accessToken = await getSessionToken();
+  if (!accessToken) {
+    return Response.json(null, { status: 401, headers: { 'Cache-Control': 'no-store' } });
+  }
+  const page = new URL(request.url).searchParams.get('page') ?? '1';
+  const path =
+    resource === 'estimate'
+      ? '/api/v1/orders/wallet-estimate'
+      : resource === 'ledger'
+        ? `/api/v1/wallet/ledger?page=${encodeURIComponent(page)}`
+        : '/api/v1/wallet';
+  try {
+    const init =
+      resource === 'estimate'
+        ? {
+            method: 'POST',
+            body: await request.text(),
+            headers: { 'Content-Type': 'application/json' },
+          }
+        : {};
+    return await forwardAuthenticatedResponse(path, accessToken, {
+      ...init,
+      signal: request.signal,
+    });
+  } catch {
+    return Response.json(null, { status: 502, headers: { 'Cache-Control': 'no-store' } });
+  }
+}
+
 export async function getCardToCardSettings(): Promise<Response> {
   const accessToken = await getSessionToken();
   if (!accessToken) return authenticationRequired();

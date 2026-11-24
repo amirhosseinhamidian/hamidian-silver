@@ -204,14 +204,15 @@ it('serializes concurrent spend, preserves append-only movements and reconciles 
     configureApiRouting(app);
     app.use((req: Request & RequestWithAuth, _res: Response, next: NextFunction) => {
       const role = req.header('x-test-role');
-      if (role === 'customer' || role === 'reader' || role === 'writer') {
+      if (role === 'buyer' || role === 'customer' || role === 'reader' || role === 'writer') {
+        const current = role === 'buyer' ? buyer : other;
         req.auth = {
-          sessionId: other.id,
-          userId: other.id,
-          phone: other.phone,
+          sessionId: current.id,
+          userId: current.id,
+          phone: current.phone,
           roleCodes: [],
           permissionCodes:
-            role === 'customer'
+            role === 'customer' || role === 'buyer'
               ? []
               : role === 'reader'
                 ? [PERMISSION_CODES.FINANCE_READ]
@@ -238,7 +239,32 @@ it('serializes concurrent spend, preserves append-only movements and reconciles 
       .get('/api/v1/wallet')
       .set('x-test-role', 'customer')
       .expect(200)
-      .expect({ pendingToman: 0, availableToman: 0, reservedToman: 0, nextExpiryAt: null });
+      .expect({
+        pendingToman: 0,
+        availableToman: 0,
+        reservedToman: 0,
+        nextExpiryAt: null,
+        nextExpiryToman: 0,
+      });
+    await api
+      .get('/api/v1/wallet/ledger')
+      .set('x-test-role', 'customer')
+      .expect(200)
+      .expect({ items: [], page: 1, hasMore: false });
+    const ownLedger = await api
+      .get('/api/v1/wallet/ledger')
+      .set('x-test-role', 'buyer')
+      .expect(200);
+    expect(ownLedger.body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'GRANT',
+          movements: [expect.objectContaining({ source: 'REFERRAL', originOrderId: null })],
+        }),
+      ]),
+    );
+    expect(ownLedger.text).not.toContain('sourceKey');
+    expect(ownLedger.text).not.toContain('actorUserId');
     await api.get(`${admin}/ledger`).set('x-test-role', 'customer').expect(403);
     const maintenance = '/api/v1/wallet/admin/maintenance/report';
     await api.get(maintenance).set('x-test-role', 'customer').expect(403);

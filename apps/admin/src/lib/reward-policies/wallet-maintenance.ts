@@ -20,6 +20,7 @@ export const walletIssueLabels = {
 type WalletIssue = {
   subject: 'LOT' | 'RESERVATION';
   subjectId: string;
+  userId: string;
   orderId: string;
   orderNumber: string | null;
   code: keyof typeof walletIssueLabels;
@@ -48,6 +49,7 @@ function isIssue(value: unknown): value is WalletIssue {
     issue &&
     (issue.subject === 'LOT' || issue.subject === 'RESERVATION') &&
     typeof issue.subjectId === 'string' &&
+    typeof issue.userId === 'string' &&
     typeof issue.orderId === 'string' &&
     (issue.orderNumber === null || typeof issue.orderNumber === 'string') &&
     typeof issue.code === 'string' &&
