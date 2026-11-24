@@ -1694,6 +1694,7 @@ model Order {
   merchandiseTotalToman Int
   platingTotalToman     Int                           @default(0)
   discountTotalToman    Int                           @default(0)
+  walletAppliedToman    Int                           @default(0)
   shippingTotalToman    Int                           @default(0)
   shippingCarrierIdSnapshot String?                   @db.Uuid
   shippingCarrierNameSnapshot String?                 @db.VarChar(200)
@@ -2239,6 +2240,7 @@ model OrderItem {
   platingLeadTimeDays     Int?
   unitWeightGrams         Decimal?          @db.Decimal(10, 3)
   lineTotalToman          Int
+  walletAppliedToman      Int               @default(0)
   returnAllocatedQuantity Int               @default(0)
   returnedQuantity        Int               @default(0)
   createdAt               DateTime          @default(now()) @db.Timestamptz(3)
@@ -2635,6 +2637,7 @@ model OrderFinanceSnapshot {
   shippingChargedToman               Int
   taxToman                           Int
   customerTotalToman                 Int
+  walletAppliedToman                 Int      @default(0)
   supplierCostToman                  Int
   grossSalesToman                    Int
   netSalesToman                      Int

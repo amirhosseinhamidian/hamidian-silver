@@ -1524,6 +1524,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletController_balance_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletController_adminBalance_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/{userId}/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletController_history_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/{userId}/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["WalletController_correct_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RewardPoliciesController_list_v1"];
+        put?: never;
+        post: operations["RewardPoliciesController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RewardPoliciesController_active_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RewardPoliciesController_read_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/simulation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RewardPoliciesController_simulate_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/{version}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RewardPoliciesController_publish_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/guide/public/topics": {
         parameters: {
             query?: never;
@@ -3348,86 +3492,6 @@ export interface paths {
         patch: operations["ProfileController_setDefaultAddress_v1"];
         trace?: never;
     };
-    "/api/v1/reward-policies": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["RewardPoliciesController_list_v1"];
-        put?: never;
-        post: operations["RewardPoliciesController_create_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reward-policies/active": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["RewardPoliciesController_active_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reward-policies/{version}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["RewardPoliciesController_read_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reward-policies/simulation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["RewardPoliciesController_simulate_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reward-policies/{version}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["RewardPoliciesController_publish_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/shipping/pricing/public": {
         parameters: {
             query?: never;
@@ -4382,70 +4446,6 @@ export interface paths {
         get?: never;
         put: operations["AdminRoleManagementController_updatePermissions_v1"];
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/wallet": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["WalletController_balance_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/wallet/admin/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["WalletController_adminBalance_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/wallet/admin/{userId}/ledger": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["WalletController_history_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/wallet/admin/{userId}/corrections": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["WalletController_correct_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5814,6 +5814,198 @@ export interface components {
         ReverseOrderCostDto: {
             reason?: string;
         };
+        WalletBalanceDto: {
+            /** Format: date-time */
+            nextExpiryAt: string | null;
+            pendingToman: number;
+            availableToman: number;
+            reservedToman: number;
+        };
+        WalletMovementDto: {
+            /** Format: uuid */
+            lotId: string;
+            /** Format: uuid */
+            originOrderId: string;
+            /** @enum {string} */
+            source: "PURCHASE" | "REFERRAL";
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            reservationId: string | null;
+            /** Format: uuid */
+            reservationOrderId: string | null;
+            /** @enum {string|null} */
+            fromBucket: "PENDING" | "AVAILABLE" | "RESERVED" | "CAPTURED" | "EXPIRED" | "REVOKED" | null;
+            /** @enum {string} */
+            toBucket: "PENDING" | "AVAILABLE" | "RESERVED" | "CAPTURED" | "EXPIRED" | "REVOKED";
+            sourceKey: string;
+            policyVersion: number;
+            amountToman: number;
+        };
+        WalletOperationDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "GRANT" | "ACTIVATE" | "RESERVE" | "RELEASE" | "CAPTURE" | "EXPIRE" | "REVOKE_GRANT" | "REVERSE_CAPTURE";
+            /** Format: date-time */
+            recordedAt: string;
+            /** Format: uuid */
+            actorUserId: string | null;
+            reason: string | null;
+            movements: components["schemas"]["WalletMovementDto"][];
+        };
+        WalletLedgerPageDto: {
+            items: components["schemas"]["WalletOperationDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        WalletCorrectionDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** @enum {string} */
+            kind: "REVOKE_GRANT" | "REVERSE_CAPTURE";
+            /**
+             * Format: uuid
+             * @description Lot ID for REVOKE_GRANT or reservation ID for REVERSE_CAPTURE.
+             */
+            targetId: string;
+            amountToman: number;
+            reason: string;
+        };
+        RewardPolicyVersionDto: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            requestedEffectiveAt: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            publishedById: string | null;
+            /** Format: date-time */
+            effectiveAt: string | null;
+            version: number;
+            enabled: boolean;
+            createdById: string;
+        };
+        RewardPolicyListDto: {
+            items: components["schemas"]["RewardPolicyVersionDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        RewardEligibilityDto: {
+            allowCoupon: boolean;
+            allowedCategoryIds: string[];
+            excludedCategoryIds: string[];
+            excludedProductIds: string[];
+        };
+        RewardBudgetDto: {
+            rewardPerOrderToman: number;
+            rewardPerCustomerPeriodToman: number;
+            rewardPerPeriodToman: number;
+            incentivesPerOrderToman: number;
+            incentivesPerCustomerPeriodToman: number;
+            incentivesPerPeriodToman: number;
+        };
+        RewardGrantRuleDto: {
+            code: string;
+            enabled: boolean;
+            priority: number;
+            minimumToman: number;
+            maximumExclusiveToman?: number | null;
+            capToman: number;
+            /** @enum {string} */
+            purchaseRank: "ANY" | "FIRST" | "SECOND" | "THIRD_OR_LATER";
+            /** @enum {string} */
+            method: "PERCENT" | "FIXED";
+            value: number;
+        };
+        RewardRedemptionBandDto: {
+            code: string;
+            enabled: boolean;
+            priority: number;
+            minimumToman: number;
+            maximumExclusiveToman?: number | null;
+            capToman: number;
+            rateBps: number;
+        };
+        RewardPolicyDefinitionDto: {
+            enabled: boolean;
+            expiryDays: number;
+            grantEligibility: components["schemas"]["RewardEligibilityDto"];
+            redemptionEligibility: components["schemas"]["RewardEligibilityDto"];
+            budget: components["schemas"]["RewardBudgetDto"];
+            grantRules: components["schemas"]["RewardGrantRuleDto"][];
+            redemptionBands: components["schemas"]["RewardRedemptionBandDto"][];
+        };
+        RewardPolicyDetailDto: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            requestedEffectiveAt: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            publishedById: string | null;
+            /** Format: date-time */
+            effectiveAt: string | null;
+            definition: components["schemas"]["RewardPolicyDefinitionDto"];
+            version: number;
+            enabled: boolean;
+            createdById: string;
+        };
+        ActiveRewardPolicyDto: {
+            policy: components["schemas"]["RewardPolicyDetailDto"] | null;
+        };
+        CreateRewardPolicyDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** Format: date-time */
+            requestedEffectiveAt?: string | null;
+            definition: components["schemas"]["RewardPolicyDefinitionDto"];
+        };
+        RewardSampleLineDto: {
+            /** Format: uuid */
+            productId: string;
+            categoryIds: string[];
+            merchandiseToman: number;
+            directDiscountToman: number;
+            settledCreditToman: number;
+            refundedCashToman: number;
+        };
+        RewardPeriodUsageDto: {
+            customerRewardsToman: number;
+            periodRewardsToman: number;
+            customerIncentivesToman: number;
+            periodIncentivesToman: number;
+        };
+        RewardPolicySimulationRequestDto: {
+            lines: components["schemas"]["RewardSampleLineDto"][];
+            /** @enum {string} */
+            outcome: "UNPAID" | "PAID" | "CANCELLED" | "FULLY_RETURNED";
+            previousCompletedPurchases: number;
+            couponApplied: boolean;
+            shippingDiscountToman: number;
+            otherOrderIncentivesToman: number;
+            availableCreditToman: number;
+            campaignRedemptionCapToman?: number | null;
+            usage: components["schemas"]["RewardPeriodUsageDto"];
+            version: number;
+        };
+        RewardSimulationDto: {
+            /** @enum {string} */
+            purchaseRank: "FIRST" | "SECOND" | "THIRD_OR_LATER";
+            grantRuleCode: string | null;
+            redemptionBandCode: string | null;
+            version: number;
+            enabled: boolean;
+            rewardBaseToman: number;
+            redemptionBaseToman: number;
+            calculatedRewardToman: number;
+            estimatedRewardToman: number;
+            maxRedemptionToman: number;
+            existingOrderIncentivesToman: number;
+            remainingRewardBudgetToman: number;
+            existingIncentivesExceedLimit: boolean;
+            expiryDays: number;
+        };
         GuideMediaDto: {
             id: string;
             url: string | null;
@@ -6484,6 +6676,8 @@ export interface components {
             platingType?: "GOLD" | "ROSE_GOLD" | "RHODIUM";
         };
         CreateOrderDto: {
+            /** @description Apply the maximum eligible wallet credit. */
+            useWalletCredit?: boolean;
             attribution?: components["schemas"]["SessionAttributionDto"];
             /** @enum {string} */
             growthDevice?: "desktop" | "mobile" | "tablet";
@@ -6567,6 +6761,8 @@ export interface components {
         CustomerOrderDetailDto: {
             /** @enum {string} */
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
+            /** @description Wallet credit included in the order snapshot. */
+            walletAppliedToman?: number;
             payment: components["schemas"]["CustomerOrderPaymentDto"] | null;
             trackingCode: string | null;
             shippingMethodName: string | null;
@@ -6634,6 +6830,8 @@ export interface components {
         CustomerOrderSummaryDto: {
             /** @enum {string} */
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
+            /** @description Wallet credit included in the order snapshot. */
+            walletAppliedToman?: number;
             payment: components["schemas"]["CustomerOrderPaymentDto"] | null;
             trackingCode: string | null;
             shippingMethodName: string | null;
@@ -6873,140 +7071,6 @@ export interface components {
             id: string;
             /** Format: date-time */
             deletedAt: string;
-        };
-        RewardPolicyVersionDto: {
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            requestedEffectiveAt: string | null;
-            /** Format: date-time */
-            publishedAt: string | null;
-            publishedById: string | null;
-            /** Format: date-time */
-            effectiveAt: string | null;
-            version: number;
-            enabled: boolean;
-            createdById: string;
-        };
-        RewardPolicyListDto: {
-            items: components["schemas"]["RewardPolicyVersionDto"][];
-            page: number;
-            hasMore: boolean;
-        };
-        RewardEligibilityDto: {
-            allowCoupon: boolean;
-            allowedCategoryIds: string[];
-            excludedCategoryIds: string[];
-            excludedProductIds: string[];
-        };
-        RewardBudgetDto: {
-            rewardPerOrderToman: number;
-            rewardPerCustomerPeriodToman: number;
-            rewardPerPeriodToman: number;
-            incentivesPerOrderToman: number;
-            incentivesPerCustomerPeriodToman: number;
-            incentivesPerPeriodToman: number;
-        };
-        RewardGrantRuleDto: {
-            code: string;
-            enabled: boolean;
-            priority: number;
-            minimumToman: number;
-            maximumExclusiveToman?: number | null;
-            capToman: number;
-            /** @enum {string} */
-            purchaseRank: "ANY" | "FIRST" | "SECOND" | "THIRD_OR_LATER";
-            /** @enum {string} */
-            method: "PERCENT" | "FIXED";
-            value: number;
-        };
-        RewardRedemptionBandDto: {
-            code: string;
-            enabled: boolean;
-            priority: number;
-            minimumToman: number;
-            maximumExclusiveToman?: number | null;
-            capToman: number;
-            rateBps: number;
-        };
-        RewardPolicyDefinitionDto: {
-            enabled: boolean;
-            expiryDays: number;
-            grantEligibility: components["schemas"]["RewardEligibilityDto"];
-            redemptionEligibility: components["schemas"]["RewardEligibilityDto"];
-            budget: components["schemas"]["RewardBudgetDto"];
-            grantRules: components["schemas"]["RewardGrantRuleDto"][];
-            redemptionBands: components["schemas"]["RewardRedemptionBandDto"][];
-        };
-        RewardPolicyDetailDto: {
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            requestedEffectiveAt: string | null;
-            /** Format: date-time */
-            publishedAt: string | null;
-            publishedById: string | null;
-            /** Format: date-time */
-            effectiveAt: string | null;
-            definition: components["schemas"]["RewardPolicyDefinitionDto"];
-            version: number;
-            enabled: boolean;
-            createdById: string;
-        };
-        ActiveRewardPolicyDto: {
-            policy: components["schemas"]["RewardPolicyDetailDto"] | null;
-        };
-        CreateRewardPolicyDto: {
-            /** Format: uuid */
-            requestId: string;
-            /** Format: date-time */
-            requestedEffectiveAt?: string | null;
-            definition: components["schemas"]["RewardPolicyDefinitionDto"];
-        };
-        RewardSampleLineDto: {
-            /** Format: uuid */
-            productId: string;
-            categoryIds: string[];
-            merchandiseToman: number;
-            directDiscountToman: number;
-            settledCreditToman: number;
-            refundedCashToman: number;
-        };
-        RewardPeriodUsageDto: {
-            customerRewardsToman: number;
-            periodRewardsToman: number;
-            customerIncentivesToman: number;
-            periodIncentivesToman: number;
-        };
-        RewardPolicySimulationRequestDto: {
-            lines: components["schemas"]["RewardSampleLineDto"][];
-            /** @enum {string} */
-            outcome: "UNPAID" | "PAID" | "CANCELLED" | "FULLY_RETURNED";
-            previousCompletedPurchases: number;
-            couponApplied: boolean;
-            shippingDiscountToman: number;
-            otherOrderIncentivesToman: number;
-            availableCreditToman: number;
-            campaignRedemptionCapToman?: number | null;
-            usage: components["schemas"]["RewardPeriodUsageDto"];
-            version: number;
-        };
-        RewardSimulationDto: {
-            /** @enum {string} */
-            purchaseRank: "FIRST" | "SECOND" | "THIRD_OR_LATER";
-            grantRuleCode: string | null;
-            redemptionBandCode: string | null;
-            version: number;
-            enabled: boolean;
-            rewardBaseToman: number;
-            redemptionBaseToman: number;
-            calculatedRewardToman: number;
-            estimatedRewardToman: number;
-            maxRedemptionToman: number;
-            existingOrderIncentivesToman: number;
-            remainingRewardBudgetToman: number;
-            existingIncentivesExceedLimit: boolean;
-            expiryDays: number;
         };
         ShippingPricingSettingsDto: {
             /** @enum {string} */
@@ -7879,64 +7943,6 @@ export interface components {
         };
         UpdateAdminRolePermissionsDto: {
             permissionCodes: ("catalog.read" | "catalog.write" | "inventory.read" | "inventory.write" | "orders.read" | "orders.status.write" | "orders.tracking.write" | "orders.cancel" | "cms.read" | "cms.write" | "pricing.read" | "pricing.write" | "finance.read" | "finance.write" | "settings.read" | "settings.write" | "users.read" | "users.write" | "audit.read")[];
-        };
-        WalletBalanceDto: {
-            /** Format: date-time */
-            nextExpiryAt: string | null;
-            pendingToman: number;
-            availableToman: number;
-            reservedToman: number;
-        };
-        WalletMovementDto: {
-            /** Format: uuid */
-            lotId: string;
-            /** Format: uuid */
-            originOrderId: string;
-            /** @enum {string} */
-            source: "PURCHASE" | "REFERRAL";
-            /** Format: date-time */
-            expiresAt: string;
-            /** Format: uuid */
-            reservationId: string | null;
-            /** Format: uuid */
-            reservationOrderId: string | null;
-            /** @enum {string|null} */
-            fromBucket: "PENDING" | "AVAILABLE" | "RESERVED" | "CAPTURED" | "EXPIRED" | "REVOKED" | null;
-            /** @enum {string} */
-            toBucket: "PENDING" | "AVAILABLE" | "RESERVED" | "CAPTURED" | "EXPIRED" | "REVOKED";
-            sourceKey: string;
-            policyVersion: number;
-            amountToman: number;
-        };
-        WalletOperationDto: {
-            /** Format: uuid */
-            id: string;
-            /** @enum {string} */
-            kind: "GRANT" | "ACTIVATE" | "RESERVE" | "RELEASE" | "CAPTURE" | "EXPIRE" | "REVOKE_GRANT" | "REVERSE_CAPTURE";
-            /** Format: date-time */
-            recordedAt: string;
-            /** Format: uuid */
-            actorUserId: string | null;
-            reason: string | null;
-            movements: components["schemas"]["WalletMovementDto"][];
-        };
-        WalletLedgerPageDto: {
-            items: components["schemas"]["WalletOperationDto"][];
-            page: number;
-            hasMore: boolean;
-        };
-        WalletCorrectionDto: {
-            /** Format: uuid */
-            requestId: string;
-            /** @enum {string} */
-            kind: "REVOKE_GRANT" | "REVERSE_CAPTURE";
-            /**
-             * Format: uuid
-             * @description Lot ID for REVOKE_GRANT or reservation ID for REVERSE_CAPTURE.
-             */
-            targetId: string;
-            amountToman: number;
-            reason: string;
         };
     };
     responses: never;
@@ -10774,6 +10780,222 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    WalletController_balance_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletBalanceDto"];
+                };
+            };
+        };
+    };
+    WalletController_adminBalance_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletBalanceDto"];
+                };
+            };
+        };
+    };
+    WalletController_history_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletLedgerPageDto"];
+                };
+            };
+        };
+    };
+    WalletController_correct_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WalletCorrectionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletOperationDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPolicyListDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRewardPolicyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_active_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveRewardPolicyDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_read_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_simulate_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RewardPolicySimulationRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardSimulationDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_publish_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPolicyDetailDto"];
+                };
             };
         };
     };
@@ -13697,134 +13919,6 @@ export interface operations {
             };
         };
     };
-    RewardPoliciesController_list_v1: {
-        parameters: {
-            query?: {
-                page?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RewardPolicyListDto"];
-                };
-            };
-        };
-    };
-    RewardPoliciesController_create_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateRewardPolicyDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RewardPolicyDetailDto"];
-                };
-            };
-        };
-    };
-    RewardPoliciesController_active_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActiveRewardPolicyDto"];
-                };
-            };
-        };
-    };
-    RewardPoliciesController_read_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                version: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RewardPolicyDetailDto"];
-                };
-            };
-        };
-    };
-    RewardPoliciesController_simulate_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RewardPolicySimulationRequestDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RewardSimulationDto"];
-                };
-            };
-        };
-    };
-    RewardPoliciesController_publish_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                version: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RewardPolicyDetailDto"];
-                };
-            };
-        };
-    };
     ShippingController_getPublicPricing_v1: {
         parameters: {
             query?: never;
@@ -15246,94 +15340,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminRoleManagementSnapshotDto"];
-                };
-            };
-        };
-    };
-    WalletController_balance_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WalletBalanceDto"];
-                };
-            };
-        };
-    };
-    WalletController_adminBalance_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WalletBalanceDto"];
-                };
-            };
-        };
-    };
-    WalletController_history_v1: {
-        parameters: {
-            query?: {
-                page?: number;
-            };
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WalletLedgerPageDto"];
-                };
-            };
-        };
-    };
-    WalletController_correct_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WalletCorrectionDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WalletOperationDto"];
                 };
             };
         };

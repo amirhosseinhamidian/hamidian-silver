@@ -445,6 +445,9 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
               {order.discountTotalToman > 0 ? (
                 <TotalRow label="تخفیف" value={order.discountTotalToman} negative />
               ) : null}
+              {order.walletAppliedToman ? (
+                <TotalRow label="اعتبار کیف پول" value={order.walletAppliedToman} negative />
+              ) : null}
               <ShippingTotalRow
                 value={order.shippingTotalToman}
                 payOnDelivery={order.shippingPayOnDelivery}

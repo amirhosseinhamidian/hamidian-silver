@@ -80,7 +80,7 @@ function eligibility(selector: RewardEligibilityDto, couponApplied: boolean) {
   const allow = new Set(selector.allowedCategoryIds.map((id) => id.toLowerCase()));
   const excludedCategories = new Set(selector.excludedCategoryIds.map((id) => id.toLowerCase()));
   const excludedProducts = new Set(selector.excludedProductIds.map((id) => id.toLowerCase()));
-  return (line: RewardSampleLineDto) => {
+  return (line: Pick<RewardSampleLineDto, 'productId' | 'categoryIds'>) => {
     const categories = line.categoryIds.map((id) => id.toLowerCase());
     return (
       (!couponApplied || selector.allowCoupon) &&
@@ -97,6 +97,37 @@ function percentage(amount: number, bps: number) {
 
 function remaining(limit: number, used: number) {
   return Math.max(0, limit - used);
+}
+
+export function calculateRedemption(
+  policy: RewardPolicyDefinitionDto,
+  lines: readonly Pick<
+    RewardSampleLineDto,
+    'productId' | 'categoryIds' | 'merchandiseToman' | 'directDiscountToman'
+  >[],
+  couponApplied: boolean,
+  availableCreditToman: number,
+  campaignCapToman = TOMAN_INT_MAX,
+) {
+  const eligible = eligibility(policy.redemptionEligibility, couponApplied);
+  const weights = lines.map((line) =>
+    eligible(line) ? line.merchandiseToman - line.directDiscountToman : 0,
+  );
+  const redemptionBaseToman = weights.reduce((sum, weight) => sum + weight, 0);
+  const band = policy.enabled ? applicableBand(policy.redemptionBands, redemptionBaseToman) : null;
+  return {
+    weights,
+    redemptionBaseToman,
+    bandCode: band?.code ?? null,
+    maximumToman: band
+      ? Math.min(
+          availableCreditToman,
+          band.capToman,
+          percentage(redemptionBaseToman, band.rateBps),
+          campaignCapToman,
+        )
+      : 0,
+  };
 }
 
 function calculatedReward(rule: RewardGrantRuleDto | null, base: number) {
@@ -133,10 +164,8 @@ export function calculateRewardPolicy(
     throw new RewardPolicyValidationError('Reward and incentive usage totals are inconsistent.');
 
   const grantEligible = eligibility(policy.grantEligibility, sample.couponApplied);
-  const redemptionEligible = eligibility(policy.redemptionEligibility, sample.couponApplied);
   let gross = 0;
   let rewardBaseToman = 0;
-  let redemptionBaseToman = 0;
   let existingOrderIncentivesToman =
     sample.shippingDiscountToman + sample.otherOrderIncentivesToman;
   for (const line of sample.lines) {
@@ -158,7 +187,6 @@ export function calculateRewardPolicy(
     gross += line.merchandiseToman;
     existingOrderIncentivesToman += line.directDiscountToman;
     if (grantEligible(line) && sample.outcome === 'PAID') rewardBaseToman += cash;
-    if (redemptionEligible(line)) redemptionBaseToman += net;
   }
   if (gross > TOMAN_INT_MAX || existingOrderIncentivesToman > TOMAN_INT_MAX)
     throw new RewardPolicyValidationError(
@@ -179,10 +207,14 @@ export function calculateRewardPolicy(
         rewardBaseToman,
       )
     : null;
-  const redemption =
-    policy.enabled && sample.outcome !== 'CANCELLED' && sample.outcome !== 'FULLY_RETURNED'
-      ? applicableBand(policy.redemptionBands, redemptionBaseToman)
-      : null;
+  const redemption = calculateRedemption(
+    policy,
+    sample.lines,
+    sample.couponApplied,
+    sample.availableCreditToman,
+    sample.campaignRedemptionCapToman ?? undefined,
+  );
+  const canRedeem = sample.outcome !== 'CANCELLED' && sample.outcome !== 'FULLY_RETURNED';
   const remainingRewardBudgetToman = Math.min(
     budget.rewardPerOrderToman,
     remaining(budget.rewardPerCustomerPeriodToman, usage.customerRewardsToman),
@@ -203,23 +235,16 @@ export function calculateRewardPolicy(
     enabled: policy.enabled,
     purchaseRank,
     grantRuleCode: grant?.code ?? null,
-    redemptionBandCode: redemption?.code ?? null,
+    redemptionBandCode: canRedeem ? redemption.bandCode : null,
     rewardBaseToman,
-    redemptionBaseToman,
+    redemptionBaseToman: redemption.redemptionBaseToman,
     calculatedRewardToman,
     estimatedRewardToman: Math.min(
       calculatedRewardToman,
       grant?.capToman ?? 0,
       remainingRewardBudgetToman,
     ),
-    maxRedemptionToman: redemption
-      ? Math.min(
-          sample.availableCreditToman,
-          redemption.capToman,
-          percentage(redemptionBaseToman, redemption.rateBps),
-          sample.campaignRedemptionCapToman ?? TOMAN_INT_MAX,
-        )
-      : 0,
+    maxRedemptionToman: canRedeem ? redemption.maximumToman : 0,
     existingOrderIncentivesToman,
     remainingRewardBudgetToman,
     existingIncentivesExceedLimit:

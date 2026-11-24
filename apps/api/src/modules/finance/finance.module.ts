@@ -1,5 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
+import { WalletModule } from '../wallet/wallet.module';
 import { FinancialReportingController } from './financial-reporting.controller';
 import { FinancialReportingService } from './financial-reporting.service';
 import { OrderCostsController } from './order-costs.controller';
@@ -17,7 +18,7 @@ import { SupplierSettlementsService } from './supplier-settlements.service';
 
 @Global()
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, WalletModule],
   controllers: [
     SupplierPayablesController,
     SupplierSettlementsController,

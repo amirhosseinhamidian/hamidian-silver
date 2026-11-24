@@ -69,6 +69,7 @@ export type CustomerOrder = Readonly<{
   merchandiseTotalToman: number;
   platingTotalToman: number;
   discountTotalToman: number;
+  walletAppliedToman?: number;
   shippingTotalToman: number;
   taxTotalToman: number;
   grandTotalToman: number;

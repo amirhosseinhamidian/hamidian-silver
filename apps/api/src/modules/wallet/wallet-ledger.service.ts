@@ -98,6 +98,10 @@ function exactToman(total: bigint) {
 export class WalletLedgerService {
   constructor(private readonly db: PrismaService) {}
 
+  async lockAccount(tx: Prisma.TransactionClient, userId: string) {
+    await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended('wallet:' || ${userId}::uuid::text, 0))`;
+  }
+
   async balance(userId: string): Promise<WalletBalanceDto> {
     const [balance] = await this.db.$queryRaw<BalanceRow[]>`
       SELECT
@@ -435,7 +439,7 @@ export class WalletLedgerService {
       .update(JSON.stringify([kind, actorUserId, reason, ...details]))
       .digest('hex');
     const run = async (db: Prisma.TransactionClient) => {
-      await db.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended('wallet:' || ${userId}::uuid::text, 0))`;
+      await this.lockAccount(db, userId);
       const where = { userId_idempotencyKey: { userId, idempotencyKey: input.idempotencyKey } };
       const existing = await db.walletOperation.findUnique({ where, include: includeMovements });
       if (existing) {

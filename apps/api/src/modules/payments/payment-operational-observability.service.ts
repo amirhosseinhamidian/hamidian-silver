@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import {
   OperationalAlertLevel,
   PaymentAttemptStatus,
@@ -10,6 +10,8 @@ import {
   OperationalAlertOutboxService,
 } from '../notifications/operational-alert-outbox.service';
 import { ROLE_CODES } from '../authorization/rbac.constants';
+import { WalletCheckoutService } from '../wallet/wallet-checkout.service';
+import { expiredWalletRedirect } from './payment-initiation-recovery-policy';
 
 const INITIATION_STUCK_AFTER_MS = 5 * 60 * 1000;
 const RECONCILIATION_ALERT_AFTER_MS = 5 * 60 * 1000;
@@ -21,6 +23,7 @@ export class PaymentOperationalObservabilityService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OperationalAlertOutboxService,
+    @Optional() private readonly walletCheckout?: WalletCheckoutService,
   ) {}
 
   async summary(now = new Date()) {
@@ -71,10 +74,12 @@ export class PaymentOperationalObservabilityService {
     const [stuckInitiations, openReconciliations] = await Promise.all([
       this.prisma.paymentAttempt.findMany({
         where: {
-          status: PaymentAttemptStatus.CREATED,
           createdAt: {
             lte: initiationCutoff,
           },
+          ...(this.walletCheckout
+            ? { OR: [{ status: PaymentAttemptStatus.CREATED }, expiredWalletRedirect(now)] }
+            : { status: PaymentAttemptStatus.CREATED }),
         },
         take: MAX_OBSERVABILITY_ROWS,
         orderBy: {

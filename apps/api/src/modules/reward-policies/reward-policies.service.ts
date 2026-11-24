@@ -70,14 +70,20 @@ export class RewardPoliciesService {
     return { items: rows.slice(0, pageSize).map(summary), page, hasMore: rows.length > pageSize };
   }
 
-  async read(version: number): Promise<RewardPolicyDetailDto> {
-    const policy = await this.db.rewardPolicyVersion.findUnique({ where: { version } });
+  async read(
+    version: number,
+    tx: Prisma.TransactionClient = this.db,
+  ): Promise<RewardPolicyDetailDto> {
+    const policy = await tx.rewardPolicyVersion.findUnique({ where: { version } });
     if (!policy) throw new NotFoundException('Reward policy version not found.');
     return detail(policy);
   }
 
-  async active(at = new Date()): Promise<ActiveRewardPolicyDto> {
-    const policy = await this.db.rewardPolicyVersion.findFirst({
+  async active(
+    at = new Date(),
+    tx: Prisma.TransactionClient = this.db,
+  ): Promise<ActiveRewardPolicyDto> {
+    const policy = await tx.rewardPolicyVersion.findFirst({
       where: { effectiveAt: { lte: at } },
       orderBy: [{ effectiveAt: 'desc' }, { version: 'desc' }],
     });

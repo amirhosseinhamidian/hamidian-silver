@@ -4,6 +4,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { ShippingPricingModule } from '../shipping/shipping-pricing.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { PromotionsModule } from '../promotions/promotions.module';
+import { WalletModule } from '../wallet/wallet.module';
 import { FulfillmentReadinessController } from './fulfillment-readiness.controller';
 import { FulfillmentReadinessService } from './fulfillment-readiness.service';
 import { OperationsWorkQueueController } from './operations-work-queue.controller';
@@ -27,6 +28,7 @@ import { OrdersService } from './orders.service';
     CatalogModule,
     ShippingPricingModule,
     PromotionsModule,
+    WalletModule,
   ],
   controllers: [
     OrdersController,

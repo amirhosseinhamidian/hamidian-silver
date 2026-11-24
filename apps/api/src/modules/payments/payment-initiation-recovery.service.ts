@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { DomainException } from '../../common/errors/domain-exception';
 import { ErrorCode } from '../../common/errors/error-codes';
 import { lockOrderRowForUpdate } from '../../common/order-row-lock';
@@ -9,7 +9,11 @@ import {
   PaymentInitiationRecoveryResolution,
   type ResolvePaymentInitiationRecoveryDto,
 } from './dto/resolve-payment-initiation-recovery.dto';
-import { PaymentInitiationRecoveryPolicy } from './payment-initiation-recovery-policy';
+import {
+  expiredWalletRedirect,
+  PaymentInitiationRecoveryPolicy,
+} from './payment-initiation-recovery-policy';
+import { WalletCheckoutService } from '../wallet/wallet-checkout.service';
 
 const RECOVERY_MIN_AGE_MS = 2 * 60 * 1000;
 const RECOVERY_FAILURE_CODE = 'INITIATION_RECOVERY_ABANDONED';
@@ -21,6 +25,7 @@ export class PaymentInitiationRecoveryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly recoveryPolicy: PaymentInitiationRecoveryPolicy,
+    @Optional() private readonly walletCheckout?: WalletCheckoutService,
   ) {}
 
   listCandidates(now = new Date()) {
@@ -28,10 +33,14 @@ export class PaymentInitiationRecoveryService {
 
     return this.prisma.paymentAttempt.findMany({
       where: {
-        status: PaymentAttemptStatus.CREATED,
         createdAt: {
           lte: cutoff,
         },
+        ...(this.walletCheckout
+          ? {
+              OR: [{ status: PaymentAttemptStatus.CREATED }, expiredWalletRedirect(now)],
+            }
+          : { status: PaymentAttemptStatus.CREATED }),
       },
       take: 100,
       orderBy: {
@@ -107,8 +116,19 @@ export class PaymentInitiationRecoveryService {
         throw new DomainException(ErrorCode.PAYMENT_NOT_FOUND, 'Payment attempt was not found.');
       }
 
-      if (attempt.status !== PaymentAttemptStatus.CREATED) {
+      const isExpiredWalletRedirect =
+        attempt.status === PaymentAttemptStatus.REDIRECTED &&
+        attempt.payment.order.walletAppliedToman > 0 &&
+        attempt.payment.order.reservationExpiresAt <= now &&
+        dto.resolution === PaymentInitiationRecoveryResolution.ABANDONED;
+      if (attempt.status !== PaymentAttemptStatus.CREATED && !isExpiredWalletRedirect) {
         return this.resolveExisting(attempt, dto);
+      }
+      if (isExpiredWalletRedirect && (dto.note?.trim().length ?? 0) < 3) {
+        throw new DomainException(
+          ErrorCode.PAYMENT_FAILED,
+          'ثبت نتیجهٔ استعلام درگاه برای آزادسازی اعتبار لازم است.',
+        );
       }
 
       const cutoff = new Date(now.getTime() - RECOVERY_MIN_AGE_MS);
@@ -148,7 +168,7 @@ export class PaymentInitiationRecoveryService {
         resolved = await transaction.paymentAttempt.updateMany({
           where: {
             id: attempt.id,
-            status: PaymentAttemptStatus.CREATED,
+            status: attempt.status,
             createdAt: {
               lte: cutoff,
             },
@@ -192,6 +212,9 @@ export class PaymentInitiationRecoveryService {
         dto.resolution === PaymentInitiationRecoveryResolution.ABANDONED
       )
         await releaseQuotaAfterFailedAttempt(transaction, attempt.payment.orderId);
+      if (dto.resolution === PaymentInitiationRecoveryResolution.ABANDONED) {
+        await this.walletCheckout?.releaseAfterFailure(transaction, attempt.payment.order);
+      }
 
       return transaction.paymentAttempt.findUniqueOrThrow({
         where: {

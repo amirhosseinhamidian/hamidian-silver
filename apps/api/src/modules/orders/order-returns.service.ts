@@ -4,7 +4,9 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
+import { lockOrderRowForUpdate } from '../../common/order-row-lock';
 import { isNonNegativeInt32 } from '../../common/int32';
 import { isNonNegativeTomanInt } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
@@ -16,6 +18,8 @@ import {
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
+import { WalletCheckoutService } from '../wallet/wallet-checkout.service';
+import { returnedLineCredit } from '../wallet/wallet-checkout';
 import { AuthorizeOrderReturnDto } from './dto/authorize-order-return.dto';
 import { CancelOrderReturnDto } from './dto/cancel-order-return.dto';
 import { CreateOrderReturnDto } from './dto/create-order-return.dto';
@@ -52,7 +56,10 @@ type CustomerOrderReturnRecord = Prisma.OrderReturnGetPayload<{
 
 @Injectable()
 export class OrderReturnsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly walletCheckout?: WalletCheckoutService,
+  ) {}
 
   async authorizeReturn(orderId: string, actorUserId: string, dto: AuthorizeOrderReturnDto) {
     const order = await this.prisma.order.findUnique({
@@ -271,6 +278,13 @@ export class OrderReturnsService {
     );
 
     return this.prisma.$transaction(async (transaction) => {
+      if (this.walletCheckout) {
+        const target = await transaction.orderReturn.findUnique({
+          where: { id: returnId },
+          select: { orderId: true },
+        });
+        if (target) await lockOrderRowForUpdate(transaction, target.orderId);
+      }
       const orderReturn = await transaction.orderReturn.findUnique({
         where: {
           id: returnId,
@@ -410,6 +424,32 @@ export class OrderReturnsService {
           item.orderItem,
           item.quantity,
           actorUserId,
+        );
+      }
+
+      if (this.walletCheckout) {
+        const amountToman = orderReturn.items.reduce(
+          (total, { orderItem, quantity }) =>
+            total +
+            returnedLineCredit(
+              orderItem.walletAppliedToman,
+              orderItem.quantity,
+              orderItem.returnedQuantity,
+              quantity,
+            ),
+          0,
+        );
+        await this.walletCheckout.restore(
+          transaction,
+          orderReturn.order,
+          amountToman,
+          `checkout:return:${orderReturn.id}`,
+        );
+        await this.walletCheckout.adjustPurchaseReward(
+          transaction,
+          orderReturn.order,
+          `checkout:reward-return:${orderReturn.id}`,
+          false,
         );
       }
 

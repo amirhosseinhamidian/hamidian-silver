@@ -98,9 +98,11 @@ export class ZarinpalPaymentGateway implements PaymentGateway {
       };
     }
 
+    const failureCode = this.getErrorCode(payload);
     return {
       success: false,
-      code: this.getErrorCode(payload),
+      code: failureCode,
+      ...(failureCode === '-51' ? { definitiveFailure: true as const } : {}),
       message: this.getErrorMessage(payload, 'Zarinpal could not verify the payment.'),
     };
   }

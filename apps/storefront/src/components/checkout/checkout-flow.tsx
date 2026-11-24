@@ -184,6 +184,7 @@ export function CheckoutFlow({
   const [cardToCardModalOpen, setCardToCardModalOpen] = useState(false);
   const [customerNote, setCustomerNote] = useState('');
   const [couponCode, setCouponCode] = useState('');
+  const [useWalletCredit, setUseWalletCredit] = useState(false);
   const [quote, setQuote] = useState<{ key: string; quote: CheckoutPriceQuote } | null>(null);
   const paymentIdempotencyKey = useRef<string | null>(null);
 
@@ -411,7 +412,11 @@ export function CheckoutFlow({
         };
     const base = buildCreateOrderBody(items, address, carrierId, customerNote);
     const coupon = couponCode.trim();
-    return { ...base, ...(promotionsAvailable && coupon ? { couponCode: coupon } : {}) };
+    return {
+      ...base,
+      ...(promotionsAvailable && coupon ? { couponCode: coupon } : {}),
+      ...(useWalletCredit ? { useWalletCredit: true } : {}),
+    };
   }
 
   async function submitCheckout(event: FormEvent<HTMLFormElement>) {
@@ -437,6 +442,7 @@ export function CheckoutFlow({
     try {
       let orderId = pendingOrderId;
       let orderNumber = completedOrderNumber;
+      let amountDueToman = pendingOrderTotalToman;
       if (!orderId) {
         let userAddressId = selectedAddress?.id;
         if (!userAddressId && saveAddress) {
@@ -452,7 +458,7 @@ export function CheckoutFlow({
         const quoteKey = JSON.stringify(orderBody);
         const agreedQuote = quote?.key === quoteKey ? quote.quote : null;
         if (
-          promotionsAvailable &&
+          (promotionsAvailable || useWalletCredit) &&
           (!agreedQuote || Date.parse(agreedQuote.expiresAt) <= Date.now())
         ) {
           phase = 'quote';
@@ -494,9 +500,16 @@ export function CheckoutFlow({
         if (!orderResponse.ok) {
           if (orderResponse.status === 401) setAuth({ status: 'anonymous', expired: true });
           const orderError = await readError(orderResponse);
-          if (orderError.code === 'ORDER_PRICE_QUOTE_CHANGED') {
+          if (
+            orderError.code === 'ORDER_PRICE_QUOTE_CHANGED' ||
+            orderError.code === 'WALLET_CREDIT_UNAVAILABLE'
+          ) {
             setQuote(null);
-            setCheckoutError('قیمت یا شرایط تخفیف تغییر کرده است. مبلغ را دوباره بررسی کنید.');
+            setCheckoutError(
+              useWalletCredit
+                ? 'قیمت، تخفیف یا اعتبار تغییر کرده است. مبلغ را دوباره بررسی کنید.'
+                : 'قیمت یا شرایط تخفیف تغییر کرده است. مبلغ را دوباره بررسی کنید.',
+            );
             return;
           }
           if (
@@ -528,6 +541,7 @@ export function CheckoutFlow({
         }
         orderId = order.id;
         orderNumber = order.orderNumber;
+        amountDueToman = order.grandTotalToman;
         void trackFunnelEvent(submittedOrderEvent(order));
         setPendingOrderId(order.id);
         setPendingOrderTotalToman(order.grandTotalToman);
@@ -558,7 +572,7 @@ export function CheckoutFlow({
         setCardToCardOrder({
           id: orderId,
           number: orderNumber ?? '',
-          amountToman: pendingOrderTotalToman ?? estimatedTotalToman,
+          amountToman: amountDueToman ?? estimatedTotalToman,
         });
         setCardToCardModalOpen(true);
         return;
@@ -577,7 +591,10 @@ export function CheckoutFlow({
       });
       if (!paymentResponse.ok) {
         const paymentError = await readError(paymentResponse);
-        if (paymentError.code === 'CAMPAIGN_QUOTA_UNAVAILABLE') {
+        if (
+          paymentError.code === 'CAMPAIGN_QUOTA_UNAVAILABLE' ||
+          paymentError.code === 'WALLET_CREDIT_UNAVAILABLE'
+        ) {
           setQuotaUnavailable(true);
           setCheckoutError(paymentError.message);
           return;
@@ -1077,6 +1094,20 @@ export function CheckoutFlow({
             )}
           </FormField>
         )}
+        {!pendingOrderId && (
+          <label className="mt-4 flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={useWalletCredit}
+              disabled={checkoutLoading}
+              onChange={(event) => {
+                setUseWalletCredit(event.currentTarget.checked);
+                setQuote(null);
+              }}
+            />
+            استفاده از اعتبار کیف پول
+          </label>
+        )}
       </section>
 
       <aside className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-12px_36px_rgb(17_17_17/0.1)] lg:sticky lg:inset-auto lg:top-20 lg:z-auto lg:h-fit lg:border lg:p-5 lg:shadow-none">
@@ -1098,6 +1129,16 @@ export function CheckoutFlow({
             <div className="flex items-center justify-between gap-4">
               <span>تخفیف {currentQuote.campaignName}</span>
               <span>{formatTomanPrice(currentQuote.discountTotalToman)}</span>
+            </div>
+          )}
+          {useWalletCredit && currentQuote && (
+            <div className="flex items-center justify-between gap-4" role="status">
+              <span>اعتبار کیف پول</span>
+              <span>
+                {currentQuote.walletAppliedToman > 0
+                  ? formatTomanPrice(currentQuote.walletAppliedToman)
+                  : 'برای این سفارش قابل استفاده نیست'}
+              </span>
             </div>
           )}
           <div className="flex items-center justify-between gap-4">
@@ -1162,7 +1203,7 @@ export function CheckoutFlow({
             >
               {priceChange
                 ? 'تأیید مبلغ جدید و پرداخت'
-                : promotionsAvailable && !pendingOrderId && !currentQuote
+                : (promotionsAvailable || useWalletCredit) && !pendingOrderId && !currentQuote
                   ? 'بررسی مبلغ نهایی'
                   : paymentMethod === 'card_to_card'
                     ? pendingOrderId

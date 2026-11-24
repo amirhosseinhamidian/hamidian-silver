@@ -99,6 +99,9 @@ export class CustomerOrderSummaryDto {
   merchandiseTotalToman!: number;
   platingTotalToman!: number;
   discountTotalToman!: number;
+
+  @ApiPropertyOptional({ description: 'Wallet credit included in the order snapshot.' })
+  walletAppliedToman?: number;
   shippingTotalToman!: number;
   taxTotalToman!: number;
   grandTotalToman!: number;

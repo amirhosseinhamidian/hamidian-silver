@@ -4547,6 +4547,314 @@
         ]
       }
     },
+    "/api/v1/wallet": {
+      "get": {
+        "operationId": "WalletController_balance_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletBalanceDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallet/admin/{userId}": {
+      "get": {
+        "operationId": "WalletController_adminBalance_v1",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletBalanceDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallet/admin/{userId}/ledger": {
+      "get": {
+        "operationId": "WalletController_history_v1",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletLedgerPageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallet/admin/{userId}/corrections": {
+      "post": {
+        "operationId": "WalletController_correct_v1",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalletCorrectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletOperationDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/reward-policies": {
+      "get": {
+        "operationId": "RewardPoliciesController_list_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardPolicyListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "RewardPolicies"
+        ]
+      },
+      "post": {
+        "operationId": "RewardPoliciesController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRewardPolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardPolicyDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "RewardPolicies"
+        ]
+      }
+    },
+    "/api/v1/reward-policies/active": {
+      "get": {
+        "operationId": "RewardPoliciesController_active_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveRewardPolicyDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "RewardPolicies"
+        ]
+      }
+    },
+    "/api/v1/reward-policies/{version}": {
+      "get": {
+        "operationId": "RewardPoliciesController_read_v1",
+        "parameters": [
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minimum": 1,
+              "maximum": 2147483647,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardPolicyDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "RewardPolicies"
+        ]
+      }
+    },
+    "/api/v1/reward-policies/simulation": {
+      "post": {
+        "operationId": "RewardPoliciesController_simulate_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RewardPolicySimulationRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardSimulationDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "RewardPolicies"
+        ]
+      }
+    },
+    "/api/v1/reward-policies/{version}/publish": {
+      "post": {
+        "operationId": "RewardPoliciesController_publish_v1",
+        "parameters": [
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minimum": 1,
+              "maximum": 2147483647,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardPolicyDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "RewardPolicies"
+        ]
+      }
+    },
     "/api/v1/guide/public/topics": {
       "get": {
         "operationId": "GuideController_listPublicTopics_v1",
@@ -9160,183 +9468,6 @@
         ]
       }
     },
-    "/api/v1/reward-policies": {
-      "get": {
-        "operationId": "RewardPoliciesController_list_v1",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 10000,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RewardPolicyListDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "RewardPolicies"
-        ]
-      },
-      "post": {
-        "operationId": "RewardPoliciesController_create_v1",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateRewardPolicyDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RewardPolicyDetailDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "RewardPolicies"
-        ]
-      }
-    },
-    "/api/v1/reward-policies/active": {
-      "get": {
-        "operationId": "RewardPoliciesController_active_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ActiveRewardPolicyDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "RewardPolicies"
-        ]
-      }
-    },
-    "/api/v1/reward-policies/{version}": {
-      "get": {
-        "operationId": "RewardPoliciesController_read_v1",
-        "parameters": [
-          {
-            "name": "version",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "minimum": 1,
-              "maximum": 2147483647,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RewardPolicyDetailDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "RewardPolicies"
-        ]
-      }
-    },
-    "/api/v1/reward-policies/simulation": {
-      "post": {
-        "operationId": "RewardPoliciesController_simulate_v1",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RewardPolicySimulationRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RewardSimulationDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "RewardPolicies"
-        ]
-      }
-    },
-    "/api/v1/reward-policies/{version}/publish": {
-      "post": {
-        "operationId": "RewardPoliciesController_publish_v1",
-        "parameters": [
-          {
-            "name": "version",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "minimum": 1,
-              "maximum": 2147483647,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RewardPolicyDetailDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "RewardPolicies"
-        ]
-      }
-    },
     "/api/v1/shipping/pricing/public": {
       "get": {
         "operationId": "ShippingController_getPublicPricing_v1",
@@ -11708,137 +11839,6 @@
         },
         "tags": [
           "AdminRoleManagement"
-        ]
-      }
-    },
-    "/api/v1/wallet": {
-      "get": {
-        "operationId": "WalletController_balance_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WalletBalanceDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Wallet"
-        ]
-      }
-    },
-    "/api/v1/wallet/admin/{userId}": {
-      "get": {
-        "operationId": "WalletController_adminBalance_v1",
-        "parameters": [
-          {
-            "name": "userId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WalletBalanceDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Wallet"
-        ]
-      }
-    },
-    "/api/v1/wallet/admin/{userId}/ledger": {
-      "get": {
-        "operationId": "WalletController_history_v1",
-        "parameters": [
-          {
-            "name": "userId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 10000,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WalletLedgerPageDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Wallet"
-        ]
-      }
-    },
-    "/api/v1/wallet/admin/{userId}/corrections": {
-      "post": {
-        "operationId": "WalletController_correct_v1",
-        "parameters": [
-          {
-            "name": "userId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WalletCorrectionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WalletOperationDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Wallet"
         ]
       }
     }
@@ -17991,6 +17991,828 @@
           }
         }
       },
+      "WalletBalanceDto": {
+        "type": "object",
+        "properties": {
+          "nextExpiryAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "pendingToman": {
+            "type": "number"
+          },
+          "availableToman": {
+            "type": "number"
+          },
+          "reservedToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "nextExpiryAt",
+          "pendingToman",
+          "availableToman",
+          "reservedToman"
+        ]
+      },
+      "WalletMovementDto": {
+        "type": "object",
+        "properties": {
+          "lotId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "originOrderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "enum": [
+              "PURCHASE",
+              "REFERRAL"
+            ],
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reservationId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "reservationOrderId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "fromBucket": {
+            "nullable": true,
+            "enum": [
+              "PENDING",
+              "AVAILABLE",
+              "RESERVED",
+              "CAPTURED",
+              "EXPIRED",
+              "REVOKED"
+            ],
+            "type": "string"
+          },
+          "toBucket": {
+            "enum": [
+              "PENDING",
+              "AVAILABLE",
+              "RESERVED",
+              "CAPTURED",
+              "EXPIRED",
+              "REVOKED"
+            ],
+            "type": "string"
+          },
+          "sourceKey": {
+            "type": "string"
+          },
+          "policyVersion": {
+            "type": "number"
+          },
+          "amountToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "lotId",
+          "originOrderId",
+          "source",
+          "expiresAt",
+          "reservationId",
+          "reservationOrderId",
+          "fromBucket",
+          "toBucket",
+          "sourceKey",
+          "policyVersion",
+          "amountToman"
+        ]
+      },
+      "WalletOperationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "enum": [
+              "GRANT",
+              "ACTIVATE",
+              "RESERVE",
+              "RELEASE",
+              "CAPTURE",
+              "EXPIRE",
+              "REVOKE_GRANT",
+              "REVERSE_CAPTURE"
+            ],
+            "type": "string"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actorUserId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "movements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletMovementDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "recordedAt",
+          "actorUserId",
+          "reason",
+          "movements"
+        ]
+      },
+      "WalletLedgerPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletOperationDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "hasMore"
+        ]
+      },
+      "WalletCorrectionDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "enum": [
+              "REVOKE_GRANT",
+              "REVERSE_CAPTURE"
+            ],
+            "type": "string"
+          },
+          "targetId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Lot ID for REVOKE_GRANT or reservation ID for REVERSE_CAPTURE."
+          },
+          "amountToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 250
+          }
+        },
+        "required": [
+          "requestId",
+          "kind",
+          "targetId",
+          "amountToman",
+          "reason"
+        ]
+      },
+      "RewardPolicyVersionDto": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestedEffectiveAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "publishedById": {
+            "type": "string",
+            "nullable": true
+          },
+          "effectiveAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "version": {
+            "type": "number"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "createdById": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "createdAt",
+          "requestedEffectiveAt",
+          "publishedAt",
+          "publishedById",
+          "effectiveAt",
+          "version",
+          "enabled",
+          "createdById"
+        ]
+      },
+      "RewardPolicyListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RewardPolicyVersionDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "hasMore"
+        ]
+      },
+      "RewardEligibilityDto": {
+        "type": "object",
+        "properties": {
+          "allowCoupon": {
+            "type": "boolean"
+          },
+          "allowedCategoryIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "excludedCategoryIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "excludedProductIds": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "allowCoupon",
+          "allowedCategoryIds",
+          "excludedCategoryIds",
+          "excludedProductIds"
+        ]
+      },
+      "RewardBudgetDto": {
+        "type": "object",
+        "properties": {
+          "rewardPerOrderToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "rewardPerCustomerPeriodToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "rewardPerPeriodToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "incentivesPerOrderToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "incentivesPerCustomerPeriodToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "incentivesPerPeriodToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "rewardPerOrderToman",
+          "rewardPerCustomerPeriodToman",
+          "rewardPerPeriodToman",
+          "incentivesPerOrderToman",
+          "incentivesPerCustomerPeriodToman",
+          "incentivesPerPeriodToman"
+        ]
+      },
+      "RewardGrantRuleDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "maxLength": 40
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "priority": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "minimumToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "maximumExclusiveToman": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "capToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "purchaseRank": {
+            "enum": [
+              "ANY",
+              "FIRST",
+              "SECOND",
+              "THIRD_OR_LATER"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "enum": [
+              "PERCENT",
+              "FIXED"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "code",
+          "enabled",
+          "priority",
+          "minimumToman",
+          "capToman",
+          "purchaseRank",
+          "method",
+          "value"
+        ]
+      },
+      "RewardRedemptionBandDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "maxLength": 40
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "priority": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "minimumToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "maximumExclusiveToman": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "capToman": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "rateBps": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        },
+        "required": [
+          "code",
+          "enabled",
+          "priority",
+          "minimumToman",
+          "capToman",
+          "rateBps"
+        ]
+      },
+      "RewardPolicyDefinitionDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "expiryDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 3650
+          },
+          "grantEligibility": {
+            "$ref": "#/components/schemas/RewardEligibilityDto"
+          },
+          "redemptionEligibility": {
+            "$ref": "#/components/schemas/RewardEligibilityDto"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/RewardBudgetDto"
+          },
+          "grantRules": {
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RewardGrantRuleDto"
+            }
+          },
+          "redemptionBands": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RewardRedemptionBandDto"
+            }
+          }
+        },
+        "required": [
+          "enabled",
+          "expiryDays",
+          "grantEligibility",
+          "redemptionEligibility",
+          "budget",
+          "grantRules",
+          "redemptionBands"
+        ]
+      },
+      "RewardPolicyDetailDto": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestedEffectiveAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "publishedById": {
+            "type": "string",
+            "nullable": true
+          },
+          "effectiveAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/RewardPolicyDefinitionDto"
+          },
+          "version": {
+            "type": "number"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "createdById": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "createdAt",
+          "requestedEffectiveAt",
+          "publishedAt",
+          "publishedById",
+          "effectiveAt",
+          "definition",
+          "version",
+          "enabled",
+          "createdById"
+        ]
+      },
+      "ActiveRewardPolicyDto": {
+        "type": "object",
+        "properties": {
+          "policy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RewardPolicyDetailDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "policy"
+        ]
+      },
+      "CreateRewardPolicyDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestedEffectiveAt": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?(?:Z|[+-]\\d{2}:\\d{2})$",
+            "format": "date-time"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/RewardPolicyDefinitionDto"
+          }
+        },
+        "required": [
+          "requestId",
+          "definition"
+        ]
+      },
+      "RewardSampleLineDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "merchandiseToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "directDiscountToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "settledCreditToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "refundedCashToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "productId",
+          "categoryIds",
+          "merchandiseToman",
+          "directDiscountToman",
+          "settledCreditToman",
+          "refundedCashToman"
+        ]
+      },
+      "RewardPeriodUsageDto": {
+        "type": "object",
+        "properties": {
+          "customerRewardsToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "periodRewardsToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "customerIncentivesToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "periodIncentivesToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "customerRewardsToman",
+          "periodRewardsToman",
+          "customerIncentivesToman",
+          "periodIncentivesToman"
+        ]
+      },
+      "RewardPolicySimulationRequestDto": {
+        "type": "object",
+        "properties": {
+          "lines": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RewardSampleLineDto"
+            }
+          },
+          "outcome": {
+            "enum": [
+              "UNPAID",
+              "PAID",
+              "CANCELLED",
+              "FULLY_RETURNED"
+            ],
+            "type": "string"
+          },
+          "previousCompletedPurchases": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "couponApplied": {
+            "type": "boolean"
+          },
+          "shippingDiscountToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "otherOrderIncentivesToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "availableCreditToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "campaignRedemptionCapToman": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "usage": {
+            "$ref": "#/components/schemas/RewardPeriodUsageDto"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "lines",
+          "outcome",
+          "previousCompletedPurchases",
+          "couponApplied",
+          "shippingDiscountToman",
+          "otherOrderIncentivesToman",
+          "availableCreditToman",
+          "usage",
+          "version"
+        ]
+      },
+      "RewardSimulationDto": {
+        "type": "object",
+        "properties": {
+          "purchaseRank": {
+            "enum": [
+              "FIRST",
+              "SECOND",
+              "THIRD_OR_LATER"
+            ],
+            "type": "string"
+          },
+          "grantRuleCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "redemptionBandCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "version": {
+            "type": "number"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "rewardBaseToman": {
+            "type": "number"
+          },
+          "redemptionBaseToman": {
+            "type": "number"
+          },
+          "calculatedRewardToman": {
+            "type": "number"
+          },
+          "estimatedRewardToman": {
+            "type": "number"
+          },
+          "maxRedemptionToman": {
+            "type": "number"
+          },
+          "existingOrderIncentivesToman": {
+            "type": "number"
+          },
+          "remainingRewardBudgetToman": {
+            "type": "number"
+          },
+          "existingIncentivesExceedLimit": {
+            "type": "boolean"
+          },
+          "expiryDays": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "purchaseRank",
+          "grantRuleCode",
+          "redemptionBandCode",
+          "version",
+          "enabled",
+          "rewardBaseToman",
+          "redemptionBaseToman",
+          "calculatedRewardToman",
+          "estimatedRewardToman",
+          "maxRedemptionToman",
+          "existingOrderIncentivesToman",
+          "remainingRewardBudgetToman",
+          "existingIncentivesExceedLimit",
+          "expiryDays"
+        ]
+      },
       "GuideMediaDto": {
         "type": "object",
         "properties": {
@@ -20846,6 +21668,10 @@
       "CreateOrderDto": {
         "type": "object",
         "properties": {
+          "useWalletCredit": {
+            "type": "boolean",
+            "description": "Apply the maximum eligible wallet credit."
+          },
           "attribution": {
             "$ref": "#/components/schemas/SessionAttributionDto"
           },
@@ -21190,6 +22016,10 @@
             ],
             "type": "string"
           },
+          "walletAppliedToman": {
+            "type": "number",
+            "description": "Wallet credit included in the order snapshot."
+          },
           "payment": {
             "nullable": true,
             "type": "object",
@@ -21462,6 +22292,10 @@
               "EXPIRED"
             ],
             "type": "string"
+          },
+          "walletAppliedToman": {
+            "type": "number",
+            "description": "Wallet credit included in the order snapshot."
           },
           "payment": {
             "nullable": true,
@@ -22388,615 +23222,6 @@
         "required": [
           "id",
           "deletedAt"
-        ]
-      },
-      "RewardPolicyVersionDto": {
-        "type": "object",
-        "properties": {
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "requestedEffectiveAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "publishedAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "publishedById": {
-            "type": "string",
-            "nullable": true
-          },
-          "effectiveAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "version": {
-            "type": "number"
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "createdById": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "createdAt",
-          "requestedEffectiveAt",
-          "publishedAt",
-          "publishedById",
-          "effectiveAt",
-          "version",
-          "enabled",
-          "createdById"
-        ]
-      },
-      "RewardPolicyListDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RewardPolicyVersionDto"
-            }
-          },
-          "page": {
-            "type": "number"
-          },
-          "hasMore": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "items",
-          "page",
-          "hasMore"
-        ]
-      },
-      "RewardEligibilityDto": {
-        "type": "object",
-        "properties": {
-          "allowCoupon": {
-            "type": "boolean"
-          },
-          "allowedCategoryIds": {
-            "maxItems": 50,
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "excludedCategoryIds": {
-            "maxItems": 50,
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "excludedProductIds": {
-            "maxItems": 100,
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "allowCoupon",
-          "allowedCategoryIds",
-          "excludedCategoryIds",
-          "excludedProductIds"
-        ]
-      },
-      "RewardBudgetDto": {
-        "type": "object",
-        "properties": {
-          "rewardPerOrderToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "rewardPerCustomerPeriodToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "rewardPerPeriodToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "incentivesPerOrderToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "incentivesPerCustomerPeriodToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "incentivesPerPeriodToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          }
-        },
-        "required": [
-          "rewardPerOrderToman",
-          "rewardPerCustomerPeriodToman",
-          "rewardPerPeriodToman",
-          "incentivesPerOrderToman",
-          "incentivesPerCustomerPeriodToman",
-          "incentivesPerPeriodToman"
-        ]
-      },
-      "RewardGrantRuleDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
-            "maxLength": 40
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "priority": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "minimumToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "maximumExclusiveToman": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 1,
-            "maximum": 2147483647
-          },
-          "capToman": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 2147483647
-          },
-          "purchaseRank": {
-            "enum": [
-              "ANY",
-              "FIRST",
-              "SECOND",
-              "THIRD_OR_LATER"
-            ],
-            "type": "string"
-          },
-          "method": {
-            "enum": [
-              "PERCENT",
-              "FIXED"
-            ],
-            "type": "string"
-          },
-          "value": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 2147483647
-          }
-        },
-        "required": [
-          "code",
-          "enabled",
-          "priority",
-          "minimumToman",
-          "capToman",
-          "purchaseRank",
-          "method",
-          "value"
-        ]
-      },
-      "RewardRedemptionBandDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
-            "maxLength": 40
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "priority": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "minimumToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "maximumExclusiveToman": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 1,
-            "maximum": 2147483647
-          },
-          "capToman": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 2147483647
-          },
-          "rateBps": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 10000
-          }
-        },
-        "required": [
-          "code",
-          "enabled",
-          "priority",
-          "minimumToman",
-          "capToman",
-          "rateBps"
-        ]
-      },
-      "RewardPolicyDefinitionDto": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean"
-          },
-          "expiryDays": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 3650
-          },
-          "grantEligibility": {
-            "$ref": "#/components/schemas/RewardEligibilityDto"
-          },
-          "redemptionEligibility": {
-            "$ref": "#/components/schemas/RewardEligibilityDto"
-          },
-          "budget": {
-            "$ref": "#/components/schemas/RewardBudgetDto"
-          },
-          "grantRules": {
-            "maxItems": 30,
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RewardGrantRuleDto"
-            }
-          },
-          "redemptionBands": {
-            "maxItems": 20,
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RewardRedemptionBandDto"
-            }
-          }
-        },
-        "required": [
-          "enabled",
-          "expiryDays",
-          "grantEligibility",
-          "redemptionEligibility",
-          "budget",
-          "grantRules",
-          "redemptionBands"
-        ]
-      },
-      "RewardPolicyDetailDto": {
-        "type": "object",
-        "properties": {
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "requestedEffectiveAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "publishedAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "publishedById": {
-            "type": "string",
-            "nullable": true
-          },
-          "effectiveAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "definition": {
-            "$ref": "#/components/schemas/RewardPolicyDefinitionDto"
-          },
-          "version": {
-            "type": "number"
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "createdById": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "createdAt",
-          "requestedEffectiveAt",
-          "publishedAt",
-          "publishedById",
-          "effectiveAt",
-          "definition",
-          "version",
-          "enabled",
-          "createdById"
-        ]
-      },
-      "ActiveRewardPolicyDto": {
-        "type": "object",
-        "properties": {
-          "policy": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/RewardPolicyDetailDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "policy"
-        ]
-      },
-      "CreateRewardPolicyDto": {
-        "type": "object",
-        "properties": {
-          "requestId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "requestedEffectiveAt": {
-            "type": "string",
-            "nullable": true,
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?(?:Z|[+-]\\d{2}:\\d{2})$",
-            "format": "date-time"
-          },
-          "definition": {
-            "$ref": "#/components/schemas/RewardPolicyDefinitionDto"
-          }
-        },
-        "required": [
-          "requestId",
-          "definition"
-        ]
-      },
-      "RewardSampleLineDto": {
-        "type": "object",
-        "properties": {
-          "productId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "categoryIds": {
-            "maxItems": 50,
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "merchandiseToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "directDiscountToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "settledCreditToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "refundedCashToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          }
-        },
-        "required": [
-          "productId",
-          "categoryIds",
-          "merchandiseToman",
-          "directDiscountToman",
-          "settledCreditToman",
-          "refundedCashToman"
-        ]
-      },
-      "RewardPeriodUsageDto": {
-        "type": "object",
-        "properties": {
-          "customerRewardsToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "periodRewardsToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "customerIncentivesToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "periodIncentivesToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          }
-        },
-        "required": [
-          "customerRewardsToman",
-          "periodRewardsToman",
-          "customerIncentivesToman",
-          "periodIncentivesToman"
-        ]
-      },
-      "RewardPolicySimulationRequestDto": {
-        "type": "object",
-        "properties": {
-          "lines": {
-            "minItems": 1,
-            "maxItems": 50,
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RewardSampleLineDto"
-            }
-          },
-          "outcome": {
-            "enum": [
-              "UNPAID",
-              "PAID",
-              "CANCELLED",
-              "FULLY_RETURNED"
-            ],
-            "type": "string"
-          },
-          "previousCompletedPurchases": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "couponApplied": {
-            "type": "boolean"
-          },
-          "shippingDiscountToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "otherOrderIncentivesToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "availableCreditToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "campaignRedemptionCapToman": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 0,
-            "maximum": 2147483647
-          },
-          "usage": {
-            "$ref": "#/components/schemas/RewardPeriodUsageDto"
-          },
-          "version": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 2147483647
-          }
-        },
-        "required": [
-          "lines",
-          "outcome",
-          "previousCompletedPurchases",
-          "couponApplied",
-          "shippingDiscountToman",
-          "otherOrderIncentivesToman",
-          "availableCreditToman",
-          "usage",
-          "version"
-        ]
-      },
-      "RewardSimulationDto": {
-        "type": "object",
-        "properties": {
-          "purchaseRank": {
-            "enum": [
-              "FIRST",
-              "SECOND",
-              "THIRD_OR_LATER"
-            ],
-            "type": "string"
-          },
-          "grantRuleCode": {
-            "type": "string",
-            "nullable": true
-          },
-          "redemptionBandCode": {
-            "type": "string",
-            "nullable": true
-          },
-          "version": {
-            "type": "number"
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "rewardBaseToman": {
-            "type": "number"
-          },
-          "redemptionBaseToman": {
-            "type": "number"
-          },
-          "calculatedRewardToman": {
-            "type": "number"
-          },
-          "estimatedRewardToman": {
-            "type": "number"
-          },
-          "maxRedemptionToman": {
-            "type": "number"
-          },
-          "existingOrderIncentivesToman": {
-            "type": "number"
-          },
-          "remainingRewardBudgetToman": {
-            "type": "number"
-          },
-          "existingIncentivesExceedLimit": {
-            "type": "boolean"
-          },
-          "expiryDays": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "purchaseRank",
-          "grantRuleCode",
-          "redemptionBandCode",
-          "version",
-          "enabled",
-          "rewardBaseToman",
-          "redemptionBaseToman",
-          "calculatedRewardToman",
-          "estimatedRewardToman",
-          "maxRedemptionToman",
-          "existingOrderIncentivesToman",
-          "remainingRewardBudgetToman",
-          "existingIncentivesExceedLimit",
-          "expiryDays"
         ]
       },
       "ShippingPricingSettingsDto": {
@@ -26822,219 +27047,6 @@
         },
         "required": [
           "permissionCodes"
-        ]
-      },
-      "WalletBalanceDto": {
-        "type": "object",
-        "properties": {
-          "nextExpiryAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "pendingToman": {
-            "type": "number"
-          },
-          "availableToman": {
-            "type": "number"
-          },
-          "reservedToman": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "nextExpiryAt",
-          "pendingToman",
-          "availableToman",
-          "reservedToman"
-        ]
-      },
-      "WalletMovementDto": {
-        "type": "object",
-        "properties": {
-          "lotId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "originOrderId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "source": {
-            "enum": [
-              "PURCHASE",
-              "REFERRAL"
-            ],
-            "type": "string"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "reservationId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "reservationOrderId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "fromBucket": {
-            "nullable": true,
-            "enum": [
-              "PENDING",
-              "AVAILABLE",
-              "RESERVED",
-              "CAPTURED",
-              "EXPIRED",
-              "REVOKED"
-            ],
-            "type": "string"
-          },
-          "toBucket": {
-            "enum": [
-              "PENDING",
-              "AVAILABLE",
-              "RESERVED",
-              "CAPTURED",
-              "EXPIRED",
-              "REVOKED"
-            ],
-            "type": "string"
-          },
-          "sourceKey": {
-            "type": "string"
-          },
-          "policyVersion": {
-            "type": "number"
-          },
-          "amountToman": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "lotId",
-          "originOrderId",
-          "source",
-          "expiresAt",
-          "reservationId",
-          "reservationOrderId",
-          "fromBucket",
-          "toBucket",
-          "sourceKey",
-          "policyVersion",
-          "amountToman"
-        ]
-      },
-      "WalletOperationDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "kind": {
-            "enum": [
-              "GRANT",
-              "ACTIVATE",
-              "RESERVE",
-              "RELEASE",
-              "CAPTURE",
-              "EXPIRE",
-              "REVOKE_GRANT",
-              "REVERSE_CAPTURE"
-            ],
-            "type": "string"
-          },
-          "recordedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "actorUserId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "reason": {
-            "type": "string",
-            "nullable": true
-          },
-          "movements": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WalletMovementDto"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "recordedAt",
-          "actorUserId",
-          "reason",
-          "movements"
-        ]
-      },
-      "WalletLedgerPageDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WalletOperationDto"
-            }
-          },
-          "page": {
-            "type": "number"
-          },
-          "hasMore": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "items",
-          "page",
-          "hasMore"
-        ]
-      },
-      "WalletCorrectionDto": {
-        "type": "object",
-        "properties": {
-          "requestId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "kind": {
-            "enum": [
-              "REVOKE_GRANT",
-              "REVERSE_CAPTURE"
-            ],
-            "type": "string"
-          },
-          "targetId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Lot ID for REVOKE_GRANT or reservation ID for REVERSE_CAPTURE."
-          },
-          "amountToman": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 2147483647
-          },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 250
-          }
-        },
-        "required": [
-          "requestId",
-          "kind",
-          "targetId",
-          "amountToman",
-          "reason"
         ]
       }
     }

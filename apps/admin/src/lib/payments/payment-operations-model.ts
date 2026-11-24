@@ -13,6 +13,7 @@ export type PaymentOperationsSummary = Readonly<{
 export type PaymentInitiationCandidate = Readonly<{
   id: string;
   provider: string;
+  status?: string;
   amountToman: number;
   createdAt: string;
   updatedAt: string;
@@ -146,6 +147,7 @@ function parseInitiationCandidate(value: unknown): PaymentInitiationCandidate | 
   const order = record(payment?.order);
   const id = text(source?.id);
   const provider = text(source?.provider);
+  const attemptStatus = text(source?.status);
   const amountToman = number(source?.amountToman);
   const createdAt = date(source?.createdAt);
   const updatedAt = date(source?.updatedAt);
@@ -176,6 +178,7 @@ function parseInitiationCandidate(value: unknown): PaymentInitiationCandidate | 
   return {
     id,
     provider,
+    ...(attemptStatus ? { status: attemptStatus } : {}),
     amountToman,
     createdAt,
     updatedAt,

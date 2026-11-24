@@ -211,76 +211,86 @@ describe('CheckoutFlow price integrity', () => {
     expect(clearCart).not.toHaveBeenCalled();
   });
 
-  it('shows the quoted coupon total before creating an order and asks for a fresh quote on conflict', async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
-      const url = String(input);
-      if (url === '/api/auth/me') return jsonResponse({ phone: '09120000000' });
-      if (url === '/api/profile/addresses') {
-        return jsonResponse([
-          {
-            id: '33333333-3333-4333-8333-333333333333',
-            title: 'خانه',
-            recipientName: 'خریدار',
-            phone: '09120000000',
-            province: 'تهران',
-            city: 'تهران',
-            addressLine: 'خیابان اصلی',
-            postalCode: '1234567890',
-            isDefault: true,
-          },
-        ]);
-      }
-      if (url === '/api/checkout/payment-gateways') {
-        return jsonResponse([
-          { provider: 'irandargah', displayName: 'ایران‌درگاه', sortOrder: 10 },
-        ]);
-      }
-      if (url === '/api/checkout/card-to-card') return jsonResponse({ enabled: false });
-      if (url === '/api/checkout/price-quote') {
-        return jsonResponse({
-          quoteToken: 'signed-quote',
-          expiresAt: new Date(Date.now() + 60_000).toISOString(),
-          merchandiseTotalToman: 800_000,
-          platingTotalToman: 0,
-          discountTotalToman: 100_000,
-          shippingTotalToman: 0,
-          shippingDiscountToman: 0,
-          walletAppliedToman: 0,
-          payableToman: 700_000,
-          campaignName: 'خرید زمستان',
+  it.each(['coupon', 'wallet'] as const)(
+    'shows the quoted %s total before creating an order and asks for a fresh quote on conflict',
+    async (pricing) => {
+      const useWallet = pricing === 'wallet';
+      const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/auth/me') return jsonResponse({ phone: '09120000000' });
+        if (url === '/api/profile/addresses') {
+          return jsonResponse([
+            {
+              id: '33333333-3333-4333-8333-333333333333',
+              title: 'خانه',
+              recipientName: 'خریدار',
+              phone: '09120000000',
+              province: 'تهران',
+              city: 'تهران',
+              addressLine: 'خیابان اصلی',
+              postalCode: '1234567890',
+              isDefault: true,
+            },
+          ]);
+        }
+        if (url === '/api/checkout/payment-gateways') {
+          return jsonResponse([
+            { provider: 'irandargah', displayName: 'ایران‌درگاه', sortOrder: 10 },
+          ]);
+        }
+        if (url === '/api/checkout/card-to-card') return jsonResponse({ enabled: false });
+        if (url === '/api/checkout/price-quote') {
+          return jsonResponse({
+            quoteToken: 'signed-quote',
+            expiresAt: new Date(Date.now() + 60_000).toISOString(),
+            merchandiseTotalToman: 800_000,
+            platingTotalToman: 0,
+            discountTotalToman: useWallet ? 0 : 100_000,
+            shippingTotalToman: 0,
+            shippingDiscountToman: 0,
+            walletAppliedToman: useWallet ? 100_000 : 0,
+            payableToman: 700_000,
+            campaignName: useWallet ? null : 'خرید زمستان',
+          });
+        }
+        if (url === '/api/checkout/order') {
+          return jsonResponse(
+            { error: { code: 'ORDER_PRICE_QUOTE_CHANGED', message: 'Quote expired.' } },
+            409,
+          );
+        }
+        throw new Error('Unexpected request.');
+      });
+      vi.stubGlobal('fetch', fetchMock);
+      render(<CheckoutFlow shippingOptions={shippingOptions} promotionsAvailable={!useWallet} />);
+      await screen.findByText('آدرس پیش‌فرض');
+      await screen.findByText('پرداخت امن و آنلاین از طریق ایران‌درگاه');
+      if (useWallet) {
+        fireEvent.click(screen.getByRole('checkbox', { name: 'استفاده از اعتبار کیف پول' }));
+      } else {
+        fireEvent.change(screen.getByRole('textbox', { name: 'کد تخفیف' }), {
+          target: { value: 'WINTER' },
         });
       }
-      if (url === '/api/checkout/order') {
-        return jsonResponse(
-          { error: { code: 'ORDER_PRICE_QUOTE_CHANGED', message: 'Quote expired.' } },
-          409,
-        );
-      }
-      throw new Error('Unexpected request.');
-    });
-    vi.stubGlobal('fetch', fetchMock);
-    render(<CheckoutFlow shippingOptions={shippingOptions} promotionsAvailable />);
-    await screen.findByText('آدرس پیش‌فرض');
-    await screen.findByText('پرداخت امن و آنلاین از طریق ایران‌درگاه');
-    fireEvent.change(screen.getByRole('textbox', { name: 'کد تخفیف' }), {
-      target: { value: 'WINTER' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'بررسی مبلغ نهایی' }));
-    expect(await screen.findByText(formatTomanPrice(700_000))).toBeInTheDocument();
-    expect(fetchMock.mock.calls.some(([input]) => String(input) === '/api/checkout/order')).toBe(
-      false,
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت' }));
-    expect(await screen.findByText(/قیمت یا شرایط تخفیف تغییر کرده/)).toBeInTheDocument();
-    const call = fetchMock.mock.calls.find(([input]) => String(input) === '/api/checkout/order');
-    expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({
-      quoteToken: 'signed-quote',
-      couponCode: 'WINTER',
-    });
-    expect(fetchMock.mock.calls.some(([input]) => String(input) === '/api/checkout/payment')).toBe(
-      false,
-    );
-  });
+      fireEvent.click(screen.getByRole('button', { name: 'بررسی مبلغ نهایی' }));
+      expect(await screen.findByText(formatTomanPrice(700_000))).toBeInTheDocument();
+      expect(fetchMock.mock.calls.some(([input]) => String(input) === '/api/checkout/order')).toBe(
+        false,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش و پرداخت' }));
+      expect(
+        await screen.findByText(useWallet ? /اعتبار تغییر کرده/ : /قیمت یا شرایط تخفیف تغییر کرده/),
+      ).toBeInTheDocument();
+      const call = fetchMock.mock.calls.find(([input]) => String(input) === '/api/checkout/order');
+      expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({
+        quoteToken: 'signed-quote',
+        ...(useWallet ? { useWalletCredit: true } : { couponCode: 'WINTER' }),
+      });
+      expect(
+        fetchMock.mock.calls.some(([input]) => String(input) === '/api/checkout/payment'),
+      ).toBe(false);
+    },
+  );
 
   it('requires a cart review when a stored variant was deleted or its stock changed', async () => {
     for (const response of [

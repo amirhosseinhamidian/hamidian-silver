@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { DomainException } from '../../common/errors/domain-exception';
 
 import { ErrorCode } from '../../common/errors/error-codes';
+import { lockOrderRowForUpdate } from '../../common/order-row-lock';
 import { randomUUID } from 'node:crypto';
 import { calculatePlatingPriceToman } from '../../common/plating-price';
 import { isNonNegativeTomanInt } from '../../common/toman';
@@ -33,6 +34,8 @@ import { NotificationOutboxService } from '../notifications/notification-outbox.
 import { ShippingPricingService } from '../shipping/shipping-pricing.service';
 import { ShippingCarriersService } from '../shipping/shipping-carriers.service';
 import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
+import { WalletCheckoutService } from '../wallet/wallet-checkout.service';
+import { allocateCheckoutDiscount } from '../wallet/wallet-checkout';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderAddressDto, CreateOrderDto, CreateOrderItemDto } from './dto/create-order.dto';
 import { AdminListOrdersQueryDto, ListOrdersQueryDto } from './dto/list-orders-query.dto';
@@ -149,6 +152,7 @@ const CUSTOMER_ORDER_LIST_SELECT = {
   merchandiseTotalToman: true,
   platingTotalToman: true,
   discountTotalToman: true,
+  walletAppliedToman: true,
   shippingTotalToman: true,
   shippingCarrierNameSnapshot: true,
   shippingCarrierTrackingUrlSnapshot: true,
@@ -402,13 +406,15 @@ export class OrdersService {
     @Optional() private readonly shippingCarriers?: ShippingCarriersService,
     @Optional() private readonly outbox?: NotificationOutboxService,
     @Optional() private readonly promotions?: PromotionsService,
+    @Optional() private readonly walletCheckout?: WalletCheckoutService,
   ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
     this.assertUniqueItemSelections(dto.items);
     const customerNote = dto.customerNote?.trim() || null;
     const quote = dto.quoteToken ? parseQuoteToken(dto.quoteToken) : null;
-    if ((dto.quoteToken && !quote) || (dto.couponCode && !quote)) throw this.quoteChanged();
+    if ((dto.quoteToken || dto.couponCode || dto.useWalletCredit) && !quote)
+      throw this.quoteChanged();
     const tokenHash = dto.quoteToken ? quoteTokenHash(dto.quoteToken) : null;
 
     const order = await this.prisma.$transaction(async (transaction) => {
@@ -439,7 +445,7 @@ export class OrdersService {
         throw new BadRequestException('No active default warehouse is configured.');
       }
 
-      const { preparedItems, shippingSelection, totals, promotion, binding } =
+      const { preparedItems, lines, shippingSelection, totals, promotion, wallet, binding } =
         await this.priceOrder(transaction, userId, dto, shippingAddress, Boolean(quote));
       if (
         quote &&
@@ -464,6 +470,7 @@ export class OrdersService {
       );
 
       const campaignProducts = new Set(promotion?.rule.eligibleProductIds);
+      const discounts = allocateCheckoutDiscount(lines, promotion);
       const order = await transaction.order.create({
         data: {
           id: orderId,
@@ -476,6 +483,7 @@ export class OrdersService {
           shippingTotalToman,
           ...shippingSelection.snapshot,
           grandTotalToman,
+          ...(wallet ? { walletAppliedToman: wallet.amountToman } : {}),
           ...(promotion?.quotaAllocations?.length
             ? {
                 campaignQuotaRestricted: true,
@@ -496,12 +504,22 @@ export class OrdersService {
                       ...totals,
                       baseShippingToman: shippingSelection.costToman,
                       rule: promotion?.rule ?? null,
-                      items: preparedItems.map((item) => ({
+                      ...(wallet
+                        ? {
+                            walletPolicyVersion: wallet.policyVersion,
+                            walletBandCode: wallet.bandCode,
+                          }
+                        : {}),
+                      items: preparedItems.map((item, index) => ({
                         variantId: item.variantId,
                         quantity: item.quantity,
                         unitSalePriceToman: item.unitSalePriceToman,
                         unitPlatingPriceToman: item.unitPlatingPriceToman,
                         platingType: item.platingType ?? null,
+                        productId: item.productId,
+                        categoryIds: lines[index].categoryIds,
+                        directDiscountToman: discounts[index],
+                        ...(wallet ? { walletAppliedToman: wallet.lineAmounts[index] } : {}),
                       })),
                     },
                   },
@@ -516,7 +534,7 @@ export class OrdersService {
             create: shippingAddress,
           },
           items: {
-            create: preparedItems.map((item) => ({
+            create: preparedItems.map((item, index) => ({
               variantId: item.variantId,
               quantity: item.quantity,
               productNameSnapshot: item.productNameSnapshot,
@@ -543,6 +561,7 @@ export class OrdersService {
               platingLeadTimeDays: item.platingLeadTimeDays,
               unitWeightGrams: item.unitWeightGrams,
               lineTotalToman: item.lineTotalToman,
+              ...(wallet ? { walletAppliedToman: wallet.lineAmounts[index] } : {}),
             })),
           },
         },
@@ -561,6 +580,17 @@ export class OrdersService {
         },
       });
 
+      if (wallet) {
+        await this.walletCheckout?.reserve(
+          transaction,
+          {
+            id: order.id,
+            userId,
+            walletAppliedToman: wallet.amountToman,
+          },
+          `checkout:order:${order.id}`,
+        );
+      }
       await this.reserveInventory(transaction, warehouse.id, order.id, preparedItems, userId);
 
       return transaction.order.findUniqueOrThrow({
@@ -733,12 +763,22 @@ export class OrdersService {
     const promotion = usePromotions
       ? await this.promotions?.apply(tx, lines, baseShipping, new Date(), coupon, userId)
       : null;
-    const totals = this.promotionTotals(
+    const beforeWallet = this.promotionTotals(
       merchandiseTotalToman,
       platingTotalToman,
       baseShipping,
       promotion,
     );
+    const wallet = dto.useWalletCredit
+      ? await this.walletCheckout?.quote(tx, userId, lines, beforeWallet.payableToman, promotion)
+      : null;
+    const totals = wallet
+      ? {
+          ...beforeWallet,
+          walletAppliedToman: wallet.amountToman,
+          payableToman: beforeWallet.payableToman - wallet.amountToman,
+        }
+      : beforeWallet;
     const binding = {
       userId,
       address,
@@ -747,6 +787,7 @@ export class OrdersService {
       shippingSelection,
       totals,
       promotion,
+      ...(dto.useWalletCredit ? { wallet: wallet ?? null } : {}),
       items: preparedItems.map(
         ({ variantId, quantity, platingType, unitSalePriceToman, unitPlatingPriceToman }) => ({
           variantId,
@@ -757,7 +798,7 @@ export class OrdersService {
         }),
       ),
     };
-    return { preparedItems, shippingSelection, promotion, totals, binding };
+    return { preparedItems, lines, shippingSelection, promotion, totals, wallet, binding };
   }
 
   private promotionTotals(
@@ -1223,6 +1264,16 @@ export class OrdersService {
         );
       }
 
+      if (order.walletAppliedToman && this.walletCheckout) {
+        await lockOrderRowForUpdate(transaction, order.id);
+        if (await this.walletCheckout.hasOpenPayment(transaction, order.id)) {
+          throw new DomainException(
+            ErrorCode.ORDER_CANNOT_CANCEL,
+            'نتیجهٔ پرداخت در حال بررسی است. پس از مشخص شدن نتیجه می‌توانید سفارش را لغو کنید.',
+          );
+        }
+      }
+
       const cancelledAt = new Date();
       const claimed = await transaction.order.updateMany({
         where: {
@@ -1248,6 +1299,7 @@ export class OrdersService {
       }
 
       if (order.campaignQuotaRestricted) await releaseCampaignQuota(transaction, order.id);
+      await this.walletCheckout?.release(transaction, order);
       const quantitiesByVariant = await resolveVariantInventoryRequirements(
         transaction,
         order.items,

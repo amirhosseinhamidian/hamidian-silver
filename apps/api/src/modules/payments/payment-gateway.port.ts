@@ -29,6 +29,7 @@ export type VerifyGatewayPaymentResult =
       success: false;
       code?: string;
       message?: string;
+      definitiveFailure?: true;
     };
 
 export interface PaymentGateway {

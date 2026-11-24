@@ -42,6 +42,7 @@ import {
   type PaymentGateway,
   type VerifyGatewayPaymentInput,
 } from './payment-gateway.port';
+import { WalletCheckoutService } from '../wallet/wallet-checkout.service';
 
 const CARD_TO_CARD_PROVIDER = 'card_to_card';
 const MAX_RECEIPT_SIZE_BYTES = 10 * 1024 * 1024;
@@ -71,6 +72,7 @@ type InitiationContext = {
   provider: string;
   isNew: boolean;
   campaignQuotaRestricted?: boolean;
+  walletAppliedToman?: number;
 };
 
 @Injectable()
@@ -91,6 +93,7 @@ export class PaymentsService {
     @Optional()
     @Inject(AdminOrderNotificationOutboxService)
     private readonly adminOrderOutbox: AdminOrderNotificationOutboxService | undefined = undefined,
+    @Optional() private readonly walletCheckout?: WalletCheckoutService,
   ) {
     this.callbackBaseUrl = this.config.get<string>(
       'PAYMENT_CALLBACK_URL',
@@ -224,7 +227,14 @@ export class PaymentsService {
           PaymentAttemptStatus.CREATED,
           'Payment initiation failed.',
           undefined,
-          context.campaignQuotaRestricted ? orderId : undefined,
+          context.campaignQuotaRestricted || context.walletAppliedToman
+            ? {
+                id: orderId,
+                userId,
+                campaignQuotaRestricted: context.campaignQuotaRestricted,
+                walletAppliedToman: context.walletAppliedToman ?? 0,
+              }
+            : undefined,
         );
       }
 
@@ -380,6 +390,10 @@ export class PaymentsService {
     if (!verification.success) {
       this.assertGatewayFailureResult(verification.code, verification.message);
 
+      // A verification error does not itself prove the provider never collected funds.
+      if (attempt.payment.order.walletAppliedToman && !verification.definitiveFailure) {
+        throw new DomainException(ErrorCode.PAYMENT_FAILED, 'نتیجهٔ پرداخت در حال بررسی است.');
+      }
       if (
         attempt.payment.order.campaignQuotaRestricted &&
         (!verification.code || INCONCLUSIVE_VERIFICATION_CODES.has(verification.code))
@@ -392,7 +406,9 @@ export class PaymentsService {
         attempt.status,
         verification.message ?? 'Payment verification failed.',
         verification.code,
-        attempt.payment.order.campaignQuotaRestricted ? attempt.payment.orderId : undefined,
+        attempt.payment.order.campaignQuotaRestricted || attempt.payment.order.walletAppliedToman
+          ? attempt.payment.order
+          : undefined,
       );
 
       if (failed.count === 1) {
@@ -472,7 +488,14 @@ export class PaymentsService {
     expectedStatus: PaymentAttemptStatus,
     failureMessage: string,
     failureCode: string | undefined,
-    quotaOrderId: string | undefined,
+    order:
+      | {
+          id: string;
+          userId: string;
+          campaignQuotaRestricted?: boolean;
+          walletAppliedToman: number;
+        }
+      | undefined,
   ) {
     const update = (tx: Prisma.TransactionClient) =>
       tx.paymentAttempt.updateMany({
@@ -480,11 +503,14 @@ export class PaymentsService {
         data: { status: PaymentAttemptStatus.FAILED, failureCode, failureMessage },
       });
 
-    if (!quotaOrderId) return update(this.prisma);
+    if (!order) return update(this.prisma);
     return this.prisma.$transaction(async (tx) => {
-      await lockOrderRowForUpdate(tx, quotaOrderId);
+      await lockOrderRowForUpdate(tx, order.id);
       const failed = await update(tx);
-      if (failed.count === 1) await releaseQuotaAfterFailedAttempt(tx, quotaOrderId);
+      if (failed.count === 1) {
+        if (order.campaignQuotaRestricted) await releaseQuotaAfterFailedAttempt(tx, order.id);
+        await this.walletCheckout?.releaseAfterFailure(tx, order);
+      }
       return failed;
     });
   }
@@ -509,6 +535,8 @@ export class PaymentsService {
           grandTotalToman: true,
           reservationExpiresAt: true,
           campaignQuotaRestricted: true,
+          walletAppliedToman: true,
+          userId: true,
         },
       });
 
@@ -591,7 +619,7 @@ export class PaymentsService {
         };
       }
 
-      if (order.campaignQuotaRestricted) await reacquireCampaignQuota(transaction, order.id);
+      await this.prepareOrderFunding(transaction, order);
       await transaction.paymentAttempt.updateMany({
         where: {
           paymentId: payment.id,
@@ -783,7 +811,13 @@ export class PaymentsService {
                 status: true,
                 orderId: true,
                 order: {
-                  select: { status: true, campaignQuotaRestricted: true },
+                  select: {
+                    id: true,
+                    userId: true,
+                    status: true,
+                    campaignQuotaRestricted: true,
+                    walletAppliedToman: true,
+                  },
                 },
               },
             },
@@ -791,7 +825,10 @@ export class PaymentsService {
         });
 
       let attempt = await readAttempt();
-      if (attempt?.payment.order.campaignQuotaRestricted) {
+      if (
+        attempt?.payment.order.campaignQuotaRestricted ||
+        attempt?.payment.order.walletAppliedToman
+      ) {
         await lockOrderRowForUpdate(transaction, attempt.payment.orderId);
         attempt = await readAttempt();
       }
@@ -844,6 +881,7 @@ export class PaymentsService {
 
       if (attempt.payment.order.campaignQuotaRestricted)
         await releaseQuotaAfterFailedAttempt(transaction, attempt.payment.orderId);
+      await this.walletCheckout?.releaseAfterFailure(transaction, attempt.payment.order);
 
       await this.outbox?.enqueueOrderEvent(transaction, {
         type: NotificationOutboxEventType.PAYMENT_RECEIPT_REJECTED,
@@ -935,6 +973,8 @@ export class PaymentsService {
           grandTotalToman: true,
           reservationExpiresAt: true,
           campaignQuotaRestricted: true,
+          walletAppliedToman: true,
+          userId: true,
         },
       });
 
@@ -1030,7 +1070,7 @@ export class PaymentsService {
         };
       }
 
-      if (order.campaignQuotaRestricted) await reacquireCampaignQuota(transaction, order.id);
+      await this.prepareOrderFunding(transaction, order);
       const attempt = await transaction.paymentAttempt.create({
         data: {
           paymentId: payment.id,
@@ -1050,8 +1090,28 @@ export class PaymentsService {
         provider,
         isNew: true,
         campaignQuotaRestricted: order.campaignQuotaRestricted,
+        walletAppliedToman: order.walletAppliedToman,
       };
     });
+  }
+
+  private async prepareOrderFunding(
+    tx: Prisma.TransactionClient,
+    order: {
+      id: string;
+      userId: string;
+      campaignQuotaRestricted: boolean;
+      walletAppliedToman: number;
+    },
+  ) {
+    if (order.walletAppliedToman && (await this.walletCheckout?.hasOpenPayment(tx, order.id))) {
+      throw new DomainException(
+        ErrorCode.PAYMENT_FAILED,
+        'نتیجهٔ تلاش قبلی برای پرداخت هنوز مشخص نشده است.',
+      );
+    }
+    if (order.campaignQuotaRestricted) await reacquireCampaignQuota(tx, order.id);
+    await this.walletCheckout?.reacquire(tx, order);
   }
 
   private async finalizeVerifiedPayment(
@@ -1082,7 +1142,10 @@ export class PaymentsService {
         });
 
       let attempt = await readAttempt();
-      if (attempt?.payment.order.campaignQuotaRestricted) {
+      if (
+        attempt?.payment.order.campaignQuotaRestricted ||
+        attempt?.payment.order.walletAppliedToman
+      ) {
         await lockOrderRowForUpdate(transaction, attempt.payment.orderId);
         attempt = await readAttempt();
       }
@@ -1202,6 +1265,7 @@ export class PaymentsService {
       }
 
       if (order.campaignQuotaRestricted) await captureCampaignQuota(transaction, order.id);
+      await this.walletCheckout?.capture(transaction, order);
       await this.commitReservedInventory(transaction, order.warehouseId, order.id, order.items);
 
       await transaction.orderStatusHistory.create({
@@ -1260,6 +1324,7 @@ export class PaymentsService {
         shippingTotalToman: order.shippingTotalToman,
         taxTotalToman: order.taxTotalToman,
         grandTotalToman: order.grandTotalToman,
+        ...(order.walletAppliedToman ? { walletAppliedToman: order.walletAppliedToman } : {}),
         items: order.items,
       });
 

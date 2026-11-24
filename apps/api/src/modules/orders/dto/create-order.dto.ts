@@ -6,6 +6,7 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsIn,
   IsInt,
@@ -74,6 +75,12 @@ export class PromotionEstimateRequestDto {
 }
 
 export class CreateOrderDto {
+  @ApiPropertyOptional({ type: Boolean, description: 'Apply the maximum eligible wallet credit.' })
+  @IsOptional()
+  @Type(() => Object)
+  @IsBoolean()
+  useWalletCredit?: boolean;
+
   @IsOptional()
   @Type(() => Object)
   @IsString()

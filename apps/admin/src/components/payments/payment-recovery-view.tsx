@@ -102,6 +102,7 @@ function isEscalated(createdAt: string) {
 
 function canRestoreRedirect(candidate: PaymentInitiationCandidate) {
   return (
+    candidate.status !== 'REDIRECTED' &&
     candidate.payment.status === 'PENDING' &&
     candidate.payment.order.status === 'PENDING_PAYMENT' &&
     new Date(candidate.payment.order.reservationExpiresAt).getTime() > Date.now() &&

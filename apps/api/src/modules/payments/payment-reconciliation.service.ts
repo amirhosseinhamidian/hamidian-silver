@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { lockOrderRowForUpdate } from '../../common/order-row-lock';
 import { DomainException } from '../../common/errors/domain-exception';
 import { ErrorCode } from '../../common/errors/error-codes';
 import {
@@ -8,10 +9,14 @@ import {
   PaymentStatus,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { WalletCheckoutService } from '../wallet/wallet-checkout.service';
 
 @Injectable()
 export class PaymentReconciliationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly walletCheckout?: WalletCheckoutService,
+  ) {}
 
   list(status?: PaymentReconciliationStatus) {
     return this.prisma.paymentReconciliation.findMany({
@@ -122,6 +127,9 @@ export class PaymentReconciliationService {
         paymentStatus === PaymentStatus.PAID ||
         paymentStatus === PaymentStatus.PARTIALLY_REFUNDED ||
         paymentStatus === PaymentStatus.REFUNDED;
+      if (this.walletCheckout && !preserveSettledPayment) {
+        await lockOrderRowForUpdate(transaction, reconciliation.paymentAttempt.payment.orderId);
+      }
 
       if (
         reconciliation.paymentAttempt.status !== PaymentAttemptStatus.RECONCILIATION_REQUIRED ||
@@ -233,6 +241,14 @@ export class PaymentReconciliationService {
           ErrorCode.PAYMENT_FAILED,
           'Payment attempt state changed while resolving reconciliation.',
         );
+      }
+
+      if (this.walletCheckout && !preserveSettledPayment) {
+        const order = await transaction.order.findUniqueOrThrow({
+          where: { id: reconciliation.paymentAttempt.payment.orderId },
+          select: { id: true, userId: true, walletAppliedToman: true },
+        });
+        await this.walletCheckout.releaseAfterFailure(transaction, order);
       }
 
       return transaction.paymentReconciliation.findUniqueOrThrow({

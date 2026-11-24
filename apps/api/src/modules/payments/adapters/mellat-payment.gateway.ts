@@ -164,6 +164,7 @@ export class MellatPaymentGateway implements PaymentGateway {
       return {
         success: false,
         code: verifyCode,
+        ...(verifyCode === '48' ? { definitiveFailure: true as const } : {}),
         message: `Mellat verification failed with code ${verifyCode}.`,
       };
     }
@@ -174,6 +175,7 @@ export class MellatPaymentGateway implements PaymentGateway {
       return {
         success: false,
         code: settleCode,
+        ...(settleCode === '48' ? { definitiveFailure: true as const } : {}),
         message: `Mellat settlement failed with code ${settleCode}.`,
       };
     }

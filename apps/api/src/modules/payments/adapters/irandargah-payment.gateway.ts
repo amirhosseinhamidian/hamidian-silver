@@ -1,5 +1,6 @@
 import { BadGatewayException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { MIN_WALLET_CASH_PAYMENT_TOMAN } from '../../../common/toman';
 import { PaymentInitiationUnknownError } from '../payment-initiation-unknown.error';
 import type {
   InitiateGatewayPaymentInput,
@@ -31,7 +32,7 @@ type IranDargahResponse = {
 
 const PRODUCTION_API_BASE_URL = 'https://ipg.irandargah.com';
 const SANDBOX_API_BASE_URL = 'https://sandbox.irandargah.com';
-const MIN_AMOUNT_RIAL = 100_000;
+const MIN_AMOUNT_RIAL = MIN_WALLET_CASH_PAYMENT_TOMAN * 10;
 const MAX_AMOUNT_RIAL = 4_000_000_000;
 
 @Injectable()
