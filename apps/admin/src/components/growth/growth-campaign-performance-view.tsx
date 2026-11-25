@@ -1,10 +1,10 @@
 import type { components } from '@hamidian/contracts';
 import Link from 'next/link';
 
+import { CampaignReportPeriod } from '@/components/growth/campaign-report-period';
 import { Alert } from '@/components/ui/alert';
-import { Button, ButtonLink } from '@/components/ui/button';
+import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/form-control';
 import {
   formatAdminDateTime,
   formatAdminInteger,
@@ -68,18 +68,8 @@ export function GrowthCampaignPerformanceView({
           داشبورد رشد
         </ButtonLink>
       </header>
-      <Card title="بازهٔ گزارش" description="روزهای میلادی به وقت تهران. حداکثر ۹۲ روز.">
-        <form action={path} className="flex flex-wrap items-end gap-3">
-          <label className="text-sm">
-            از روز
-            <Input name="from" type="date" defaultValue={from} dir="ltr" required />
-          </label>
-          <label className="text-sm">
-            تا روز
-            <Input name="to" type="date" defaultValue={to} dir="ltr" required />
-          </label>
-          <Button type="submit">نمایش گزارش</Button>
-        </form>
+      <Card title="بازهٔ گزارش" description="روزها به وقت تهران محاسبه می‌شوند. حداکثر ۹۲ روز.">
+        <CampaignReportPeriod key={`${from}/${to}`} path={path} from={from} to={to} />
       </Card>
       {report && totals ? (
         <>

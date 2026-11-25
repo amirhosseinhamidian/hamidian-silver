@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/form-control';
 import { campaignError } from '@/lib/campaigns/campaign-api-errors';
+import { toAsciiDigits } from '@/lib/presentation/formatters';
 import { FestivalSectionEditor } from './festival-section-editor';
 
 type Editor = components['schemas']['FestivalDesignEditorDto'];
@@ -167,6 +168,18 @@ export function FestivalDesigner({
 
   function inputsValid() {
     if (busy || uploads || !formRef.current?.reportValidity()) return false;
+    if (
+      design.sections.some(
+        ({ enabled, startsTehran, endsTehran }) =>
+          enabled &&
+          startsTehran &&
+          endsTehran &&
+          toAsciiDigits(startsTehran) >= toAsciiDigits(endsTehran),
+      )
+    ) {
+      setError('زمان پایان هر سکشن باید پس از زمان آغاز آن باشد.');
+      return false;
+    }
     if (design.sections.some((section) => section.slides?.some(({ mediaId }) => !mediaId))) {
       setError('برای هر اسلاید، تصویر دسکتاپ را بارگذاری کنید.');
       return false;

@@ -7,6 +7,7 @@ import { SiteMediaField } from '@/components/site-settings/site-media-field';
 import { Alert } from '@/components/ui/alert';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { DualCalendarPicker } from '@/components/ui/dual-calendar-picker';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
 import { MoneyInput } from '@/components/ui/money-input';
@@ -61,6 +62,16 @@ export function CampaignEditor({
     if (pending || uploading) return;
     const fields = new FormData(event.currentTarget);
     const value = (field: string) => String(fields.get(field) ?? '').trim();
+    const startsTehran = value('startsTehran');
+    const endsTehran = value('endsTehran');
+    if (!startsTehran || !endsTehran || startsTehran >= endsTehran) {
+      setError('زمان شروع و پایان را انتخاب کنید. زمان پایان باید پس از شروع باشد.');
+      const field = startsTehran ? 'endsTehran' : 'startsTehran';
+      event.currentTarget
+        .querySelector<HTMLButtonElement>(`[data-calendar-field="${field}"]`)
+        ?.focus();
+      return;
+    }
     const budgetToman = parseAdminMoneyInput(value('budgetToman'));
     const plannedCost = value('plannedChannelCostToman');
     const plannedChannelCostToman = parseAdminMoneyInput(plannedCost);
@@ -87,8 +98,8 @@ export function CampaignEditor({
       audience: value('audience') as CampaignDraft['audience'],
       bannerPriority,
       goal: value('goal'),
-      startsTehran: value('startsTehran'),
-      endsTehran: value('endsTehran'),
+      startsTehran,
+      endsTehran,
       productSlugs: allProducts ? [] : parseSlugs(productSlugs),
       categorySlugs: allProducts ? [] : parseSlugs(value('categorySlugs')),
       mediaId: media?.id ?? null,
@@ -264,41 +275,19 @@ export function CampaignEditor({
           </FormField>
 
           <fieldset className="grid gap-4 rounded-lg border border-[var(--admin-color-border)] p-3 sm:col-span-2 sm:grid-cols-2">
-            <legend className="px-2 text-sm font-semibold">تقویم شمسی به وقت تهران</legend>
-            <FormField
-              id="campaign-start"
+            <legend className="px-2 text-sm font-semibold">زمان‌بندی به وقت تهران</legend>
+            <DualCalendarPicker
               label="زمان آغاز"
-              hint="نمونهٔ ورود ۱۴۰۵/۰۹/۰۱ ۰۹:۳۰"
+              name="startsTehran"
+              defaultValue={campaign?.startsTehran}
               required
-            >
-              {(control) => (
-                <Input
-                  {...control}
-                  name="startsTehran"
-                  dir="ltr"
-                  maxLength={16}
-                  defaultValue={campaign && toPersianDigits(campaign.startsTehran)}
-                  required
-                />
-              )}
-            </FormField>
-            <FormField
-              id="campaign-end"
+            />
+            <DualCalendarPicker
               label="زمان پایان"
-              hint="نمونهٔ ورود ۱۴۰۵/۰۹/۰۷ ۲۳:۰۰"
+              name="endsTehran"
+              defaultValue={campaign?.endsTehran}
               required
-            >
-              {(control) => (
-                <Input
-                  {...control}
-                  name="endsTehran"
-                  dir="ltr"
-                  maxLength={16}
-                  defaultValue={campaign && toPersianDigits(campaign.endsTehran)}
-                  required
-                />
-              )}
-            </FormField>
+            />
           </fieldset>
 
           <fieldset className="grid gap-4 rounded-lg border border-[var(--admin-color-border)] p-3 sm:col-span-2 sm:grid-cols-2">

@@ -4,6 +4,7 @@ import type { components } from '@hamidian/contracts';
 import { useState } from 'react';
 import { SiteMediaField } from '@/components/site-settings/site-media-field';
 import { Button } from '@/components/ui/button';
+import { DualCalendarPicker } from '@/components/ui/dual-calendar-picker';
 import { Input, Textarea } from '@/components/ui/form-control';
 
 type Section = components['schemas']['FestivalSectionDto'];
@@ -161,18 +162,12 @@ export function FestivalSectionEditor({
               </label>
             )}
             {(['startsTehran', 'endsTehran'] as const).map((key) => (
-              <label key={key} className="grid gap-1 text-sm">
-                {key === 'startsTehran' ? 'آغاز شمسی تهران' : 'پایان شمسی تهران'}
-                <Input
-                  dir="ltr"
-                  maxLength={16}
-                  placeholder="۱۴۰۵/۰۹/۰۱ ۱۰:۰۰"
-                  value={section[key] ?? ''}
-                  onChange={(e) =>
-                    update({ ...section, [key]: e.currentTarget.value || undefined })
-                  }
-                />
-              </label>
+              <DualCalendarPicker
+                key={key}
+                label={key === 'startsTehran' ? 'زمان آغاز سکشن' : 'زمان پایان سکشن'}
+                value={section[key] ?? ''}
+                onChange={(value) => update({ ...section, [key]: value || undefined })}
+              />
             ))}
           </>
         )}

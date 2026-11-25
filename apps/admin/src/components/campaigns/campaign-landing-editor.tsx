@@ -8,6 +8,7 @@ import { Alert } from '@/components/ui/alert';
 import { SiteMediaField } from '@/components/site-settings/site-media-field';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { DualCalendarPicker } from '@/components/ui/dual-calendar-picker';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
 import { MoneyInput } from '@/components/ui/money-input';
@@ -199,6 +200,16 @@ export function CampaignLandingEditor({
     try {
       const body = editable && form ? currentDraft(form) : draft;
       if (!body) return;
+      if (
+        editable &&
+        body.placements.some(
+          ({ startsTehran, endsTehran }) =>
+            (startsTehran ?? campaign.startsTehran) >= (endsTehran ?? campaign.endsTehran),
+        )
+      ) {
+        setError('زمان پایان هر جایگاه باید پس از زمان آغاز آن باشد.');
+        return;
+      }
       const endpoint = `/api/campaigns/${campaign.id}/landing`;
       const response = await fetch(action === 'preview' ? `${endpoint}/preview` : endpoint, {
         method: action === 'preview' ? 'POST' : 'PUT',
@@ -586,34 +597,16 @@ export function CampaignLandingEditor({
                           />
                         )}
                       </FormField>
-                      <FormField id={`start-${slot}`} label="آغاز شمسی تهران">
-                        {(control) => (
-                          <Input
-                            {...control}
-                            name={control.id}
-                            dir="ltr"
-                            placeholder="۱۴۰۵/۰۹/۰۱ ۰۹:۰۰"
-                            defaultValue={
-                              saved?.startsTehran ? toPersianDigits(saved.startsTehran) : ''
-                            }
-                            maxLength={16}
-                          />
-                        )}
-                      </FormField>
-                      <FormField id={`end-${slot}`} label="پایان شمسی تهران">
-                        {(control) => (
-                          <Input
-                            {...control}
-                            name={control.id}
-                            dir="ltr"
-                            placeholder="۱۴۰۵/۰۹/۰۷ ۲۳:۰۰"
-                            defaultValue={
-                              saved?.endsTehran ? toPersianDigits(saved.endsTehran) : ''
-                            }
-                            maxLength={16}
-                          />
-                        )}
-                      </FormField>
+                      <DualCalendarPicker
+                        label="زمان آغاز جایگاه"
+                        name={`start-${slot}`}
+                        defaultValue={saved?.startsTehran ?? ''}
+                      />
+                      <DualCalendarPicker
+                        label="زمان پایان جایگاه"
+                        name={`end-${slot}`}
+                        defaultValue={saved?.endsTehran ?? ''}
+                      />
                       {slot === 'NAVIGATION' && (
                         <FormField id="navigation-effect" label="جلوهٔ منو">
                           {(control) => (
