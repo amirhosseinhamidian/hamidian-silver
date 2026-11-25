@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { useCampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
 import { toPersianDigits } from '@/lib/presentation/formatters';
 
 type Quota = components['schemas']['CampaignQuotaAdminDto'];
@@ -26,6 +27,7 @@ export function CampaignQuotaEditor({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const formId = useId();
+  const taxonomy = useCampaignTaxonomy();
   const endpoint = `/api/campaigns/${campaignId}/quota`;
 
   async function load(slug: string) {
@@ -87,7 +89,12 @@ export function CampaignQuotaEditor({
   return (
     <Card title="سهمیه و فروش دستی">
       <div className="space-y-4">
-        <CampaignProductSearch selected={[]} disabled={busy} onSelect={(slug) => void load(slug)} />
+        <CampaignProductSearch
+          campaignId={campaignId}
+          taxonomy={taxonomy.data}
+          disabled={busy}
+          onSelect={(slug) => void load(slug)}
+        />
         {busy && (
           <p role="status" className="text-sm">
             در حال دریافت یا ذخیرهٔ سهمیه…

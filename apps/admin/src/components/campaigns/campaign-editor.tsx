@@ -13,6 +13,7 @@ import { FormField } from '@/components/ui/form-field';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Select } from '@/components/ui/select';
 import { campaignError } from '@/lib/campaigns/campaign-api-errors';
+import { addCampaignSelection, useCampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
 import {
   campaignAudienceOptions,
   isCampaignId,
@@ -27,13 +28,7 @@ import {
 
 import { CampaignPreview } from './campaign-preview';
 import { CampaignProductSearch } from './campaign-product-search';
-
-function parseSlugs(value: string) {
-  return value
-    .split(/[\n,،]/)
-    .map((slug) => slug.trim())
-    .filter(Boolean);
-}
+import { CampaignTaxonomyPicker } from './campaign-taxonomy-picker';
 
 export function CampaignEditor({
   campaign,
@@ -49,7 +44,9 @@ export function CampaignEditor({
   const [message, setMessage] = useState(campaign?.message ?? '');
   const [ctaLabel, setCtaLabel] = useState(campaign?.ctaLabel ?? '');
   const [allProducts, setAllProducts] = useState(campaign?.allProducts ?? true);
-  const [productSlugs, setProductSlugs] = useState(campaign?.productSlugs.join('\n') ?? '');
+  const [productSlugs, setProductSlugs] = useState(campaign?.productSlugs ?? []);
+  const [categorySlugs, setCategorySlugs] = useState(campaign?.categorySlugs ?? []);
+  const taxonomy = useCampaignTaxonomy();
   const [bannerEnabled, setBannerEnabled] = useState(campaign?.bannerEnabled ?? false);
   const [preview, setPreview] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -100,8 +97,8 @@ export function CampaignEditor({
       goal: value('goal'),
       startsTehran,
       endsTehran,
-      productSlugs: allProducts ? [] : parseSlugs(productSlugs),
-      categorySlugs: allProducts ? [] : parseSlugs(value('categorySlugs')),
+      productSlugs: allProducts ? [] : productSlugs,
+      categorySlugs: allProducts ? [] : categorySlugs,
       mediaId: media?.id ?? null,
       ctaLabel: ctaLabel.trim() || null,
       ctaPath: value('ctaPath') || null,
@@ -301,43 +298,43 @@ export function CampaignEditor({
               همهٔ محصولات
             </label>
             {!allProducts && (
-              <div className="sm:col-span-2">
+              <div className="space-y-4 sm:col-span-2">
                 <CampaignProductSearch
-                  selected={parseSlugs(productSlugs)}
+                  selected={productSlugs}
+                  taxonomy={taxonomy.data}
+                  campaignId={campaign?.id}
                   onSelect={(slug) =>
-                    setProductSlugs([...parseSlugs(productSlugs), slug].join('\n'))
+                    setProductSlugs((current) => addCampaignSelection(current, slug, 50))
                   }
-                  disabled={pending || parseSlugs(productSlugs).length >= 50}
+                  onRemove={(slug) =>
+                    setProductSlugs((current) => current.filter((item) => item !== slug))
+                  }
+                  disabled={pending}
+                />
+                {taxonomy.loading && (
+                  <p role="status" className="text-sm">
+                    در حال دریافت دسته‌بندی‌ها…
+                  </p>
+                )}
+                {taxonomy.failed && (
+                  <Alert tone="danger">
+                    دریافت دسته‌بندی‌ها ممکن نشد.{' '}
+                    <Button size="sm" variant="outline" onClick={taxonomy.retry}>
+                      تلاش دوباره
+                    </Button>
+                  </Alert>
+                )}
+                <CampaignTaxonomyPicker
+                  taxonomy={taxonomy.data ?? { categories: [], brands: [] }}
+                  kind="categories"
+                  selected={categorySlugs}
+                  onChange={setCategorySlugs}
+                  max={50}
+                  disabled={pending}
+                  categoryMode="direct"
                 />
               </div>
             )}
-            <FormField
-              id="campaign-products"
-              label="اسلاگ محصولات"
-              hint="اسلاگ‌ها را در خط‌های جدا یا با ویرگول وارد کنید."
-            >
-              {(control) => (
-                <Textarea
-                  {...control}
-                  name="productSlugs"
-                  dir="ltr"
-                  disabled={allProducts}
-                  value={productSlugs}
-                  onChange={(event) => setProductSlugs(event.currentTarget.value)}
-                />
-              )}
-            </FormField>
-            <FormField id="campaign-categories" label="اسلاگ دسته‌ها">
-              {(control) => (
-                <Textarea
-                  {...control}
-                  name="categorySlugs"
-                  dir="ltr"
-                  disabled={allProducts}
-                  defaultValue={campaign?.categorySlugs.join('\n')}
-                />
-              )}
-            </FormField>
           </fieldset>
 
           <fieldset className="grid gap-4 rounded-lg border border-[var(--admin-color-border)] p-3 sm:col-span-2 sm:grid-cols-2">

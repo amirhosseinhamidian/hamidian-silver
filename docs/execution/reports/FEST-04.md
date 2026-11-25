@@ -1,6 +1,6 @@
 # FEST-04 — انتخاب تاریخ و ساعت جشنواره
 
-وضعیت `IN_REVIEW` است. مبنا `f96e58c688cadd11f0842cc038446486fea067f5` روی `seo-fix` است. [برنامهٔ جشنواره](../FESTIVAL_COMPLETION_AND_BLACK_FRIDAY_READINESS.md)
+وضعیت `DONE` است. مبنا `f96e58c688cadd11f0842cc038446486fea067f5` روی `seo-fix` است. کامیت `5dccfa05db10a7aade09ff031e56a257e8d441f5` روی `HEAD` و مرجع محلی `origin/seo-fix` تأیید شد. [برنامهٔ جشنواره](../FESTIVAL_COMPLETION_AND_BLACK_FRIDAY_READINESS.md)
 
 ## رفتار
 
@@ -20,4 +20,4 @@ pnpm admin:test dual-calendar growth-report campaign-report-period &&
 pnpm api:test --runInBand campaign-calendar
 ```
 
-مدیر پروژه موفقیت تست‌های محلی این مرحله را گزارش کرد. SHA کامیت و نتیجهٔ بازبینی دستی پنل هنوز ثبت نشده‌اند.
+مدیر پروژه موفقیت تست‌های محلی و SHA کامیت را گزارش کرد. نتیجهٔ جداگانهٔ بازبینی دستی پنل هنوز ثبت نشده است.

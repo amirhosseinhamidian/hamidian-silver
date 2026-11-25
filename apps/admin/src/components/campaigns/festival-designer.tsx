@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/form-control';
 import { campaignError } from '@/lib/campaigns/campaign-api-errors';
+import { useCampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
 import { toAsciiDigits } from '@/lib/presentation/formatters';
 import { FestivalSectionEditor } from './festival-section-editor';
 
@@ -111,6 +112,7 @@ export function FestivalDesigner({
   editable: boolean;
 }) {
   const router = useRouter();
+  const taxonomy = useCampaignTaxonomy();
   const [design, setDesign] = useState<Design>(
     () =>
       editor.design ?? {
@@ -375,6 +377,8 @@ export function FestivalDesigner({
                 {section.enabled && (
                   <FestivalSectionEditor
                     section={section}
+                    campaignId={campaignId}
+                    taxonomy={taxonomy.data}
                     assets={assets}
                     update={setSection}
                     uploaded={(asset) =>

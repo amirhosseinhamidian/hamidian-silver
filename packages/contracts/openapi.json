@@ -341,12 +341,100 @@
         "parameters": [
           {
             "name": "q",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "minLength": 2,
               "maxLength": 96,
               "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 180,
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 180,
+              "type": "string"
+            }
+          },
+          {
+            "name": "stock",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "in-stock",
+                "out-of-stock"
+              ]
+            }
+          },
+          {
+            "name": "campaignId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "campaign"
+              ]
+            }
+          },
+          {
+            "name": "selected",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxItems": 50,
+              "minLength": 1,
+              "maxLength": 220,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "categoryMode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "direct",
+                "tree"
+              ]
             }
           }
         ],
@@ -357,6 +445,98 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CampaignProductOptionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Campaigns"
+        ]
+      },
+      "post": {
+        "operationId": "CampaignsController_hydrateProducts_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignProductQueryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignProductOptionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
+    "/api/v1/campaigns/selection-taxonomy": {
+      "get": {
+        "operationId": "CampaignsController_selectionTaxonomy_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignTaxonomyOptionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
+    "/api/v1/campaigns/collection-options": {
+      "get": {
+        "operationId": "CampaignsController_selectCollections_v1",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 2,
+              "maxLength": 96,
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignCollectionOptionsDto"
                 }
               }
             }
@@ -13467,6 +13647,38 @@
       "CampaignProductOptionDto": {
         "type": "object",
         "properties": {
+          "defaultPriceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "festivalPriceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "quotaRemaining": {
+            "type": "number",
+            "nullable": true
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageAlt": {
+            "type": "string",
+            "nullable": true
+          },
+          "availableQuantity": {
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
           "slug": {
             "type": "string"
           },
@@ -13475,6 +13687,14 @@
           }
         },
         "required": [
+          "defaultPriceToman",
+          "festivalPriceToman",
+          "quotaRemaining",
+          "categories",
+          "imageUrl",
+          "imageAlt",
+          "availableQuantity",
+          "id",
           "slug",
           "name"
         ]
@@ -13487,10 +13707,170 @@
             "items": {
               "$ref": "#/components/schemas/CampaignProductOptionDto"
             }
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
           }
         },
         "required": [
-          "items"
+          "items",
+          "page",
+          "hasMore"
+        ]
+      },
+      "CampaignProductQueryDto": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 96
+          },
+          "page": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "brand": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "stock": {
+            "enum": [
+              "in-stock",
+              "out-of-stock"
+            ],
+            "type": "string"
+          },
+          "campaignId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "campaign"
+            ]
+          },
+          "selected": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 220,
+              "minLength": 1
+            }
+          },
+          "categoryMode": {
+            "enum": [
+              "direct",
+              "tree"
+            ],
+            "type": "string"
+          }
+        }
+      },
+      "CampaignCategoryOptionDto": {
+        "type": "object",
+        "properties": {
+          "parentId": {
+            "type": "string",
+            "nullable": true
+          },
+          "directProductCount": {
+            "type": "number"
+          },
+          "subtreeProductCount": {
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "parentId",
+          "directProductCount",
+          "subtreeProductCount",
+          "id",
+          "slug",
+          "name"
+        ]
+      },
+      "CampaignNamedOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name"
+        ]
+      },
+      "CampaignTaxonomyOptionsDto": {
+        "type": "object",
+        "properties": {
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignCategoryOptionDto"
+            }
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignNamedOptionDto"
+            }
+          }
+        },
+        "required": [
+          "categories",
+          "brands"
+        ]
+      },
+      "CampaignCollectionOptionsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignNamedOptionDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "hasMore"
         ]
       },
       "CampaignBudgetDto": {

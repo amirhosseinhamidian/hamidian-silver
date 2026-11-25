@@ -15,12 +15,16 @@ import { MoneyInput } from '@/components/ui/money-input';
 import { Select } from '@/components/ui/select';
 import { campaignError } from '@/lib/campaigns/campaign-api-errors';
 import type { CampaignDetail } from '@/lib/campaigns/campaign-model';
+import { addCampaignSelection, useCampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
 import {
   formatAdminInteger,
   parseAdminMoneyInput,
   toAsciiDigits,
   toPersianDigits,
 } from '@/lib/presentation/formatters';
+import { CampaignCollectionPicker } from './campaign-collection-picker';
+import { CampaignProductSearch } from './campaign-product-search';
+import { CampaignTaxonomyPicker } from './campaign-taxonomy-picker';
 
 type Draft = components['schemas']['CampaignLandingDraftDto'];
 type Editor = components['schemas']['CampaignLandingEditorDto'];
@@ -49,8 +53,8 @@ const slotLabels: Record<Slot, string> = {
 };
 const slots = Object.keys(slotLabels) as Slot[];
 const labels = {
-  FILTERED: 'طبق قواعد کاتالوگ',
-  MANUAL: 'انتخاب دستی',
+  FILTERED: 'انتخاب پویا بر اساس قواعد کاتالوگ',
+  MANUAL: 'فهرست ثابت محصولات انتخابی',
 };
 const seoOptions = [
   { value: 'TEMPORARY', label: 'صفحهٔ موقت' },
@@ -80,6 +84,14 @@ function readOptionalNumber(value: string) {
   return parsed;
 }
 
+function attributesFrom(filters?: Draft['filters']) {
+  return (filters?.attributes ?? []).map((filter, key) => ({
+    key,
+    mode: (filter.values?.length ? 'choices' : 'range') as AttributeMode,
+    filter,
+  }));
+}
+
 export function CampaignLandingEditor({
   campaign,
   editor,
@@ -93,12 +105,25 @@ export function CampaignLandingEditor({
   const draft = editor.landing;
   const editable = canWrite && campaign.status === 'DRAFT';
   const [mode, setMode] = useState<Draft['collectionMode']>(draft?.collectionMode ?? 'FILTERED');
+  const [filterDefaults, setFilterDefaults] = useState(draft?.filters);
+  const [filterVersion, setFilterVersion] = useState(0);
+  const [manualProducts, setManualProducts] = useState(draft?.manualProductSlugs ?? []);
+  const [categories, setCategories] = useState(draft?.filters.categories ?? []);
+  const [brands, setBrands] = useState(draft?.filters.brands ?? []);
+  const taxonomy = useCampaignTaxonomy();
   const [seoMode, setSeoMode] = useState<Draft['seoMode']>(draft?.seoMode ?? 'TEMPORARY');
   const [enabledSlots, setEnabledSlots] = useState<Slot[]>(
     draft?.placements.map(({ slot }) => slot) ?? [],
   );
   const [placementMedia, setPlacementMedia] = useState<Partial<Record<Slot, PlacementMedia>>>(() =>
     Object.fromEntries((editor.placementMedia ?? []).map((entry) => [entry.slot, entry])),
+  );
+  const [placementTargets, setPlacementTargets] = useState<Partial<Record<Slot, string>>>(() =>
+    Object.fromEntries(
+      (draft?.placements ?? []).flatMap(({ slot, targetSlug }) =>
+        targetSlug ? [[slot, targetSlug]] : [],
+      ),
+    ),
   );
   const [altTexts, setAltTexts] = useState<Record<string, string>>({});
   const [uploads, setUploads] = useState<string[]>([]);
@@ -115,18 +140,23 @@ export function CampaignLandingEditor({
       },
     }));
   }
-  const [attributeRows, setAttributeRows] = useState(() =>
-    (draft?.filters.attributes ?? []).map((filter, key) => ({
-      key,
-      mode: (filter.values?.length ? 'choices' : 'range') as AttributeMode,
-      filter,
-    })),
-  );
-  const nextKey = useRef(8);
+  const [attributeRows, setAttributeRows] = useState(() => attributesFrom(draft?.filters));
+  const nextKey = useRef(attributeRows.length);
   const [busy, setBusy] = useState<'save' | 'preview' | null>(null);
   const [count, setCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  function applyCollection(filters: Draft['filters']) {
+    const rows = attributesFrom(filters);
+    setFilterDefaults(filters);
+    setFilterVersion((version) => version + 1);
+    setCategories(filters.categories ?? []);
+    setBrands(filters.brands ?? []);
+    setAttributeRows(rows);
+    nextKey.current = rows.length;
+    setCount(null);
+  }
 
   function currentDraft(form: HTMLFormElement): Draft {
     const values = new FormData(form);
@@ -138,11 +168,11 @@ export function CampaignLandingEditor({
     };
     if (mode === 'FILTERED') {
       Object.assign(filters, {
-        categories: splitSlugs(text('categories')),
-        brands: splitSlugs(text('brands')),
+        categories,
+        brands,
         minPriceToman,
         maxPriceToman,
-        sort: draft?.filters.sort,
+        sort: filterDefaults?.sort,
         attributes: attributeRows.map(({ key, mode: attributeMode }) => ({
           code: text(`attribute-code-${key}`),
           ...(attributeMode === 'choices'
@@ -161,11 +191,11 @@ export function CampaignLandingEditor({
       story: text('story'),
       collectionMode: mode,
       filters,
-      manualProductSlugs: mode === 'MANUAL' ? splitSlugs(text('products')) : [],
+      manualProductSlugs: mode === 'MANUAL' ? manualProducts : [],
       placements: enabledSlots.map((slot) => ({
         slot,
         priority: readOptionalNumber(text(`priority-${slot}`)) ?? 0,
-        targetSlug: text(`target-${slot}`) || null,
+        targetSlug: placementTargets[slot] || null,
         startsTehran: text(`start-${slot}`) || null,
         endsTehran: text(`end-${slot}`) || null,
         appearance:
@@ -368,77 +398,113 @@ export function CampaignLandingEditor({
               />
             )}
           </FormField>
-          <FormField id="landing-stock" label="حداقل موجودی قابل فروش" hint="از ۱ تا ۹۹۹">
+          <FormField
+            key={`stock-${filterVersion}`}
+            id="landing-stock"
+            label="حداقل موجودی قابل فروش"
+            hint="از ۱ تا ۹۹۹"
+          >
             {(control) => (
               <Input
                 {...control}
                 name="minimumQuantity"
                 inputMode="numeric"
                 maxLength={3}
-                defaultValue={toPersianDigits(draft?.filters.minimumQuantity ?? 1)}
+                defaultValue={toPersianDigits(filterDefaults?.minimumQuantity ?? 1)}
                 required
               />
             )}
           </FormField>
           {mode === 'MANUAL' ? (
-            <FormField
-              id="landing-products"
-              label="اسلاگ محصولات"
-              hint="به ترتیب نمایش، در خط‌های جدا یا با ویرگول."
-              required
-              className="sm:col-span-2"
-            >
-              {(control) => (
-                <Textarea
-                  {...control}
-                  name="products"
-                  dir="ltr"
-                  defaultValue={draft?.manualProductSlugs.join('\n')}
-                  required
-                />
-              )}
-            </FormField>
+            <div className="space-y-2 sm:col-span-2">
+              <p className="text-xs text-[var(--admin-color-muted)]">
+                محصولات به ترتیب انتخاب در فهرست ثابت ذخیره می‌شوند.
+              </p>
+              <CampaignProductSearch
+                selected={manualProducts}
+                campaignId={campaign.id}
+                withinCampaign
+                taxonomy={taxonomy.data}
+                max={48}
+                disabled={Boolean(busy)}
+                onSelect={(slug) => {
+                  setManualProducts((current) => addCampaignSelection(current, slug, 48));
+                  setCount(null);
+                }}
+                onRemove={(slug) => {
+                  setManualProducts((current) => current.filter((item) => item !== slug));
+                  setCount(null);
+                }}
+              />
+            </div>
           ) : (
             <>
-              <FormField id="landing-categories" label="اسلاگ دسته‌ها" hint="با ویرگول جدا کنید.">
-                {(control) => (
-                  <Input
-                    {...control}
-                    name="categories"
-                    dir="ltr"
-                    defaultValue={draft?.filters.categories?.join(', ')}
-                  />
+              <div className="space-y-2 sm:col-span-2">
+                <CampaignCollectionPicker
+                  campaignId={campaign.id}
+                  disabled={Boolean(busy)}
+                  onApply={applyCollection}
+                />
+                {taxonomy.loading && (
+                  <p role="status" className="text-sm">
+                    در حال دریافت دسته‌ها و برندها…
+                  </p>
                 )}
-              </FormField>
-              <FormField id="landing-brands" label="اسلاگ برندها" hint="با ویرگول جدا کنید.">
-                {(control) => (
-                  <Input
-                    {...control}
-                    name="brands"
-                    dir="ltr"
-                    defaultValue={draft?.filters.brands?.join(', ')}
-                  />
+                {taxonomy.failed && (
+                  <Alert tone="danger">
+                    دریافت دسته‌ها و برندها ممکن نشد.{' '}
+                    <Button size="sm" variant="outline" onClick={taxonomy.retry}>
+                      تلاش دوباره
+                    </Button>
+                  </Alert>
                 )}
-              </FormField>
-              <FormField id="landing-min" label="حداقل قیمت (تومان)">
+              </div>
+              <CampaignTaxonomyPicker
+                taxonomy={taxonomy.data ?? { categories: [], brands: [] }}
+                kind="categories"
+                selected={categories}
+                onChange={(selected) => {
+                  setCategories(selected);
+                  setCount(null);
+                }}
+                max={16}
+                campaignId={campaign.id}
+                disabled={Boolean(busy)}
+              />
+              <CampaignTaxonomyPicker
+                taxonomy={taxonomy.data ?? { categories: [], brands: [] }}
+                kind="brands"
+                selected={brands}
+                campaignId={campaign.id}
+                onChange={(selected) => {
+                  setBrands(selected);
+                  setCount(null);
+                }}
+                max={16}
+                disabled={Boolean(busy)}
+              />
+              <FormField key={`min-${filterVersion}`} id="landing-min" label="حداقل قیمت (تومان)">
                 {(control) => (
                   <MoneyInput
                     {...control}
                     name="minPrice"
-                    defaultValue={draft?.filters.minPriceToman}
+                    defaultValue={filterDefaults?.minPriceToman}
                   />
                 )}
               </FormField>
-              <FormField id="landing-max" label="حداکثر قیمت (تومان)">
+              <FormField key={`max-${filterVersion}`} id="landing-max" label="حداکثر قیمت (تومان)">
                 {(control) => (
                   <MoneyInput
                     {...control}
                     name="maxPrice"
-                    defaultValue={draft?.filters.maxPriceToman}
+                    defaultValue={filterDefaults?.maxPriceToman}
                   />
                 )}
               </FormField>
-              <fieldset className="space-y-4 rounded-lg border border-[var(--admin-color-border)] p-3 sm:col-span-2">
+              <fieldset
+                key={filterVersion}
+                className="space-y-4 rounded-lg border border-[var(--admin-color-border)] p-3 sm:col-span-2"
+              >
                 <legend className="px-2 text-sm font-semibold">فیلتر ویژگی‌ها</legend>
                 {attributeRows.map(({ key, mode: attributeMode, filter }) => (
                   <div className="grid gap-3 sm:grid-cols-2" key={key}>
@@ -572,20 +638,46 @@ export function CampaignLandingEditor({
                   {enabledSlots.includes(slot) && (
                     <div className="grid gap-3 sm:grid-cols-2">
                       {(slot === 'CATEGORY' || slot === 'PRODUCT') && (
-                        <FormField
-                          id={`target-${slot}`}
-                          label="اسلاگ مقصد"
-                          hint="برای همهٔ صفحات این نوع، خالی بگذارید."
-                        >
-                          {(control) => (
-                            <Input
-                              {...control}
-                              name={control.id}
-                              dir="ltr"
-                              defaultValue={saved?.targetSlug ?? ''}
+                        <div className="space-y-2 sm:col-span-2">
+                          <p className="text-xs text-[var(--admin-color-muted)]">
+                            بدون انتخاب مقصد، جایگاه برای همهٔ صفحات این نوع فعال است.
+                          </p>
+                          {slot === 'CATEGORY' ? (
+                            <CampaignTaxonomyPicker
+                              taxonomy={taxonomy.data ?? { categories: [], brands: [] }}
+                              kind="categories"
+                              selected={
+                                placementTargets.CATEGORY ? [placementTargets.CATEGORY] : []
+                              }
+                              onChange={(selection) =>
+                                setPlacementTargets((current) => ({
+                                  ...current,
+                                  CATEGORY: selection[0],
+                                }))
+                              }
+                              max={1}
+                              categoryMode="direct"
+                              disabled={Boolean(busy)}
+                            />
+                          ) : (
+                            <CampaignProductSearch
+                              selected={placementTargets.PRODUCT ? [placementTargets.PRODUCT] : []}
+                              taxonomy={taxonomy.data}
+                              campaignId={campaign.id}
+                              max={1}
+                              disabled={Boolean(busy)}
+                              onSelect={(slug) =>
+                                setPlacementTargets((current) => ({ ...current, PRODUCT: slug }))
+                              }
+                              onRemove={() =>
+                                setPlacementTargets((current) => ({
+                                  ...current,
+                                  PRODUCT: undefined,
+                                }))
+                              }
                             />
                           )}
-                        </FormField>
+                        </div>
                       )}
                       <FormField id={`priority-${slot}`} label="اولویت" hint="از ۰ تا ۱۰۰">
                         {(control) => (

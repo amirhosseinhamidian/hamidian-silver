@@ -6,6 +6,9 @@ import { SiteMediaField } from '@/components/site-settings/site-media-field';
 import { Button } from '@/components/ui/button';
 import { DualCalendarPicker } from '@/components/ui/dual-calendar-picker';
 import { Input, Textarea } from '@/components/ui/form-control';
+import { addCampaignSelection, type CampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
+import { CampaignProductSearch } from './campaign-product-search';
+import { CampaignTaxonomyPicker } from './campaign-taxonomy-picker';
 
 type Section = components['schemas']['FestivalSectionDto'];
 type Slide = components['schemas']['FestivalHeroSlideDto'];
@@ -110,12 +113,16 @@ function SlideFields({
 
 export function FestivalSectionEditor({
   section,
+  campaignId,
+  taxonomy,
   update,
   assets,
   uploaded,
   onPendingChange,
 }: {
   section: Section;
+  campaignId: string;
+  taxonomy?: CampaignTaxonomy;
   update: (section: Section) => void;
   assets: Readonly<Record<string, Media>>;
   uploaded: (asset: Media) => void;
@@ -127,7 +134,9 @@ export function FestivalSectionEditor({
   const selectedSource = ['PICKS', 'OFFERS', 'DISCOUNTS', 'LOW_QUOTA', 'CATEGORIES'].includes(
     section.kind,
   );
-  const [slugText, setSlugText] = useState(section.slugs?.join('\n') ?? '');
+  const slugs = section.slugs ?? [];
+  const selectSlugs = (next: string[]) =>
+    update({ ...section, slugs: next.length ? next : undefined });
 
   return (
     <div className="space-y-4">
@@ -191,31 +200,31 @@ export function FestivalSectionEditor({
       </div>
 
       {selectedSource && (
-        <label className="grid gap-1 text-sm">
-          {section.kind === 'CATEGORIES' ? 'اسلاگ دسته‌ها' : 'اسلاگ محصولات'}
-          <Textarea
-            dir="ltr"
-            rows={3}
-            placeholder="هر اسلاگ در یک خط"
-            value={slugText}
-            onChange={(event) => {
-              const text = event.currentTarget.value;
-              setSlugText(text);
-              const slugs = [
-                ...new Set(
-                  text
-                    .split(/[\n,،]/)
-                    .map((entry) => entry.trim())
-                    .filter(Boolean),
-                ),
-              ];
-              update({ ...section, slugs: slugs.length > 0 ? slugs : undefined });
-            }}
-          />
+        <div className="grid gap-2 text-sm">
+          {section.kind === 'CATEGORIES' ? (
+            <CampaignTaxonomyPicker
+              taxonomy={taxonomy ?? { categories: [], brands: [] }}
+              kind="categories"
+              selected={slugs}
+              onChange={selectSlugs}
+              max={24}
+              campaignId={campaignId}
+            />
+          ) : (
+            <CampaignProductSearch
+              selected={slugs}
+              campaignId={campaignId}
+              withinCampaign
+              taxonomy={taxonomy}
+              max={24}
+              onSelect={(slug) => selectSlugs(addCampaignSelection(slugs, slug, 24))}
+              onRemove={(slug) => selectSlugs(slugs.filter((item) => item !== slug))}
+            />
+          )}
           {section.kind !== 'PICKS' && (
             <span className="text-xs">اگر خالی بماند، از مجموعهٔ کمپین انتخاب می‌شود.</span>
           )}
-        </label>
+        </div>
       )}
 
       {entrySection && (

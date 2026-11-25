@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { CampaignProductSearch } from '@/components/campaigns/campaign-product-search';
 import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
+import { useCampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
 import { formatAdminToman, toPersianDigits } from '@/lib/presentation/formatters';
 
 type Preview = components['schemas']['CampaignProductPricePreviewDto'];
@@ -24,6 +25,7 @@ const money = (amount: number | null) => (amount === null ? '—' : formatAdminT
 
 export function CampaignProductPricePreview({ campaignId }: { campaignId: string }) {
   const [preview, setPreview] = useState<Preview | null>(null);
+  const taxonomy = useCampaignTaxonomy();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
 
@@ -50,7 +52,8 @@ export function CampaignProductPricePreview({ campaignId }: { campaignId: string
     >
       <div className="space-y-4">
         <CampaignProductSearch
-          selected={[]}
+          campaignId={campaignId}
+          taxonomy={taxonomy.data}
           disabled={busy}
           onSelect={(slug) => void selectProduct(slug)}
         />

@@ -18,10 +18,13 @@ import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CampaignsService } from './campaigns.service';
 import {
+  CampaignCollectionOptionsDto,
+  CampaignCollectionOptionsQueryDto,
   CampaignProductOptionsDto,
   CampaignProductQueryDto,
   CampaignSimulationDto,
   CampaignSimulationInputDto,
+  CampaignTaxonomyOptionsDto,
 } from './dto/campaign-operations.dto';
 import {
   CampaignDetailDto,
@@ -66,7 +69,31 @@ export class CampaignsController {
   @RequirePermissions(PERMISSION_CODES.SETTINGS_READ)
   @ApiOkResponse({ type: CampaignProductOptionsDto })
   selectProducts(@Query() query: CampaignProductQueryDto): Promise<CampaignProductOptionsDto> {
-    return this.campaigns.selectProducts(query.q);
+    return this.campaigns.selectProducts(query);
+  }
+
+  @Post('product-options')
+  @HttpCode(200)
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_READ)
+  @ApiOkResponse({ type: CampaignProductOptionsDto })
+  hydrateProducts(@Body() query: CampaignProductQueryDto): Promise<CampaignProductOptionsDto> {
+    return this.campaigns.selectProducts(query);
+  }
+
+  @Get('selection-taxonomy')
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_READ)
+  @ApiOkResponse({ type: CampaignTaxonomyOptionsDto })
+  selectionTaxonomy(): Promise<CampaignTaxonomyOptionsDto> {
+    return this.campaigns.selectionTaxonomy();
+  }
+
+  @Get('collection-options')
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_READ)
+  @ApiOkResponse({ type: CampaignCollectionOptionsDto })
+  selectCollections(
+    @Query() query: CampaignCollectionOptionsQueryDto,
+  ): Promise<CampaignCollectionOptionsDto> {
+    return this.campaigns.selectCollections(query.q, query.page ?? 1);
   }
 
   @Get(':id')

@@ -135,6 +135,57 @@ it('publishes only qualifying products, limits banner placements and archives a 
         }),
       ),
     );
+    await db.productMedia.create({
+      data: { productId: ring.id, mediaId: assets[1].id, isPrimary: true },
+    });
+    await db.productVariant.update({
+      where: { sku: `${slug}-ring` },
+      data: { sku: `${slug}-ring-sku` },
+    });
+    await expect(
+      campaigns.selectProducts({ q: `${slug}-ring-sku`, stock: 'in-stock' }),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          id: ring.id,
+          defaultPriceToman: 800_000,
+          availableQuantity: 3,
+          imageAlt: 'تصویر کمپین آزمایشی',
+        },
+      ],
+      hasMore: false,
+    });
+    await expect(
+      campaigns.selectProducts({ q: slug, category: category.slug, categoryMode: 'direct' }),
+    ).resolves.toMatchObject({ items: [] });
+    await expect(
+      campaigns.selectProducts({
+        q: slug,
+        category: category.slug,
+        brand: brand.slug,
+        stock: 'out-of-stock',
+      }),
+    ).resolves.toMatchObject({ items: [{ id: remote.id, availableQuantity: 0 }] });
+    await expect(
+      campaigns.selectProducts({ selected: [ring.slug, ring.slug], campaignId: created.id }),
+    ).resolves.toMatchObject({ items: [{ id: ring.id }], hasMore: false });
+    await expect(campaigns.selectProducts({ scope: 'campaign' })).rejects.toThrow('identifier');
+    await db.campaign.update({
+      where: { id: created.id },
+      data: { allProducts: false, productIds: [ring.id], categoryIds: [child.id] },
+    });
+    await expect(
+      campaigns.selectProducts({ q: ring.id, campaignId: created.id, scope: 'campaign' }),
+    ).resolves.toMatchObject({ items: [{ id: ring.id }] });
+    await db.campaign.update({
+      where: { id: created.id },
+      data: { allProducts: true, productIds: [], categoryIds: [] },
+    });
+    await expect(campaigns.selectionTaxonomy()).resolves.toMatchObject({
+      categories: expect.arrayContaining([
+        expect.objectContaining({ id: category.id, directProductCount: 0, subtreeProductCount: 5 }),
+      ]),
+    });
     const input = {
       slug,
       seoMode: 'RECURRING',
@@ -190,6 +241,9 @@ it('publishes only qualifying products, limits banner placements and archives a 
       }),
     ).rejects.toThrow('static fallback');
     const saved = await landings.save(created.id, { ...input, expectedRevision: 1 }, owner.id);
+    await expect(campaigns.selectCollections(slug)).resolves.toMatchObject({
+      items: [{ id: created.id, slug, name: input.title }],
+    });
     await expect(landings.publicLanding(slug, 1, now)).rejects.toThrow('not found');
     await expect(
       landings.save(created.id, { ...input, expectedRevision: 1 }, owner.id),
@@ -376,6 +430,21 @@ it('publishes only qualifying products, limits banner placements and archives a 
       seoMode: 'RECURRING',
       products: { total: 0 },
     });
+
+    await db.product.createMany({
+      data: Array.from({ length: 13 }, (_, index) => ({
+        slug: `${slug}-page-${index}`,
+        name: `محصول آزمون ${index}`,
+        status: 'ACTIVE',
+      })),
+    });
+    const firstPage = await campaigns.selectProducts({ q: `${slug}-page` });
+    const secondPage = await campaigns.selectProducts({ q: `${slug}-page`, page: 2 });
+    expect(firstPage).toMatchObject({ page: 1, hasMore: true });
+    expect(firstPage.items).toHaveLength(12);
+    expect(secondPage).toMatchObject({ page: 2, hasMore: false });
+    expect(secondPage.items).toHaveLength(1);
+    expect(firstPage.items.map(({ id }) => id)).not.toContain(secondPage.items[0].id);
   } finally {
     try {
       await db.$transaction([

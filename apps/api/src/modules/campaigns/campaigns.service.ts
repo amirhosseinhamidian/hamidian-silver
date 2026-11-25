@@ -26,7 +26,11 @@ import { campaignTransition } from './campaign-lifecycle';
 import { assertExclusiveQuotaWindow } from './campaign-quota';
 import { CampaignLandingsService } from './campaign-landings.service';
 import { campaignBudget, simulateCampaign } from './campaign-operations';
-import type { CampaignSimulationInputDto } from './dto/campaign-operations.dto';
+import { campaignTaxonomy, selectCampaignProducts } from './campaign-selection';
+import type {
+  CampaignProductQueryDto,
+  CampaignSimulationInputDto,
+} from './dto/campaign-operations.dto';
 import type {
   CampaignDetailDto,
   CampaignDraftDto,
@@ -138,21 +142,45 @@ export class CampaignsService {
     };
   }
 
-  async selectProducts(query: string) {
-    const items = await this.db.product.findMany({
-      where: {
-        status: 'ACTIVE',
-        deletedAt: null,
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { slug: { contains: query, mode: 'insensitive' } },
-        ],
-      },
-      select: { slug: true, name: true },
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
-      take: 12,
+  selectProducts(query: CampaignProductQueryDto | string) {
+    const filters = typeof query === 'string' ? { q: query } : query;
+    return this.db.$transaction((tx) => selectCampaignProducts(tx, this.mediaUrls, filters), {
+      isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+      timeout: 10_000,
     });
-    return { items };
+  }
+
+  selectionTaxonomy() {
+    return campaignTaxonomy(this.db);
+  }
+
+  async selectCollections(q?: string, page = 1) {
+    if (q?.includes('\0')) throw new BadRequestException('Invalid collection search.');
+    const rows = await this.db.campaignLanding.findMany({
+      where: {
+        collectionMode: 'FILTERED',
+        campaign: { kind: { not: 'MARKETING' }, archivedAt: null },
+        ...(q
+          ? {
+              OR: [
+                { title: { contains: q, mode: 'insensitive' } },
+                { slug: { contains: q, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      },
+      select: { campaignId: true, slug: true, title: true },
+      orderBy: [{ updatedAt: 'desc' }, { campaignId: 'asc' }],
+      skip: (page - 1) * 20,
+      take: 21,
+    });
+    return {
+      page,
+      hasMore: rows.length > 20,
+      items: rows
+        .slice(0, 20)
+        .map(({ campaignId, slug, title }) => ({ id: campaignId, slug, name: title })),
+    };
   }
 
   async simulate(id: string, input: CampaignSimulationInputDto) {

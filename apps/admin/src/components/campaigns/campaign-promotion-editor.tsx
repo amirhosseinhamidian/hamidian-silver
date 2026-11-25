@@ -7,16 +7,18 @@ import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input, Textarea } from '@/components/ui/form-control';
+import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Select } from '@/components/ui/select';
+import { addCampaignSelection, useCampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
 import {
   formatAdminInteger,
   formatAdminToman,
   parseAdminMoneyInput,
   toAsciiDigits,
 } from '@/lib/presentation/formatters';
+import { CampaignProductSearch } from './campaign-product-search';
 
 type Rule = components['schemas']['SavePromotionDto'];
 const labels: Record<Rule['kind'], string> = {
@@ -38,6 +40,8 @@ export function CampaignPromotionEditor({
 }) {
   const router = useRouter();
   const [kind, setKind] = useState<Rule['kind']>(rule?.kind ?? 'PERCENT');
+  const [bundle, setBundle] = useState(rule?.bundleProductSlugs ?? []);
+  const taxonomy = useCampaignTaxonomy();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,15 +69,13 @@ export function CampaignPromotionEditor({
       priority: integer('priority'),
       couponCode: text('coupon') || null,
       maxUses: text('uses') ? integer('uses') : null,
-      bundleProductSlugs:
-        kind === 'BUNDLE'
-          ? text('bundle')
-              .split(/[\n,،]/)
-              .map((slug) => slug.trim())
-              .filter(Boolean)
-          : [],
+      bundleProductSlugs: kind === 'BUNDLE' ? bundle : [],
       expectedVersion: rule?.expectedVersion ?? 0,
     };
+    if (kind === 'BUNDLE' && bundle.length < 2) {
+      setError('حداقل دو محصول متمایز برای بسته انتخاب کنید.');
+      return;
+    }
     if (
       [draft.value, draft.maxDiscountBps, draft.priority, draft.maxUses ?? 1].some(
         (value) => !Number.isSafeInteger(value),
@@ -281,23 +283,21 @@ export function CampaignPromotionEditor({
             )}
           </FormField>
           {kind === 'BUNDLE' && (
-            <FormField
-              id="promotion-bundle"
-              label="اسلاگ محصول‌های بسته"
-              hint="حداقل دو محصول متمایز را در خط‌های جدا وارد کنید."
-              className="sm:col-span-2"
-              required
-            >
-              {(control) => (
-                <Textarea
-                  {...control}
-                  name="bundle"
-                  dir="ltr"
-                  defaultValue={rule?.bundleProductSlugs.join('\n')}
-                  required
-                />
-              )}
-            </FormField>
+            <div className="space-y-2 sm:col-span-2">
+              <p className="text-xs text-[var(--admin-color-muted)]">
+                حداقل دو محصول متمایز از محدودهٔ کمپین انتخاب کنید.
+              </p>
+              <CampaignProductSearch
+                selected={bundle}
+                campaignId={id}
+                withinCampaign
+                taxonomy={taxonomy.data}
+                max={10}
+                disabled={busy}
+                onSelect={(slug) => setBundle((current) => addCampaignSelection(current, slug, 10))}
+                onRemove={(slug) => setBundle((current) => current.filter((item) => item !== slug))}
+              />
+            </div>
           )}
         </fieldset>
         {error && <Alert tone="danger">{error}</Alert>}

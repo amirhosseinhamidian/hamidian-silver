@@ -157,6 +157,38 @@ export interface paths {
         };
         get: operations["CampaignsController_selectProducts_v1"];
         put?: never;
+        post: operations["CampaignsController_hydrateProducts_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/selection-taxonomy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignsController_selectionTaxonomy_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/collection-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignsController_selectCollections_v1"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -5000,11 +5032,58 @@ export interface components {
             hasMore: boolean;
         };
         CampaignProductOptionDto: {
+            defaultPriceToman: number | null;
+            festivalPriceToman: number | null;
+            quotaRemaining: number | null;
+            categories: string[];
+            imageUrl: string | null;
+            imageAlt: string | null;
+            availableQuantity: number;
+            id: string;
             slug: string;
             name: string;
         };
         CampaignProductOptionsDto: {
             items: components["schemas"]["CampaignProductOptionDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        CampaignProductQueryDto: {
+            q?: string;
+            page?: number;
+            category?: string;
+            brand?: string;
+            /** @enum {string} */
+            stock?: "in-stock" | "out-of-stock";
+            /** Format: uuid */
+            campaignId?: string;
+            /** @enum {string} */
+            scope?: "campaign";
+            selected?: string[];
+            /** @enum {string} */
+            categoryMode?: "direct" | "tree";
+        };
+        CampaignCategoryOptionDto: {
+            parentId: string | null;
+            directProductCount: number;
+            subtreeProductCount: number;
+            id: string;
+            slug: string;
+            name: string;
+        };
+        CampaignNamedOptionDto: {
+            id: string;
+            slug: string;
+            name: string;
+        };
+        CampaignTaxonomyOptionsDto: {
+            categories: components["schemas"]["CampaignCategoryOptionDto"][];
+            brands: components["schemas"]["CampaignNamedOptionDto"][];
+        };
+        CampaignCollectionOptionsDto: {
+            items: components["schemas"]["CampaignNamedOptionDto"][];
+            page: number;
+            hasMore: boolean;
         };
         CampaignBudgetDto: {
             committedReferralRewardToman?: number;
@@ -9084,8 +9163,16 @@ export interface operations {
     };
     CampaignsController_selectProducts_v1: {
         parameters: {
-            query: {
-                q: string;
+            query?: {
+                q?: string;
+                page?: number;
+                category?: string;
+                brand?: string;
+                stock?: "in-stock" | "out-of-stock";
+                campaignId?: string;
+                scope?: "campaign";
+                selected?: string[];
+                categoryMode?: "direct" | "tree";
             };
             header?: never;
             path?: never;
@@ -9099,6 +9186,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CampaignProductOptionsDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_hydrateProducts_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignProductQueryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignProductOptionsDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_selectionTaxonomy_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignTaxonomyOptionsDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_selectCollections_v1: {
+        parameters: {
+            query?: {
+                q?: string;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignCollectionOptionsDto"];
                 };
             };
         };

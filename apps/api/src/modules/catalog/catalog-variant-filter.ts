@@ -27,13 +27,14 @@ export type MatchingCatalogVariants = {
   }[];
 };
 
-export function buildCatalogStockCte(defaultWarehouseOnly = false) {
+export function buildCatalogStockCte(defaultWarehouseOnly = false, variantIds?: Prisma.Sql) {
   return Prisma.sql`stock AS (
       SELECT inventory."variantId", SUM(GREATEST(inventory."onHand" - inventory."reserved", 0)) AS units
       FROM "inventory" AS inventory
       JOIN "warehouses" AS warehouse ON warehouse.id = inventory."warehouseId"
       WHERE warehouse."isActive" AND warehouse."deletedAt" IS NULL
       ${defaultWarehouseOnly ? Prisma.sql`AND warehouse."isDefault"` : Prisma.empty}
+      ${variantIds ? Prisma.sql`AND inventory."variantId" IN (${variantIds})` : Prisma.empty}
       GROUP BY inventory."variantId"
 )`;
 }
@@ -62,13 +63,17 @@ export const catalogActiveVariantCriteria = Prisma.sql`AND variant."isActive" AN
         AND (product."sizeMode" <> 'SIZED' OR
           (size."isActive" AND size."deletedAt" IS NULL AND size_group."isActive" AND size_group."deletedAt" IS NULL))`;
 
-export const catalogProductStockSql = Prisma.sql`COALESCE((
+export function buildCatalogProductStockSql(requirePublishedComponents = false) {
+  return Prisma.sql`COALESCE((
   SELECT CASE WHEN product."purchaseMode" = 'COMPOSITE' THEN MAX(stock_amount.quantity) ELSE SUM(stock_amount.quantity) END
   FROM "product_variants" AS variant
   ${catalogVariantStockJoins}
-  CROSS JOIN LATERAL (SELECT ${catalogVariantStockSql} AS quantity) AS stock_amount
+  CROSS JOIN LATERAL (SELECT ${buildCatalogVariantStockSql(requirePublishedComponents)} AS quantity) AS stock_amount
   WHERE variant."productId" = product.id ${catalogActiveVariantCriteria}
 ), 0)::bigint`;
+}
+
+export const catalogProductStockSql = buildCatalogProductStockSql();
 
 export async function readMatchingCatalogVariants(
   prisma: Pick<PrismaService, '$queryRaw'>,
