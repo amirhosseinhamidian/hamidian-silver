@@ -78,6 +78,8 @@ const messages: Record<string, string> = {
   'The destination already contains tracking parameters.':
     'پارامترهای ردیابی را از مسیر مقصد بردارید.',
   'Keep section dates inside the campaign window.': 'زمان هر بخش باید داخل بازهٔ کمپین باشد.',
+  'Section artwork needs a desktop image in a content section.':
+    'برای رسانهٔ بخش، ابتدا تصویر دسکتاپ را در یک بخش محتوایی انتخاب کنید.',
   'Keep the full product list enabled throughout the campaign.':
     'بخش همهٔ محصولات باید در سراسر کمپین فعال باشد.',
   'Set a maximum price for each budget group.': 'برای هر گروه بودجه سقف قیمت تعیین کنید.',

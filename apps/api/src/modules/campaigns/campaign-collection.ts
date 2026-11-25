@@ -5,6 +5,7 @@ import {
   type PublicCatalogFacetsDto,
   type PublicCatalogFacetsQueryDto,
 } from '../catalog/dto/public-catalog-facets.dto';
+import type { CatalogPromotionCandidate } from '../promotions/promotion-presentation';
 import type { CampaignCollectionFiltersDto } from './dto/campaign-landing.dto';
 
 type Collection = Pick<CampaignLanding, 'collectionMode' | 'manualProductIds'> & {
@@ -31,8 +32,15 @@ export function readCampaignProducts(
   selected: CampaignProductFilters = {},
   {
     pickedIds,
+    candidateIds,
     includeFilterOptions,
-  }: { pickedIds?: string[]; includeFilterOptions?: boolean } = {},
+    campaignPromotions,
+  }: {
+    pickedIds?: string[];
+    candidateIds?: string[];
+    includeFilterOptions?: boolean;
+    campaignPromotions?: readonly CatalogPromotionCandidate[];
+  } = {},
 ) {
   const { minimumQuantity = 1, ...filters } = landing.filters as CampaignCollectionFiltersDto;
   const minPriceToman = Math.max(filters.minPriceToman ?? 1, selected.minPriceToman ?? 1);
@@ -64,9 +72,11 @@ export function readCampaignProducts(
       categoryIds: campaign.categoryIds,
       minimumQuantity,
       includeFilterOptions,
+      ...(candidateIds ? { candidateIds } : {}),
       ...(matchingIds ? { manualProductIds: matchingIds } : {}),
     },
     page,
     pageSize,
+    campaignPromotions,
   );
 }

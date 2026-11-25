@@ -140,6 +140,7 @@ export function CatalogProductGrid({
   const campaignKey = campaignRequest
     ? `${campaignRequest.pathname}?${campaignRequest.query}:${initialProducts.page}`
     : null;
+  const observedCampaignPage = campaignRequest ? nextPage : null;
   const campaignHref = campaignRequest ? new URLSearchParams(campaignRequest.query) : null;
   campaignHref?.set('page', String(nextPage));
   const nextPageHref = campaignHref
@@ -257,7 +258,7 @@ export function CatalogProductGrid({
     observer.observe(sentinel);
 
     return () => observer.disconnect();
-  }, [autoLoad, error, hasMore, loadNextPage]);
+  }, [autoLoad, error, hasMore, loadNextPage, observedCampaignPage]);
 
   return (
     <>

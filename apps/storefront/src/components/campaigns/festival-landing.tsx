@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, type CSSProperties, type ReactNode } from 'react';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
+import { CampaignArtwork } from '@/components/home/campaign-artwork';
 import { HomepageHero } from '@/components/home/homepage-hero';
 import { Countdown } from '@/components/layout/storefront-announcement';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
@@ -159,6 +160,7 @@ export function FestivalLanding({
   }, [preview, refreshAt, router, visible]);
   const { theme } = design;
   const hero = design.sections.find(({ kind }) => kind === 'HERO');
+  const hasIntro = design.sections.some(({ kind }) => kind === 'INTRO');
   const slides = hero?.slides?.filter((slide) => slide.media?.url) ?? [];
   const pattern =
     theme.decoration === 'DOTS'
@@ -199,14 +201,8 @@ export function FestivalLanding({
   const heading = (
     <div className="sf-container py-7">
       {breadcrumbs}
-      {slides.length ? (
-        <p className="mt-4 max-w-3xl whitespace-pre-line text-sm leading-8">{story}</p>
-      ) : (
-        <>
-          <h1 className="my-4 text-3xl font-medium sm:text-5xl">{title}</h1>
-          <p className="max-w-3xl whitespace-pre-line text-sm leading-8">{story}</p>
-        </>
-      )}
+      {slides.length === 0 && <h1 className="my-4 text-3xl font-medium sm:text-5xl">{title}</h1>}
+      {!hasIntro && <p className="mt-4 max-w-3xl whitespace-pre-line text-sm leading-8">{story}</p>}
     </div>
   );
 
@@ -271,8 +267,15 @@ export function FestivalLanding({
           );
         }
         const all = section.kind === 'PRODUCTS';
+        const hasArtwork = Boolean(
+          section.artwork?.media?.url ||
+          section.artwork?.mobileMedia?.url ||
+          section.artwork?.stillMedia?.url,
+        );
         if (
           !all &&
+          !section.description &&
+          !hasArtwork &&
           !section.products?.length &&
           !section.entries?.length &&
           !section.categories?.length
@@ -290,13 +293,38 @@ export function FestivalLanding({
             id={all ? 'campaign-products' : undefined}
             className="sf-container scroll-mt-32 pt-10 sm:pt-14"
           >
-            <h2
-              className="mb-5 border-s-2 ps-3 text-xl font-semibold sm:text-3xl"
-              style={{ borderColor: theme.accent }}
+            <div
+              className={
+                section.highlighted
+                  ? 'rounded-xl bg-[var(--sf-color-surface)] p-3 sm:p-6'
+                  : undefined
+              }
             >
-              {section.title}
-            </h2>
-            {all ? children : <FestivalSectionContent section={section} pathname={pathname} />}
+              <h2
+                className="mb-5 border-s-2 ps-3 text-xl font-semibold sm:text-3xl"
+                style={{ borderColor: theme.accent }}
+              >
+                {section.title}
+              </h2>
+              {section.description && (
+                <p className="mb-5 max-w-3xl whitespace-pre-line text-sm leading-8 [overflow-wrap:anywhere]">
+                  {section.description}
+                </p>
+              )}
+              {section.artwork && hasArtwork && (
+                <CampaignArtwork
+                  key={[
+                    section.artwork.media?.id,
+                    section.artwork.mobileMedia?.id,
+                    section.artwork.stillMedia?.id,
+                  ].join(':')}
+                  artwork={section.artwork}
+                  className="relative mb-5 aspect-[4/3] overflow-hidden rounded-lg sm:aspect-[3/1]"
+                  sizes="100vw"
+                />
+              )}
+              {all ? children : <FestivalSectionContent section={section} pathname={pathname} />}
+            </div>
           </section>
         );
       })}

@@ -19,7 +19,10 @@ import {
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { readPublicQuotas } from '../campaigns/campaign-quota';
-import { selectCatalogPromotion } from '../promotions/promotion-presentation';
+import {
+  selectCatalogPromotion,
+  type CatalogPromotionCandidate,
+} from '../promotions/promotion-presentation';
 import { PromotionsService } from '../promotions/promotions.service';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
 import { readActiveCategoryProductCounts } from './catalog-category-counts';
@@ -1270,17 +1273,28 @@ export class CatalogService {
     return listing;
   }
 
+  async campaignCollectionPromotions(reader: CatalogPricingReader) {
+    return (await this.promotions?.catalogPromotions(reader)) ?? [];
+  }
+
   async readCampaignCollection(
     reader: CatalogPricingReader & Pick<PrismaService, '$queryRaw'>,
     query: PublicCatalogFacetsQueryDto,
     selection: CampaignCollectionSelection,
     page = 1,
     pageSize = 24,
+    campaignPromotions?: readonly CatalogPromotionCandidate[],
   ) {
     const [result] = await reader.$queryRaw<CatalogFacetPageRow[]>(
       buildPublicCatalogFacetsQuery({ ...query, page, pageSize }, undefined, selection),
     );
-    const products = await this.hydrateFacetPage(reader, result, page, pageSize || 1);
+    const products = await this.hydrateFacetPage(
+      reader,
+      result,
+      page,
+      pageSize || 1,
+      campaignPromotions,
+    );
     return { ...products, facets: result.facets };
   }
 
@@ -1289,6 +1303,7 @@ export class CatalogService {
     result: CatalogFacetPageRow,
     page: number,
     pageSize: number,
+    campaignPromotions?: readonly CatalogPromotionCandidate[],
   ) {
     if (result.invalidAttributeFilter) {
       throw new BadRequestException(
@@ -1308,6 +1323,7 @@ export class CatalogService {
         ),
       ),
       new Map(result.items.map((item) => [item.id, item])),
+      campaignPromotions,
     );
   }
 
@@ -1338,6 +1354,7 @@ export class CatalogService {
       string,
       Pick<CatalogFacetPageRow['items'][number], 'salePriceToman' | 'compareAtPriceToman'>
     >,
+    campaignPromotions?: readonly CatalogPromotionCandidate[],
   ) {
     const matchingVariantIds = facetPrices
       ? []
@@ -1473,7 +1490,7 @@ export class CatalogService {
     const [promotions, quotas] =
       this.promotions && orderedPageProducts.length
         ? await Promise.all([
-            this.promotions.catalogPromotions(reader),
+            campaignPromotions ?? this.promotions.catalogPromotions(reader),
             readPublicQuotas(
               reader,
               orderedPageProducts.map(({ id }) => id),

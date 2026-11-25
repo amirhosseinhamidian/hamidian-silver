@@ -275,9 +275,34 @@ it('publishes only qualifying products, limits banner placements and archives a 
           startsTehran: formatTehranDate(bannerEnd),
           entries: [{ title: 'زمان پایان', body: 'پایان در تاریخ اعلام‌شده' }],
         },
+        {
+          kind: 'PICKS',
+          enabled: true,
+          title: 'انتخاب مدیر',
+          description: '  انتخاب‌های این هفته  ',
+          highlighted: true,
+          layout: 'STRIP',
+          itemLimit: 1,
+          slugs: [remote.slug, chain.slug, ring.slug],
+          artwork: {
+            mediaId: assets[0].id,
+            mobileMediaId: assets[1].id,
+            stillMediaId: assets[2].id,
+          },
+        },
         { kind: 'PRODUCTS', enabled: true, title: 'همهٔ محصولات', layout: 'GRID' },
       ],
     } satisfies FestivalDesignDto;
+    await expect(
+      festivals.preview(created.id, {
+        ...design,
+        sections: design.sections.map((section) =>
+          section.kind === 'PICKS'
+            ? { ...section, artwork: { mobileMediaId: assets[1].id } }
+            : section,
+        ),
+      }),
+    ).rejects.toThrow('Section artwork needs a desktop image');
     await expect(festivals.preview(created.id, design)).resolves.toMatchObject({
       products: { total: 2 },
       design: {
@@ -358,6 +383,7 @@ it('publishes only qualifying products, limits banner placements and archives a 
     expect(page.design?.sections.map(({ kind }) => kind)).toEqual([
       'HERO',
       'CATEGORIES',
+      'PICKS',
       'PRODUCTS',
     ]);
     expect(page.design?.refreshAt).toBe(bannerEnd.toISOString());
@@ -370,6 +396,17 @@ it('publishes only qualifying products, limits banner placements and archives a 
     expect(page.design?.sections.find(({ kind }) => kind === 'CATEGORIES')?.categories).toEqual([
       expect.objectContaining({ slug: child.slug }),
     ]);
+    expect(page.design?.sections.find(({ kind }) => kind === 'PICKS')).toMatchObject({
+      description: 'انتخاب‌های این هفته',
+      highlighted: true,
+      layout: 'STRIP',
+      artwork: {
+        media: { id: assets[0].id },
+        mobileMedia: { id: assets[1].id },
+        stillMedia: { id: assets[2].id },
+      },
+      products: [{ id: chain.id }],
+    });
     await expect(landings.publicLanding(slug, 1, bannerEnd)).resolves.toMatchObject({
       design: { sections: expect.arrayContaining([expect.objectContaining({ kind: 'FAQ' })]) },
     });

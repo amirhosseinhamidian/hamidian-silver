@@ -608,6 +608,10 @@ async function handler(request, response) {
     });
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/v1/campaigns/public/activity') {
+    return json(response, 200, { activeIds: ['festival-nowruz'] });
+  }
+
   if (
     request.method === 'GET' &&
     ['/api/v1/campaigns/public/banner', '/api/v1/campaigns/public/placement'].includes(url.pathname)
@@ -636,22 +640,57 @@ async function handler(request, response) {
   if (request.method === 'GET' && url.pathname.startsWith('/api/v1/campaigns/public/landing/')) {
     const slug = url.pathname.split('/').at(-1);
     const page = Number(url.searchParams.get('page') ?? '1');
+    const festival = slug === 'festival-nowruz';
     if (
       !['nowruz', 'festival-nowruz', 'weekend', 'archived-nowruz', 'empty-collection'].includes(
         slug,
       ) ||
-      page > (slug === 'nowruz' ? 2 : 1)
+      page > (slug === 'nowruz' || festival ? 2 : 1)
     ) {
       return json(response, 404, { message: 'Campaign landing not found.' });
     }
     const hasProducts = slug !== 'archived-nowruz' && slug !== 'empty-collection';
-    const count = hasProducts ? (slug === 'nowruz' ? 2 : 1) : 0;
+    const count = hasProducts ? (slug === 'nowruz' || festival ? 2 : 1) : 0;
+    const artwork = {
+      media: { ...media, id: PRODUCT_ID, altText: 'تصویر مزایای جشنواره' },
+      mobileMedia: null,
+      stillMedia: null,
+    };
     return json(response, 200, {
       slug,
       title: slug === 'nowruz' ? 'مجموعهٔ نوروز' : 'مجموعهٔ آزمایشی',
       story: 'انتخاب‌هایی برای هدیه دادن.',
       seoMode: slug === 'weekend' ? 'TEMPORARY' : 'RECURRING',
-      isFestival: slug === 'festival-nowruz',
+      isFestival: festival,
+      ...(festival && !url.searchParams.has('productsOnly')
+        ? {
+            campaignId: slug,
+            endsAt: '2099-03-22T12:00:00.000Z',
+            design: {
+              theme: {
+                background: '#16131b',
+                surface: '#2c2434',
+                foreground: '#ffffff',
+                accent: '#f0acd6',
+                decoration: 'NONE',
+                motion: 'STILL',
+              },
+              filterCategories: [{ label: 'انگشتر', value: 'rings', count: 2 }],
+              filterBrands: [],
+              sections: [
+                {
+                  kind: 'HIGHLIGHTS',
+                  title: 'مزایای جشنواره',
+                  description: 'راهنمای خرید در جشنواره',
+                  highlighted: true,
+                  artwork,
+                  layout: 'GRID',
+                },
+                { kind: 'PRODUCTS', title: 'همهٔ محصولات جشنواره', layout: 'GRID' },
+              ],
+            },
+          }
+        : {}),
       active: slug !== 'archived-nowruz',
       media: { ...media, id: PRODUCT_ID },
       ctaPath: '/products',

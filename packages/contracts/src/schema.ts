@@ -5286,6 +5286,11 @@ export interface components {
             accent: string;
             gradient?: string;
         };
+        PublicFestivalArtworkDto: {
+            media: components["schemas"]["CampaignMediaDto"] | null;
+            mobileMedia: components["schemas"]["CampaignMediaDto"] | null;
+            stillMedia: components["schemas"]["CampaignMediaDto"] | null;
+        };
         PublicCatalogMatchingVariantDto: {
             sizeId: string | null;
             lengthMm: number | null;
@@ -5400,7 +5405,8 @@ export interface components {
         };
         PublicFestivalSectionDto: {
             /** @enum {string} */
-            kind: "HERO" | "COUNTDOWN" | "HIGHLIGHTS" | "CATEGORIES" | "DISCOUNTS" | "PICKS" | "LOW_QUOTA" | "BUDGET" | "OFFERS" | "PRODUCTS" | "FAQ";
+            kind: "HERO" | "COUNTDOWN" | "INTRO" | "HIGHLIGHTS" | "CATEGORIES" | "DISCOUNTS" | "PICKS" | "LOW_QUOTA" | "BUDGET" | "OFFERS" | "PRODUCTS" | "FAQ";
+            artwork?: components["schemas"]["PublicFestivalArtworkDto"];
             /** @enum {string} */
             layout: "GRID" | "STRIP";
             products?: components["schemas"]["PublicCatalogProductSummaryDto"][];
@@ -5408,6 +5414,8 @@ export interface components {
             slides?: components["schemas"]["PublicFestivalHeroSlideDto"][];
             categories?: components["schemas"]["PublicFestivalCategoryDto"][];
             title: string;
+            description?: string;
+            highlighted?: boolean;
         };
         PublicFestivalDesignDto: {
             /** Format: date-time */
@@ -5558,6 +5566,14 @@ export interface components {
             name: string;
             version: number;
         };
+        FestivalArtworkDto: {
+            /** Format: uuid */
+            mediaId?: string;
+            /** Format: uuid */
+            mobileMediaId?: string;
+            /** Format: uuid */
+            stillMediaId?: string;
+        };
         FestivalHeroSlideDto: {
             /** Format: uuid */
             mediaId: string;
@@ -5572,7 +5588,8 @@ export interface components {
         };
         FestivalSectionDto: {
             /** @enum {string} */
-            kind: "HERO" | "COUNTDOWN" | "HIGHLIGHTS" | "CATEGORIES" | "DISCOUNTS" | "PICKS" | "LOW_QUOTA" | "BUDGET" | "OFFERS" | "PRODUCTS" | "FAQ";
+            kind: "HERO" | "COUNTDOWN" | "INTRO" | "HIGHLIGHTS" | "CATEGORIES" | "DISCOUNTS" | "PICKS" | "LOW_QUOTA" | "BUDGET" | "OFFERS" | "PRODUCTS" | "FAQ";
+            artwork?: components["schemas"]["FestivalArtworkDto"];
             /** @enum {string} */
             layout: "GRID" | "STRIP";
             slugs?: string[];
@@ -5580,6 +5597,9 @@ export interface components {
             slides?: components["schemas"]["FestivalHeroSlideDto"][];
             enabled: boolean;
             title: string;
+            description?: string;
+            itemLimit?: number;
+            highlighted?: boolean;
             startsTehran?: string;
             endsTehran?: string;
             threshold?: number;

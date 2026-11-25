@@ -25,6 +25,7 @@ type Theme = Design['theme'];
 const sectionLabels: Record<Kind, string> = {
   HERO: 'اسلایدهای آغاز صفحه',
   COUNTDOWN: 'زمان باقی‌مانده',
+  INTRO: 'معرفی جشنواره',
   HIGHLIGHTS: 'مزیت‌های جشنواره',
   CATEGORIES: 'خرید بر اساس دسته',
   DISCOUNTS: 'تخفیف‌های بزرگ',
@@ -35,12 +36,11 @@ const sectionLabels: Record<Kind, string> = {
   PRODUCTS: 'همهٔ محصولات',
   FAQ: 'سؤالات متداول',
 };
-const defaults = (Object.keys(sectionLabels) as Kind[]).map((kind) => ({
-  kind,
-  title: sectionLabels[kind],
-  enabled: ['HERO', 'COUNTDOWN', 'PRODUCTS'].includes(kind),
-  layout: 'GRID' as const,
-}));
+function newSection(kind: Kind): Section {
+  return { kind, title: sectionLabels[kind], enabled: true, layout: 'GRID' };
+}
+const defaults = (['HERO', 'COUNTDOWN', 'INTRO', 'PRODUCTS'] as const).map(newSection);
+const supportedSections = Object.keys(sectionLabels) as Kind[];
 const selectStyle = 'min-h-10 min-w-0 rounded-md border border-[var(--admin-color-border)] px-2';
 
 function openFestivalPreview(device: 'mobile' | 'desktop', onError: (message: string) => void) {
@@ -128,6 +128,10 @@ export function FestivalDesigner({
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('');
   const [revisionToRestore, setRevisionToRestore] = useState('');
+  const [sectionToAdd, setSectionToAdd] = useState<Kind | ''>('');
+  const availableSections = supportedSections.filter(
+    (kind) => !design.sections.some((section) => section.kind === kind),
+  );
   const formRef = useRef<HTMLFormElement>(null);
   const cancelPreview = useRef<(() => void) | null>(null);
   const endpoint = `/api/campaigns/${campaignId}/design`;
@@ -142,6 +146,23 @@ export function FestivalDesigner({
       ...current,
       sections: current.sections.map((row) => (row.kind === next.kind ? next : row)),
     }));
+  }
+
+  function addSection() {
+    if (!sectionToAdd || !availableSections.includes(sectionToAdd)) return;
+    const section = newSection(sectionToAdd);
+    setDesign((current) => ({ ...current, sections: [...current.sections, section] }));
+    setSectionToAdd('');
+    setStatus(`بخش «${section.title}» اضافه شد.`);
+  }
+
+  function removeSection(section: Section) {
+    if (section.kind === 'PRODUCTS' || uploads || busy) return;
+    setDesign((current) => ({
+      ...current,
+      sections: current.sections.filter(({ kind }) => kind !== section.kind),
+    }));
+    setStatus(`بخش «${section.title}» از پیش‌نویس حذف شد.`);
   }
   function move(kind: Kind, target: Kind) {
     if (kind === target) return;
@@ -283,6 +304,32 @@ export function FestivalDesigner({
           </div>
           <FestivalThemeFields theme={design.theme} onChange={setTheme} />
 
+          {editable && availableSections.length > 0 && (
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="grid gap-1 text-sm">
+                نوع بخش تازه
+                <select
+                  className={selectStyle}
+                  value={sectionToAdd}
+                  onChange={(event) => setSectionToAdd(event.currentTarget.value as Kind | '')}
+                >
+                  <option value="">انتخاب نوع بخش</option>
+                  {availableSections.map((kind) => (
+                    <option key={kind} value={kind}>
+                      {sectionLabels[kind]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button
+                variant="outline"
+                disabled={!sectionToAdd || busy || uploads > 0}
+                onClick={addSection}
+              >
+                افزودن بخش
+              </Button>
+            </div>
+          )}
           <ol aria-label="ترتیب بخش‌های جشنواره" className="space-y-3">
             {design.sections.map((section, index) => (
               <li
@@ -333,6 +380,17 @@ export function FestivalDesigner({
                       >
                         ↓
                       </Button>
+                      {section.kind !== 'PRODUCTS' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={busy || uploads > 0}
+                          aria-label={`حذف بخش ${sectionLabels[section.kind]}`}
+                          onClick={() => removeSection(section)}
+                        >
+                          حذف بخش
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>

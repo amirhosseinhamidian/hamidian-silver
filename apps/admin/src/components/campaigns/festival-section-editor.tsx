@@ -13,12 +13,65 @@ import { CampaignTaxonomyPicker } from './campaign-taxonomy-picker';
 type Section = components['schemas']['FestivalSectionDto'];
 type Slide = components['schemas']['FestivalHeroSlideDto'];
 type Media = components['schemas']['CampaignMediaDto'];
+type Artwork = NonNullable<Section['artwork']>;
 
 const mediaFields = [
   ['mediaId', 'تصویر دسکتاپ'],
   ['mobileMediaId', 'تصویر موبایل'],
   ['stillMediaId', 'تصویر ثابت جایگزین GIF'],
 ] as const;
+
+function ArtworkFields({
+  artwork,
+  assets,
+  update,
+  uploaded,
+  onPendingChange,
+}: {
+  artwork: Artwork;
+  assets: Readonly<Record<string, Media>>;
+  update: (artwork: Artwork) => void;
+  uploaded: (asset: Media) => void;
+  onPendingChange: (pending: boolean) => void;
+}) {
+  const [alt, setAlt] = useState<Partial<Record<(typeof mediaFields)[number][0], string>>>({});
+  return (
+    <div className="grid gap-3 md:grid-cols-3">
+      {mediaFields.map(([key, label]) => {
+        const media = assets[artwork[key] ?? ''] ?? null;
+        const altText = alt[key] ?? media?.altText ?? '';
+        return (
+          <div key={key} className="space-y-2">
+            <label className="grid gap-1 text-xs">
+              متن جایگزین برای {label}
+              <Input
+                value={altText}
+                maxLength={255}
+                onChange={(e) => {
+                  const text = e.currentTarget.value;
+                  setAlt((current) => ({ ...current, [key]: text }));
+                }}
+              />
+            </label>
+            <SiteMediaField
+              label={label}
+              media={media}
+              altText={altText}
+              uploadUrl="/api/campaigns/media"
+              allowCampaignGif={key !== 'stillMediaId'}
+              onPendingChange={onPendingChange}
+              onUploaded={(asset) => {
+                uploaded(asset);
+                update({ ...artwork, [key]: asset.id });
+              }}
+              onClear={() => update({ ...artwork, [key]: undefined })}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function SlideFields({
   slide,
@@ -33,7 +86,6 @@ function SlideFields({
   uploaded: (asset: Media) => void;
   onPendingChange: (pending: boolean) => void;
 }) {
-  const [alt, setAlt] = useState<Partial<Record<(typeof mediaFields)[number][0], string>>>({});
   return (
     <div className="space-y-3 rounded-lg border border-[var(--admin-color-border)] p-3">
       <div className="grid gap-2 md:grid-cols-2">
@@ -73,40 +125,13 @@ function SlideFields({
           />
         </label>
       </div>
-      <div className="grid gap-3 md:grid-cols-3">
-        {mediaFields.map(([key, label]) => {
-          const media = assets[slide[key] ?? ''] ?? null;
-          const altText = alt[key] ?? media?.altText ?? '';
-          return (
-            <div key={key} className="space-y-2">
-              <label className="grid gap-1 text-xs">
-                متن جایگزین برای {label}
-                <Input
-                  value={altText}
-                  maxLength={255}
-                  onChange={(e) => {
-                    const text = e.currentTarget.value;
-                    setAlt((current) => ({ ...current, [key]: text }));
-                  }}
-                />
-              </label>
-              <SiteMediaField
-                label={label}
-                media={media}
-                altText={altText}
-                uploadUrl="/api/campaigns/media"
-                allowCampaignGif={key !== 'stillMediaId'}
-                onPendingChange={onPendingChange}
-                onUploaded={(asset) => {
-                  uploaded(asset);
-                  update({ ...slide, [key]: asset.id });
-                }}
-                onClear={() => update({ ...slide, [key]: key === 'mediaId' ? '' : undefined })}
-              />
-            </div>
-          );
-        })}
-      </div>
+      <ArtworkFields
+        artwork={slide}
+        assets={assets}
+        uploaded={uploaded}
+        onPendingChange={onPendingChange}
+        update={(artwork) => update({ ...slide, ...artwork, mediaId: artwork.mediaId ?? '' })}
+      />
     </div>
   );
 }
@@ -150,26 +175,58 @@ export function FestivalSectionEditor({
             onChange={(e) => update({ ...section, title: e.currentTarget.value })}
           />
         </label>
+        {section.kind !== 'HERO' && section.kind !== 'COUNTDOWN' && (
+          <>
+            <label className="grid gap-1 text-sm sm:col-span-2">
+              توضیح بخش
+              <Textarea
+                maxLength={500}
+                value={section.description ?? ''}
+                placeholder={
+                  section.kind === 'INTRO'
+                    ? 'خالی بماند تا متن معرفی لندینگ نمایش داده شود'
+                    : undefined
+                }
+                rows={2}
+                onChange={(event) =>
+                  update({ ...section, description: event.currentTarget.value || undefined })
+                }
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={section.highlighted ?? false}
+                onChange={(event) =>
+                  update({ ...section, highlighted: event.currentTarget.checked })
+                }
+              />
+              استفاده از پس‌زمینهٔ دوم تم
+            </label>
+          </>
+        )}
         {section.kind !== 'PRODUCTS' && (
           <>
-            {section.kind !== 'HERO' && section.kind !== 'COUNTDOWN' && (
-              <label className="grid gap-1 text-sm">
-                چیدمان
-                <select
-                  className="min-h-10 rounded-md border border-[var(--admin-color-border)] px-2"
-                  value={section.layout}
-                  onChange={(e) =>
-                    update({
-                      ...section,
-                      layout: e.currentTarget.value === 'STRIP' ? 'STRIP' : 'GRID',
-                    })
-                  }
-                >
-                  <option value="GRID">شبکه‌ای</option>
-                  <option value="STRIP">ردیفی</option>
-                </select>
-              </label>
-            )}
+            {section.kind !== 'HERO' &&
+              section.kind !== 'COUNTDOWN' &&
+              section.kind !== 'INTRO' && (
+                <label className="grid gap-1 text-sm">
+                  چیدمان
+                  <select
+                    className="min-h-10 rounded-md border border-[var(--admin-color-border)] px-2"
+                    value={section.layout}
+                    onChange={(e) =>
+                      update({
+                        ...section,
+                        layout: e.currentTarget.value === 'STRIP' ? 'STRIP' : 'GRID',
+                      })
+                    }
+                  >
+                    <option value="GRID">شبکه‌ای</option>
+                    <option value="STRIP">ردیفی</option>
+                  </select>
+                </label>
+              )}
             {(['startsTehran', 'endsTehran'] as const).map((key) => (
               <DualCalendarPicker
                 key={key}
@@ -197,7 +254,40 @@ export function FestivalSectionEditor({
             />
           </label>
         )}
+        {selectedSource && (
+          <label className="grid gap-1 text-sm">
+            حداکثر تعداد نمایش
+            <Input
+              type="number"
+              min={1}
+              max={24}
+              placeholder="۱۲"
+              value={section.itemLimit ?? ''}
+              onChange={(event) =>
+                update({
+                  ...section,
+                  itemLimit: event.currentTarget.value
+                    ? event.currentTarget.valueAsNumber
+                    : undefined,
+                })
+              }
+            />
+          </label>
+        )}
       </div>
+
+      {section.kind !== 'HERO' && section.kind !== 'COUNTDOWN' && (
+        <details open={section.artwork?.mediaId ? true : undefined}>
+          <summary className="mb-2 cursor-pointer text-sm">رسانهٔ بخش</summary>
+          <ArtworkFields
+            artwork={section.artwork ?? {}}
+            assets={assets}
+            uploaded={uploaded}
+            onPendingChange={onPendingChange}
+            update={(artwork) => update({ ...section, artwork })}
+          />
+        </details>
+      )}
 
       {selectedSource && (
         <div className="grid gap-2 text-sm">

@@ -27,6 +27,7 @@ import { CampaignMediaDto } from './campaign.dto';
 export const festivalSections = [
   'HERO',
   'COUNTDOWN',
+  'INTRO',
   'HIGHLIGHTS',
   'CATEGORIES',
   'DISCOUNTS',
@@ -71,6 +72,12 @@ export class FestivalEntryDto {
   @IsOptional() @IsString() @Length(1, 220) actionPath?: string;
 }
 
+export class FestivalArtworkDto {
+  @IsOptional() @IsUUID() mediaId?: string;
+  @IsOptional() @IsUUID() mobileMediaId?: string;
+  @IsOptional() @IsUUID() stillMediaId?: string;
+}
+
 export class FestivalHeroSlideDto {
   @IsUUID() mediaId!: string;
   @IsOptional() @IsUUID() mobileMediaId?: string;
@@ -88,6 +95,17 @@ export class FestivalSectionDto {
 
   @IsBoolean() enabled!: boolean;
   @IsString() @Length(1, 100) title!: string;
+  @IsOptional() @IsString() @Length(1, 500) description?: string;
+  @IsOptional() @IsInt() @Min(1) @Max(24) itemLimit?: number;
+  @IsOptional() @IsBoolean() highlighted?: boolean;
+
+  @ApiPropertyOptional({ type: () => FestivalArtworkDto })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => FestivalArtworkDto)
+  artwork?: FestivalArtworkDto;
+
   @IsOptional() @IsString() @Length(16, 16) startsTehran?: string;
   @IsOptional() @IsString() @Length(16, 16) endsTehran?: string;
 
@@ -139,9 +157,9 @@ export class FestivalDesignDto {
   @Type(() => FestivalThemeSourceDto)
   themeSource?: FestivalThemeSourceDto;
 
-  @ApiProperty({ type: () => FestivalSectionDto, isArray: true, maxItems: 11 })
+  @ApiProperty({ type: () => FestivalSectionDto, isArray: true, maxItems: festivalSections.length })
   @IsArray()
-  @ArrayMaxSize(11)
+  @ArrayMaxSize(festivalSections.length)
   @ArrayUnique((row: FestivalSectionDto) => row?.kind)
   @IsObject({ each: true })
   @ValidateNested({ each: true })
@@ -192,7 +210,7 @@ export class FestivalDesignEditorDto {
   media!: CampaignMediaDto[];
 }
 
-export class PublicFestivalHeroSlideDto {
+export class PublicFestivalArtworkDto {
   @ApiProperty({ type: () => CampaignMediaDto, nullable: true })
   media!: CampaignMediaDto | null;
 
@@ -201,7 +219,9 @@ export class PublicFestivalHeroSlideDto {
 
   @ApiProperty({ type: () => CampaignMediaDto, nullable: true })
   stillMedia!: CampaignMediaDto | null;
+}
 
+export class PublicFestivalHeroSlideDto extends PublicFestivalArtworkDto {
   title!: string;
   subtitle?: string;
   actionLabel?: string;
@@ -219,6 +239,11 @@ export class PublicFestivalSectionDto {
   @ApiProperty({ enum: festivalSections })
   kind!: FestivalSectionKind;
   title!: string;
+  description?: string;
+  highlighted?: boolean;
+
+  @ApiPropertyOptional({ type: () => PublicFestivalArtworkDto })
+  artwork?: PublicFestivalArtworkDto;
 
   @ApiProperty({ enum: ['GRID', 'STRIP'] })
   layout!: 'GRID' | 'STRIP';

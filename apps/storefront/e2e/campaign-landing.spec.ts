@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { waitForClientHydration } from './support/accessibility';
 
 const mockApi = 'http://127.0.0.1:4311';
 
@@ -66,6 +67,66 @@ test('keeps festival, temporary, archived and empty pages out of the index', asy
   ).toBeVisible();
   expect((await request.get('/campaigns/expired-temporary')).status()).toBe(404);
   expect((await request.get('/campaigns/nowruz?page=3')).status()).toBe(404);
+});
+
+test('renders a designed festival, pages with filters, restores results and reaches the footer', async ({
+  page,
+  baseURL,
+}) => {
+  const pages: URLSearchParams[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === '/api/campaigns/festival-nowruz/products') pages.push(url.searchParams);
+  });
+
+  await page.goto('/campaigns/festival-nowruz');
+  await expect(page.getByRole('heading', { name: 'مزایای جشنواره' })).toBeVisible();
+  await expect(page.getByText('راهنمای خرید در جشنواره')).toBeVisible();
+  await expect(page.getByRole('img', { name: 'تصویر مزایای جشنواره' })).toBeVisible();
+  const products = page.locator('#campaign-products');
+  const category = products.getByRole('combobox', { name: 'دسته', exact: true });
+  const sort = products.getByRole('combobox', { name: 'ترتیب نمایش', exact: true });
+  await category.selectOption('rings');
+  await sort.selectOption('price-asc');
+  await page.getByRole('button', { name: 'اعمال فیلتر' }).click();
+  await expect(page).toHaveURL(/category=rings.*sort=price-asc.*#campaign-products$/);
+  await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute(
+    'content',
+    'noindex, follow',
+  );
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    `${baseURL}/campaigns/festival-nowruz`,
+  );
+  const next = page.getByRole('link', { name: 'صفحهٔ بعد', exact: true });
+  await expect(next).toHaveAttribute(
+    'href',
+    '/campaigns/festival-nowruz?category=rings&sort=price-asc&page=2',
+  );
+
+  await waitForClientHydration(page);
+  await page.locator('#campaign-list-end').scrollIntoViewIfNeeded();
+  const appended = products.getByRole('link', { name: 'زنجیر نقره آتنا', exact: true }).last();
+  await expect(appended).toBeVisible();
+  expect(
+    pages.some(
+      (query) =>
+        query.get('page') === '2' &&
+        query.get('category') === 'rings' &&
+        query.get('sort') === 'price-asc',
+    ),
+  ).toBe(true);
+  expect(new URL(page.url()).searchParams.get('page')).toBeNull();
+
+  await appended.click();
+  await expect(page).toHaveURL(/\/products\/athena-gold-silver-chain-45cm-model-2$/);
+  await page.goBack();
+  await expect(appended).toBeInViewport();
+  await expect(category).toHaveValue('rings');
+  await expect(sort).toHaveValue('price-asc');
+  await page.getByRole('link', { name: 'رفتن به پاورقی فروشگاه' }).click();
+  await expect(page).toHaveURL(/#storefront-footer$/);
+  await expect(page.locator('#storefront-footer')).toBeInViewport();
 });
 
 test('uses the standard home slideshow, links catalog banners and lists the eligible landing', async ({

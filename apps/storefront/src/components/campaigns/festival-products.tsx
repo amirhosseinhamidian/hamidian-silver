@@ -156,6 +156,13 @@ export function FestivalProducts({
             >
               رفتن به پایان فهرست
             </Link>
+            <Link
+              href="#storefront-footer"
+              className="underline underline-offset-4"
+              onClick={() => setAutoLoad(false)}
+            >
+              رفتن به پاورقی فروشگاه
+            </Link>
           </div>
           <CatalogProductGrid
             filters={parseCatalogFacetFilters({})}

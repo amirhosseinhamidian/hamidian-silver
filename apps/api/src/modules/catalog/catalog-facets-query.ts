@@ -38,6 +38,7 @@ export type CampaignCollectionSelection = Readonly<{
   productIds: readonly string[];
   categoryIds: readonly string[];
   manualProductIds?: readonly string[];
+  candidateIds?: readonly string[];
   minimumQuantity: number;
   includeFilterOptions?: boolean;
 }>;
@@ -171,6 +172,11 @@ export function buildPublicCatalogFacetsQuery(
         ${
           collection?.manualProductIds
             ? Prisma.sql`AND product.id = ANY(${uuidArray(collection.manualProductIds)})`
+            : Prisma.empty
+        }
+        ${
+          collection?.candidateIds
+            ? Prisma.sql`AND product.id = ANY(${uuidArray(collection.candidateIds)})`
             : Prisma.empty
         }
         ${

@@ -22,6 +22,7 @@ import { createFestivalTheme, requireFestivalThemeVersion } from './festival-the
 import type {
   FestivalDesignDto,
   FestivalDesignEditorDto,
+  FestivalArtworkDto,
   FestivalPreviewDto,
   FestivalSectionDto,
   PublicFestivalDesignDto,
@@ -30,9 +31,14 @@ import type {
 } from './dto/festival-design.dto';
 
 type CampaignProducts = Awaited<ReturnType<typeof readCampaignProducts>>;
+type CampaignProduct = CampaignProducts['items'][number];
 const sectionProductLimit = 12;
-const sectionSampleSize = 48;
+const sectionScanSize = 96;
 const campaignOrigin = 'https://campaign.invalid';
+
+function artworkIds({ mediaId, mobileMediaId, stillMediaId }: FestivalArtworkDto) {
+  return [mediaId, mobileMediaId, stillMediaId].filter((id): id is string => Boolean(id));
+}
 
 export function readFestivalDesign(value: Prisma.JsonValue | undefined) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || value.schemaVersion !== 1)
@@ -43,13 +49,10 @@ export function readFestivalDesign(value: Prisma.JsonValue | undefined) {
 function assetIds(sections: FestivalSectionDto[]) {
   return [
     ...new Set(
-      sections.flatMap(({ slides }) =>
-        (slides ?? []).flatMap(({ mediaId, mobileMediaId, stillMediaId }) => [
-          mediaId,
-          ...(mobileMediaId ? [mobileMediaId] : []),
-          ...(stillMediaId ? [stillMediaId] : []),
-        ]),
-      ),
+      sections.flatMap(({ artwork, slides }) => [
+        ...artworkIds(artwork ?? {}),
+        ...(slides ?? []).flatMap(artworkIds),
+      ]),
     ),
   ];
 }
@@ -59,8 +62,9 @@ function normalizeDesign(input: FestivalDesignDto): FestivalDesignDto {
     schemaVersion: 1,
     theme: input.theme,
     ...(input.themeSource ? { themeSource: input.themeSource } : {}),
-    sections: input.sections.map(({ slides, entries, ...section }) => ({
+    sections: input.sections.map(({ slides, entries, description, ...section }) => ({
       ...section,
+      ...(description?.trim() ? { description: description.trim() } : {}),
       ...(entries
         ? {
             entries: entries.map(({ actionPath, ...entry }) => {
@@ -120,6 +124,13 @@ async function validateSections(
       throw new BadRequestException('Keep section dates inside the campaign window.');
     if (section.slides?.length && section.kind !== 'HERO')
       throw new BadRequestException('Slides belong to the hero section.');
+    if (section.artwork && artworkIds(section.artwork).length) {
+      if (!section.artwork.mediaId || section.kind === 'HERO' || section.kind === 'COUNTDOWN')
+        throw new BadRequestException(
+          'Section artwork needs a desktop image in a content section.',
+        );
+      await validateCampaignPlacementAppearance(tx, 'HOME', section.artwork);
+    }
     for (const slide of section.slides ?? []) {
       await validateCampaignPlacementAppearance(tx, 'HOME', {
         mediaId: slide.mediaId,
@@ -130,6 +141,29 @@ async function validateSections(
     if (section.kind === 'BUDGET' && section.entries?.some(({ maxPriceToman }) => !maxPriceToman))
       throw new BadRequestException('Set a maximum price for each budget group.');
   }
+}
+
+function automaticSection(section: FestivalSectionDto) {
+  return (
+    !section.slugs?.length &&
+    (section.kind === 'DISCOUNTS' || section.kind === 'LOW_QUOTA' || section.kind === 'OFFERS')
+  );
+}
+
+function matchesSection(section: FestivalSectionDto, product: CampaignProduct, campaignId: string) {
+  const { campaignOffer, campaignQuota } = product;
+  if (section.kind === 'PICKS') return true;
+  if (section.kind === 'LOW_QUOTA')
+    return (
+      campaignQuota?.campaignId === campaignId &&
+      campaignQuota.remaining > 0 &&
+      campaignQuota.remaining <= (section.threshold ?? 3)
+    );
+  return (
+    campaignOffer?.campaignId === campaignId &&
+    (section.kind === 'OFFERS' ||
+      (campaignOffer.price?.discountPercent ?? 0) >= (section.threshold ?? 10))
+  );
 }
 
 @Injectable()
@@ -338,30 +372,49 @@ export class FestivalDesignService {
     const sections = preview
       ? configured
       : windows.filter(({ start, end }) => start <= now && end > now).map(({ section }) => section);
-    const sampleNeeded = sections.some(
-      (section) =>
-        ['DISCOUNTS', 'LOW_QUOTA', 'OFFERS'].includes(section.kind) && !section.slugs?.length,
-    );
-    const [assets, sample] = await Promise.all([
+    const [assets, base, automatic] = await Promise.all([
       this.assets(tx, sections),
-      sampleNeeded || rebase
+      rebase
         ? readCampaignProducts(
             this.catalog,
             tx,
             campaign,
             landing,
             1,
-            sampleNeeded ? sectionSampleSize : 0,
+            0,
             {},
             { includeFilterOptions: true },
           )
         : products,
+      this.automaticProducts(tx, campaign, landing, sections.filter(automaticSection)),
     ]);
     const byId = new Map(assets.map((asset) => [asset.id, asset]));
     const projected: PublicFestivalSectionDto[] = [];
     for (const section of sections) {
-      const { kind, title, layout } = section;
-      const view = { kind, title, layout };
+      const { kind, title, layout, highlighted } = section;
+      const description = section.description || (kind === 'INTRO' ? landing.story : undefined);
+      const artwork = section.artwork;
+      const view = {
+        kind,
+        title,
+        layout,
+        ...(description ? { description } : {}),
+        ...(highlighted ? { highlighted } : {}),
+        ...(artwork?.mediaId
+          ? {
+              artwork: {
+                media: this.media(byId.get(artwork.mediaId)),
+                mobileMedia: this.media(
+                  artwork.mobileMediaId ? byId.get(artwork.mobileMediaId) : undefined,
+                ),
+                stillMedia: this.media(
+                  artwork.stillMediaId ? byId.get(artwork.stillMediaId) : undefined,
+                ),
+              },
+            }
+          : {}),
+      };
+      const limit = section.itemLimit ?? sectionProductLimit;
       if (kind === 'HERO') {
         projected.push({
           ...view,
@@ -375,13 +428,13 @@ export class FestivalDesignService {
           ),
         });
       } else if (kind === 'CATEGORIES') {
-        const facetSlugs = (sample.facets?.categories ?? []).map(({ value }) => value);
+        const facetSlugs = (base.facets?.categories ?? []).map(({ value }) => value);
         const eligibleSlugs = new Set(facetSlugs);
         const slugs = (
           section.slugs?.length
             ? section.slugs.filter((slug) => eligibleSlugs.has(slug))
             : facetSlugs
-        ).slice(0, sectionProductLimit);
+        ).slice(0, limit);
         const rows = slugs.length
           ? await tx.category.findMany({
               where: { slug: { in: slugs }, isActive: true, deletedAt: null },
@@ -408,14 +461,14 @@ export class FestivalDesignService {
         kind === 'LOW_QUOTA' ||
         kind === 'OFFERS'
       ) {
-        let eligible = sample.items;
+        let matching = automatic.get(kind) ?? [];
         if (section.slugs?.length) {
           const rows = await tx.product.findMany({
             where: { slug: { in: section.slugs }, deletedAt: null, status: 'ACTIVE' },
             select: { slug: true, id: true },
           });
           const ids = new Map(rows.map(({ slug, id }) => [slug, id]));
-          eligible = (
+          matching = (
             await readCampaignProducts(
               this.catalog,
               tx,
@@ -426,27 +479,11 @@ export class FestivalDesignService {
               {},
               { pickedIds: section.slugs.flatMap((slug) => ids.get(slug) ?? []) },
             )
-          ).items;
-        } else if (kind === 'PICKS') {
-          eligible = [];
+          ).items.filter((product) => matchesSection(section, product, campaign.id));
         }
-        const matching = eligible.filter(({ campaignOffer, campaignQuota }) => {
-          if (kind === 'PICKS') return true;
-          if (kind === 'LOW_QUOTA')
-            return (
-              campaignQuota?.campaignId === campaign.id &&
-              campaignQuota.remaining > 0 &&
-              campaignQuota.remaining <= (section.threshold ?? 3)
-            );
-          if (campaignOffer?.campaignId !== campaign.id) return false;
-          return (
-            kind === 'OFFERS' ||
-            (campaignOffer.price?.discountPercent ?? 0) >= (section.threshold ?? 10)
-          );
-        });
         projected.push({
           ...view,
-          products: matching.slice(0, sectionProductLimit),
+          products: matching.slice(0, limit),
           ...(kind === 'OFFERS' && section.entries?.length ? { entries: section.entries } : {}),
         });
       } else {
@@ -465,10 +502,79 @@ export class FestivalDesignService {
     return {
       theme: design.theme,
       sections: projected,
-      filterCategories: sample.facets?.categories ?? [],
-      filterBrands: sample.facets?.brands ?? [],
+      filterCategories: base.facets?.categories ?? [],
+      filterBrands: base.facets?.brands ?? [],
       ...(nextChange !== null ? { refreshAt: new Date(nextChange).toISOString() } : {}),
     };
+  }
+
+  private async automaticProducts(
+    tx: Prisma.TransactionClient,
+    campaign: Campaign,
+    landing: CampaignLanding,
+    sections: FestivalSectionDto[],
+  ) {
+    const results = new Map<FestivalSectionDto['kind'], CampaignProduct[]>();
+    if (!sections.length) return results;
+    const [campaignPromotions, quotas] = await Promise.all([
+      this.catalog.campaignCollectionPromotions(tx),
+      sections.some(({ kind }) => kind === 'LOW_QUOTA')
+        ? tx.campaignQuota.findMany({
+            where: { campaignId: campaign.id, campaign: { promotion: { isNot: null } } },
+            select: { productId: true },
+          })
+        : [],
+    ]);
+    const promotion = campaignPromotions.find(({ campaignId }) => campaignId === campaign.id);
+    let pending = sections.filter((section) => {
+      if (section.kind === 'LOW_QUOTA') return quotas.length > 0;
+      if (!promotion) return false;
+      if (section.kind === 'OFFERS') return true;
+      return (
+        promotion.kind === 'PERCENT' &&
+        !promotion.couponCode &&
+        promotion.minSubtotalToman === 0 &&
+        campaign.audience === 'ALL_CUSTOMERS' &&
+        Math.round(Math.min(promotion.value, promotion.maxDiscountBps) / 100) >=
+          (section.threshold ?? 10)
+      );
+    });
+    if (!pending.length) return results;
+    const candidateIds = pending.every(({ kind }) => kind === 'LOW_QUOTA')
+      ? quotas.map(({ productId }) => productId)
+      : promotion?.kind === 'BUNDLE'
+        ? [...new Set([...promotion.bundleProductIds, ...quotas.map(({ productId }) => productId)])]
+        : undefined;
+    let page = 1;
+    while (pending.length) {
+      const products = await readCampaignProducts(
+        this.catalog,
+        tx,
+        campaign,
+        landing,
+        page,
+        sectionScanSize,
+        {},
+        { candidateIds, campaignPromotions },
+      );
+      for (const section of pending) {
+        const selected = results.get(section.kind) ?? [];
+        const remaining = (section.itemLimit ?? sectionProductLimit) - selected.length;
+        selected.push(
+          ...products.items
+            .filter((product) => matchesSection(section, product, campaign.id))
+            .slice(0, remaining),
+        );
+        results.set(section.kind, selected);
+      }
+      if (page >= products.totalPages) break;
+      page += 1;
+      pending = pending.filter(
+        (section) =>
+          results.get(section.kind)?.length !== (section.itemLimit ?? sectionProductLimit),
+      );
+    }
+    return results;
   }
 
   private assets(reader: Pick<Prisma.TransactionClient, 'media'>, sections: FestivalSectionDto[]) {
