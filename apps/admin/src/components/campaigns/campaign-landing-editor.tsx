@@ -40,7 +40,7 @@ const navigationEffects = [
 ] as const;
 
 const slotLabels: Record<Slot, string> = {
-  HOME: 'صفحهٔ نخست',
+  HOME: 'ردیف قدیمی صفحهٔ نخست (خارج از نمایش فروشگاه)',
   CATEGORY: 'صفحهٔ دسته',
   PRODUCT: 'صفحهٔ محصول',
   COUNTDOWN: 'نوار سراسری شمارش معکوس',
@@ -537,8 +537,12 @@ export function CampaignLandingEditor({
               برای نمایش، گزینهٔ بنر را در پیش‌نویس اصلی کمپین هم فعال کنید. زمان‌های خالی از بازهٔ
               کمپین خوانده می‌شوند.
             </p>
+            <p className="text-xs text-[var(--admin-color-muted)]">
+              برای معرفی کمپین در صفحهٔ نخست، پیوند لندینگ را در اسلایدشوی اصلی فروشگاه قرار دهید.
+            </p>
             {slots.map((slot) => {
               const saved = draft?.placements.find((item) => item.slot === slot);
+              if (slot === 'HOME' && !saved) return null;
               return (
                 <div key={slot} className="grid gap-3">
                   <label className="flex items-center gap-2 text-sm font-semibold">

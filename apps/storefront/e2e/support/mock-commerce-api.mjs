@@ -735,7 +735,19 @@ async function handler(request, response) {
 
   if (request.method === 'GET' && url.pathname === '/api/v1/site-settings/public/homepage') {
     return json(response, 200, {
-      primaryHeroSlides: [],
+      primaryHeroSlides: campaignPlacements
+        ? [
+            {
+              title: 'جشنوارهٔ نوروز',
+              subtitle: null,
+              actionHref: '/campaigns/nowruz',
+              actionLabel: 'مشاهدهٔ جشنواره',
+              contentColor: '#FFFFFF',
+              media,
+              mobileMedia: null,
+            },
+          ]
+        : [],
       secondaryHero: null,
       newProducts: [product],
       featuredCategories: [],

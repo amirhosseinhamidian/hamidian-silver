@@ -323,19 +323,19 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
           </fieldset>
 
           <fieldset className="grid gap-4 rounded-lg border border-[var(--admin-color-border)] p-3 sm:col-span-2 sm:grid-cols-2">
-            <legend className="px-2 text-sm font-semibold">بنر صفحهٔ نخست</legend>
+            <legend className="px-2 text-sm font-semibold">تنظیمات نمایش کمپین</legend>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={bannerEnabled}
                 onChange={(event) => setBannerEnabled(event.currentTarget.checked)}
               />
-              نمایش بنر در بازهٔ فعال
+              فعال‌سازی جایگاه‌های انتخاب‌شده در بازهٔ کمپین
             </label>
             <FormField
               id="campaign-priority"
               label="اولویت نمایش"
-              hint="از ۰ تا ۱۰۰. در هر زمان، یک کمپین با اولویت بالاتر نمایش داده می‌شود."
+              hint="از ۰ تا ۱۰۰. مقدار پیشنهادی هنگام تنظیم هر جایگاه."
             >
               {(control) => (
                 <Input

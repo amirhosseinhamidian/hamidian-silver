@@ -335,7 +335,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5 px-4 py-5 sm:px-6 lg:px-8">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold">کمپین‌های فروش</h1>
         {id !== undefined || create === '1' ? (

@@ -68,7 +68,7 @@ test('keeps temporary, archived and empty pages out of the index and missing rou
   expect((await request.get('/campaigns/nowruz?page=3')).status()).toBe(404);
 });
 
-test('links the configured banners to the landing and adds only the recurring eligible page to the sitemap', async ({
+test('uses the standard home slideshow, links catalog banners and lists the eligible landing', async ({
   page,
   request,
   baseURL,
@@ -78,7 +78,15 @@ test('links the configured banners to the landing and adds only the recurring el
   });
   expect(enabled.ok()).toBe(true);
   try {
-    for (const path of ['/', '/categories/rings', '/products/silver-ring']) {
+    await page.goto('/');
+    const slideshow = page.getByRole('region', { name: 'اسلایدهای اصلی فروشگاه' });
+    await expect(slideshow.getByRole('link', { name: 'مشاهدهٔ جشنواره' })).toHaveAttribute(
+      'href',
+      '/campaigns/nowruz',
+    );
+    await expect(page.getByRole('complementary', { name: 'کمپین نوروز' })).toHaveCount(0);
+
+    for (const path of ['/categories/rings', '/products/silver-ring']) {
       await page.goto(path);
       await expect(
         page
