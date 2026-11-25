@@ -40,6 +40,29 @@ export const festivalSections = [
 ] as const;
 export type FestivalSectionKind = (typeof festivalSections)[number];
 
+export class FestivalCardThemeDto {
+  @IsOptional() @IsString() @Matches(/^#[0-9a-f]{6}$/i) surface?: string;
+  @IsOptional() @IsString() @Matches(/^#[0-9a-f]{6}$/i) border?: string;
+  @IsOptional() @IsString() @Matches(/^#[0-9a-f]{6}$/i) discount?: string;
+  @IsOptional() @IsString() @Matches(/^#[0-9a-f]{6}$/i) tag?: string;
+  @IsOptional() @IsString() @Matches(/^#[0-9a-f]{6}$/i) price?: string;
+  @IsOptional() @IsString() @Matches(/^#[0-9a-f]{6}$/i) quota?: string;
+  @IsOptional() @IsString() @Matches(/^#[0-9a-f]{6}$/i) action?: string;
+
+  @ApiPropertyOptional({ enum: ['STANDARD', 'COMPACT'] })
+  @IsOptional()
+  @IsIn(['STANDARD', 'COMPACT'])
+  density?: 'STANDARD' | 'COMPACT';
+
+  @ApiPropertyOptional({ enum: ['NONE', 'SOFT'] })
+  @IsOptional()
+  @IsIn(['NONE', 'SOFT'])
+  shadow?: 'NONE' | 'SOFT';
+
+  @IsOptional() @IsBoolean() hoverEmphasis?: boolean;
+  @IsOptional() @IsBoolean() showDescription?: boolean;
+}
+
 export class FestivalThemeDto {
   @IsString() @Matches(/^#[0-9a-f]{6}$/i) background!: string;
   @IsString() @Matches(/^#[0-9a-f]{6}$/i) surface!: string;
@@ -58,6 +81,13 @@ export class FestivalThemeDto {
   @ApiProperty({ enum: ['STILL', 'SOFT'] })
   @IsIn(['STILL', 'SOFT'])
   motion!: 'STILL' | 'SOFT';
+
+  @ApiPropertyOptional({ type: () => FestivalCardThemeDto })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => FestivalCardThemeDto)
+  card?: FestivalCardThemeDto;
 }
 
 export class FestivalThemeSourceDto {

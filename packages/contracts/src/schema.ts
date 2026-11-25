@@ -5275,11 +5275,27 @@ export interface components {
             label: string;
             count: number;
         };
+        FestivalCardThemeDto: {
+            /** @enum {string} */
+            density?: "STANDARD" | "COMPACT";
+            /** @enum {string} */
+            shadow?: "NONE" | "SOFT";
+            surface?: string;
+            border?: string;
+            discount?: string;
+            tag?: string;
+            price?: string;
+            quota?: string;
+            action?: string;
+            hoverEmphasis?: boolean;
+            showDescription?: boolean;
+        };
         FestivalThemeDto: {
             /** @enum {string} */
             decoration: "NONE" | "DOTS" | "LINES";
             /** @enum {string} */
             motion: "STILL" | "SOFT";
+            card?: components["schemas"]["FestivalCardThemeDto"];
             background: string;
             surface: string;
             foreground: string;

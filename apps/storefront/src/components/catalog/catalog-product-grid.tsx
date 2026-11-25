@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
+import {
+  CatalogProductCard,
+  type CatalogProductCardVariant,
+} from '@/components/catalog/catalog-product-card';
 import { Button } from '@/components/ui/button';
 import { trackCatalogEvent } from '@/lib/analytics/commerce-events';
 import type { CatalogList } from '@/lib/analytics/funnel-contract';
@@ -35,6 +38,7 @@ type CatalogProductGridProps = Readonly<{
   paused?: boolean;
   campaignRequest?: Readonly<{ pathname: string; query: string }>;
   autoLoad?: boolean;
+  cardVariant?: CatalogProductCardVariant;
 }>;
 
 let campaignPosition: {
@@ -116,6 +120,7 @@ export function CatalogProductGrid({
   paused = false,
   campaignRequest,
   autoLoad = true,
+  cardVariant,
 }: CatalogProductGridProps) {
   const [products, setProducts] = useState<PublicCatalogProductSummary[]>(initialProducts.items);
   const [nextPage, setNextPage] = useState(initialProducts.page + 1);
@@ -267,6 +272,7 @@ export function CatalogProductGrid({
           <CatalogProductCard
             key={product.id}
             product={product}
+            variant={cardVariant}
             fallbackSrc={initialFallbackSources[product.id]}
             imageSizes={imageSizes}
             preloadImage={prioritizeFirstImage && index === 0}

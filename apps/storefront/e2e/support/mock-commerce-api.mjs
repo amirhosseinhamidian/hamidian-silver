@@ -656,6 +656,31 @@ async function handler(request, response) {
       mobileMedia: null,
       stillMedia: null,
     };
+    const endsAt = '2099-03-22T12:00:00.000Z';
+    const festivalRing = {
+      ...product,
+      campaignOffer: {
+        campaignId: slug,
+        name: 'جشنوارهٔ نوروز',
+        endsAt,
+        conditions: [],
+        minimumToman: null,
+        price: {
+          regularToman: 800_000,
+          discountToman: 80_000,
+          finalToman: 720_000,
+          discountPercent: 10,
+        },
+      },
+      campaignQuota: {
+        campaignId: slug,
+        name: 'جشنوارهٔ نوروز',
+        endsAt,
+        limit: 5,
+        sold: 2,
+        remaining: 3,
+      },
+    };
     return json(response, 200, {
       slug,
       title: slug === 'nowruz' ? 'مجموعهٔ نوروز' : 'مجموعهٔ آزمایشی',
@@ -665,7 +690,7 @@ async function handler(request, response) {
       ...(festival && !url.searchParams.has('productsOnly')
         ? {
             campaignId: slug,
-            endsAt: '2099-03-22T12:00:00.000Z',
+            endsAt,
             design: {
               theme: {
                 background: '#16131b',
@@ -674,6 +699,19 @@ async function handler(request, response) {
                 accent: '#f0acd6',
                 decoration: 'NONE',
                 motion: 'STILL',
+                card: {
+                  surface: '#21162d',
+                  border: '#f0acd6',
+                  discount: '#ffc8ea',
+                  tag: '#ffd49a',
+                  price: '#ffdda8',
+                  quota: '#9ed0c0',
+                  action: '#d0b9ff',
+                  density: 'COMPACT',
+                  shadow: 'SOFT',
+                  showDescription: false,
+                  hoverEmphasis: false,
+                },
               },
               filterCategories: [{ label: 'انگشتر', value: 'rings', count: 2 }],
               filterBrands: [],
@@ -686,6 +724,7 @@ async function handler(request, response) {
                   artwork,
                   layout: 'GRID',
                 },
+                { kind: 'PICKS', title: 'منتخب جشنواره', layout: 'GRID', products: [festivalRing] },
                 { kind: 'PRODUCTS', title: 'همهٔ محصولات جشنواره', layout: 'GRID' },
               ],
             },
@@ -700,7 +739,7 @@ async function handler(request, response) {
         page,
         pageSize: 1,
         totalPages: count,
-        items: hasProducts ? [page === 1 ? product : seoProduct] : [],
+        items: hasProducts ? [page === 1 ? (festival ? festivalRing : product) : seoProduct] : [],
       },
     });
   }

@@ -27,7 +27,11 @@ it('versions and archives themes while leaving two festival design snapshots ind
     decoration: 'LINES',
     motion: 'STILL',
   };
-  const next = { ...theme, accent: '#d9a943' };
+  const next: FestivalThemeDto = {
+    ...theme,
+    accent: '#d9a943',
+    card: { discount: '#f2acda', density: 'COMPACT' },
+  };
   try {
     const owner = await db.user.create({ data: { phone } });
     await expect(library.list({})).resolves.toMatchObject({
@@ -108,7 +112,11 @@ it('versions and archives themes while leaving two festival design snapshots ind
       ],
     });
 
-    const localTheme = { ...theme, accent: '#abcdea' };
+    const localTheme: FestivalThemeDto = {
+      ...theme,
+      accent: '#abcdea',
+      card: { action: '#abcdea', showDescription: false },
+    };
     await design.save(
       festivals[0].id,
       { ...picked, theme: localTheme, saveThemeAs: `${key}-copy`, expectedRevision: 2 },

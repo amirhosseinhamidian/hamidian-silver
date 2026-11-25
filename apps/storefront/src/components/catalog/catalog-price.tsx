@@ -54,7 +54,13 @@ export function CatalogPrice({
           <DiscountBadge percent={percent} />
         </div>
       )}
-      <p className={priceClassName}>{formatTomanPrice(final === null ? null : final + extra)}</p>
+      <p
+        className={
+          percent !== null ? `${priceClassName} sf-catalog-price__reduced` : priceClassName
+        }
+      >
+        {formatTomanPrice(final === null ? null : final + extra)}
+      </p>
       {details && price && (
         <p className="text-xs text-[var(--sf-color-muted)]">
           تخفیف هر واحد {formatTomanPrice(price.discountToman)}

@@ -61,11 +61,18 @@ function brightness(color: string) {
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
 
+function contrast(first: string, second: string) {
+  const a = brightness(first) + 0.05;
+  const b = brightness(second) + 0.05;
+  return Math.max(a, b) / Math.min(a, b);
+}
+
 export function checkFestivalTheme({
   foreground,
   background,
   surface,
   gradient,
+  card,
 }: FestivalThemeDto) {
   const text = brightness(foreground) + 0.05;
   const canvases = [background, surface, gradient ?? background].map(
@@ -76,5 +83,18 @@ export function checkFestivalTheme({
     text > canvases[0] !== text > canvases[2]
   ) {
     throw new BadRequestException('Use a text color that contrasts with all festival backgrounds.');
+  }
+
+  if (!card) return;
+  const cardSurface = card.surface ?? surface;
+  if (
+    [foreground, card.discount, card.tag, card.price, card.action].some(
+      (color) => color != null && contrast(color, cardSurface) < 4.5,
+    )
+  ) {
+    throw new BadRequestException('Use readable text, badges and buttons on the festival card.');
+  }
+  if (card.quota && contrast(card.quota, cardSurface) < 3) {
+    throw new BadRequestException('Use a quota color that contrasts with the festival card.');
   }
 }

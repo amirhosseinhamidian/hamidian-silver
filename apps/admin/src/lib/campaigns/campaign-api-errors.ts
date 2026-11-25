@@ -85,6 +85,10 @@ const messages: Record<string, string> = {
   'Set a maximum price for each budget group.': 'برای هر گروه بودجه سقف قیمت تعیین کنید.',
   'Use a text color that contrasts with all festival backgrounds.':
     'رنگ متن را طوری انتخاب کنید که روی هر دو پس‌زمینه و گرادیان خوانا باشد.',
+  'Use readable text, badges and buttons on the festival card.':
+    'رنگ متن، قیمت تخفیفی، نشان‌ها و دکمه باید روی سطح کارت خوانا باشند.',
+  'Use a quota color that contrasts with the festival card.':
+    'رنگ نوار سهمیه باید روی سطح کارت به‌خوبی دیده شود.',
   'Choose supported media with alternative text and a static fallback for GIFs.':
     'تصویر باید متن جایگزین داشته باشد. برای GIF، تصویر ثابت هم انتخاب کنید.',
   'The campaign changed. Reload it before submitting.': 'کمپین تغییر کرده است. صفحه را تازه کنید.',

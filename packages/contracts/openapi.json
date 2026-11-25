@@ -14683,6 +14683,59 @@
           "count"
         ]
       },
+      "FestivalCardThemeDto": {
+        "type": "object",
+        "properties": {
+          "density": {
+            "enum": [
+              "STANDARD",
+              "COMPACT"
+            ],
+            "type": "string"
+          },
+          "shadow": {
+            "enum": [
+              "NONE",
+              "SOFT"
+            ],
+            "type": "string"
+          },
+          "surface": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "border": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "discount": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "tag": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "quota": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "action": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "hoverEmphasis": {
+            "type": "boolean"
+          },
+          "showDescription": {
+            "type": "boolean"
+          }
+        }
+      },
       "FestivalThemeDto": {
         "type": "object",
         "properties": {
@@ -14700,6 +14753,9 @@
               "SOFT"
             ],
             "type": "string"
+          },
+          "card": {
+            "$ref": "#/components/schemas/FestivalCardThemeDto"
           },
           "background": {
             "type": "string",

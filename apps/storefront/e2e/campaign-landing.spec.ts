@@ -106,7 +106,10 @@ test('renders a designed festival, pages with filters, restores results and reac
 
   await waitForClientHydration(page);
   await page.locator('#campaign-list-end').scrollIntoViewIfNeeded();
-  const appended = products.getByRole('link', { name: 'زنجیر نقره آتنا', exact: true }).last();
+  const appended = products
+    .locator('li[data-festival-card]')
+    .getByRole('link', { name: 'زنجیر نقره آتنا', exact: true })
+    .last();
   await expect(appended).toBeVisible();
   expect(
     pages.some(
@@ -127,6 +130,59 @@ test('renders a designed festival, pages with filters, restores results and reac
   await page.getByRole('link', { name: 'رفتن به پاورقی فروشگاه' }).click();
   await expect(page).toHaveURL(/#storefront-footer$/);
   await expect(page.locator('#storefront-footer')).toBeInViewport();
+});
+
+test('applies festival card colors to real prices and quotas only inside the designed landing', async ({
+  page,
+}) => {
+  await page.goto('/campaigns/festival-nowruz');
+  await expect(page.getByRole('heading', { name: 'منتخب جشنواره' })).toBeVisible();
+  const rings = page.locator('li[data-festival-card]').filter({
+    has: page.getByRole('heading', { name: 'انگشتر نقره حمیدیان', exact: true }),
+  });
+  await expect(rings).toHaveCount(2);
+  const card = page
+    .locator('#campaign-products')
+    .locator('li[data-festival-card]')
+    .filter({
+      has: page.getByRole('heading', { name: 'انگشتر نقره حمیدیان', exact: true }),
+    });
+  await expect(card).toHaveCSS('background-color', 'rgb(33, 22, 45)');
+  await expect(card.getByText('جشنوارهٔ نوروز', { exact: true })).toHaveCSS(
+    'background-color',
+    'rgb(255, 212, 154)',
+  );
+  await expect(card.getByText('۱۰٪', { exact: true })).toHaveCSS(
+    'background-color',
+    'rgb(255, 200, 234)',
+  );
+  await expect(card.getByText('۷۲۰,۰۰۰ تومان', { exact: true })).toHaveCSS(
+    'color',
+    'rgb(255, 221, 168)',
+  );
+  await expect(
+    card.getByRole('progressbar', { name: 'فروش سهمیهٔ جشنوارهٔ نوروز' }),
+  ).toHaveAttribute('value', '2');
+  await expect(card.getByRole('progressbar')).toHaveCSS('border-top-color', 'rgb(158, 208, 192)');
+  await expect(card.getByRole('link', { name: 'مشاهده و خرید' })).toHaveAttribute(
+    'href',
+    '/products/silver-ring',
+  );
+  await expect(card.getByRole('link', { name: 'مشاهده و خرید' })).toHaveCSS(
+    'background-color',
+    'rgb(208, 185, 255)',
+  );
+  await expect(card.getByRole('button', { name: 'افزودن به علاقه‌مندی‌ها' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+  await expect(card.getByText('انگشتر نقره برای آزمون کامل فرایند خرید.')).toBeHidden();
+
+  await page.goto('/campaigns/nowruz');
+  await expect(
+    page.getByRole('heading', { name: 'انگشتر نقره حمیدیان', exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('li[data-festival-card]')).toHaveCount(0);
 });
 
 test('uses the standard home slideshow, links catalog banners and lists the eligible landing', async ({

@@ -56,7 +56,7 @@ function FestivalSectionContent({ section, pathname }: { section: Section; pathn
       }
     >
       {section.products.map((product) => (
-        <CatalogProductCard key={product.id} product={product} />
+        <CatalogProductCard key={product.id} product={product} variant="festival" />
       ))}
     </ul>
   ) : null;
@@ -159,6 +159,7 @@ export function FestivalLanding({
     return () => window.clearTimeout(timer);
   }, [preview, refreshAt, router, visible]);
   const { theme } = design;
+  const { card } = theme;
   const hero = design.sections.find(({ kind }) => kind === 'HERO');
   const hasIntro = design.sections.some(({ kind }) => kind === 'INTRO');
   const slides = hero?.slides?.filter((slide) => slide.media?.url) ?? [];
@@ -175,6 +176,13 @@ export function FestivalLanding({
     '--sf-color-subtle': theme.foreground,
     '--sf-color-muted': theme.foreground,
     '--sf-color-inverse': theme.background,
+    '--festival-card-surface': card?.surface ?? theme.surface,
+    '--festival-card-border': card?.border ?? theme.accent,
+    '--festival-card-discount': card?.discount,
+    '--festival-card-tag': card?.tag,
+    '--festival-card-price': card?.price,
+    '--festival-card-quota': card?.quota,
+    '--festival-card-action': card?.action,
     color: theme.foreground,
     backgroundColor: theme.background,
     backgroundImage: [
@@ -207,7 +215,15 @@ export function FestivalLanding({
   );
 
   return (
-    <main id="main-content" style={style} className="min-h-[35vh] pb-16">
+    <main
+      id="main-content"
+      style={style}
+      className="min-h-[35vh] pb-16"
+      data-festival-card-density={card?.density === 'COMPACT' ? 'compact' : undefined}
+      data-festival-card-shadow={card?.shadow === 'SOFT' ? 'soft' : undefined}
+      data-festival-card-hover={card?.hoverEmphasis !== false ? 'emphasis' : undefined}
+      data-festival-card-description={card?.showDescription === false ? 'hidden' : undefined}
+    >
       {slides.length === 0 && heading}
       {design.sections.map((section) => {
         if (section.kind === 'HERO') {
