@@ -61,10 +61,18 @@ function brightness(color: string) {
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
 
-function contrast(first: string, second: string) {
+export function contrast(first: string, second: string) {
   const a = brightness(first) + 0.05;
   const b = brightness(second) + 0.05;
   return Math.max(a, b) / Math.min(a, b);
+}
+
+export function hasGradientContrast(text: string, start: string, end: string) {
+  return (
+    contrast(text, start) >= 4.5 &&
+    contrast(text, end) >= 4.5 &&
+    brightness(text) > brightness(start) === brightness(text) > brightness(end)
+  );
 }
 
 export function checkFestivalTheme({

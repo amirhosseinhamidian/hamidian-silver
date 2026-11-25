@@ -13592,6 +13592,87 @@
           "mimeType"
         ]
       },
+      "CampaignPlacementDisplayDto": {
+        "type": "object",
+        "properties": {
+          "icon": {
+            "enum": [
+              "STAR",
+              "TAG"
+            ],
+            "type": "string"
+          },
+          "motion": {
+            "enum": [
+              "NONE",
+              "SUBTLE",
+              "EMPHASIS"
+            ],
+            "type": "string"
+          },
+          "mediaFit": {
+            "enum": [
+              "COVER",
+              "CONTAIN"
+            ],
+            "type": "string"
+          },
+          "overlay": {
+            "enum": [
+              "NONE",
+              "SOFT",
+              "STRONG"
+            ],
+            "type": "string"
+          },
+          "ctaStyle": {
+            "enum": [
+              "LINK",
+              "SOLID",
+              "OUTLINE"
+            ],
+            "type": "string"
+          },
+          "useTheme": {
+            "type": "boolean"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "backgroundColor": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "gradientColor": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "borderColor": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "ctaPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220
+          },
+          "ctaLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "showCountdown": {
+            "type": "boolean"
+          }
+        }
+      },
       "CampaignBannerDto": {
         "type": "object",
         "properties": {
@@ -13658,6 +13739,13 @@
               "ANIMATED"
             ],
             "type": "string"
+          },
+          "display": {
+            "$ref": "#/components/schemas/CampaignPlacementDisplayDto"
+          },
+          "countdownEndsAt": {
+            "type": "string",
+            "format": "date-time"
           },
           "name": {
             "type": "string"
@@ -15758,6 +15846,9 @@
               "ANIMATED"
             ],
             "type": "string"
+          },
+          "display": {
+            "$ref": "#/components/schemas/CampaignPlacementDisplayDto"
           }
         }
       },

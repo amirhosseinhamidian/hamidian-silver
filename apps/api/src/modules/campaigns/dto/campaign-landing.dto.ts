@@ -26,6 +26,7 @@ import { PublicCatalogFacetsQueryDto } from '../../catalog/dto/public-catalog-fa
 import { PublicCatalogSort } from '../../catalog/dto/public-catalog-query.dto';
 import { PublicCatalogProductListDto } from '../../catalog/dto/public-catalog-response.dto';
 import { CampaignMediaDto } from './campaign.dto';
+import { CampaignPlacementDisplayDto } from './campaign-placement-display.dto';
 import { PublicFestivalDesignDto } from './festival-design.dto';
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -94,6 +95,13 @@ export class CampaignPlacementAppearanceDto {
   @IsOptional()
   @IsEnum(CampaignNavigationEffect)
   navigationEffect?: CampaignNavigationEffect | null;
+
+  @ApiPropertyOptional({ type: () => CampaignPlacementDisplayDto })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CampaignPlacementDisplayDto)
+  display?: CampaignPlacementDisplayDto;
 }
 
 export class CampaignPlacementDraftDto {

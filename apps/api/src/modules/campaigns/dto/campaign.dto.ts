@@ -23,6 +23,7 @@ import {
 } from '../../../generated/prisma/enums';
 import { CampaignAction } from '../campaign-lifecycle';
 import { CampaignBudgetDto } from './campaign-operations.dto';
+import { CampaignPlacementDisplayDto } from './campaign-placement-display.dto';
 
 function Trimmed() {
   return Transform(({ value }: { value: unknown }) =>
@@ -345,6 +346,12 @@ export class CampaignBannerDto {
 
   @ApiPropertyOptional({ enum: CampaignNavigationEffect, nullable: true })
   navigationEffect?: CampaignNavigationEffect | null;
+
+  @ApiPropertyOptional({ type: () => CampaignPlacementDisplayDto })
+  display?: CampaignPlacementDisplayDto;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time' })
+  countdownEndsAt?: string;
 }
 
 export class PublicCampaignDto {

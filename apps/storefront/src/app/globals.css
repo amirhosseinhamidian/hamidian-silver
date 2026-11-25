@@ -649,6 +649,6 @@ a {
     box-shadow: 0 0 0 0 transparent;
   }
   50% {
-    box-shadow: 0 0 0 3px #6c414a55;
+    box-shadow: 0 0 0 var(--sf-campaign-pulse-width, 3px) #6c414a55;
   }
 }

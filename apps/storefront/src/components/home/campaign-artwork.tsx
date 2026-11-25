@@ -11,11 +11,15 @@ export function CampaignArtwork({
   className,
   sizes,
   preload = false,
+  contain = false,
+  overlay,
 }: {
   artwork: Artwork;
   className: string;
   sizes: string;
   preload?: boolean;
+  contain?: boolean;
+  overlay?: 'NONE' | 'SOFT' | 'STRONG';
 }) {
   const [playing, setPlaying] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -66,10 +70,16 @@ export function CampaignArtwork({
           unoptimized
           preload={preload}
           sizes={sizes}
-          className="object-cover"
+          className={contain ? 'object-contain' : 'object-cover'}
           onError={() => setFailed(true)}
         />
       </picture>
+      {(overlay === 'SOFT' || overlay === 'STRONG') && (
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-0 ${overlay === 'SOFT' ? 'bg-black/30' : 'bg-black/60'}`}
+        />
+      )}
       {animated && stillMedia?.url && !failed && (
         <button
           type="button"

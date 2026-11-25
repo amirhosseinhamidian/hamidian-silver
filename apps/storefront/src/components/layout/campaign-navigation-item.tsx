@@ -2,8 +2,10 @@
 
 import { Close } from '@radix-ui/react-dialog';
 import Link from 'next/link';
+import { FiStar, FiTag } from 'react-icons/fi';
 import { useCampaignVisibility } from '@/lib/campaigns/campaign-visibility';
 import type { PublicCampaignBanner } from '@/lib/home/public-campaign-banner';
+import { campaignPlacementMotion } from './campaign-placement-motion';
 
 export function CampaignNavigationItem({
   campaign,
@@ -15,19 +17,28 @@ export function CampaignNavigationItem({
   const visible = useCampaignVisibility(campaign.campaignId, campaign.endsAt);
   if (!visible || !campaign.ctaPath) return null;
 
-  const effect = campaign.navigationEffect;
+  const { display, navigationEffect: effect, textColor } = campaign;
+  const gradientPreset = effect === 'GRADIENT' || effect === 'ANIMATED';
+  const fill = display?.backgroundColor ?? (gradientPreset ? '#40303d' : 'var(--sf-color-ink)');
+  const gradient =
+    display?.gradientColor ?? (gradientPreset && !display?.backgroundColor ? '#6c414a' : undefined);
+  const Icon = display?.icon === 'STAR' ? FiStar : display?.icon === 'TAG' ? FiTag : null;
+  const motion = campaignPlacementMotion(
+    display?.motion ?? (effect === 'ANIMATED' ? 'EMPHASIS' : undefined),
+  );
   const link = (
     <Link
       href={campaign.ctaPath}
-      className={[
-        'inline-flex max-w-full rounded-sm px-3 py-1.5 font-semibold leading-5 text-white [overflow-wrap:anywhere]',
-        effect === 'GRADIENT' || effect === 'ANIMATED'
-          ? 'bg-linear-to-l from-[#40303d] to-[#6c414a]'
-          : 'bg-[var(--sf-color-ink)]',
-        effect === 'ANIMATED' ? 'motion-safe:animate-[sf-campaign-link_1.4s_ease-in-out_2]' : '',
-      ].join(' ')}
+      className={`inline-flex max-w-full items-center gap-1.5 rounded-sm border px-3 py-1.5 font-semibold leading-5 [overflow-wrap:anywhere] ${motion}`}
+      style={{
+        backgroundColor: fill,
+        backgroundImage: gradient ? `linear-gradient(to left, ${fill}, ${gradient})` : undefined,
+        color: textColor ?? '#ffffff',
+        borderColor: display?.borderColor ?? 'transparent',
+      }}
     >
-      {campaign.name}
+      {Icon && <Icon aria-hidden="true" className="shrink-0" />}
+      <span>{display?.title ?? campaign.name}</span>
     </Link>
   );
 

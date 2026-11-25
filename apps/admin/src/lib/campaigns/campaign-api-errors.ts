@@ -71,6 +71,12 @@ const messages: Record<string, string> = {
     'بعضی از محصول‌ها یا دسته‌های انتخابی پیدا نشدند یا غیرفعال‌اند.',
   'Choose an available campaign image.': 'تصویر کمپین در دسترس نیست. تصویری دیگر انتخاب کنید.',
   'Supply both the banner link and its label.': 'متن دکمه و مسیر مقصد را با هم وارد کنید.',
+  'Display settings belong to the menu or announcement.':
+    'تنظیمات نمایش را در جایگاه منو یا نوار اعلان وارد کنید.',
+  'Choose either theme colors or custom placement colors.':
+    'برای این جایگاه رنگ‌های تم یا رنگ‌های سفارشی را انتخاب کنید.',
+  'Use a text color that contrasts with the campaign placement.':
+    'رنگ متن باید روی پس‌زمینه و گرادیان جایگاه خوانا باشد.',
   'Choose a public storefront path.': 'یک مسیر عمومی فروشگاه مثل /products را وارد کنید.',
   'The encoded banner link is too long.': 'مسیر مقصد بنر بیش از حد طولانی است.',
   'The destination contains an unsupported or repeated parameter.':

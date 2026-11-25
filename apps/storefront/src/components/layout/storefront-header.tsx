@@ -1,4 +1,5 @@
 import { CampaignNavigationItem } from '@/components/layout/campaign-navigation-item';
+import { CampaignPlacementRollover } from '@/components/layout/campaign-placement-rollover';
 import type { PublicCampaignBanner } from '@/lib/home/public-campaign-banner';
 import { StorefrontAnnouncementBar } from '@/components/layout/storefront-announcement';
 import {
@@ -66,14 +67,22 @@ export function StorefrontHeader({
 
   return (
     <>
+      {(campaignCountdown || campaignNavigation) && (
+        <CampaignPlacementRollover
+          announcement={campaignCountdown}
+          navigation={campaignNavigation}
+        />
+      )}
       <StorefrontAnnouncementBar
         announcement={announcement}
         initialRemainingSeconds={initialRemainingSeconds}
         campaign={campaignCountdown}
         campaignSeconds={
           campaignCountdown
-            ? (getInitialCountdownSeconds({ mode: 'deadline', endsAt: campaignCountdown.endsAt }) ??
-              0)
+            ? (getInitialCountdownSeconds({
+                mode: 'deadline',
+                endsAt: campaignCountdown.countdownEndsAt ?? campaignCountdown.endsAt,
+              }) ?? 0)
             : 0
         }
       />

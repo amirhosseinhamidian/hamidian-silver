@@ -23,6 +23,10 @@ import {
   toPersianDigits,
 } from '@/lib/presentation/formatters';
 import { CampaignCollectionPicker } from './campaign-collection-picker';
+import {
+  CampaignPlacementStyleFields,
+  readCampaignPlacementStyle,
+} from './campaign-placement-style-fields';
 import { CampaignProductSearch } from './campaign-product-search';
 import { CampaignTaxonomyPicker } from './campaign-taxonomy-picker';
 
@@ -205,6 +209,7 @@ export function CampaignLandingEditor({
                   navigationEffects.find(({ value }) => value === text('navigation-effect')) ??
                   navigationEffects[0]
                 ).value,
+                ...readCampaignPlacementStyle(slot, text),
               }
             : {
                 mediaId: placementMedia[slot]?.media?.id ?? null,
@@ -214,7 +219,7 @@ export function CampaignLandingEditor({
                   ? {
                       desktopHeight: readOptionalNumber(text('countdown-desktop-height')),
                       mobileHeight: readOptionalNumber(text('countdown-mobile-height')),
-                      textColor: text('countdown-text-color') || null,
+                      ...readCampaignPlacementStyle(slot, text),
                     }
                   : {}),
               },
@@ -609,7 +614,7 @@ export function CampaignLandingEditor({
             </>
           )}
           <fieldset className="space-y-4 rounded-lg border border-[var(--admin-color-border)] p-3 sm:col-span-2">
-            <legend className="px-2 text-sm font-semibold">جایگاه‌های بنر</legend>
+            <legend className="px-2 text-sm font-semibold">منو، اعلان و جایگاه‌های بنر</legend>
             <p className="text-xs text-[var(--admin-color-muted)]">
               برای نمایش، گزینهٔ بنر را در پیش‌نویس اصلی کمپین هم فعال کنید. زمان‌های خالی از بازهٔ
               کمپین خوانده می‌شوند.
@@ -700,7 +705,7 @@ export function CampaignLandingEditor({
                         defaultValue={saved?.endsTehran ?? ''}
                       />
                       {slot === 'NAVIGATION' && (
-                        <FormField id="navigation-effect" label="جلوهٔ منو">
+                        <FormField id="navigation-effect" label="ظاهر پایهٔ منو">
                           {(control) => (
                             <Select
                               {...control}
@@ -710,6 +715,9 @@ export function CampaignLandingEditor({
                             />
                           )}
                         </FormField>
+                      )}
+                      {(slot === 'NAVIGATION' || slot === 'COUNTDOWN') && (
+                        <CampaignPlacementStyleFields slot={slot} saved={saved?.appearance} />
                       )}
                       {slot === 'COUNTDOWN' && (
                         <>
@@ -740,19 +748,9 @@ export function CampaignLandingEditor({
                               )}
                             </FormField>
                           ))}
-                          <FormField id="countdown-text-color" label="رنگ متن">
-                            {(control) => (
-                              <Input
-                                {...control}
-                                name={control.id}
-                                type="color"
-                                defaultValue={saved?.appearance?.textColor ?? '#ffffff'}
-                              />
-                            )}
-                          </FormField>
                           <p className="text-xs text-[var(--admin-color-muted)] sm:col-span-2">
-                            لینک نوار از دکمهٔ کمپین خوانده می‌شود. در صورت خالی بودن آن، صفحهٔ
-                            کمپین باز می‌شود.
+                            با خالی گذاشتن متن و مسیر دکمه، تنظیم دکمهٔ کمپین یا پیوند لندینگ
+                            استفاده می‌شود.
                           </p>
                         </>
                       )}

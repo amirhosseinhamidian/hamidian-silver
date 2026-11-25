@@ -6,6 +6,7 @@ import { CampaignArtwork } from '@/components/home/campaign-artwork';
 import { useCampaignVisibility } from '@/lib/campaigns/campaign-visibility';
 import type { PublicCampaignBanner } from '@/lib/home/public-campaign-banner';
 import { FiArrowLeft } from 'react-icons/fi';
+import { campaignPlacementMotion } from './campaign-placement-motion';
 
 import {
   getFixedCountdownStorageKey,
@@ -132,36 +133,67 @@ export function StorefrontAnnouncementBar({
 }: StorefrontAnnouncementBarProps) {
   const campaignVisible = useCampaignVisibility(campaign?.campaignId, campaign?.endsAt);
   if (campaign && campaignVisible && campaignSeconds > 0) {
+    const { display } = campaign;
+    const deadline = campaign.countdownEndsAt ?? campaign.endsAt;
     const campaignAnnouncement: StorefrontAnnouncement = {
       enabled: true,
       message: campaign.message,
-      countdown: { mode: 'deadline', endsAt: campaign.endsAt },
+      countdown: { mode: 'deadline', endsAt: deadline },
     };
     const color = campaign.textColor ?? '#ffffff';
-    const backgroundColor = countdownTextBackground(color);
-    const heights = {
+    const customPalette = display?.backgroundColor || display?.gradientColor;
+    const backdrop = display?.backgroundColor ?? '#161616';
+    const chip = customPalette ? backdrop : countdownTextBackground(color);
+    const hasArtwork = Boolean(
+      campaign.media?.url || campaign.mobileMedia?.url || campaign.stillMedia?.url,
+    );
+    const style = {
       '--campaign-height': `${campaign.mobileHeight ?? 88}px`,
       '--campaign-desktop-height': `${campaign.desktopHeight ?? 96}px`,
+      backgroundColor: backdrop,
+      backgroundImage: display?.gradientColor
+        ? `linear-gradient(to left, ${backdrop}, ${display.gradientColor})`
+        : undefined,
     } as CSSProperties;
+    const ctaStyle = display?.ctaStyle ?? 'LINK';
 
     return (
-      <aside aria-label={campaign.name} className="relative isolate" style={heights}>
+      <aside aria-label={campaign.name} className="relative isolate" style={style}>
         <CampaignArtwork
           key={`${campaign.media?.url}:${campaign.mobileMedia?.url}:${campaign.stillMedia?.url}`}
           artwork={campaign}
           sizes="100vw"
           className="absolute inset-0 -z-10"
+          contain={display?.mediaFit === 'CONTAIN'}
+          overlay={display?.overlay}
         />
-        <div className="bg-[var(--sf-color-ink)] absolute inset-0 -z-20" aria-hidden="true" />
         <div className="sf-container pointer-events-none relative flex min-h-[var(--campaign-height)] items-center justify-center py-2 sm:min-h-[var(--campaign-desktop-height)]">
           <div
-            className="pointer-events-auto flex flex-wrap items-center justify-center gap-x-5 gap-y-2 rounded-sm px-4 py-2 text-center text-sm leading-6 [overflow-wrap:anywhere]"
-            style={{ color, backgroundColor }}
+            className={`pointer-events-auto flex min-w-0 flex-wrap items-center justify-center gap-x-5 gap-y-2 rounded-sm px-4 py-2 text-center text-sm leading-6 [overflow-wrap:anywhere] ${campaignPlacementMotion(display?.motion)}`}
+            style={{ color, backgroundColor: customPalette && !hasArtwork ? undefined : chip }}
           >
             <span>{campaign.message || campaign.name}</span>
-            <Countdown announcement={campaignAnnouncement} initialSeconds={campaignSeconds} />
+            {display?.showCountdown !== false && (
+              <Countdown
+                key={deadline}
+                announcement={campaignAnnouncement}
+                initialSeconds={campaignSeconds}
+              />
+            )}
             {campaign.ctaPath && campaign.ctaLabel && (
-              <Link href={campaign.ctaPath} className="border-b border-current font-semibold">
+              <Link
+                href={campaign.ctaPath}
+                className={
+                  ctaStyle === 'LINK'
+                    ? 'border-b border-current font-semibold'
+                    : 'rounded-md border border-current px-3 py-1.5 font-semibold'
+                }
+                style={
+                  ctaStyle === 'SOLID'
+                    ? { color: chip, backgroundColor: color, borderColor: 'transparent' }
+                    : undefined
+                }
+              >
                 {campaign.ctaLabel}
               </Link>
             )}

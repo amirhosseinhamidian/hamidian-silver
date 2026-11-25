@@ -23,6 +23,7 @@ let orderCreated = false;
 let receiptSubmitted = false;
 let apiUnavailable = false;
 let campaignPlacements = false;
+let festivalHeader = null;
 const measuredStages = new Set();
 
 const media = {
@@ -593,6 +594,7 @@ async function handler(request, response) {
     receiptSubmitted = false;
     apiUnavailable = false;
     campaignPlacements = false;
+    festivalHeader = null;
     measuredStages.clear();
     return json(response, 200, { reset: true });
   }
@@ -602,6 +604,20 @@ async function handler(request, response) {
     return json(response, 200, { campaignPlacements });
   }
 
+  if (request.method === 'POST' && url.pathname === '/__e2e/festival-header') {
+    const { state, showCountdown } = await body(request);
+    festivalHeader = state
+      ? {
+          state,
+          showCountdown: showCountdown !== false,
+          endsAt: festivalHeader?.endsAt ?? new Date(Date.now() + 5 * 60_000).toISOString(),
+          countdownEndsAt:
+            festivalHeader?.countdownEndsAt ?? new Date(Date.now() + 130 * 60_000).toISOString(),
+        }
+      : null;
+    return json(response, 200, { festivalHeader });
+  }
+
   if (request.method === 'GET' && url.pathname === '/api/v1/campaigns/public/sitemap') {
     return json(response, 200, {
       entries: campaignPlacements ? [{ slug: 'nowruz', updatedAt: CREATED_AT }] : [],
@@ -609,7 +625,12 @@ async function handler(request, response) {
   }
 
   if (request.method === 'GET' && url.pathname === '/api/v1/campaigns/public/activity') {
-    return json(response, 200, { activeIds: ['festival-nowruz'] });
+    return json(response, 200, {
+      activeIds: [
+        'festival-nowruz',
+        ...(festivalHeader?.state === 'active' ? ['festival-header'] : []),
+      ],
+    });
   }
 
   if (
@@ -618,6 +639,33 @@ async function handler(request, response) {
   ) {
     const slug = url.searchParams.get('slug');
     const slot = url.searchParams.get('slot');
+    if (slot === 'NAVIGATION' || slot === 'COUNTDOWN') {
+      return json(response, 200, {
+        banner:
+          festivalHeader?.state === 'active'
+            ? {
+                campaignId: 'festival-header',
+                name: 'جشنوارهٔ آزمایشی',
+                message: 'پیشنهاد ویژهٔ جشنواره',
+                ctaPath: slot === 'COUNTDOWN' ? '/products' : '/campaigns/festival-nowruz',
+                ctaLabel: 'دیدن پیشنهادها',
+                media: null,
+                endsAt: festivalHeader.endsAt,
+                countdownEndsAt: festivalHeader.countdownEndsAt,
+                textColor: '#fff5dc',
+                display: {
+                  title: 'پیشنهاد نوروز',
+                  backgroundColor: '#20162e',
+                  gradientColor: '#50385d',
+                  motion: 'EMPHASIS',
+                  icon: 'STAR',
+                  ctaStyle: 'SOLID',
+                  showCountdown: festivalHeader.showCountdown,
+                },
+              }
+            : null,
+      });
+    }
     const matches =
       url.pathname.endsWith('/banner') ||
       (slot === 'CATEGORY' && slug === 'rings') ||

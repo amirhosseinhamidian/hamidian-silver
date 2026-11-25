@@ -21,7 +21,10 @@ import {
 } from './campaign-collection';
 import { FestivalDesignService, readFestivalDesign } from './festival-design.service';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
-import { validateCampaignPlacementAppearance } from './campaign-placement-appearance';
+import {
+  readCampaignPlacementDisplay,
+  validateCampaignPlacementAppearance,
+} from './campaign-placement-appearance';
 import { formatTehranDate, parseTehranDate } from './campaign-calendar';
 import type { CampaignBannerDto } from './dto/campaign.dto';
 import type {
@@ -133,6 +136,7 @@ export class CampaignLandingsService {
             mobileHeight: row.mobileHeight,
             textColor: row.textColor,
             navigationEffect: row.navigationEffect,
+            display: readCampaignPlacementDisplay(row.display),
           },
         })),
       },
@@ -413,6 +417,18 @@ export class CampaignLandingsService {
             candidate.endsAt && candidate.endsAt < campaign.endsAt
               ? candidate.endsAt
               : campaign.endsAt;
+          const savedDisplay = readCampaignPlacementDisplay(candidate.display);
+          const theme = savedDisplay?.useTheme
+            ? readFestivalDesign(candidate.landing.design)?.theme
+            : undefined;
+          const display = theme
+            ? {
+                ...savedDisplay,
+                backgroundColor: theme.background,
+                gradientColor: theme.gradient,
+              }
+            : savedDisplay;
+          const announcement = slot === 'COUNTDOWN';
           return {
             priority: candidate.priority,
             startsAt: campaign.startsAt,
@@ -420,13 +436,13 @@ export class CampaignLandingsService {
             banner: {
               campaignId: campaign.id,
               name: campaign.name,
-              message: campaign.message,
+              message: display?.message ?? campaign.message,
               endsAt: endsAt.toISOString(),
+              ...(announcement ? { countdownEndsAt: campaign.endsAt.toISOString() } : {}),
               ctaPath:
-                slot === 'COUNTDOWN' && campaign.ctaPath
-                  ? campaign.ctaPath
-                  : `/campaigns/${candidate.landing.slug}`,
-              ctaLabel: slot === 'COUNTDOWN' ? (campaign.ctaLabel ?? 'دیدن مجموعه') : 'دیدن مجموعه',
+                (announcement && (display?.ctaPath ?? campaign.ctaPath)) ||
+                `/campaigns/${candidate.landing.slug}`,
+              ctaLabel: (announcement && (display?.ctaLabel ?? campaign.ctaLabel)) || 'دیدن مجموعه',
               media:
                 slot === 'NAVIGATION'
                   ? null
@@ -435,8 +451,9 @@ export class CampaignLandingsService {
               stillMedia: this.media(candidate.stillMedia),
               desktopHeight: candidate.desktopHeight,
               mobileHeight: candidate.mobileHeight,
-              textColor: candidate.textColor,
+              textColor: theme?.foreground ?? candidate.textColor,
               navigationEffect: candidate.navigationEffect,
+              ...(display ? { display } : {}),
             } satisfies CampaignBannerDto,
           };
         }

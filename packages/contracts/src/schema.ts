@@ -5031,6 +5031,27 @@ export interface components {
             id: string;
             mimeType: string;
         };
+        CampaignPlacementDisplayDto: {
+            /** @enum {string} */
+            icon?: "STAR" | "TAG";
+            /** @enum {string} */
+            motion?: "NONE" | "SUBTLE" | "EMPHASIS";
+            /** @enum {string} */
+            mediaFit?: "COVER" | "CONTAIN";
+            /** @enum {string} */
+            overlay?: "NONE" | "SOFT" | "STRONG";
+            /** @enum {string} */
+            ctaStyle?: "LINK" | "SOLID" | "OUTLINE";
+            useTheme?: boolean;
+            title?: string;
+            message?: string;
+            backgroundColor?: string;
+            gradientColor?: string;
+            borderColor?: string;
+            ctaPath?: string;
+            ctaLabel?: string;
+            showCountdown?: boolean;
+        };
         CampaignBannerDto: {
             /** Format: uuid */
             campaignId?: string;
@@ -5046,6 +5067,9 @@ export interface components {
             textColor?: string | null;
             /** @enum {string|null} */
             navigationEffect?: "SOLID" | "GRADIENT" | "ANIMATED" | null;
+            display?: components["schemas"]["CampaignPlacementDisplayDto"];
+            /** Format: date-time */
+            countdownEndsAt?: string;
             name: string;
             message: string;
         };
@@ -5511,6 +5535,7 @@ export interface components {
             textColor?: string | null;
             /** @enum {string|null} */
             navigationEffect?: "SOLID" | "GRADIENT" | "ANIMATED" | null;
+            display?: components["schemas"]["CampaignPlacementDisplayDto"];
         };
         CampaignPlacementDraftDto: {
             /** @enum {string} */

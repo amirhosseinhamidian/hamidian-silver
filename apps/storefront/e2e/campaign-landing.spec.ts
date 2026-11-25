@@ -3,6 +3,57 @@ import { waitForClientHydration } from './support/accessibility';
 
 const mockApi = 'http://127.0.0.1:4311';
 
+test('shows the festival menu and optional deadline and hides the placements when paused', async ({
+  page,
+  request,
+}) => {
+  const fixture = `${mockApi}/__e2e/festival-header`;
+  expect((await request.post(fixture, { data: { state: 'active' } })).ok()).toBe(true);
+  try {
+    await page.clock.install();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/campaigns/festival-nowruz');
+    const notice = page.getByRole('complementary', { name: 'جشنوارهٔ آزمایشی' });
+    await expect(notice.getByText('پیشنهاد ویژهٔ جشنواره')).toBeVisible();
+    const timer = notice.locator('[aria-label="شمارش معکوس"]');
+    await expect(timer.getByText('۰۲ ساعت')).toBeVisible();
+    await expect(notice.getByRole('link', { name: 'دیدن پیشنهادها' })).toHaveAttribute(
+      'href',
+      '/products',
+    );
+    await expect(notice).toHaveCSS('background-color', 'rgb(32, 22, 46)');
+
+    await waitForClientHydration(page);
+    const mobileMenu = page.getByRole('button', { name: 'باز کردن منوی موبایل' });
+    const mobile = await mobileMenu.isVisible();
+    if (mobile) await mobileMenu.click();
+    const navigation = page.getByRole('navigation', {
+      name: mobile ? 'منوی موبایل' : 'پیمایش اصلی',
+    });
+    await expect(navigation).toHaveCSS('direction', 'rtl');
+    const link = navigation.getByRole('link', { name: 'پیشنهاد نوروز', exact: true });
+    await expect(link).toHaveAttribute('href', '/campaigns/festival-nowruz');
+    await expect(link).toHaveCSS('animation-name', 'none');
+    if (mobile) await page.getByRole('button', { name: 'بستن منوی موبایل' }).click();
+
+    expect(
+      (await request.post(fixture, { data: { state: 'active', showCountdown: false } })).ok(),
+    ).toBe(true);
+    await page.reload();
+    await expect(notice).toBeVisible();
+    await expect(timer).toHaveCount(0);
+    await waitForClientHydration(page);
+
+    expect((await request.post(fixture, { data: { state: 'paused' } })).ok()).toBe(true);
+    await page.clock.fastForward(31_000);
+    await expect(notice).toHaveCount(0);
+    if (mobile) await mobileMenu.click();
+    await expect(link).toHaveCount(0);
+  } finally {
+    await request.post(fixture, { data: {} });
+  }
+});
+
 test('shows the collection without horizontal overflow and normalizes campaign URLs', async ({
   page,
   baseURL,

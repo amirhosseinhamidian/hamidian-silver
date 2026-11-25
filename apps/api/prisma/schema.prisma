@@ -1959,6 +1959,7 @@ model CampaignPlacement {
   mobileHeight     Int?
   textColor        String?                   @db.VarChar(7)
   navigationEffect CampaignNavigationEffect?
+  display          Json?
   media            Media?                    @relation("CampaignPlacementMedia", fields: [mediaId], references: [id], onDelete: Restrict)
   mobileMedia      Media?                    @relation("CampaignPlacementMobileMedia", fields: [mobileMediaId], references: [id], onDelete: Restrict)
   stillMedia       Media?                    @relation("CampaignPlacementStillMedia", fields: [stillMediaId], references: [id], onDelete: Restrict)

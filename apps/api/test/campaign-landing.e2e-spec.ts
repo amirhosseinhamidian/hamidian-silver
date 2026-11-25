@@ -22,6 +22,7 @@ it('publishes only qualifying products, limits banner placements and archives a 
   const landings = new CampaignLandingsService(db, catalog, media, festivals);
   const campaigns = new CampaignsService(db, media, landings);
   const slug = `landing-${randomUUID()}`;
+  const secondarySlug = `${slug}-secondary`;
   const phone = `+0${BigInt(`0x${randomUUID().replaceAll('-', '').slice(0, 12)}`)}`;
   const now = new Date(Math.floor(Date.now() / 60_000) * 60_000);
   const end = new Date(now.valueOf() + 10 * 60_000);
@@ -220,9 +221,27 @@ it('publishes only qualifying products, limits banner placements and archives a 
             desktopHeight: 120,
             mobileHeight: 64,
             textColor: '#ffffff',
+            display: {
+              message: 'پیشنهاد نوروزی',
+              backgroundColor: '#251a30',
+              gradientColor: '#432e51',
+              mediaFit: 'CONTAIN',
+              overlay: 'SOFT',
+              ctaStyle: 'SOLID',
+              ctaPath: '/products',
+              ctaLabel: 'دیدن محصولات',
+              showCountdown: false,
+            },
           },
         },
-        { slot: 'NAVIGATION', priority: 40, appearance: { navigationEffect: 'ANIMATED' } },
+        {
+          slot: 'NAVIGATION',
+          priority: 40,
+          appearance: {
+            navigationEffect: 'ANIMATED',
+            display: { useTheme: true, title: 'نوروز', icon: 'STAR' },
+          },
+        },
       ],
     } satisfies CampaignLandingDraftDto;
 
@@ -241,6 +260,9 @@ it('publishes only qualifying products, limits banner placements and archives a 
       }),
     ).rejects.toThrow('static fallback');
     const saved = await landings.save(created.id, { ...input, expectedRevision: 1 }, owner.id);
+    expect(
+      saved.landing?.placements.find(({ slot }) => slot === 'COUNTDOWN')?.appearance?.display,
+    ).toEqual(input.placements.find(({ slot }) => slot === 'COUNTDOWN')?.appearance?.display);
     await expect(campaigns.selectCollections(slug)).resolves.toMatchObject({
       items: [{ id: created.id, slug, name: input.title }],
     });
@@ -425,6 +447,42 @@ it('publishes only qualifying products, limits banner placements and archives a 
     await expect(landings.placement('PRODUCT', ring.slug, now)).resolves.toMatchObject({
       banner: { ctaPath: `/campaigns/${slug}` },
     });
+    await db.campaignLinkIdentity.create({ data: { id: secondarySlug, campaign: secondarySlug } });
+    const secondary = await db.campaign.create({
+      data: {
+        slug: secondarySlug,
+        name: secondarySlug,
+        goal: 'فروش',
+        message: 'جشنوارهٔ دوم',
+        channel: 'festival',
+        ownerId: owner.id,
+        trackingId: secondarySlug,
+        kind: 'FESTIVAL',
+        status: 'ACTIVE',
+        bannerEnabled: true,
+        allProducts: true,
+        budgetToman: 0,
+        startsAt: now,
+        endsAt: end,
+        landing: {
+          create: {
+            slug: secondarySlug,
+            seoMode: 'TEMPORARY',
+            title: secondarySlug,
+            story: 'جشنوارهٔ دوم',
+            collectionMode: 'MANUAL',
+            manualProductIds: [ring.id],
+            filters: {},
+            placements: {
+              create: [
+                { slot: 'COUNTDOWN', priority: 30 },
+                { slot: 'NAVIGATION', priority: 30 },
+              ],
+            },
+          },
+        },
+      },
+    });
     await expect(landings.placement('COUNTDOWN', undefined, now)).resolves.toMatchObject({
       banner: {
         campaignId: created.id,
@@ -433,15 +491,31 @@ it('publishes only qualifying products, limits banner placements and archives a 
         stillMedia: { id: assets[2].id },
         desktopHeight: 120,
         mobileHeight: 64,
+        message: 'پیشنهاد نوروزی',
+        ctaPath: '/products',
+        ctaLabel: 'دیدن محصولات',
+        endsAt: bannerEnd.toISOString(),
+        countdownEndsAt: end.toISOString(),
+        display: { mediaFit: 'CONTAIN', overlay: 'SOFT', ctaStyle: 'SOLID', showCountdown: false },
       },
     });
-    await expect(landings.placement('COUNTDOWN', undefined, bannerEnd)).resolves.toBeNull();
+    await expect(landings.placement('COUNTDOWN', undefined, bannerEnd)).resolves.toMatchObject({
+      banner: { campaignId: secondary.id },
+    });
     await expect(landings.placement('NAVIGATION', undefined, now)).resolves.toMatchObject({
-      banner: { campaignId: created.id, navigationEffect: 'ANIMATED' },
+      banner: {
+        campaignId: created.id,
+        navigationEffect: 'ANIMATED',
+        ctaPath: `/campaigns/${slug}`,
+        textColor: design.theme.foreground,
+        display: { title: 'نوروز', icon: 'STAR', backgroundColor: design.theme.background },
+      },
     });
     expect((await campaigns.publicActivity(now)).activeIds).toContain(created.id);
     await db.campaign.update({ where: { id: created.id }, data: { status: 'PAUSED' } });
-    await expect(landings.placement('NAVIGATION', undefined, now)).resolves.toBeNull();
+    await expect(landings.placement('NAVIGATION', undefined, now)).resolves.toMatchObject({
+      banner: { campaignId: secondary.id },
+    });
     expect((await campaigns.publicActivity(now)).activeIds).not.toContain(created.id);
     await db.campaign.update({ where: { id: created.id }, data: { status: 'ACTIVE' } });
     await expect(landings.sitemap(now)).resolves.toMatchObject({
@@ -485,12 +559,16 @@ it('publishes only qualifying products, limits banner placements and archives a 
   } finally {
     try {
       await db.$transaction([
-        db.campaignPlacement.deleteMany({ where: { landing: { slug } } }),
-        db.campaignLanding.deleteMany({ where: { slug } }),
-        db.campaignRevision.deleteMany({ where: { campaign: { trackingId: slug } } }),
+        db.campaignPlacement.deleteMany({
+          where: { landing: { slug: { in: [slug, secondarySlug] } } },
+        }),
+        db.campaignLanding.deleteMany({ where: { slug: { in: [slug, secondarySlug] } } }),
+        db.campaignRevision.deleteMany({
+          where: { campaign: { trackingId: { in: [slug, secondarySlug] } } },
+        }),
         db.media.deleteMany({ where: { storageKey: { startsWith: `catalog/${slug}-` } } }),
-        db.campaign.deleteMany({ where: { trackingId: slug } }),
-        db.campaignLinkIdentity.deleteMany({ where: { id: slug } }),
+        db.campaign.deleteMany({ where: { trackingId: { in: [slug, secondarySlug] } } }),
+        db.campaignLinkIdentity.deleteMany({ where: { id: { in: [slug, secondarySlug] } } }),
         db.catalogProductAttributeValue.deleteMany({ where: { attributeCode: `${slug}-style` } }),
         db.catalogAttributeVersion.deleteMany({ where: { attributeCode: `${slug}-style` } }),
         db.catalogAttributeDefinition.deleteMany({ where: { code: `${slug}-style` } }),
