@@ -357,14 +357,19 @@ export default async function CampaignsPage({ searchParams }: Props) {
             فهرست کمپین‌ها
           </ButtonLink>
         ) : (
-          canWrite && (
-            <div className="flex flex-wrap gap-2">
-              <ButtonLink href="/campaigns?create=1">جشنوارهٔ جدید</ButtonLink>
-              <ButtonLink href="/campaigns?create=marketing" variant="outline">
-                کمپین بازاریابی جدید
-              </ButtonLink>
-            </div>
-          )
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/campaigns/themes" variant="outline">
+              کتابخانهٔ تم‌ها
+            </ButtonLink>
+            {canWrite && (
+              <>
+                <ButtonLink href="/campaigns?create=1">جشنوارهٔ جدید</ButtonLink>
+                <ButtonLink href="/campaigns?create=marketing" variant="outline">
+                  کمپین بازاریابی جدید
+                </ButtonLink>
+              </>
+            )}
+          </div>
         )}
       </header>
       {content}

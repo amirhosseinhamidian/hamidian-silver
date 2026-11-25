@@ -1,4 +1,14 @@
 const messages: Record<string, string> = {
+  'Enter a valid festival theme name.': 'نام معتبر برای تم وارد کنید.',
+  'Enter a valid festival theme description.': 'توضیحات تم دارای نویسهٔ نامعتبر است.',
+  'This archived theme cannot be selected for a new design.':
+    'این تم بایگانی شده است. تم دیگری از کتابخانه انتخاب کنید.',
+  'Choose a name different from the built-in themes.':
+    'برای تم مستقل، نامی غیر از تم‌های آماده انتخاب کنید.',
+  'That theme name is already in use.': 'این نام تم قبلاً استفاده شده است.',
+  'The festival theme has changed or was archived.':
+    'تم تغییر کرده یا بایگانی شده است. فهرست را تازه کنید و دوباره نسخهٔ موردنظر را باز کنید.',
+  'Festival theme version was not found.': 'نسخهٔ انتخاب‌شدهٔ تم پیدا نشد.',
   'Enter an unambiguous Solar Hijri date and time in Tehran.':
     'تاریخ و ساعت شمسی را با الگوی فرم وارد کنید.',
   'The end time must follow the start time.': 'زمان پایان باید بعد از زمان آغاز باشد.',

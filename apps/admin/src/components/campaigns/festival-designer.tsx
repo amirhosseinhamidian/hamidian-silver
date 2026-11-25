@@ -4,13 +4,16 @@ import type { components } from '@hamidian/contracts';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/form-control';
 import { campaignError } from '@/lib/campaigns/campaign-api-errors';
 import { useCampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
 import { toAsciiDigits } from '@/lib/presentation/formatters';
 import { FestivalSectionEditor } from './festival-section-editor';
+import { FestivalThemeBrowser } from './festival-theme-browser';
+import { FestivalThemeFields } from './festival-theme-fields';
 
 type Editor = components['schemas']['FestivalDesignEditorDto'];
 type Design = components['schemas']['FestivalDesignDto'];
@@ -38,13 +41,6 @@ const defaults = (Object.keys(sectionLabels) as Kind[]).map((kind) => ({
   enabled: ['HERO', 'COUNTDOWN', 'PRODUCTS'].includes(kind),
   layout: 'GRID' as const,
 }));
-const colorFields = [
-  ['background', 'پس‌زمینه'],
-  ['surface', 'سطح کارت‌ها'],
-  ['foreground', 'متن'],
-  ['accent', 'رنگ تأکید'],
-  ['gradient', 'رنگ آغاز گرادیان'],
-] as const;
 const selectStyle = 'min-h-10 min-w-0 rounded-md border border-[var(--admin-color-border)] px-2';
 
 function openFestivalPreview(device: 'mobile' | 'desktop', onError: (message: string) => void) {
@@ -118,6 +114,7 @@ export function FestivalDesigner({
       editor.design ?? {
         schemaVersion: 1,
         theme: editor.presets[0].theme,
+        themeSource: { name: editor.presets[0].name, version: 1 },
         sections: defaults,
       },
   );
@@ -125,6 +122,7 @@ export function FestivalDesigner({
     Object.fromEntries(editor.media.map((asset) => [asset.id, asset])),
   );
   const [saveThemeAs, setSaveThemeAs] = useState('');
+  const [themePickerOpen, setThemePickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [uploads, setUploads] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -255,71 +253,35 @@ export function FestivalDesigner({
     <Card title="طراحی صفحهٔ جشنواره">
       <form ref={formRef} className="space-y-5" onSubmit={(event) => void save(event)}>
         <fieldset disabled={!editable || busy || uploads > 0} className="space-y-4">
-          <label className="grid max-w-md gap-1 text-sm">
-            الگوی تم
-            <select
-              className={selectStyle}
-              value=""
-              onChange={(e) => {
-                const selected = editor.presets.find(({ name }) => name === e.currentTarget.value);
-                if (selected) setTheme(selected.theme);
-              }}
-            >
-              <option value="" disabled>
-                انتخاب الگو
-              </option>
-              {editor.presets.map(({ name }) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {colorFields.map(([key, label]) => (
-              <label key={key} className="grid gap-1 text-sm">
-                {label}
-                <Input
-                  type="color"
-                  value={design.theme[key] ?? design.theme.background}
-                  onChange={(e) => setTheme({ ...design.theme, [key]: e.currentTarget.value })}
+          <div className="flex flex-wrap items-center gap-2">
+            <Dialog open={themePickerOpen} onOpenChange={setThemePickerOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">انتخاب تم از کتابخانه</Button>
+              </DialogTrigger>
+              <DialogContent
+                title="انتخاب تم جشنواره"
+                description="نسخهٔ انتخابی در پیش‌نویس این جشنواره کپی می‌شود."
+                size="lg"
+              >
+                <FestivalThemeBrowser
+                  onChoose={({ name, version, theme }) => {
+                    setDesign((current) => ({ ...current, theme, themeSource: { name, version } }));
+                    setThemePickerOpen(false);
+                  }}
                 />
-              </label>
-            ))}
-            <label className="grid gap-1 text-sm">
-              نقش پس‌زمینه
-              <select
-                className={selectStyle}
-                value={design.theme.decoration}
-                onChange={(e) =>
-                  setTheme({
-                    ...design.theme,
-                    decoration: e.currentTarget.value as Theme['decoration'],
-                  })
-                }
-              >
-                <option value="NONE">ساده</option>
-                <option value="DOTS">نقطه‌ای</option>
-                <option value="LINES">خطی</option>
-              </select>
-            </label>
-            <label className="grid gap-1 text-sm">
-              حرکت اسلایدها
-              <select
-                className={selectStyle}
-                value={design.theme.motion}
-                onChange={(e) =>
-                  setTheme({
-                    ...design.theme,
-                    motion: e.currentTarget.value as Theme['motion'],
-                  })
-                }
-              >
-                <option value="STILL">با کنترل دستی</option>
-                <option value="SOFT">چرخش خودکار</option>
-              </select>
-            </label>
+              </DialogContent>
+            </Dialog>
+            <ButtonLink href="/campaigns/themes" variant="ghost" target="_blank" rel="noreferrer">
+              مدیریت کتابخانه
+            </ButtonLink>
+            {design.themeSource && (
+              <span className="text-xs [overflow-wrap:anywhere]">
+                الگوی پایهٔ {design.themeSource.name} · نسخهٔ{' '}
+                {design.themeSource.version.toLocaleString('fa-IR')}
+              </span>
+            )}
           </div>
+          <FestivalThemeFields theme={design.theme} onChange={setTheme} />
 
           <ol aria-label="ترتیب بخش‌های جشنواره" className="space-y-3">
             {design.sections.map((section, index) => (

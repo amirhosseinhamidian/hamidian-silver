@@ -1219,6 +1219,162 @@
         ]
       }
     },
+    "/api/v1/festival-themes": {
+      "get": {
+        "operationId": "FestivalThemeLibraryController_list_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 80,
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "archived"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FestivalThemeLibraryListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "FestivalThemeLibrary"
+        ]
+      },
+      "post": {
+        "operationId": "FestivalThemeLibraryController_save_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveFestivalThemeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FestivalLibraryThemeDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "FestivalThemeLibrary"
+        ]
+      }
+    },
+    "/api/v1/festival-themes/history": {
+      "get": {
+        "operationId": "FestivalThemeLibraryController_history_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "name",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 80,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FestivalThemeLibraryHistoryDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "FestivalThemeLibrary"
+        ]
+      }
+    },
+    "/api/v1/festival-themes/archive": {
+      "post": {
+        "operationId": "FestivalThemeLibraryController_archive_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchiveFestivalThemeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FestivalLibraryThemeDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "FestivalThemeLibrary"
+        ]
+      }
+    },
     "/api/v1/campaigns/{id}/operations": {
       "get": {
         "operationId": "CampaignOperationsCenterController_read_v1",
@@ -15841,6 +15997,25 @@
           "expectedRevision"
         ]
       },
+      "FestivalThemeSourceDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "name",
+          "version"
+        ]
+      },
       "FestivalHeroSlideDto": {
         "type": "object",
         "properties": {
@@ -15969,6 +16144,9 @@
           "theme": {
             "$ref": "#/components/schemas/FestivalThemeDto"
           },
+          "themeSource": {
+            "$ref": "#/components/schemas/FestivalThemeSourceDto"
+          },
           "sections": {
             "uniqueItems": true,
             "maxItems": 11,
@@ -16068,6 +16246,9 @@
           "theme": {
             "$ref": "#/components/schemas/FestivalThemeDto"
           },
+          "themeSource": {
+            "$ref": "#/components/schemas/FestivalThemeSourceDto"
+          },
           "sections": {
             "uniqueItems": true,
             "maxItems": 11,
@@ -16149,6 +16330,176 @@
           "slug",
           "campaignId",
           "endsAt"
+        ]
+      },
+      "FestivalLibraryThemeDto": {
+        "type": "object",
+        "properties": {
+          "theme": {
+            "$ref": "#/components/schemas/FestivalThemeDto"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "archivedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "version": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "theme",
+          "description",
+          "updatedAt",
+          "archivedAt",
+          "version",
+          "name"
+        ]
+      },
+      "FestivalThemeLibraryListDto": {
+        "type": "object",
+        "properties": {
+          "presets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalThemePresetDto"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalLibraryThemeDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "presets",
+          "items",
+          "page",
+          "hasMore"
+        ]
+      },
+      "FestivalLibraryVersionDto": {
+        "type": "object",
+        "properties": {
+          "theme": {
+            "$ref": "#/components/schemas/FestivalThemeDto"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "theme",
+          "description",
+          "createdAt",
+          "name",
+          "version"
+        ]
+      },
+      "FestivalThemeLibraryHistoryDto": {
+        "type": "object",
+        "properties": {
+          "template": {
+            "$ref": "#/components/schemas/FestivalLibraryThemeDto"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalLibraryVersionDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "template",
+          "items",
+          "page",
+          "hasMore"
+        ]
+      },
+      "SaveFestivalThemeDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 0,
+            "maxLength": 240
+          },
+          "theme": {
+            "$ref": "#/components/schemas/FestivalThemeDto"
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483646
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "theme",
+          "name"
+        ]
+      },
+      "ArchiveFestivalThemeDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "name",
+          "expectedVersion"
         ]
       },
       "CampaignOrderCountsDto": {

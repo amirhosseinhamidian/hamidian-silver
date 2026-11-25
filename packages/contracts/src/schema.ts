@@ -388,6 +388,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/festival-themes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FestivalThemeLibraryController_list_v1"];
+        put?: never;
+        post: operations["FestivalThemeLibraryController_save_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/festival-themes/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FestivalThemeLibraryController_history_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/festival-themes/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FestivalThemeLibraryController_archive_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/campaigns/{id}/operations": {
         parameters: {
             query?: never;
@@ -5506,6 +5554,10 @@ export interface components {
             manualSold: number;
             expectedRevision: number;
         };
+        FestivalThemeSourceDto: {
+            name: string;
+            version: number;
+        };
         FestivalHeroSlideDto: {
             /** Format: uuid */
             mediaId: string;
@@ -5534,6 +5586,7 @@ export interface components {
         };
         FestivalDesignDto: {
             theme: components["schemas"]["FestivalThemeDto"];
+            themeSource?: components["schemas"]["FestivalThemeSourceDto"];
             sections: components["schemas"]["FestivalSectionDto"][];
             /** @enum {number} */
             schemaVersion: 1;
@@ -5555,6 +5608,7 @@ export interface components {
         };
         SaveFestivalDesignDto: {
             theme: components["schemas"]["FestivalThemeDto"];
+            themeSource?: components["schemas"]["FestivalThemeSourceDto"];
             sections: components["schemas"]["FestivalSectionDto"][];
             /** @enum {number} */
             schemaVersion: 1;
@@ -5573,6 +5627,46 @@ export interface components {
             slug: string;
             campaignId: string;
             endsAt: string;
+        };
+        FestivalLibraryThemeDto: {
+            theme: components["schemas"]["FestivalThemeDto"];
+            description: string | null;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            archivedAt: string | null;
+            version: number;
+            name: string;
+        };
+        FestivalThemeLibraryListDto: {
+            presets: components["schemas"]["FestivalThemePresetDto"][];
+            items: components["schemas"]["FestivalLibraryThemeDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        FestivalLibraryVersionDto: {
+            theme: components["schemas"]["FestivalThemeDto"];
+            description: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            name: string;
+            version: number;
+        };
+        FestivalThemeLibraryHistoryDto: {
+            template: components["schemas"]["FestivalLibraryThemeDto"];
+            items: components["schemas"]["FestivalLibraryVersionDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        SaveFestivalThemeDto: {
+            description?: string | null;
+            theme: components["schemas"]["FestivalThemeDto"];
+            expectedVersion?: number;
+            name: string;
+        };
+        ArchiveFestivalThemeDto: {
+            name: string;
+            expectedVersion: number;
         };
         CampaignOrderCountsDto: {
             registered: number;
@@ -9633,6 +9727,97 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FestivalPreviewDto"];
+                };
+            };
+        };
+    };
+    FestivalThemeLibraryController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                q?: string;
+                status?: "active" | "archived";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalThemeLibraryListDto"];
+                };
+            };
+        };
+    };
+    FestivalThemeLibraryController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveFestivalThemeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalLibraryThemeDto"];
+                };
+            };
+        };
+    };
+    FestivalThemeLibraryController_history_v1: {
+        parameters: {
+            query: {
+                page?: number;
+                name: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalThemeLibraryHistoryDto"];
+                };
+            };
+        };
+    };
+    FestivalThemeLibraryController_archive_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArchiveFestivalThemeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalLibraryThemeDto"];
                 };
             };
         };

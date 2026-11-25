@@ -12,6 +12,8 @@ import { CampaignLandingsService } from './campaign-landings.service';
 import { CampaignsController } from './campaigns.controller';
 import { FestivalDesignController } from './festival-design.controller';
 import { FestivalDesignService } from './festival-design.service';
+import { FestivalThemeLibraryController } from './festival-theme-library.controller';
+import { FestivalThemeLibraryService } from './festival-theme-library.service';
 import { CampaignsService } from './campaigns.service';
 
 @Module({
@@ -21,6 +23,7 @@ import { CampaignsService } from './campaigns.service';
     CampaignLandingsController,
     CampaignQuotasController,
     FestivalDesignController,
+    FestivalThemeLibraryController,
     CampaignOperationsCenterController,
   ],
   providers: [
@@ -29,6 +32,7 @@ import { CampaignsService } from './campaigns.service';
     CampaignLandingsService,
     CampaignQuotasService,
     FestivalDesignService,
+    FestivalThemeLibraryService,
     CampaignOperationsCenterService,
   ],
 })

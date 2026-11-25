@@ -59,6 +59,11 @@ export class FestivalThemeDto {
   motion!: 'STILL' | 'SOFT';
 }
 
+export class FestivalThemeSourceDto {
+  @IsString() @Length(1, 80) name!: string;
+  @IsInt() @Min(1) @Max(2_147_483_647) version!: number;
+}
+
 export class FestivalEntryDto {
   @IsString() @Length(1, 80) title!: string;
   @IsOptional() @IsString() @Length(1, 500) body?: string;
@@ -126,6 +131,13 @@ export class FestivalDesignDto {
   @ValidateNested()
   @Type(() => FestivalThemeDto)
   theme!: FestivalThemeDto;
+
+  @ApiPropertyOptional({ type: () => FestivalThemeSourceDto })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => FestivalThemeSourceDto)
+  themeSource?: FestivalThemeSourceDto;
 
   @ApiProperty({ type: () => FestivalSectionDto, isArray: true, maxItems: 11 })
   @IsArray()

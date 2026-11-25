@@ -17,67 +17,18 @@ import { parseCampaignDestination } from '../growth-attribution/campaign-links.s
 import { readCampaignProducts } from './campaign-collection';
 import { parseTehranDate } from './campaign-calendar';
 import { validateCampaignPlacementAppearance } from './campaign-placement-appearance';
+import { checkFestivalTheme, festivalThemePresets } from './festival-theme';
+import { createFestivalTheme, requireFestivalThemeVersion } from './festival-theme-library.service';
 import type {
   FestivalDesignDto,
   FestivalDesignEditorDto,
   FestivalPreviewDto,
   FestivalSectionDto,
-  FestivalThemePresetDto,
   PublicFestivalDesignDto,
   PublicFestivalSectionDto,
   SaveFestivalDesignDto,
 } from './dto/festival-design.dto';
 
-const presets: FestivalThemePresetDto[] = [
-  {
-    name: 'بلک فرایدی',
-    theme: {
-      background: '#15131a',
-      surface: '#24202c',
-      foreground: '#f8f5fb',
-      accent: '#e3abd1',
-      gradient: '#2e243d',
-      decoration: 'LINES',
-      motion: 'STILL',
-    },
-  },
-  {
-    name: 'یلدا',
-    theme: {
-      background: '#fff3f5',
-      surface: '#ffffff',
-      foreground: '#37111a',
-      accent: '#871d3f',
-      gradient: '#f3d5dc',
-      decoration: 'DOTS',
-      motion: 'STILL',
-    },
-  },
-  {
-    name: 'نوروز',
-    theme: {
-      background: '#eff7ed',
-      surface: '#ffffff',
-      foreground: '#16372c',
-      accent: '#215342',
-      gradient: '#d6e9db',
-      decoration: 'DOTS',
-      motion: 'STILL',
-    },
-  },
-  {
-    name: 'مناسبت ویژه',
-    theme: {
-      background: '#f6f3ee',
-      surface: '#ffffff',
-      foreground: '#2a2021',
-      accent: '#69453f',
-      gradient: '#f0e2df',
-      decoration: 'NONE',
-      motion: 'STILL',
-    },
-  },
-];
 type CampaignProducts = Awaited<ReturnType<typeof readCampaignProducts>>;
 const sectionProductLimit = 12;
 const sectionSampleSize = 48;
@@ -103,32 +54,11 @@ function assetIds(sections: FestivalSectionDto[]) {
   ];
 }
 
-function brightness(color: string) {
-  const channels = color.slice(1).match(/../g) ?? [];
-  const [red, green, blue] = channels.map((part) => {
-    const value = Number.parseInt(part, 16) / 255;
-    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-}
-
-function checkTheme({ foreground, background, surface, gradient }: FestivalDesignDto['theme']) {
-  const text = brightness(foreground) + 0.05;
-  const canvases = [background, surface, gradient ?? background].map(
-    (color) => brightness(color) + 0.05,
-  );
-  if (
-    canvases.some((canvas) => Math.max(text, canvas) / Math.min(text, canvas) < 4.5) ||
-    text > canvases[0] !== text > canvases[2]
-  ) {
-    throw new BadRequestException('Use a text color that contrasts with all festival backgrounds.');
-  }
-}
-
 function normalizeDesign(input: FestivalDesignDto): FestivalDesignDto {
   return {
     schemaVersion: 1,
     theme: input.theme,
+    ...(input.themeSource ? { themeSource: input.themeSource } : {}),
     sections: input.sections.map(({ slides, entries, ...section }) => ({
       ...section,
       ...(entries
@@ -179,7 +109,7 @@ async function validateSections(
   campaign: Campaign,
   design: FestivalDesignDto,
 ) {
-  checkTheme(design.theme);
+  checkFestivalTheme(design.theme);
   const products = design.sections.find(({ kind }) => kind === 'PRODUCTS');
   if (!products?.enabled || products.startsTehran || products.endsTehran)
     throw new BadRequestException('Keep the full product list enabled throughout the campaign.');
@@ -227,17 +157,21 @@ export class FestivalDesignService {
     if (!campaign) throw new NotFoundException('Campaign not found.');
     const design = readFestivalDesign(campaign.landing?.design);
     const [templates, assets] = await Promise.all([
-      this.db.festivalThemeTemplate.findMany({ orderBy: { name: 'asc' }, take: 100 }),
+      this.db.festivalThemeTemplate.findMany({
+        where: { archivedAt: null },
+        orderBy: { name: 'asc' },
+        take: 100,
+      }),
       this.assets(this.db, design?.sections ?? []),
     ]);
     return {
       revision: campaign.revision,
       design,
       presets: [
-        ...presets,
+        ...festivalThemePresets,
         ...templates.map(({ name, theme }) => ({
           name,
-          theme: theme as unknown as FestivalThemePresetDto['theme'],
+          theme: theme as unknown as FestivalDesignDto['theme'],
         })),
       ],
       media: assets.map((row) => this.media(row)).filter((row) => row !== null),
@@ -252,14 +186,11 @@ export class FestivalDesignService {
     const design = normalizeDesign(input);
     await this.change(campaignId, input.expectedRevision, actorUserId, async (tx) => {
       if (input.saveThemeAs) {
-        const { saveThemeAs: name } = input;
-        if (presets.some((preset) => preset.name === name))
-          throw new BadRequestException('Choose a new theme name.');
-        const result = await tx.festivalThemeTemplate.createMany({
-          data: [{ name, theme: JSON.parse(JSON.stringify(design.theme)) }],
-          skipDuplicates: true,
-        });
-        if (result.count !== 1) throw new ConflictException('That theme name is already in use.');
+        await createFestivalTheme(
+          tx,
+          { name: input.saveThemeAs, theme: design.theme },
+          actorUserId,
+        );
       }
       return design;
     });
@@ -314,6 +245,17 @@ export class FestivalDesignService {
           throw new ConflictException('Only the current draft revision can be edited.');
         const design = await selectDesign(tx);
         await validateSections(tx, campaign, design);
+        if (design.themeSource) {
+          const previous = readFestivalDesign(campaign.landing.design)?.themeSource;
+          const sameSource =
+            previous?.name === design.themeSource.name &&
+            previous?.version === design.themeSource.version;
+          await requireFestivalThemeVersion(
+            tx,
+            design.themeSource,
+            sameSource || action === 'FESTIVAL_RESTORE',
+          );
+        }
         const version = campaign.revision + 1;
         const stored = JSON.parse(JSON.stringify(design)) as Prisma.InputJsonObject;
         const assets = assetIds(design.sections);
