@@ -1,8 +1,10 @@
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/infrastructure/database/prisma.service';
+import { CampaignLandingsService } from '../src/modules/campaigns/campaign-landings.service';
 import { CampaignOperationsCenterService } from '../src/modules/campaigns/campaign-operations-center.service';
 import { CampaignQuotasService } from '../src/modules/campaigns/campaign-quotas.service';
+import { CampaignsService } from '../src/modules/campaigns/campaigns.service';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
 import type { CreateOrderDto } from '../src/modules/orders/dto/create-order.dto';
@@ -12,8 +14,9 @@ import { OrdersService } from '../src/modules/orders/orders.service';
 import type { PaymentGateway } from '../src/modules/payments/payment-gateway.port';
 import { PaymentsService } from '../src/modules/payments/payments.service';
 import { PromotionsService } from '../src/modules/promotions/promotions.service';
+import { createFestivalDraft, publishFestival } from './support/festival-purchase';
 
-it('serializes quota claims with inventory, releases failed payments, and preserves captured sales on returns', async () => {
+it('reconciles published festival prices with Checkout and protects quota across payments and returns', async () => {
   const config = new ConfigService({
     OTP_PEPPER: 'campaign-quota-test',
     MANUAL_SHIPPING_COST_TOMAN: 700,
@@ -22,7 +25,10 @@ it('serializes quota claims with inventory, releases failed payments, and preser
   const db = new PrismaService(config);
   const promotions = new PromotionsService(db);
   const quotas = new CampaignQuotasService(db, promotions);
-  const catalog = new CatalogService(db, new PublicMediaUrlService(config), undefined, promotions);
+  const media = new PublicMediaUrlService(config);
+  const catalog = new CatalogService(db, media, undefined, promotions);
+  const landings = new CampaignLandingsService(db, catalog, media);
+  const campaigns = new CampaignsService(db, media, landings);
   const operations = new CampaignOperationsCenterService(db, catalog);
   const orders = new OrdersService(
     db,
@@ -50,12 +56,12 @@ it('serializes quota claims with inventory, releases failed payments, and preser
   const payments = new PaymentsService(db, config, gateway);
   const slug = `quota-${randomUUID()}`;
   const anotherSlug = `${slug}-other`;
-  const tracking = { trackingId: { in: [slug, anotherSlug] } };
+  const campaignFilter = { slug: { in: [slug, anotherSlug] } };
   const phoneSuffix = BigInt(`0x${slug.slice(5).replaceAll('-', '').slice(0, 12)}`).toString();
   const phones = [`+0${phoneSuffix}1`, `+0${phoneSuffix}2`];
   const orderFilter = { user: { phone: { in: phones } } };
   const receipt = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  const card = phoneSuffix.padStart(16, '0');
+  const receiptCardNumber = phoneSuffix.padStart(16, '0');
   try {
     const buyers = await Promise.all(phones.map((phone) => db.user.create({ data: { phone } })));
     const manager = buyers[0].id;
@@ -71,8 +77,10 @@ it('serializes quota claims with inventory, releases failed payments, and preser
         slug,
         name: 'محصول سهمیه‌دار',
         status: 'ACTIVE',
-        salePriceToman: 20_000,
-        variants: { create: [{ sku: slug }, { sku: anotherSlug }] },
+        salePriceToman: 25_000,
+        variants: {
+          create: [slug, anotherSlug].map((sku) => ({ sku, salePriceToman: 20_000 })),
+        },
       },
       include: { variants: true },
     });
@@ -83,25 +91,35 @@ it('serializes quota claims with inventory, releases failed payments, and preser
         onHand: 2,
       })),
     });
-    const campaignData = {
+    const startsAt = new Date(Date.now() - 60_000);
+    const endsAt = new Date(Date.now() + 20 * 60_000);
+    const festival = await createFestivalDraft(campaigns, {
+      slug,
+      productSlug: product.slug,
       ownerId: manager,
-      name: 'کمپین آزمایشی',
-      goal: 'آزمون سهمیه',
-      channel: 'email',
-      allProducts: false,
-      productIds: [product.id],
-      budgetToman: 100_000,
-      startsAt: new Date(Date.now() - 60_000),
-      endsAt: new Date(Date.now() + 120_000),
-      message: 'دادهٔ آزمایش',
-    };
-    const campaignIds: string[] = [];
-    for (const trackingId of [slug, anotherSlug]) {
-      await db.campaignLinkIdentity.create({ data: { id: trackingId, campaign: trackingId } });
-      const { id } = await db.campaign.create({
-        data: { ...campaignData, slug: trackingId, trackingId },
-      });
-      campaignIds.push(id);
+      startsAt,
+      endsAt,
+      budgetToman: 4_500,
+    });
+    await db.campaignLinkIdentity.create({ data: { id: anotherSlug, campaign: anotherSlug } });
+    const { id: overlappingId } = await db.campaign.create({
+      data: {
+        slug: anotherSlug,
+        trackingId: anotherSlug,
+        ownerId: manager,
+        name: 'کمپین آزمایشی',
+        goal: 'آزمون سهمیه',
+        channel: 'email',
+        allProducts: false,
+        productIds: [product.id],
+        budgetToman: 100_000,
+        startsAt,
+        endsAt,
+        message: 'دادهٔ آزمایش',
+      },
+    });
+    const campaignId = festival.id;
+    for (const id of [campaignId, overlappingId]) {
       await promotions.save(
         id,
         {
@@ -117,7 +135,6 @@ it('serializes quota claims with inventory, releases failed payments, and preser
         manager,
       );
     }
-    const [campaignId, overlappingId] = campaignIds;
     const update = (limit: number, manualSold: number, expectedRevision: number, id = campaignId) =>
       quotas.save(id, { slug, limit, manualSold, expectedRevision }, manager);
 
@@ -147,7 +164,30 @@ it('serializes quota claims with inventory, releases failed payments, and preser
       quota: { limit: 2, manualSold: 1, siteSold: 0, reserved: 0, remaining: 1 },
       finance: null,
     });
-    await db.campaign.update({ where: { id: campaignId }, data: { status: 'ACTIVE' } });
+    const published = await publishFestival(campaigns, landings, festival, product.slug);
+    const expectedProductCard = {
+      id: product.id,
+      defaultSalePriceToman: 25_000,
+      campaignOffer: {
+        campaignId,
+        price: { regularToman: 25_000, discountToman: 2_500, finalToman: 22_500 },
+      },
+      campaignQuota: { sold: 1, remaining: 1 },
+    };
+    await expect(landings.publicLanding(slug, 1)).resolves.toMatchObject({
+      isFestival: true,
+      active: true,
+      publicationVersion: published.revision,
+      products: { items: [expectedProductCard] },
+    });
+    const details = await catalog.getPublicProduct(slug);
+    expect(details.campaignOffer).toMatchObject(expectedProductCard.campaignOffer);
+    expect(details.variants).toHaveLength(2);
+    for (const variant of details.variants) {
+      expect(variant.campaignOffer).toMatchObject({
+        price: { regularToman: 20_000, discountToman: 2_000, finalToman: 18_000 },
+      });
+    }
     const baskets = product.variants.map(
       ({ id: variantId }) =>
         ({
@@ -165,7 +205,9 @@ it('serializes quota claims with inventory, releases failed payments, and preser
     const quotes = await Promise.all(
       buyers.map(({ id }, index) => orders.quotePrice(id, baskets[index])),
     );
-    for (const quote of quotes) expect(quote.discountTotalToman).toBe(2_000);
+    for (const quote of quotes) {
+      expect(quote).toMatchObject({ discountTotalToman: 2_000, payableToman: 18_700 });
+    }
     const submissions = await Promise.allSettled(
       buyers.map(({ id }, index) =>
         orders.createOrder(id, {
@@ -183,13 +225,34 @@ it('serializes quota claims with inventory, releases failed payments, and preser
     });
     const buyerId = buyers[winner].id;
     const pending = await db.order.findFirstOrThrow({ where: { userId: buyerId } });
-    expect(pending.campaignQuotaRestricted).toBe(true);
+    expect(pending).toMatchObject({ campaignQuotaRestricted: true, grandTotalToman: 18_700 });
+    await expect(
+      db.inventory.findMany({
+        where: { variantId: { in: product.variants.map(({ id }) => id) } },
+        select: { variantId: true, onHand: true, reserved: true },
+      }),
+    ).resolves.toEqual(
+      expect.arrayContaining([
+        { variantId: product.variants[winner].id, onHand: 2, reserved: 1 },
+        { variantId: product.variants[loser].id, onHand: 2, reserved: 0 },
+      ]),
+    );
 
     const full = await catalog.getPublicProduct(slug);
     expect(full.campaignQuota).toMatchObject({ sold: 1, remaining: 0 });
     expect(full.campaignOffer).toBeNull();
+    await expect(landings.publicLanding(slug, 1)).resolves.toMatchObject({
+      publicationVersion: published.revision,
+      products: {
+        items: [{ id: product.id, campaignOffer: null, campaignQuota: { remaining: 0 } }],
+      },
+    });
     await expect(orders.quotePrice(buyers[loser].id, baskets[loser])).resolves.toMatchObject({
       discountTotalToman: 0,
+    });
+    await db.productVariant.update({
+      where: { id: product.variants[winner].id },
+      data: { salePriceToman: 30_000 },
     });
 
     const declined = await payments.initiateOrderPayment(buyerId, pending.id, {
@@ -221,8 +284,8 @@ it('serializes quota claims with inventory, releases failed payments, and preser
     await update(2, 1, 2);
     await db.cardToCardAccount.create({
       data: {
-        cardNumber: card,
-        ibanNumber: card.padStart(24, '0'),
+        cardNumber: receiptCardNumber,
+        ibanNumber: receiptCardNumber.padStart(24, '0'),
         holderName: 'Quota test',
         bankName: 'Test',
         isActive: true,
@@ -269,7 +332,22 @@ it('serializes quota claims with inventory, releases failed payments, and preser
       remaining: 0,
       siteSold: 1,
     });
+    await expect(
+      db.orderPriceQuote.findUniqueOrThrow({ where: { orderId: pending.id } }),
+    ).resolves.toMatchObject({
+      campaignId,
+      merchandiseDiscountToman: 2_000,
+      snapshot: {
+        payableToman: 18_700,
+        rule: { kind: 'PERCENT', version: 1 },
+        items: [{ unitSalePriceToman: 20_000 }],
+      },
+    });
     const anotherOrder = await orders.createOrder(buyers[loser].id, baskets[loser]);
+    const { trackingId } = await db.campaign.findUniqueOrThrow({
+      where: { id: campaignId },
+      select: { trackingId: true },
+    });
     await db.orderAttribution.createMany({
       data: [pending.id, anotherOrder.id].map((orderId) => ({
         orderId,
@@ -280,7 +358,7 @@ it('serializes quota claims with inventory, releases failed payments, and preser
         lastTouch: {},
         source: 'email',
         medium: 'email',
-        campaignId: slug,
+        campaignId: trackingId,
         attributedAt: new Date(),
       })),
     });
@@ -330,6 +408,19 @@ it('serializes quota claims with inventory, releases failed payments, and preser
       where: { variant: { productId: product.id } },
       data: { onHand: 2 },
     });
+    const restoredStock = await catalog.getPublicProduct(slug);
+    expect(restoredStock.campaignOffer).toMatchObject(expectedProductCard.campaignOffer);
+    expect(
+      restoredStock.variants.find(({ id }) => id === product.variants[winner].id),
+    ).toMatchObject({
+      campaignOffer: {
+        price: { regularToman: 30_000, discountToman: 2_500, finalToman: 27_500 },
+      },
+    });
+    await expect(orders.quotePrice(buyerId, baskets[winner])).resolves.toMatchObject({
+      discountTotalToman: 2_500,
+      payableToman: 28_200,
+    });
 
     const createPending = async () => {
       const id = buyers[loser].id;
@@ -361,6 +452,10 @@ it('serializes quota claims with inventory, releases failed payments, and preser
     ).resolves.toEqual([1, 2, 1, 0].map((manualSold) => ({ manualSold })));
   } finally {
     try {
+      const identities = await db.campaign.findMany({
+        where: campaignFilter,
+        select: { trackingId: true },
+      });
       await db.$transaction([
         db.inventoryMovement.deleteMany({
           where: { inventory: { variant: { product: { slug } } } },
@@ -370,8 +465,8 @@ it('serializes quota claims with inventory, releases failed payments, and preser
         db.paymentAttempt.deleteMany({ where: { payment: { order: orderFilter } } }),
         db.payment.deleteMany({ where: { order: orderFilter } }),
         db.campaignQuotaAllocation.deleteMany({ where: { order: orderFilter } }),
-        db.campaignQuotaChange.deleteMany({ where: { quota: { campaign: tracking } } }),
-        db.campaignQuota.deleteMany({ where: { campaign: tracking } }),
+        db.campaignQuotaChange.deleteMany({ where: { quota: { campaign: campaignFilter } } }),
+        db.campaignQuota.deleteMany({ where: { campaign: campaignFilter } }),
         db.orderPriceQuote.deleteMany({ where: { order: orderFilter } }),
         db.orderStatusHistory.deleteMany({ where: { order: orderFilter } }),
         db.orderAddress.deleteMany({ where: { order: orderFilter } }),
@@ -381,11 +476,14 @@ it('serializes quota claims with inventory, releases failed payments, and preser
         db.inventory.deleteMany({ where: { variant: { product: { slug } } } }),
         db.productVariant.deleteMany({ where: { product: { slug } } }),
         db.product.deleteMany({ where: { slug } }),
-        db.campaignPromotion.deleteMany({ where: { campaign: tracking } }),
-        db.campaignRevision.deleteMany({ where: { campaign: tracking } }),
-        db.campaign.deleteMany({ where: tracking }),
-        db.campaignLinkIdentity.deleteMany({ where: { id: { in: [slug, anotherSlug] } } }),
-        db.cardToCardAccount.deleteMany({ where: { cardNumber: card } }),
+        db.campaignPromotion.deleteMany({ where: { campaign: campaignFilter } }),
+        db.campaignLanding.deleteMany({ where: { campaign: campaignFilter } }),
+        db.campaignRevision.deleteMany({ where: { campaign: campaignFilter } }),
+        db.campaign.deleteMany({ where: campaignFilter }),
+        db.campaignLinkIdentity.deleteMany({
+          where: { id: { in: [...identities.map(({ trackingId }) => trackingId), anotherSlug] } },
+        }),
+        db.cardToCardAccount.deleteMany({ where: { cardNumber: receiptCardNumber } }),
         db.warehouse.deleteMany({ where: { code: slug } }),
         db.user.deleteMany({ where: { phone: { in: phones } } }),
       ]);

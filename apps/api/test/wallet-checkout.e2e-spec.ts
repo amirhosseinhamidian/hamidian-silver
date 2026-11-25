@@ -1,7 +1,11 @@
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../src/infrastructure/database/prisma.service';
+import { CampaignLandingsService } from '../src/modules/campaigns/campaign-landings.service';
 import { CampaignQuotasService } from '../src/modules/campaigns/campaign-quotas.service';
+import { CampaignsService } from '../src/modules/campaigns/campaigns.service';
+import { CatalogService } from '../src/modules/catalog/catalog.service';
+import { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
 import { OrderFinanceService } from '../src/modules/finance/order-finance.service';
 import { PaymentRefundsService } from '../src/modules/finance/payment-refunds.service';
 import type { CreateOrderDto } from '../src/modules/orders/dto/create-order.dto';
@@ -14,6 +18,7 @@ import { PromotionsService } from '../src/modules/promotions/promotions.service'
 import { RewardPoliciesService } from '../src/modules/reward-policies/reward-policies.service';
 import { WalletCheckoutService } from '../src/modules/wallet/wallet-checkout.service';
 import { WalletLedgerService } from '../src/modules/wallet/wallet-ledger.service';
+import { createFestivalDraft, publishFestival } from './support/festival-purchase';
 
 it('reserves once, holds uncertain attempts and restores the exact credit on returns and full refunds', async () => {
   const config = new ConfigService({
@@ -26,6 +31,10 @@ it('reserves once, holds uncertain attempts and restores the exact credit on ret
   const wallet = new WalletCheckoutService(new RewardPoliciesService(db), ledger);
   const promotions = new PromotionsService(db);
   const quotas = new CampaignQuotasService(db, promotions);
+  const media = new PublicMediaUrlService(config);
+  const catalog = new CatalogService(db, media, undefined, promotions);
+  const landings = new CampaignLandingsService(db, catalog, media);
+  const campaigns = new CampaignsService(db, media, landings);
   const orders = new OrdersService(
     db,
     undefined,
@@ -92,23 +101,13 @@ it('reserves once, holds uncertain attempts and restores the exact credit on ret
     });
     const variantId = product.variants[0].id;
     await db.inventory.create({ data: { warehouseId: warehouse.id, variantId, onHand: 8 } });
-    const campaignKey = `wallet-${key}`;
-    await db.campaignLinkIdentity.create({ data: { id: campaignKey, campaign: campaignKey } });
-    const campaign = await db.campaign.create({
-      data: {
-        trackingId: campaignKey,
-        slug: campaignKey,
-        ownerId: user.id,
-        name: 'تخفیف آزمایشی',
-        goal: 'تست کیف پول',
-        channel: 'email',
-        message: 'آزمون سهمیه',
-        allProducts: false,
-        productIds: [product.id],
-        budgetToman: 100_000,
-        startsAt: new Date(+now - 60_000),
-        endsAt: expiry,
-      },
+    const campaign = await createFestivalDraft(campaigns, {
+      slug: product.slug,
+      productSlug: product.slug,
+      ownerId: user.id,
+      budgetToman: 100_000,
+      startsAt: new Date(+now - 60_000),
+      endsAt: expiry,
     });
     await promotions.save(
       campaign.id,
@@ -129,7 +128,8 @@ it('reserves once, holds uncertain attempts and restores the exact credit on ret
       { slug: product.slug, limit: 6, manualSold: 0, expectedRevision: 0 },
       user.id,
     );
-    await db.campaign.update({ where: { id: campaign.id }, data: { status: 'ACTIVE' } });
+    const published = await publishFestival(campaigns, landings, campaign, product.slug);
+    expect(published.status).toBe('ACTIVE');
     const eligibility = {
       allowCoupon: false,
       allowedCategoryIds: [],
@@ -249,6 +249,18 @@ it('reserves once, holds uncertain attempts and restores the exact credit on ret
     if (accepted.status !== 'fulfilled') throw new Error('Expected a successful order');
     const order = accepted.value;
     expect(order).toMatchObject({ grandTotalToman: 10_000, walletAppliedToman: 28_000 });
+    await expect(
+      db.orderPriceQuote.findUniqueOrThrow({ where: { orderId: order.id } }),
+    ).resolves.toMatchObject({
+      campaignId: campaign.id,
+      merchandiseDiscountToman: 2_000,
+      snapshot: {
+        payableToman: 10_000,
+        walletAppliedToman: 28_000,
+        walletPolicyVersion: version.version,
+        items: [{ unitSalePriceToman: 20_000, walletAppliedToman: 28_000 }],
+      },
+    });
     await expect(
       create(
         submissions[0].status === 'fulfilled' ? firstQuote.quoteToken : secondQuote.quoteToken,
