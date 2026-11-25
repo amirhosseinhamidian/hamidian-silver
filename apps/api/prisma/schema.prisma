@@ -1894,6 +1894,7 @@ model CampaignLanding {
   filters          Json
   manualProductIds String[]               @default([]) @db.Uuid
   design           Json?
+  publication      Json?
   updatedAt        DateTime               @updatedAt @db.Timestamptz(3)
   campaign         Campaign               @relation(fields: [campaignId], references: [id], onDelete: Restrict)
   placements       CampaignPlacement[]

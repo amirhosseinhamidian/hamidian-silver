@@ -688,16 +688,24 @@ async function handler(request, response) {
   if (request.method === 'GET' && url.pathname.startsWith('/api/v1/campaigns/public/landing/')) {
     const slug = url.pathname.split('/').at(-1);
     const page = Number(url.searchParams.get('page') ?? '1');
-    const festival = slug === 'festival-nowruz';
+    const liveFestival = slug === 'festival-nowruz';
+    const endedFestival = slug === 'festival-ended';
+    const festival = liveFestival || endedFestival;
     if (
-      !['nowruz', 'festival-nowruz', 'weekend', 'archived-nowruz', 'empty-collection'].includes(
-        slug,
-      ) ||
-      page > (slug === 'nowruz' || festival ? 2 : 1)
+      ![
+        'nowruz',
+        'festival-nowruz',
+        'festival-ended',
+        'weekend',
+        'archived-nowruz',
+        'empty-collection',
+      ].includes(slug) ||
+      page > (slug === 'nowruz' || liveFestival ? 2 : 1) ||
+      (endedFestival && url.searchParams.has('productsOnly'))
     ) {
       return json(response, 404, { message: 'Campaign landing not found.' });
     }
-    const hasProducts = slug !== 'archived-nowruz' && slug !== 'empty-collection';
+    const hasProducts = !endedFestival && slug !== 'archived-nowruz' && slug !== 'empty-collection';
     const count = hasProducts ? (slug === 'nowruz' || festival ? 2 : 1) : 0;
     const artwork = {
       media: { ...media, id: PRODUCT_ID, altText: 'تصویر مزایای جشنواره' },
@@ -735,7 +743,7 @@ async function handler(request, response) {
       story: 'انتخاب‌هایی برای هدیه دادن.',
       seoMode: slug === 'weekend' ? 'TEMPORARY' : 'RECURRING',
       isFestival: festival,
-      ...(festival && !url.searchParams.has('productsOnly')
+      ...(liveFestival && !url.searchParams.has('productsOnly')
         ? {
             campaignId: slug,
             endsAt,
@@ -778,7 +786,7 @@ async function handler(request, response) {
             },
           }
         : {}),
-      active: slug !== 'archived-nowruz',
+      active: !endedFestival && slug !== 'archived-nowruz',
       media: { ...media, id: PRODUCT_ID },
       ctaPath: '/products',
       ctaLabel: 'دیدن همهٔ محصولات',

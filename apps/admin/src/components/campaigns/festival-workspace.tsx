@@ -6,6 +6,7 @@ import type { CampaignDetail } from '@/lib/campaigns/campaign-model';
 import { CampaignLandingEditor } from './campaign-landing-editor';
 import { FestivalDesigner } from './festival-designer';
 import { FestivalLivePreview } from './festival-live-preview';
+import { FestivalPublicationRestore } from './festival-publication-restore';
 
 export function FestivalWorkspace({
   campaign,
@@ -26,6 +27,14 @@ export function FestivalWorkspace({
         campaignId={campaign.id}
         draft={landingDraft && designDraft ? { ...designDraft, landing: landingDraft } : null}
       />
+      {Boolean(landing.publishedVersions?.length) && (
+        <FestivalPublicationRestore
+          campaignId={campaign.id}
+          revision={landing.revision}
+          versions={landing.publishedVersions ?? []}
+          editable={canWrite && campaign.status === 'DRAFT'}
+        />
+      )}
       <CampaignLandingEditor
         campaign={campaign}
         editor={landing}

@@ -136,6 +136,7 @@ export function StorefrontAnnouncementBar({
   const campaignVisible = useCampaignVisibility(
     preview ? undefined : campaign?.campaignId,
     preview ? undefined : campaign?.endsAt,
+    preview ? undefined : campaign?.publicationVersion,
   );
   if (campaign && campaignVisible && (preview || campaignSeconds > 0)) {
     const { display } = campaign;

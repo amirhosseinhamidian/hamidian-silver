@@ -196,7 +196,7 @@ it('separates festival publication and archival from existing campaign tracking'
       startsTehran: formatTehranDate(new Date(start.valueOf() + tomorrow)),
       endsTehran: formatTehranDate(new Date(end.valueOf() + tomorrow)),
       budgetToman: 1000,
-      bannerEnabled: false,
+      bannerEnabled: true,
       bannerPriority: 0,
     };
     const landing = {
@@ -207,7 +207,9 @@ it('separates festival publication and archival from existing campaign tracking'
       collectionMode: 'MANUAL',
       filters: { minimumQuantity: 1 },
       manualProductSlugs: [slug],
-      placements: [],
+      placements: [
+        { slot: 'NAVIGATION', priority: 50, appearance: { display: { title: 'منوی منتشرشده' } } },
+      ],
     } satisfies CampaignLandingDraftDto;
     const marketTracking = `${slug}-market`;
     await expect(
@@ -291,6 +293,63 @@ it('separates festival publication and archival from existing campaign tracking'
     await expect(landings.publicLanding(slug, 1)).resolves.toMatchObject({
       active: true,
       isFestival: true,
+      publicationVersion: 8,
+    });
+    await expect(landings.editor(festival.id)).resolves.toMatchObject({
+      publishedVersions: [{ version: 8 }],
+    });
+    const conflict = await campaigns.create(
+      {
+        ...draft,
+        slug: `${slug}-conflict`,
+        kind: 'FESTIVAL',
+        startsTehran: formatTehranDate(start),
+        endsTehran: formatTehranDate(end),
+      },
+      owner.id,
+    );
+    const conflictLanding = await landings.save(
+      conflict.id,
+      { ...landing, expectedRevision: conflict.revision },
+      owner.id,
+    );
+    await expect(
+      campaigns.transition(
+        conflict.id,
+        { action: 'APPROVE', expectedRevision: conflictLanding.revision, requestId: randomUUID() },
+        owner.id,
+      ),
+    ).rejects.toThrow('same period');
+    await expect(
+      landings.restorePublication(festival.id, { expectedRevision: 8, version: 8 }, owner.id),
+    ).rejects.toThrow('current festival draft');
+    await db.campaignLanding.update({
+      where: { campaignId: festival.id },
+      data: { title: 'عنوان خصوصی آزمایش' },
+    });
+    await db.campaignPlacement.deleteMany({ where: { campaignId: festival.id } });
+    await expect(landings.publicLanding(slug, 1)).resolves.toMatchObject({
+      title: landing.title,
+      publicationVersion: 8,
+    });
+    await expect(landings.placement('NAVIGATION', undefined)).resolves.toMatchObject({
+      banner: {
+        campaignId: festival.id,
+        publicationVersion: 8,
+        display: { title: 'منوی منتشرشده' },
+      },
+    });
+    await db.campaignLanding.update({
+      where: { campaignId: festival.id },
+      data: { title: landing.title },
+    });
+    await db.campaignPlacement.create({
+      data: {
+        campaignId: festival.id,
+        slot: 'NAVIGATION',
+        priority: 50,
+        display: { title: 'منوی منتشرشده' },
+      },
     });
     await expect(landings.sitemap()).resolves.toMatchObject({
       entries: expect.not.arrayContaining([expect.objectContaining({ slug })]),
@@ -305,22 +364,73 @@ it('separates festival publication and archival from existing campaign tracking'
       revision: 11,
     });
 
+    await move('PAUSE', 11);
+    await move('REOPEN', 12);
+    const changed = await landings.save(
+      festival.id,
+      { ...landing, title: 'عنوان جدید پیش‌نویس', placements: [], expectedRevision: 13 },
+      owner.id,
+    );
+    await expect(
+      landings.restorePublication(
+        festival.id,
+        { expectedRevision: changed.revision, version: 2 },
+        owner.id,
+      ),
+    ).rejects.toThrow('Published festival version not found');
+    const restored = await landings.restorePublication(
+      festival.id,
+      { expectedRevision: changed.revision, version: 8 },
+      owner.id,
+    );
+    expect(restored).toMatchObject({
+      revision: 15,
+      landing: { title: landing.title, placements: landing.placements },
+    });
+    await expect(
+      db.campaignRevision.findUnique({
+        where: { campaignId_version: { campaignId: festival.id, version: restored.revision } },
+      }),
+    ).resolves.toMatchObject({
+      action: 'PUBLICATION_RESTORE',
+      snapshot: { restoredFromVersion: 8 },
+    });
+    await expect(
+      landings.restorePublication(
+        festival.id,
+        { expectedRevision: changed.revision, version: 8 },
+        owner.id,
+      ),
+    ).rejects.toThrow('current festival draft');
+    await expect(landings.publicLanding(slug, 1)).rejects.toThrow('not found');
+    const approvedAgain = await move('APPROVE', restored.revision);
+    const republished = await move('PUBLISH_NOW', approvedAgain.revision);
+    await expect(landings.publicLanding(slug, 1)).resolves.toMatchObject({
+      title: landing.title,
+      publicationVersion: republished.revision,
+    });
+
     await db.campaign.update({ where: { id: festival.id }, data: { endsAt: new Date() } });
     await campaigns.advance(new Date());
     await expect(campaigns.detail(festival.id, 1)).resolves.toMatchObject({
       status: 'ENDED',
-      revision: 12,
+      revision: 18,
     });
     await expect(landings.publicLanding(slug, 1)).resolves.toMatchObject({
       active: false,
       isFestival: true,
+      products: { items: [] },
     });
+    await expect(landings.publicLanding(slug, 2)).rejects.toThrow('not found');
+    await expect(landings.publicLanding(slug, 1, new Date(), {}, true)).rejects.toThrow(
+      'not found',
+    );
     const archiveId = randomUUID();
-    await expect(move('ARCHIVE', 12, archiveId)).resolves.toMatchObject({
+    await expect(move('ARCHIVE', 18, archiveId)).resolves.toMatchObject({
       archivedAt: expect.any(String),
-      revision: 13,
+      revision: 19,
     });
-    await expect(move('ARCHIVE', 12, archiveId)).resolves.toMatchObject({ revision: 13 });
+    await expect(move('ARCHIVE', 18, archiveId)).resolves.toMatchObject({ revision: 19 });
     await expect(landings.publicLanding(slug, 1)).rejects.toThrow('not found');
   } finally {
     try {

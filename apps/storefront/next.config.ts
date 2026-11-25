@@ -72,6 +72,10 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'no-referrer' },
         ],
       },
+      {
+        source: '/campaigns/:slug',
+        headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
+      },
     ];
   },
   ...(e2eMode ? { distDir: '.next-e2e' } : {}),

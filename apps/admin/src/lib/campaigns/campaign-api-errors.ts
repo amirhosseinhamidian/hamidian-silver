@@ -15,6 +15,9 @@ const messages: Record<string, string> = {
   'The campaign end time has passed.': 'زمان پایان کمپین گذشته است.',
   'The festival start time has not arrived.': 'زمان آغاز جشنواره هنوز نرسیده است.',
   'A festival needs a landing before publication.': 'پیش از انتشار، لندینگ جشنواره را ذخیره کنید.',
+  'Only the current festival draft can restore a published version.':
+    'برای بازگردانی، آخرین پیش‌نویس جشنواره را باز کنید.',
+  'Published festival version not found.': 'نسخهٔ منتشرشدهٔ انتخابی برای این جشنواره پیدا نشد.',
   'Archiving is unavailable until the festival ends.': 'جشنواره پس از پایان قابل بایگانی است.',
   'Marketing campaigns do not have a landing.':
     'تنظیمات لندینگ برای جشنواره‌های فروش در دسترس است.',

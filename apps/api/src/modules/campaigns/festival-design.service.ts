@@ -50,7 +50,7 @@ export function readFestivalDesign(value: Prisma.JsonValue | undefined) {
   return value as unknown as FestivalDesignDto;
 }
 
-function assetIds(sections: FestivalSectionDto[]) {
+export function festivalDesignAssetIds(sections: FestivalSectionDto[]) {
   return [
     ...new Set(
       sections.flatMap(({ artwork, slides }) => [
@@ -296,7 +296,7 @@ export class FestivalDesignService {
         }
         const version = campaign.revision + 1;
         const stored = JSON.parse(JSON.stringify(design)) as Prisma.InputJsonObject;
-        const assets = assetIds(design.sections);
+        const assets = festivalDesignAssetIds(design.sections);
         await tx.campaignLanding.update({ where: { campaignId }, data: { design: stored } });
         await tx.campaign.update({ where: { id: campaignId }, data: { revision: version } });
         await tx.campaignRevision.create({
@@ -613,7 +613,7 @@ export class FestivalDesignService {
   }
 
   private assets(reader: Pick<Prisma.TransactionClient, 'media'>, sections: FestivalSectionDto[]) {
-    const ids = assetIds(sections);
+    const ids = festivalDesignAssetIds(sections);
     return ids.length
       ? reader.media.findMany({ where: { id: { in: ids }, deletedAt: null } })
       : Promise.resolve([]);

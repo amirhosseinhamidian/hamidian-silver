@@ -28,6 +28,7 @@ import {
   CampaignSitemapDto,
   PublicCampaignLandingDto,
   PublicCampaignLandingQueryDto,
+  RestoreFestivalPublicationDto,
   SaveCampaignLandingDto,
 } from './dto/campaign-landing.dto';
 
@@ -90,5 +91,18 @@ export class CampaignLandingsController {
   @ApiOkResponse({ type: CampaignLandingPreviewDto })
   preview(@Param('id', ParseUUIDPipe) id: string, @Body() input: CampaignLandingDraftDto) {
     return this.landings.preview(id, input);
+  }
+
+  @Post(':id/landing/restore-publication')
+  @HttpCode(200)
+  @Header('Cache-Control', 'private, no-store')
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_WRITE)
+  @ApiOkResponse({ type: CampaignLandingEditorDto })
+  restorePublication(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() input: RestoreFestivalPublicationDto,
+    @CurrentPrincipal() actor: AuthenticatedPrincipal,
+  ) {
+    return this.landings.restorePublication(id, input, actor.userId);
   }
 }

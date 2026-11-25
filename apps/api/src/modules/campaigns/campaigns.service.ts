@@ -412,11 +412,20 @@ export class CampaignsService {
           { bannerEnabled: true },
           { promotion: { isNot: null } },
           { landing: { design: { not: Prisma.DbNull } } },
+          { landing: { publication: { not: Prisma.DbNull } } },
         ],
       },
-      select: { id: true },
+      select: { id: true, kind: true, revision: true },
     });
-    return { activeIds: campaigns.map(({ id }) => id) };
+    const festivalVersions = campaigns.flatMap(({ id, kind, revision }) =>
+      kind === 'FESTIVAL' ? [[id, revision] as const] : [],
+    );
+    return {
+      activeIds: campaigns.map(({ id }) => id),
+      ...(festivalVersions.length
+        ? { festivalVersions: Object.fromEntries(festivalVersions) }
+        : {}),
+    };
   }
 
   async publicBanner(now = new Date()): Promise<PublicCampaignDto> {
@@ -620,7 +629,19 @@ export class CampaignsService {
       where: { id: current.id },
       data: { status, revision: { increment: 1 } },
     });
-    await this.recordRevision(tx, campaign, action, actorUserId, requestId, publicationError);
+    const publication =
+      status === 'ACTIVE' && campaign.kind === 'FESTIVAL'
+        ? await this.landings?.recordPublication(tx, campaign)
+        : undefined;
+    await this.recordRevision(
+      tx,
+      campaign,
+      action,
+      actorUserId,
+      requestId,
+      publicationError,
+      publication,
+    );
     return campaign;
   }
 
@@ -631,6 +652,7 @@ export class CampaignsService {
     actorUserId: string | null,
     requestId?: string,
     publicationError?: string,
+    publication?: Awaited<ReturnType<CampaignLandingsService['recordPublication']>>,
   ) {
     await tx.campaignRevision.create({
       data: {
@@ -647,7 +669,15 @@ export class CampaignsService {
           createdAt: campaign.createdAt.toISOString(),
           updatedAt: campaign.updatedAt.toISOString(),
           ...(publicationError ? { publicationError } : {}),
+          ...(publication ? { publishedLanding: publication.publishedLanding } : {}),
         },
+        ...(publication?.mediaIds.length
+          ? {
+              festivalAssets: {
+                createMany: { data: publication.mediaIds.map((mediaId) => ({ mediaId })) },
+              },
+            }
+          : {}),
       },
     });
   }

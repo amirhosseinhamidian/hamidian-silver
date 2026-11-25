@@ -42,6 +42,7 @@ const historyLabels: Record<string, string> = {
   PUBLICATION_BLOCKED: 'توقف انتشار خودکار به‌دلیل خطای اعتبارسنجی',
   EXPIRE: 'پایان خودکار',
   LANDING_EDIT: 'ویرایش صفحه و مجموعه',
+  PUBLICATION_RESTORE: 'بازگردانی نسخهٔ منتشرشده در پیش‌نویس',
   PROMOTION_EDIT: 'ویرایش قانون تخفیف',
 };
 

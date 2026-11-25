@@ -224,6 +224,19 @@ export class CampaignLandingEditorDto {
 
   @ApiPropertyOptional({ type: () => CampaignPlacementMediaDto, isArray: true })
   placementMedia?: CampaignPlacementMediaDto[];
+
+  @ApiPropertyOptional({ type: () => FestivalPublishedVersionDto, isArray: true })
+  publishedVersions?: FestivalPublishedVersionDto[];
+}
+
+export class FestivalPublishedVersionDto {
+  version!: number;
+  recordedAt!: string;
+}
+
+export class RestoreFestivalPublicationDto {
+  @IsInt() @Min(1) expectedRevision!: number;
+  @IsInt() @Min(1) version!: number;
 }
 
 export class CampaignPlacementQueryDto {
@@ -292,6 +305,9 @@ export class PublicCampaignLandingDto {
 
   @ApiPropertyOptional({ type: String, format: 'uuid' })
   campaignId?: string;
+
+  @ApiPropertyOptional({ type: Number })
+  publicationVersion?: number;
 
   @ApiPropertyOptional({ type: String, format: 'date-time' })
   endsAt?: string;

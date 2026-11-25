@@ -993,6 +993,46 @@
         ]
       }
     },
+    "/api/v1/campaigns/{id}/landing/restore-publication": {
+      "post": {
+        "operationId": "CampaignLandingsController_restorePublication_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreFestivalPublicationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignLandingEditorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CampaignLandings"
+        ]
+      }
+    },
     "/api/v1/campaigns/{id}/quota": {
       "get": {
         "operationId": "CampaignQuotasController_get_v1",
@@ -13680,6 +13720,9 @@
             "type": "string",
             "format": "uuid"
           },
+          "publicationVersion": {
+            "type": "number"
+          },
           "endsAt": {
             "type": "string",
             "format": "date-time"
@@ -13787,6 +13830,12 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "festivalVersions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
             }
           }
         },
@@ -15630,6 +15679,9 @@
             "type": "string",
             "format": "uuid"
           },
+          "publicationVersion": {
+            "type": "number"
+          },
           "endsAt": {
             "type": "string",
             "format": "date-time"
@@ -16010,6 +16062,21 @@
           "stillMedia"
         ]
       },
+      "FestivalPublishedVersionDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number"
+          },
+          "recordedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "recordedAt"
+        ]
+      },
       "CampaignLandingEditorDto": {
         "type": "object",
         "properties": {
@@ -16026,6 +16093,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CampaignPlacementMediaDto"
+            }
+          },
+          "publishedVersions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalPublishedVersionDto"
             }
           },
           "revision": {
@@ -16116,6 +16189,23 @@
         },
         "required": [
           "total"
+        ]
+      },
+      "RestoreFestivalPublicationDto": {
+        "type": "object",
+        "properties": {
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "expectedRevision",
+          "version"
         ]
       },
       "CampaignQuotaAdminDto": {

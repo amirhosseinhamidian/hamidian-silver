@@ -3,7 +3,7 @@
 import type { components } from '@hamidian/contracts';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
 import { CampaignArtwork } from '@/components/home/campaign-artwork';
@@ -138,6 +138,7 @@ function FestivalSectionContent({
 export function FestivalLanding({
   design,
   campaignId,
+  publicationVersion,
   endsAt,
   initialSeconds,
   title,
@@ -149,6 +150,7 @@ export function FestivalLanding({
 }: {
   design: Design;
   campaignId: string;
+  publicationVersion?: number;
   endsAt: string;
   initialSeconds: number;
   title: string;
@@ -161,8 +163,20 @@ export function FestivalLanding({
   const visible = useCampaignVisibility(
     preview ? undefined : campaignId,
     preview ? undefined : endsAt,
+    preview ? undefined : publicationVersion,
   );
   const router = useRouter();
+  const refreshRequested = useRef('');
+  useEffect(() => {
+    if (preview || visible) {
+      refreshRequested.current = '';
+      return;
+    }
+    const key = `${campaignId}:${publicationVersion ?? ''}:${endsAt}`;
+    if (refreshRequested.current === key) return;
+    refreshRequested.current = key;
+    router.refresh();
+  }, [campaignId, endsAt, preview, publicationVersion, router, visible]);
   const refreshAt = design.refreshAt;
   useEffect(() => {
     if (preview || !visible || !refreshAt) return;

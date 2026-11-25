@@ -324,6 +324,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaigns/{id}/landing/restore-publication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CampaignLandingsController_restorePublication_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/campaigns/{id}/quota": {
         parameters: {
             query?: never;
@@ -5055,6 +5071,7 @@ export interface components {
         CampaignBannerDto: {
             /** Format: uuid */
             campaignId?: string;
+            publicationVersion?: number;
             /** Format: date-time */
             endsAt: string;
             ctaPath: string | null;
@@ -5078,6 +5095,9 @@ export interface components {
         };
         PublicCampaignActivityDto: {
             activeIds: string[];
+            festivalVersions?: {
+                [key: string]: number;
+            };
         };
         CampaignSummaryDto: {
             /** @enum {string} */
@@ -5487,6 +5507,7 @@ export interface components {
             seoMode: "TEMPORARY" | "RECURRING";
             /** Format: uuid */
             campaignId?: string;
+            publicationVersion?: number;
             /** Format: date-time */
             endsAt?: string;
             design?: components["schemas"]["PublicFestivalDesignDto"];
@@ -5565,9 +5586,14 @@ export interface components {
             mobileMedia: components["schemas"]["CampaignMediaDto"] | null;
             stillMedia: components["schemas"]["CampaignMediaDto"] | null;
         };
+        FestivalPublishedVersionDto: {
+            version: number;
+            recordedAt: string;
+        };
         CampaignLandingEditorDto: {
             landing: components["schemas"]["CampaignLandingDraftDto"] | null;
             placementMedia?: components["schemas"]["CampaignPlacementMediaDto"][];
+            publishedVersions?: components["schemas"]["FestivalPublishedVersionDto"][];
             revision: number;
         };
         SaveCampaignLandingDto: {
@@ -5585,6 +5611,10 @@ export interface components {
         };
         CampaignLandingPreviewDto: {
             total: number;
+        };
+        RestoreFestivalPublicationDto: {
+            expectedRevision: number;
+            version: number;
         };
         CampaignQuotaAdminDto: {
             slug: string;
@@ -9654,6 +9684,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CampaignLandingPreviewDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_restorePublication_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreFestivalPublicationDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignLandingEditorDto"];
                 };
             };
         };

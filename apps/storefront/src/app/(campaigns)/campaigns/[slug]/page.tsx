@@ -18,6 +18,8 @@ import { getPublicCampaignLanding } from '@/lib/campaigns/public-campaigns';
 import { buildStorefrontPageMetadata, type StorefrontSearchParams } from '@/lib/seo/metadata';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
+export const dynamic = 'force-dynamic';
+
 type Props = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<StorefrontSearchParams>;
@@ -67,11 +69,13 @@ export default async function CampaignLandingPage(props: Props) {
   const { landing, page, filters, filterQuery } = result;
   const pathname = `/campaigns/${landing.slug}`;
   const hasProducts = landing.active && landing.products.total > 0;
+  const historicalFestival = landing.isFestival === true && !landing.active;
   if (landing.design && landing.campaignId && landing.endsAt) {
     return (
       <FestivalLanding
         design={landing.design}
         campaignId={landing.campaignId}
+        publicationVersion={landing.publicationVersion}
         endsAt={landing.endsAt}
         initialSeconds={
           getInitialCountdownSeconds({ mode: 'deadline', endsAt: landing.endsAt }) ?? 0
@@ -116,6 +120,9 @@ export default async function CampaignLandingPage(props: Props) {
           <p className="mt-5 whitespace-pre-line text-sm leading-8 text-[var(--sf-color-muted)]">
             {landing.story}
           </p>
+          {historicalFestival && (
+            <p className="mt-4 text-sm font-semibold">این نوبت جشنواره به پایان رسیده است.</p>
+          )}
           {hasProducts ? (
             <ButtonLink href="#campaign-products" className="mt-6">
               دیدن محصولات مجموعه
@@ -139,60 +146,62 @@ export default async function CampaignLandingPage(props: Props) {
         )}
       </header>
 
-      <section
-        id="campaign-products"
-        aria-labelledby="campaign-products-title"
-        className="mt-10 scroll-mt-20 sm:mt-16"
-      >
-        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
-          <h2 id="campaign-products-title" className="text-xl font-medium sm:text-3xl">
-            محصولات مجموعه
-          </h2>
-          {hasProducts && (
-            <p className="text-sm text-[var(--sf-color-muted)]">
-              {displayNumber.format(landing.products.total)} محصول
+      {!historicalFestival && (
+        <section
+          id="campaign-products"
+          aria-labelledby="campaign-products-title"
+          className="mt-10 scroll-mt-20 sm:mt-16"
+        >
+          <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 id="campaign-products-title" className="text-xl font-medium sm:text-3xl">
+              محصولات مجموعه
+            </h2>
+            {hasProducts && (
+              <p className="text-sm text-[var(--sf-color-muted)]">
+                {displayNumber.format(landing.products.total)} محصول
+              </p>
+            )}
+          </div>
+          {hasProducts ? (
+            <>
+              <ul className="grid grid-cols-2 gap-x-2 gap-y-6 md:grid-cols-3 lg:grid-cols-4">
+                {landing.products.items.map((product) => (
+                  <CatalogProductCard key={product.id} product={product} />
+                ))}
+              </ul>
+              {landing.products.totalPages > 1 && (
+                <nav
+                  aria-label="صفحات مجموعه"
+                  className="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm"
+                >
+                  {page > 1 && (
+                    <ButtonLink href={previousPage} variant="outline">
+                      صفحهٔ قبل
+                    </ButtonLink>
+                  )}
+                  <span>صفحهٔ {displayNumber.format(page)}</span>
+                  {page < Math.min(landing.products.totalPages, 1000) && (
+                    <ButtonLink href={nextPage} variant="outline">
+                      صفحهٔ بعد
+                    </ButtonLink>
+                  )}
+                </nav>
+              )}
+              {landing.ctaPath !== '/' && (
+                <ButtonLink href={landing.ctaPath} variant="outline" className="mt-8">
+                  {landing.ctaLabel}
+                </ButtonLink>
+              )}
+            </>
+          ) : (
+            <p className="rounded-md border border-[var(--sf-color-border)] p-5 text-sm leading-7 text-[var(--sf-color-muted)]">
+              {landing.active
+                ? 'در حال حاضر محصول قابل خریدی در این مجموعه موجود نیست.'
+                : 'این نوبت کمپین به پایان رسیده است.'}
             </p>
           )}
-        </div>
-        {hasProducts ? (
-          <>
-            <ul className="grid grid-cols-2 gap-x-2 gap-y-6 md:grid-cols-3 lg:grid-cols-4">
-              {landing.products.items.map((product) => (
-                <CatalogProductCard key={product.id} product={product} />
-              ))}
-            </ul>
-            {landing.products.totalPages > 1 && (
-              <nav
-                aria-label="صفحات مجموعه"
-                className="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm"
-              >
-                {page > 1 && (
-                  <ButtonLink href={previousPage} variant="outline">
-                    صفحهٔ قبل
-                  </ButtonLink>
-                )}
-                <span>صفحهٔ {displayNumber.format(page)}</span>
-                {page < Math.min(landing.products.totalPages, 1000) && (
-                  <ButtonLink href={nextPage} variant="outline">
-                    صفحهٔ بعد
-                  </ButtonLink>
-                )}
-              </nav>
-            )}
-            {landing.ctaPath !== '/' && (
-              <ButtonLink href={landing.ctaPath} variant="outline" className="mt-8">
-                {landing.ctaLabel}
-              </ButtonLink>
-            )}
-          </>
-        ) : (
-          <p className="rounded-md border border-[var(--sf-color-border)] p-5 text-sm leading-7 text-[var(--sf-color-muted)]">
-            {landing.active
-              ? 'در حال حاضر محصول قابل خریدی در این مجموعه موجود نیست.'
-              : 'این نوبت کمپین به پایان رسیده است.'}
-          </p>
-        )}
-      </section>
+        </section>
+      )}
     </main>
   );
 }

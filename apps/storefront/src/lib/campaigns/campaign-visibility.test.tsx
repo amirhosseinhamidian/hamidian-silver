@@ -12,6 +12,51 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+it('hides a stale publication when the same festival is still active with a newer version', async () => {
+  vi.useFakeTimers();
+  vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+  const campaignId = '10000000-0000-4000-8000-000000000002';
+  const name = 'جشنوارهٔ بهار';
+  const endsAt = new Date(Date.now() + 600_000).toISOString();
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({ activeIds: [campaignId], festivalVersions: { [campaignId]: 11 } }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({ activeIds: [campaignId], festivalVersions: { [campaignId]: 15 } }),
+      ),
+  );
+  render(
+    <CampaignVisibilityProvider>
+      <ul>
+        <CampaignNavigationItem
+          campaign={{
+            campaignId,
+            name,
+            endsAt,
+            publicationVersion: 12,
+            message: name,
+            ctaLabel: name,
+            ctaPath: '/campaigns/spring',
+            media: null,
+          }}
+        />
+      </ul>
+    </CampaignVisibilityProvider>,
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0);
+  });
+  expect(screen.getByRole('link', { name })).toBeInTheDocument();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(30_000);
+  });
+  expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
+});
+
 it('removes live campaign prices, stock and navigation from an open page after a pause', async () => {
   vi.useFakeTimers();
   vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');

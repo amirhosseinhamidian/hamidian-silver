@@ -14,13 +14,24 @@ import {
   type Media,
 } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { attachHumanAuditEvent } from '../audit/audit-event';
 import { CatalogService } from '../catalog/catalog.service';
 import {
   emptyCampaignProducts,
   readCampaignProducts,
   type CampaignProductFilters,
 } from './campaign-collection';
-import { FestivalDesignService, readFestivalDesign } from './festival-design.service';
+import {
+  festivalDesignAssetIds,
+  FestivalDesignService,
+  readFestivalDesign,
+} from './festival-design.service';
+import {
+  activeFestivalPublication,
+  festivalPublication,
+  publicationPlacements,
+  readFestivalPublication,
+} from './festival-publication';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import {
   readCampaignPlacementDisplay,
@@ -29,6 +40,7 @@ import {
 import { formatTehranDate, parseTehranDate } from './campaign-calendar';
 import type { CampaignBannerDto } from './dto/campaign.dto';
 import type { FestivalThemeDto } from './dto/festival-design.dto';
+import type { RestoreFestivalPublicationDto } from './dto/campaign-landing.dto';
 import type { FestivalPreviewDraftDto } from './dto/festival-preview.dto';
 import type {
   CampaignCollectionFiltersDto,
@@ -86,11 +98,23 @@ export class CampaignLandingsService {
     this.assertLandingKind(campaign);
     const landing = campaign.landing;
     if (!landing) return { revision: campaign.revision, landing: null };
-    const [products, categories, targets] = await Promise.all([
+    const [products, versions, categories, targets] = await Promise.all([
       this.db.product.findMany({
         where: { id: { in: landing.manualProductIds } },
         select: { id: true, slug: true },
       }),
+      campaign.kind === 'FESTIVAL'
+        ? this.db.campaignRevision.findMany({
+            where: {
+              campaignId,
+              action: { in: publicationActions },
+              snapshot: { path: ['publishedLanding', 'schemaVersion'], equals: 1 },
+            },
+            select: { version: true, recordedAt: true },
+            orderBy: { version: 'desc' },
+            take: 30,
+          })
+        : [],
       this.db.category.findMany({
         where: {
           id: {
@@ -115,6 +139,10 @@ export class CampaignLandingsService {
     const slugs = new Map(products.map((row) => [row.id, row.slug]));
     return {
       revision: campaign.revision,
+      publishedVersions: versions.map(({ version, recordedAt }) => ({
+        version,
+        recordedAt: recordedAt.toISOString(),
+      })),
       placementMedia: landing.placements
         .filter(
           ({ mediaId, mobileMediaId, stillMediaId }) => mediaId || mobileMediaId || stillMediaId,
@@ -154,6 +182,144 @@ export class CampaignLandingsService {
         })),
       },
     };
+  }
+
+  async recordPublication(tx: Prisma.TransactionClient, campaign: Campaign) {
+    const landing = await tx.campaignLanding.findUniqueOrThrow({
+      where: { campaignId: campaign.id },
+      include: { placements: true },
+    });
+    const publishedLanding = festivalPublication(campaign, landing);
+    await tx.campaignLanding.update({
+      where: { campaignId: campaign.id },
+      data: { publication: publishedLanding },
+    });
+    const mediaIds = new Set([
+      campaign.mediaId,
+      ...festivalDesignAssetIds(readFestivalDesign(landing.design)?.sections ?? []),
+      ...landing.placements.flatMap(({ mediaId, mobileMediaId, stillMediaId }) => [
+        mediaId,
+        mobileMediaId,
+        stillMediaId,
+      ]),
+    ]);
+    return { publishedLanding, mediaIds: [...mediaIds].filter((id): id is string => Boolean(id)) };
+  }
+
+  async restorePublication(
+    campaignId: string,
+    input: RestoreFestivalPublicationDto,
+    actorUserId: string,
+  ) {
+    await this.db.$transaction(
+      async (tx) => {
+        const [locked] = await tx.$queryRaw<
+          Array<{ id: string }>
+        >`SELECT id FROM "campaigns" WHERE id = ${campaignId}::uuid FOR UPDATE`;
+        if (!locked) throw new NotFoundException('Campaign not found.');
+        const campaign = await tx.campaign.findUniqueOrThrow({
+          where: { id: campaignId },
+          include: { landing: true },
+        });
+        if (
+          campaign.kind !== 'FESTIVAL' ||
+          campaign.status !== 'DRAFT' ||
+          campaign.revision !== input.expectedRevision
+        ) {
+          throw new ConflictException(
+            'Only the current festival draft can restore a published version.',
+          );
+        }
+        const source = await tx.campaignRevision.findFirst({
+          where: { campaignId, version: input.version, action: { in: publicationActions } },
+          select: { snapshot: true },
+        });
+        const snapshot = source?.snapshot;
+        const publication = readFestivalPublication(
+          snapshot && typeof snapshot === 'object' && !Array.isArray(snapshot)
+            ? snapshot.publishedLanding
+            : undefined,
+        );
+        if (
+          !publication ||
+          !campaign.landing ||
+          publication.landing.slug !== campaign.landing.slug ||
+          publication.landing.seoMode !== campaign.landing.seoMode
+        ) {
+          throw new NotFoundException('Published festival version not found.');
+        }
+
+        const { filters, design, ...landing } = publication.landing;
+        const placements = publicationPlacements(publication);
+        const restoredCampaign = { ...campaign, ...publication.presentation };
+        await this.validateLandingContents(
+          tx,
+          restoredCampaign,
+          { ...campaign.landing, ...publication.landing },
+          placements,
+        );
+        if (
+          restoredCampaign.mediaId &&
+          !(await tx.media.findFirst({
+            where: { id: restoredCampaign.mediaId, deletedAt: null },
+            select: { id: true },
+          }))
+        ) {
+          throw new BadRequestException('Choose an available campaign image.');
+        }
+        await tx.campaignLanding.update({
+          where: { campaignId },
+          data: {
+            ...landing,
+            filters: filters as Prisma.InputJsonValue,
+            design: design === null ? Prisma.DbNull : design,
+          },
+        });
+        await tx.campaignPlacement.deleteMany({ where: { campaignId } });
+        if (placements.length) {
+          await tx.campaignPlacement.createMany({
+            data: placements.map(({ display, ...row }) => ({
+              ...row,
+              campaignId,
+              display: display === null ? Prisma.DbNull : display,
+            })),
+          });
+        }
+        const updated = await tx.campaign.update({
+          where: { id: campaignId },
+          data: { ...publication.presentation, revision: { increment: 1 } },
+        });
+        await tx.campaignRevision.create({
+          data: {
+            campaignId,
+            version: updated.revision,
+            actorUserId,
+            action: 'PUBLICATION_RESTORE',
+            snapshot: {
+              restoredFromVersion: publication.version,
+              landing: publication.landing,
+              placements: publication.placements,
+              presentation: publication.presentation,
+            },
+          },
+        });
+      },
+      { timeout: 10_000 },
+    );
+    const editor = await this.editor(campaignId);
+    return attachHumanAuditEvent(editor, {
+      title: `نسخهٔ منتشرشدهٔ ${input.version} در پیش‌نویس جشنواره بازیابی شد.`,
+      entityName: editor.landing?.title ?? null,
+      operationType: 'UPDATE',
+      changes: [
+        {
+          field: 'publishedVersion',
+          label: 'نسخهٔ بازیابی‌شده',
+          before: null,
+          after: input.version,
+        },
+      ],
+    });
   }
 
   async preview(campaignId: string, input: CampaignLandingDraftDto) {
@@ -314,29 +480,52 @@ export class CampaignLandingsService {
       }
       return;
     }
-    // A scheduled campaign already reserves this path. The worker only rechecks its contents.
-    if (campaign.status !== 'SCHEDULED') {
-      await this.lockPath(tx, landing.slug);
-      if (landing.seoMode === 'RECURRING') {
-        const overlap = await tx.campaignLanding.findFirst({
-          where: {
-            slug: landing.slug,
-            campaignId: { not: campaign.id },
-            campaign: {
-              status: { in: ['APPROVED', 'SCHEDULED', 'ACTIVE', 'PAUSED'] },
-              startsAt: { lt: campaign.endsAt },
-              endsAt: { gt: campaign.startsAt },
-            },
-          },
-          select: { campaignId: true },
-        });
-        if (overlap)
-          throw new ConflictException(
-            'Another campaign uses this landing path in the same period.',
-          );
+    await this.lockPath(tx, landing.slug);
+    const overlap = await tx.campaignLanding.findFirst({
+      where: {
+        slug: landing.slug,
+        campaignId: { not: campaign.id },
+        campaign: {
+          ...(campaign.kind !== 'FESTIVAL' && landing.seoMode !== 'RECURRING'
+            ? { kind: 'FESTIVAL' }
+            : {}),
+          status: { in: ['APPROVED', 'SCHEDULED', 'ACTIVE', 'PAUSED'] },
+          startsAt: { lt: campaign.endsAt },
+          endsAt: { gt: campaign.startsAt },
+        },
+      },
+      select: { campaignId: true },
+    });
+    if (overlap)
+      throw new ConflictException('Another campaign uses this landing path in the same period.');
+    await this.validateLandingContents(tx, campaign, landing, landing.placements);
+  }
+
+  private async validateLandingContents(
+    tx: Prisma.TransactionClient,
+    campaign: Campaign,
+    landing: CampaignLanding,
+    placements: Omit<CampaignPlacement, 'campaignId'>[],
+  ) {
+    for (const placement of placements) {
+      this.checkWindow(campaign, placement);
+      if (campaign.kind !== 'FESTIVAL') continue;
+      const display = readCampaignPlacementDisplay(placement.display);
+      await validateCampaignPlacementAppearance(tx, placement.slot, { ...placement, display });
+      if (placement.targetId) {
+        const target =
+          placement.slot === 'CATEGORY'
+            ? await tx.category.findFirst({
+                where: { id: placement.targetId, isActive: true, deletedAt: null },
+                select: { id: true },
+              })
+            : await tx.product.findFirst({
+                where: { id: placement.targetId, status: 'ACTIVE', deletedAt: null },
+                select: { id: true },
+              });
+        if (!target) throw new BadRequestException('Select a published banner target.');
       }
     }
-    for (const placement of landing.placements) this.checkWindow(campaign, placement);
     await this.festivals?.checkPublish(tx, campaign, landing);
     const { total } = await this.readCollection(tx, campaign, landing, 1, 0);
     if (total === 0) throw new BadRequestException('The collection has no sellable products.');
@@ -356,8 +545,14 @@ export class CampaignLandingsService {
           include: { campaign: { include: { media: true } } },
           orderBy: publicOrder,
         });
-        const landing = live ?? (page === 1 ? await this.archivedLanding(tx, slug, now) : null);
-        if (!landing) throw new NotFoundException('Campaign landing not found.');
+        const stored =
+          live ?? (page === 1 && !productsOnly ? await this.archivedLanding(tx, slug, now) : null);
+        if (!stored) throw new NotFoundException('Campaign landing not found.');
+        const published = live
+          ? activeFestivalPublication(stored.publication, stored.campaign.revision)
+          : readFestivalPublication(stored.publication);
+        const campaign = await this.publicPresentation(tx, stored.campaign, published);
+        const landing = { ...stored, ...published?.landing, campaign };
         const design = live && !productsOnly ? readFestivalDesign(landing.design) : null;
         const rebase = Object.values(selected).some((value) => value !== undefined);
         const loaded = live
@@ -398,6 +593,7 @@ export class CampaignLandingsService {
               }
             : {}),
           story: landing.story,
+          ...(published ? { publicationVersion: published.version } : {}),
           seoMode: landing.seoMode,
           isFestival: landing.campaign.kind === 'FESTIVAL',
           active: Boolean(live),
@@ -444,8 +640,10 @@ export class CampaignLandingsService {
       orderBy: publicOrder,
     });
     return (
-      completed.find(({ campaign }) =>
-        publicationActions.includes(campaign.revisions[0]?.action ?? ''),
+      completed.find(
+        ({ campaign, publication }) =>
+          Boolean(readFestivalPublication(publication)) ||
+          publicationActions.includes(campaign.revisions[0]?.action ?? ''),
       ) ?? null
     );
   }
@@ -455,46 +653,108 @@ export class CampaignLandingsService {
       async (tx) => {
         const targetId = await this.resolveTarget(tx, slot, slug);
         if (slug && !targetId) return null;
-        const choices = await tx.campaignPlacement.findMany({
+        const matching = {
+          slot,
+          OR: [{ targetId: null }, ...(targetId ? [{ targetId }] : [])],
+          AND: [
+            { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+            { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+          ],
+        } satisfies Prisma.CampaignPlacementWhereInput;
+        const landings = await tx.campaignLanding.findMany({
           where: {
-            slot,
-            OR: [{ targetId: null }, ...(targetId ? [{ targetId }] : [])],
-            AND: [
-              { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
-              { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+            campaign: activeWindow(now),
+            OR: [
+              { publication: { not: Prisma.DbNull } },
+              { campaign: { bannerEnabled: true }, placements: { some: matching } },
             ],
-            landing: { campaign: { ...activeWindow(now), bannerEnabled: true } },
           },
           include: {
-            ...placementMedia,
-            landing: { include: { campaign: { include: { media: true } } } },
+            campaign: { include: { media: true } },
+            placements: { where: matching, include: placementMedia },
           },
-          orderBy: [
-            { priority: 'desc' },
-            { landing: { campaign: { startsAt: 'desc' } } },
-            { campaignId: 'asc' },
-          ],
         });
-        for (const candidate of choices) {
-          const campaign = candidate.landing.campaign;
-          const { total } = await this.publicCollection(tx, campaign, candidate.landing, 1, 0);
+        const choices = landings
+          .flatMap((landing) => {
+            const published = activeFestivalPublication(
+              landing.publication,
+              landing.campaign.revision,
+            );
+            if (!(published?.presentation.bannerEnabled ?? landing.campaign.bannerEnabled))
+              return [];
+            const rows = published
+              ? publicationPlacements(published).filter(
+                  (candidate) =>
+                    candidate.slot === slot &&
+                    (candidate.targetId === null || candidate.targetId === targetId) &&
+                    (candidate.startsAt === null || candidate.startsAt <= now) &&
+                    (candidate.endsAt === null || candidate.endsAt > now),
+                )
+              : landing.placements;
+            return rows.map((candidate) => ({ landing, candidate, published }));
+          })
+          .sort(
+            (a, b) =>
+              b.candidate.priority - a.candidate.priority ||
+              b.landing.campaign.startsAt.getTime() - a.landing.campaign.startsAt.getTime() ||
+              a.landing.campaignId.localeCompare(b.landing.campaignId),
+          );
+        for (const { landing: stored, candidate, published } of choices) {
+          const landing = { ...stored, ...published?.landing };
+          const { total } = await this.publicCollection(tx, stored.campaign, landing, 1, 0);
           if (total === 0) continue;
+          const campaign = await this.publicPresentation(tx, stored.campaign, published);
+          const ids = [candidate.mediaId, candidate.mobileMediaId, candidate.stillMediaId].filter(
+            (id): id is string => Boolean(id),
+          );
+          const assets =
+            published && ids.length
+              ? await tx.media.findMany({ where: { id: { in: ids }, deletedAt: null } })
+              : [];
+          const byId = new Map(assets.map((asset) => [asset.id, asset]));
+          const appearance = published
+            ? {
+                ...candidate,
+                media: byId.get(candidate.mediaId ?? ''),
+                mobileMedia: byId.get(candidate.mobileMediaId ?? ''),
+                stillMedia: byId.get(candidate.stillMediaId ?? ''),
+              }
+            : candidate;
           return {
             priority: candidate.priority,
             startsAt: campaign.startsAt,
             campaignId: campaign.id,
-            banner: this.projectPlacement(
-              campaign,
-              candidate.landing.slug,
-              candidate,
-              readFestivalDesign(candidate.landing.design)?.theme,
-            ),
+            banner: {
+              ...this.projectPlacement(
+                campaign,
+                landing.slug,
+                appearance,
+                readFestivalDesign(landing.design)?.theme,
+              ),
+              ...(published ? { publicationVersion: published.version } : {}),
+            },
           };
         }
         return null;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 10_000 },
     );
+  }
+
+  private async publicPresentation(
+    tx: Prisma.TransactionClient,
+    campaign: Campaign & { media: Media | null },
+    published: ReturnType<typeof readFestivalPublication>,
+  ) {
+    if (!published) return campaign;
+    const { mediaId } = published.presentation;
+    const media =
+      mediaId === campaign.mediaId
+        ? campaign.media
+        : mediaId
+          ? await tx.media.findFirst({ where: { id: mediaId, deletedAt: null } })
+          : null;
+    return { ...campaign, ...published.presentation, media };
   }
 
   private projectPlacement(

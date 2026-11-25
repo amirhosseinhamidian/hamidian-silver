@@ -314,6 +314,9 @@ export class CampaignBannerDto {
   @ApiPropertyOptional({ type: String, format: 'uuid' })
   campaignId?: string;
 
+  @ApiPropertyOptional({ type: Number })
+  publicationVersion?: number;
+
   name!: string;
   message!: string;
 
@@ -362,4 +365,7 @@ export class PublicCampaignDto {
 export class PublicCampaignActivityDto {
   @ApiProperty({ type: String, isArray: true })
   activeIds!: string[];
+
+  @ApiPropertyOptional({ type: 'object', additionalProperties: { type: 'integer' } })
+  festivalVersions?: Record<string, number>;
 }

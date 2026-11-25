@@ -120,6 +120,59 @@ test('keeps festival, temporary, archived and empty pages out of the index', asy
   expect((await request.get('/campaigns/nowruz?page=3')).status()).toBe(404);
 });
 
+test('keeps public festival URLs crawlable without indexing and serves the ended edition without offers', async ({
+  page,
+  request,
+  baseURL,
+}) => {
+  for (const [suffix, canonical] of [
+    ['?page=2', '?page=2'],
+    ['?category=rings&sort=price-asc', ''],
+  ]) {
+    const response = await page.goto(`/campaigns/festival-nowruz${suffix}`);
+    expect(response?.status()).toBe(200);
+    await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute(
+      'content',
+      'noindex, follow',
+    );
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      `${baseURL}/campaigns/festival-nowruz${canonical}`,
+    );
+  }
+  const ended = await page.goto('/campaigns/festival-ended');
+  expect(ended?.status()).toBe(200);
+  await expect(page.getByText('این نوبت جشنواره به پایان رسیده است.')).toBeVisible();
+  await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute(
+    'content',
+    'noindex, follow',
+  );
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    `${baseURL}/campaigns/festival-ended`,
+  );
+  await expect(page.getByRole('link', { name: 'مشاهده و خرید' })).toHaveCount(0);
+  for (const suffix of [
+    'festival-draft',
+    'festival-scheduled',
+    'festival-paused',
+    'festival-archived',
+    'festival-ended?page=2',
+  ]) {
+    expect((await request.get(`/campaigns/${suffix}`)).status()).toBe(404);
+  }
+  expect((await request.get('/api/campaigns/festival-ended/products?page=1')).status()).toBe(404);
+
+  const rsc = await request.get('/campaigns/festival-nowruz', { headers: { RSC: '1' } });
+  expect(rsc.status()).toBe(200);
+  expect(rsc.headers()['cache-control']).toMatch(/\bno-store\b|^no-cache, must-revalidate$/);
+  const robots = await (await request.get('/robots.txt')).text();
+  expect(robots).toMatch(/^Allow: \/$/m);
+  expect(robots).not.toMatch(/^Disallow: \/campaigns/m);
+  const sitemap = await (await request.get('/sitemap.xml')).text();
+  expect(sitemap).not.toContain('/campaigns/festival-');
+});
+
 test('renders a designed festival, pages with filters, restores results and reaches the footer', async ({
   page,
   baseURL,

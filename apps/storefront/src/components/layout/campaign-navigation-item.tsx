@@ -19,6 +19,7 @@ export function CampaignNavigationItem({
   const visible = useCampaignVisibility(
     preview ? undefined : campaign.campaignId,
     preview ? undefined : campaign.endsAt,
+    preview ? undefined : campaign.publicationVersion,
   );
   if (!visible || !campaign.ctaPath) return null;
 

@@ -14,11 +14,13 @@ import { useCampaignExpiration } from '@/components/catalog/use-campaign-expirat
 const CampaignVisibility = createContext<{
   watch: (campaignId: string) => () => void;
   inactiveIds: ReadonlySet<string>;
+  festivalVersions: ReadonlyMap<string, number>;
 } | null>(null);
 
 export function CampaignVisibilityProvider({ children }: { children: ReactNode }) {
   const registrations = useRef(new Map<string, number>());
   const [inactiveIds, setInactiveIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [versions, setVersions] = useState<ReadonlyMap<string, number>>(() => new Map());
   const watch = useCallback((id: string) => {
     const watched = registrations.current;
     watched.set(id, (watched.get(id) ?? 0) + 1);
@@ -43,7 +45,10 @@ export function CampaignVisibilityProvider({ children }: { children: ReactNode }
           signal: controller.signal,
         });
         if (!response.ok) return;
-        const { activeIds } = (await response.json()) as { activeIds?: string[] };
+        const { activeIds, festivalVersions } = (await response.json()) as {
+          activeIds?: string[];
+          festivalVersions?: Record<string, number>;
+        };
         if (!Array.isArray(activeIds) || controller.signal.aborted) return;
         const active = new Set(activeIds);
         const next = new Set(requested.filter((id) => !active.has(id)));
@@ -51,6 +56,20 @@ export function CampaignVisibilityProvider({ children }: { children: ReactNode }
           previous.size === next.size && [...next].every((id) => previous.has(id))
             ? previous
             : next,
+        );
+        const updated = new Map(
+          requested.flatMap((id) => {
+            const version = festivalVersions?.[id];
+            return typeof version === 'number' && Number.isInteger(version)
+              ? [[id, version] as const]
+              : [];
+          }),
+        );
+        setVersions((previous) =>
+          previous.size === updated.size &&
+          [...updated].every(([id, version]) => previous.get(id) === version)
+            ? previous
+            : updated,
         );
       } catch {
         // Keep the server-rendered presentation when an activity check is unavailable.
@@ -73,13 +92,17 @@ export function CampaignVisibilityProvider({ children }: { children: ReactNode }
   }, []);
 
   return (
-    <CampaignVisibility.Provider value={{ watch, inactiveIds }}>
+    <CampaignVisibility.Provider value={{ watch, inactiveIds, festivalVersions: versions }}>
       {children}
     </CampaignVisibility.Provider>
   );
 }
 
-export function useCampaignVisibility(campaignId: string | undefined, endsAt: string | undefined) {
+export function useCampaignVisibility(
+  campaignId: string | undefined,
+  endsAt: string | undefined,
+  publicationVersion?: number,
+) {
   const activity = useContext(CampaignVisibility);
   const watching = activity?.watch;
   const expired = useCampaignExpiration(endsAt);
@@ -87,5 +110,8 @@ export function useCampaignVisibility(campaignId: string | undefined, endsAt: st
     if (expired || !campaignId || !watching) return;
     return watching(campaignId);
   }, [campaignId, expired, watching]);
-  return !expired && (!campaignId || !activity?.inactiveIds.has(campaignId));
+  const current = campaignId ? activity?.festivalVersions.get(campaignId) : undefined;
+  const superseded =
+    publicationVersion !== undefined && current !== undefined && current > publicationVersion;
+  return !expired && !superseded && (!campaignId || !activity?.inactiveIds.has(campaignId));
 }

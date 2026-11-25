@@ -13,11 +13,23 @@ export function CampaignPlacementRollover({
   navigation?: PublicCampaignBanner | null;
 }) {
   const router = useRouter();
-  const announcementVisible = useCampaignVisibility(announcement?.campaignId, announcement?.endsAt);
-  const navigationVisible = useCampaignVisibility(navigation?.campaignId, navigation?.endsAt);
+  const announcementVisible = useCampaignVisibility(
+    announcement?.campaignId,
+    announcement?.endsAt,
+    announcement?.publicationVersion,
+  );
+  const navigationVisible = useCampaignVisibility(
+    navigation?.campaignId,
+    navigation?.endsAt,
+    navigation?.publicationVersion,
+  );
   const invalid = [announcementVisible ? null : announcement, navigationVisible ? null : navigation]
     .flatMap((placement) =>
-      placement ? [`${placement.campaignId ?? ''}:${placement.endsAt}`] : [],
+      placement
+        ? [
+            `${placement.campaignId ?? ''}:${placement.endsAt}:${placement.publicationVersion ?? ''}`,
+          ]
+        : [],
     )
     .join('|');
   const lastRefresh = useRef('');
