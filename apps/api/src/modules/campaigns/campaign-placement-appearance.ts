@@ -9,7 +9,9 @@ import { hasGradientContrast } from './festival-theme';
 const stillTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 const displayOrigin = 'https://campaign.invalid';
 
-export function readCampaignPlacementDisplay(value: Prisma.JsonValue) {
+export function readCampaignPlacementDisplay(
+  value: Prisma.JsonValue | Prisma.InputJsonValue | undefined,
+) {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as CampaignPlacementDisplayDto)
     : undefined;

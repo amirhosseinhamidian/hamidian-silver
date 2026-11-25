@@ -24,6 +24,7 @@ export function CatalogPrice({
   extra = 0,
   priceClassName,
   details = false,
+  preview = false,
 }: {
   sale: number | null;
   compare?: number | null;
@@ -31,8 +32,12 @@ export function CatalogPrice({
   extra?: number;
   priceClassName: string;
   details?: boolean;
+  preview?: boolean;
 }) {
-  const visible = useCampaignVisibility(offer?.campaignId, offer?.endsAt);
+  const visible = useCampaignVisibility(
+    preview ? undefined : offer?.campaignId,
+    preview ? undefined : offer?.endsAt,
+  );
   const active = visible ? offer : null;
   const price = active?.price;
   const previous = price?.regularToman ?? (active ? null : compare);

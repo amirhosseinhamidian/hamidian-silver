@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import { FestivalPreviewBridge } from '@/components/campaigns/festival-preview-bridge';
+import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'پیش‌نمایش جشنواره',
@@ -9,15 +12,21 @@ export const metadata: Metadata = {
 export default async function CampaignPreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ frame?: string; device?: string; nonce?: string }>;
+  searchParams: Promise<{ frame?: string; nonce?: string }>;
 }) {
-  const { frame, device, nonce } = await searchParams;
+  const { frame, nonce } = await searchParams;
+  const configured =
+    process.env.ADMIN_APP_ORIGIN?.trim() ||
+    (process.env.NODE_ENV === 'development'
+      ? 'http://localhost:3002'
+      : 'https://admin.hamidian.shop');
+  const adminOrigin = new URL(configured).origin;
   return (
     <FestivalPreviewBridge
       frame={frame === '1'}
-      device={device === 'mobile' ? 'mobile' : 'desktop'}
       frameNonce={typeof nonce === 'string' ? nonce : ''}
-      adminOrigin={process.env.ADMIN_APP_ORIGIN?.trim() || 'https://admin.hamidian.shop'}
+      adminOrigin={adminOrigin}
+      navigationCategories={frame === '1' ? (await getPublicSiteSettings()).headerCategories : []}
     />
   );
 }

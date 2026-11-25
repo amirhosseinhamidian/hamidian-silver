@@ -229,9 +229,10 @@ export class PromotionsService {
   async catalogPromotions(
     reader: Pick<Prisma.TransactionClient, 'campaignPromotion' | 'orderPriceQuote'>,
     now = new Date(),
+    previewCampaignId?: string,
   ) {
     const candidates = await reader.campaignPromotion.findMany({
-      where: { campaign: this.activeCampaign(now) },
+      where: { campaign: previewCampaignId ? { id: previewCampaignId } : this.activeCampaign(now) },
       orderBy: [{ priority: 'desc' }, { campaignId: 'asc' }],
       select: {
         couponCode: true,

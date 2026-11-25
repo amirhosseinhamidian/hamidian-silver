@@ -7,7 +7,7 @@ import {
 } from '@/components/campaigns/campaign-operations-center';
 import { CampaignDetailView } from '@/components/campaigns/campaign-detail-view';
 import { CampaignBudgetReview } from '@/components/campaigns/campaign-budget-review';
-import { FestivalDesigner } from '@/components/campaigns/festival-designer';
+import { FestivalWorkspace } from '@/components/campaigns/festival-workspace';
 import { CampaignLandingEditor } from '@/components/campaigns/campaign-landing-editor';
 import { CampaignPromotionEditor } from '@/components/campaigns/campaign-promotion-editor';
 import { CampaignQuotaEditor } from '@/components/campaigns/campaign-quota-editor';
@@ -158,29 +158,28 @@ export default async function CampaignsPage({ searchParams }: Props) {
           </Alert>
         );
       } else if (currentStep === 'landing') {
-        panel = landing?.data ? (
-          <>
-            <CampaignLandingEditor
-              key={`landing-${campaign.id}-${landing.data.revision}`}
+        panel =
+          landing?.data?.landing && festival?.data ? (
+            <FestivalWorkspace
+              key={`${campaign.id}-${landing.data.revision}-${festival.data.revision}`}
               campaign={campaign}
-              editor={landing.data}
+              landing={landing.data}
+              festival={festival.data}
               canWrite={canWrite}
             />
-            {landing.data.landing &&
-              (festival?.data ? (
-                <FestivalDesigner
-                  key={`festival-${campaign.id}-${festival.data.revision}`}
-                  campaignId={campaign.id}
-                  editor={festival.data}
-                  editable={canWrite && campaign.status === 'DRAFT'}
-                />
-              ) : (
-                <Alert tone="danger">دریافت طرح جشنواره ممکن نشد.</Alert>
-              ))}
-          </>
-        ) : (
-          <Alert tone="danger">دریافت تنظیمات صفحهٔ کمپین ممکن نشد.</Alert>
-        );
+          ) : landing?.data ? (
+            <>
+              <CampaignLandingEditor
+                key={`landing-${campaign.id}-${landing.data.revision}`}
+                campaign={campaign}
+                editor={landing.data}
+                canWrite={canWrite}
+              />
+              {landing.data.landing && <Alert tone="danger">دریافت طرح جشنواره ممکن نشد.</Alert>}
+            </>
+          ) : (
+            <Alert tone="danger">دریافت تنظیمات صفحهٔ کمپین ممکن نشد.</Alert>
+          );
       } else if (currentStep === 'promotion') {
         panel = promotion?.data ? (
           <>

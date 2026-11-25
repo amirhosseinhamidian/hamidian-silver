@@ -29,6 +29,7 @@ type StorefrontHeaderProps = Readonly<{
   campaignNavigation?: PublicCampaignBanner | null;
   navigationCategories?: readonly StorefrontNavigationCategory[];
   authenticated?: boolean;
+  preview?: boolean;
 }>;
 
 function IconLink({
@@ -60,6 +61,7 @@ export function StorefrontHeader({
   campaignNavigation,
   navigationCategories = [],
   authenticated = false,
+  preview = false,
 }: StorefrontHeaderProps) {
   const initialRemainingSeconds = announcement
     ? getInitialCountdownSeconds(announcement.countdown)
@@ -67,13 +69,14 @@ export function StorefrontHeader({
 
   return (
     <>
-      {(campaignCountdown || campaignNavigation) && (
+      {!preview && (campaignCountdown || campaignNavigation) && (
         <CampaignPlacementRollover
           announcement={campaignCountdown}
           navigation={campaignNavigation}
         />
       )}
       <StorefrontAnnouncementBar
+        preview={preview}
         announcement={announcement}
         initialRemainingSeconds={initialRemainingSeconds}
         campaign={campaignCountdown}
@@ -96,15 +99,26 @@ export function StorefrontHeader({
               text-[var(--sf-color-muted)] xl:flex
             "
           >
-            <Link href="/services">خدمات ما</Link>
-            <Link href="/faq">سوالات متداول</Link>
-            <Link href="/size-guide">راهنمای سایز</Link>
-            <Link href="/contact">تماس با ما</Link>
-            <Link href="/about">درباره گالری حمیدیان</Link>
+            <Link prefetch={preview ? false : undefined} href="/services">
+              خدمات ما
+            </Link>
+            <Link prefetch={preview ? false : undefined} href="/faq">
+              سوالات متداول
+            </Link>
+            <Link prefetch={preview ? false : undefined} href="/size-guide">
+              راهنمای سایز
+            </Link>
+            <Link prefetch={preview ? false : undefined} href="/contact">
+              تماس با ما
+            </Link>
+            <Link prefetch={preview ? false : undefined} href="/about">
+              درباره گالری حمیدیان
+            </Link>
           </nav>
 
           <Link
             href="/"
+            prefetch={preview ? false : undefined}
             aria-label="گالری حمیدیان، صفحه اصلی"
             className="relative col-start-2 h-16 w-40 sm:h-20 sm:w-56"
           >
@@ -119,14 +133,18 @@ export function StorefrontHeader({
           </Link>
 
           <div className="flex items-center justify-end gap-1">
-            <WishlistHeaderLink />
-            <AccountHeaderAction authenticated={authenticated} />
-            <span className="hidden sm:inline-flex">
-              <IconLink href="/contact" label="نشانی گالری">
-                <FiMapPin aria-hidden="true" size={21} />
-              </IconLink>
-            </span>
-            <CartHeaderLink />
+            {!preview && (
+              <>
+                <WishlistHeaderLink />
+                <AccountHeaderAction authenticated={authenticated} />
+                <span className="hidden sm:inline-flex">
+                  <IconLink href="/contact" label="نشانی گالری">
+                    <FiMapPin aria-hidden="true" size={21} />
+                  </IconLink>
+                </span>
+                <CartHeaderLink />
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -150,15 +168,17 @@ export function StorefrontHeader({
           >
             <div className="lg:hidden">
               <StorefrontMobileMenu
+                preview={preview}
                 navigationCategories={navigationCategories}
                 campaign={campaignNavigation}
               />
             </div>
-            <StorefrontSearch />
+            {!preview && <StorefrontSearch />}
           </div>
 
           <Link
             href="/"
+            prefetch={preview ? false : undefined}
             aria-label="گالری حمیدیان، صفحه اصلی موبایل"
             className="relative h-11 w-28 lg:hidden"
           >
@@ -179,33 +199,52 @@ export function StorefrontHeader({
           >
             <ul className="flex min-w-max items-center justify-center gap-9 py-4 text-sm">
               <li>
-                <Link href="/">خانه</Link>
+                <Link prefetch={preview ? false : undefined} href="/">
+                  خانه
+                </Link>
               </li>
 
-              {campaignNavigation && <CampaignNavigationItem campaign={campaignNavigation} />}
+              {campaignNavigation && (
+                <CampaignNavigationItem campaign={campaignNavigation} preview={preview} />
+              )}
 
               {navigationCategories.map((category) => (
                 <li key={category.id}>
-                  <Link href={`/categories/${category.slug}`}>{category.label}</Link>
+                  <Link
+                    prefetch={preview ? false : undefined}
+                    href={`/categories/${category.slug}`}
+                  >
+                    {category.label}
+                  </Link>
                 </li>
               ))}
 
               <li>
-                <Link href="/brands">برندها</Link>
+                <Link prefetch={preview ? false : undefined} href="/brands">
+                  برندها
+                </Link>
               </li>
               <li>
-                <Link href="/products?sort=newest">جدیدترین‌ها</Link>
+                <Link prefetch={preview ? false : undefined} href="/products?sort=newest">
+                  جدیدترین‌ها
+                </Link>
               </li>
               <li>
-                <Link href="/guide">دانستنی‌ها</Link>
+                <Link prefetch={preview ? false : undefined} href="/guide">
+                  دانستنی‌ها
+                </Link>
               </li>
             </ul>
           </nav>
 
           <div className="flex items-center justify-end gap-1 lg:hidden">
-            <AccountHeaderAction authenticated={authenticated} />
-            <WishlistHeaderLink />
-            <CartHeaderLink />
+            {!preview && (
+              <>
+                <AccountHeaderAction authenticated={authenticated} />
+                <WishlistHeaderLink />
+                <CartHeaderLink />
+              </>
+            )}
           </div>
         </div>
       </header>

@@ -27,14 +27,19 @@ type HomepageHeroProps = Readonly<{
   preload?: boolean;
   headingLevel?: 1 | 2;
   fallbackTitle?: string;
+  preview?: boolean;
 }>;
 
-function HeroAction({ href, label }: Readonly<{ href: string; label: string }>) {
+function HeroAction({
+  href,
+  label,
+  preview,
+}: Readonly<{ href: string; label: string; preview: boolean }>) {
   const className =
     'inline-flex min-h-11 items-center justify-center border border-current px-7 text-sm font-medium text-current transition-opacity hover:opacity-75';
 
   return (href.startsWith('/') && !href.startsWith('//')) || href.startsWith('#') ? (
-    <Link href={href} className={className}>
+    <Link href={href} prefetch={preview ? false : undefined} className={className}>
       {label}
     </Link>
   ) : (
@@ -52,6 +57,7 @@ export function HomepageHero({
   preload = false,
   headingLevel = 1,
   fallbackTitle,
+  preview = false,
 }: HomepageHeroProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -91,6 +97,7 @@ export function HomepageHero({
           </Heading>
           <Link
             href="/products"
+            prefetch={preview ? false : undefined}
             className="mt-8 inline-flex min-h-11 items-center border border-[var(--sf-color-ink)] px-7 text-sm"
           >
             مشاهده محصولات
@@ -157,7 +164,11 @@ export function HomepageHero({
           ) : null}
           {activeSlide.actionLabel && activeSlide.actionHref ? (
             <div className="mt-7">
-              <HeroAction href={activeSlide.actionHref} label={activeSlide.actionLabel} />
+              <HeroAction
+                href={activeSlide.actionHref}
+                label={activeSlide.actionLabel}
+                preview={preview}
+              />
             </div>
           ) : null}
         </div>

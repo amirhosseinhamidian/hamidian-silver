@@ -10,11 +10,16 @@ import { campaignPlacementMotion } from './campaign-placement-motion';
 export function CampaignNavigationItem({
   campaign,
   mobile = false,
+  preview = false,
 }: {
   campaign: PublicCampaignBanner;
   mobile?: boolean;
+  preview?: boolean;
 }) {
-  const visible = useCampaignVisibility(campaign.campaignId, campaign.endsAt);
+  const visible = useCampaignVisibility(
+    preview ? undefined : campaign.campaignId,
+    preview ? undefined : campaign.endsAt,
+  );
   if (!visible || !campaign.ctaPath) return null;
 
   const { display, navigationEffect: effect, textColor } = campaign;
@@ -29,6 +34,7 @@ export function CampaignNavigationItem({
   const link = (
     <Link
       href={campaign.ctaPath}
+      prefetch={preview ? false : undefined}
       className={`inline-flex max-w-full items-center gap-1.5 rounded-sm border px-3 py-1.5 font-semibold leading-5 [overflow-wrap:anywhere] ${motion}`}
       style={{
         backgroundColor: fill,

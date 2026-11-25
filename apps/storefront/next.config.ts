@@ -64,6 +64,14 @@ const nextConfig: NextConfig = {
         source: '/:path*',
         headers: [...SECURITY_HEADERS],
       },
+      {
+        source: '/campaign-preview',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+        ],
+      },
     ];
   },
   ...(e2eMode ? { distDir: '.next-e2e' } : {}),

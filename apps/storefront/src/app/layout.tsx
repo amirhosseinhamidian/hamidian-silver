@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense, type ReactNode } from 'react';
 
-import { GoogleAnalytics } from '@/components/analytics/analytics-consent';
-import { AttributionLanding } from '@/components/analytics/attribution-landing';
+import { StorefrontTelemetry } from '@/components/analytics/storefront-telemetry';
 import { validGoogleMeasurementId } from '@/lib/analytics/google-analytics';
 import { buildStorefrontRootMetadata } from '@/lib/seo/metadata';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
@@ -26,9 +25,8 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <body>
         {children}
         <Suspense fallback={null}>
-          <AttributionLanding />
+          <StorefrontTelemetry measurementId={measurementId} />
         </Suspense>
-        {measurementId ? <GoogleAnalytics measurementId={measurementId} /> : null}
       </body>
     </html>
   );

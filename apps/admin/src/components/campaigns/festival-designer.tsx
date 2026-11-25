@@ -43,69 +43,16 @@ const defaults = (['HERO', 'COUNTDOWN', 'INTRO', 'PRODUCTS'] as const).map(newSe
 const supportedSections = Object.keys(sectionLabels) as Kind[];
 const selectStyle = 'min-h-10 min-w-0 rounded-md border border-[var(--admin-color-border)] px-2';
 
-function openFestivalPreview(device: 'mobile' | 'desktop', onError: (message: string) => void) {
-  const storefront = new URL(
-    process.env.NEXT_PUBLIC_STOREFRONT_URL ??
-      (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://hamidian.shop'),
-  );
-  const preview = new URL('/campaign-preview', storefront);
-  preview.searchParams.set('device', device);
-  const nonce = crypto.randomUUID();
-  preview.hash = new URLSearchParams({ nonce, admin: window.location.origin }).toString();
-  const popup = window.open(preview.href, '_blank', 'popup,width=1280,height=900');
-  if (!popup) throw new Error('preview blocked');
-  let ready = false;
-  let payload: components['schemas']['FestivalPreviewDto'] | null = null;
-
-  function deliver() {
-    if (!ready || !payload) return;
-    popup?.postMessage({ kind: 'festival-preview', nonce, payload }, storefront.origin);
-    cleanup();
-  }
-
-  function receive(event: MessageEvent) {
-    if (
-      event.origin !== storefront.origin ||
-      event.source !== popup ||
-      event.data?.kind !== 'festival-preview-ready' ||
-      event.data?.nonce !== nonce
-    )
-      return;
-    ready = true;
-    deliver();
-  }
-
-  const timer = window.setTimeout(() => {
-    cleanup();
-    onError('پیش‌نمایش به فروشگاه وصل نشد. نشانی فروشگاه و مجوز پنجرهٔ جدید را بررسی کنید.');
-  }, 45_000);
-  function cleanup() {
-    window.clearTimeout(timer);
-    window.removeEventListener('message', receive);
-  }
-
-  window.addEventListener('message', receive);
-  return {
-    send(data: components['schemas']['FestivalPreviewDto']) {
-      payload = data;
-      deliver();
-    },
-    cleanup,
-    close() {
-      cleanup();
-      popup.close();
-    },
-  };
-}
-
 export function FestivalDesigner({
   campaignId,
   editor,
   editable,
+  onPreviewChange,
 }: {
   campaignId: string;
   editor: Editor;
   editable: boolean;
+  onPreviewChange?: (draft: Design | null) => void;
 }) {
   const router = useRouter();
   const taxonomy = useCampaignTaxonomy();
@@ -133,10 +80,11 @@ export function FestivalDesigner({
     (kind) => !design.sections.some((section) => section.kind === kind),
   );
   const formRef = useRef<HTMLFormElement>(null);
-  const cancelPreview = useRef<(() => void) | null>(null);
   const endpoint = `/api/campaigns/${campaignId}/design`;
 
-  useEffect(() => () => cancelPreview.current?.(), []);
+  useEffect(() => {
+    onPreviewChange?.(uploads ? null : design);
+  }, [design, onPreviewChange, uploads]);
 
   function setTheme(theme: Theme) {
     setDesign((current) => ({ ...current, theme }));
@@ -241,30 +189,6 @@ export function FestivalDesigner({
       router.refresh();
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'بازگردانی نسخه انجام نشد.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function preview(device: 'mobile' | 'desktop') {
-    if (!inputsValid()) return;
-    setError(null);
-    let viewer: ReturnType<typeof openFestivalPreview>;
-    try {
-      cancelPreview.current?.();
-      viewer = openFestivalPreview(device, setError);
-      cancelPreview.current = viewer.cleanup;
-    } catch {
-      setError('اجازهٔ باز شدن پنجرهٔ پیش‌نمایش را در مرورگر فعال کنید.');
-      return;
-    }
-    setBusy(true);
-    try {
-      const response = await request(`${endpoint}/preview`, 'POST', design);
-      viewer.send((await response.json()) as components['schemas']['FestivalPreviewDto']);
-    } catch (failure) {
-      viewer.close();
-      setError(failure instanceof Error ? failure.message : 'دریافت پیش‌نمایش انجام نشد.');
     } finally {
       setBusy(false);
     }
@@ -430,20 +354,6 @@ export function FestivalDesigner({
               ذخیرهٔ نسخهٔ طرح
             </Button>
           )}
-          <Button
-            variant="outline"
-            disabled={busy || uploads > 0}
-            onClick={() => void preview('desktop')}
-          >
-            پیش‌نمایش دسکتاپ
-          </Button>
-          <Button
-            variant="outline"
-            disabled={busy || uploads > 0}
-            onClick={() => void preview('mobile')}
-          >
-            پیش‌نمایش موبایل
-          </Button>
         </div>
         {editable && editor.history.length > 1 && (
           <div className="flex flex-wrap items-end gap-2">

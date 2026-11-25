@@ -1197,7 +1197,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/FestivalDesignDto"
+                "$ref": "#/components/schemas/FestivalPreviewDraftDto"
               }
             }
           }
@@ -16525,9 +16525,48 @@
           "revision"
         ]
       },
+      "FestivalPreviewDraftDto": {
+        "type": "object",
+        "properties": {
+          "theme": {
+            "$ref": "#/components/schemas/FestivalThemeDto"
+          },
+          "themeSource": {
+            "$ref": "#/components/schemas/FestivalThemeSourceDto"
+          },
+          "sections": {
+            "uniqueItems": true,
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalSectionDto"
+            }
+          },
+          "landing": {
+            "$ref": "#/components/schemas/CampaignLandingDraftDto"
+          },
+          "schemaVersion": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          }
+        },
+        "required": [
+          "theme",
+          "sections",
+          "schemaVersion"
+        ]
+      },
       "FestivalPreviewDto": {
         "type": "object",
         "properties": {
+          "navigation": {
+            "$ref": "#/components/schemas/CampaignBannerDto"
+          },
+          "announcement": {
+            "$ref": "#/components/schemas/CampaignBannerDto"
+          },
           "design": {
             "$ref": "#/components/schemas/PublicFestivalDesignDto"
           },

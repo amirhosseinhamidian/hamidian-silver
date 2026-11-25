@@ -11,6 +11,7 @@ import type { StorefrontNavigationCategory } from '@/components/layout/storefron
 type StorefrontMobileMenuProps = Readonly<{
   navigationCategories: readonly StorefrontNavigationCategory[];
   campaign?: PublicCampaignBanner | null;
+  preview?: boolean;
 }>;
 
 const utilityLinks = [
@@ -29,6 +30,7 @@ const utilityLinks = [
 export function StorefrontMobileMenu({
   navigationCategories,
   campaign,
+  preview = false,
 }: StorefrontMobileMenuProps) {
   return (
     <DialogPrimitive.Root>
@@ -86,18 +88,26 @@ export function StorefrontMobileMenu({
             <ul className="divide-y divide-[var(--sf-color-border)] border-y border-[var(--sf-color-border)]">
               <li>
                 <DialogPrimitive.Close asChild>
-                  <Link href="/" className="block py-4 text-sm">
+                  <Link
+                    prefetch={preview ? false : undefined}
+                    href="/"
+                    className="block py-4 text-sm"
+                  >
                     خانه
                   </Link>
                 </DialogPrimitive.Close>
               </li>
 
-              {campaign && <CampaignNavigationItem campaign={campaign} mobile />}
+              {campaign && <CampaignNavigationItem campaign={campaign} mobile preview={preview} />}
 
               {navigationCategories.map((category) => (
                 <li key={category.id}>
                   <DialogPrimitive.Close asChild>
-                    <Link href={`/categories/${category.slug}`} className="block py-4 text-sm">
+                    <Link
+                      prefetch={preview ? false : undefined}
+                      href={`/categories/${category.slug}`}
+                      className="block py-4 text-sm"
+                    >
                       {category.label}
                     </Link>
                   </DialogPrimitive.Close>
@@ -107,7 +117,11 @@ export function StorefrontMobileMenu({
               {utilityLinks.map((link) => (
                 <li key={link.href}>
                   <DialogPrimitive.Close asChild>
-                    <Link href={link.href} className="block py-4 text-sm">
+                    <Link
+                      prefetch={preview ? false : undefined}
+                      href={link.href}
+                      className="block py-4 text-sm"
+                    >
                       {link.label}
                     </Link>
                   </DialogPrimitive.Close>

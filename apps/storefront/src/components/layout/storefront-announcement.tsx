@@ -25,6 +25,7 @@ type StorefrontAnnouncementBarProps = Readonly<{
   initialRemainingSeconds?: number | null;
   campaign?: PublicCampaignBanner | null;
   campaignSeconds?: number;
+  preview?: boolean;
 }>;
 
 const numberFormatter = new Intl.NumberFormat('fa-IR', {
@@ -130,9 +131,13 @@ export function StorefrontAnnouncementBar({
   initialRemainingSeconds = null,
   campaign,
   campaignSeconds = 0,
+  preview = false,
 }: StorefrontAnnouncementBarProps) {
-  const campaignVisible = useCampaignVisibility(campaign?.campaignId, campaign?.endsAt);
-  if (campaign && campaignVisible && campaignSeconds > 0) {
+  const campaignVisible = useCampaignVisibility(
+    preview ? undefined : campaign?.campaignId,
+    preview ? undefined : campaign?.endsAt,
+  );
+  if (campaign && campaignVisible && (preview || campaignSeconds > 0)) {
     const { display } = campaign;
     const deadline = campaign.countdownEndsAt ?? campaign.endsAt;
     const campaignAnnouncement: StorefrontAnnouncement = {
@@ -183,6 +188,7 @@ export function StorefrontAnnouncementBar({
             {campaign.ctaPath && campaign.ctaLabel && (
               <Link
                 href={campaign.ctaPath}
+                prefetch={preview ? false : undefined}
                 className={
                   ctaStyle === 'LINK'
                     ? 'border-b border-current font-semibold'

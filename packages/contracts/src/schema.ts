@@ -5680,7 +5680,17 @@ export interface components {
             expectedRevision: number;
             revision: number;
         };
+        FestivalPreviewDraftDto: {
+            theme: components["schemas"]["FestivalThemeDto"];
+            themeSource?: components["schemas"]["FestivalThemeSourceDto"];
+            sections: components["schemas"]["FestivalSectionDto"][];
+            landing?: components["schemas"]["CampaignLandingDraftDto"];
+            /** @enum {number} */
+            schemaVersion: 1;
+        };
         FestivalPreviewDto: {
+            navigation?: components["schemas"]["CampaignBannerDto"];
+            announcement?: components["schemas"]["CampaignBannerDto"];
             design: components["schemas"]["PublicFestivalDesignDto"];
             products: components["schemas"]["PublicCatalogProductListDto"];
             title: string;
@@ -9778,7 +9788,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["FestivalDesignDto"];
+                "application/json": components["schemas"]["FestivalPreviewDraftDto"];
             };
         };
         responses: {

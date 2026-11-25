@@ -16,7 +16,15 @@ import { useCampaignVisibility } from '@/lib/campaigns/campaign-visibility';
 type Design = components['schemas']['PublicFestivalDesignDto'];
 type Section = components['schemas']['PublicFestivalSectionDto'];
 
-function FestivalSectionContent({ section, pathname }: { section: Section; pathname: string }) {
+function FestivalSectionContent({
+  section,
+  pathname,
+  preview,
+}: {
+  section: Section;
+  pathname: string;
+  preview: boolean;
+}) {
   if (section.categories?.length) {
     return (
       <ul
@@ -29,6 +37,7 @@ function FestivalSectionContent({ section, pathname }: { section: Section; pathn
         {section.categories.map(({ name, slug, media }) => (
           <li key={slug}>
             <Link
+              prefetch={preview ? false : undefined}
               href={`${campaignPageHref(pathname, { scopeCategory: slug })}#campaign-products`}
               className="block overflow-hidden rounded-lg border border-current/20 bg-[var(--sf-color-surface)]"
             >
@@ -56,7 +65,12 @@ function FestivalSectionContent({ section, pathname }: { section: Section; pathn
       }
     >
       {section.products.map((product) => (
-        <CatalogProductCard key={product.id} product={product} variant="festival" />
+        <CatalogProductCard
+          key={product.id}
+          product={product}
+          variant="festival"
+          preview={preview}
+        />
       ))}
     </ul>
   ) : null;
@@ -94,13 +108,18 @@ function FestivalSectionContent({ section, pathname }: { section: Section; pathn
             >
               {section.kind === 'BUDGET' && maxPriceToman ? (
                 <Link
+                  prefetch={preview ? false : undefined}
                   href={`${campaignPageHref(pathname, { maxPriceToman })}#campaign-products`}
                   className="font-semibold underline underline-offset-4"
                 >
                   {title} · تا {formatTomanPrice(maxPriceToman)}
                 </Link>
               ) : section.kind === 'OFFERS' && actionPath ? (
-                <Link href={actionPath} className="font-semibold underline underline-offset-4">
+                <Link
+                  href={actionPath}
+                  prefetch={preview ? false : undefined}
+                  className="font-semibold underline underline-offset-4"
+                >
                   {title}
                 </Link>
               ) : (
@@ -231,6 +250,7 @@ export function FestivalLanding({
           return (
             <div key="HERO">
               <HomepageHero
+                preview={preview}
                 compact
                 preload={!preview}
                 autoPlay={theme.motion === 'SOFT'}
@@ -273,6 +293,7 @@ export function FestivalLanding({
                   <span>مهلت کمپین به پایان رسیده است.</span>
                 )}
                 <Link
+                  prefetch={preview ? false : undefined}
                   href="#campaign-products"
                   className="text-sm font-medium underline underline-offset-4"
                 >
@@ -339,7 +360,11 @@ export function FestivalLanding({
                   sizes="100vw"
                 />
               )}
-              {all ? children : <FestivalSectionContent section={section} pathname={pathname} />}
+              {all ? (
+                children
+              ) : (
+                <FestivalSectionContent section={section} pathname={pathname} preview={preview} />
+              )}
             </div>
           </section>
         );

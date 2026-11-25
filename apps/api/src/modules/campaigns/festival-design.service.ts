@@ -11,7 +11,7 @@ import {
   type Media,
 } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
-import { CatalogService } from '../catalog/catalog.service';
+import { CatalogService, type CampaignCollectionPricing } from '../catalog/catalog.service';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { parseCampaignDestination } from '../growth-attribution/campaign-links.service';
 import { readCampaignProducts } from './campaign-collection';
@@ -32,6 +32,10 @@ import type {
 
 type CampaignProducts = Awaited<ReturnType<typeof readCampaignProducts>>;
 type CampaignProduct = CampaignProducts['items'][number];
+type PreviewLanding = Prisma.CampaignLandingGetPayload<{
+  include: { campaign: { include: { media: true } } };
+}>;
+type PreviewPlacements = Pick<FestivalPreviewDto, 'navigation' | 'announcement'>;
 const sectionProductLimit = 12;
 const sectionScanSize = 96;
 const campaignOrigin = 'https://campaign.invalid';
@@ -312,17 +316,34 @@ export class FestivalDesignService {
     );
   }
 
-  async preview(campaignId: string, input: FestivalDesignDto): Promise<FestivalPreviewDto> {
+  async preview(
+    campaignId: string,
+    input: FestivalDesignDto,
+    resolve?: (
+      tx: Prisma.TransactionClient,
+      landing: PreviewLanding,
+      design: FestivalDesignDto,
+    ) => Promise<{ landing: CampaignLanding; placements: PreviewPlacements }>,
+  ): Promise<FestivalPreviewDto> {
     const design = normalizeDesign(input);
     return this.db.$transaction(
       async (tx) => {
-        const landing = await tx.campaignLanding.findUnique({
+        const saved = await tx.campaignLanding.findUnique({
           where: { campaignId },
-          include: { campaign: true },
+          include: { campaign: { include: { media: true } } },
         });
-        if (!landing) throw new NotFoundException('Campaign landing not found.');
-        const { campaign, slug, title, story } = landing;
+        if (!saved) throw new NotFoundException('Campaign landing not found.');
+        const { campaign } = saved;
         await validateSections(tx, campaign, design);
+        const { landing, placements } = (await resolve?.(tx, saved, design)) ?? {
+          landing: saved,
+          placements: {},
+        };
+        const { slug, title, story } = landing;
+        const pricing = {
+          previewCampaignId: campaignId,
+          campaignPromotions: await this.catalog.campaignCollectionPromotions(tx, campaignId),
+        };
         const loaded = await readCampaignProducts(
           this.catalog,
           tx,
@@ -333,6 +354,7 @@ export class FestivalDesignService {
           {},
           {
             includeFilterOptions: true,
+            pricing,
           },
         );
         const { facets: _facets, ...products } = loaded;
@@ -343,7 +365,18 @@ export class FestivalDesignService {
           campaignId,
           endsAt: campaign.endsAt.toISOString(),
           products,
-          design: await this.project(tx, campaign, landing, design, loaded, new Date(), true),
+          ...placements,
+          design: await this.project(
+            tx,
+            campaign,
+            landing,
+            design,
+            loaded,
+            new Date(),
+            true,
+            false,
+            pricing,
+          ),
         };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 10_000 },
@@ -364,6 +397,7 @@ export class FestivalDesignService {
     now: Date,
     preview = false,
     rebase = false,
+    pricing?: CampaignCollectionPricing,
   ): Promise<PublicFestivalDesignDto> {
     const configured = design.sections.filter(({ enabled }) => enabled);
     const windows = preview
@@ -386,7 +420,7 @@ export class FestivalDesignService {
             { includeFilterOptions: true },
           )
         : products,
-      this.automaticProducts(tx, campaign, landing, sections.filter(automaticSection)),
+      this.automaticProducts(tx, campaign, landing, sections.filter(automaticSection), pricing),
     ]);
     const byId = new Map(assets.map((asset) => [asset.id, asset]));
     const projected: PublicFestivalSectionDto[] = [];
@@ -477,7 +511,7 @@ export class FestivalDesignService {
               1,
               24,
               {},
-              { pickedIds: section.slugs.flatMap((slug) => ids.get(slug) ?? []) },
+              { pickedIds: section.slugs.flatMap((slug) => ids.get(slug) ?? []), pricing },
             )
           ).items.filter((product) => matchesSection(section, product, campaign.id));
         }
@@ -513,11 +547,12 @@ export class FestivalDesignService {
     campaign: Campaign,
     landing: CampaignLanding,
     sections: FestivalSectionDto[],
+    pricing?: CampaignCollectionPricing,
   ) {
     const results = new Map<FestivalSectionDto['kind'], CampaignProduct[]>();
     if (!sections.length) return results;
     const [campaignPromotions, quotas] = await Promise.all([
-      this.catalog.campaignCollectionPromotions(tx),
+      pricing?.campaignPromotions ?? this.catalog.campaignCollectionPromotions(tx),
       sections.some(({ kind }) => kind === 'LOW_QUOTA')
         ? tx.campaignQuota.findMany({
             where: { campaignId: campaign.id, campaign: { promotion: { isNot: null } } },
@@ -555,7 +590,7 @@ export class FestivalDesignService {
         page,
         sectionScanSize,
         {},
-        { candidateIds, campaignPromotions },
+        { candidateIds, pricing: { ...pricing, campaignPromotions } },
       );
       for (const section of pending) {
         const selected = results.get(section.kind) ?? [];

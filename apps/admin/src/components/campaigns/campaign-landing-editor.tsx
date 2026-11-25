@@ -2,7 +2,7 @@
 
 import type { components } from '@hamidian/contracts';
 import { useRouter } from 'next/navigation';
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, type FormEvent } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { SiteMediaField } from '@/components/site-settings/site-media-field';
@@ -100,10 +100,12 @@ export function CampaignLandingEditor({
   campaign,
   editor,
   canWrite,
+  onPreviewChange,
 }: {
   campaign: CampaignDetail;
   editor: Editor;
   canWrite: boolean;
+  onPreviewChange?: (draft: Draft | null) => void;
 }) {
   const router = useRouter();
   const draft = editor.landing;
@@ -150,6 +152,38 @@ export function CampaignLandingEditor({
   const [count, setCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [formChanges, setFormChanges] = useState(0);
+  const publishDraft = useEffectEvent(() => {
+    if (!onPreviewChange) return;
+    if (!editable) return onPreviewChange(draft);
+    const form = formRef.current;
+    if (!form || busy || uploads.length || !form.checkValidity()) return onPreviewChange(null);
+    try {
+      onPreviewChange(currentDraft(form));
+    } catch {
+      onPreviewChange(null);
+    }
+  });
+
+  useEffect(() => {
+    publishDraft();
+  }, [
+    attributeRows,
+    brands,
+    categories,
+    draft,
+    editable,
+    enabledSlots,
+    filterDefaults,
+    formChanges,
+    manualProducts,
+    mode,
+    placementMedia,
+    placementTargets,
+    seoMode,
+    uploads,
+    busy,
+  ]);
 
   function applyCollection(filters: Draft['filters']) {
     const rows = attributesFrom(filters);
@@ -330,7 +364,15 @@ export function CampaignLandingEditor({
       title="صفحه و مجموعهٔ کمپین"
       description="قواعد انتخاب و بنرها را در پیش‌نویس تنظیم کنید. پیش از تأیید می‌توانید تعداد محصولات قابل فروش را ببینید."
     >
-      <form ref={formRef} onSubmit={save} className="space-y-4" onChange={() => setCount(null)}>
+      <form
+        ref={formRef}
+        onSubmit={save}
+        className="space-y-4"
+        onChange={() => {
+          setCount(null);
+          if (onPreviewChange) setFormChanges((value) => value + 1);
+        }}
+      >
         <fieldset disabled={Boolean(busy)} className="grid gap-4 sm:grid-cols-2">
           <FormField
             id="landing-slug"

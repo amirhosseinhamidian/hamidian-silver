@@ -11,12 +11,13 @@ import type { FestivalDesignDto } from '../src/modules/campaigns/dto/festival-de
 import type { CampaignLandingDraftDto } from '../src/modules/campaigns/dto/campaign-landing.dto';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
+import { PromotionsService } from '../src/modules/promotions/promotions.service';
 
 it('publishes only qualifying products, limits banner placements and archives a recurring campaign', async () => {
   const config = new ConfigService();
   const db = new PrismaService(config);
   const media = new PublicMediaUrlService(config);
-  const catalog = new CatalogService(db, media);
+  const catalog = new CatalogService(db, media, undefined, new PromotionsService(db));
   const operations = new CampaignOperationsCenterService(db, catalog);
   const festivals = new FestivalDesignService(db, catalog, media);
   const landings = new CampaignLandingsService(db, catalog, media, festivals);
@@ -338,6 +339,62 @@ it('publishes only qualifying products, limits banner placements and archives a 
         ]),
       },
     });
+    await db.campaign.update({ where: { id: created.id }, data: { budgetToman: 10_000_000 } });
+    await db.campaignPromotion.create({
+      data: {
+        campaignId: created.id,
+        actorUserId: owner.id,
+        kind: 'PERCENT',
+        value: 1_000,
+        minSubtotalToman: 0,
+        maxDiscountToman: 500_000,
+        maxDiscountBps: 1_000,
+        priority: 10,
+      },
+    });
+    await db.campaignQuota.create({
+      data: { campaignId: created.id, productId: ring.id, limit: 5 },
+    });
+    const draftPreview = await landings.previewDesign(created.id, {
+      ...design,
+      landing: {
+        ...input,
+        title: 'عنوان ذخیره‌نشده',
+        collectionMode: 'MANUAL',
+        manualProductSlugs: [ring.slug],
+        placements: [
+          {
+            slot: 'NAVIGATION',
+            priority: 40,
+            appearance: { display: { title: 'منوی ذخیره‌نشده', useTheme: true } },
+          },
+        ],
+      },
+    });
+    expect(draftPreview).toMatchObject({
+      title: 'عنوان ذخیره‌نشده',
+      navigation: {
+        display: { title: 'منوی ذخیره‌نشده', backgroundColor: design.theme.background },
+      },
+      products: {
+        items: [
+          {
+            id: ring.id,
+            campaignOffer: { price: { finalToman: 720_000 } },
+            campaignQuota: { limit: 5 },
+          },
+        ],
+      },
+    });
+    expect(draftPreview.announcement).toBeUndefined();
+    await expect(landings.editor(created.id)).resolves.toMatchObject({
+      revision: saved.revision,
+      landing: { title: input.title },
+    });
+    await expect(landings.publicLanding(slug, 1, now)).rejects.toThrow('not found');
+    await db.campaignQuota.deleteMany({ where: { campaignId: created.id } });
+    await db.campaignPromotion.delete({ where: { campaignId: created.id } });
+    await db.campaign.update({ where: { id: created.id }, data: { budgetToman: 0 } });
     const firstDesign = await festivals.save(
       created.id,
       { ...design, expectedRevision: saved.revision },
@@ -559,6 +616,8 @@ it('publishes only qualifying products, limits banner placements and archives a 
   } finally {
     try {
       await db.$transaction([
+        db.campaignQuota.deleteMany({ where: { campaign: { trackingId: slug } } }),
+        db.campaignPromotion.deleteMany({ where: { campaign: { trackingId: slug } } }),
         db.campaignPlacement.deleteMany({
           where: { landing: { slug: { in: [slug, secondarySlug] } } },
         }),

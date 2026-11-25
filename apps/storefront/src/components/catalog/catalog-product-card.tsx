@@ -19,6 +19,7 @@ type CatalogProductCardProps = Readonly<{
   onSelect?: () => void;
   showBudgetMatch?: boolean;
   variant?: CatalogProductCardVariant;
+  preview?: boolean;
 }>;
 
 export function CatalogProductCard({
@@ -30,6 +31,7 @@ export function CatalogProductCard({
   onSelect,
   showBudgetMatch = false,
   variant = 'default',
+  preview = false,
 }: CatalogProductCardProps) {
   const sale =
     product.defaultSalePriceToman === undefined
@@ -57,6 +59,7 @@ export function CatalogProductCard({
       <div className="relative">
         <Link
           href={`/products/${product.slug}`}
+          prefetch={preview ? false : undefined}
           onClick={onSelect}
           className="
             sf-catalog-card__media relative block aspect-square overflow-hidden
@@ -89,7 +92,7 @@ export function CatalogProductCard({
           ) : null}
         </Link>
 
-        <CatalogWishlistButton item={wishlistItem} />
+        <CatalogWishlistButton item={wishlistItem} preview={preview} />
       </div>
 
       <div className="sf-catalog-card__body flex flex-1 flex-col pt-3 text-center sm:pt-4">
@@ -97,7 +100,12 @@ export function CatalogProductCard({
           <p className="text-[0.7rem] text-[var(--sf-color-subtle)]">{product.brand.name}</p>
         ) : null}
 
-        <Link href={`/products/${product.slug}`} className="mt-2 block" onClick={onSelect}>
+        <Link
+          href={`/products/${product.slug}`}
+          prefetch={preview ? false : undefined}
+          className="mt-2 block"
+          onClick={onSelect}
+        >
           <h2 className="text-xs font-medium leading-5 sm:text-base sm:leading-6">
             {product.name}
           </h2>
@@ -120,6 +128,7 @@ export function CatalogProductCard({
               sale={sale}
               compare={compare}
               offer={product.campaignOffer}
+              preview={preview}
               priceClassName="text-xs font-medium sm:text-base"
             />
           )}
@@ -134,12 +143,14 @@ export function CatalogProductCard({
         {product.campaignQuota && (
           <CampaignQuotaProgress
             quota={product.campaignQuota}
+            preview={preview}
             showName={product.campaignQuota.campaignId !== product.campaignOffer?.campaignId}
           />
         )}
         <div className="sf-catalog-card__action mt-auto pt-3 sm:pt-4">
           <ButtonLink
             href={`/products/${product.slug}`}
+            prefetch={preview ? false : undefined}
             onClick={onSelect}
             variant="solid"
             size="sm"

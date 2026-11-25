@@ -9,11 +9,16 @@ const number = new Intl.NumberFormat('fa-IR');
 export function CampaignQuotaProgress({
   quota,
   showName = false,
+  preview = false,
 }: {
   showName?: boolean;
+  preview?: boolean;
   quota: components['schemas']['PublicCampaignQuotaDto'];
 }) {
-  const visible = useCampaignVisibility(quota.campaignId, quota.endsAt);
+  const visible = useCampaignVisibility(
+    preview ? undefined : quota.campaignId,
+    preview ? undefined : quota.endsAt,
+  );
   if (!visible) return null;
 
   return (

@@ -15,17 +15,21 @@ import type { AuthenticatedPrincipal } from '../authorization/authorization.type
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import {
-  FestivalDesignDto,
   FestivalDesignEditorDto,
   FestivalPreviewDto,
   RestoreFestivalDesignDto,
   SaveFestivalDesignDto,
 } from './dto/festival-design.dto';
+import { FestivalPreviewDraftDto } from './dto/festival-preview.dto';
 import { FestivalDesignService } from './festival-design.service';
+import { CampaignLandingsService } from './campaign-landings.service';
 
 @Controller({ path: 'campaigns/:id/design', version: '1' })
 export class FestivalDesignController {
-  constructor(private readonly design: FestivalDesignService) {}
+  constructor(
+    private readonly design: FestivalDesignService,
+    private readonly landings: CampaignLandingsService,
+  ) {}
 
   @Get()
   @RequirePermissions(PERMISSION_CODES.SETTINGS_READ)
@@ -62,7 +66,7 @@ export class FestivalDesignController {
   @Header('Cache-Control', 'private, no-store')
   @RequirePermissions(PERMISSION_CODES.SETTINGS_READ)
   @ApiOkResponse({ type: FestivalPreviewDto })
-  preview(@Param('id', ParseUUIDPipe) id: string, @Body() input: FestivalDesignDto) {
-    return this.design.preview(id, input);
+  preview(@Param('id', ParseUUIDPipe) id: string, @Body() input: FestivalPreviewDraftDto) {
+    return this.landings.previewDesign(id, input);
   }
 }

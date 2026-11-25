@@ -1,11 +1,10 @@
 import type { Campaign, CampaignLanding, Prisma } from '../../generated/prisma/client';
-import type { CatalogService } from '../catalog/catalog.service';
+import type { CampaignCollectionPricing, CatalogService } from '../catalog/catalog.service';
 import {
   PublicCatalogAvailability,
   type PublicCatalogFacetsDto,
   type PublicCatalogFacetsQueryDto,
 } from '../catalog/dto/public-catalog-facets.dto';
-import type { CatalogPromotionCandidate } from '../promotions/promotion-presentation';
 import type { CampaignCollectionFiltersDto } from './dto/campaign-landing.dto';
 
 type Collection = Pick<CampaignLanding, 'collectionMode' | 'manualProductIds'> & {
@@ -34,12 +33,12 @@ export function readCampaignProducts(
     pickedIds,
     candidateIds,
     includeFilterOptions,
-    campaignPromotions,
+    pricing,
   }: {
     pickedIds?: string[];
     candidateIds?: string[];
     includeFilterOptions?: boolean;
-    campaignPromotions?: readonly CatalogPromotionCandidate[];
+    pricing?: CampaignCollectionPricing;
   } = {},
 ) {
   const { minimumQuantity = 1, ...filters } = landing.filters as CampaignCollectionFiltersDto;
@@ -77,6 +76,6 @@ export function readCampaignProducts(
     },
     page,
     pageSize,
-    campaignPromotions,
+    pricing,
   );
 }

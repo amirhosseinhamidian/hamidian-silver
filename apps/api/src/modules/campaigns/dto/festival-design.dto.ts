@@ -22,7 +22,7 @@ import {
   PublicCatalogProductSummaryDto,
 } from '../../catalog/dto/public-catalog-response.dto';
 import { PublicCatalogFacetOptionDto } from '../../catalog/dto/public-catalog-facets.dto';
-import { CampaignMediaDto } from './campaign.dto';
+import { CampaignBannerDto, CampaignMediaDto } from './campaign.dto';
 
 export const festivalSections = [
   'HERO',
@@ -313,6 +313,12 @@ export class FestivalPreviewDto {
   slug!: string;
   campaignId!: string;
   endsAt!: string;
+
+  @ApiPropertyOptional({ type: () => CampaignBannerDto })
+  navigation?: CampaignBannerDto;
+
+  @ApiPropertyOptional({ type: () => CampaignBannerDto })
+  announcement?: CampaignBannerDto;
 
   @ApiProperty({ type: () => PublicFestivalDesignDto })
   design!: PublicFestivalDesignDto;

@@ -51,7 +51,7 @@ export function FestivalProducts({
     return products.items.length ? (
       <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
         {products.items.map((product) => (
-          <CatalogProductCard key={product.id} product={product} variant="festival" />
+          <CatalogProductCard key={product.id} product={product} variant="festival" preview />
         ))}
       </ul>
     ) : (

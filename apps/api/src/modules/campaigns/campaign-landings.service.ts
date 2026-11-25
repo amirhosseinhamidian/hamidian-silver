@@ -10,6 +10,7 @@ import {
   type Campaign,
   type CampaignBannerSlot,
   type CampaignLanding,
+  type CampaignPlacement,
   type Media,
 } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
@@ -27,6 +28,8 @@ import {
 } from './campaign-placement-appearance';
 import { formatTehranDate, parseTehranDate } from './campaign-calendar';
 import type { CampaignBannerDto } from './dto/campaign.dto';
+import type { FestivalThemeDto } from './dto/festival-design.dto';
+import type { FestivalPreviewDraftDto } from './dto/festival-preview.dto';
 import type {
   CampaignCollectionFiltersDto,
   CampaignLandingDraftDto,
@@ -37,6 +40,16 @@ import type {
 } from './dto/campaign-landing.dto';
 
 const placementMedia = { media: true, mobileMedia: true, stillMedia: true } as const;
+const headerSlots = ['NAVIGATION', 'COUNTDOWN'] as const;
+type PlacementAppearance = Pick<
+  CampaignPlacement,
+  'slot' | 'endsAt' | 'desktopHeight' | 'mobileHeight' | 'textColor' | 'navigationEffect'
+> & {
+  display?: Prisma.JsonValue | Prisma.InputJsonValue;
+  media?: Media | null;
+  mobileMedia?: Media | null;
+  stillMedia?: Media | null;
+};
 const productPageSize = 24;
 const emptyProducts = emptyCampaignProducts();
 const publicationActions = ['PUBLISH', 'PUBLISH_NOW'];
@@ -155,6 +168,59 @@ export class CampaignLandingsService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 10_000 },
     );
+  }
+
+  previewDesign(campaignId: string, { landing: draft, ...design }: FestivalPreviewDraftDto) {
+    if (!this.festivals) throw new NotFoundException('Festival design not found.');
+    return this.festivals.preview(campaignId, design, async (tx, saved, normalized) => {
+      const { campaign } = saved;
+      this.assertLandingKind(campaign);
+      const prepared = draft ? await this.prepare(tx, campaign, draft) : undefined;
+      const landing = prepared
+        ? { ...saved, ...prepared, filters: prepared.filters as Prisma.JsonObject }
+        : saved;
+      let rows: PlacementAppearance[];
+      if (prepared) {
+        const selected = prepared.placements.filter(
+          ({ slot }) => slot === 'NAVIGATION' || slot === 'COUNTDOWN',
+        );
+        const ids = [
+          ...new Set(
+            selected.flatMap(({ mediaId, mobileMediaId, stillMediaId }) =>
+              [mediaId, mobileMediaId, stillMediaId].filter((id): id is string => Boolean(id)),
+            ),
+          ),
+        ];
+        const assets = ids.length
+          ? await tx.media.findMany({ where: { id: { in: ids }, deletedAt: null } })
+          : [];
+        const byId = new Map(assets.map((asset) => [asset.id, asset]));
+        rows = selected.map((row) => ({
+          ...row,
+          media: byId.get(row.mediaId ?? ''),
+          mobileMedia: byId.get(row.mobileMediaId ?? ''),
+          stillMedia: byId.get(row.stillMediaId ?? ''),
+        }));
+      } else {
+        rows = await tx.campaignPlacement.findMany({
+          where: { campaignId, slot: { in: [...headerSlots] } },
+          include: placementMedia,
+        });
+      }
+      const nav = rows.find(({ slot }) => slot === 'NAVIGATION');
+      const bar = rows.find(({ slot }) => slot === 'COUNTDOWN');
+      return {
+        landing,
+        placements: {
+          ...(nav
+            ? { navigation: this.projectPlacement(campaign, landing.slug, nav, normalized.theme) }
+            : {}),
+          ...(bar
+            ? { announcement: this.projectPlacement(campaign, landing.slug, bar, normalized.theme) }
+            : {}),
+        },
+      };
+    });
   }
 
   async save(
@@ -413,54 +479,58 @@ export class CampaignLandingsService {
           const campaign = candidate.landing.campaign;
           const { total } = await this.publicCollection(tx, campaign, candidate.landing, 1, 0);
           if (total === 0) continue;
-          const endsAt =
-            candidate.endsAt && candidate.endsAt < campaign.endsAt
-              ? candidate.endsAt
-              : campaign.endsAt;
-          const savedDisplay = readCampaignPlacementDisplay(candidate.display);
-          const theme = savedDisplay?.useTheme
-            ? readFestivalDesign(candidate.landing.design)?.theme
-            : undefined;
-          const display = theme
-            ? {
-                ...savedDisplay,
-                backgroundColor: theme.background,
-                gradientColor: theme.gradient,
-              }
-            : savedDisplay;
-          const announcement = slot === 'COUNTDOWN';
           return {
             priority: candidate.priority,
             startsAt: campaign.startsAt,
             campaignId: campaign.id,
-            banner: {
-              campaignId: campaign.id,
-              name: campaign.name,
-              message: display?.message ?? campaign.message,
-              endsAt: endsAt.toISOString(),
-              ...(announcement ? { countdownEndsAt: campaign.endsAt.toISOString() } : {}),
-              ctaPath:
-                (announcement && (display?.ctaPath ?? campaign.ctaPath)) ||
-                `/campaigns/${candidate.landing.slug}`,
-              ctaLabel: (announcement && (display?.ctaLabel ?? campaign.ctaLabel)) || 'دیدن مجموعه',
-              media:
-                slot === 'NAVIGATION'
-                  ? null
-                  : (this.media(candidate.media) ?? this.media(campaign.media)),
-              mobileMedia: this.media(candidate.mobileMedia),
-              stillMedia: this.media(candidate.stillMedia),
-              desktopHeight: candidate.desktopHeight,
-              mobileHeight: candidate.mobileHeight,
-              textColor: theme?.foreground ?? candidate.textColor,
-              navigationEffect: candidate.navigationEffect,
-              ...(display ? { display } : {}),
-            } satisfies CampaignBannerDto,
+            banner: this.projectPlacement(
+              campaign,
+              candidate.landing.slug,
+              candidate,
+              readFestivalDesign(candidate.landing.design)?.theme,
+            ),
           };
         }
         return null;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 10_000 },
     );
+  }
+
+  private projectPlacement(
+    campaign: Campaign & { media: Media | null },
+    slug: string,
+    candidate: PlacementAppearance,
+    palette?: FestivalThemeDto,
+  ): CampaignBannerDto {
+    const endsAt =
+      candidate.endsAt && candidate.endsAt < campaign.endsAt ? candidate.endsAt : campaign.endsAt;
+    const saved = readCampaignPlacementDisplay(candidate.display);
+    const theme = saved?.useTheme ? palette : undefined;
+    const display = theme
+      ? { ...saved, backgroundColor: theme.background, gradientColor: theme.gradient }
+      : saved;
+    const announcement = candidate.slot === 'COUNTDOWN';
+    return {
+      campaignId: campaign.id,
+      name: campaign.name,
+      message: display?.message ?? campaign.message,
+      endsAt: endsAt.toISOString(),
+      ...(announcement ? { countdownEndsAt: campaign.endsAt.toISOString() } : {}),
+      ctaPath: (announcement && (display?.ctaPath ?? campaign.ctaPath)) || `/campaigns/${slug}`,
+      ctaLabel: (announcement && (display?.ctaLabel ?? campaign.ctaLabel)) || 'دیدن مجموعه',
+      media:
+        candidate.slot === 'NAVIGATION'
+          ? null
+          : (this.media(candidate.media ?? null) ?? this.media(campaign.media)),
+      mobileMedia: this.media(candidate.mobileMedia ?? null),
+      stillMedia: this.media(candidate.stillMedia ?? null),
+      desktopHeight: candidate.desktopHeight,
+      mobileHeight: candidate.mobileHeight,
+      textColor: theme?.foreground ?? candidate.textColor,
+      navigationEffect: candidate.navigationEffect,
+      ...(display ? { display } : {}),
+    };
   }
 
   async sitemap(now = new Date()): Promise<CampaignSitemapDto> {

@@ -1,32 +1,56 @@
 'use client';
 
 import type { components } from '@hamidian/contracts';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import {
+  StorefrontHeader,
+  type StorefrontNavigationCategory,
+} from '@/components/layout/storefront-header';
 import { FestivalLanding } from './festival-landing';
 import { FestivalProducts } from './festival-products';
 
 type Preview = components['schemas']['FestivalPreviewDto'];
-type Device = 'mobile' | 'desktop';
-
-function allowedAdmin(candidate: string, configured: string) {
-  try {
-    const origin = new URL(candidate).origin;
-    if (origin !== candidate) return false;
-    return (
-      origin === new URL(configured).origin ||
-      (process.env.NODE_ENV !== 'production' &&
-        /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin))
-    );
-  } catch {
-    return false;
-  }
-}
+const devices = {
+  desktop: { width: 'w-[1280px]', label: 'دسکتاپ' },
+  tablet: { width: 'w-[820px]', label: 'تبلت' },
+  mobile: { width: 'w-[390px]', label: 'موبایل' },
+  fullscreen: { width: 'w-full', label: 'تمام‌صفحه' },
+} as const;
+type Device = keyof typeof devices;
 
 function validNonce(value: unknown): value is string {
   return typeof value === 'string' && /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(value);
 }
 
-function Frame({ nonce }: { nonce: string }) {
+function isPreview(value: unknown): value is Preview {
+  if (!value || typeof value !== 'object') return false;
+  const preview = value as Partial<Preview>;
+  return (
+    typeof preview.title === 'string' &&
+    typeof preview.story === 'string' &&
+    typeof preview.slug === 'string' &&
+    typeof preview.endsAt === 'string' &&
+    Boolean(preview.design?.theme) &&
+    Array.isArray(preview.design?.sections) &&
+    Array.isArray(preview.products?.items)
+  );
+}
+
+function preventNavigation(event: MouseEvent<HTMLDivElement>) {
+  const link = event.target instanceof Element ? event.target.closest('a') : null;
+  if (link && !link.getAttribute('href')?.startsWith('#')) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}
+
+function Frame({
+  nonce,
+  navigationCategories,
+}: {
+  nonce: string;
+  navigationCategories: readonly StorefrontNavigationCategory[];
+}) {
   const [data, setData] = useState<{ preview: Preview; initialSeconds: number } | null>(null);
   useEffect(() => {
     if (!validNonce(nonce) || window.parent === window) return;
@@ -35,10 +59,11 @@ function Frame({ nonce }: { nonce: string }) {
         event.origin !== window.location.origin ||
         event.source !== window.parent ||
         event.data?.kind !== 'festival-preview-frame' ||
-        event.data.nonce !== nonce
+        event.data.nonce !== nonce ||
+        !isPreview(event.data.payload)
       )
         return;
-      const preview = event.data.payload as Preview;
+      const preview = event.data.payload;
       setData({
         preview,
         initialSeconds: Math.max(0, Math.ceil((Date.parse(preview.endsAt) - Date.now()) / 1000)),
@@ -52,16 +77,20 @@ function Frame({ nonce }: { nonce: string }) {
     return () => window.removeEventListener('message', receive);
   }, [nonce]);
 
-  if (!data) return <p className="p-6">در انتظار طرح جشنواره…</p>;
+  if (!data) return <p className="p-6">پیش‌نمایش را از پنل کمپین باز کنید.</p>;
   const { preview, initialSeconds } = data;
-
   return (
     <div
-      onClickCapture={(event) => {
-        const link = event.target instanceof Element ? event.target.closest('a') : null;
-        if (link && !link.getAttribute('href')?.startsWith('#')) event.preventDefault();
-      }}
+      onClickCapture={preventNavigation}
+      onAuxClickCapture={preventNavigation}
+      onContextMenuCapture={preventNavigation}
     >
+      <StorefrontHeader
+        preview
+        campaignNavigation={preview.navigation}
+        campaignCountdown={preview.announcement}
+        navigationCategories={navigationCategories}
+      />
       <FestivalLanding
         preview
         {...preview}
@@ -74,11 +103,13 @@ function Frame({ nonce }: { nonce: string }) {
   );
 }
 
-function Window({ adminOrigin, device }: { adminOrigin: string; device: Device }) {
+function PreviewWindow({ adminOrigin }: { adminOrigin: string }) {
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [device, setDevice] = useState<Device>('desktop');
   const [nonce, setNonce] = useState('');
   const [invalid, setInvalid] = useState(false);
   const target = useRef<HTMLIFrameElement>(null);
+  const windowContent = useRef<HTMLElement>(null);
   const ready = useRef(false);
   const data = useRef<Preview | null>(null);
 
@@ -87,7 +118,7 @@ function Window({ adminOrigin, device }: { adminOrigin: string; device: Device }
     const token = params.get('nonce');
     const origin = params.get('admin');
     const opener = window.opener;
-    if (!validNonce(token) || !origin || !allowedAdmin(origin, adminOrigin) || !opener) {
+    if (!validNonce(token) || !origin || origin !== adminOrigin || !opener) {
       const timer = window.setTimeout(() => setInvalid(true), 0);
       return () => window.clearTimeout(timer);
     }
@@ -104,12 +135,11 @@ function Window({ adminOrigin, device }: { adminOrigin: string; device: Device }
       if (
         event.origin === origin &&
         event.source === opener &&
-        event.data.kind === 'festival-preview'
+        event.data.kind === 'festival-preview' &&
+        isPreview(event.data.payload)
       ) {
-        const snapshot = event.data.payload as Preview;
-        if (!snapshot?.design?.sections || !snapshot?.products?.items) return;
-        data.current = snapshot;
-        setPreview(snapshot);
+        data.current = event.data.payload;
+        setPreview(event.data.payload);
         deliver();
       } else if (
         event.origin === window.location.origin &&
@@ -121,33 +151,57 @@ function Window({ adminOrigin, device }: { adminOrigin: string; device: Device }
       }
     }
     window.addEventListener('message', receive);
-    const timer = window.setTimeout(() => {
+    const begin = window.setTimeout(() => {
       setNonce(token);
       opener.postMessage({ kind: 'festival-preview-ready', nonce: token }, origin);
     }, 0);
     return () => {
-      window.clearTimeout(timer);
+      window.clearTimeout(begin);
       window.removeEventListener('message', receive);
     };
   }, [adminOrigin]);
 
+  function resize(next: Device) {
+    setDevice(next);
+    if (next === 'fullscreen' && !document.fullscreenElement) {
+      void windowContent.current?.requestFullscreen?.().catch(() => undefined);
+    } else if (next !== 'fullscreen' && document.fullscreenElement === windowContent.current) {
+      void document.exitFullscreen().catch(() => undefined);
+    }
+  }
+
   if (invalid) return <p className="p-6">پیش‌نمایش را از پنل کمپین باز کنید.</p>;
   if (!nonce) return <p className="p-6">در حال اتصال به پنل…</p>;
-
   return (
-    <main className="flex min-h-dvh flex-col items-center gap-3 bg-[var(--sf-color-surface)] p-3">
-      <p role="status" className="text-sm">
-        {preview
-          ? `${preview.title} · پیش‌نمایش ${device === 'mobile' ? 'موبایل' : 'دسکتاپ'}`
-          : 'در انتظار طرح جشنواره…'}
-      </p>
-      <div className="w-full overflow-x-auto">
+    <main
+      ref={windowContent}
+      className="flex h-dvh flex-col gap-3 bg-[var(--sf-color-surface)] p-3"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p role="status" className="text-sm">
+          پیش‌نمایش خصوصی · {preview?.title ?? 'در انتظار طرح جشنواره…'}
+        </p>
+        <div role="group" aria-label="اندازهٔ پیش‌نمایش" className="flex flex-wrap gap-1">
+          {(Object.keys(devices) as Device[]).map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={option === device}
+              className="min-h-9 rounded border border-current px-2 text-sm aria-pressed:bg-[var(--sf-color-ink)] aria-pressed:text-[var(--sf-color-inverse)]"
+              onClick={() => resize(option)}
+            >
+              {devices[option].label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 overflow-x-auto">
         <iframe
           ref={target}
-          name="festival-preview"
           title="طرح صفحهٔ جشنواره"
+          sandbox="allow-scripts allow-same-origin"
           src={`/campaign-preview?frame=1&nonce=${nonce}`}
-          className={`mx-auto block h-[calc(100dvh-4rem)] rounded-sm border border-[var(--sf-color-border)] bg-white ${device === 'mobile' ? 'w-[390px]' : 'w-[1180px]'}`}
+          className={`mx-auto block h-full max-w-none rounded-sm border border-[var(--sf-color-border)] bg-white ${devices[device].width}`}
         />
       </div>
     </main>
@@ -156,18 +210,18 @@ function Window({ adminOrigin, device }: { adminOrigin: string; device: Device }
 
 export function FestivalPreviewBridge({
   frame,
-  device,
   frameNonce,
   adminOrigin,
+  navigationCategories,
 }: {
   frame: boolean;
-  device: Device;
   frameNonce: string;
   adminOrigin: string;
+  navigationCategories: readonly StorefrontNavigationCategory[];
 }) {
   return frame ? (
-    <Frame nonce={frameNonce} />
+    <Frame nonce={frameNonce} navigationCategories={navigationCategories} />
   ) : (
-    <Window adminOrigin={adminOrigin} device={device} />
+    <PreviewWindow adminOrigin={adminOrigin} />
   );
 }

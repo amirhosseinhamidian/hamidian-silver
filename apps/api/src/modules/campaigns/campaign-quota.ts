@@ -89,10 +89,18 @@ export async function quotaStock(reader: QuotaReader, ids: string[]) {
   );
 }
 
-export async function readPublicQuotas(reader: QuotaReader, ids: string[], now = new Date()) {
+export async function readPublicQuotas(
+  reader: QuotaReader,
+  ids: string[],
+  now = new Date(),
+  previewCampaignId?: string,
+) {
   if (!ids.length) return new Map<string, PublicCampaignQuotaDto>();
   const configured = await reader.campaignQuota.findMany({
-    where: { productId: { in: ids }, campaign: activeQuotaCampaign(now) },
+    where: {
+      productId: { in: ids },
+      campaign: previewCampaignId ? { id: previewCampaignId } : activeQuotaCampaign(now),
+    },
     include: {
       campaign: {
         select: {
