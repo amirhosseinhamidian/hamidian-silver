@@ -31,4 +31,27 @@ describe('Tehran campaign calendar', () => {
       expect.arrayContaining(['allProducts', 'bannerEnabled', 'budgetToman']),
     );
   });
+
+  it('accepts a festival draft without tracking fields in the global validation pipe', () => {
+    const draft = plainToInstance(
+      CreateCampaignDto,
+      {
+        kind: 'FESTIVAL',
+        slug: 'black-friday',
+        name: 'بلک فرایدی',
+        goal: 'فروش مناسبتی',
+        allProducts: true,
+        productSlugs: [],
+        categorySlugs: [],
+        startsTehran: '1405/09/05 09:00',
+        endsTehran: '1405/09/05 22:00',
+        budgetToman: 1000,
+        message: 'محصولات منتخب',
+        bannerEnabled: false,
+        bannerPriority: 0,
+      },
+      { enableImplicitConversion: true },
+    );
+    expect(validateSync(draft)).toEqual([]);
+  });
 });

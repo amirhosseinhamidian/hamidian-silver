@@ -21,7 +21,11 @@ import { Card } from '@/components/ui/card';
 import { requireAdminSession } from '@/lib/auth/session';
 import { createAdminApiClient } from '@/lib/auth/server-api';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
-import { campaignStatusLabels, isCampaignId } from '@/lib/campaigns/campaign-model';
+import {
+  campaignKindLabels,
+  campaignStatusLabels,
+  isCampaignId,
+} from '@/lib/campaigns/campaign-model';
 import { formatAdminInteger, toPersianDigits } from '@/lib/presentation/formatters';
 
 type Props = {
@@ -61,10 +65,11 @@ export default async function CampaignsPage({ searchParams }: Props) {
       : undefined;
   const canWrite = user.permissions.includes('settings.write');
   const client = createAdminApiClient(token);
+  const createKind = create === '1' ? 'FESTIVAL' : create === 'marketing' ? 'MARKETING' : null;
 
   let content;
-  if (create === '1' && canWrite) {
-    content = <CampaignEditor />;
+  if (createKind && canWrite) {
+    content = <CampaignEditor key={createKind} createKind={createKind} />;
   } else if (id !== undefined) {
     const result =
       typeof id === 'string' && isCampaignId(id)
@@ -76,6 +81,8 @@ export default async function CampaignsPage({ searchParams }: Props) {
             .catch(() => null)
         : null;
     const campaign = result?.data;
+    const canConfigureLanding = campaign?.kind !== 'MARKETING';
+    const canBuildLinks = canWrite && campaign?.kind !== 'FESTIVAL';
     const [promotion, landing, festival] =
       campaign &&
       step !== 'operations' &&
@@ -87,13 +94,15 @@ export default async function CampaignsPage({ searchParams }: Props) {
                 cache: 'no-store',
               })
               .catch(() => null),
-            client
-              .GET('/api/v1/campaigns/{id}/landing', {
-                params: { path: { id: campaign.id } },
-                cache: 'no-store',
-              })
-              .catch(() => null),
-            step === 'landing'
+            canConfigureLanding
+              ? client
+                  .GET('/api/v1/campaigns/{id}/landing', {
+                    params: { path: { id: campaign.id } },
+                    cache: 'no-store',
+                  })
+                  .catch(() => null)
+              : null,
+            step === 'landing' && canConfigureLanding
               ? client
                   .GET('/api/v1/campaigns/{id}/design', {
                     params: { path: { id: campaign.id } },
@@ -107,9 +116,9 @@ export default async function CampaignsPage({ searchParams }: Props) {
       const editing = edit === '1' && canWrite && campaign.status === 'DRAFT';
       const currentStep =
         step === 'operations' ||
-        step === 'landing' ||
+        (step === 'landing' && canConfigureLanding) ||
         step === 'promotion' ||
-        (step === 'links' && canWrite)
+        (step === 'links' && canBuildLinks)
           ? step
           : 'review';
       const url = `/campaigns?id=${campaign.id}`;
@@ -228,10 +237,10 @@ export default async function CampaignsPage({ searchParams }: Props) {
       }
       const steps = [
         ...(canReadOperations ? [{ id: 'operations', title: 'مرکز عملیات' }] : []),
-        { id: 'landing', title: 'صفحه و مجموعه' },
+        ...(canConfigureLanding ? [{ id: 'landing', title: 'صفحه و مجموعه' }] : []),
         { id: 'promotion', title: 'قانون و کوپن' },
         { id: 'review', title: 'پیش‌نمایش و انتشار' },
-        ...(canWrite ? [{ id: 'links', title: 'ساخت لینک' }] : []),
+        ...(canBuildLinks ? [{ id: 'links', title: 'ساخت لینک' }] : []),
       ];
       content = (
         <>
@@ -294,14 +303,19 @@ export default async function CampaignsPage({ searchParams }: Props) {
                 key={campaign.id}
                 className="grid gap-2 py-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-center sm:gap-5"
               >
-                <Link
-                  href={`/campaigns?id=${campaign.id}${canReadOperations ? '&step=operations' : ''}`}
-                  className="font-semibold underline-offset-4 hover:underline"
-                >
-                  {campaign.name}
-                </Link>
+                <div className="min-w-0 space-y-1">
+                  <Link
+                    href={`/campaigns?id=${campaign.id}${canReadOperations ? '&step=operations' : ''}`}
+                    className="font-semibold underline-offset-4 hover:underline"
+                  >
+                    {campaign.name}
+                  </Link>
+                  <p className="text-xs text-[var(--admin-color-muted)]">
+                    {campaignKindLabels[campaign.kind]}
+                  </p>
+                </div>
                 <Badge tone={campaign.status === 'ACTIVE' ? 'success' : 'neutral'}>
-                  {campaignStatusLabels[campaign.status]}
+                  {campaign.archivedAt ? 'بایگانی‌شده' : campaignStatusLabels[campaign.status]}
                 </Badge>
                 <span className="text-xs">
                   آغاز <bdi>{toPersianDigits(campaign.startsTehran)}</bdi>
@@ -337,13 +351,20 @@ export default async function CampaignsPage({ searchParams }: Props) {
   return (
     <div className="min-w-0 space-y-5 px-4 py-5 sm:px-6 lg:px-8">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold">کمپین‌های فروش</h1>
-        {id !== undefined || create === '1' ? (
+        <h1 className="text-xl font-bold">جشنواره‌ها و کمپین‌ها</h1>
+        {id !== undefined || createKind ? (
           <ButtonLink href="/campaigns" variant="outline">
             فهرست کمپین‌ها
           </ButtonLink>
         ) : (
-          canWrite && <ButtonLink href="/campaigns?create=1">کمپین جدید</ButtonLink>
+          canWrite && (
+            <div className="flex flex-wrap gap-2">
+              <ButtonLink href="/campaigns?create=1">جشنوارهٔ جدید</ButtonLink>
+              <ButtonLink href="/campaigns?create=marketing" variant="outline">
+                کمپین بازاریابی جدید
+              </ButtonLink>
+            </div>
+          )
         )}
       </header>
       {content}

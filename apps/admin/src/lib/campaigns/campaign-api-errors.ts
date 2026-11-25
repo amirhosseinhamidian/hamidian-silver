@@ -3,6 +3,15 @@ const messages: Record<string, string> = {
     'تاریخ و ساعت شمسی را با الگوی فرم وارد کنید.',
   'The end time must follow the start time.': 'زمان پایان باید بعد از زمان آغاز باشد.',
   'The campaign end time has passed.': 'زمان پایان کمپین گذشته است.',
+  'The festival start time has not arrived.': 'زمان آغاز جشنواره هنوز نرسیده است.',
+  'A festival needs a landing before publication.': 'پیش از انتشار، لندینگ جشنواره را ذخیره کنید.',
+  'Archiving is unavailable until the festival ends.': 'جشنواره پس از پایان قابل بایگانی است.',
+  'Marketing campaigns do not have a landing.':
+    'تنظیمات لندینگ برای جشنواره‌های فروش در دسترس است.',
+  'Only a legacy draft can be classified as a festival.':
+    'فقط پیش‌نویس کمپین‌های قبلی قابل تبدیل به جشنواره است.',
+  'This action is only available for sales festivals.':
+    'این عملیات برای جشنوارهٔ فروش در دسترس است.',
   'The collection has no sellable products.':
     'این مجموعه محصول قابل فروش ندارد. قواعد یا موجودی را بررسی کنید و دوباره پیش‌نمایش بگیرید.',
   'Another campaign uses this landing path in the same period.':

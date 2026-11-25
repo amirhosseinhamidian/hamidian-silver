@@ -4,7 +4,10 @@ import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { formatTehranDate } from '../src/modules/campaigns/campaign-calendar';
 import type { CampaignAction } from '../src/modules/campaigns/campaign-lifecycle';
 import { resolveHumanAuditEvent } from '../src/modules/audit/audit-event';
+import { CampaignLandingsService } from '../src/modules/campaigns/campaign-landings.service';
 import { CampaignsService } from '../src/modules/campaigns/campaigns.service';
+import type { CampaignLandingDraftDto } from '../src/modules/campaigns/dto/campaign-landing.dto';
+import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
 
 it('locks transitions across transactions, reuses tracking and expires the banner before the worker catches up', async () => {
@@ -151,3 +154,193 @@ it('locks transitions across transactions, reuses tracking and expires the banne
     }
   }
 }, 25_000);
+
+it('separates festival publication and archival from existing campaign tracking', async () => {
+  const config = new ConfigService();
+  const db = new PrismaService(config);
+  const media = new PublicMediaUrlService(config);
+  const landings = new CampaignLandingsService(db, new CatalogService(db, media), media);
+  const campaigns = new CampaignsService(db, media, landings);
+  const slug = `fest-${randomUUID()}`;
+  const phone = `+0${BigInt(`0x${randomUUID().replaceAll('-', '').slice(0, 12)}`)}`;
+  const start = new Date(Math.floor(Date.now() / 60_000) * 60_000 - 60_000);
+  const end = new Date(start.valueOf() + 20 * 60_000);
+  const tomorrow = 24 * 60 * 60_000;
+  try {
+    const owner = await db.user.create({ data: { phone } });
+    const primary =
+      (await db.warehouse.findFirst({
+        where: { isDefault: true, isActive: true, deletedAt: null },
+      })) ??
+      (await db.warehouse.create({
+        data: { code: slug, name: 'Festival fixture', isDefault: true },
+      }));
+    const product = await db.product.create({
+      data: {
+        slug,
+        name: 'انگشتر',
+        status: 'ACTIVE',
+        salePriceToman: 500_000,
+        variants: {
+          create: { sku: slug, inventories: { create: { warehouseId: primary.id, onHand: 3 } } },
+        },
+      },
+    });
+    const draft = {
+      name: 'جشنوارهٔ تست',
+      goal: 'فروش مناسبتی',
+      message: 'مشاهدهٔ محصولات',
+      allProducts: false,
+      productSlugs: [slug],
+      categorySlugs: [],
+      startsTehran: formatTehranDate(new Date(start.valueOf() + tomorrow)),
+      endsTehran: formatTehranDate(new Date(end.valueOf() + tomorrow)),
+      budgetToman: 1000,
+      bannerEnabled: false,
+      bannerPriority: 0,
+    };
+    const landing = {
+      slug,
+      seoMode: 'RECURRING',
+      title: draft.name,
+      story: draft.goal,
+      collectionMode: 'MANUAL',
+      filters: { minimumQuantity: 1 },
+      manualProductSlugs: [slug],
+      placements: [],
+    } satisfies CampaignLandingDraftDto;
+    const marketTracking = `${slug}-market`;
+    await expect(
+      campaigns.create({ ...draft, slug: marketTracking, kind: 'MARKETING' }, owner.id),
+    ).rejects.toThrow('tracking labels');
+    const marketing = await campaigns.create(
+      {
+        ...draft,
+        slug: marketTracking,
+        kind: 'MARKETING',
+        channel: 'email',
+        trackingId: marketTracking,
+        trackingLabel: marketTracking,
+      },
+      owner.id,
+    );
+    await expect(
+      landings.save(marketing.id, { ...landing, expectedRevision: 1 }, owner.id),
+    ).rejects.toThrow('Marketing campaigns do not have a landing');
+
+    const legacyTracking = `${slug}-legacy`;
+    const legacy = await campaigns.create(
+      {
+        ...draft,
+        slug: legacyTracking,
+        channel: 'email',
+        trackingId: legacyTracking,
+        trackingLabel: legacyTracking,
+        plannedChannelCostToman: 250,
+      },
+      owner.id,
+    );
+    expect(legacy.kind).toBe('LEGACY');
+    await expect(
+      campaigns.update(
+        legacy.id,
+        { ...draft, kind: 'FESTIVAL', expectedRevision: 1, plannedChannelCostToman: null },
+        owner.id,
+      ),
+    ).resolves.toMatchObject({ kind: 'FESTIVAL', revision: 2 });
+    await expect(campaigns.detail(legacy.id, 1)).resolves.toMatchObject({
+      channel: 'email',
+      trackingId: legacyTracking,
+      plannedChannelCostToman: 250,
+      productSlugs: [product.slug],
+    });
+
+    const festival = await campaigns.create({ ...draft, slug, kind: 'FESTIVAL' }, owner.id);
+    expect(festival).toMatchObject({ kind: 'FESTIVAL', status: 'DRAFT', revision: 1 });
+    const move = (action: CampaignAction, expectedRevision: number, requestId = randomUUID()) =>
+      campaigns.transition(festival.id, { action, expectedRevision, requestId }, owner.id);
+    await expect(move('APPROVE', 1)).rejects.toThrow('A festival needs a landing');
+    await landings.save(festival.id, { ...landing, expectedRevision: 1 }, owner.id);
+    await expect(move('APPROVE', 2)).resolves.toMatchObject({ status: 'APPROVED', revision: 3 });
+    await expect(move('PUBLISH_NOW', 3)).rejects.toThrow('start time has not arrived');
+    await expect(move('SCHEDULE', 3)).resolves.toMatchObject({ status: 'SCHEDULED', revision: 4 });
+    await expect(landings.publicLanding(slug, 1)).rejects.toThrow('not found');
+
+    // Make only this fixture due, at the same moment its stock disappears.
+    await db.$transaction([
+      db.inventory.updateMany({
+        where: { variant: { productId: product.id } },
+        data: { onHand: 0 },
+      }),
+      db.campaign.update({ where: { id: festival.id }, data: { startsAt: start, endsAt: end } }),
+    ]);
+    await campaigns.advance(new Date());
+    const blocked = await campaigns.detail(festival.id, 1);
+    expect(blocked).toMatchObject({ status: 'PAUSED', revision: 5 });
+    expect(blocked.history[0]).toMatchObject({
+      action: 'PUBLICATION_BLOCKED',
+      snapshot: { publicationError: 'The collection has no sellable products.' },
+    });
+    await db.inventory.updateMany({
+      where: { variant: { productId: product.id } },
+      data: { onHand: 3 },
+    });
+    await expect(move('REOPEN', 5)).resolves.toMatchObject({ status: 'DRAFT', revision: 6 });
+    await expect(move('APPROVE', 6)).resolves.toMatchObject({ status: 'APPROVED', revision: 7 });
+    await expect(move('PUBLISH_NOW', 7)).resolves.toMatchObject({ status: 'ACTIVE', revision: 8 });
+    await expect(landings.publicLanding(slug, 1)).resolves.toMatchObject({
+      active: true,
+      isFestival: true,
+    });
+    await expect(landings.sitemap()).resolves.toMatchObject({
+      entries: expect.not.arrayContaining([expect.objectContaining({ slug })]),
+    });
+    await expect(move('ARCHIVE', 8)).rejects.toThrow('unavailable');
+    await expect(move('PAUSE', 8)).resolves.toMatchObject({ status: 'PAUSED', revision: 9 });
+    await expect(landings.publicLanding(slug, 1)).rejects.toThrow('not found');
+    await expect(move('RESUME', 9)).resolves.toMatchObject({ status: 'SCHEDULED', revision: 10 });
+    await campaigns.advance(new Date());
+    await expect(campaigns.detail(festival.id, 1)).resolves.toMatchObject({
+      status: 'ACTIVE',
+      revision: 11,
+    });
+
+    await db.campaign.update({ where: { id: festival.id }, data: { endsAt: new Date() } });
+    await campaigns.advance(new Date());
+    await expect(campaigns.detail(festival.id, 1)).resolves.toMatchObject({
+      status: 'ENDED',
+      revision: 12,
+    });
+    await expect(landings.publicLanding(slug, 1)).resolves.toMatchObject({
+      active: false,
+      isFestival: true,
+    });
+    const archiveId = randomUUID();
+    await expect(move('ARCHIVE', 12, archiveId)).resolves.toMatchObject({
+      archivedAt: expect.any(String),
+      revision: 13,
+    });
+    await expect(move('ARCHIVE', 12, archiveId)).resolves.toMatchObject({ revision: 13 });
+    await expect(landings.publicLanding(slug, 1)).rejects.toThrow('not found');
+  } finally {
+    try {
+      const owner = { owner: { phone } };
+      const identities = await db.campaign.findMany({ where: owner, select: { trackingId: true } });
+      await db.$transaction([
+        db.campaignLanding.deleteMany({ where: { campaign: owner } }),
+        db.campaignRevision.deleteMany({ where: { campaign: owner } }),
+        db.campaign.deleteMany({ where: owner }),
+        db.campaignLinkIdentity.deleteMany({
+          where: { id: { in: identities.map(({ trackingId }) => trackingId) } },
+        }),
+        db.inventory.deleteMany({ where: { variant: { sku: slug } } }),
+        db.productVariant.deleteMany({ where: { sku: slug } }),
+        db.product.deleteMany({ where: { slug } }),
+        db.warehouse.deleteMany({ where: { code: slug } }),
+        db.user.deleteMany({ where: { phone } }),
+      ]);
+    } finally {
+      await db.$disconnect();
+    }
+  }
+}, 30_000);

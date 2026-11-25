@@ -1803,6 +1803,12 @@ enum CampaignAudience {
   RETURNING
 }
 
+enum CampaignKind {
+  LEGACY
+  MARKETING
+  FESTIVAL
+}
+
 model Campaign {
   id                      String               @id @default(uuid()) @db.Uuid
   slug                    String               @unique @db.VarChar(64)
@@ -1811,7 +1817,9 @@ model Campaign {
   channel                 String               @db.VarChar(96)
   ownerId                 String               @db.Uuid
   trackingId              String               @unique @db.VarChar(64)
+  kind                    CampaignKind         @default(LEGACY)
   status                  CampaignStatus       @default(DRAFT)
+  archivedAt              DateTime?            @db.Timestamptz(3)
   allProducts             Boolean
   productIds              String[]             @default([]) @db.Uuid
   categoryIds             String[]             @default([]) @db.Uuid

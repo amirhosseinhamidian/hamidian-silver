@@ -13373,6 +13373,14 @@
       "CampaignSummaryDto": {
         "type": "object",
         "properties": {
+          "kind": {
+            "enum": [
+              "LEGACY",
+              "MARKETING",
+              "FESTIVAL"
+            ],
+            "type": "string"
+          },
           "status": {
             "enum": [
               "DRAFT",
@@ -13383,6 +13391,11 @@
               "ENDED"
             ],
             "type": "string"
+          },
+          "archivedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
           },
           "startsAt": {
             "type": "string",
@@ -13415,7 +13428,9 @@
           }
         },
         "required": [
+          "kind",
           "status",
+          "archivedAt",
           "startsAt",
           "endsAt",
           "id",
@@ -13556,6 +13571,14 @@
       "CampaignDetailDto": {
         "type": "object",
         "properties": {
+          "kind": {
+            "enum": [
+              "LEGACY",
+              "MARKETING",
+              "FESTIVAL"
+            ],
+            "type": "string"
+          },
           "status": {
             "enum": [
               "DRAFT",
@@ -13566,6 +13589,11 @@
               "ENDED"
             ],
             "type": "string"
+          },
+          "archivedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
           },
           "startsAt": {
             "type": "string",
@@ -13681,7 +13709,9 @@
           }
         },
         "required": [
+          "kind",
           "status",
+          "archivedAt",
           "startsAt",
           "endsAt",
           "productSlugs",
@@ -13716,6 +13746,11 @@
       "CreateCampaignDto": {
         "type": "object",
         "properties": {
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
           "productSlugs": {
             "maxItems": 50,
             "type": "array",
@@ -13765,11 +13800,12 @@
             "minLength": 1,
             "maxLength": 80
           },
-          "slug": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          "kind": {
+            "enum": [
+              "MARKETING",
+              "FESTIVAL"
+            ],
+            "type": "string"
           },
           "trackingId": {
             "type": "string",
@@ -13781,6 +13817,12 @@
             "minLength": 1,
             "maxLength": 96
           },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
           "name": {
             "type": "string",
             "minLength": 1,
@@ -13790,11 +13832,6 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
-          },
-          "channel": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 96
           },
           "allProducts": {
             "type": "boolean"
@@ -13832,11 +13869,8 @@
           "productSlugs",
           "categorySlugs",
           "slug",
-          "trackingId",
-          "trackingLabel",
           "name",
           "goal",
-          "channel",
           "allProducts",
           "startsTehran",
           "endsTehran",
@@ -13849,6 +13883,11 @@
       "UpdateCampaignDto": {
         "type": "object",
         "properties": {
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
           "productSlugs": {
             "maxItems": 50,
             "type": "array",
@@ -13898,6 +13937,12 @@
             "minLength": 1,
             "maxLength": 80
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "FESTIVAL"
+            ]
+          },
           "expectedRevision": {
             "type": "number",
             "minimum": 1
@@ -13911,11 +13956,6 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
-          },
-          "channel": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 96
           },
           "allProducts": {
             "type": "boolean"
@@ -13955,7 +13995,6 @@
           "expectedRevision",
           "name",
           "goal",
-          "channel",
           "allProducts",
           "startsTehran",
           "endsTehran",
@@ -14065,10 +14104,12 @@
             "enum": [
               "APPROVE",
               "SCHEDULE",
+              "PUBLISH_NOW",
               "PAUSE",
               "RESUME",
               "REOPEN",
-              "END"
+              "END",
+              "ARCHIVE"
             ],
             "type": "string"
           },
@@ -14848,6 +14889,9 @@
       "PublicCampaignLandingDto": {
         "type": "object",
         "properties": {
+          "isFestival": {
+            "type": "boolean"
+          },
           "seoMode": {
             "enum": [
               "TEMPORARY",

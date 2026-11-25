@@ -2,9 +2,11 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   Optional,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { Prisma, type Campaign, type Media } from '../../generated/prisma/client';
 import { attachHumanAuditEvent } from '../audit/audit-event';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
@@ -45,7 +47,9 @@ function summarize(campaign: Campaign): CampaignSummaryDto {
     slug: campaign.slug,
     name: campaign.name,
     ownerId: campaign.ownerId,
+    kind: campaign.kind,
     status: campaign.status,
+    archivedAt: campaign.archivedAt?.toISOString() ?? null,
     revision: campaign.revision,
     startsAt: campaign.startsAt.toISOString(),
     endsAt: campaign.endsAt.toISOString(),
@@ -56,6 +60,8 @@ function summarize(campaign: Campaign): CampaignSummaryDto {
 
 @Injectable()
 export class CampaignsService {
+  private readonly logger = new Logger(CampaignsService.name);
+
   constructor(
     private readonly db: PrismaService,
     private readonly mediaUrls: PublicMediaUrlService,
@@ -165,17 +171,19 @@ export class CampaignsService {
   }
 
   async create(input: CreateCampaignDto, actorUserId: string): Promise<CampaignSummaryDto> {
-    const trackingId = normalizeAttributionToken(input.trackingId, 64);
-    const trackingLabel = normalizeAttributionToken(input.trackingLabel);
+    const kind = input.kind ?? 'LEGACY';
+    const internalIdentity = kind === 'FESTIVAL' ? `festival-${randomUUID()}` : null;
+    const trackingId = internalIdentity ?? normalizeAttributionToken(input.trackingId, 64);
+    const trackingLabel = internalIdentity ?? normalizeAttributionToken(input.trackingLabel);
     if (!trackingId || !trackingLabel)
       throw new BadRequestException('Enter valid campaign tracking labels.');
 
     try {
       return await this.db.$transaction(async (tx) => {
-        const draft = await this.prepareDraft(tx, input);
+        const draft = await this.prepareDraft(tx, input, kind);
         await ensureCampaignLinkIdentity(tx, trackingId, trackingLabel);
         const campaign = await tx.campaign.create({
-          data: { ...draft, slug: input.slug, trackingId, ownerId: actorUserId },
+          data: { ...draft, kind, slug: input.slug, trackingId, ownerId: actorUserId },
         });
         await this.recordRevision(tx, campaign, 'CREATE', actorUserId);
         return summarize(campaign);
@@ -199,7 +207,11 @@ export class CampaignsService {
       if (current.status !== 'DRAFT')
         throw new ConflictException('Only draft campaigns can be edited.');
 
-      const draft = await this.prepareDraft(tx, input, current);
+      const kind = input.kind ?? current.kind;
+      if (kind !== current.kind && current.kind !== 'LEGACY') {
+        throw new ConflictException('Only a legacy draft can be classified as a festival.');
+      }
+      const draft = await this.prepareDraft(tx, input, kind, current);
       if (
         discountBudget(draft) < discountBudget(current) &&
         discountBudget(draft) < committedCampaignIncentives(await promotionUsage(tx, id))
@@ -222,9 +234,14 @@ export class CampaignsService {
       }
       const campaign = await tx.campaign.update({
         where: { id },
-        data: { ...draft, revision: { increment: 1 } },
+        data: { ...draft, kind, revision: { increment: 1 } },
       });
-      await this.recordRevision(tx, campaign, 'EDIT', actorUserId);
+      await this.recordRevision(
+        tx,
+        campaign,
+        kind === current.kind ? 'EDIT' : 'CLASSIFY_FESTIVAL',
+        actorUserId,
+      );
       return summarize(campaign);
     });
   }
@@ -247,29 +264,52 @@ export class CampaignsService {
         return summarize(current);
       }
       this.assertRevision(current, input.expectedRevision);
-      const status = campaignTransition(current.status, input.action);
+      const { action, requestId } = input;
+      if ((action === 'PUBLISH_NOW' || action === 'ARCHIVE') && current.kind !== 'FESTIVAL') {
+        throw new ConflictException('This action is only available for sales festivals.');
+      }
+      const now = new Date();
+      if (action === 'ARCHIVE') {
+        if (current.status !== 'ENDED') {
+          throw new ConflictException('Archiving is unavailable until the festival ends.');
+        }
+        if (current.archivedAt) return summarize(current);
+        const archived = await tx.campaign.update({
+          where: { id },
+          data: { archivedAt: now, revision: { increment: 1 } },
+        });
+        await this.recordRevision(tx, archived, action, actorUserId, requestId);
+        return attachHumanAuditEvent(summarize(archived), {
+          title: `جشنوارهٔ «${current.name}» بایگانی شد.`,
+          entityName: current.name,
+          operationType: 'STATUS_CHANGE',
+          changes: [
+            { field: 'archivedAt', label: 'زمان بایگانی', before: null, after: now.toISOString() },
+          ],
+        });
+      }
+      const status = campaignTransition(current.status, action);
       if (!status)
         throw new ConflictException(
           'This transition is unavailable for the current campaign status.',
         );
       if (status === current.status) return summarize(current);
 
-      if (status === 'APPROVED' || status === 'SCHEDULED') {
-        if (current.endsAt <= new Date())
-          throw new BadRequestException('The campaign end time has passed.');
-        await this.validateScope(tx, current);
-        if (current.mediaId) await this.checkMedia(tx, current.mediaId);
-        await this.landings?.validateForPublication(tx, current);
-        const rule = await tx.campaignPromotion.findUnique({ where: { campaignId: id } });
-        const budget = await campaignBudget(tx, current, rule);
-        if (budget.blockers.length) throw new BadRequestException(budget.blockers[0]);
+      if (action === 'PUBLISH_NOW' && current.startsAt > now) {
+        throw new BadRequestException('The festival start time has not arrived.');
+      }
+      if (status === 'APPROVED' || status === 'SCHEDULED' || status === 'ACTIVE') {
+        await this.validatePublication(tx, current, now);
       }
       const updated = summarize(
-        await this.setStatus(tx, current, status, input.action, actorUserId, input.requestId),
+        await this.setStatus(tx, current, status, action, actorUserId, requestId),
       );
-      if (input.action !== 'PAUSE') return updated;
+      if (action !== 'PAUSE' && action !== 'PUBLISH_NOW') return updated;
       return attachHumanAuditEvent(updated, {
-        title: `کمپین «${current.name}» متوقف شد.`,
+        title:
+          action === 'PAUSE'
+            ? `کمپین «${current.name}» متوقف شد.`
+            : `جشنوارهٔ «${current.name}» منتشر شد.`,
         entityName: current.name,
         operationType: 'STATUS_CHANGE',
         changes: [{ field: 'status', label: 'وضعیت کمپین', before: current.status, after: status }],
@@ -278,28 +318,60 @@ export class CampaignsService {
   }
 
   async advance(now = new Date()): Promise<number> {
-    return this.db.$transaction(async (tx) => {
-      const due = await tx.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM "campaigns"
-        WHERE ("status" IN ('SCHEDULED', 'ACTIVE', 'PAUSED') AND "endsAt" <= ${now})
-          OR ("status" = 'SCHEDULED' AND "startsAt" <= ${now})
-        ORDER BY "endsAt", id
-        LIMIT 25 FOR UPDATE SKIP LOCKED
-      `;
-      if (due.length === 0) return 0;
-      const rows = await tx.campaign.findMany({ where: { id: { in: due.map(({ id }) => id) } } });
-      for (const campaign of rows) {
-        const ended = campaign.endsAt <= now;
-        await this.setStatus(
-          tx,
-          campaign,
-          ended ? 'ENDED' : 'ACTIVE',
-          ended ? 'EXPIRE' : 'PUBLISH',
-          null,
+    const dueWindow = Prisma.sql`
+      ("status" IN ('SCHEDULED', 'ACTIVE', 'PAUSED') AND "endsAt" <= ${now})
+      OR ("status" = 'SCHEDULED' AND "startsAt" <= ${now})
+    `;
+    const due = await this.db.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM "campaigns" WHERE ${dueWindow}
+      ORDER BY "endsAt", id LIMIT 25
+    `;
+    let advanced = 0;
+    for (const { id } of due) {
+      try {
+        const changed = await this.db.$transaction(
+          async (tx) => {
+            const [locked] = await tx.$queryRaw<Array<{ id: string }>>`
+              SELECT id FROM "campaigns" WHERE id = ${id}::uuid AND (${dueWindow})
+              FOR UPDATE SKIP LOCKED
+            `;
+            if (!locked) return false;
+            const campaign = await tx.campaign.findUniqueOrThrow({ where: { id } });
+            if (campaign.endsAt <= now) {
+              await this.setStatus(tx, campaign, 'ENDED', 'EXPIRE', null);
+              return true;
+            }
+            if (campaign.kind === 'FESTIVAL') {
+              try {
+                await this.validatePublication(tx, campaign, now);
+              } catch (error) {
+                if (!(error instanceof BadRequestException || error instanceof ConflictException)) {
+                  throw error;
+                }
+                await this.setStatus(
+                  tx,
+                  campaign,
+                  'PAUSED',
+                  'PUBLICATION_BLOCKED',
+                  null,
+                  undefined,
+                  error.message,
+                );
+                return true;
+              }
+            }
+            await this.setStatus(tx, campaign, 'ACTIVE', 'PUBLISH', null);
+            return true;
+          },
+          { timeout: 10_000 },
         );
+        if (changed) advanced++;
+      } catch (error) {
+        const category = error instanceof Error ? error.name : 'UnknownError';
+        this.logger.warn(`Campaign ${id} could not advance (${category}).`);
       }
-      return rows.length;
-    });
+    }
+    return advanced;
   }
 
   async publicActivity(now = new Date()) {
@@ -371,16 +443,20 @@ export class CampaignsService {
   private async prepareDraft(
     tx: Prisma.TransactionClient,
     input: CampaignDraftDto,
+    kind: Campaign['kind'],
     current?: Campaign,
   ) {
     const startsAt = parseTehranDate(input.startsTehran);
     const endsAt = parseTehranDate(input.endsTehran);
     if (startsAt >= endsAt)
       throw new BadRequestException('The end time must follow the start time.');
-    const channel = normalizeAttributionToken(input.channel);
+    const channel =
+      kind === 'FESTIVAL'
+        ? (current?.channel ?? 'festival')
+        : normalizeAttributionToken(input.channel);
     if (!channel) throw new BadRequestException('Enter a valid campaign channel.');
     const plannedChannelCostToman =
-      input.plannedChannelCostToman === undefined
+      input.plannedChannelCostToman === undefined || (current && current.kind !== kind)
         ? (current?.plannedChannelCostToman ?? null)
         : input.plannedChannelCostToman;
     if (plannedChannelCostToman !== null && plannedChannelCostToman > input.budgetToman)
@@ -442,6 +518,19 @@ export class CampaignsService {
     };
   }
 
+  private async validatePublication(tx: Prisma.TransactionClient, campaign: Campaign, now: Date) {
+    if (campaign.endsAt <= now) throw new BadRequestException('The campaign end time has passed.');
+    await this.validateScope(tx, campaign);
+    if (campaign.mediaId) await this.checkMedia(tx, campaign.mediaId);
+    if (campaign.kind === 'FESTIVAL' && !this.landings) {
+      throw new BadRequestException('A festival needs a landing before publication.');
+    }
+    await this.landings?.validateForPublication(tx, campaign);
+    const rule = await tx.campaignPromotion.findUnique({ where: { campaignId: campaign.id } });
+    const budget = await campaignBudget(tx, campaign, rule);
+    if (budget.blockers.length) throw new BadRequestException(budget.blockers[0]);
+  }
+
   private async validateScope(tx: Prisma.TransactionClient, campaign: Campaign) {
     const [products, categories] = await Promise.all([
       tx.product.count({
@@ -497,12 +586,13 @@ export class CampaignsService {
     action: string,
     actorUserId: string | null,
     requestId?: string,
+    publicationError?: string,
   ) {
     const campaign = await tx.campaign.update({
       where: { id: current.id },
       data: { status, revision: { increment: 1 } },
     });
-    await this.recordRevision(tx, campaign, action, actorUserId, requestId);
+    await this.recordRevision(tx, campaign, action, actorUserId, requestId, publicationError);
     return campaign;
   }
 
@@ -512,6 +602,7 @@ export class CampaignsService {
     action: string,
     actorUserId: string | null,
     requestId?: string,
+    publicationError?: string,
   ) {
     await tx.campaignRevision.create({
       data: {
@@ -522,10 +613,12 @@ export class CampaignsService {
         requestId,
         snapshot: {
           ...campaign,
+          archivedAt: campaign.archivedAt?.toISOString() ?? null,
           startsAt: campaign.startsAt.toISOString(),
           endsAt: campaign.endsAt.toISOString(),
           createdAt: campaign.createdAt.toISOString(),
           updatedAt: campaign.updatedAt.toISOString(),
+          ...(publicationError ? { publicationError } : {}),
         },
       },
     });

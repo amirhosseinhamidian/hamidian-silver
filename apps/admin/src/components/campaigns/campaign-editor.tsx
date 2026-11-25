@@ -34,8 +34,15 @@ function parseSlugs(value: string) {
     .filter(Boolean);
 }
 
-export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
+export function CampaignEditor({
+  campaign,
+  createKind = 'FESTIVAL',
+}: {
+  campaign?: CampaignDetail;
+  createKind?: 'FESTIVAL' | 'MARKETING';
+}) {
   const router = useRouter();
+  const [classifyFestival, setClassifyFestival] = useState(false);
   const [media, setMedia] = useState(campaign?.media ?? null);
   const [name, setName] = useState(campaign?.name ?? '');
   const [message, setMessage] = useState(campaign?.message ?? '');
@@ -47,6 +54,7 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
   const [uploading, setUploading] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isFestival = classifyFestival || (campaign?.kind ?? createKind) === 'FESTIVAL';
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,17 +77,16 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
       setError('بودجه، سهم هزینهٔ کانال یا اولویت نمایش را بررسی کنید.');
       return;
     }
-    const draft: Omit<CampaignDraft, 'slug' | 'trackingId' | 'trackingLabel'> = {
+    const draft: Omit<CampaignDraft, 'kind' | 'slug' | 'trackingId' | 'trackingLabel'> = {
       name,
       message,
       allProducts,
       bannerEnabled,
       budgetToman,
-      plannedChannelCostToman,
+      ...(isFestival ? {} : { plannedChannelCostToman, channel: value('channel') }),
       audience: value('audience') as CampaignDraft['audience'],
       bannerPriority,
       goal: value('goal'),
-      channel: value('channel'),
       startsTehran: value('startsTehran'),
       endsTehran: value('endsTehran'),
       productSlugs: allProducts ? [] : parseSlugs(productSlugs),
@@ -89,12 +96,18 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
       ctaPath: value('ctaPath') || null,
     };
     const body = campaign
-      ? { ...draft, expectedRevision: campaign.revision }
+      ? {
+          ...draft,
+          expectedRevision: campaign.revision,
+          ...(classifyFestival ? { kind: 'FESTIVAL' as const } : {}),
+        }
       : {
           ...draft,
+          kind: createKind,
           slug: value('slug'),
-          trackingId: value('trackingId'),
-          trackingLabel: value('trackingLabel'),
+          ...(isFestival
+            ? {}
+            : { trackingId: value('trackingId'), trackingLabel: value('trackingLabel') }),
         };
     setPending(true);
     setError(null);
@@ -111,7 +124,8 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
       }
       const result = (await response.json()) as { id?: string };
       if (!result.id || !isCampaignId(result.id)) throw new Error('Invalid campaign response.');
-      router.replace(`/campaigns?id=${result.id}&step=${campaign ? 'review' : 'landing'}`);
+      const step = campaign ? 'review' : isFestival ? 'landing' : 'links';
+      router.replace(`/campaigns?id=${result.id}&step=${step}`);
       router.refresh();
     } catch {
       setError('ذخیرهٔ کمپین ممکن نشد. دوباره تلاش کنید.');
@@ -120,10 +134,24 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
   }
 
   return (
-    <Card title={campaign ? 'ویرایش پیش‌نویس' : 'پیش‌نویس کمپین جدید'}>
+    <Card
+      title={
+        campaign ? 'ویرایش پیش‌نویس' : isFestival ? 'جشنوارهٔ فروش جدید' : 'کمپین بازاریابی جدید'
+      }
+    >
       <form onSubmit={(event) => void save(event)} className="space-y-5">
         <fieldset disabled={pending} className="grid gap-4 sm:grid-cols-2">
-          <FormField id="campaign-name" label="نام کمپین" required>
+          {campaign?.kind === 'LEGACY' && (
+            <label className="flex items-center gap-2 text-sm sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={classifyFestival}
+                onChange={(event) => setClassifyFestival(event.currentTarget.checked)}
+              />
+              ثبت این پیش‌نویس به‌عنوان جشنوارهٔ فروش
+            </label>
+          )}
+          <FormField id="campaign-name" label={isFestival ? 'نام جشنواره' : 'نام کمپین'} required>
             {(control) => (
               <Input
                 {...control}
@@ -134,41 +162,40 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
               />
             )}
           </FormField>
-          <FormField
-            id="campaign-channel"
-            label="کانال"
-            hint="برای نمونه sms یا instagram"
-            required
-          >
-            {(control) => (
-              <Input
-                {...control}
-                name="channel"
-                defaultValue={campaign?.channel}
-                maxLength={96}
-                required
-              />
-            )}
-          </FormField>
+          {!isFestival && (
+            <FormField id="campaign-channel" label="کانال" hint="برای نمونه instagram" required>
+              {(control) => (
+                <Input
+                  {...control}
+                  name="channel"
+                  defaultValue={campaign?.channel}
+                  maxLength={96}
+                  required
+                />
+              )}
+            </FormField>
+          )}
           {!campaign && (
+            <FormField
+              id="campaign-slug"
+              label="اسلاگ"
+              hint="حروف کوچک لاتین، عدد و خط تیره"
+              required
+            >
+              {(control) => (
+                <Input
+                  {...control}
+                  name="slug"
+                  dir="ltr"
+                  pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                  maxLength={64}
+                  required
+                />
+              )}
+            </FormField>
+          )}
+          {!campaign && !isFestival && (
             <>
-              <FormField
-                id="campaign-slug"
-                label="اسلاگ"
-                hint="حروف کوچک لاتین، عدد و خط تیره"
-                required
-              >
-                {(control) => (
-                  <Input
-                    {...control}
-                    name="slug"
-                    dir="ltr"
-                    pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-                    maxLength={64}
-                    required
-                  />
-                )}
-              </FormField>
               <FormField
                 id="campaign-tracking-id"
                 label="شناسهٔ ردیابی"
@@ -199,19 +226,21 @@ export function CampaignEditor({ campaign }: { campaign?: CampaignDetail }) {
               />
             )}
           </FormField>
-          <FormField
-            id="campaign-channel-cost"
-            label="هزینهٔ برنامه‌ریزی‌شدهٔ کانال (تومان)"
-            hint="این مبلغ از سقف بودجهٔ تخفیف کم می‌شود. اگر هنوز مشخص نیست، خالی بگذارید."
-          >
-            {(control) => (
-              <MoneyInput
-                {...control}
-                name="plannedChannelCostToman"
-                defaultValue={campaign?.plannedChannelCostToman ?? ''}
-              />
-            )}
-          </FormField>
+          {!isFestival && (
+            <FormField
+              id="campaign-channel-cost"
+              label="هزینهٔ برنامه‌ریزی‌شدهٔ کانال (تومان)"
+              hint="این مبلغ از سقف بودجهٔ تخفیف کم می‌شود. اگر هنوز مشخص نیست، خالی بگذارید."
+            >
+              {(control) => (
+                <MoneyInput
+                  {...control}
+                  name="plannedChannelCostToman"
+                  defaultValue={campaign?.plannedChannelCostToman ?? ''}
+                />
+              )}
+            </FormField>
+          )}
           <FormField id="campaign-audience" label="گروه مخاطب تخفیف">
             {(control) => (
               <Select

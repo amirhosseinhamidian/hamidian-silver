@@ -637,7 +637,9 @@ async function handler(request, response) {
     const slug = url.pathname.split('/').at(-1);
     const page = Number(url.searchParams.get('page') ?? '1');
     if (
-      !['nowruz', 'weekend', 'archived-nowruz', 'empty-collection'].includes(slug) ||
+      !['nowruz', 'festival-nowruz', 'weekend', 'archived-nowruz', 'empty-collection'].includes(
+        slug,
+      ) ||
       page > (slug === 'nowruz' ? 2 : 1)
     ) {
       return json(response, 404, { message: 'Campaign landing not found.' });
@@ -649,6 +651,7 @@ async function handler(request, response) {
       title: slug === 'nowruz' ? 'مجموعهٔ نوروز' : 'مجموعهٔ آزمایشی',
       story: 'انتخاب‌هایی برای هدیه دادن.',
       seoMode: slug === 'weekend' ? 'TEMPORARY' : 'RECURRING',
+      isFestival: slug === 'festival-nowruz',
       active: slug !== 'archived-nowruz',
       media: { ...media, id: PRODUCT_ID },
       ctaPath: '/products',

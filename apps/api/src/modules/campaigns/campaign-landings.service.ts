@@ -36,6 +36,7 @@ import type {
 const placementMedia = { media: true, mobileMedia: true, stillMedia: true } as const;
 const productPageSize = 24;
 const emptyProducts = emptyCampaignProducts();
+const publicationActions = ['PUBLISH', 'PUBLISH_NOW'];
 const activeWindow = (now: Date) =>
   ({
     status: 'ACTIVE',
@@ -59,9 +60,14 @@ export class CampaignLandingsService {
   async editor(campaignId: string): Promise<CampaignLandingEditorDto> {
     const campaign = await this.db.campaign.findUnique({
       where: { id: campaignId },
-      select: { revision: true, landing: { include: { placements: { include: placementMedia } } } },
+      select: {
+        kind: true,
+        revision: true,
+        landing: { include: { placements: { include: placementMedia } } },
+      },
     });
     if (!campaign) throw new NotFoundException('Campaign not found.');
+    this.assertLandingKind(campaign);
     const landing = campaign.landing;
     if (!landing) return { revision: campaign.revision, landing: null };
     const [products, categories, targets] = await Promise.all([
@@ -138,6 +144,7 @@ export class CampaignLandingsService {
       async (tx) => {
         const campaign = await tx.campaign.findUnique({ where: { id: campaignId } });
         if (!campaign) throw new NotFoundException('Campaign not found.');
+        this.assertLandingKind(campaign);
         const prepared = await this.prepare(tx, campaign, input);
         const { total } = await this.readCollection(tx, campaign, prepared, 1, 0);
         return { total };
@@ -161,6 +168,7 @@ export class CampaignLandingsService {
           where: { id: campaignId },
           include: { landing: true },
         });
+        this.assertLandingKind(campaign);
         if (campaign.status !== 'DRAFT' || campaign.revision !== input.expectedRevision) {
           throw new ConflictException('Only the current draft revision can be edited.');
         }
@@ -205,6 +213,7 @@ export class CampaignLandingsService {
             action: 'LANDING_EDIT',
             snapshot: {
               ...updated,
+              archivedAt: updated.archivedAt?.toISOString() ?? null,
               startsAt: updated.startsAt.toISOString(),
               endsAt: updated.endsAt.toISOString(),
               createdAt: updated.createdAt.toISOString(),
@@ -229,23 +238,33 @@ export class CampaignLandingsService {
       where: { campaignId: campaign.id },
       include: { placements: true },
     });
-    if (!landing) return;
-    await this.lockPath(tx, landing.slug);
-    if (landing.seoMode === 'RECURRING') {
-      const overlap = await tx.campaignLanding.findFirst({
-        where: {
-          slug: landing.slug,
-          campaignId: { not: campaign.id },
-          campaign: {
-            status: { in: ['APPROVED', 'SCHEDULED', 'ACTIVE', 'PAUSED'] },
-            startsAt: { lt: campaign.endsAt },
-            endsAt: { gt: campaign.startsAt },
+    if (!landing) {
+      if (campaign.kind === 'FESTIVAL') {
+        throw new BadRequestException('A festival needs a landing before publication.');
+      }
+      return;
+    }
+    // A scheduled campaign already reserves this path. The worker only rechecks its contents.
+    if (campaign.status !== 'SCHEDULED') {
+      await this.lockPath(tx, landing.slug);
+      if (landing.seoMode === 'RECURRING') {
+        const overlap = await tx.campaignLanding.findFirst({
+          where: {
+            slug: landing.slug,
+            campaignId: { not: campaign.id },
+            campaign: {
+              status: { in: ['APPROVED', 'SCHEDULED', 'ACTIVE', 'PAUSED'] },
+              startsAt: { lt: campaign.endsAt },
+              endsAt: { gt: campaign.startsAt },
+            },
           },
-        },
-        select: { campaignId: true },
-      });
-      if (overlap)
-        throw new ConflictException('Another campaign uses this landing path in the same period.');
+          select: { campaignId: true },
+        });
+        if (overlap)
+          throw new ConflictException(
+            'Another campaign uses this landing path in the same period.',
+          );
+      }
     }
     for (const placement of landing.placements) this.checkWindow(campaign, placement);
     await this.festivals?.checkPublish(tx, campaign, landing);
@@ -310,6 +329,7 @@ export class CampaignLandingsService {
             : {}),
           story: landing.story,
           seoMode: landing.seoMode,
+          isFestival: landing.campaign.kind === 'FESTIVAL',
           active: Boolean(live),
           media: this.media(landing.campaign.media),
           ctaPath: live ? (landing.campaign.ctaPath ?? '/products') : '/products',
@@ -329,8 +349,9 @@ export class CampaignLandingsService {
         slug,
         seoMode: 'RECURRING',
         campaign: {
+          archivedAt: null,
           OR: [{ status: 'ENDED' }, { status: { in: ['ACTIVE', 'PAUSED'] }, endsAt: { lte: now } }],
-          revisions: { some: { action: 'PUBLISH' } },
+          revisions: { some: { action: { in: publicationActions } } },
         },
       },
       include: {
@@ -338,7 +359,11 @@ export class CampaignLandingsService {
           include: {
             media: true,
             revisions: {
-              where: { action: { in: ['PUBLISH', 'EDIT', 'LANDING_EDIT'] } },
+              where: {
+                action: {
+                  in: [...publicationActions, 'EDIT', 'CLASSIFY_FESTIVAL', 'LANDING_EDIT'],
+                },
+              },
               select: { action: true },
               orderBy: { version: 'desc' },
               take: 1,
@@ -348,7 +373,11 @@ export class CampaignLandingsService {
       },
       orderBy: publicOrder,
     });
-    return completed.find(({ campaign }) => campaign.revisions[0]?.action === 'PUBLISH') ?? null;
+    return (
+      completed.find(({ campaign }) =>
+        publicationActions.includes(campaign.revisions[0]?.action ?? ''),
+      ) ?? null
+    );
   }
 
   async placement(slot: CampaignBannerSlot, slug: string | undefined, now = new Date()) {
@@ -421,7 +450,10 @@ export class CampaignLandingsService {
     return this.db.$transaction(
       async (tx) => {
         const landings = await tx.campaignLanding.findMany({
-          where: { seoMode: 'RECURRING', campaign: activeWindow(now) },
+          where: {
+            seoMode: 'RECURRING',
+            campaign: { ...activeWindow(now), kind: { not: 'FESTIVAL' } },
+          },
           include: { campaign: true },
           orderBy: publicOrder,
         });
@@ -441,6 +473,12 @@ export class CampaignLandingsService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 10_000 },
     );
+  }
+
+  private assertLandingKind({ kind }: Pick<Campaign, 'kind'>) {
+    if (kind === 'MARKETING') {
+      throw new BadRequestException('Marketing campaigns do not have a landing.');
+    }
   }
 
   private async prepare(

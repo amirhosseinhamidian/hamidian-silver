@@ -126,7 +126,7 @@ export function CampaignOperationsCenter({
         description={`آخرین بررسی ${formatAdminDateTime(data.checkedAt)}`}
         action={
           <Badge tone={campaign.status === 'ACTIVE' ? 'success' : 'neutral'}>
-            {campaignStatusLabels[campaign.status]}
+            {campaign.archivedAt ? 'بایگانی‌شده' : campaignStatusLabels[campaign.status]}
           </Badge>
         }
       >
@@ -142,7 +142,7 @@ export function CampaignOperationsCenter({
               گزارش عملیات مدیران
             </ButtonLink>
           )}
-          {data.landingSlug && (
+          {data.landingSlug && !campaign.archivedAt && (
             <ButtonLink
               href={`${storefrontOrigin}/campaigns/${encodeURIComponent(data.landingSlug)}`}
               target="_blank"
@@ -157,7 +157,13 @@ export function CampaignOperationsCenter({
       </Card>
 
       <Card title="سفارش، پرداخت و انتشار">
-        <p className="mb-3 text-sm">{publicationLabels[data.publication]}</p>
+        <p className="mb-3 text-sm">
+          {campaign.archivedAt
+            ? 'صفحهٔ این دوره بایگانی شده است.'
+            : campaign.kind === 'MARKETING' && data.publication === 'NO_LANDING'
+              ? 'کمپین بازاریابی از پیوند مقصد تعیین‌شده استفاده می‌کند.'
+              : publicationLabels[data.publication]}
+        </p>
         {observedIssues > 0 && (
           <div className="mb-3">
             <Alert tone="warning">

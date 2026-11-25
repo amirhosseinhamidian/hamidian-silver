@@ -5,6 +5,7 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -16,6 +17,7 @@ import {
 } from 'class-validator';
 import {
   CampaignAudience,
+  CampaignKind,
   CampaignNavigationEffect,
   CampaignStatus,
 } from '../../../generated/prisma/enums';
@@ -41,11 +43,13 @@ export class CampaignDraftDto {
   @Length(1, 500)
   goal!: string;
 
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
   @Trimmed()
   @Type(() => Object)
   @IsString()
   @Length(1, 96)
-  channel!: string;
+  channel?: string;
 
   @Type(() => Object)
   @IsBoolean()
@@ -134,26 +138,42 @@ export class CampaignDraftDto {
 }
 
 export class CreateCampaignDto extends CampaignDraftDto {
+  @ApiPropertyOptional({ enum: [CampaignKind.MARKETING, CampaignKind.FESTIVAL] })
+  @IsOptional()
+  @Type(() => Object)
+  @IsIn([CampaignKind.MARKETING, CampaignKind.FESTIVAL])
+  kind?: 'MARKETING' | 'FESTIVAL';
+
   @Type(() => Object)
   @IsString()
   @Length(1, 64)
   @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
   slug!: string;
 
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
   @Trimmed()
   @Type(() => Object)
   @IsString()
   @Length(1, 64)
-  trackingId!: string;
+  trackingId?: string;
 
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
   @Trimmed()
   @Type(() => Object)
   @IsString()
   @Length(1, 96)
-  trackingLabel!: string;
+  trackingLabel?: string;
 }
 
 export class UpdateCampaignDto extends CampaignDraftDto {
+  @ApiPropertyOptional({ enum: [CampaignKind.FESTIVAL] })
+  @IsOptional()
+  @Type(() => Object)
+  @IsIn([CampaignKind.FESTIVAL])
+  kind?: 'FESTIVAL';
+
   @Type(() => Object)
   @IsInt()
   @Min(1)
@@ -203,8 +223,14 @@ export class CampaignSummaryDto {
   name!: string;
   ownerId!: string;
 
+  @ApiProperty({ enum: CampaignKind })
+  kind!: CampaignKind;
+
   @ApiProperty({ enum: CampaignStatus })
   status!: CampaignStatus;
+
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  archivedAt!: string | null;
 
   @ApiProperty({ format: 'date-time' })
   startsAt!: string;

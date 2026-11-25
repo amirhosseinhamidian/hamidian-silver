@@ -49,11 +49,11 @@ test('shows the collection without horizontal overflow and normalizes campaign U
   );
 });
 
-test('keeps temporary, archived and empty pages out of the index and missing routes out of the catalog', async ({
+test('keeps festival, temporary, archived and empty pages out of the index', async ({
   page,
   request,
 }) => {
-  for (const slug of ['weekend', 'archived-nowruz', 'empty-collection']) {
+  for (const slug of ['festival-nowruz', 'weekend', 'archived-nowruz', 'empty-collection']) {
     const response = await page.goto(`/campaigns/${slug}`);
     expect(response?.status()).toBe(200);
     await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute(

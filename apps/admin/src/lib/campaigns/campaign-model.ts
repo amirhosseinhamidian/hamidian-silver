@@ -16,6 +16,12 @@ export const campaignAudienceOptions = Object.entries(campaignAudienceLabels).ma
   ([value, label]) => ({ value, label }),
 );
 
+export const campaignKindLabels: Record<CampaignSummary['kind'], string> = {
+  LEGACY: 'کمپین قبلی',
+  MARKETING: 'کمپین بازاریابی',
+  FESTIVAL: 'جشنوارهٔ فروش',
+};
+
 export const campaignStatusLabels: Record<CampaignSummary['status'], string> = {
   DRAFT: 'پیش‌نویس',
   APPROVED: 'تأییدشده',
@@ -28,10 +34,12 @@ export const campaignStatusLabels: Record<CampaignSummary['status'], string> = {
 export const campaignActionLabels: Record<CampaignAction, string> = {
   APPROVE: 'تأیید پیش‌نویس',
   SCHEDULE: 'زمان‌بندی انتشار',
+  PUBLISH_NOW: 'انتشار فوری',
   PAUSE: 'توقف موقت',
   RESUME: 'زمان‌بندی دوباره',
   REOPEN: 'بازگشت به پیش‌نویس',
   END: 'پایان کمپین',
+  ARCHIVE: 'بایگانی جشنواره',
 };
 
 export function isCampaignId(value: string) {

@@ -270,6 +270,9 @@ export class PublicCampaignLandingQueryDto extends PickType(PublicCatalogFacetsQ
 }
 
 export class PublicCampaignLandingDto {
+  @ApiPropertyOptional({ type: Boolean })
+  isFestival?: boolean;
+
   slug!: string;
   title!: string;
   story!: string;

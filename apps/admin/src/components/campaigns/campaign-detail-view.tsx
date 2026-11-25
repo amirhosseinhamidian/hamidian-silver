@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { campaignError } from '@/lib/campaigns/campaign-api-errors';
 import {
   campaignActionLabels,
+  campaignKindLabels,
   campaignStatusLabels,
   type CampaignAction,
   type CampaignDetail,
@@ -36,7 +37,9 @@ const historyLabels: Record<string, string> = {
   ...campaignActionLabels,
   CREATE: 'ایجاد پیش‌نویس',
   EDIT: 'ویرایش پیش‌نویس',
+  CLASSIFY_FESTIVAL: 'ثبت به‌عنوان جشنوارهٔ فروش',
   PUBLISH: 'انتشار خودکار',
+  PUBLICATION_BLOCKED: 'توقف انتشار خودکار به‌دلیل خطای اعتبارسنجی',
   EXPIRE: 'پایان خودکار',
   LANDING_EDIT: 'ویرایش صفحه و مجموعه',
   PROMOTION_EDIT: 'ویرایش قانون تخفیف',
@@ -53,10 +56,21 @@ export function CampaignDetailView({
   const requests = useRef(new Map<CampaignAction, string>());
   const [pending, setPending] = useState<CampaignAction | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const isFestival = campaign.kind === 'FESTIVAL';
+  const actions = [...statusActions[campaign.status]];
+  if (isFestival && (campaign.status === 'APPROVED' || campaign.status === 'SCHEDULED')) {
+    actions.unshift('PUBLISH_NOW');
+  }
+  if (isFestival && campaign.status === 'ENDED' && !campaign.archivedAt) actions.push('ARCHIVE');
 
   async function transition(action: CampaignAction) {
     if (pending) return;
     if (action === 'END' && !window.confirm('پایان کمپین قطعی است. کمپین پایان یابد؟')) return;
+    if (
+      action === 'ARCHIVE' &&
+      !window.confirm('با بایگانی، لندینگ این دوره از فروشگاه خارج می‌شود. جشنواره بایگانی شود؟')
+    )
+      return;
     const requestId = requests.current.get(action) ?? crypto.randomUUID();
     requests.current.set(action, requestId);
     setPending(action);
@@ -80,20 +94,25 @@ export function CampaignDetailView({
   }
 
   const details = [
+    ['نوع', campaignKindLabels[campaign.kind]],
     ['هدف', campaign.goal],
-    ['کانال', campaign.channel],
     [
       'مالک',
       <span key="owner" className="break-all font-mono" dir="ltr">
         {campaign.ownerId}
       </span>,
     ],
-    [
-      'شناسه و نام ردیابی',
-      <span key="tracking" className="break-all" dir="ltr">
-        {campaign.trackingId} / {campaign.trackingLabel}
-      </span>,
-    ],
+    ...(!isFestival
+      ? ([
+          ['کانال', campaign.channel],
+          [
+            'شناسه و نام ردیابی',
+            <span key="tracking" className="break-all" dir="ltr">
+              {campaign.trackingId} / {campaign.trackingLabel}
+            </span>,
+          ],
+        ] as const)
+      : []),
     ['زمان آغاز به وقت تهران', <bdi key="start">{toPersianDigits(campaign.startsTehran)}</bdi>],
     ['زمان پایان به وقت تهران', <bdi key="end">{toPersianDigits(campaign.endsTehran)}</bdi>],
     [
@@ -120,7 +139,7 @@ export function CampaignDetailView({
         description={campaign.slug}
         action={
           <Badge tone={campaign.status === 'ACTIVE' ? 'success' : 'neutral'}>
-            {campaignStatusLabels[campaign.status]}
+            {campaign.archivedAt ? 'بایگانی‌شده' : campaignStatusLabels[campaign.status]}
           </Badge>
         }
       >
@@ -132,7 +151,7 @@ export function CampaignDetailView({
             </div>
           ))}
         </dl>
-        {canWrite && statusActions[campaign.status].length > 0 && (
+        {canWrite && actions.length > 0 && (
           <div className="mt-5 space-y-3">
             {error && <Alert tone="danger">{error}</Alert>}
             {campaign.status === 'PAUSED' && (
@@ -146,7 +165,7 @@ export function CampaignDetailView({
                   ویرایش
                 </ButtonLink>
               )}
-              {statusActions[campaign.status].map((action) => (
+              {actions.map((action) => (
                 <Button
                   key={action}
                   variant={action === 'END' ? 'danger' : 'secondary'}
@@ -154,7 +173,10 @@ export function CampaignDetailView({
                   disabled={
                     pending !== null ||
                     (campaign.budget.blockers.length > 0 &&
-                      (action === 'APPROVE' || action === 'SCHEDULE' || action === 'RESUME'))
+                      (action === 'APPROVE' ||
+                        action === 'SCHEDULE' ||
+                        action === 'RESUME' ||
+                        action === 'PUBLISH_NOW'))
                   }
                   onClick={() => void transition(action)}
                 >

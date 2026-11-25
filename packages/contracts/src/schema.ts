@@ -4977,7 +4977,11 @@ export interface components {
         };
         CampaignSummaryDto: {
             /** @enum {string} */
+            kind: "LEGACY" | "MARKETING" | "FESTIVAL";
+            /** @enum {string} */
             status: "DRAFT" | "APPROVED" | "SCHEDULED" | "ACTIVE" | "PAUSED" | "ENDED";
+            /** Format: date-time */
+            archivedAt: string | null;
             /** Format: date-time */
             startsAt: string;
             /** Format: date-time */
@@ -5024,7 +5028,11 @@ export interface components {
         };
         CampaignDetailDto: {
             /** @enum {string} */
+            kind: "LEGACY" | "MARKETING" | "FESTIVAL";
+            /** @enum {string} */
             status: "DRAFT" | "APPROVED" | "SCHEDULED" | "ACTIVE" | "PAUSED" | "ENDED";
+            /** Format: date-time */
+            archivedAt: string | null;
             /** Format: date-time */
             startsAt: string;
             /** Format: date-time */
@@ -5059,6 +5067,7 @@ export interface components {
             revision: number;
         };
         CreateCampaignDto: {
+            channel?: string;
             productSlugs: string[];
             categorySlugs: string[];
             plannedChannelCostToman?: number | null;
@@ -5068,12 +5077,13 @@ export interface components {
             mediaId?: string | null;
             ctaPath?: string | null;
             ctaLabel?: string | null;
+            /** @enum {string} */
+            kind?: "MARKETING" | "FESTIVAL";
+            trackingId?: string;
+            trackingLabel?: string;
             slug: string;
-            trackingId: string;
-            trackingLabel: string;
             name: string;
             goal: string;
-            channel: string;
             allProducts: boolean;
             startsTehran: string;
             endsTehran: string;
@@ -5083,6 +5093,7 @@ export interface components {
             bannerPriority: number;
         };
         UpdateCampaignDto: {
+            channel?: string;
             productSlugs: string[];
             categorySlugs: string[];
             plannedChannelCostToman?: number | null;
@@ -5092,10 +5103,11 @@ export interface components {
             mediaId?: string | null;
             ctaPath?: string | null;
             ctaLabel?: string | null;
+            /** @enum {string} */
+            kind?: "FESTIVAL";
             expectedRevision: number;
             name: string;
             goal: string;
-            channel: string;
             allProducts: boolean;
             startsTehran: string;
             endsTehran: string;
@@ -5126,7 +5138,7 @@ export interface components {
         };
         CampaignTransitionDto: {
             /** @enum {string} */
-            action: "APPROVE" | "SCHEDULE" | "PAUSE" | "RESUME" | "REOPEN" | "END";
+            action: "APPROVE" | "SCHEDULE" | "PUBLISH_NOW" | "PAUSE" | "RESUME" | "REOPEN" | "END" | "ARCHIVE";
             expectedRevision: number;
             /** Format: uuid */
             requestId: string;
@@ -5295,6 +5307,7 @@ export interface components {
             totalPages: number;
         };
         PublicCampaignLandingDto: {
+            isFestival?: boolean;
             /** @enum {string} */
             seoMode: "TEMPORARY" | "RECURRING";
             /** Format: uuid */

@@ -52,6 +52,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     description: landing.story.slice(0, 160),
     ...(hasCampaignFilters(filters) ? { seoCanonicalPath: `/campaigns/${landing.slug}` } : {}),
     seoNoIndex:
+      landing.isFestival === true ||
       hasCampaignFilters(filters) ||
       landing.seoMode !== 'RECURRING' ||
       !landing.active ||
