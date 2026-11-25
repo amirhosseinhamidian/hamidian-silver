@@ -1,10 +1,12 @@
 import type { components } from '@hamidian/contracts';
+import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { campaignMessage } from '@/lib/campaigns/campaign-api-errors';
 import { campaignStatusLabels, type CampaignDetail } from '@/lib/campaigns/campaign-model';
 import {
   formatAdminDateTime,
@@ -15,6 +17,21 @@ import { CampaignEmergencyPause } from './campaign-emergency-pause';
 
 type Operations = components['schemas']['CampaignOperationsCenterDto'];
 type OrderState = components['schemas']['CampaignOrderOperationDto']['state'];
+type QuotaProduct = components['schemas']['CampaignQuotaOperationDto'];
+type OperationCampaign = Pick<
+  CampaignDetail,
+  | 'id'
+  | 'revision'
+  | 'kind'
+  | 'status'
+  | 'name'
+  | 'trackingId'
+  | 'archivedAt'
+  | 'startsAt'
+  | 'endsAt'
+  | 'budget'
+  | 'history'
+>;
 
 const integer = formatAdminInteger;
 const money = formatAdminToman;
@@ -39,7 +56,91 @@ const publicationLabels: Record<Operations['publication'], string> = {
   EMPTY: 'کمپین فعال است و مجموعه محصول قابل خرید ندارد',
   LIVE: 'صفحهٔ کمپین و محصولات قابل خرید در دسترس‌اند',
   UNKNOWN: 'بررسی مجموعه ممکن نشد',
+  HISTORICAL: 'صفحهٔ دورهٔ پایان‌یافته در دسترس است',
 };
+
+const productStatusLabels: Record<QuotaProduct['productStatus'], string> = {
+  ACTIVE: 'فعال',
+  DRAFT: 'پیش‌نویس',
+  ARCHIVED: 'بایگانی‌شده',
+  DELETED: 'حذف‌شده',
+};
+
+function timeRemaining(endsAt: string, checkedAt: string) {
+  const remaining = Math.ceil((Date.parse(endsAt) - Date.parse(checkedAt)) / 60_000);
+  if (remaining <= 0) return 'زمان پایان گذشته است';
+  const days = Math.floor(remaining / 1440);
+  const hours = Math.floor((remaining % 1440) / 60);
+  const minutes = remaining % 60;
+  return [
+    days && `${integer(days)} روز`,
+    hours && `${integer(hours)} ساعت`,
+    minutes && `${integer(minutes)} دقیقه`,
+  ]
+    .filter(Boolean)
+    .join(' و ');
+}
+
+function QuotaProductName({
+  row,
+  festival,
+  canEditCatalog,
+}: {
+  row: QuotaProduct;
+  festival: boolean;
+  canEditCatalog: boolean;
+}) {
+  const href =
+    row.productStatus === 'DELETED'
+      ? null
+      : canEditCatalog
+        ? `/products/${row.productId}/edit`
+        : row.productStatus === 'ACTIVE'
+          ? `${storefrontOrigin}/products/${encodeURIComponent(row.slug)}`
+          : null;
+  return (
+    <div className="flex min-w-36 items-start gap-2">
+      {festival && row.imageUrl && (
+        <Image
+          src={row.imageUrl}
+          alt=""
+          width={40}
+          height={40}
+          unoptimized
+          className="size-10 rounded object-cover"
+        />
+      )}
+      <div>
+        {href ? (
+          <Link
+            href={href}
+            className="underline"
+            target={canEditCatalog ? undefined : '_blank'}
+            rel={canEditCatalog ? undefined : 'noreferrer'}
+          >
+            {row.name}
+          </Link>
+        ) : (
+          row.name
+        )}
+        {festival && row.variants.length > 1 && (
+          <details className="mt-1 text-xs font-normal">
+            <summary className="cursor-pointer">قیمت واریانت‌ها</summary>
+            <ul className="mt-1 space-y-1">
+              {row.variants.map((variant) => (
+                <li key={variant.sku}>
+                  <bdi>{variant.name ?? variant.sku}</bdi>{' '}
+                  {variant.priceToman === null ? 'قیمت ثبت نشده' : money(variant.priceToman)}
+                </li>
+              ))}
+            </ul>
+            {row.hasMoreVariants && <p className="mt-1">فهرست کامل در صفحهٔ محصول</p>}
+          </details>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function Metrics({ rows }: { rows: readonly (readonly [string, ReactNode])[] }) {
   return (
@@ -90,24 +191,30 @@ export function CampaignOperationsCenter({
   campaign,
   data,
   orderState,
+  orderSort,
   canWrite,
   canEditCatalog,
   canReadAudit,
 }: {
-  campaign: CampaignDetail;
+  campaign: OperationCampaign;
   data: Operations;
   orderState?: OrderState;
+  orderSort: 'newest' | 'oldest';
   canWrite: boolean;
   canEditCatalog: boolean;
   canReadAudit: boolean;
 }) {
-  const { orders, quota, finance } = data;
+  const { orders, quota, finance, festival } = data;
   const reportPath = `/growth/campaigns/${encodeURIComponent(campaign.trackingId)}`;
+  const reviewPath = `/campaigns?id=${campaign.id}&step=review`;
+  const salesPath = `/campaigns?id=${campaign.id}&step=promotion`;
+  const landingPath = `/campaigns?id=${campaign.id}&step=landing`;
   const operationPath = (orderPage: number, quotaPage: number, filter = orderState) => {
     const query = new URLSearchParams({ id: campaign.id, step: 'operations' });
     if (orderPage > 1) query.set('orderPage', String(orderPage));
     if (quotaPage > 1) query.set('quotaPage', String(quotaPage));
     if (filter) query.set('orderState', filter);
+    if (orderSort === 'oldest') query.set('orderSort', orderSort);
     return `/campaigns?${query}`;
   };
   const observedIssues =
@@ -118,6 +225,13 @@ export function CampaignOperationsCenter({
   const shortfall = data.quotaItems.some(({ stockShortfall }) => stockShortfall > 0);
   const cell = 'px-3 py-2 text-start align-top';
   const active = campaign.status === 'ACTIVE' || campaign.status === 'SCHEDULED';
+  const publicLanding =
+    data.publication === 'LIVE' ||
+    data.publication === 'EMPTY' ||
+    data.publication === 'HISTORICAL';
+  const budgetLimit = campaign.budget.discountBudgetToman;
+  const budgetUsed = Math.max(0, budgetLimit - campaign.budget.remainingDiscountToman);
+  const usedPercent = budgetLimit > 0 ? Math.round((100 * budgetUsed) / budgetLimit) : 0;
 
   return (
     <div className="space-y-5">
@@ -134,7 +248,7 @@ export function CampaignOperationsCenter({
           {canWrite && active && (
             <CampaignEmergencyPause key={campaign.revision} campaign={campaign} />
           )}
-          <ButtonLink href={`/campaigns?id=${campaign.id}&step=review`} variant="outline" size="sm">
+          <ButtonLink href={reviewPath} variant="outline" size="sm">
             چرخه و تاریخچهٔ کمپین
           </ButtonLink>
           {canReadAudit && (
@@ -142,7 +256,7 @@ export function CampaignOperationsCenter({
               گزارش عملیات مدیران
             </ButtonLink>
           )}
-          {data.landingSlug && !campaign.archivedAt && (
+          {data.landingSlug && !campaign.archivedAt && (!festival || publicLanding) && (
             <ButtonLink
               href={`${storefrontOrigin}/campaigns/${encodeURIComponent(data.landingSlug)}`}
               target="_blank"
@@ -150,21 +264,63 @@ export function CampaignOperationsCenter({
               variant="outline"
               size="sm"
             >
-              صفحهٔ کمپین
+              مشاهدهٔ صفحه در فروشگاه
             </ButtonLink>
           )}
         </div>
       </Card>
 
-      <Card title="سفارش، پرداخت و انتشار">
-        <p className="mb-3 text-sm">
-          {campaign.archivedAt
-            ? 'صفحهٔ این دوره بایگانی شده است.'
-            : campaign.kind === 'MARKETING' && data.publication === 'NO_LANDING'
-              ? 'کمپین بازاریابی از پیوند مقصد تعیین‌شده استفاده می‌کند.'
-              : publicationLabels[data.publication]}
-        </p>
-        {observedIssues > 0 && (
+      {festival && (
+        <Card title="وضعیت انتشار جشنواره">
+          <Metrics
+            rows={[
+              ['شروع', formatAdminDateTime(campaign.startsAt)],
+              ['پایان', formatAdminDateTime(campaign.endsAt)],
+              [
+                'تا پایان',
+                campaign.archivedAt || campaign.status === 'ENDED'
+                  ? 'پایان‌یافته'
+                  : timeRemaining(campaign.endsAt, data.checkedAt),
+              ],
+              [
+                'آخرین نسخهٔ منتشرشده',
+                festival.version === null ? 'ثبت نشده' : integer(festival.version),
+              ],
+              ['لندینگ', campaign.archivedAt ? 'بایگانی‌شده' : publicationLabels[data.publication]],
+              ['آیتم منو', festival.navigation ? 'در حال نمایش' : 'نمایش داده نمی‌شود'],
+              ['نوار اعلان', festival.announcement ? 'در حال نمایش' : 'نمایش داده نمی‌شود'],
+            ]}
+          />
+          {(festival.publicationError ||
+            ['NO_LANDING', 'EMPTY', 'UNKNOWN'].includes(data.publication)) && (
+            <Alert tone="warning" title="نیاز به بررسی انتشار" className="mt-3">
+              <p>
+                {festival.publicationError
+                  ? campaignMessage(
+                      festival.publicationError,
+                      'انتشار خودکار متوقف شد. دلیل را در تاریخچهٔ نسخه‌ها بررسی کنید.',
+                    )
+                  : publicationLabels[data.publication]}
+              </p>
+              <Link href={landingPath} className="underline">
+                باز کردن تنظیمات لندینگ
+              </Link>
+            </Alert>
+          )}
+        </Card>
+      )}
+
+      <Card title={festival ? 'سفارش‌ها و پرداخت‌ها' : 'سفارش، پرداخت و انتشار'}>
+        {!festival && (
+          <p className="mb-3 text-sm">
+            {campaign.archivedAt
+              ? 'صفحهٔ این دوره بایگانی شده است.'
+              : campaign.kind === 'MARKETING' && data.publication === 'NO_LANDING'
+                ? 'کمپین بازاریابی از پیوند مقصد تعیین‌شده استفاده می‌کند.'
+                : publicationLabels[data.publication]}
+          </p>
+        )}
+        {!festival && observedIssues > 0 && (
           <div className="mb-3">
             <Alert tone="warning">
               رد رسید، پرداخت ناموفق، نیاز به تطبیق یا رزرو گذشته از مهلت ثبت شده است. برای رسیدگی،
@@ -179,11 +335,15 @@ export function CampaignOperationsCenter({
             ['در انتظار پرداخت', integer(orders.pending)],
             ['رسید در انتظار بررسی', integer(orders.awaitingReceipt)],
             ['رسید ردشده', integer(orders.rejectedReceipt)],
-            ['پرداخت ناموفق', integer(orders.paymentFailed)],
-            ['نیازمند تطبیق', integer(orders.reconciliation)],
-            ['مهلت رزرو گذشته', integer(orders.overdueReservations)],
-            ['منقضی‌شده', integer(orders.expired)],
             ['لغوشده', integer(orders.cancelled)],
+            ['نیازمند تطبیق', integer(orders.reconciliation)],
+            ...(!festival
+              ? ([
+                  ['پرداخت ناموفق', integer(orders.paymentFailed)],
+                  ['مهلت رزرو گذشته', integer(orders.overdueReservations)],
+                  ['منقضی‌شده', integer(orders.expired)],
+                ] as const)
+              : []),
           ]}
         />
         <p className="mt-3 text-xs leading-6 text-[var(--admin-color-muted)]">
@@ -207,6 +367,17 @@ export function CampaignOperationsCenter({
                   {label}
                 </option>
               ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm">
+            ترتیب ثبت
+            <select
+              name="orderSort"
+              defaultValue={orderSort}
+              className="min-h-9 rounded-md border border-[var(--admin-color-border)] px-2"
+            >
+              <option value="newest">جدیدترین</option>
+              <option value="oldest">قدیمی‌ترین</option>
             </select>
           </label>
           <button
@@ -278,7 +449,7 @@ export function CampaignOperationsCenter({
             ['ماندهٔ سهمیه', integer(quota.remaining)],
           ]}
         />
-        {shortfall && (
+        {!festival && shortfall && (
           <div className="mt-3">
             <Alert tone="warning">
               در ردیف‌های این صفحه، موجودی بعضی محصولات کمتر از ماندهٔ سهمیه است.
@@ -292,6 +463,7 @@ export function CampaignOperationsCenter({
                 <tr>
                   {[
                     'محصول',
+                    ...(festival ? ['وضعیت محصول', 'قیمت پیش‌فرض'] : []),
                     'سقف',
                     'فروش سایت',
                     'فروش دستی',
@@ -310,21 +482,22 @@ export function CampaignOperationsCenter({
                 {data.quotaItems.map((row) => (
                   <tr key={row.productId}>
                     <th scope="row" className={cell}>
-                      {canEditCatalog ? (
-                        <Link className="underline" href={`/products/${row.productId}/edit`}>
-                          {row.name}
-                        </Link>
-                      ) : (
-                        <Link
-                          className="underline"
-                          href={`${storefrontOrigin}/products/${encodeURIComponent(row.slug)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {row.name}
-                        </Link>
-                      )}
+                      <QuotaProductName
+                        row={row}
+                        festival={Boolean(festival)}
+                        canEditCatalog={canEditCatalog}
+                      />
                     </th>
+                    {festival && (
+                      <>
+                        <td className={cell}>{productStatusLabels[row.productStatus]}</td>
+                        <td className={cell}>
+                          {row.defaultPriceToman === null
+                            ? 'ثبت نشده'
+                            : money(row.defaultPriceToman)}
+                        </td>
+                      </>
+                    )}
                     {[
                       row.limit,
                       row.siteSold,
@@ -352,14 +525,11 @@ export function CampaignOperationsCenter({
         ) : (
           <p className="mt-4 text-sm">در این صفحه سهمیه‌ای برای نمایش وجود ندارد.</p>
         )}
-        <ButtonLink
-          href={`/campaigns?id=${campaign.id}&step=promotion`}
-          variant="outline"
-          size="sm"
-          className="mt-3"
-        >
-          مدیریت سهمیه و فروش دستی
-        </ButtonLink>
+        {canWrite && (
+          <ButtonLink href={salesPath} variant="outline" size="sm" className="mt-3">
+            مدیریت سهمیه و فروش دستی
+          </ButtonLink>
+        )}
         <PageLinks
           label="صفحات سهمیهٔ محصولات"
           page={data.quotaPage}
@@ -395,6 +565,65 @@ export function CampaignOperationsCenter({
               ['بودجهٔ تخفیف باقی‌مانده', money(campaign.budget.remainingDiscountToman)],
             ]}
           />
+          {festival && budgetLimit > 0 && (
+            <label className="mt-3 grid gap-1 text-sm">
+              <span>بودجهٔ درگیر {integer(usedPercent)}٪</span>
+              <progress
+                className="h-2 w-full accent-[var(--admin-color-info)]"
+                max={budgetLimit}
+                value={budgetUsed}
+              />
+            </label>
+          )}
+          {festival && campaign.budget.blockers.length > 0 && (
+            <Alert tone="warning" title="مانع انتشار یا ادامهٔ تخفیف" className="mt-3">
+              <ul>
+                {campaign.budget.blockers.map((reason) => (
+                  <li key={reason}>
+                    {campaignMessage(reason, 'تنظیمات قانون و بودجه را بررسی کنید.')}
+                  </li>
+                ))}
+              </ul>
+              <Link href={salesPath} className="underline">
+                مشاهدهٔ قوانین فروش
+              </Link>
+            </Alert>
+          )}
+        </Card>
+      )}
+      {festival && (
+        <Card title="سلامت عملیاتی">
+          <ul className="space-y-2 text-sm">
+            <li>
+              <Link className="underline" href={operationPath(1, data.quotaPage, 'PAYMENT_FAILED')}>
+                پرداخت ناموفق
+              </Link>{' '}
+              {integer(orders.paymentFailed)}
+            </li>
+            <li>
+              <Link className="underline" href={operationPath(1, data.quotaPage, 'RECONCILIATION')}>
+                نیازمند تطبیق پرداخت
+              </Link>{' '}
+              {integer(orders.reconciliation)}
+            </li>
+            <li>رزروهای گذشته از مهلت {integer(orders.overdueReservations)}</li>
+            <li>محصولات با کسری موجودی نسبت به سهمیه {integer(festival.stockShortfallProducts)}</li>
+            <li>
+              محصولات فعال سهمیه‌دار بدون قیمت پیش‌فرض معتبر{' '}
+              {integer(festival.missingDefaultPriceProducts)}
+            </li>
+          </ul>
+          {campaign.history[0] && (
+            <p className="mt-3 text-sm">
+              <Link className="underline" href={reviewPath}>
+                تاریخچهٔ عملیات
+              </Link>{' '}
+              <span>
+                آخرین تغییر نسخهٔ {integer(campaign.history[0].version)} در{' '}
+                {formatAdminDateTime(campaign.history[0].recordedAt)}
+              </span>
+            </p>
+          )}
         </Card>
       )}
     </div>

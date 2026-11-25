@@ -5799,6 +5799,11 @@ export interface components {
             manualSold: number;
             remaining: number;
         };
+        CampaignQuotaVariantDto: {
+            name: string | null;
+            priceToman: number | null;
+            sku: string;
+        };
         CampaignQuotaOperationDto: {
             slug: string;
             name: string;
@@ -5811,11 +5816,25 @@ export interface components {
             sellableStock: number;
             /** Format: uuid */
             productId: string;
+            /** @enum {string} */
+            productStatus: "ACTIVE" | "DRAFT" | "ARCHIVED" | "DELETED";
+            defaultPriceToman: number | null;
+            imageUrl: string | null;
+            variants: components["schemas"]["CampaignQuotaVariantDto"][];
             stockShortfall: number;
+            hasMoreVariants: boolean;
         };
         CampaignOperationsFinanceDto: {
             confirmedMerchandiseDiscountToman: number;
             confirmedShippingDiscountToman: number;
+        };
+        FestivalOperationsStatusDto: {
+            version: number | null;
+            publicationError: string | null;
+            navigation: boolean;
+            announcement: boolean;
+            stockShortfallProducts: number;
+            missingDefaultPriceProducts: number;
         };
         CampaignOperationsCenterDto: {
             orders: components["schemas"]["CampaignOrderCountsDto"];
@@ -5825,7 +5844,8 @@ export interface components {
             finance: components["schemas"]["CampaignOperationsFinanceDto"] | null;
             landingSlug: string | null;
             /** @enum {string} */
-            publication: "NO_LANDING" | "INACTIVE" | "EMPTY" | "LIVE" | "UNKNOWN";
+            publication: "NO_LANDING" | "INACTIVE" | "EMPTY" | "LIVE" | "UNKNOWN" | "HISTORICAL";
+            festival: components["schemas"]["FestivalOperationsStatusDto"] | null;
             /** Format: date-time */
             checkedAt: string;
             orderPage: number;
@@ -9954,6 +9974,7 @@ export interface operations {
                 orderPage?: number;
                 quotaPage?: number;
                 orderState?: "PENDING" | "CONFIRMED" | "RECEIPT_REVIEW" | "RECEIPT_REJECTED" | "PAYMENT_FAILED" | "RECONCILIATION" | "CANCELLED" | "EXPIRED";
+                orderSort?: "newest" | "oldest";
             };
             header?: never;
             path: {

@@ -5,6 +5,7 @@ import { formatTehranDate } from '../src/modules/campaigns/campaign-calendar';
 import type { CampaignAction } from '../src/modules/campaigns/campaign-lifecycle';
 import { resolveHumanAuditEvent } from '../src/modules/audit/audit-event';
 import { CampaignLandingsService } from '../src/modules/campaigns/campaign-landings.service';
+import { CampaignOperationsCenterService } from '../src/modules/campaigns/campaign-operations-center.service';
 import { CampaignsService } from '../src/modules/campaigns/campaigns.service';
 import type { CampaignLandingDraftDto } from '../src/modules/campaigns/dto/campaign-landing.dto';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
@@ -159,7 +160,9 @@ it('separates festival publication and archival from existing campaign tracking'
   const config = new ConfigService();
   const db = new PrismaService(config);
   const media = new PublicMediaUrlService(config);
-  const landings = new CampaignLandingsService(db, new CatalogService(db, media), media);
+  const catalog = new CatalogService(db, media);
+  const landings = new CampaignLandingsService(db, catalog, media);
+  const operations = new CampaignOperationsCenterService(db, catalog, landings, media);
   const campaigns = new CampaignsService(db, media, landings);
   const slug = `fest-${randomUUID()}`;
   const phone = `+0${BigInt(`0x${randomUUID().replaceAll('-', '').slice(0, 12)}`)}`;
@@ -209,6 +212,7 @@ it('separates festival publication and archival from existing campaign tracking'
       manualProductSlugs: [slug],
       placements: [
         { slot: 'NAVIGATION', priority: 50, appearance: { display: { title: 'منوی منتشرشده' } } },
+        { slot: 'COUNTDOWN', priority: 50 },
       ],
     } satisfies CampaignLandingDraftDto;
     const marketTracking = `${slug}-market`;
@@ -261,6 +265,12 @@ it('separates festival publication and archival from existing campaign tracking'
     expect(festival).toMatchObject({ kind: 'FESTIVAL', status: 'DRAFT', revision: 1 });
     const move = (action: CampaignAction, expectedRevision: number, requestId = randomUUID()) =>
       campaigns.transition(festival.id, { action, expectedRevision, requestId }, owner.id);
+    const status = () => operations.read(festival.id, {}, false);
+    await expect(status()).resolves.toMatchObject({
+      publication: 'NO_LANDING',
+      festival: { version: null, navigation: false, announcement: false },
+      finance: null,
+    });
     await expect(move('APPROVE', 1)).rejects.toThrow('A festival needs a landing');
     await landings.save(festival.id, { ...landing, expectedRevision: 1 }, owner.id);
     await expect(move('APPROVE', 2)).resolves.toMatchObject({ status: 'APPROVED', revision: 3 });
@@ -282,6 +292,13 @@ it('separates festival publication and archival from existing campaign tracking'
     expect(blocked.history[0]).toMatchObject({
       action: 'PUBLICATION_BLOCKED',
       snapshot: { publicationError: 'The collection has no sellable products.' },
+    });
+    await expect(status()).resolves.toMatchObject({
+      publication: 'INACTIVE',
+      festival: {
+        version: null,
+        publicationError: 'The collection has no sellable products.',
+      },
     });
     await db.inventory.updateMany({
       where: { variant: { productId: product.id } },
@@ -339,6 +356,10 @@ it('separates festival publication and archival from existing campaign tracking'
         display: { title: 'منوی منتشرشده' },
       },
     });
+    await expect(status()).resolves.toMatchObject({
+      publication: 'LIVE',
+      festival: { version: 8, navigation: true, announcement: true, publicationError: null },
+    });
     await db.campaignLanding.update({
       where: { campaignId: festival.id },
       data: { title: landing.title },
@@ -356,6 +377,10 @@ it('separates festival publication and archival from existing campaign tracking'
     });
     await expect(move('ARCHIVE', 8)).rejects.toThrow('unavailable');
     await expect(move('PAUSE', 8)).resolves.toMatchObject({ status: 'PAUSED', revision: 9 });
+    await expect(status()).resolves.toMatchObject({
+      publication: 'INACTIVE',
+      festival: { version: 8, navigation: false, announcement: false, publicationError: null },
+    });
     await expect(landings.publicLanding(slug, 1)).rejects.toThrow('not found');
     await expect(move('RESUME', 9)).resolves.toMatchObject({ status: 'SCHEDULED', revision: 10 });
     await campaigns.advance(new Date());
@@ -385,8 +410,15 @@ it('separates festival publication and archival from existing campaign tracking'
     );
     expect(restored).toMatchObject({
       revision: 15,
-      landing: { title: landing.title, placements: landing.placements },
+      landing: { title: landing.title },
     });
+    const restoredPlacements = restored.landing?.placements;
+    expect(restoredPlacements).toHaveLength(landing.placements.length);
+    for (const placement of landing.placements) {
+      expect(restoredPlacements?.find(({ slot }) => slot === placement.slot)).toMatchObject(
+        placement,
+      );
+    }
     await expect(
       db.campaignRevision.findUnique({
         where: { campaignId_version: { campaignId: festival.id, version: restored.revision } },
@@ -421,6 +453,10 @@ it('separates festival publication and archival from existing campaign tracking'
       isFestival: true,
       products: { items: [] },
     });
+    await expect(status()).resolves.toMatchObject({
+      publication: 'HISTORICAL',
+      festival: { version: republished.revision, navigation: false, announcement: false },
+    });
     await expect(landings.publicLanding(slug, 2)).rejects.toThrow('not found');
     await expect(landings.publicLanding(slug, 1, new Date(), {}, true)).rejects.toThrow(
       'not found',
@@ -431,6 +467,7 @@ it('separates festival publication and archival from existing campaign tracking'
       revision: 19,
     });
     await expect(move('ARCHIVE', 18, archiveId)).resolves.toMatchObject({ revision: 19 });
+    await expect(status()).resolves.toMatchObject({ publication: 'INACTIVE' });
     await expect(landings.publicLanding(slug, 1)).rejects.toThrow('not found');
   } finally {
     try {

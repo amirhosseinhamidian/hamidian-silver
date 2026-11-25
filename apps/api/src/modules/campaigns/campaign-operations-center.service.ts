@@ -6,10 +6,13 @@ import {
 } from '@nestjs/common';
 import { Prisma, type Campaign, type CampaignLanding } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { buildCatalogStockCte, catalogProductStockSql } from '../catalog/catalog-variant-filter';
 import { CatalogService } from '../catalog/catalog.service';
+import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { confirmedCampaignDiscountSums } from '../growth-attribution/growth-campaign-performance-query';
 import { confirmedGrowthOrders } from '../growth-attribution/growth-revenue-events';
 import { readCampaignProducts } from './campaign-collection';
+import { CampaignLandingsService } from './campaign-landings.service';
 import { quotaCounts, quotaStock, quotaUsage } from './campaign-quota';
 import type {
   CampaignOperationsCenterDto,
@@ -19,6 +22,7 @@ import type {
 } from './dto/campaign-operations-center.dto';
 
 const pageSize = 25;
+const variantPreviewSize = 5;
 type OrderRow = Omit<CampaignOrderOperationDto, 'createdAt'> & { createdAt: Date };
 type CountRow = { [Key in keyof CampaignOrderCountsDto]: bigint };
 
@@ -82,6 +86,8 @@ export class CampaignOperationsCenterService {
   constructor(
     private readonly db: PrismaService,
     private readonly catalog: CatalogService,
+    private readonly landings: CampaignLandingsService,
+    private readonly mediaUrls: PublicMediaUrlService,
   ) {}
 
   async read(
@@ -100,10 +106,16 @@ export class CampaignOperationsCenterService {
 
         const orderPage = query.orderPage ?? 1;
         const quotaPage = query.quotaPage ?? 1;
-        const orders = await this.orders(tx, campaign, orderPage, query.orderState, now);
+        const orders = await this.orders(tx, campaign, orderPage, query, now);
         const quotas = await this.quotas(tx, campaignId, quotaPage);
         const finance = includeFinance ? await this.finance(tx, campaignId) : null;
-        const publication = await this.publication(tx, campaign, campaign.landing, now);
+        const status =
+          campaign.kind === 'FESTIVAL'
+            ? await this.festivalStatus(tx, campaign, campaign.landing, now)
+            : {
+                publication: await this.publication(tx, campaign, campaign.landing, now),
+                festival: null,
+              };
 
         return {
           ...orders,
@@ -111,7 +123,7 @@ export class CampaignOperationsCenterService {
           orderPage,
           quotaPage,
           finance,
-          publication,
+          ...status,
           landingSlug: campaign.landing?.slug ?? null,
           checkedAt: now.toISOString(),
         };
@@ -124,10 +136,11 @@ export class CampaignOperationsCenterService {
     tx: Prisma.TransactionClient,
     campaign: Campaign,
     page: number,
-    state: CampaignOperationsQueryDto['orderState'],
+    { orderState: state, orderSort }: CampaignOperationsQueryDto,
     now: Date,
   ) {
     const scope = scopedOrders(campaign);
+    const sort = orderSort === 'oldest' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
     const [counts] = await tx.$queryRaw<CountRow[]>`
         ${scope}
         SELECT COUNT(*) AS registered,
@@ -152,7 +165,7 @@ export class CampaignOperationsCenterService {
               ? Prisma.sql`WHERE state = ${state}`
               : Prisma.empty
         }
-        ORDER BY "createdAt" DESC, id DESC
+        ORDER BY "createdAt" ${sort}, id ${sort}
         LIMIT ${pageSize + 1} OFFSET ${(page - 1) * pageSize}
       `;
     const orders = {
@@ -188,7 +201,27 @@ export class CampaignOperationsCenterService {
         limit: true,
         manualSold: true,
         revision: true,
-        product: { select: { slug: true, name: true } },
+        product: {
+          select: {
+            slug: true,
+            name: true,
+            status: true,
+            deletedAt: true,
+            salePriceToman: true,
+            media: {
+              where: { media: { deletedAt: null, mimeType: { startsWith: 'image/' } } },
+              orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }, { mediaId: 'asc' }],
+              take: 1,
+              select: { media: { select: { storageKey: true } } },
+            },
+            variants: {
+              where: { deletedAt: null, isActive: true },
+              orderBy: { sku: 'asc' },
+              take: variantPreviewSize + 1,
+              select: { sku: true, name: true, salePriceToman: true },
+            },
+          },
+        },
       },
     });
     const totals = await tx.campaignQuota.aggregate({
@@ -228,8 +261,20 @@ export class CampaignOperationsCenterService {
       quotaItems: items.map((row) => {
         const counts = quotaCounts(row, usage);
         const sellableStock = stock.get(row.productId) ?? 0;
+        const { product } = row;
+        const image = product.media[0]?.media;
         return {
-          ...row.product,
+          slug: product.slug,
+          name: product.name,
+          productStatus: product.deletedAt ? ('DELETED' as const) : product.status,
+          defaultPriceToman: product.salePriceToman,
+          imageUrl: image ? this.mediaUrls.resolve(image.storageKey) : null,
+          variants: product.variants.slice(0, variantPreviewSize).map((variant) => ({
+            sku: variant.sku,
+            name: variant.name,
+            priceToman: variant.salePriceToman ?? product.salePriceToman,
+          })),
+          hasMoreVariants: product.variants.length > variantPreviewSize,
           productId: row.productId,
           revision: row.revision,
           ...counts,
@@ -253,6 +298,80 @@ export class CampaignOperationsCenterService {
     return {
       confirmedMerchandiseDiscountToman: asInteger(amounts.merchandiseDiscountToman),
       confirmedShippingDiscountToman: asInteger(amounts.shippingDiscountToman),
+    };
+  }
+
+  private async festivalStatus(
+    tx: Prisma.TransactionClient,
+    campaign: Campaign,
+    landing: CampaignLanding | null,
+    now: Date,
+  ) {
+    const { publication, ...visibility } = landing
+      ? await this.landings.operationsVisibility(tx, campaign, landing, now)
+      : {
+          publication: 'NO_LANDING' as const,
+          version: null,
+          navigation: false,
+          announcement: false,
+        };
+    const blocked =
+      campaign.status === 'PAUSED'
+        ? await tx.campaignRevision.findFirst({
+            where: {
+              campaignId: campaign.id,
+              version: campaign.revision,
+              action: 'PUBLICATION_BLOCKED',
+            },
+            select: { snapshot: true },
+          })
+        : null;
+    const snapshot = blocked?.snapshot;
+    const reason =
+      snapshot && typeof snapshot === 'object' && !Array.isArray(snapshot)
+        ? snapshot.publicationError
+        : null;
+    const [health] = await tx.$queryRaw<
+      { stockShortfallProducts: bigint; missingDefaultPriceProducts: bigint }[]
+    >`
+      WITH quotas AS MATERIALIZED (
+        SELECT id, "productId", "limit", "manualSold"
+        FROM "campaign_quotas" WHERE "campaignId" = ${campaign.id}::uuid
+      ), usage AS (
+        SELECT a."quotaId", SUM(a.quantity) AS units
+        FROM quotas q JOIN "campaign_quota_allocations" a ON a."quotaId" = q.id
+        WHERE a.state IN ('RESERVED', 'CAPTURED')
+        GROUP BY a."quotaId"
+      ), variants AS MATERIALIZED (
+        SELECT v.id FROM quotas q JOIN "product_variants" v ON v."productId" = q."productId"
+        WHERE v."isActive" AND v."deletedAt" IS NULL
+      ), ${buildCatalogStockCte(
+        true,
+        Prisma.sql`SELECT id FROM variants UNION
+          SELECT recipe."componentVariantId" FROM variants v
+          JOIN "product_variant_components" recipe ON recipe."bundleVariantId" = v.id`,
+      )}
+      SELECT COUNT(*) FILTER (
+        WHERE q."limit" - q."manualSold" - COALESCE(usage.units, 0) >
+          CASE WHEN product.status = 'ACTIVE' AND product."deletedAt" IS NULL
+            THEN ${catalogProductStockSql} ELSE 0 END
+      ) AS "stockShortfallProducts",
+      COUNT(*) FILTER (
+        WHERE product.status = 'ACTIVE' AND product."deletedAt" IS NULL
+          AND COALESCE(product."salePriceToman", 0) <= 0
+      ) AS "missingDefaultPriceProducts"
+      FROM quotas q
+      JOIN "products" product ON product.id = q."productId"
+      LEFT JOIN usage ON usage."quotaId" = q.id
+    `;
+    return {
+      publication,
+      festival: {
+        ...visibility,
+        publicationError: typeof reason === 'string' ? reason : null,
+        stockShortfallProducts: asInteger(health.stockShortfallProducts),
+        missingDefaultPriceProducts: asInteger(health.missingDefaultPriceProducts),
+      },
     };
   }
 

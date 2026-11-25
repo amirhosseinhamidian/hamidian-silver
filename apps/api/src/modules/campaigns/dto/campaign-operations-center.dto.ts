@@ -14,6 +14,17 @@ export const campaignOrderStates = [
   'EXPIRED',
 ] as const;
 export type CampaignOrderState = (typeof campaignOrderStates)[number];
+export const campaignOrderSorts = ['newest', 'oldest'] as const;
+export type CampaignOrderSort = (typeof campaignOrderSorts)[number];
+const publicationStates = [
+  'NO_LANDING',
+  'INACTIVE',
+  'EMPTY',
+  'LIVE',
+  'UNKNOWN',
+  'HISTORICAL',
+] as const;
+const quotaProductStates = ['ACTIVE', 'DRAFT', 'ARCHIVED', 'DELETED'] as const;
 
 export class CampaignOperationsQueryDto {
   @ApiPropertyOptional({ minimum: 1, maximum: 1000 })
@@ -36,6 +47,11 @@ export class CampaignOperationsQueryDto {
   @IsOptional()
   @IsIn(campaignOrderStates)
   orderState?: CampaignOrderState;
+
+  @ApiPropertyOptional({ enum: campaignOrderSorts })
+  @IsOptional()
+  @IsIn(campaignOrderSorts)
+  orderSort?: CampaignOrderSort;
 }
 
 export class CampaignOrderCountsDto {
@@ -65,11 +81,35 @@ export class CampaignOrderOperationDto {
   discountApplied!: boolean;
 }
 
+export class CampaignQuotaVariantDto {
+  sku!: string;
+
+  @ApiProperty({ type: String, nullable: true })
+  name!: string | null;
+
+  @ApiProperty({ type: Number, nullable: true })
+  priceToman!: number | null;
+}
+
 export class CampaignQuotaOperationDto extends CampaignQuotaAdminDto {
   @ApiProperty({ format: 'uuid' })
   productId!: string;
 
   stockShortfall!: number;
+
+  @ApiProperty({ enum: quotaProductStates })
+  productStatus!: (typeof quotaProductStates)[number];
+
+  @ApiProperty({ type: Number, nullable: true })
+  defaultPriceToman!: number | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  imageUrl!: string | null;
+
+  @ApiProperty({ type: () => CampaignQuotaVariantDto, isArray: true })
+  variants!: CampaignQuotaVariantDto[];
+
+  hasMoreVariants!: boolean;
 }
 
 export class CampaignQuotaTotalsDto {
@@ -84,6 +124,19 @@ export class CampaignQuotaTotalsDto {
 export class CampaignOperationsFinanceDto {
   confirmedMerchandiseDiscountToman!: number;
   confirmedShippingDiscountToman!: number;
+}
+
+export class FestivalOperationsStatusDto {
+  @ApiProperty({ type: Number, nullable: true })
+  version!: number | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  publicationError!: string | null;
+
+  navigation!: boolean;
+  announcement!: boolean;
+  stockShortfallProducts!: number;
+  missingDefaultPriceProducts!: number;
 }
 
 export class CampaignOperationsCenterDto {
@@ -111,8 +164,11 @@ export class CampaignOperationsCenterDto {
   @ApiProperty({ type: String, nullable: true })
   landingSlug!: string | null;
 
-  @ApiProperty({ enum: ['NO_LANDING', 'INACTIVE', 'EMPTY', 'LIVE', 'UNKNOWN'] })
-  publication!: 'NO_LANDING' | 'INACTIVE' | 'EMPTY' | 'LIVE' | 'UNKNOWN';
+  @ApiProperty({ enum: publicationStates })
+  publication!: (typeof publicationStates)[number];
+
+  @ApiProperty({ type: () => FestivalOperationsStatusDto, nullable: true })
+  festival!: FestivalOperationsStatusDto | null;
 
   @ApiProperty({ format: 'date-time' })
   checkedAt!: string;

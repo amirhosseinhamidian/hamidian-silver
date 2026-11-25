@@ -39,6 +39,7 @@ type Props = {
     orderPage?: string;
     quotaPage?: string;
     orderState?: string;
+    orderSort?: string;
   }>;
 };
 
@@ -55,7 +56,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
     returnTo: '/campaigns',
   });
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
-  const { id, create, page, history, edit, step, orderPage, quotaPage, orderState } =
+  const { id, create, page, history, edit, step, orderPage, quotaPage, orderState, orderSort } =
     await searchParams;
   const canReadOperations = user.permissions.includes('orders.read');
   const operationsPage = (value?: string) => Math.min(pageNumber(value), 1000);
@@ -63,6 +64,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
     typeof orderState === 'string' && Object.hasOwn(campaignOrderLabels, orderState)
       ? (orderState as keyof typeof campaignOrderLabels)
       : undefined;
+  const sort = orderSort === 'oldest' ? 'oldest' : 'newest';
   const canWrite = user.permissions.includes('settings.write');
   const client = createAdminApiClient(token);
   const createKind = create === '1' ? 'FESTIVAL' : create === 'marketing' ? 'MARKETING' : null;
@@ -136,6 +138,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
                     orderPage: operationsPage(orderPage),
                     quotaPage: operationsPage(quotaPage),
                     orderState: orderFilter,
+                    orderSort: sort,
                   },
                 },
               })
@@ -146,6 +149,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
             campaign={campaign}
             data={operations.data}
             orderState={orderFilter}
+            orderSort={sort}
             canWrite={canWrite}
             canEditCatalog={user.permissions.includes('catalog.write')}
             canReadAudit={user.permissions.includes('audit.read')}

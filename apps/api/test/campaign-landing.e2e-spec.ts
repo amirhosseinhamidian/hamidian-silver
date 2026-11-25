@@ -18,9 +18,9 @@ it('publishes only qualifying products, limits banner placements and archives a 
   const db = new PrismaService(config);
   const media = new PublicMediaUrlService(config);
   const catalog = new CatalogService(db, media, undefined, new PromotionsService(db));
-  const operations = new CampaignOperationsCenterService(db, catalog);
   const festivals = new FestivalDesignService(db, catalog, media);
   const landings = new CampaignLandingsService(db, catalog, media, festivals);
+  const operations = new CampaignOperationsCenterService(db, catalog, landings, media);
   const campaigns = new CampaignsService(db, media, landings);
   const slug = `landing-${randomUUID()}`;
   const secondarySlug = `${slug}-secondary`;

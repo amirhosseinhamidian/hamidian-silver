@@ -29,7 +29,7 @@ it('reconciles published festival prices with Checkout and protects quota across
   const catalog = new CatalogService(db, media, undefined, promotions);
   const landings = new CampaignLandingsService(db, catalog, media);
   const campaigns = new CampaignsService(db, media, landings);
-  const operations = new CampaignOperationsCenterService(db, catalog);
+  const operations = new CampaignOperationsCenterService(db, catalog, landings, media);
   const orders = new OrdersService(
     db,
     undefined,
@@ -56,6 +56,7 @@ it('reconciles published festival prices with Checkout and protects quota across
   const payments = new PaymentsService(db, config, gateway);
   const slug = `quota-${randomUUID()}`;
   const anotherSlug = `${slug}-other`;
+  const healthProductScope = { slug: { startsWith: `${slug}-health-` } };
   const campaignFilter = { slug: { in: [slug, anotherSlug] } };
   const phoneSuffix = BigInt(`0x${slug.slice(5).replaceAll('-', '').slice(0, 12)}`).toString();
   const phones = [`+0${phoneSuffix}1`, `+0${phoneSuffix}2`];
@@ -371,6 +372,12 @@ it('reconciles published festival prices with Checkout and protects quota across
       quota: { reserved: 0, manualSold: 1, siteSold: 1 },
       finance: { confirmedMerchandiseDiscountToman: 2_000, confirmedShippingDiscountToman: 0 },
     });
+    const newest = await operations.read(campaignId, {}, false);
+    const oldest = await operations.read(campaignId, { orderSort: 'oldest' }, false);
+    expect(oldest.orderItems).toEqual([...newest.orderItems].reverse());
+    await expect(
+      operations.read(campaignId, { orderState: 'PENDING', orderSort: 'oldest' }, false),
+    ).resolves.toMatchObject({ finance: null, orderItems: [{ id: anotherOrder.id }] });
     await expect(orders.listOrders({ orderId: pending.id, limit: 1 })).resolves.toMatchObject([
       { id: pending.id },
     ]);
@@ -403,6 +410,8 @@ it('reconciles published festival prices with Checkout and protects quota across
     });
     await expect(operations.read(campaignId, {}, false)).resolves.toMatchObject({
       quotaItems: [{ productId: product.id, remaining: 1, sellableStock: 0, stockShortfall: 1 }],
+      publication: 'EMPTY',
+      festival: { stockShortfallProducts: 1, missingDefaultPriceProducts: 0 },
     });
     await db.inventory.updateMany({
       where: { variant: { productId: product.id } },
@@ -450,6 +459,38 @@ it('reconciles published festival prices with Checkout and protects quota across
         select: { manualSold: true },
       }),
     ).resolves.toEqual([1, 2, 1, 0].map((manualSold) => ({ manualSold })));
+
+    const healthIds = Array.from({ length: 26 }, () => randomUUID()).sort();
+    const shortageId = healthIds.at(-1);
+    await db.product.createMany({
+      data: healthIds.map((id, index) => ({
+        id,
+        slug: `${slug}-health-${index}`,
+        name: 'کالای آزمون سلامت',
+        status: 'ACTIVE',
+        salePriceToman: id === shortageId ? null : 25_000,
+      })),
+    });
+    await db.campaignQuota.createMany({
+      data: healthIds.map((productId) => ({
+        campaignId,
+        productId,
+        limit: 1,
+        manualSold: productId === shortageId ? 0 : 1,
+      })),
+    });
+    const firstPage = await operations.read(campaignId, {}, false);
+    expect(firstPage).toMatchObject({
+      hasMoreQuotas: true,
+      festival: { stockShortfallProducts: 1, missingDefaultPriceProducts: 1 },
+    });
+    expect(firstPage.quotaItems.every(({ stockShortfall }) => stockShortfall === 0)).toBe(true);
+    const secondPage = await operations.read(campaignId, { quotaPage: 2 }, false);
+    expect(secondPage.quotaItems.find(({ productId }) => productId === shortageId)).toMatchObject({
+      stockShortfall: 1,
+      defaultPriceToman: null,
+      productStatus: 'ACTIVE',
+    });
   } finally {
     try {
       const identities = await db.campaign.findMany({
@@ -476,6 +517,7 @@ it('reconciles published festival prices with Checkout and protects quota across
         db.inventory.deleteMany({ where: { variant: { product: { slug } } } }),
         db.productVariant.deleteMany({ where: { product: { slug } } }),
         db.product.deleteMany({ where: { slug } }),
+        db.product.deleteMany({ where: healthProductScope }),
         db.campaignPromotion.deleteMany({ where: { campaign: campaignFilter } }),
         db.campaignLanding.deleteMany({ where: { campaign: campaignFilter } }),
         db.campaignRevision.deleteMany({ where: { campaign: campaignFilter } }),

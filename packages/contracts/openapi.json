@@ -1464,6 +1464,18 @@
                 "EXPIRED"
               ]
             }
+          },
+          {
+            "name": "orderSort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest"
+              ]
+            }
           }
         ],
         "responses": {
@@ -16976,6 +16988,27 @@
           "remaining"
         ]
       },
+      "CampaignQuotaVariantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "priceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "sku": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "priceToman",
+          "sku"
+        ]
+      },
       "CampaignQuotaOperationDto": {
         "type": "object",
         "properties": {
@@ -17010,8 +17043,34 @@
             "type": "string",
             "format": "uuid"
           },
+          "productStatus": {
+            "enum": [
+              "ACTIVE",
+              "DRAFT",
+              "ARCHIVED",
+              "DELETED"
+            ],
+            "type": "string"
+          },
+          "defaultPriceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignQuotaVariantDto"
+            }
+          },
           "stockShortfall": {
             "type": "number"
+          },
+          "hasMoreVariants": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -17025,7 +17084,12 @@
           "remaining",
           "sellableStock",
           "productId",
-          "stockShortfall"
+          "productStatus",
+          "defaultPriceToman",
+          "imageUrl",
+          "variants",
+          "stockShortfall",
+          "hasMoreVariants"
         ]
       },
       "CampaignOperationsFinanceDto": {
@@ -17041,6 +17105,39 @@
         "required": [
           "confirmedMerchandiseDiscountToman",
           "confirmedShippingDiscountToman"
+        ]
+      },
+      "FestivalOperationsStatusDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "nullable": true
+          },
+          "publicationError": {
+            "type": "string",
+            "nullable": true
+          },
+          "navigation": {
+            "type": "boolean"
+          },
+          "announcement": {
+            "type": "boolean"
+          },
+          "stockShortfallProducts": {
+            "type": "number"
+          },
+          "missingDefaultPriceProducts": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "version",
+          "publicationError",
+          "navigation",
+          "announcement",
+          "stockShortfallProducts",
+          "missingDefaultPriceProducts"
         ]
       },
       "CampaignOperationsCenterDto": {
@@ -17083,9 +17180,19 @@
               "INACTIVE",
               "EMPTY",
               "LIVE",
-              "UNKNOWN"
+              "UNKNOWN",
+              "HISTORICAL"
             ],
             "type": "string"
+          },
+          "festival": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FestivalOperationsStatusDto"
+              }
+            ]
           },
           "checkedAt": {
             "type": "string",
@@ -17112,6 +17219,7 @@
           "finance",
           "landingSlug",
           "publication",
+          "festival",
           "checkedAt",
           "orderPage",
           "hasMoreOrders",
