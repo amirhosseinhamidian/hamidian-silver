@@ -7,7 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { campaignMessage } from '@/lib/campaigns/campaign-api-errors';
-import { campaignStatusLabels, type CampaignDetail } from '@/lib/campaigns/campaign-model';
+import {
+  campaignOrderLabels,
+  campaignStatusLabels,
+  type CampaignDetail,
+} from '@/lib/campaigns/campaign-model';
 import {
   formatAdminDateTime,
   formatAdminInteger,
@@ -38,17 +42,6 @@ const money = formatAdminToman;
 const storefrontOrigin = (
   process.env.NEXT_PUBLIC_STOREFRONT_URL ?? 'https://hamidian.shop'
 ).replace(/\/+$/, '');
-
-export const campaignOrderLabels: Record<OrderState, string> = {
-  PENDING: 'در انتظار پرداخت',
-  CONFIRMED: 'خرید تأییدشده',
-  RECEIPT_REVIEW: 'در انتظار بررسی رسید',
-  RECEIPT_REJECTED: 'رسید ردشده',
-  PAYMENT_FAILED: 'پرداخت ناموفق',
-  RECONCILIATION: 'نیازمند تطبیق پرداخت',
-  CANCELLED: 'لغوشده',
-  EXPIRED: 'منقضی',
-};
 
 const publicationLabels: Record<Operations['publication'], string> = {
   NO_LANDING: 'صفحهٔ کمپین تعریف نشده',
@@ -205,7 +198,10 @@ export function CampaignOperationsCenter({
   canReadAudit: boolean;
 }) {
   const { orders, quota, finance, festival } = data;
-  const reportPath = `/growth/campaigns/${encodeURIComponent(campaign.trackingId)}`;
+  const reportPath =
+    campaign.kind === 'FESTIVAL'
+      ? `/growth/festivals/${encodeURIComponent(campaign.id)}`
+      : `/growth/campaigns/${encodeURIComponent(campaign.trackingId)}`;
   const reviewPath = `/campaigns?id=${campaign.id}&step=review`;
   const salesPath = `/campaigns?id=${campaign.id}&step=promotion`;
   const landingPath = `/campaigns?id=${campaign.id}&step=landing`;

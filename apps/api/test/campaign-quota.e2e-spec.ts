@@ -5,6 +5,7 @@ import { CampaignLandingsService } from '../src/modules/campaigns/campaign-landi
 import { CampaignOperationsCenterService } from '../src/modules/campaigns/campaign-operations-center.service';
 import { CampaignQuotasService } from '../src/modules/campaigns/campaign-quotas.service';
 import { CampaignsService } from '../src/modules/campaigns/campaigns.service';
+import { FestivalAnalyticsService } from '../src/modules/campaigns/festival-analytics.service';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
 import type { CreateOrderDto } from '../src/modules/orders/dto/create-order.dto';
@@ -30,6 +31,7 @@ it('reconciles published festival prices with Checkout and protects quota across
   const landings = new CampaignLandingsService(db, catalog, media);
   const campaigns = new CampaignsService(db, media, landings);
   const operations = new CampaignOperationsCenterService(db, catalog, landings, media);
+  const analytics = new FestivalAnalyticsService(db, operations);
   const orders = new OrdersService(
     db,
     undefined,
@@ -378,6 +380,83 @@ it('reconciles published festival prices with Checkout and protects quota across
     await expect(
       operations.read(campaignId, { orderState: 'PENDING', orderSort: 'oldest' }, false),
     ).resolves.toMatchObject({ finance: null, orderItems: [{ id: anotherOrder.id }] });
+    const brand = await db.brand.create({ data: { slug, name: 'برند نمونه' } });
+    const category = await db.category.create({ data: { slug, name: 'دستهٔ نمونه' } });
+    await db.product.update({
+      where: { id: product.id },
+      data: { brandId: brand.id, categories: { create: { categoryId: category.id } } },
+    });
+    const visitId = randomUUID();
+    await db.growthFunnelEvent.createMany({
+      data: ['view_item_list', 'view_item', 'view_item', 'begin_checkout'].map((stage) => ({
+        id: randomUUID(),
+        visitId,
+        stage,
+        device: 'desktop',
+        source: 'email',
+        medium: 'email',
+        campaign: trackingId,
+        campaignId: trackingId,
+        productSlugs: [slug],
+      })),
+    });
+    const tehranDay = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Tehran',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const reportPeriod = {
+      from: tehranDay.format(new Date(pending.createdAt.getTime() - 86_400_000)),
+      to: tehranDay.format(new Date(Date.now() + 86_400_000)),
+    };
+    const report = await analytics.read(campaignId, reportPeriod);
+    expect(report).toMatchObject({
+      totals: {
+        orders: 2,
+        confirmedOrders: 1,
+        units: 1,
+        collectedToman: 18_700,
+        averageOrderToman: 18_700,
+        discountToman: 2_000,
+        orderConfirmationPercent: 50,
+      },
+      groups: [{ key: product.id, units: 1, amountToman: 20_000 }],
+      topCategories: [{ key: category.id, units: 1 }],
+      topSources: [{ orders: 1, amountToman: 18_700 }],
+      funnel: { visits: 1, listVisits: 1, itemVisits: 1, cartVisits: 0, checkoutVisits: 1 },
+      quota: { manualSold: 1, siteSold: 1 },
+    });
+    expect(report.daily.filter(({ confirmedOrders }) => confirmedOrders > 0)).toMatchObject([
+      { confirmedOrders: 1, collectedToman: 18_700 },
+    ]);
+    await expect(
+      analytics.read(campaignId, {
+        ...reportPeriod,
+        section: 'brands',
+        product: slug,
+        category: slug,
+      }),
+    ).resolves.toMatchObject({ funnel: null, groups: [{ key: brand.id, units: 1 }] });
+    await expect(
+      analytics.read(campaignId, { ...reportPeriod, section: 'offers', sort: 'asc' }),
+    ).resolves.toMatchObject({
+      groups: [{ key: 'PERCENT/1', orders: 1, units: null, amountToman: 2_000 }],
+    });
+    await expect(
+      analytics.read(campaignId, { ...reportPeriod, section: 'orders', orderState: 'PENDING' }),
+    ).resolves.toMatchObject({
+      totals: { averageOrderToman: null, collectedToman: 0, orderConfirmationPercent: null },
+      orders: [{ id: anotherOrder.id, collectedToman: null }],
+    });
+    await expect(
+      analytics.read(campaignId, { ...reportPeriod, product: anotherSlug }),
+    ).resolves.toMatchObject({
+      totals: { orders: 0, averageOrderToman: null },
+      groups: [],
+      funnel: null,
+    });
+    await expect(analytics.read(overlappingId, reportPeriod)).rejects.toThrow('Festival not found');
     await expect(orders.listOrders({ orderId: pending.id, limit: 1 })).resolves.toMatchObject([
       { id: pending.id },
     ]);
@@ -491,6 +570,12 @@ it('reconciles published festival prices with Checkout and protects quota across
       defaultPriceToman: null,
       productStatus: 'ACTIVE',
     });
+    await expect(
+      analytics.read(campaignId, { ...reportPeriod, section: 'quotas', page: 2 }),
+    ).resolves.toMatchObject({
+      hasMore: false,
+      quotaItems: expect.arrayContaining([expect.objectContaining({ productId: shortageId })]),
+    });
   } finally {
     try {
       const identities = await db.campaign.findMany({
@@ -518,10 +603,15 @@ it('reconciles published festival prices with Checkout and protects quota across
         db.productVariant.deleteMany({ where: { product: { slug } } }),
         db.product.deleteMany({ where: { slug } }),
         db.product.deleteMany({ where: healthProductScope }),
+        db.category.deleteMany({ where: { slug } }),
+        db.brand.deleteMany({ where: { slug } }),
         db.campaignPromotion.deleteMany({ where: { campaign: campaignFilter } }),
         db.campaignLanding.deleteMany({ where: { campaign: campaignFilter } }),
         db.campaignRevision.deleteMany({ where: { campaign: campaignFilter } }),
         db.campaign.deleteMany({ where: campaignFilter }),
+        db.growthFunnelEvent.deleteMany({
+          where: { campaignId: { in: identities.map(({ trackingId }) => trackingId) } },
+        }),
         db.campaignLinkIdentity.deleteMany({
           where: { id: { in: [...identities.map(({ trackingId }) => trackingId), anotherSlug] } },
         }),

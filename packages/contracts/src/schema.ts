@@ -468,6 +468,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaigns/{id}/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FestivalAnalyticsController_read_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/public/categories": {
         parameters: {
             query?: never;
@@ -5853,6 +5869,81 @@ export interface components {
             quotaPage: number;
             hasMoreQuotas: boolean;
         };
+        GrowthRevenuePeriodDto: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** @enum {string} */
+            timezone: "Asia/Tehran";
+        };
+        FestivalSalesTotalsDto: {
+            averageOrderToman: number | null;
+            orderConfirmationPercent: number | null;
+            orders: number;
+            confirmedOrders: number;
+            units: number;
+            collectedToman: number;
+            discountToman: number;
+        };
+        FestivalDailySalesDto: {
+            /** Format: date */
+            day: string;
+            confirmedOrders: number;
+            collectedToman: number;
+        };
+        FestivalSalesGroupDto: {
+            slug: string | null;
+            units: number | null;
+            key: string;
+            label: string;
+            orders: number;
+            amountToman: number;
+        };
+        FestivalMeasuredFunnelDto: {
+            visits: number;
+            listVisits: number;
+            itemVisits: number;
+            cartVisits: number;
+            checkoutVisits: number;
+        };
+        FestivalOrderStatusCountDto: {
+            /** @enum {string} */
+            state: "PENDING" | "CONFIRMED" | "RECEIPT_REVIEW" | "RECEIPT_REJECTED" | "PAYMENT_FAILED" | "RECONCILIATION" | "CANCELLED" | "EXPIRED";
+            orders: number;
+        };
+        FestivalReportOrderDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            occurredAt: string;
+            /** @enum {string} */
+            state: "PENDING" | "CONFIRMED" | "RECEIPT_REVIEW" | "RECEIPT_REJECTED" | "PAYMENT_FAILED" | "RECONCILIATION" | "CANCELLED" | "EXPIRED";
+            collectedToman: number | null;
+            number: string;
+        };
+        FestivalAnalyticsDto: {
+            /** Format: uuid */
+            campaignId: string;
+            /** Format: date-time */
+            checkedAt: string;
+            period: components["schemas"]["GrowthRevenuePeriodDto"];
+            totals: components["schemas"]["FestivalSalesTotalsDto"];
+            daily: components["schemas"]["FestivalDailySalesDto"][];
+            topProducts: components["schemas"]["FestivalSalesGroupDto"][];
+            topCategories: components["schemas"]["FestivalSalesGroupDto"][];
+            topSources: components["schemas"]["FestivalSalesGroupDto"][];
+            funnel: components["schemas"]["FestivalMeasuredFunnelDto"] | null;
+            states: components["schemas"]["FestivalOrderStatusCountDto"][];
+            budget: components["schemas"]["CampaignBudgetDto"];
+            quota: components["schemas"]["CampaignQuotaTotalsDto"];
+            groups: components["schemas"]["FestivalSalesGroupDto"][];
+            orders: components["schemas"]["FestivalReportOrderDto"][];
+            quotaItems: components["schemas"]["CampaignQuotaOperationDto"][];
+            name: string;
+            page: number;
+            hasMore: boolean;
+        };
         PublicCatalogCategoryPageDto: {
             description: string | null;
             parentId: string | null;
@@ -7083,14 +7174,6 @@ export interface components {
             url: string;
             campaignId: string;
             campaign: string;
-        };
-        GrowthRevenuePeriodDto: {
-            /** Format: date */
-            from: string;
-            /** Format: date */
-            to: string;
-            /** @enum {string} */
-            timezone: "Asia/Tehran";
         };
         GrowthRevenueSummaryDto: {
             period: components["schemas"]["GrowthRevenuePeriodDto"];
@@ -9990,6 +10073,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CampaignOperationsCenterDto"];
+                };
+            };
+        };
+    };
+    FestivalAnalyticsController_read_v1: {
+        parameters: {
+            query: {
+                /** @description First included calendar day in Asia/Tehran. */
+                from: string;
+                /** @description Last included calendar day in Asia/Tehran. */
+                to: string;
+                product?: string;
+                category?: string;
+                orderState?: "PENDING" | "CONFIRMED" | "RECEIPT_REVIEW" | "RECEIPT_REJECTED" | "PAYMENT_FAILED" | "RECONCILIATION" | "CANCELLED" | "EXPIRED";
+                section?: "products" | "categories" | "brands" | "offers" | "sources" | "orders" | "quotas";
+                sort?: "desc" | "asc";
+                page?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalAnalyticsDto"];
                 };
             };
         };

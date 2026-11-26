@@ -45,3 +45,17 @@ export const campaignActionLabels: Record<CampaignAction, string> = {
 export function isCampaignId(value: string) {
   return /^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i.test(value);
 }
+
+export const campaignOrderLabels: Record<
+  components['schemas']['CampaignOrderOperationDto']['state'],
+  string
+> = {
+  PENDING: 'در انتظار پرداخت',
+  CONFIRMED: 'خرید تأییدشده',
+  RECEIPT_REVIEW: 'در انتظار بررسی رسید',
+  RECEIPT_REJECTED: 'رسید ردشده',
+  PAYMENT_FAILED: 'پرداخت ناموفق',
+  RECONCILIATION: 'نیازمند تطبیق پرداخت',
+  CANCELLED: 'لغوشده',
+  EXPIRED: 'منقضی',
+};

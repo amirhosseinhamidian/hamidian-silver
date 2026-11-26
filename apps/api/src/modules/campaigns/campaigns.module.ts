@@ -10,6 +10,8 @@ import { CampaignPublisher } from './campaign-publisher';
 import { CampaignLandingsController } from './campaign-landings.controller';
 import { CampaignLandingsService } from './campaign-landings.service';
 import { CampaignsController } from './campaigns.controller';
+import { FestivalAnalyticsController } from './festival-analytics.controller';
+import { FestivalAnalyticsService } from './festival-analytics.service';
 import { FestivalDesignController } from './festival-design.controller';
 import { FestivalDesignService } from './festival-design.service';
 import { FestivalThemeLibraryController } from './festival-theme-library.controller';
@@ -25,6 +27,7 @@ import { CampaignsService } from './campaigns.service';
     FestivalDesignController,
     FestivalThemeLibraryController,
     CampaignOperationsCenterController,
+    FestivalAnalyticsController,
   ],
   providers: [
     CampaignsService,
@@ -34,6 +37,7 @@ import { CampaignsService } from './campaigns.service';
     FestivalDesignService,
     FestivalThemeLibraryService,
     CampaignOperationsCenterService,
+    FestivalAnalyticsService,
   ],
 })
 export class CampaignsModule {}

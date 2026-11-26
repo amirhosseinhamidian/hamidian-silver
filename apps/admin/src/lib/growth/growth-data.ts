@@ -3,6 +3,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { createAdminApiClient } from '@/lib/auth/server-api';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
+import type { FestivalReportFilters } from '@/lib/growth/festival-report';
 import { growthQuery, type GrowthDashboard, type GrowthFilters } from '@/lib/growth/growth-report';
 
 type ReportEndpoint =
@@ -52,6 +53,20 @@ export async function loadCampaignPerformance(
     if (!client) return { report: null, status: 401 };
     const result = await client.GET('/api/v1/growth-attribution/dashboard/campaigns/{campaignId}', {
       params: { path: { campaignId }, query },
+      cache: 'no-store',
+    });
+    return { report: result.data ?? null, status: result.response.status };
+  } catch {
+    return { report: null, status: 502 };
+  }
+}
+
+export async function loadFestivalAnalytics(id: string, query: FestivalReportFilters) {
+  try {
+    const client = await apiClient();
+    if (!client) return { report: null, status: 401 };
+    const result = await client.GET('/api/v1/campaigns/{id}/analytics', {
+      params: { path: { id }, query },
       cache: 'no-store',
     });
     return { report: result.data ?? null, status: result.response.status };

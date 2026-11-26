@@ -1495,6 +1495,133 @@
         ]
       }
     },
+    "/api/v1/campaigns/{id}/analytics": {
+      "get": {
+        "operationId": "FestivalAnalyticsController_read_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "First included calendar day in Asia/Tehran.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Last included calendar day in Asia/Tehran.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "product",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 220,
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 220,
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderState",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "CONFIRMED",
+                "RECEIPT_REVIEW",
+                "RECEIPT_REJECTED",
+                "PAYMENT_FAILED",
+                "RECONCILIATION",
+                "CANCELLED",
+                "EXPIRED"
+              ]
+            }
+          },
+          {
+            "name": "section",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "products",
+                "categories",
+                "brands",
+                "offers",
+                "sources",
+                "orders",
+                "quotas"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "desc",
+                "asc"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FestivalAnalyticsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "FestivalAnalytics"
+        ]
+      }
+    },
     "/api/v1/catalog/public/categories": {
       "get": {
         "operationId": "CatalogController_listPublicCategories_v1",
@@ -17227,6 +17354,323 @@
           "hasMoreQuotas"
         ]
       },
+      "GrowthRevenuePeriodDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "timezone": {
+            "type": "string",
+            "enum": [
+              "Asia/Tehran"
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "timezone"
+        ]
+      },
+      "FestivalSalesTotalsDto": {
+        "type": "object",
+        "properties": {
+          "averageOrderToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "orderConfirmationPercent": {
+            "type": "number",
+            "nullable": true
+          },
+          "orders": {
+            "type": "number"
+          },
+          "confirmedOrders": {
+            "type": "number"
+          },
+          "units": {
+            "type": "number"
+          },
+          "collectedToman": {
+            "type": "number"
+          },
+          "discountToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "averageOrderToman",
+          "orderConfirmationPercent",
+          "orders",
+          "confirmedOrders",
+          "units",
+          "collectedToman",
+          "discountToman"
+        ]
+      },
+      "FestivalDailySalesDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "confirmedOrders": {
+            "type": "number"
+          },
+          "collectedToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "day",
+          "confirmedOrders",
+          "collectedToman"
+        ]
+      },
+      "FestivalSalesGroupDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "nullable": true
+          },
+          "units": {
+            "type": "number",
+            "nullable": true
+          },
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "orders": {
+            "type": "number"
+          },
+          "amountToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "slug",
+          "units",
+          "key",
+          "label",
+          "orders",
+          "amountToman"
+        ]
+      },
+      "FestivalMeasuredFunnelDto": {
+        "type": "object",
+        "properties": {
+          "visits": {
+            "type": "number"
+          },
+          "listVisits": {
+            "type": "number"
+          },
+          "itemVisits": {
+            "type": "number"
+          },
+          "cartVisits": {
+            "type": "number"
+          },
+          "checkoutVisits": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "visits",
+          "listVisits",
+          "itemVisits",
+          "cartVisits",
+          "checkoutVisits"
+        ]
+      },
+      "FestivalOrderStatusCountDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "enum": [
+              "PENDING",
+              "CONFIRMED",
+              "RECEIPT_REVIEW",
+              "RECEIPT_REJECTED",
+              "PAYMENT_FAILED",
+              "RECONCILIATION",
+              "CANCELLED",
+              "EXPIRED"
+            ],
+            "type": "string"
+          },
+          "orders": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "state",
+          "orders"
+        ]
+      },
+      "FestivalReportOrderDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "enum": [
+              "PENDING",
+              "CONFIRMED",
+              "RECEIPT_REVIEW",
+              "RECEIPT_REJECTED",
+              "PAYMENT_FAILED",
+              "RECONCILIATION",
+              "CANCELLED",
+              "EXPIRED"
+            ],
+            "type": "string"
+          },
+          "collectedToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "number": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "occurredAt",
+          "state",
+          "collectedToman",
+          "number"
+        ]
+      },
+      "FestivalAnalyticsDto": {
+        "type": "object",
+        "properties": {
+          "campaignId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "period": {
+            "$ref": "#/components/schemas/GrowthRevenuePeriodDto"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/FestivalSalesTotalsDto"
+          },
+          "daily": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalDailySalesDto"
+            }
+          },
+          "topProducts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalSalesGroupDto"
+            }
+          },
+          "topCategories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalSalesGroupDto"
+            }
+          },
+          "topSources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalSalesGroupDto"
+            }
+          },
+          "funnel": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FestivalMeasuredFunnelDto"
+              }
+            ]
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalOrderStatusCountDto"
+            }
+          },
+          "budget": {
+            "$ref": "#/components/schemas/CampaignBudgetDto"
+          },
+          "quota": {
+            "$ref": "#/components/schemas/CampaignQuotaTotalsDto"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalSalesGroupDto"
+            }
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FestivalReportOrderDto"
+            }
+          },
+          "quotaItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignQuotaOperationDto"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "campaignId",
+          "checkedAt",
+          "period",
+          "totals",
+          "daily",
+          "topProducts",
+          "topCategories",
+          "topSources",
+          "funnel",
+          "states",
+          "budget",
+          "quota",
+          "groups",
+          "orders",
+          "quotaItems",
+          "name",
+          "page",
+          "hasMore"
+        ]
+      },
       "PublicCatalogCategoryPageDto": {
         "type": "object",
         "properties": {
@@ -22606,30 +23050,6 @@
           "url",
           "campaignId",
           "campaign"
-        ]
-      },
-      "GrowthRevenuePeriodDto": {
-        "type": "object",
-        "properties": {
-          "from": {
-            "type": "string",
-            "format": "date"
-          },
-          "to": {
-            "type": "string",
-            "format": "date"
-          },
-          "timezone": {
-            "type": "string",
-            "enum": [
-              "Asia/Tehran"
-            ]
-          }
-        },
-        "required": [
-          "from",
-          "to",
-          "timezone"
         ]
       },
       "GrowthRevenueSummaryDto": {

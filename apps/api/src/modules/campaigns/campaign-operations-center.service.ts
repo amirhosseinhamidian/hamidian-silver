@@ -12,6 +12,7 @@ import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { confirmedCampaignDiscountSums } from '../growth-attribution/growth-campaign-performance-query';
 import { confirmedGrowthOrders } from '../growth-attribution/growth-revenue-events';
 import { readCampaignProducts } from './campaign-collection';
+import { scopedCampaignOrders } from './campaign-order-scope';
 import { CampaignLandingsService } from './campaign-landings.service';
 import { quotaCounts, quotaStock, quotaUsage } from './campaign-quota';
 import type {
@@ -31,54 +32,6 @@ function asInteger(value: bigint) {
   if (!Number.isSafeInteger(result))
     throw new ServiceUnavailableException('Campaign metrics exceed the supported range.');
   return result;
-}
-
-function scopedOrders({ id, trackingId }: Pick<Campaign, 'id' | 'trackingId'>) {
-  return Prisma.sql`
-    WITH campaign_orders AS (
-      SELECT "orderId" AS id, TRUE AS "discountApplied"
-        FROM "order_price_quotes" WHERE "campaignId" = ${id}::uuid
-      UNION ALL
-      SELECT attribution."orderId", FALSE
-        FROM "order_attributions" attribution
-        WHERE attribution."campaignId" = ${trackingId} AND NOT EXISTS (
-          SELECT 1 FROM "order_price_quotes" quote
-          WHERE quote."orderId" = attribution."orderId" AND quote."campaignId" = ${id}::uuid
-        )
-    ), confirmed_orders AS NOT MATERIALIZED (${confirmedGrowthOrders}),
-    classified AS (
-      SELECT o.id, o."orderNumber" AS number, o."createdAt", o."reservationExpiresAt",
-        campaign_orders."discountApplied",
-        CASE
-          WHEN p.status = 'RECONCILIATION_REQUIRED' OR EXISTS (
-            SELECT 1 FROM "payment_attempts" a
-            JOIN "payment_reconciliations" r ON r."paymentAttemptId" = a.id
-            WHERE a."paymentId" = p.id AND r.status = 'OPEN'
-          ) THEN 'RECONCILIATION'
-          WHEN confirmed.id IS NOT NULL THEN 'CONFIRMED'
-          WHEN o.status = 'CANCELLED' THEN 'CANCELLED'
-          WHEN o.status = 'EXPIRED' THEN 'EXPIRED'
-          WHEN p.status = 'AWAITING_REVIEW' THEN 'RECEIPT_REVIEW'
-          WHEN latest."receiptRejectedAt" IS NOT NULL THEN 'RECEIPT_REJECTED'
-          WHEN latest.status = 'FAILED' AND latest."failureCode" IS DISTINCT FROM 'PAYMENT_METHOD_CHANGED'
-            THEN 'PAYMENT_FAILED'
-          ELSE 'PENDING'
-        END AS state,
-        confirmed.id IS NOT NULL AS confirmed,
-        o.status = 'PENDING_PAYMENT' AND (
-          p.id IS NULL OR p.status IN ('PENDING', 'CANCELLED')
-        ) AS "waitingForPayment"
-      FROM campaign_orders
-      JOIN "orders" o ON o.id = campaign_orders.id
-      LEFT JOIN "payments" p ON p."orderId" = o.id
-      LEFT JOIN confirmed_orders confirmed ON confirmed.id = o.id
-      LEFT JOIN LATERAL (
-        SELECT a.status, a."receiptRejectedAt", a."failureCode"
-        FROM "payment_attempts" a WHERE a."paymentId" = p.id
-        ORDER BY a."createdAt" DESC, a.id DESC LIMIT 1
-      ) latest ON TRUE
-    )
-  `;
 }
 
 @Injectable()
@@ -107,7 +60,7 @@ export class CampaignOperationsCenterService {
         const orderPage = query.orderPage ?? 1;
         const quotaPage = query.quotaPage ?? 1;
         const orders = await this.orders(tx, campaign, orderPage, query, now);
-        const quotas = await this.quotas(tx, campaignId, quotaPage);
+        const quotas = await this.readQuotas(tx, campaignId, quotaPage);
         const finance = includeFinance ? await this.finance(tx, campaignId) : null;
         const status =
           campaign.kind === 'FESTIVAL'
@@ -139,7 +92,7 @@ export class CampaignOperationsCenterService {
     { orderState: state, orderSort }: CampaignOperationsQueryDto,
     now: Date,
   ) {
-    const scope = scopedOrders(campaign);
+    const scope = scopedCampaignOrders(campaign);
     const sort = orderSort === 'oldest' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
     const [counts] = await tx.$queryRaw<CountRow[]>`
         ${scope}
@@ -189,41 +142,44 @@ export class CampaignOperationsCenterService {
     };
   }
 
-  private async quotas(tx: Prisma.TransactionClient, campaignId: string, page: number) {
-    const rows = await tx.campaignQuota.findMany({
-      where: { campaignId },
-      orderBy: { productId: 'asc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize + 1,
-      select: {
-        id: true,
-        productId: true,
-        limit: true,
-        manualSold: true,
-        revision: true,
-        product: {
-          select: {
-            slug: true,
-            name: true,
-            status: true,
-            deletedAt: true,
-            salePriceToman: true,
-            media: {
-              where: { media: { deletedAt: null, mimeType: { startsWith: 'image/' } } },
-              orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }, { mediaId: 'asc' }],
-              take: 1,
-              select: { media: { select: { storageKey: true } } },
+  async readQuotas(tx: Prisma.TransactionClient, campaignId: string, page?: number) {
+    const rows =
+      page === undefined
+        ? []
+        : await tx.campaignQuota.findMany({
+            where: { campaignId },
+            orderBy: { productId: 'asc' },
+            skip: (page - 1) * pageSize,
+            take: pageSize + 1,
+            select: {
+              id: true,
+              productId: true,
+              limit: true,
+              manualSold: true,
+              revision: true,
+              product: {
+                select: {
+                  slug: true,
+                  name: true,
+                  status: true,
+                  deletedAt: true,
+                  salePriceToman: true,
+                  media: {
+                    where: { media: { deletedAt: null, mimeType: { startsWith: 'image/' } } },
+                    orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }, { mediaId: 'asc' }],
+                    take: 1,
+                    select: { media: { select: { storageKey: true } } },
+                  },
+                  variants: {
+                    where: { deletedAt: null, isActive: true },
+                    orderBy: { sku: 'asc' },
+                    take: variantPreviewSize + 1,
+                    select: { sku: true, name: true, salePriceToman: true },
+                  },
+                },
+              },
             },
-            variants: {
-              where: { deletedAt: null, isActive: true },
-              orderBy: { sku: 'asc' },
-              take: variantPreviewSize + 1,
-              select: { sku: true, name: true, salePriceToman: true },
-            },
-          },
-        },
-      },
-    });
+          });
     const totals = await tx.campaignQuota.aggregate({
       where: { campaignId },
       _sum: { limit: true, manualSold: true },

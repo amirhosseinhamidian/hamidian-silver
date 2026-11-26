@@ -1,10 +1,7 @@
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 
-import {
-  CampaignOperationsCenter,
-  campaignOrderLabels,
-} from '@/components/campaigns/campaign-operations-center';
+import { CampaignOperationsCenter } from '@/components/campaigns/campaign-operations-center';
 import { CampaignDetailView } from '@/components/campaigns/campaign-detail-view';
 import { CampaignBudgetReview } from '@/components/campaigns/campaign-budget-review';
 import { FestivalWorkspace } from '@/components/campaigns/festival-workspace';
@@ -23,6 +20,7 @@ import { createAdminApiClient } from '@/lib/auth/server-api';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
 import {
   campaignKindLabels,
+  campaignOrderLabels,
   campaignStatusLabels,
   isCampaignId,
 } from '@/lib/campaigns/campaign-model';
@@ -270,7 +268,11 @@ export default async function CampaignsPage({ searchParams }: Props) {
           </nav>
           {currentStep !== 'operations' && user.permissions.includes('finance.read') && (
             <ButtonLink
-              href={`/growth/campaigns/${encodeURIComponent(campaign.trackingId)}`}
+              href={
+                campaign.kind === 'FESTIVAL'
+                  ? `/growth/festivals/${encodeURIComponent(campaign.id)}`
+                  : `/growth/campaigns/${encodeURIComponent(campaign.trackingId)}`
+              }
               variant="outline"
               size="sm"
             >

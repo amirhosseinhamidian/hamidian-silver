@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { DualCalendarPicker } from '@/components/ui/dual-calendar-picker';
@@ -10,10 +10,12 @@ export function CampaignReportPeriod({
   path,
   from,
   to,
+  children,
 }: {
   path: string;
   from: string;
   to: string;
+  children?: ReactNode;
 }) {
   const [error, setError] = useState<string | null>(null);
 
@@ -51,8 +53,14 @@ export function CampaignReportPeriod({
           onChange={() => setError(null)}
           required
         />
-        <Button type="submit">نمایش گزارش</Button>
+        {!children && <Button type="submit">نمایش گزارش</Button>}
       </div>
+      {children && (
+        <>
+          {children}
+          <Button type="submit">نمایش گزارش</Button>
+        </>
+      )}
       {error && <Alert tone="danger">{error}</Alert>}
     </form>
   );
