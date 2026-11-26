@@ -7,6 +7,7 @@ import type { KeyboardEvent } from 'react';
 import { AccountAddressesPanel } from '@/components/account/account-addresses-panel';
 import { AccountOrdersPanel } from '@/components/account/account-orders-panel';
 import { AccountProfilePanel } from '@/components/account/account-profile-panel';
+import { CartRecoveryPanel } from '@/components/cart/cart-recovery-panel';
 import { AccountWalletPanel } from '@/components/wallet/account-wallet-panel';
 import { useWalletBalance } from '@/components/wallet/use-wallet-balance';
 import type {
@@ -155,6 +156,7 @@ export function AccountDashboard() {
 
   return (
     <div className="grid gap-8 pt-8 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-12">
+      <CartRecoveryPanel className="md:col-span-2" />
       {activeTab !== 'wallet' && wallet.state.status === 'ready' && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-sm border border-[var(--sf-color-border)] px-4 py-2 md:col-span-2">
           <p className="text-sm">

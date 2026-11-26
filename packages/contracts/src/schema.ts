@@ -3044,6 +3044,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cart-recovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CartRecoveryController_status_v1"];
+        put: operations["CartRecoveryController_save_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart-recovery/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CartRecoveryController_preview_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart-recovery/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CartRecoveryController_restore_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart-recovery/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CartRecoveryController_hide_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart-recovery/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CartRecoveryController_discard_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart-recovery/admin/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CartRecoveryController_report_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart-recovery/admin/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CartRecoveryController_policy_v1"];
+        trace?: never;
+    };
     "/api/v1/orders/{orderId}/return-authorization": {
         parameters: {
             query?: never;
@@ -7654,11 +7766,14 @@ export interface components {
             attribution?: components["schemas"]["SessionAttributionDto"];
             /** @enum {string} */
             growthDevice?: "desktop" | "mobile" | "tablet";
+            /** Format: uuid */
+            savedCartId?: string;
             couponCode?: string;
             quoteToken?: string;
             customerNote?: string;
             /** Format: uuid */
             shippingCarrierId?: string;
+            savedCartRevision?: number;
             /** Format: uuid */
             userAddressId?: string;
             shippingAddress?: components["schemas"]["CreateOrderAddressDto"];
@@ -7862,6 +7977,65 @@ export interface components {
             status: "CANCELLED" | "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "EXPIRED";
             reason?: string;
             sendCustomerSms?: boolean;
+        };
+        SavedCartVersionDto: {
+            /** Format: uuid */
+            cartId: string;
+            revision: number;
+        };
+        SavedCartStatusDto: {
+            current: components["schemas"]["SavedCartVersionDto"] | null;
+            /** Format: date-time */
+            expiresAt: string | null;
+            itemCount: number;
+            showReminder: boolean;
+        };
+        SaveCartDto: {
+            current?: components["schemas"]["SavedCartVersionDto"];
+            items: components["schemas"]["CreateOrderItemDto"][];
+        };
+        RecoveredCartItemDto: {
+            /** @enum {string|null} */
+            platingType: "GOLD" | "ROSE_GOLD" | "RHODIUM" | null;
+            variantId: string;
+            productSlug: string;
+            productName: string;
+            variantLabel: string;
+            unitSalePriceToman: number;
+            unitPlatingPriceToman: number;
+            platingLeadTimeDays: number;
+            quantity: number;
+            maxQuantity: number;
+        };
+        SavedCartReviewLineDto: {
+            item: components["schemas"]["RecoveredCartItemDto"] | null;
+            productName: string;
+            previousQuantity: number;
+            previousUnitToman: number;
+        };
+        SavedCartReviewDto: {
+            lines: components["schemas"]["SavedCartReviewLineDto"][];
+            reviewKey: string;
+            applied: boolean;
+        };
+        RestoreCartDto: {
+            /** Format: uuid */
+            cartId: string;
+            revision: number;
+            reviewKey: string;
+        };
+        SavedCartPolicyDto: {
+            remindersEnabled: boolean;
+            idleHours: number;
+            retentionDays: number;
+        };
+        SavedCartReportDto: {
+            policy: components["schemas"]["SavedCartPolicyDto"];
+            saved: number;
+            abandoned: number;
+            restored: number;
+            ordered: number;
+            paid: number;
         };
         AuthorizeOrderReturnDto: {
             reason: string;
@@ -14591,6 +14765,182 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    CartRecoveryController_status_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartStatusDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveCartDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartStatusDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_preview_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedCartVersionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartReviewDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_restore_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreCartDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartReviewDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_hide_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedCartVersionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartStatusDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_discard_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedCartVersionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartStatusDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_report_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartReportDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_policy_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedCartPolicyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartPolicyDto"];
+                };
             };
         };
     };

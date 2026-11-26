@@ -8650,6 +8650,232 @@
         ]
       }
     },
+    "/api/v1/cart-recovery": {
+      "get": {
+        "operationId": "CartRecoveryController_status_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedCartStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CartRecovery"
+        ]
+      },
+      "put": {
+        "operationId": "CartRecoveryController_save_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveCartDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedCartStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CartRecovery"
+        ]
+      }
+    },
+    "/api/v1/cart-recovery/preview": {
+      "post": {
+        "operationId": "CartRecoveryController_preview_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavedCartVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedCartReviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CartRecovery"
+        ]
+      }
+    },
+    "/api/v1/cart-recovery/restore": {
+      "post": {
+        "operationId": "CartRecoveryController_restore_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreCartDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedCartReviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CartRecovery"
+        ]
+      }
+    },
+    "/api/v1/cart-recovery/hide": {
+      "post": {
+        "operationId": "CartRecoveryController_hide_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavedCartVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedCartStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CartRecovery"
+        ]
+      }
+    },
+    "/api/v1/cart-recovery/discard": {
+      "post": {
+        "operationId": "CartRecoveryController_discard_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavedCartVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedCartStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CartRecovery"
+        ]
+      }
+    },
+    "/api/v1/cart-recovery/admin/report": {
+      "get": {
+        "operationId": "CartRecoveryController_report_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedCartReportDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CartRecovery"
+        ]
+      }
+    },
+    "/api/v1/cart-recovery/admin/policy": {
+      "patch": {
+        "operationId": "CartRecoveryController_policy_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavedCartPolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedCartPolicyDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CartRecovery"
+        ]
+      }
+    },
     "/api/v1/orders/{orderId}/return-authorization": {
       "post": {
         "operationId": "OrderReturnsController_authorizeReturn_v1",
@@ -20283,8 +20509,8 @@
           },
           "variantId": {
             "type": "string",
-            "format": "uuid",
-            "nullable": true
+            "nullable": true,
+            "format": "uuid"
           },
           "rateBps": {
             "type": "number",
@@ -25003,6 +25229,10 @@
             ],
             "type": "string"
           },
+          "savedCartId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "couponCode": {
             "type": "string",
             "maxLength": 32
@@ -25018,6 +25248,10 @@
           "shippingCarrierId": {
             "type": "string",
             "format": "uuid"
+          },
+          "savedCartRevision": {
+            "type": "number",
+            "minimum": 1
           },
           "userAddressId": {
             "type": "string",
@@ -25837,6 +26071,254 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "SavedCartVersionDto": {
+        "type": "object",
+        "properties": {
+          "cartId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "cartId",
+          "revision"
+        ]
+      },
+      "SavedCartStatusDto": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SavedCartVersionDto"
+              }
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "itemCount": {
+            "type": "number"
+          },
+          "showReminder": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "current",
+          "expiresAt",
+          "itemCount",
+          "showReminder"
+        ]
+      },
+      "SaveCartDto": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "$ref": "#/components/schemas/SavedCartVersionDto"
+          },
+          "items": {
+            "uniqueItems": true,
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateOrderItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "RecoveredCartItemDto": {
+        "type": "object",
+        "properties": {
+          "platingType": {
+            "nullable": true,
+            "enum": [
+              "GOLD",
+              "ROSE_GOLD",
+              "RHODIUM"
+            ],
+            "type": "string"
+          },
+          "variantId": {
+            "type": "string"
+          },
+          "productSlug": {
+            "type": "string"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "variantLabel": {
+            "type": "string"
+          },
+          "unitSalePriceToman": {
+            "type": "number"
+          },
+          "unitPlatingPriceToman": {
+            "type": "number"
+          },
+          "platingLeadTimeDays": {
+            "type": "number"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "maxQuantity": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "platingType",
+          "variantId",
+          "productSlug",
+          "productName",
+          "variantLabel",
+          "unitSalePriceToman",
+          "unitPlatingPriceToman",
+          "platingLeadTimeDays",
+          "quantity",
+          "maxQuantity"
+        ]
+      },
+      "SavedCartReviewLineDto": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecoveredCartItemDto"
+              }
+            ]
+          },
+          "productName": {
+            "type": "string"
+          },
+          "previousQuantity": {
+            "type": "number"
+          },
+          "previousUnitToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "item",
+          "productName",
+          "previousQuantity",
+          "previousUnitToman"
+        ]
+      },
+      "SavedCartReviewDto": {
+        "type": "object",
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SavedCartReviewLineDto"
+            }
+          },
+          "reviewKey": {
+            "type": "string"
+          },
+          "applied": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "lines",
+          "reviewKey",
+          "applied"
+        ]
+      },
+      "RestoreCartDto": {
+        "type": "object",
+        "properties": {
+          "cartId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "reviewKey": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "cartId",
+          "revision",
+          "reviewKey"
+        ]
+      },
+      "SavedCartPolicyDto": {
+        "type": "object",
+        "properties": {
+          "remindersEnabled": {
+            "type": "boolean"
+          },
+          "idleHours": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 168
+          },
+          "retentionDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 30
+          }
+        },
+        "required": [
+          "remindersEnabled",
+          "idleHours",
+          "retentionDays"
+        ]
+      },
+      "SavedCartReportDto": {
+        "type": "object",
+        "properties": {
+          "policy": {
+            "$ref": "#/components/schemas/SavedCartPolicyDto"
+          },
+          "saved": {
+            "type": "number"
+          },
+          "abandoned": {
+            "type": "number"
+          },
+          "restored": {
+            "type": "number"
+          },
+          "ordered": {
+            "type": "number"
+          },
+          "paid": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "policy",
+          "saved",
+          "abandoned",
+          "restored",
+          "ordered",
+          "paid"
         ]
       },
       "AuthorizeOrderReturnDto": {

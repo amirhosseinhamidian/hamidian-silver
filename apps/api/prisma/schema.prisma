@@ -25,6 +25,7 @@ model User {
   priceChanges                        ProductPriceHistory[]            @relation("ProductPriceHistoryActor")
   platingRateChanges                  PlatingRateHistory[]             @relation("PlatingRateHistoryActor")
   orders                              Order[]
+  savedCarts                         SavedCart[]
   orderStatusChanges                  OrderStatusHistory[]             @relation("OrderStatusHistoryActor")
   addresses                           UserAddress[]
   shipmentStatusChanges               ShipmentStatusHistory[]          @relation("ShipmentStatusHistoryActor")
@@ -498,6 +499,9 @@ model SiteSettings {
   seoHomeDescription          String?  @db.VarChar(500)
   seoHomeOgMediaId            String?  @db.Uuid
   manufacturerCountriesEnabled Boolean @default(false)
+  cartRecoveryRemindersEnabled Boolean @default(true)
+  cartRecoveryIdleHours Int @default(24)
+  cartRecoveryRetentionDays Int @default(14)
   updatedByUserId     String?  @db.Uuid
   createdAt           DateTime @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime @updatedAt @db.Timestamptz(3)
@@ -1738,6 +1742,7 @@ model Order {
   financeSnapshot       OrderFinanceSnapshot?
   attribution           OrderAttribution?
   priceQuote            OrderPriceQuote?
+  recoveredCart         SavedCart?
   walletRewardLots      WalletLot[]
   walletReservations    WalletReservation[]
   purchaseRewardBasis   Json?
@@ -1989,6 +1994,32 @@ model CampaignPromotion {
   actor                User          @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
 
   @@map("campaign_promotions")
+}
+
+model SavedCart {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  activeUserId  String?  @unique @db.Uuid
+  orderId       String?  @unique @db.Uuid
+  revision      Int      @default(1)
+  items         Json
+  fingerprint   String   @db.Char(64)
+  savedAt       DateTime @default(now()) @db.Timestamptz(3)
+  eligibleAt    DateTime @db.Timestamptz(3)
+  expiresAt     DateTime @db.Timestamptz(3)
+  abandonedAt   DateTime? @db.Timestamptz(3)
+  restoredAt    DateTime? @db.Timestamptz(3)
+  hiddenAt      DateTime? @db.Timestamptz(3)
+  closedAt      DateTime? @db.Timestamptz(3)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order         Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([savedAt])
+  @@index([activeUserId, expiresAt])
+  @@index([expiresAt])
+  @@index([abandonedAt])
+  @@index([userId])
+  @@map("saved_carts")
 }
 
 model OrderPriceQuote {

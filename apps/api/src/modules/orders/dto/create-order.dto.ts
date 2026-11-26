@@ -68,7 +68,10 @@ export class PromotionEstimateRequestDto {
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(100)
-  @ArrayUnique((item: CreateOrderItemDto) => `${item.variantId}:${item.platingType ?? 'NONE'}`)
+  @ArrayUnique(
+    (item: CreateOrderItemDto | null) =>
+      `${typeof item?.variantId === 'string' ? item.variantId.toLowerCase() : ''}:${item?.platingType ?? 'NONE'}`,
+  )
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)
   items!: CreateOrderItemDto[];
@@ -119,6 +122,16 @@ export class CreateOrderDto {
   @IsOptional()
   @IsUUID('4')
   shippingCarrierId?: string;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid' })
+  @IsOptional()
+  @IsUUID('4')
+  savedCartId?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  savedCartRevision?: number;
 
   @IsOptional()
   @IsUUID('4')

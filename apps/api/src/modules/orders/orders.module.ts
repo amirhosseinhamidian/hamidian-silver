@@ -20,6 +20,9 @@ import { OrderReturnsController } from './order-returns.controller';
 import { OrderReturnsService } from './order-returns.service';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
+import { CartRecoveryController } from './cart-recovery.controller';
+import { CartRecoveryService } from './cart-recovery.service';
+import { CartRecoveryScheduler } from './cart-recovery.scheduler';
 
 @Module({
   imports: [
@@ -32,6 +35,7 @@ import { OrdersService } from './orders.service';
   ],
   controllers: [
     OrdersController,
+    CartRecoveryController,
     OrderReturnsController,
     FulfillmentReadinessController,
     OperationsWorkQueueController,
@@ -40,6 +44,8 @@ import { OrdersService } from './orders.service';
   ],
   providers: [
     OrdersService,
+    CartRecoveryService,
+    CartRecoveryScheduler,
     OrderReturnsService,
     OrderExpirationService,
     OrderExpirationScheduler,

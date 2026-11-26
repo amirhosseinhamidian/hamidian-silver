@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 
+import { CartRecoveryPanel } from '@/components/cart/cart-recovery-panel';
 import { StorefrontHome } from '@/components/home/storefront-home';
+import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
 import { JsonLd } from '@/components/seo/json-ld';
 import { getPublicHomepage } from '@/lib/home/public-homepage';
 import { HOME_SEO } from '@/lib/seo/content-copy';
@@ -26,16 +29,22 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function StorefrontHomePage() {
-  const [homepage, settings, shippingOptions] = await Promise.all([
+  const [homepage, settings, shippingOptions, cookieStore] = await Promise.all([
     getPublicHomepage(),
     getPublicSiteSettings(),
     getPublicShippingOptionsForSeo(),
+    cookies(),
   ]);
 
   return (
     <>
       <JsonLd data={buildOrganizationStructuredData(settings, shippingOptions)} />
       <JsonLd data={buildWebSiteStructuredData(settings)} />
+      {cookieStore.has(SESSION_COOKIE_NAME) && (
+        <div className="sf-container">
+          <CartRecoveryPanel />
+        </div>
+      )}
       <StorefrontHome homepage={homepage} />
     </>
   );

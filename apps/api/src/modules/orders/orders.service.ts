@@ -34,6 +34,8 @@ import { NotificationOutboxService } from '../notifications/notification-outbox.
 import { ShippingPricingService } from '../shipping/shipping-pricing.service';
 import { ShippingCarriersService } from '../shipping/shipping-carriers.service';
 import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
+import { CartRecoveryService } from './cart-recovery.service';
+import { loadRecoveryItems } from './cart-recovery-pricing';
 import { WalletCheckoutService } from '../wallet/wallet-checkout.service';
 import { allocateCheckoutDiscount } from '../wallet/wallet-checkout';
 import { quoteReferralCheckout } from '../referrals/referral-checkout';
@@ -411,6 +413,7 @@ export class OrdersService {
     @Optional() private readonly outbox?: NotificationOutboxService,
     @Optional() private readonly promotions?: PromotionsService,
     @Optional() private readonly walletCheckout?: WalletCheckoutService,
+    @Optional() private readonly cartRecovery?: CartRecoveryService,
   ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
@@ -418,7 +421,11 @@ export class OrdersService {
     const customerNote = dto.customerNote?.trim() || null;
     const quote = dto.quoteToken ? parseQuoteToken(dto.quoteToken) : null;
     if (
-      (dto.quoteToken || dto.couponCode || dto.useWalletCredit || dto.useReferralCredit) &&
+      (dto.quoteToken ||
+        dto.couponCode ||
+        dto.useWalletCredit ||
+        dto.useReferralCredit ||
+        dto.savedCartId) &&
       !quote
     )
       throw this.quoteChanged();
@@ -633,6 +640,13 @@ export class OrdersService {
         );
       }
       await this.reserveInventory(transaction, warehouse.id, order.id, preparedItems, userId);
+      await this.cartRecovery?.closeForOrder(transaction, {
+        userId,
+        orderId: order.id,
+        cartId: dto.savedCartId,
+        revision: dto.savedCartRevision,
+        items: dto.items,
+      });
 
       return transaction.order.findUniqueOrThrow({
         where: {
@@ -686,6 +700,14 @@ export class OrdersService {
     this.assertUniqueItemSelections(dto.items);
     return this.prisma.$transaction(async (tx) => {
       const address = await this.resolveShippingAddress(tx, userId, dto);
+      if (dto.savedCartId) {
+        const available = await loadRecoveryItems(tx, dto.items);
+        if (available.some((item, index) => item?.quantity !== dto.items[index].quantity))
+          throw new DomainException(
+            ErrorCode.INVENTORY_NOT_AVAILABLE,
+            'Inventory is not available.',
+          );
+      }
       const priced = await this.priceOrder(tx, userId, dto, address, true);
       if (priced.binding.coupon && !priced.promotion) {
         throw new BadRequestException('The coupon is unavailable for this basket.');

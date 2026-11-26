@@ -162,7 +162,7 @@ export function CheckoutFlow({
   referralAvailable?: boolean;
 }>) {
   const router = useRouter();
-  const { items, itemCount, subtotalToman, clearCart } = useCart();
+  const { items, itemCount, subtotalToman, clearCart, recoveredCart } = useCart();
   const [auth, setAuth] = useState<AuthState>({ status: 'checking' });
   const wallet = useWalletBalance(auth.status === 'authenticated');
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
@@ -427,6 +427,9 @@ export function CheckoutFlow({
       ...(promotionsAvailable && coupon ? { couponCode: coupon } : {}),
       ...(useWalletCredit ? { useWalletCredit: true } : {}),
       ...(referralAvailable ? { useReferralCredit: true } : {}),
+      ...(recoveredCart
+        ? { savedCartId: recoveredCart.cartId, savedCartRevision: recoveredCart.revision }
+        : {}),
     };
   }
 
@@ -469,7 +472,7 @@ export function CheckoutFlow({
         const quoteKey = JSON.stringify(orderBody);
         const agreedQuote = quote?.key === quoteKey ? quote.quote : null;
         if (
-          (promotionsAvailable || useWalletCredit || referralAvailable) &&
+          (promotionsAvailable || useWalletCredit || referralAvailable || recoveredCart) &&
           (!agreedQuote || Date.parse(agreedQuote.expiresAt) <= Date.now())
         ) {
           phase = 'quote';
@@ -481,6 +484,11 @@ export function CheckoutFlow({
           });
           if (!quoteResponse.ok) {
             if (quoteResponse.status === 401) setAuth({ status: 'anonymous', expired: true });
+            if (recoveredCart && quoteResponse.status === 409) {
+              setStaleCart(true);
+              setCheckoutError('موجودی سبد بازیابی‌شده تغییر کرده است. دوباره سبد را بررسی کنید.');
+              return;
+            }
             setCheckoutError(
               quoteResponse.status === 400 && orderBody.couponCode
                 ? 'کد تخفیف برای این سبد قابل استفاده نیست.'
@@ -1268,7 +1276,7 @@ export function CheckoutFlow({
             >
               {priceChange
                 ? 'تأیید مبلغ جدید و پرداخت'
-                : (promotionsAvailable || useWalletCredit || referralAvailable) &&
+                : (promotionsAvailable || useWalletCredit || referralAvailable || recoveredCart) &&
                     !pendingOrderId &&
                     !currentQuote
                   ? 'بررسی مبلغ نهایی'
