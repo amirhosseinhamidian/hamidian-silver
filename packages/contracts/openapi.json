@@ -12736,6 +12736,171 @@
         ]
       }
     },
+    "/api/v1/seo/index-monitoring": {
+      "get": {
+        "operationId": "SeoIndexMonitoringController_overview_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 180,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoIndexOverviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
+    "/api/v1/seo/index-monitoring/queue": {
+      "post": {
+        "operationId": "SeoIndexMonitoringController_queue_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoInspectionQueuedDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
+    "/api/v1/seo/index-monitoring/coverage": {
+      "get": {
+        "operationId": "SeoIndexMonitoringController_coverage_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "reason",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 240,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoCoverageOverviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      },
+      "post": {
+        "operationId": "SeoIndexMonitoringController_importCoverage_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "label",
+                  "reportDate"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "reportDate": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoCoverageStoredDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
     "/api/v1/supplier-imports/sources": {
       "get": {
         "operationId": "SupplierImportsController_listSources_v1",
@@ -31974,6 +32139,391 @@
         ]
       },
       "SeoAuditQueuedDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "SeoGoogleIndexDto": {
+        "type": "object",
+        "properties": {
+          "observedAt": {
+            "type": "string"
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "incomplete": {
+            "type": "boolean"
+          },
+          "verdict": {
+            "type": "string",
+            "nullable": true
+          },
+          "coverageState": {
+            "type": "string",
+            "nullable": true
+          },
+          "indexingState": {
+            "type": "string",
+            "nullable": true
+          },
+          "pageFetchState": {
+            "type": "string",
+            "nullable": true
+          },
+          "googleCanonical": {
+            "type": "string",
+            "nullable": true
+          },
+          "userCanonical": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastCrawlAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "observedAt",
+          "stale",
+          "incomplete",
+          "verdict",
+          "coverageState",
+          "indexingState",
+          "pageFetchState",
+          "googleCanonical",
+          "userCanonical",
+          "lastCrawlAt"
+        ]
+      },
+      "SeoIndexTechnicalDto": {
+        "type": "object",
+        "properties": {
+          "observedAt": {
+            "type": "string"
+          },
+          "finalPath": {
+            "type": "string"
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "number",
+            "nullable": true
+          },
+          "canonical": {
+            "type": "string",
+            "nullable": true
+          },
+          "noindex": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "failure": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "observedAt",
+          "finalPath",
+          "stale",
+          "status",
+          "canonical",
+          "noindex",
+          "failure"
+        ]
+      },
+      "SeoIndexSitemapDto": {
+        "type": "object",
+        "properties": {
+          "observedAt": {
+            "type": "string"
+          },
+          "present": {
+            "type": "boolean"
+          },
+          "stale": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "observedAt",
+          "present",
+          "stale"
+        ]
+      },
+      "SeoIndexItemDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "prioritySource": {
+            "type": "string"
+          },
+          "queued": {
+            "type": "boolean"
+          },
+          "lastAttemptAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastError": {
+            "type": "string",
+            "nullable": true
+          },
+          "google": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeoGoogleIndexDto"
+              }
+            ]
+          },
+          "technical": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeoIndexTechnicalDto"
+              }
+            ]
+          },
+          "sitemap": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeoIndexSitemapDto"
+              }
+            ]
+          },
+          "differences": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "url",
+          "path",
+          "prioritySource",
+          "queued",
+          "lastAttemptAt",
+          "lastError",
+          "google",
+          "technical",
+          "sitemap",
+          "differences"
+        ]
+      },
+      "SeoIndexOverviewDto": {
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "property": {
+            "type": "string",
+            "nullable": true
+          },
+          "origin": {
+            "type": "string",
+            "nullable": true
+          },
+          "automatic": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "used": {
+            "type": "number"
+          },
+          "pending": {
+            "type": "number"
+          },
+          "budgetResetsAt": {
+            "type": "string"
+          },
+          "pausedUntil": {
+            "type": "string",
+            "nullable": true
+          },
+          "pauseReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeoIndexItemDto"
+            }
+          }
+        },
+        "required": [
+          "configured",
+          "property",
+          "origin",
+          "automatic",
+          "limit",
+          "used",
+          "pending",
+          "budgetResetsAt",
+          "pausedUntil",
+          "pauseReason",
+          "page",
+          "pageSize",
+          "total",
+          "items"
+        ]
+      },
+      "SeoInspectionQueuedDto": {
+        "type": "object",
+        "properties": {
+          "queued": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "queued"
+        ]
+      },
+      "SeoCoverageReportDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string"
+          },
+          "reportDate": {
+            "type": "string"
+          },
+          "importedAt": {
+            "type": "string"
+          },
+          "rowCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "reportDate",
+          "importedAt",
+          "rowCount"
+        ]
+      },
+      "SeoCoverageRowDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastCrawled": {
+            "type": "string",
+            "nullable": true
+          },
+          "pages": {
+            "type": "number",
+            "nullable": true
+          },
+          "validation": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "reason",
+          "url",
+          "lastCrawled",
+          "pages",
+          "validation"
+        ]
+      },
+      "SeoCoverageOverviewDto": {
+        "type": "object",
+        "properties": {
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeoCoverageReportDto"
+            }
+          },
+          "report": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeoCoverageReportDto"
+              }
+            ]
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeoCoverageRowDto"
+            }
+          }
+        },
+        "required": [
+          "history",
+          "report",
+          "reasons",
+          "page",
+          "pageSize",
+          "total",
+          "rows"
+        ]
+      },
+      "SeoCoverageStoredDto": {
         "type": "object",
         "properties": {
           "id": {

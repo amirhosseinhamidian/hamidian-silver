@@ -64,14 +64,23 @@ function retryAfterSeconds(value: string | null): number | undefined {
 function googleError(
   status: number,
   body: unknown,
-  stage: 'search_console' | 'oauth',
+  stage: 'search_console' | 'oauth' | 'inspection',
   retryAfter?: number,
 ): SearchConsoleError {
   const detail = searchConsoleRecord(searchConsoleRecord(body)?.error);
   const reasons = Array.isArray(detail?.errors)
     ? detail.errors.map((entry) => searchConsoleRecord(entry)?.reason)
     : [];
-  if (reasons.some((reason) => typeof reason === 'string' && quotaReasons.has(reason))) {
+  const errorInfo = Array.isArray(detail?.details)
+    ? detail.details.map((entry) => searchConsoleRecord(entry)?.reason)
+    : [];
+  if (
+    [...reasons, ...errorInfo].some(
+      (reason) =>
+        typeof reason === 'string' &&
+        (quotaReasons.has(reason) || ['QUOTA_EXCEEDED', 'DAILY_LIMIT_EXCEEDED'].includes(reason)),
+    )
+  ) {
     return new SearchConsoleError('quota_exceeded', retryAfter);
   }
   if (
@@ -98,10 +107,11 @@ export class SearchConsoleTransport {
   async json(
     url: string,
     init: RequestInit,
-    stage: 'search_console' | 'oauth' = 'search_console',
+    stage: 'search_console' | 'oauth' | 'inspection' = 'search_console',
   ): Promise<unknown> {
     const remainingSeconds = Math.ceil((this.rateLimitedUntil - Date.now()) / 1000);
-    if (remainingSeconds > 0) throw new SearchConsoleError('rate_limited', remainingSeconds);
+    if (stage !== 'inspection' && remainingSeconds > 0)
+      throw new SearchConsoleError('rate_limited', remainingSeconds);
     if (this.active >= maximumInFlight) throw new SearchConsoleError('busy', 1);
     this.active++;
     try {
@@ -133,6 +143,7 @@ export class SearchConsoleTransport {
         }
 
         const retryAfter = failure.retryAfterSeconds;
+        if (stage === 'inspection') throw failure;
         if (failure.code === 'rate_limited') {
           this.rateLimitedUntil = Math.max(
             this.rateLimitedUntil,

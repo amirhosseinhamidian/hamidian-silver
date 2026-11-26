@@ -113,6 +113,12 @@ export const envValidationSchema = Joi.object({
     .uri({ scheme: ['http', 'https'] })
     .empty('')
     .optional(),
+  SEO_INSPECTION_ENABLED: Joi.boolean().default(false),
+  SEO_INSPECTION_ORIGIN: Joi.string()
+    .uri({ scheme: ['https'] })
+    .empty('')
+    .optional(),
+  SEO_INSPECTION_DAILY_LIMIT: Joi.number().integer().min(1).max(100).default(30),
   SEO_AUDIT_ENABLED: Joi.boolean().default(false),
   SEARCH_CONSOLE_SYNC_ENABLED: Joi.boolean().default(false),
   SEARCH_CONSOLE_SYNC_HISTORY_DAYS: Joi.number().integer().min(3).max(90).default(30),

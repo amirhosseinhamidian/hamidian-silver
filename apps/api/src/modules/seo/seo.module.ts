@@ -4,6 +4,9 @@ import { DatabaseModule } from '../../infrastructure/database/database.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { SeoAuditController } from './audit/seo-audit.controller';
 import { SeoAuditService } from './audit/seo-audit.service';
+import { SeoIndexMonitoringController } from './inspection/seo-index-monitoring.controller';
+import { SeoIndexMonitoringService } from './inspection/seo-index-monitoring.service';
+import { SeoInspectionStore } from './inspection/seo-inspection-store';
 import { SeoController } from './seo.controller';
 import { SeoRedirectsService } from './seo-redirects.service';
 import { SeoSitemapService } from './seo-sitemap.service';
@@ -28,6 +31,7 @@ import { SearchEntityService } from './search-console/search-entity.service';
     SearchOverviewController,
     SearchEntityController,
     SeoAuditController,
+    SeoIndexMonitoringController,
   ],
   providers: [
     SeoRedirectsService,
@@ -38,6 +42,8 @@ import { SearchEntityService } from './search-console/search-entity.service';
     SearchOverviewService,
     SearchEntityService,
     SeoAuditService,
+    SeoIndexMonitoringService,
+    SeoInspectionStore,
     {
       provide: SEARCH_CONSOLE_CLIENT,
       inject: [ConfigService],

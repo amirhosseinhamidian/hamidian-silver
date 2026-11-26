@@ -3440,3 +3440,52 @@ model SeoAuditCheck {
   @@index([path, checkedAt])
   @@map("seo_audit_checks")
 }
+
+model SeoInspectionState {
+  property      String    @id @db.VarChar(128)
+  budgetDay     DateTime  @db.Date
+  used          Int       @default(0)
+  plannedDay    DateTime? @db.Date
+  leaseToken    String?   @db.Uuid
+  leaseUntil    DateTime? @db.Timestamptz(3)
+  pausedUntil   DateTime? @db.Timestamptz(3)
+  pauseReason   String?   @db.VarChar(50)
+
+  @@map("seo_inspection_states")
+}
+
+model SeoInspectionTarget {
+  property      String    @db.VarChar(128)
+  origin        String
+  path          String
+  priority      Int
+  source        String    @db.VarChar(30)
+  queued        Boolean   @default(true)
+  dueAt         DateTime  @db.Timestamptz(3)
+  attempts      Int       @default(0)
+  lastAttemptAt DateTime? @db.Timestamptz(3)
+  lastError     String?   @db.VarChar(50)
+  observedAt    DateTime? @db.Timestamptz(3)
+  observation   Json?
+
+  @@id([property, origin, path])
+  @@index([property, origin, queued, dueAt, priority], map: "seo_inspection_targets_queue_idx")
+  @@index([property, origin, observedAt], map: "seo_inspection_targets_observed_idx")
+  @@map("seo_inspection_targets")
+}
+
+model SeoCoverageImport {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  property   String   @db.VarChar(128)
+  origin     String
+  label      String   @db.VarChar(120)
+  reportDate DateTime @db.Date
+  importedAt DateTime @default(now()) @db.Timestamptz(3)
+  digest     String   @db.Char(64)
+  rowCount   Int
+  rows       Json
+
+  @@unique([property, origin, digest], map: "seo_coverage_imports_digest_key")
+  @@index([property, origin, importedAt], map: "seo_coverage_imports_recent_idx")
+  @@map("seo_coverage_imports")
+}

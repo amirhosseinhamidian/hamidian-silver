@@ -4692,6 +4692,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/seo/index-monitoring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoIndexMonitoringController_overview_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/index-monitoring/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SeoIndexMonitoringController_queue_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/index-monitoring/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoIndexMonitoringController_coverage_v1"];
+        put?: never;
+        post: operations["SeoIndexMonitoringController_importCoverage_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/supplier-imports/sources": {
         parameters: {
             query?: never;
@@ -9391,6 +9439,91 @@ export interface components {
             checks: components["schemas"]["SeoAuditCheckDto"][];
         };
         SeoAuditQueuedDto: {
+            /** Format: uuid */
+            id: string;
+        };
+        SeoGoogleIndexDto: {
+            observedAt: string;
+            stale: boolean;
+            incomplete: boolean;
+            verdict: string | null;
+            coverageState: string | null;
+            indexingState: string | null;
+            pageFetchState: string | null;
+            googleCanonical: string | null;
+            userCanonical: string | null;
+            lastCrawlAt: string | null;
+        };
+        SeoIndexTechnicalDto: {
+            observedAt: string;
+            finalPath: string;
+            stale: boolean;
+            status: number | null;
+            canonical: string | null;
+            noindex: boolean | null;
+            failure: string | null;
+        };
+        SeoIndexSitemapDto: {
+            observedAt: string;
+            present: boolean;
+            stale: boolean;
+        };
+        SeoIndexItemDto: {
+            url: string;
+            path: string;
+            prioritySource: string;
+            queued: boolean;
+            lastAttemptAt: string | null;
+            lastError: string | null;
+            google: components["schemas"]["SeoGoogleIndexDto"] | null;
+            technical: components["schemas"]["SeoIndexTechnicalDto"] | null;
+            sitemap: components["schemas"]["SeoIndexSitemapDto"] | null;
+            differences: string[];
+        };
+        SeoIndexOverviewDto: {
+            configured: boolean;
+            property: string | null;
+            origin: string | null;
+            automatic: boolean;
+            limit: number;
+            used: number;
+            pending: number;
+            budgetResetsAt: string;
+            pausedUntil: string | null;
+            pauseReason: string | null;
+            page: number;
+            pageSize: number;
+            total: number;
+            items: components["schemas"]["SeoIndexItemDto"][];
+        };
+        SeoInspectionQueuedDto: {
+            queued: number;
+        };
+        SeoCoverageReportDto: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            reportDate: string;
+            importedAt: string;
+            rowCount: number;
+        };
+        SeoCoverageRowDto: {
+            reason: string | null;
+            url: string | null;
+            lastCrawled: string | null;
+            pages: number | null;
+            validation: string | null;
+        };
+        SeoCoverageOverviewDto: {
+            history: components["schemas"]["SeoCoverageReportDto"][];
+            report: components["schemas"]["SeoCoverageReportDto"] | null;
+            reasons: string[];
+            page: number;
+            pageSize: number;
+            total: number;
+            rows: components["schemas"]["SeoCoverageRowDto"][];
+        };
+        SeoCoverageStoredDto: {
             /** Format: uuid */
             id: string;
         };
@@ -17452,6 +17585,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SeoAuditQueuedDto"];
+                };
+            };
+        };
+    };
+    SeoIndexMonitoringController_overview_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoIndexOverviewDto"];
+                };
+            };
+        };
+    };
+    SeoIndexMonitoringController_queue_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoInspectionQueuedDto"];
+                };
+            };
+        };
+    };
+    SeoIndexMonitoringController_coverage_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                id?: string;
+                reason?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoCoverageOverviewDto"];
+                };
+            };
+        };
+    };
+    SeoIndexMonitoringController_importCoverage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    label: string;
+                    /** Format: date */
+                    reportDate: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoCoverageStoredDto"];
                 };
             };
         };

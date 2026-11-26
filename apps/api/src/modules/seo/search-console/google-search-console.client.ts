@@ -12,6 +12,7 @@ export const SEARCH_CONSOLE_PROPERTY_IDS = [
 
 const tokenUrl = 'https://oauth2.googleapis.com/token';
 const scope = 'https://www.googleapis.com/auth/webmasters.readonly';
+const inspectionUrl = 'https://searchconsole.googleapis.com/v1/urlInspection/index:inspect';
 const sitesUrl = 'https://www.googleapis.com/webmasters/v3/sites/';
 
 export type GoogleSearchAnalyticsQuery = {
@@ -83,25 +84,49 @@ export class GoogleSearchConsoleClient implements SearchConsoleClient {
     return this.authorized('/sitemaps');
   }
 
-  private async authorized(path: string, init: RequestInit = {}): Promise<unknown> {
+  inspect(url: string) {
+    return this.authorizedRequest(
+      inspectionUrl,
+      {
+        method: 'POST',
+        body: JSON.stringify({ inspectionUrl: url, siteUrl: this.property, languageCode: 'en-US' }),
+      },
+      true,
+    );
+  }
+
+  private authorized(path: string, init: RequestInit = {}) {
+    return this.authorizedRequest(`${sitesUrl}${encodeURIComponent(this.property)}${path}`, init);
+  }
+
+  private async authorizedRequest(
+    url: string,
+    init: RequestInit,
+    inspection = false,
+  ): Promise<unknown> {
     if (!this.property) {
       throw new SearchConsoleError('property_not_found');
     }
     const token = await this.accessToken();
     const request = (value: string) =>
-      this.transport.json(`${sitesUrl}${encodeURIComponent(this.property)}${path}`, {
-        ...init,
-        headers: {
-          Authorization: `Bearer ${value}`,
-          ...(init.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      this.transport.json(
+        url,
+        {
+          ...init,
+          headers: {
+            Authorization: `Bearer ${value}`,
+            ...(init.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+          },
         },
-      });
+        inspection ? 'inspection' : 'search_console',
+      );
     try {
       return await request(token.value);
     } catch (error) {
       if (!(error instanceof SearchConsoleError) || error.code !== 'authentication_failed')
         throw error;
       if (this.cached === token) this.cached = undefined;
+      if (inspection) throw error;
       const refreshed = await this.accessToken();
       try {
         return await request(refreshed.value);

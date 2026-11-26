@@ -261,6 +261,9 @@ export function SearchOverviewView({
           <ButtonLink href="/seo/entities" variant="outline">
             عملکرد صفحات و فرصت‌ها
           </ButtonLink>
+          <ButtonLink href="/seo/index-monitoring" variant="outline">
+            پایش ایندکس
+          </ButtonLink>
           <ButtonLink href="/seo/technical" variant="outline">
             مشکلات فنی سئو
           </ButtonLink>

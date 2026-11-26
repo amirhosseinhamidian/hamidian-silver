@@ -268,13 +268,35 @@ it('signs a read-only assertion, reuses the token and refreshes once after a 401
       )
       .mockResolvedValueOnce(Response.json({}, { status: 401 }))
       .mockResolvedValueOnce(Response.json({ access_token: 'new-token', expires_in: 3600 }))
-      .mockResolvedValueOnce(Response.json({ sitemap: [] }));
+      .mockResolvedValueOnce(Response.json({ sitemap: [] }))
+      .mockResolvedValueOnce(
+        Response.json({ inspectionResult: { indexStatusResult: { verdict: 'PASS' } } }),
+      );
     const client = new GoogleSearchConsoleClient(
       { credentialsFile: file },
       new SearchConsoleTransport(attempt),
     );
     await expect(client.checkAccess()).resolves.toBeUndefined();
     await expect(client.listSitemaps()).resolves.toEqual({ sitemap: [] });
+    expect(attempt).toHaveBeenCalledTimes(5);
+    await expect(client.inspect('https://hamidian.shop/products')).resolves.toMatchObject({
+      inspectionResult: { indexStatusResult: { verdict: 'PASS' } },
+    });
+    expect(attempt).toHaveBeenCalledTimes(6);
+    expect(attempt).toHaveBeenNthCalledWith(
+      6,
+      'https://searchconsole.googleapis.com/v1/urlInspection/index:inspect',
+      expect.objectContaining({
+        method: 'POST',
+        redirect: 'error',
+        headers: { Authorization: 'Bearer new-token', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inspectionUrl: 'https://hamidian.shop/products',
+          siteUrl: property,
+          languageCode: 'en-US',
+        }),
+      }),
+    );
     const [url, init] = attempt.mock.calls[0];
     expect(url).toBe('https://oauth2.googleapis.com/token');
     expect(init?.redirect).toBe('error');
@@ -293,7 +315,6 @@ it('signs a read-only assertion, reuses the token and refreshes once after a 401
       ),
     ).toBe(true);
     expect(attempt.mock.calls[4][1]?.headers).toEqual({ Authorization: 'Bearer new-token' });
-    expect(attempt).toHaveBeenCalledTimes(5);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
