@@ -264,6 +264,9 @@ export function SearchOverviewView({
           <ButtonLink href="/seo/index-monitoring" variant="outline">
             پایش ایندکس
           </ButtonLink>
+          <ButtonLink href="/seo/opportunities" variant="outline">
+            فرصت‌های سئو
+          </ButtonLink>
           <ButtonLink href="/seo/issues" variant="outline">
             هشدارهای سئو
           </ButtonLink>

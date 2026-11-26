@@ -4788,6 +4788,54 @@ export interface paths {
         patch: operations["SeoIssueController_update_v1"];
         trace?: never;
     };
+    "/api/v1/seo/opportunities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoOpportunityController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/opportunities/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SeoOpportunityController_refresh_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/opportunities/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoOpportunityController_detail_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SeoOpportunityController_update_v1"];
+        trace?: never;
+    };
     "/api/v1/supplier-imports/sources": {
         parameters: {
             query?: never;
@@ -9637,6 +9685,113 @@ export interface components {
             /** Format: uuid */
             ownerId?: string | null;
             note?: string;
+        };
+        SeoOpportunityMetricsDto: {
+            start: string;
+            end: string;
+            days: number;
+            observedDays: number;
+            cappedDays: number;
+            clicks: number | null;
+            impressions: number | null;
+            ctr: number | null;
+            position: number | null;
+        };
+        SeoOpportunityComponentsDto: {
+            signal: number;
+            demand: number;
+            quality: number;
+            commercial: number;
+            stock: number;
+        };
+        SeoOpportunityEvidenceDto: {
+            reason: string;
+            recommendation: string;
+            facts: string[];
+            limitations: string[];
+            reportHref: string;
+            current: components["schemas"]["SeoOpportunityMetricsDto"];
+            previous: components["schemas"]["SeoOpportunityMetricsDto"];
+            stock: string;
+            components: components["schemas"]["SeoOpportunityComponentsDto"];
+        };
+        SeoOpportunityItemDto: {
+            /** Format: uuid */
+            id: string;
+            entityKind: string;
+            /** Format: uuid */
+            entityId: string;
+            rule: string;
+            url: string;
+            title: string;
+            score: number;
+            scoreVersion: number;
+            active: boolean;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "DEFERRED" | "TASK_CREATED" | "REJECTED";
+            revision: number;
+            refreshedAt: string;
+            deferredUntil: string | null;
+            evidence: components["schemas"]["SeoOpportunityEvidenceDto"];
+        };
+        SeoOpportunityListDto: {
+            configured: boolean;
+            page: number;
+            pageSize: number;
+            total: number;
+            items: components["schemas"]["SeoOpportunityItemDto"][];
+        };
+        SeoOpportunityRefreshDto: {
+            changed: number;
+            hasSource: boolean;
+        };
+        SeoOpportunityImpactDto: {
+            /** @enum {string} */
+            status: "READY" | "WAITING_FOR_DATA";
+            before: components["schemas"]["SeoOpportunityMetricsDto"];
+            after: components["schemas"]["SeoOpportunityMetricsDto"];
+            clickDifference: number | null;
+            impressionDifference: number | null;
+            ctrPointDifference: number | null;
+        };
+        SeoCorrectionTaskDto: {
+            /** Format: uuid */
+            id: string;
+            instruction: string;
+            url: string;
+            createdAt: string;
+            implementedOn: string | null;
+            windowDays: number | null;
+            changeNote: string | null;
+            confounders: string | null;
+            impact: components["schemas"]["SeoOpportunityImpactDto"] | null;
+        };
+        SeoOpportunityEventDto: {
+            /** Format: uuid */
+            id: string;
+            action: string;
+            at: string;
+            note: string | null;
+            actor: string | null;
+        };
+        SeoOpportunityDetailDto: {
+            item: components["schemas"]["SeoOpportunityItemDto"];
+            task: components["schemas"]["SeoCorrectionTaskDto"] | null;
+            page: number;
+            pageSize: number;
+            eventCount: number;
+            history: components["schemas"]["SeoOpportunityEventDto"][];
+        };
+        SeoOpportunityUpdateDto: {
+            revision: number;
+            /** @enum {string} */
+            action: "APPROVE" | "REJECT" | "DEFER" | "CREATE_TASK" | "REOPEN" | "IMPLEMENT" | "MEASURE";
+            note?: string;
+            /** Format: date */
+            date?: string;
+            /** @enum {number} */
+            windowDays?: 7 | 14 | 28;
+            confounders?: string;
         };
         Object: Record<string, never>;
         UpdateSupplierCategoryMappingDto: {
@@ -17878,6 +18033,95 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SeoIssueDetailDto"];
+                };
+            };
+        };
+    };
+    SeoOpportunityController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                status?: "PENDING" | "APPROVED" | "DEFERRED" | "TASK_CREATED" | "REJECTED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoOpportunityListDto"];
+                };
+            };
+        };
+    };
+    SeoOpportunityController_refresh_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoOpportunityRefreshDto"];
+                };
+            };
+        };
+    };
+    SeoOpportunityController_detail_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoOpportunityDetailDto"];
+                };
+            };
+        };
+    };
+    SeoOpportunityController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeoOpportunityUpdateDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoOpportunityDetailDto"];
                 };
             };
         };

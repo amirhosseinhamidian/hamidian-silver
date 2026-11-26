@@ -10,6 +10,8 @@ import { SeoInspectionStore } from './inspection/seo-inspection-store';
 import { SeoIssueController } from './issues/seo-issue.controller';
 import { SeoIssueService } from './issues/seo-issue.service';
 import { SeoIssueDeliveryWorker } from './issues/seo-issue-delivery.worker';
+import { SeoOpportunityController } from './opportunities/seo-opportunity.controller';
+import { SeoOpportunityService } from './opportunities/seo-opportunity.service';
 import { SeoController } from './seo.controller';
 import { SeoRedirectsService } from './seo-redirects.service';
 import { SeoSitemapService } from './seo-sitemap.service';
@@ -36,6 +38,7 @@ import { SearchEntityService } from './search-console/search-entity.service';
     SeoAuditController,
     SeoIndexMonitoringController,
     SeoIssueController,
+    SeoOpportunityController,
   ],
   providers: [
     SeoRedirectsService,
@@ -50,6 +53,7 @@ import { SearchEntityService } from './search-console/search-entity.service';
     SeoInspectionStore,
     SeoIssueService,
     SeoIssueDeliveryWorker,
+    SeoOpportunityService,
     {
       provide: SEARCH_CONSOLE_CLIENT,
       inject: [ConfigService],

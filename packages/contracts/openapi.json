@@ -13047,6 +13047,154 @@
         ]
       }
     },
+    "/api/v1/seo/opportunities": {
+      "get": {
+        "operationId": "SeoOpportunityController_list_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "DEFERRED",
+                "TASK_CREATED",
+                "REJECTED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoOpportunityListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
+    "/api/v1/seo/opportunities/refresh": {
+      "post": {
+        "operationId": "SeoOpportunityController_refresh_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoOpportunityRefreshDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
+    "/api/v1/seo/opportunities/{id}": {
+      "get": {
+        "operationId": "SeoOpportunityController_detail_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoOpportunityDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      },
+      "patch": {
+        "operationId": "SeoOpportunityController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeoOpportunityUpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoOpportunityDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
     "/api/v1/supplier-imports/sources": {
       "get": {
         "operationId": "SupplierImportsController_listSources_v1",
@@ -32953,6 +33101,455 @@
         },
         "required": [
           "revision"
+        ]
+      },
+      "SeoOpportunityMetricsDto": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "days": {
+            "type": "number"
+          },
+          "observedDays": {
+            "type": "number"
+          },
+          "cappedDays": {
+            "type": "number"
+          },
+          "clicks": {
+            "type": "number",
+            "nullable": true
+          },
+          "impressions": {
+            "type": "number",
+            "nullable": true
+          },
+          "ctr": {
+            "type": "number",
+            "nullable": true
+          },
+          "position": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "days",
+          "observedDays",
+          "cappedDays",
+          "clicks",
+          "impressions",
+          "ctr",
+          "position"
+        ]
+      },
+      "SeoOpportunityComponentsDto": {
+        "type": "object",
+        "properties": {
+          "signal": {
+            "type": "number"
+          },
+          "demand": {
+            "type": "number"
+          },
+          "quality": {
+            "type": "number"
+          },
+          "commercial": {
+            "type": "number"
+          },
+          "stock": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "signal",
+          "demand",
+          "quality",
+          "commercial",
+          "stock"
+        ]
+      },
+      "SeoOpportunityEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "recommendation": {
+            "type": "string"
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reportHref": {
+            "type": "string"
+          },
+          "current": {
+            "$ref": "#/components/schemas/SeoOpportunityMetricsDto"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/SeoOpportunityMetricsDto"
+          },
+          "stock": {
+            "type": "string"
+          },
+          "components": {
+            "$ref": "#/components/schemas/SeoOpportunityComponentsDto"
+          }
+        },
+        "required": [
+          "reason",
+          "recommendation",
+          "facts",
+          "limitations",
+          "reportHref",
+          "current",
+          "previous",
+          "stock",
+          "components"
+        ]
+      },
+      "SeoOpportunityItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entityKind": {
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number"
+          },
+          "scoreVersion": {
+            "type": "number"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "DEFERRED",
+              "TASK_CREATED",
+              "REJECTED"
+            ],
+            "type": "string"
+          },
+          "revision": {
+            "type": "number"
+          },
+          "refreshedAt": {
+            "type": "string"
+          },
+          "deferredUntil": {
+            "type": "string",
+            "nullable": true
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/SeoOpportunityEvidenceDto"
+          }
+        },
+        "required": [
+          "id",
+          "entityKind",
+          "entityId",
+          "rule",
+          "url",
+          "title",
+          "score",
+          "scoreVersion",
+          "active",
+          "status",
+          "revision",
+          "refreshedAt",
+          "deferredUntil",
+          "evidence"
+        ]
+      },
+      "SeoOpportunityListDto": {
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeoOpportunityItemDto"
+            }
+          }
+        },
+        "required": [
+          "configured",
+          "page",
+          "pageSize",
+          "total",
+          "items"
+        ]
+      },
+      "SeoOpportunityRefreshDto": {
+        "type": "object",
+        "properties": {
+          "changed": {
+            "type": "number"
+          },
+          "hasSource": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "changed",
+          "hasSource"
+        ]
+      },
+      "SeoOpportunityImpactDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "READY",
+              "WAITING_FOR_DATA"
+            ],
+            "type": "string"
+          },
+          "before": {
+            "$ref": "#/components/schemas/SeoOpportunityMetricsDto"
+          },
+          "after": {
+            "$ref": "#/components/schemas/SeoOpportunityMetricsDto"
+          },
+          "clickDifference": {
+            "type": "number",
+            "nullable": true
+          },
+          "impressionDifference": {
+            "type": "number",
+            "nullable": true
+          },
+          "ctrPointDifference": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "before",
+          "after",
+          "clickDifference",
+          "impressionDifference",
+          "ctrPointDifference"
+        ]
+      },
+      "SeoCorrectionTaskDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "instruction": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "implementedOn": {
+            "type": "string",
+            "nullable": true
+          },
+          "windowDays": {
+            "type": "number",
+            "nullable": true
+          },
+          "changeNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "confounders": {
+            "type": "string",
+            "nullable": true
+          },
+          "impact": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeoOpportunityImpactDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "instruction",
+          "url",
+          "createdAt",
+          "implementedOn",
+          "windowDays",
+          "changeNote",
+          "confounders",
+          "impact"
+        ]
+      },
+      "SeoOpportunityEventDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "actor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "at",
+          "note",
+          "actor"
+        ]
+      },
+      "SeoOpportunityDetailDto": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/SeoOpportunityItemDto"
+          },
+          "task": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeoCorrectionTaskDto"
+              }
+            ]
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "eventCount": {
+            "type": "number"
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeoOpportunityEventDto"
+            }
+          }
+        },
+        "required": [
+          "item",
+          "task",
+          "page",
+          "pageSize",
+          "eventCount",
+          "history"
+        ]
+      },
+      "SeoOpportunityUpdateDto": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "action": {
+            "enum": [
+              "APPROVE",
+              "REJECT",
+              "DEFER",
+              "CREATE_TASK",
+              "REOPEN",
+              "IMPLEMENT",
+              "MEASURE"
+            ],
+            "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
+          },
+          "windowDays": {
+            "type": "number",
+            "enum": [
+              7,
+              14,
+              28
+            ]
+          },
+          "confounders": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "revision",
+          "action"
         ]
       },
       "Object": {

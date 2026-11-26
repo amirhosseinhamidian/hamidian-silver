@@ -59,6 +59,7 @@ model User {
   operationalIncidentsAcknowledged    OperationalIncident[]            @relation("OperationalIncidentAcknowledger")
   operationalIncidentsAssigned        OperationalIncident[]            @relation("OperationalIncidentAssignee")
   operationalIncidentActivities       OperationalIncidentActivity[]    @relation("OperationalIncidentActivityActor")
+  seoOpportunityEvents                SeoOpportunityEvent[]             @relation("SeoOpportunityActor")
   seoIssuesAssigned                   SeoIssue[]                        @relation("SeoIssueOwner")
   seoIssueActivities                  SeoIssueEvent[]                   @relation("SeoIssueActor")
   seoIssueDeliveries                  SeoIssueDelivery[]                @relation("SeoIssueRecipient")
@@ -3561,4 +3562,70 @@ model SeoIssueDelivery {
   @@index([status, createdAt])
   @@index([recipientId])
   @@map("seo_issue_deliveries")
+}
+
+enum SeoOpportunityStatus {
+  PENDING
+  APPROVED
+  DEFERRED
+  TASK_CREATED
+  REJECTED
+}
+
+model SeoOpportunity {
+  id          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String               @unique @db.Char(64)
+  property    String               @db.VarChar(128)
+  origin      String
+  entityKind  String               @db.VarChar(16)
+  entityId    String               @db.Uuid
+  rule        String               @db.VarChar(40)
+  title       String
+  url         String
+  score       Int
+  scoreVersion Int
+  evidence    Json
+  status      SeoOpportunityStatus @default(PENDING)
+  active      Boolean              @default(true)
+  revision    Int                  @default(1)
+  refreshedAt DateTime             @db.Timestamptz(3)
+  deferredUntil DateTime?          @db.Date
+  task        SeoCorrectionTask?
+  events      SeoOpportunityEvent[]
+
+  @@index([property, origin, status, active, score], map: "seo_opportunities_queue_idx")
+  @@index([property, origin, entityKind, entityId], map: "seo_opportunities_entity_idx")
+  @@map("seo_opportunities")
+}
+
+model SeoCorrectionTask {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  opportunityId String         @unique @db.Uuid
+  instruction   String
+  url           String
+  createdAt     DateTime       @default(now()) @db.Timestamptz(3)
+  implementedOn DateTime?     @db.Date
+  windowDays    Int?
+  changeNote    String?        @db.VarChar(1000)
+  confounders   String?        @db.VarChar(1000)
+  impact        Json?
+  opportunity   SeoOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("seo_correction_tasks")
+}
+
+model SeoOpportunityEvent {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  opportunityId String         @db.Uuid
+  actorId       String?        @db.Uuid
+  action        String         @db.VarChar(24)
+  note          String?        @db.VarChar(1000)
+  recordedAt    DateTime       @default(now()) @db.Timestamptz(3)
+  snapshot      Json?
+  opportunity   SeoOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  actor         User?          @relation("SeoOpportunityActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([opportunityId, recordedAt], map: "seo_opportunity_events_recent_idx")
+  @@index([actorId])
+  @@map("seo_opportunity_events")
 }
