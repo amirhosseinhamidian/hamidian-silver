@@ -48,8 +48,10 @@ export function useCampaignSelection<T>(url: string | null, delay = 0, body?: st
   };
 }
 
-export function useCampaignTaxonomy() {
-  return useCampaignSelection<CampaignTaxonomy>('/api/campaigns/selection-taxonomy');
+export function useCampaignTaxonomy(enabled = true) {
+  return useCampaignSelection<CampaignTaxonomy>(
+    enabled ? '/api/campaigns/selection-taxonomy' : null,
+  );
 }
 
 export function addCampaignSelection(selected: readonly string[], key: string, max: number) {

@@ -6,10 +6,13 @@ import { CampaignDetailView } from '@/components/campaigns/campaign-detail-view'
 import { CampaignBudgetReview } from '@/components/campaigns/campaign-budget-review';
 import { FestivalWorkspace } from '@/components/campaigns/festival-workspace';
 import { CampaignLandingEditor } from '@/components/campaigns/campaign-landing-editor';
-import { CampaignPromotionEditor } from '@/components/campaigns/campaign-promotion-editor';
-import { CampaignQuotaEditor } from '@/components/campaigns/campaign-quota-editor';
-import { CampaignProductPricePreview } from '@/components/campaigns/campaign-product-price-preview';
 import { CampaignEditor } from '@/components/campaigns/campaign-editor';
+import { CampaignSalesPanel } from '@/components/campaigns/campaign-sales-panel';
+import { FestivalWizard } from '@/components/campaigns/festival-wizard';
+import {
+  FestivalDraftLink,
+  FestivalWizardNavigation,
+} from '@/components/campaigns/festival-wizard-navigation';
 import { CampaignLinkBuilder } from '@/components/site-settings/campaign-link-builder';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +27,7 @@ import {
   campaignStatusLabels,
   isCampaignId,
 } from '@/lib/campaigns/campaign-model';
+import { festivalStep } from '@/lib/campaigns/festival-wizard';
 import { formatAdminInteger, toPersianDigits } from '@/lib/presentation/formatters';
 
 type Props = {
@@ -64,12 +68,21 @@ export default async function CampaignsPage({ searchParams }: Props) {
       : undefined;
   const sort = orderSort === 'oldest' ? 'oldest' : 'newest';
   const canWrite = user.permissions.includes('settings.write');
+  const canReadFinance = user.permissions.includes('finance.read');
   const client = createAdminApiClient(token);
   const createKind = create === '1' ? 'FESTIVAL' : create === 'marketing' ? 'MARKETING' : null;
 
   let content;
   if (createKind && canWrite) {
-    content = <CampaignEditor key={createKind} createKind={createKind} />;
+    content =
+      createKind === 'FESTIVAL' ? (
+        <>
+          <FestivalWizardNavigation accountId={user.id} name="جشنوارهٔ جدید" step="basics" />
+          <CampaignEditor key={createKind} createKind={createKind} view="basics" />
+        </>
+      ) : (
+        <CampaignEditor key={createKind} createKind={createKind} />
+      );
   } else if (id !== undefined) {
     const result =
       typeof id === 'string' && isCampaignId(id)
@@ -81,38 +94,52 @@ export default async function CampaignsPage({ searchParams }: Props) {
             .catch(() => null)
         : null;
     const campaign = result?.data;
-    const canConfigureLanding = campaign?.kind !== 'MARKETING';
-    const canBuildLinks = canWrite && campaign?.kind !== 'FESTIVAL';
-    const [promotion, landing, festival] =
-      campaign &&
-      step !== 'operations' &&
-      !(edit === '1' && canWrite && campaign.status === 'DRAFT')
-        ? await Promise.all([
-            client
-              .GET('/api/v1/promotions/{campaignId}', {
-                params: { path: { campaignId: campaign.id } },
-                cache: 'no-store',
-              })
-              .catch(() => null),
-            canConfigureLanding
-              ? client
-                  .GET('/api/v1/campaigns/{id}/landing', {
-                    params: { path: { id: campaign.id } },
-                    cache: 'no-store',
-                  })
-                  .catch(() => null)
-              : null,
-            step === 'landing' && canConfigureLanding
-              ? client
-                  .GET('/api/v1/campaigns/{id}/design', {
-                    params: { path: { id: campaign.id } },
-                    cache: 'no-store',
-                  })
-                  .catch(() => null)
-              : null,
-          ])
-        : [null, null, null];
-    if (campaign) {
+    if (campaign?.kind === 'FESTIVAL' && step !== 'operations') {
+      content = (
+        <FestivalWizard
+          campaign={campaign}
+          client={client}
+          accountId={user.id}
+          step={
+            edit === '1' && campaign.status === 'DRAFT'
+              ? 'basics'
+              : (festivalStep(step) ?? 'review')
+          }
+          canWrite={canWrite}
+          canReadOperations={canReadOperations}
+          canReadFinance={canReadFinance}
+        />
+      );
+    } else if (campaign) {
+      const canConfigureLanding = campaign.kind !== 'MARKETING';
+      const canBuildLinks = canWrite && campaign.kind !== 'FESTIVAL';
+      const [promotion, landing, festival] =
+        step !== 'operations' && !(edit === '1' && canWrite && campaign.status === 'DRAFT')
+          ? await Promise.all([
+              client
+                .GET('/api/v1/promotions/{campaignId}', {
+                  params: { path: { campaignId: campaign.id } },
+                  cache: 'no-store',
+                })
+                .catch(() => null),
+              canConfigureLanding
+                ? client
+                    .GET('/api/v1/campaigns/{id}/landing', {
+                      params: { path: { id: campaign.id } },
+                      cache: 'no-store',
+                    })
+                    .catch(() => null)
+                : null,
+              step === 'landing' && canConfigureLanding
+                ? client
+                    .GET('/api/v1/campaigns/{id}/design', {
+                      params: { path: { id: campaign.id } },
+                      cache: 'no-store',
+                    })
+                    .catch(() => null)
+                : null,
+            ])
+          : [null, null, null];
       const editing = edit === '1' && canWrite && campaign.status === 'DRAFT';
       const currentStep =
         step === 'operations' ||
@@ -183,27 +210,12 @@ export default async function CampaignsPage({ searchParams }: Props) {
             <Alert tone="danger">دریافت تنظیمات صفحهٔ کمپین ممکن نشد.</Alert>
           );
       } else if (currentStep === 'promotion') {
-        panel = promotion?.data ? (
-          <>
-            <CampaignPromotionEditor
-              key={`promotion-${campaign.id}-${promotion.data.rule?.expectedVersion ?? 0}`}
-              id={campaign.id}
-              rule={promotion.data.rule}
-              editable={canWrite && campaign.status === 'DRAFT'}
-            />
-            <CampaignQuotaEditor
-              key={`quota-${campaign.id}`}
-              campaignId={campaign.id}
-              canWrite={canWrite}
-              canAdd={['DRAFT', 'APPROVED', 'SCHEDULED'].includes(campaign.status)}
-            />
-            <CampaignProductPricePreview
-              key={`prices-${campaign.id}-${campaign.revision}`}
-              campaignId={campaign.id}
-            />
-          </>
-        ) : (
-          <Alert tone="danger">دریافت قانون تخفیف ممکن نشد.</Alert>
+        panel = (
+          <CampaignSalesPanel
+            campaign={campaign}
+            rule={promotion?.data?.rule}
+            canWrite={canWrite}
+          />
         );
       } else if (currentStep === 'links') {
         const destination = landing?.data?.landing?.slug;
@@ -266,7 +278,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
               </ButtonLink>
             ))}
           </nav>
-          {currentStep !== 'operations' && user.permissions.includes('finance.read') && (
+          {currentStep !== 'operations' && canReadFinance && (
             <ButtonLink
               href={
                 campaign.kind === 'FESTIVAL'
@@ -309,12 +321,16 @@ export default async function CampaignsPage({ searchParams }: Props) {
                 className="grid gap-2 py-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-center sm:gap-5"
               >
                 <div className="min-w-0 space-y-1">
-                  <Link
-                    href={`/campaigns?id=${campaign.id}${canReadOperations ? '&step=operations' : ''}`}
-                    className="font-semibold underline-offset-4 hover:underline"
-                  >
-                    {campaign.name}
-                  </Link>
+                  {campaign.kind === 'FESTIVAL' && campaign.status === 'DRAFT' ? (
+                    <FestivalDraftLink accountId={user.id} id={campaign.id} name={campaign.name} />
+                  ) : (
+                    <Link
+                      href={`/campaigns?id=${campaign.id}${canReadOperations ? '&step=operations' : ''}`}
+                      className="font-semibold underline-offset-4 hover:underline"
+                    >
+                      {campaign.name}
+                    </Link>
+                  )}
                   <p className="text-xs text-[var(--admin-color-muted)]">
                     {campaignKindLabels[campaign.kind]}
                   </p>

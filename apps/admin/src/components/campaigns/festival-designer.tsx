@@ -43,28 +43,35 @@ const defaults = (['HERO', 'COUNTDOWN', 'INTRO', 'PRODUCTS'] as const).map(newSe
 const supportedSections = Object.keys(sectionLabels) as Kind[];
 const selectStyle = 'min-h-10 min-w-0 rounded-md border border-[var(--admin-color-border)] px-2';
 
+export function initialFestivalDesign(editor: Editor): Design {
+  return (
+    editor.design ?? {
+      schemaVersion: 1,
+      theme: editor.presets[0].theme,
+      themeSource: { name: editor.presets[0].name, version: 1 },
+      sections: defaults,
+    }
+  );
+}
+
 export function FestivalDesigner({
   campaignId,
   editor,
   editable,
   onPreviewChange,
+  view = 'all',
 }: {
   campaignId: string;
   editor: Editor;
   editable: boolean;
   onPreviewChange?: (draft: Design | null) => void;
+  view?: 'all' | 'theme' | 'sections';
 }) {
   const router = useRouter();
-  const taxonomy = useCampaignTaxonomy();
-  const [design, setDesign] = useState<Design>(
-    () =>
-      editor.design ?? {
-        schemaVersion: 1,
-        theme: editor.presets[0].theme,
-        themeSource: { name: editor.presets[0].name, version: 1 },
-        sections: defaults,
-      },
-  );
+  const showTheme = view !== 'sections';
+  const showSections = view !== 'theme';
+  const taxonomy = useCampaignTaxonomy(showSections);
+  const [design, setDesign] = useState(() => initialFestivalDesign(editor));
   const [assets, setAssets] = useState<Readonly<Record<string, Media>>>(() =>
     Object.fromEntries(editor.media.map((asset) => [asset.id, asset])),
   );
@@ -195,149 +202,170 @@ export function FestivalDesigner({
   }
 
   return (
-    <Card title="طراحی صفحهٔ جشنواره">
+    <Card title={view === 'theme' ? 'تم جشنواره' : 'طراحی صفحهٔ جشنواره'}>
       <form ref={formRef} className="space-y-5" onSubmit={(event) => void save(event)}>
         <fieldset disabled={!editable || busy || uploads > 0} className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Dialog open={themePickerOpen} onOpenChange={setThemePickerOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">انتخاب تم از کتابخانه</Button>
-              </DialogTrigger>
-              <DialogContent
-                title="انتخاب تم جشنواره"
-                description="نسخهٔ انتخابی در پیش‌نویس این جشنواره کپی می‌شود."
-                size="lg"
-              >
-                <FestivalThemeBrowser
-                  onChoose={({ name, version, theme }) => {
-                    setDesign((current) => ({ ...current, theme, themeSource: { name, version } }));
-                    setThemePickerOpen(false);
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
-            <ButtonLink href="/campaigns/themes" variant="ghost" target="_blank" rel="noreferrer">
-              مدیریت کتابخانه
-            </ButtonLink>
-            {design.themeSource && (
-              <span className="text-xs [overflow-wrap:anywhere]">
-                الگوی پایهٔ {design.themeSource.name} · نسخهٔ{' '}
-                {design.themeSource.version.toLocaleString('fa-IR')}
-              </span>
-            )}
-          </div>
-          <FestivalThemeFields theme={design.theme} onChange={setTheme} />
-
-          {editable && availableSections.length > 0 && (
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="grid gap-1 text-sm">
-                نوع بخش تازه
-                <select
-                  className={selectStyle}
-                  value={sectionToAdd}
-                  onChange={(event) => setSectionToAdd(event.currentTarget.value as Kind | '')}
-                >
-                  <option value="">انتخاب نوع بخش</option>
-                  {availableSections.map((kind) => (
-                    <option key={kind} value={kind}>
-                      {sectionLabels[kind]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Button
-                variant="outline"
-                disabled={!sectionToAdd || busy || uploads > 0}
-                onClick={addSection}
-              >
-                افزودن بخش
-              </Button>
-            </div>
-          )}
-          <ol aria-label="ترتیب بخش‌های جشنواره" className="space-y-3">
-            {design.sections.map((section, index) => (
-              <li
-                key={section.kind}
-                onDragOver={editable && !busy && !uploads ? (e) => e.preventDefault() : undefined}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (editable && !busy && !uploads)
-                    move(e.dataTransfer.getData('text/plain') as Kind, section.kind);
-                }}
-                className="space-y-3 rounded-lg border border-[var(--admin-color-border)] p-3"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="flex items-center gap-2 text-sm font-semibold">
-                    <input
-                      type="checkbox"
-                      disabled={section.kind === 'PRODUCTS'}
-                      checked={section.enabled}
-                      onChange={(e) => setSection({ ...section, enabled: e.currentTarget.checked })}
+          {showTheme && (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <Dialog open={themePickerOpen} onOpenChange={setThemePickerOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">انتخاب تم از کتابخانه</Button>
+                  </DialogTrigger>
+                  <DialogContent
+                    title="انتخاب تم جشنواره"
+                    description="نسخهٔ انتخابی در پیش‌نویس این جشنواره کپی می‌شود."
+                    size="lg"
+                  >
+                    <FestivalThemeBrowser
+                      onChoose={({ name, version, theme }) => {
+                        setDesign((current) => ({
+                          ...current,
+                          theme,
+                          themeSource: { name, version },
+                        }));
+                        setThemePickerOpen(false);
+                      }}
                     />
-                    {sectionLabels[section.kind]}
+                  </DialogContent>
+                </Dialog>
+                <ButtonLink
+                  href="/campaigns/themes"
+                  variant="ghost"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  مدیریت کتابخانه
+                </ButtonLink>
+                {design.themeSource && (
+                  <span className="text-xs [overflow-wrap:anywhere]">
+                    الگوی پایهٔ {design.themeSource.name} · نسخهٔ{' '}
+                    {design.themeSource.version.toLocaleString('fa-IR')}
+                  </span>
+                )}
+              </div>
+              <FestivalThemeFields theme={design.theme} onChange={setTheme} />
+            </>
+          )}
+
+          {showSections && (
+            <>
+              {editable && availableSections.length > 0 && (
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="grid gap-1 text-sm">
+                    نوع بخش تازه
+                    <select
+                      className={selectStyle}
+                      value={sectionToAdd}
+                      onChange={(event) => setSectionToAdd(event.currentTarget.value as Kind | '')}
+                    >
+                      <option value="">انتخاب نوع بخش</option>
+                      {availableSections.map((kind) => (
+                        <option key={kind} value={kind}>
+                          {sectionLabels[kind]}
+                        </option>
+                      ))}
+                    </select>
                   </label>
-                  {editable && (
-                    <div className="flex items-center gap-1">
-                      <span
-                        draggable={!busy && !uploads}
-                        aria-hidden="true"
-                        className="cursor-grab px-2 text-lg"
-                        onDragStart={(e) => e.dataTransfer.setData('text/plain', section.kind)}
-                      >
-                        ⠿
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={index === 0}
-                        aria-label={`بردن ${sectionLabels[section.kind]} به بالا`}
-                        onClick={() => move(section.kind, design.sections[index - 1].kind)}
-                      >
-                        ↑
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={index === design.sections.length - 1}
-                        aria-label={`بردن ${sectionLabels[section.kind]} به پایین`}
-                        onClick={() => move(section.kind, design.sections[index + 1].kind)}
-                      >
-                        ↓
-                      </Button>
-                      {section.kind !== 'PRODUCTS' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={busy || uploads > 0}
-                          aria-label={`حذف بخش ${sectionLabels[section.kind]}`}
-                          onClick={() => removeSection(section)}
-                        >
-                          حذف بخش
-                        </Button>
+                  <Button
+                    variant="outline"
+                    disabled={!sectionToAdd || busy || uploads > 0}
+                    onClick={addSection}
+                  >
+                    افزودن بخش
+                  </Button>
+                </div>
+              )}
+              <ol aria-label="ترتیب بخش‌های جشنواره" className="space-y-3">
+                {design.sections.map((section, index) => (
+                  <li
+                    key={section.kind}
+                    onDragOver={
+                      editable && !busy && !uploads ? (e) => e.preventDefault() : undefined
+                    }
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (editable && !busy && !uploads)
+                        move(e.dataTransfer.getData('text/plain') as Kind, section.kind);
+                    }}
+                    className="space-y-3 rounded-lg border border-[var(--admin-color-border)] p-3"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <label className="flex items-center gap-2 text-sm font-semibold">
+                        <input
+                          type="checkbox"
+                          disabled={section.kind === 'PRODUCTS'}
+                          checked={section.enabled}
+                          onChange={(e) =>
+                            setSection({ ...section, enabled: e.currentTarget.checked })
+                          }
+                        />
+                        {sectionLabels[section.kind]}
+                      </label>
+                      {editable && (
+                        <div className="flex items-center gap-1">
+                          <span
+                            draggable={!busy && !uploads}
+                            aria-hidden="true"
+                            className="cursor-grab px-2 text-lg"
+                            onDragStart={(e) => e.dataTransfer.setData('text/plain', section.kind)}
+                          >
+                            ⠿
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={index === 0}
+                            aria-label={`بردن ${sectionLabels[section.kind]} به بالا`}
+                            onClick={() => move(section.kind, design.sections[index - 1].kind)}
+                          >
+                            ↑
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={index === design.sections.length - 1}
+                            aria-label={`بردن ${sectionLabels[section.kind]} به پایین`}
+                            onClick={() => move(section.kind, design.sections[index + 1].kind)}
+                          >
+                            ↓
+                          </Button>
+                          {section.kind !== 'PRODUCTS' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={busy || uploads > 0}
+                              aria-label={`حذف بخش ${sectionLabels[section.kind]}`}
+                              onClick={() => removeSection(section)}
+                            >
+                              حذف بخش
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-                {section.enabled && (
-                  <FestivalSectionEditor
-                    section={section}
-                    campaignId={campaignId}
-                    taxonomy={taxonomy.data}
-                    assets={assets}
-                    update={setSection}
-                    uploaded={(asset) =>
-                      setAssets((current) => ({ ...current, [asset.id]: asset }))
-                    }
-                    onPendingChange={(pending) =>
-                      setUploads((count) => (pending ? count + 1 : Math.max(0, count - 1)))
-                    }
-                  />
-                )}
-              </li>
-            ))}
-          </ol>
+                    {section.enabled && (
+                      <FestivalSectionEditor
+                        section={section}
+                        campaignId={campaignId}
+                        taxonomy={taxonomy.data}
+                        assets={assets}
+                        update={setSection}
+                        uploaded={(asset) =>
+                          setAssets((current) => ({ ...current, [asset.id]: asset }))
+                        }
+                        onPendingChange={(pending) =>
+                          setUploads((count) => (pending ? count + 1 : Math.max(0, count - 1)))
+                        }
+                      />
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
 
-          {editable && (
+          {showTheme && editable && (
             <label className="grid max-w-md gap-1 text-sm">
               ذخیرهٔ تم با نام جدید (اختیاری)
               <Input
@@ -355,7 +383,7 @@ export function FestivalDesigner({
             </Button>
           )}
         </div>
-        {editable && editor.history.length > 1 && (
+        {showSections && editable && editor.history.length > 1 && (
           <div className="flex flex-wrap items-end gap-2">
             <label className="grid gap-1 text-sm">
               نسخه برای بازگردانی
