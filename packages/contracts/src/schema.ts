@@ -4740,6 +4740,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/seo/issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoIssueController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/issues/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SeoIssueController_scan_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/issues/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoIssueController_detail_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SeoIssueController_update_v1"];
+        trace?: never;
+    };
     "/api/v1/supplier-imports/sources": {
         parameters: {
             query?: never;
@@ -9526,6 +9574,69 @@ export interface components {
         SeoCoverageStoredDto: {
             /** Format: uuid */
             id: string;
+        };
+        SeoIssuePersonDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        SeoIssueEvidenceDto: {
+            sourceHref: string;
+            url: string | null;
+            facts: string[];
+            /** @enum {string} */
+            severity: "REVIEW" | "IMPORTANT" | "CRITICAL";
+        };
+        SeoIssueItemDto: {
+            /** Format: uuid */
+            id: string;
+            rule: string;
+            subject: string;
+            /** @enum {string} */
+            severity: "REVIEW" | "IMPORTANT" | "CRITICAL";
+            /** @enum {string} */
+            status: "OPEN" | "IN_PROGRESS" | "RESOLVED";
+            active: boolean;
+            revision: number;
+            firstObservedAt: string;
+            observedAt: string;
+            owner: components["schemas"]["SeoIssuePersonDto"] | null;
+            evidence: components["schemas"]["SeoIssueEvidenceDto"];
+        };
+        SeoIssueListDto: {
+            configured: boolean;
+            page: number;
+            pageSize: number;
+            total: number;
+            items: components["schemas"]["SeoIssueItemDto"][];
+        };
+        SeoIssueScanDto: {
+            changed: number;
+        };
+        SeoIssueEventDto: {
+            id: string;
+            kind: string;
+            at: string;
+            note: string | null;
+            actor: components["schemas"]["SeoIssuePersonDto"] | null;
+            evidence: components["schemas"]["SeoIssueEvidenceDto"] | null;
+            deliveryStates: string[];
+        };
+        SeoIssueDetailDto: {
+            issue: components["schemas"]["SeoIssueItemDto"];
+            owners: components["schemas"]["SeoIssuePersonDto"][];
+            events: components["schemas"]["SeoIssueEventDto"][];
+            page: number;
+            pageSize: number;
+            eventCount: number;
+        };
+        SeoIssueUpdateDto: {
+            revision: number;
+            /** @enum {string} */
+            status?: "OPEN" | "IN_PROGRESS" | "RESOLVED";
+            /** Format: uuid */
+            ownerId?: string | null;
+            note?: string;
         };
         Object: Record<string, never>;
         UpdateSupplierCategoryMappingDto: {
@@ -17678,6 +17789,95 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SeoCoverageStoredDto"];
+                };
+            };
+        };
+    };
+    SeoIssueController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                status?: "OPEN" | "IN_PROGRESS" | "RESOLVED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoIssueListDto"];
+                };
+            };
+        };
+    };
+    SeoIssueController_scan_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoIssueScanDto"];
+                };
+            };
+        };
+    };
+    SeoIssueController_detail_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoIssueDetailDto"];
+                };
+            };
+        };
+    };
+    SeoIssueController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeoIssueUpdateDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoIssueDetailDto"];
                 };
             };
         };

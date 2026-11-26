@@ -12901,6 +12901,152 @@
         ]
       }
     },
+    "/api/v1/seo/issues": {
+      "get": {
+        "operationId": "SeoIssueController_list_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "IN_PROGRESS",
+                "RESOLVED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoIssueListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
+    "/api/v1/seo/issues/scan": {
+      "post": {
+        "operationId": "SeoIssueController_scan_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoIssueScanDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
+    "/api/v1/seo/issues/{id}": {
+      "get": {
+        "operationId": "SeoIssueController_detail_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoIssueDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      },
+      "patch": {
+        "operationId": "SeoIssueController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeoIssueUpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoIssueDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
     "/api/v1/supplier-imports/sources": {
       "get": {
         "operationId": "SupplierImportsController_listSources_v1",
@@ -32533,6 +32679,280 @@
         },
         "required": [
           "id"
+        ]
+      },
+      "SeoIssuePersonDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "SeoIssueEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "sourceHref": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "severity": {
+            "enum": [
+              "REVIEW",
+              "IMPORTANT",
+              "CRITICAL"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "sourceHref",
+          "url",
+          "facts",
+          "severity"
+        ]
+      },
+      "SeoIssueItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "REVIEW",
+              "IMPORTANT",
+              "CRITICAL"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "RESOLVED"
+            ],
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "number"
+          },
+          "firstObservedAt": {
+            "type": "string"
+          },
+          "observedAt": {
+            "type": "string"
+          },
+          "owner": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeoIssuePersonDto"
+              }
+            ]
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/SeoIssueEvidenceDto"
+          }
+        },
+        "required": [
+          "id",
+          "rule",
+          "subject",
+          "severity",
+          "status",
+          "active",
+          "revision",
+          "firstObservedAt",
+          "observedAt",
+          "owner",
+          "evidence"
+        ]
+      },
+      "SeoIssueListDto": {
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeoIssueItemDto"
+            }
+          }
+        },
+        "required": [
+          "configured",
+          "page",
+          "pageSize",
+          "total",
+          "items"
+        ]
+      },
+      "SeoIssueScanDto": {
+        "type": "object",
+        "properties": {
+          "changed": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "changed"
+        ]
+      },
+      "SeoIssueEventDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "actor": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeoIssuePersonDto"
+              }
+            ]
+          },
+          "evidence": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeoIssueEvidenceDto"
+              }
+            ]
+          },
+          "deliveryStates": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "at",
+          "note",
+          "actor",
+          "evidence",
+          "deliveryStates"
+        ]
+      },
+      "SeoIssueDetailDto": {
+        "type": "object",
+        "properties": {
+          "issue": {
+            "$ref": "#/components/schemas/SeoIssueItemDto"
+          },
+          "owners": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeoIssuePersonDto"
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeoIssueEventDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "eventCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "issue",
+          "owners",
+          "events",
+          "page",
+          "pageSize",
+          "eventCount"
+        ]
+      },
+      "SeoIssueUpdateDto": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "status": {
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "RESOLVED"
+            ],
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "revision"
         ]
       },
       "Object": {

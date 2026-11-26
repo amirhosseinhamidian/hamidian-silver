@@ -41,6 +41,7 @@ import { WalletCreditNotificationsService } from './wallet-credit-notifications.
     WalletCreditNotificationsService,
   ],
   exports: [
+    AdminMessageSender,
     AdminOrderNotificationOutboxService,
     NotificationOutboxService,
     OperationalAlertOutboxService,

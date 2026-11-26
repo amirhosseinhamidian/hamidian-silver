@@ -59,6 +59,9 @@ model User {
   operationalIncidentsAcknowledged    OperationalIncident[]            @relation("OperationalIncidentAcknowledger")
   operationalIncidentsAssigned        OperationalIncident[]            @relation("OperationalIncidentAssignee")
   operationalIncidentActivities       OperationalIncidentActivity[]    @relation("OperationalIncidentActivityActor")
+  seoIssuesAssigned                   SeoIssue[]                        @relation("SeoIssueOwner")
+  seoIssueActivities                  SeoIssueEvent[]                   @relation("SeoIssueActor")
+  seoIssueDeliveries                  SeoIssueDelivery[]                @relation("SeoIssueRecipient")
   auditLogs                           AuditLog[]                        @relation("AuditLogActor")
   stockNotificationSubscriptions      StockNotificationSubscription[]
   storefrontContentPageChanges        StorefrontContentPage[]           @relation("StorefrontContentPageUpdater")
@@ -3488,4 +3491,74 @@ model SeoCoverageImport {
   @@unique([property, origin, digest], map: "seo_coverage_imports_digest_key")
   @@index([property, origin, importedAt], map: "seo_coverage_imports_recent_idx")
   @@map("seo_coverage_imports")
+}
+
+enum SeoIssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum SeoIssueSeverity {
+  REVIEW
+  IMPORTANT
+  CRITICAL
+}
+
+model SeoIssue {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  issueKey        String           @unique @db.Char(64)
+  property        String           @db.VarChar(128)
+  origin          String
+  rule            String           @db.VarChar(80)
+  subject         String
+  severity        SeoIssueSeverity
+  status          SeoIssueStatus   @default(OPEN)
+  active          Boolean          @default(true)
+  ownerId         String?          @db.Uuid
+  revision        Int              @default(1)
+  observedAt      DateTime         @db.Timestamptz(3)
+  firstObservedAt DateTime         @db.Timestamptz(3)
+  lastQueuedAt    DateTime?        @db.Timestamptz(3)
+  evidence        Json
+  owner           User?            @relation("SeoIssueOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  events          SeoIssueEvent[]
+
+  @@index([property, origin, status, observedAt], map: "seo_issues_inbox_idx")
+  @@index([ownerId])
+  @@map("seo_issues")
+}
+
+model SeoIssueEvent {
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  issueId    String           @db.Uuid
+  actorId    String?          @db.Uuid
+  kind       String           @db.VarChar(32)
+  createdAt  DateTime         @default(now()) @db.Timestamptz(3)
+  note       String?          @db.VarChar(1000)
+  evidence   Json?
+  issue      SeoIssue         @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  actor      User?            @relation("SeoIssueActor", fields: [actorId], references: [id], onDelete: SetNull)
+  deliveries SeoIssueDelivery[]
+
+  @@index([issueId, createdAt])
+  @@index([actorId])
+  @@map("seo_issue_events")
+}
+
+model SeoIssueDelivery {
+  id          String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId     String                   @db.Uuid
+  recipientId String                   @db.Uuid
+  status      NotificationOutboxStatus @default(PENDING)
+  claimedAt   DateTime?                @db.Timestamptz(3)
+  finishedAt  DateTime?                @db.Timestamptz(3)
+  createdAt   DateTime                 @default(now()) @db.Timestamptz(3)
+  event       SeoIssueEvent            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  recipient   User                     @relation("SeoIssueRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, recipientId], map: "seo_issue_deliveries_event_recipient_key")
+  @@index([status, createdAt])
+  @@index([recipientId])
+  @@map("seo_issue_deliveries")
 }

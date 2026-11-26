@@ -113,6 +113,12 @@ export const envValidationSchema = Joi.object({
     .uri({ scheme: ['http', 'https'] })
     .empty('')
     .optional(),
+  SEO_ISSUES_ENABLED: Joi.boolean().default(false),
+  SEO_ISSUES_TELEGRAM_ENABLED: Joi.boolean().default(false),
+  SEO_ISSUES_COMPARISON_DAYS: Joi.number().valid(7, 14).default(7),
+  SEO_ISSUES_MIN_IMPRESSIONS: Joi.number().integer().min(100).max(10000).default(400),
+  SEO_ISSUES_MIN_CLICKS: Joi.number().integer().min(10).max(1000).default(30),
+  SEO_ISSUES_DROP_PERCENT: Joi.number().integer().min(25).max(85).default(40),
   SEO_INSPECTION_ENABLED: Joi.boolean().default(false),
   SEO_INSPECTION_ORIGIN: Joi.string()
     .uri({ scheme: ['https'] })

@@ -46,7 +46,10 @@ function displayPath(path: string) {
 function Evidence({ check }: Readonly<{ check: AuditCheck }>) {
   const observation = check.observation;
   return (
-    <details className="min-w-0 rounded-lg border border-[var(--admin-color-border)] p-3">
+    <details
+      id={`check-${check.path}`}
+      className="min-w-0 rounded-lg border border-[var(--admin-color-border)] p-3"
+    >
       <summary className="cursor-pointer break-all text-sm">
         <bdi dir="ltr">{displayPath(check.path)}</bdi>
         {' · '}
