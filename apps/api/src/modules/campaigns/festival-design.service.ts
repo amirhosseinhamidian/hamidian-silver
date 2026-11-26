@@ -14,6 +14,7 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CatalogService, type CampaignCollectionPricing } from '../catalog/catalog.service';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
 import { parseCampaignDestination } from '../growth-attribution/campaign-links.service';
+import { readPercentageOverrides } from '../promotions/promotion-engine';
 import { readCampaignProducts } from './campaign-collection';
 import { parseTehranDate } from './campaign-calendar';
 import { validateCampaignPlacementAppearance } from './campaign-placement-appearance';
@@ -561,6 +562,12 @@ export class FestivalDesignService {
         : [],
     ]);
     const promotion = campaignPromotions.find(({ campaignId }) => campaignId === campaign.id);
+    const highestProductRate = promotion
+      ? readPercentageOverrides(promotion.percentageOverrides).reduce(
+          (highest, { variantId, rateBps }) => (variantId ? highest : Math.max(highest, rateBps)),
+          promotion.value,
+        )
+      : 0;
     let pending = sections.filter((section) => {
       if (section.kind === 'LOW_QUOTA') return quotas.length > 0;
       if (!promotion) return false;
@@ -570,7 +577,7 @@ export class FestivalDesignService {
         !promotion.couponCode &&
         promotion.minSubtotalToman === 0 &&
         campaign.audience === 'ALL_CUSTOMERS' &&
-        Math.round(Math.min(promotion.value, promotion.maxDiscountBps) / 100) >=
+        Math.round(Math.min(highestProductRate, promotion.maxDiscountBps) / 100) >=
           (section.threshold ?? 10)
       );
     });

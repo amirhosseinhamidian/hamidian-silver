@@ -388,4 +388,96 @@ describe('typed catalog attributes (PostgreSQL)', () => {
       ).toBe(false);
     });
   }, 20000);
+
+  it('ranks stocked manual relations before matching attributes and price proximity', async () => {
+    await fixture(async (transaction, suffix) => {
+      const catalog = new CatalogService(
+        transaction as unknown as PrismaService,
+        {} as PublicMediaUrlService,
+      );
+      const category = await transaction.category.create({
+        data: { name: 'Recommendations', slug: `recommendations-${suffix}` },
+      });
+      const warehouse =
+        (await transaction.warehouse.findFirst({
+          where: { isDefault: true, isActive: true, deletedAt: null },
+        })) ??
+        (await transaction.warehouse.create({
+          data: { code: `workshop-${suffix}`, name: 'Recommendations', isDefault: true },
+        }));
+      const outside = await transaction.warehouse.create({
+        data: { code: `other-${suffix}`, name: 'Other warehouse' },
+      });
+      async function makeProduct(name: string, price: number, belongToGroup = true) {
+        return transaction.product.create({
+          data: {
+            slug: `${name}-${suffix}`,
+            name,
+            status: ProductStatus.ACTIVE,
+            salePriceToman: price,
+            ...(belongToGroup ? { categories: { create: { categoryId: category.id } } } : {}),
+            variants: { create: { sku: `${name}-${suffix}` } },
+          },
+          include: { variants: true },
+        });
+      }
+      const source = await makeProduct('source', 100);
+      const manual = await makeProduct('manual', 900, false);
+      const sharedFeature = await makeProduct('shared', 155);
+      const close = await makeProduct('close', 110);
+      const far = await makeProduct('far', 310);
+      const otherWarehouse = await makeProduct('remote', 100);
+      const attribute = `related-${suffix}`;
+      await transaction.catalogAttributeDefinition.create({
+        data: {
+          code: attribute,
+          versions: {
+            create: {
+              version: 1,
+              label: 'Fixture',
+              kind: Kind.NUMBER,
+              unit: Unit.PER_MILLE,
+              source: Source.MANUAL,
+              options: [],
+              legacyMappings: [],
+            },
+          },
+        },
+      });
+      await transaction.catalogProductAttributeValue.createMany({
+        data: [source.id, sharedFeature.id].map((productId) => ({
+          productId,
+          attributeCode: attribute,
+          definitionVersion: 1,
+          revision: 1,
+          value: { number: 925, unit: Unit.PER_MILLE },
+        })),
+      });
+      await transaction.inventory.createMany({
+        data: [manual, sharedFeature, close, far, otherWarehouse].map((entry) => ({
+          variantId: entry.variants[0].id,
+          warehouseId: entry.id === otherWarehouse.id ? outside.id : warehouse.id,
+          onHand: 4,
+        })),
+      });
+      await transaction.productRelation.createMany({
+        data: [manual, otherWarehouse].map((target) => {
+          const [sourceProductId, targetProductId] = [source.id, target.id].sort();
+          return { sourceProductId, targetProductId };
+        }),
+      });
+      await expect(catalog.listPublicRelatedProducts(source.slug, 1, 2)).resolves.toMatchObject({
+        total: 4,
+        totalPages: 2,
+        items: [{ id: manual.id }, { id: sharedFeature.id }],
+      });
+      await expect(catalog.listPublicRelatedProducts(source.slug, 2, 2)).resolves.toMatchObject({
+        items: [{ id: close.id }, { id: far.id }],
+      });
+      await expect(catalog.listPublicRelatedProducts(source.slug, 3, 2)).resolves.toMatchObject({
+        total: 4,
+        items: [],
+      });
+    });
+  }, 20000);
 });

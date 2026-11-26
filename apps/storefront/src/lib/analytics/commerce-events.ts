@@ -7,6 +7,8 @@ import {
   type AnalyticsItem,
 } from '@/lib/analytics/analytics';
 import type { CatalogList } from '@/lib/analytics/funnel-contract';
+import { trackFunnelEvent } from '@/lib/analytics/funnel-tracker';
+import type { PublicCatalogProductSummary } from '@/lib/catalog/public-catalog';
 
 export type CommerceItemInput = Readonly<{
   itemId: string;
@@ -66,6 +68,28 @@ export function trackCatalogEvent(
     item_list_id: list,
     items: items.map(toAnalyticsItem),
   });
+}
+
+export function measureCatalogProducts(
+  name: 'view_item_list' | 'select_item',
+  list: CatalogList,
+  products: readonly PublicCatalogProductSummary[],
+) {
+  void trackFunnelEvent(
+    { name, list, items: products.map((product) => ({ productId: product.slug })) },
+    {
+      publish: () =>
+        trackCatalogEvent(
+          name,
+          list,
+          products.map((product) => ({
+            itemId: product.slug,
+            itemName: product.name,
+            priceToman: product.salePriceToman,
+          })),
+        ),
+    },
+  );
 }
 
 export function trackWishlistChange(item: CommerceItemInput, added: boolean): boolean {

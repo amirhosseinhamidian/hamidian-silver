@@ -11,6 +11,7 @@ import {
   calculatePromotion,
   isPromotionTarget,
   matchesPromotionAudience,
+  readPercentageOverrides,
 } from '../promotions/promotion-engine';
 import type {
   CampaignBudgetDto,
@@ -80,7 +81,13 @@ export async function campaignBudget(
     if (options.warnings) {
       if (rule.maxDiscountToman > remainingDiscountToman)
         warnings.push('The remaining budget can reduce the discount below its per-order cap.');
-      if (rule.kind === 'PERCENT' && rule.value > rule.maxDiscountBps)
+      if (
+        rule.kind === 'PERCENT' &&
+        (rule.value > rule.maxDiscountBps ||
+          readPercentageOverrides(rule.percentageOverrides).some(
+            ({ rateBps }) => rateBps > rule.maxDiscountBps,
+          ))
+      )
         warnings.push('The percentage cap reduces the configured discount rate.');
       if (rule.couponCode === null && (await hasConcurrentPromotion(tx, campaign))) {
         warnings.push('An automatic promotion overlaps this period. Only one rule can apply.');

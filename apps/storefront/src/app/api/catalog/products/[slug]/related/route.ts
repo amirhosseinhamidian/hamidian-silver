@@ -10,5 +10,5 @@ export async function GET(request: Request, { params }: RouteContext) {
   const page = Number(searchParams.get('page') ?? '1');
   const pageSize = Number(searchParams.get('pageSize') ?? '8');
   const result = await getPublicRelatedProducts(slug, page, pageSize);
-  return NextResponse.json(result);
+  return NextResponse.json(result, { headers: { 'X-Robots-Tag': 'noindex' } });
 }

@@ -1971,21 +1971,22 @@ model CampaignPlacement {
 }
 
 model CampaignPromotion {
-  campaignId          String        @id @db.Uuid
-  kind                PromotionKind
-  value               Int
-  minSubtotalToman    Int
-  maxDiscountToman    Int
-  maxDiscountBps      Int
-  priority            Int
-  bundleProductIds    String[]      @default([]) @db.Uuid
-  couponCode          String?       @unique @db.VarChar(32)
-  maxUses             Int?
-  version             Int           @default(1)
-  actorUserId         String        @db.Uuid
-  updatedAt           DateTime      @updatedAt @db.Timestamptz(3)
-  campaign            Campaign      @relation(fields: [campaignId], references: [id], onDelete: Restrict)
-  actor               User          @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  campaignId           String        @id @db.Uuid
+  kind                 PromotionKind
+  value                Int
+  percentageOverrides Json          @default("[]")
+  minSubtotalToman     Int
+  maxDiscountToman     Int
+  maxDiscountBps       Int
+  priority             Int
+  bundleProductIds     String[]      @default([]) @db.Uuid
+  couponCode           String?       @unique @db.VarChar(32)
+  maxUses              Int?
+  version              Int           @default(1)
+  actorUserId          String        @db.Uuid
+  updatedAt            DateTime      @updatedAt @db.Timestamptz(3)
+  campaign             Campaign      @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  actor                User          @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
 
   @@map("campaign_promotions")
 }

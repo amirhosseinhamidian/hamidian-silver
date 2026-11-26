@@ -6532,9 +6532,17 @@ export interface components {
             items: components["schemas"]["PublicPromotionDto"][];
             available: boolean;
         };
+        PromotionPercentageOverrideDto: {
+            /** Format: uuid */
+            productId: string;
+            /** Format: uuid */
+            variantId?: string | null;
+            rateBps: number;
+        };
         SavePromotionDto: {
             /** @enum {string} */
             kind: "PERCENT" | "FIXED" | "THRESHOLD" | "BUNDLE" | "FREE_SHIPPING";
+            percentageOverrides?: components["schemas"]["PromotionPercentageOverrideDto"][];
             bundleProductSlugs: string[];
             couponCode?: string | null;
             maxUses?: number | null;
@@ -6545,8 +6553,17 @@ export interface components {
             priority: number;
             expectedVersion: number;
         };
+        PromotionRateTargetDto: {
+            /** Format: uuid */
+            productId: string;
+            /** Format: uuid */
+            variantId: string | null;
+            variantLabel: string | null;
+            productName: string;
+        };
         AdminPromotionDto: {
             rule: components["schemas"]["SavePromotionDto"] | null;
+            rateTargets?: components["schemas"]["PromotionRateTargetDto"][];
         };
         CampaignProductPriceRowDto: {
             variantId: string | null;
@@ -6556,6 +6573,8 @@ export interface components {
             active: boolean;
         };
         CampaignProductPricePreviewDto: {
+            /** Format: uuid */
+            productId?: string;
             prices: components["schemas"]["CampaignProductPriceRowDto"][];
             name: string;
         };

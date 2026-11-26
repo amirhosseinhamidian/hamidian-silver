@@ -1,6 +1,6 @@
 # FEST-06 — کتابخانهٔ تم‌های جشنواره
 
-وضعیت `IN_REVIEW` است. مبنا `39a566b0c229bb664c956c052e5159d199786a0e` روی `seo-fix` است. [برنامهٔ جشنواره](../FESTIVAL_COMPLETION_AND_BLACK_FRIDAY_READINESS.md)
+وضعیت `DONE` برای معیار فنی مرحله است. مبنا `39a566b0c229bb664c956c052e5159d199786a0e` روی `seo-fix` است. بازبینی دستی ظاهر دو جشنواره در `FEST-15` ثبت می‌شود. [برنامهٔ جشنواره](../FESTIVAL_COMPLETION_AND_BLACK_FRIDAY_READINESS.md)
 
 ## رفتار
 

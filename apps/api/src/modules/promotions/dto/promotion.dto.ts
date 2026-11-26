@@ -9,13 +9,34 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Max,
   MaxLength,
   Min,
+  ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import { TOMAN_INT_MAX } from '../../../common/toman';
 import { PromotionKind } from '../../../generated/prisma/enums';
+
+export class PromotionPercentageOverrideDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  productId!: string;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true })
+  @IsOptional()
+  @IsUUID()
+  variantId?: string | null;
+
+  @ApiProperty({ minimum: 100, maximum: 5_000 })
+  @Type(() => Object)
+  @IsInt()
+  @Min(100)
+  @Max(5_000)
+  rateBps!: number;
+}
 
 export class SavePromotionDto {
   @ApiProperty({ enum: PromotionKind })
@@ -27,6 +48,14 @@ export class SavePromotionDto {
   @Min(0)
   @Max(TOMAN_INT_MAX)
   value!: number;
+
+  @ApiPropertyOptional({ type: () => PromotionPercentageOverrideDto, isArray: true, maxItems: 500 })
+  @ValidateIf((_, value: unknown) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => PromotionPercentageOverrideDto)
+  percentageOverrides?: PromotionPercentageOverrideDto[];
 
   @Type(() => Object)
   @IsInt()
@@ -81,9 +110,24 @@ export class SavePromotionDto {
   expectedVersion!: number;
 }
 
+export class PromotionRateTargetDto {
+  @ApiProperty({ format: 'uuid' })
+  productId!: string;
+  productName!: string;
+
+  @ApiProperty({ type: String, nullable: true, format: 'uuid' })
+  variantId!: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  variantLabel!: string | null;
+}
+
 export class AdminPromotionDto {
   @ApiProperty({ type: () => SavePromotionDto, nullable: true })
   rule!: SavePromotionDto | null;
+
+  @ApiPropertyOptional({ type: () => PromotionRateTargetDto, isArray: true })
+  rateTargets?: PromotionRateTargetDto[];
 }
 
 export class PublicPromotionDto {
@@ -169,6 +213,8 @@ export class CampaignProductPriceRowDto {
 }
 
 export class CampaignProductPricePreviewDto {
+  @ApiPropertyOptional({ type: String, format: 'uuid' })
+  productId?: string;
   name!: string;
 
   @ApiProperty({ type: () => CampaignProductPriceRowDto, isArray: true })

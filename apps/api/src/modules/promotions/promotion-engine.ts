@@ -1,4 +1,9 @@
-import type { Campaign, CampaignAudience, CampaignPromotion } from '../../generated/prisma/client';
+import type {
+  Campaign,
+  CampaignAudience,
+  CampaignPromotion,
+  Prisma,
+} from '../../generated/prisma/client';
 
 export function matchesPromotionAudience(audience: CampaignAudience, hasPaidOrder?: boolean) {
   return (
@@ -10,6 +15,7 @@ export function matchesPromotionAudience(audience: CampaignAudience, hasPaidOrde
 
 export type PromotionLine = Readonly<{
   productId: string;
+  variantId?: string | null;
   categoryIds: readonly string[];
   quantity: number;
   unitSalePriceToman: number;
@@ -20,6 +26,48 @@ type Rule = Pick<
   CampaignPromotion,
   'kind' | 'value' | 'minSubtotalToman' | 'maxDiscountToman' | 'maxDiscountBps' | 'bundleProductIds'
 >;
+
+type PercentageOverride = Readonly<{
+  productId: string;
+  variantId?: string | null;
+  rateBps: number;
+}>;
+
+export function readPercentageOverrides(value: Prisma.JsonValue | undefined): PercentageOverride[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const { productId, variantId, rateBps } = entry;
+    return typeof productId === 'string' &&
+      (variantId == null || typeof variantId === 'string') &&
+      typeof rateBps === 'number' &&
+      Number.isInteger(rateBps) &&
+      rateBps >= 100 &&
+      rateBps <= 5_000
+      ? [{ productId, variantId: variantId ?? null, rateBps }]
+      : [];
+  });
+}
+
+export function percentageDiscountWeights(
+  value: number,
+  overrides: readonly PercentageOverride[],
+  lines: readonly PromotionLine[],
+) {
+  const byTarget = new Map(
+    overrides.map(({ productId, variantId, rateBps }) => [
+      variantId ? `${productId}/${variantId}` : productId,
+      rateBps,
+    ]),
+  );
+  return lines.map(({ productId, variantId, unitSalePriceToman, quantity }) => {
+    const rate =
+      (variantId ? byTarget.get(`${productId}/${variantId}`) : undefined) ??
+      byTarget.get(productId) ??
+      value;
+    return unitSalePriceToman * quantity * rate;
+  });
+}
 
 export function isPromotionTarget(
   campaign: Target,
@@ -33,7 +81,7 @@ export function isPromotionTarget(
 }
 
 export function calculatePromotion(
-  rule: Rule,
+  rule: Rule & { percentageOverrides?: Prisma.JsonValue },
   eligible: readonly PromotionLine[],
   shippingToman: number,
   budgetRemainingToman: number,
@@ -59,7 +107,14 @@ export function calculatePromotion(
 
   let discount = rule.value;
   if (rule.kind === 'PERCENT') {
-    discount = Math.floor((subtotal * rule.value) / 10_000);
+    const overrides = readPercentageOverrides(rule.percentageOverrides);
+    const weightedSubtotal = overrides.length
+      ? percentageDiscountWeights(rule.value, overrides, eligible).reduce(
+          (sum, weight) => sum + weight,
+          0,
+        )
+      : subtotal * rule.value;
+    discount = Math.floor(weightedSubtotal / 10_000);
   }
   if (rule.kind === 'BUNDLE') {
     const quantities = new Map<string, number>();

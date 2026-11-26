@@ -1,5 +1,5 @@
 const persianNumber = new Intl.NumberFormat('fa-IR', {
-  maximumFractionDigits: 0,
+  maximumFractionDigits: 2,
 });
 
 type DiscountBadgeProps = Readonly<{

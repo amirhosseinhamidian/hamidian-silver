@@ -9,7 +9,7 @@ import { festivalThemePresets } from './festival-theme';
 import type { FestivalDesignDto } from './dto/festival-design.dto';
 
 describe('FestivalDesignService project', () => {
-  it('reads past the first batch and stops once the automatic section is filled', async () => {
+  it('finds product overrides above the section threshold and stops once the section is filled', async () => {
     const campaign = {
       id: 'festival',
       audience: 'ALL_CUSTOMERS',
@@ -40,7 +40,8 @@ describe('FestivalDesignService project', () => {
         {
           campaignId: campaign.id,
           kind: 'PERCENT',
-          value: 3_000,
+          value: 1_000,
+          percentageOverrides: [{ productId: eligible.id, rateBps: 3_000 }],
           maxDiscountBps: 3_000,
           couponCode: null,
           minSubtotalToman: 0,

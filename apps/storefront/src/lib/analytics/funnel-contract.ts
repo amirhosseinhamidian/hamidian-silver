@@ -6,7 +6,14 @@ export type FunnelItem = Readonly<{
   quantity?: number;
 }>;
 
-export type CatalogList = 'catalog' | 'search' | 'category' | 'brand';
+export type CatalogList =
+  | 'catalog'
+  | 'search'
+  | 'category'
+  | 'brand'
+  | 'product_recommendations'
+  | 'cart_recommendations'
+  | 'campaign_recommendations';
 
 type CatalogEvent = Readonly<{
   name: 'view_item_list' | 'select_item';

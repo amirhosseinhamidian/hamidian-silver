@@ -10,10 +10,12 @@ import { CampaignQuotaEditor } from './campaign-quota-editor';
 export function CampaignSalesPanel({
   campaign,
   rule,
+  rateTargets,
   canWrite,
 }: {
   campaign: CampaignDetail;
   rule: components['schemas']['SavePromotionDto'] | null | undefined;
+  rateTargets?: components['schemas']['PromotionRateTargetDto'][];
   canWrite: boolean;
 }) {
   if (rule === undefined) {
@@ -30,6 +32,8 @@ export function CampaignSalesPanel({
         key={`promotion-${campaign.id}-${rule?.expectedVersion ?? 0}`}
         id={campaign.id}
         rule={rule}
+        rateTargets={rateTargets}
+        allowPercentageOverrides={campaign.kind === 'FESTIVAL'}
         editable={canWrite && campaign.status === 'DRAFT'}
       />
       <CampaignQuotaEditor

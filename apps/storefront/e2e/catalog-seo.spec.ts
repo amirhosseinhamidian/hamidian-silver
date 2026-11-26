@@ -1,22 +1,39 @@
 import { expect, test } from '@playwright/test';
+import { waitForClientHydration } from './support/accessibility';
 
 test('links a published subcategory with its own introduction, canonical and breadcrumb schema', async ({
   page,
+  request,
 }) => {
+  const childPath = '/categories/women-rings';
   await page.goto('/categories/rings');
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow');
   const child = page.getByRole('navigation', { name: 'زیرمجموعه‌های انگشتر' }).getByRole('link', {
     name: /انگشتر زنانه/,
   });
-  await expect(child).toHaveAttribute('href', '/categories/women-rings');
+  await expect(child).toHaveAttribute('href', childPath);
+  const canonical = new URL(childPath, page.url()).href;
+  await waitForClientHydration(page);
   await child.click();
+  await expect(page).toHaveURL(canonical);
   await expect(page).toHaveTitle(/راهنمای انتخاب انگشتر زنانه نقره/);
   await expect(page.getByText(/پهنای حلقه و سایز مدلی/)).toBeVisible();
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
-    'href',
-    /\/categories\/women-rings$/,
-  );
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow');
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => ({
+          canonicals: Array.from(
+            document.querySelectorAll<HTMLLinkElement>('link[rel="canonical"]'),
+            ({ href }) => href,
+          ),
+          robots: Array.from(
+            document.querySelectorAll<HTMLMetaElement>('meta[name="robots"]'),
+            ({ content }) => content,
+          ),
+        })),
+      { timeout: 15_000 },
+    )
+    .toEqual({ canonicals: [canonical], robots: ['index, follow'] });
 
   const schema = await page
     .locator('script[type="application/ld+json"]')
@@ -27,7 +44,15 @@ test('links a published subcategory with its own introduction, canonical and bre
     );
   expect(
     schema?.itemListElement?.map(({ item }: { item: string }) => new URL(item).pathname),
-  ).toEqual(['/', '/categories', '/categories/rings', '/categories/women-rings']);
+  ).toEqual(['/', '/categories', '/categories/rings', childPath]);
+
+  const response = await request.get(childPath);
+  expect(response.status()).toBe(200);
+  const html = await response.text();
+  const canonicals = [...html.matchAll(/<link rel="canonical" href="([^"]+)"/g)].map(
+    ([, href]) => href,
+  );
+  expect(canonicals).toEqual([canonical]);
 });
 
 test('serves clean pagination and keeps parameter variants out of the index', async ({

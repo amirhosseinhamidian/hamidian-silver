@@ -17,6 +17,7 @@ type CatalogProductCardProps = Readonly<{
   imageSizes?: string;
   preloadImage?: boolean;
   onSelect?: () => void;
+  recommendationId?: string;
   showBudgetMatch?: boolean;
   variant?: CatalogProductCardVariant;
   preview?: boolean;
@@ -29,6 +30,7 @@ export function CatalogProductCard({
   imageSizes = '(min-width: 1024px) 25vw, 50vw',
   preloadImage = false,
   onSelect,
+  recommendationId,
   showBudgetMatch = false,
   variant = 'default',
   preview = false,
@@ -55,6 +57,7 @@ export function CatalogProductCard({
     <li
       className="sf-catalog-card group flex min-w-0 flex-col p-1 sm:p-2"
       data-festival-card={variant === 'festival' ? '' : undefined}
+      data-recommendation={recommendationId}
     >
       <div className="relative">
         <Link

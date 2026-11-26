@@ -11,6 +11,7 @@ import {
   hasCampaignFilters,
 } from '@/lib/campaigns/campaign-filters';
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
+import { ProductRecommendations } from '@/components/catalog/product-recommendations';
 import { StorefrontImage } from '@/components/media/storefront-image';
 import { StorefrontBreadcrumbs } from '@/components/seo/storefront-breadcrumbs';
 import { ButtonLink } from '@/components/ui/button';
@@ -70,6 +71,14 @@ export default async function CampaignLandingPage(props: Props) {
   const pathname = `/campaigns/${landing.slug}`;
   const hasProducts = landing.active && landing.products.total > 0;
   const historicalFestival = landing.isFestival === true && !landing.active;
+  const visibleSlugs = landing.products.items.map(({ slug }) => slug);
+  const recommendations = hasProducts && visibleSlugs.length > 0 && (
+    <ProductRecommendations
+      list="campaign_recommendations"
+      sources={visibleSlugs.slice(0, 1)}
+      excluded={visibleSlugs}
+    />
+  );
   if (landing.design && landing.campaignId && landing.endsAt) {
     return (
       <FestivalLanding
@@ -83,6 +92,7 @@ export default async function CampaignLandingPage(props: Props) {
         title={landing.title}
         story={landing.story}
         pathname={pathname}
+        recommendations={recommendations}
         breadcrumbs={
           <StorefrontBreadcrumbs
             items={[
@@ -202,6 +212,7 @@ export default async function CampaignLandingPage(props: Props) {
           )}
         </section>
       )}
+      {recommendations}
     </main>
   );
 }

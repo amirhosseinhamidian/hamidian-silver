@@ -30,6 +30,7 @@ export function returnedLineCredit(
 
 export type CheckoutPromotion = {
   merchandiseDiscountToman: number;
+  merchandiseDiscountWeights?: readonly number[];
   rule: { coupon: boolean; kind: string; eligibleProductIds: string[]; bundleProductIds: string[] };
 };
 
@@ -37,6 +38,12 @@ export function allocateCheckoutDiscount(
   lines: readonly PromotionLine[],
   promotion?: CheckoutPromotion | null,
 ) {
+  if (promotion?.merchandiseDiscountWeights) {
+    return allocateCheckoutToman(
+      promotion.merchandiseDiscountToman,
+      promotion.merchandiseDiscountWeights,
+    );
+  }
   const target = new Set(promotion?.rule.eligibleProductIds);
   const bundle = new Set(promotion?.rule.bundleProductIds);
   const weights = lines.map(({ productId, unitSalePriceToman, quantity }) =>

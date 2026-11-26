@@ -112,7 +112,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   }
 
   const [relatedProducts, knowledgeArticles, campaignBanner] = await Promise.all([
-    getPublicRelatedProducts(slug, 1, 8),
+    getPublicRelatedProducts(slug, 1, 8).catch(() => null),
     getPublicRelatedGuideArticles({
       product: product.slug,
       categories: product.categories.map((category) => category.slug),
@@ -328,7 +328,9 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           </aside>
         ) : null}
 
-        <RelatedProductsSection productSlug={product.slug} initial={relatedProducts} />
+        {relatedProducts && (
+          <RelatedProductsSection productSlug={product.slug} initial={relatedProducts} />
+        )}
 
         <RelatedKnowledgeSection
           articles={knowledgeArticles}

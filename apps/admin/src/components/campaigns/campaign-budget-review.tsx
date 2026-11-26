@@ -159,6 +159,12 @@ export function CampaignBudgetReview({
                 قیمت و هزینهٔ ارسال نمونه را وارد کنید. برآورد بر اساس قانون ذخیره‌شده و{' '}
                 {rule.couponCode ? 'با فرض ورود کوپن معتبر' : 'تخفیف خودکار'} محاسبه می‌شود.
               </p>
+              {Boolean(rule.percentageOverrides?.length) && (
+                <p className="text-sm text-[var(--admin-color-muted)]">
+                  سبد نمونه نرخ سطح محصول را به کار می‌برد. نرخ هر واریانت در پیش‌نمایش قیمت مرحلهٔ
+                  قوانین فروش قابل مشاهده است.
+                </p>
+              )}
               {selected.map((slug, index) => (
                 <fieldset key={slug} className="grid items-start gap-2 sm:grid-cols-[1fr_2fr_auto]">
                   <legend className="text-sm font-semibold">

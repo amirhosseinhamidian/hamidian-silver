@@ -800,6 +800,7 @@ export class OrdersService {
       const variant = variantById.get(item.variantId)!;
       return {
         productId: variant.productId,
+        variantId: item.variantId,
         categoryIds: variant.product.categories?.map(({ categoryId }) => categoryId) ?? [],
         unitSalePriceToman: item.unitSalePriceToman,
         quantity: item.quantity,

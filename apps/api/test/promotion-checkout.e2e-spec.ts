@@ -27,6 +27,9 @@ it('serializes a limited promotion and reconciles current campaign prices with C
   );
   const suffix = randomUUID();
   const trackingId = `offer-${suffix}`;
+  const companionSlug = `${trackingId}-companion`;
+  const bundleSlug = `${trackingId}-bundle`;
+  const fixtures = { slug: { in: [trackingId, companionSlug, bundleSlug] } };
   const phones = ['1', '2'].map(
     (tail) => `+0${BigInt(`0x${suffix.replaceAll('-', '').slice(0, 12)}`)}${tail}`,
   );
@@ -291,6 +294,113 @@ it('serializes a limited promotion and reconciles current campaign prices with C
         items: [{ unitSalePriceToman: 8_000 }],
       },
     });
+
+    const companion = await db.product.create({
+      data: {
+        slug: companionSlug,
+        name: 'Companion product',
+        status: 'ACTIVE',
+        salePriceToman: 4_000,
+        variants: { create: { sku: companionSlug } },
+      },
+      include: { variants: true },
+    });
+    await db.inventory.create({
+      data: { warehouseId: warehouse.id, variantId: companion.variants[0].id, onHand: 2 },
+    });
+    await db.campaign.update({
+      where: { id: campaign.id },
+      data: { status: 'DRAFT', productIds: [product.id, companion.id] },
+    });
+    await promotions.save(
+      campaign.id,
+      {
+        kind: 'BUNDLE',
+        value: 1_000,
+        minSubtotalToman: 0,
+        maxDiscountToman: 5_000,
+        maxDiscountBps: 5_000,
+        priority: 10,
+        bundleProductSlugs: [product.slug, companion.slug],
+        expectedVersion: 3,
+      },
+      buyer.id,
+    );
+    await db.campaign.update({ where: { id: campaign.id }, data: { status: 'ACTIVE' } });
+    const combination = {
+      ...secondBasket,
+      items: [...secondBasket.items, { variantId: companion.variants[0].id, quantity: 1 }],
+    };
+    const combinationQuote = await orders.quotePrice(other.id, combination);
+    expect(combinationQuote).toMatchObject({ discountTotalToman: 1_000, payableToman: 12_700 });
+    await expect(
+      orders.createOrder(other.id, { ...secondBasket, quoteToken: combinationQuote.quoteToken }),
+    ).rejects.toThrow('quote changed');
+    await expect(orders.quotePrice(other.id, secondBasket)).resolves.toMatchObject({
+      discountTotalToman: 0,
+      payableToman: 9_700,
+    });
+
+    const bundle = await db.product.create({
+      data: {
+        slug: bundleSlug,
+        name: 'Fixed composite product',
+        status: 'ACTIVE',
+        purchaseMode: 'COMPOSITE',
+        salePriceToman: 10_000,
+        variants: { create: [1, 2].map((part) => ({ sku: `${bundleSlug}-part-${part}` })) },
+      },
+      include: { variants: true },
+    });
+    const bundleStock = await Promise.all(
+      bundle.variants.map(({ id }) =>
+        db.inventory.create({
+          data: { warehouseId: warehouse.id, variantId: id, onHand: 2 },
+        }),
+      ),
+    );
+    const packageVariant = await db.productVariant.create({
+      data: {
+        sku: bundleSlug,
+        productId: bundle.id,
+        inventoryMode: 'COMPONENTS',
+        bundleComponents: {
+          createMany: {
+            data: bundle.variants.map(({ id }) => ({ componentVariantId: id, quantity: 1 })),
+          },
+        },
+      },
+    });
+    const fixedBundle = { ...basket, items: [{ variantId: packageVariant.id, quantity: 1 }] };
+    const fixedQuote = await orders.quotePrice(other.id, fixedBundle);
+    expect(fixedQuote).toMatchObject({ discountTotalToman: 0, payableToman: 10_700 });
+    const orderCount = await db.order.count({ where: { user: buyers } });
+    await db.inventory.update({ where: { id: bundleStock[1].id }, data: { onHand: 0 } });
+    await expect(
+      orders.createOrder(other.id, { ...fixedBundle, quoteToken: fixedQuote.quoteToken }),
+    ).rejects.toMatchObject({ code: 'INVENTORY_NOT_AVAILABLE' });
+    await expect(db.order.count({ where: { user: buyers } })).resolves.toBe(orderCount);
+
+    await db.inventory.update({ where: { id: bundleStock[1].id }, data: { onHand: 2 } });
+    const confirmedQuote = await orders.quotePrice(other.id, fixedBundle);
+    const bundleOrder = await orders.createOrder(other.id, {
+      ...fixedBundle,
+      quoteToken: confirmedQuote.quoteToken,
+    });
+    expect(bundleOrder.grandTotalToman).toBe(10_700);
+    const reservedItems = await db.inventoryMovement.findMany({
+      where: { referenceId: bundleOrder.id, type: 'RESERVATION' },
+      select: { reservedDelta: true, inventory: { select: { variantId: true } } },
+    });
+    expect(reservedItems).toHaveLength(2);
+    expect(reservedItems).toEqual(
+      expect.arrayContaining(
+        bundle.variants.map(({ id }) => ({
+          reservedDelta: 1,
+          inventory: { variantId: id },
+        })),
+      ),
+    );
   } finally {
     try {
       await db.$transaction([
@@ -300,11 +410,12 @@ it('serializes a limited promotion and reconciles current campaign prices with C
         db.orderItem.deleteMany({ where: { order: { user: buyers } } }),
         db.order.deleteMany({ where: { user: buyers } }),
         db.inventoryMovement.deleteMany({
-          where: { inventory: { variant: { product: { slug: trackingId } } } },
+          where: { inventory: { variant: { product: fixtures } } },
         }),
-        db.inventory.deleteMany({ where: { variant: { product: { slug: trackingId } } } }),
-        db.productVariant.deleteMany({ where: { product: { slug: trackingId } } }),
-        db.product.deleteMany({ where: { slug: trackingId } }),
+        db.inventory.deleteMany({ where: { variant: { product: fixtures } } }),
+        db.productVariantComponent.deleteMany({ where: { bundleVariant: { product: fixtures } } }),
+        db.productVariant.deleteMany({ where: { product: fixtures } }),
+        db.product.deleteMany({ where: fixtures }),
         db.warehouse.deleteMany({ where: { code: warehouseCode } }),
         db.campaignPromotion.deleteMany({ where: { campaign: { trackingId } } }),
         db.campaignRevision.deleteMany({ where: { campaign: { trackingId } } }),

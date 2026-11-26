@@ -131,6 +131,7 @@ export class CatalogController {
 
   @Public()
   @Get('public/products/:slug/related')
+  @Header('X-Robots-Tag', 'noindex')
   @ApiOkResponse({ type: PublicCatalogProductListDto })
   listPublicRelatedProducts(
     @Param('slug') slug: string,

@@ -17,7 +17,9 @@ import {
   formatAdminToman,
   parseAdminMoneyInput,
   toAsciiDigits,
+  toPersianDigits,
 } from '@/lib/presentation/formatters';
+import { CampaignPercentageOverrides, formatRateDrafts } from './campaign-percentage-overrides';
 import { CampaignProductSearch } from './campaign-product-search';
 
 type Rule = components['schemas']['SavePromotionDto'];
@@ -33,14 +35,21 @@ export function CampaignPromotionEditor({
   id,
   rule,
   editable,
+  allowPercentageOverrides,
+  rateTargets = [],
 }: {
   id: string;
   rule: Rule | null;
   editable: boolean;
+  allowPercentageOverrides: boolean;
+  rateTargets?: components['schemas']['PromotionRateTargetDto'][];
 }) {
   const router = useRouter();
   const [kind, setKind] = useState<Rule['kind']>(rule?.kind ?? 'PERCENT');
   const [bundle, setBundle] = useState(rule?.bundleProductSlugs ?? []);
+  const [rates, setRates] = useState(() =>
+    formatRateDrafts(rule?.percentageOverrides ?? [], rateTargets),
+  );
   const taxonomy = useCampaignTaxonomy();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,8 +64,27 @@ export function CampaignPromotionEditor({
       return /^\d+$/.test(value) ? Number(value) : NaN;
     };
     const money = (field: string) => parseAdminMoneyInput(text(field));
+    const percentageOverrides =
+      allowPercentageOverrides && kind === 'PERCENT'
+        ? rates.map(({ productId, variantId, percentage }) => {
+            const normalized = toAsciiDigits(percentage.trim()).replace('٫', '.');
+            const rateBps = /^\d{1,2}(\.\d{1,2})?$/.test(normalized)
+              ? Math.round(Number(normalized) * 100)
+              : NaN;
+            return { productId, variantId, rateBps };
+          })
+        : undefined;
+    if (
+      percentageOverrides?.some(
+        ({ rateBps }) => !Number.isInteger(rateBps) || rateBps < 100 || rateBps > 5_000,
+      )
+    ) {
+      setError('نرخ اختصاصی باید بین ۱ و ۵۰ درصد و حداکثر دارای دو رقم اعشار باشد.');
+      return;
+    }
     const draft: Rule = {
       kind,
+      ...(percentageOverrides ? { percentageOverrides } : {}),
       value:
         kind === 'FREE_SHIPPING'
           ? 0
@@ -101,6 +129,8 @@ export function CampaignPromotionEditor({
           setError('ابتدا بودجهٔ کمپین را در پیش‌نویس ثبت کنید.');
         else if (message === 'This coupon is already in use.')
           setError('این کد تخفیف قبلاً برای کمپینی ثبت شده است.');
+        else if (message === 'Choose active rate targets in the festival scope.')
+          setError('نرخ اختصاصی را فقط برای محصول یا واریانت فعال در محدودهٔ جشنواره ثبت کنید.');
         else if (response.status === 409)
           setError('نسخه یا وضعیت کمپین تغییر کرده است. صفحه را تازه کنید.');
         else if (response.status === 400)
@@ -127,11 +157,30 @@ export function CampaignPromotionEditor({
             </div>
             {rule.kind !== 'FREE_SHIPPING' && (
               <div>
-                <dt>مقدار</dt>
+                <dt>
+                  {allowPercentageOverrides && rule.kind === 'PERCENT' ? 'درصد پیش‌فرض' : 'مقدار'}
+                </dt>
                 <dd>
                   {rule.kind === 'PERCENT'
                     ? `${formatAdminInteger(rule.value / 100)}٪`
                     : formatAdminToman(rule.value)}
+                </dd>
+              </div>
+            )}
+            {allowPercentageOverrides && rule.kind === 'PERCENT' && rates.length > 0 && (
+              <div className="sm:col-span-2">
+                <dt>درصدهای اختصاصی</dt>
+                <dd>
+                  <ul className="space-y-1">
+                    {rates.map(
+                      ({ productId, variantId, productName, variantLabel, percentage }) => (
+                        <li key={variantId ?? productId}>
+                          {productName} · {variantLabel ?? 'محصول'} ·{' '}
+                          {toPersianDigits(percentage.replace('.', '٫'))}٪
+                        </li>
+                      ),
+                    )}
+                  </ul>
                 </dd>
               </div>
             )}
@@ -190,7 +239,12 @@ export function CampaignPromotionEditor({
             )}
           </FormField>
           {kind === 'PERCENT' ? (
-            <FormField id="promotion-percent" label="درصد تخفیف" hint="از ۱ تا ۵۰" required>
+            <FormField
+              id="promotion-percent"
+              label={allowPercentageOverrides ? 'درصد تخفیف پیش‌فرض' : 'درصد تخفیف'}
+              hint="از ۱ تا ۵۰"
+              required
+            >
               {(control) => (
                 <Input
                   {...control}
@@ -237,7 +291,11 @@ export function CampaignPromotionEditor({
           <FormField
             id="promotion-percent-limit"
             label="سقف درصد از مبلغ کالای واجد شرایط"
-            hint="از ۱ تا ۵۰"
+            hint={
+              allowPercentageOverrides
+                ? 'از ۱ تا ۵۰. این سقف روی مجموع تخفیف سفارش اعمال می‌شود.'
+                : 'از ۱ تا ۵۰'
+            }
             required
           >
             {(control) => (
@@ -282,6 +340,15 @@ export function CampaignPromotionEditor({
               />
             )}
           </FormField>
+          {allowPercentageOverrides && kind === 'PERCENT' && (
+            <CampaignPercentageOverrides
+              campaignId={id}
+              taxonomy={taxonomy.data}
+              rates={rates}
+              onChange={setRates}
+              disabled={busy}
+            />
+          )}
           {kind === 'BUNDLE' && (
             <div className="space-y-2 sm:col-span-2">
               <p className="text-xs text-[var(--admin-color-muted)]">

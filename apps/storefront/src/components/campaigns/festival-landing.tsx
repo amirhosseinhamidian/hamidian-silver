@@ -145,6 +145,7 @@ export function FestivalLanding({
   story,
   pathname,
   children,
+  recommendations,
   preview = false,
   breadcrumbs,
 }: {
@@ -157,6 +158,7 @@ export function FestivalLanding({
   story: string;
   pathname: string;
   children?: ReactNode;
+  recommendations?: ReactNode;
   breadcrumbs?: ReactNode;
   preview?: boolean;
 }) {
@@ -383,6 +385,7 @@ export function FestivalLanding({
           </section>
         );
       })}
+      {recommendations && <div className="sf-container">{recommendations}</div>}
     </main>
   );
 }

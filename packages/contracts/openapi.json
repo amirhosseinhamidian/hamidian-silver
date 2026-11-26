@@ -20274,6 +20274,29 @@
           "available"
         ]
       },
+      "PromotionPercentageOverrideDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "variantId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "rateBps": {
+            "type": "number",
+            "minimum": 100,
+            "maximum": 5000
+          }
+        },
+        "required": [
+          "productId",
+          "rateBps"
+        ]
+      },
       "SavePromotionDto": {
         "type": "object",
         "properties": {
@@ -20286,6 +20309,13 @@
               "FREE_SHIPPING"
             ],
             "type": "string"
+          },
+          "percentageOverrides": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromotionPercentageOverrideDto"
+            }
           },
           "bundleProductSlugs": {
             "uniqueItems": true,
@@ -20348,6 +20378,33 @@
           "expectedVersion"
         ]
       },
+      "PromotionRateTargetDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "variantId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "variantLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "productName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "productId",
+          "variantId",
+          "variantLabel",
+          "productName"
+        ]
+      },
       "AdminPromotionDto": {
         "type": "object",
         "properties": {
@@ -20359,6 +20416,12 @@
                 "$ref": "#/components/schemas/SavePromotionDto"
               }
             ]
+          },
+          "rateTargets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromotionRateTargetDto"
+            }
           }
         },
         "required": [
@@ -20403,6 +20466,10 @@
       "CampaignProductPricePreviewDto": {
         "type": "object",
         "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "prices": {
             "type": "array",
             "items": {

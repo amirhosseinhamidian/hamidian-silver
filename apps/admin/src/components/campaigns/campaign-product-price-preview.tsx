@@ -86,7 +86,7 @@ export function CampaignProductPricePreview({ campaignId }: { campaignId: string
                     <td className={cell}>{money(regularToman)}</td>
                     <td className={cell}>
                       {offer?.price
-                        ? `${money(offer.price.discountToman)} (${toPersianDigits(offer.price.discountPercent)}٪)`
+                        ? `${money(offer.price.discountToman)} (${toPersianDigits(String(offer.price.discountPercent).replace('.', '٫'))}٪)`
                         : offer?.conditions.map((condition) => reasons[condition]).join('، ') ||
                           '—'}
                     </td>

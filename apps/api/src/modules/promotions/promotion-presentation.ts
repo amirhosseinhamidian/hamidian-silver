@@ -1,9 +1,9 @@
 import { isNonNegativeTomanInt } from '../../common/toman';
-import type { Campaign, CampaignPromotion } from '../../generated/prisma/client';
+import type { Campaign, CampaignPromotion, Prisma } from '../../generated/prisma/client';
 import type { CatalogCampaignOfferDto, CampaignCondition } from './dto/promotion.dto';
 import { calculatePromotion, isPromotionTarget, type PromotionLine } from './promotion-engine';
 
-type ProductTarget = Pick<PromotionLine, 'productId' | 'categoryIds'>;
+type ProductTarget = Pick<PromotionLine, 'productId' | 'categoryIds' | 'variantId'>;
 
 export type CatalogPromotionCandidate = Pick<
   CampaignPromotion,
@@ -21,6 +21,7 @@ export type CatalogPromotionCandidate = Pick<
     'name' | 'allProducts' | 'productIds' | 'categoryIds' | 'audience' | 'endsAt'
   >;
   remainingToman: number;
+  percentageOverrides?: Prisma.JsonValue;
 };
 
 export function selectCatalogPromotion(
@@ -70,12 +71,15 @@ export function selectCatalogPromotion(
     if (!amounts) continue;
 
     const discountToman = amounts.merchandiseDiscountToman;
+    const percentPrecision =
+      Array.isArray(rule.percentageOverrides) && rule.percentageOverrides.length ? 100 : 1;
     return {
       ...offer,
       price: {
         regularToman,
         discountToman,
-        discountPercent: Math.round((discountToman * 100) / regularToman),
+        discountPercent:
+          Math.round((discountToman * 100 * percentPrecision) / regularToman) / percentPrecision,
         finalToman: regularToman - discountToman,
       },
     };

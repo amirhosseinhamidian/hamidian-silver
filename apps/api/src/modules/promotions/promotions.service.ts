@@ -12,6 +12,8 @@ import {
   calculatePromotion,
   isPromotionTarget,
   matchesPromotionAudience,
+  percentageDiscountWeights,
+  readPercentageOverrides,
   type PromotionLine,
 } from './promotion-engine';
 import {
@@ -23,6 +25,7 @@ import {
 import type {
   AdminPromotionDto,
   CampaignProductPricePreviewDto,
+  PromotionPercentageOverrideDto,
   PublicPromotionsDto,
   SavePromotionDto,
 } from './dto/promotion.dto';
@@ -50,15 +53,43 @@ export class PromotionsService {
   async adminRule(campaignId: string): Promise<AdminPromotionDto> {
     const rule = await this.db.campaignPromotion.findUnique({ where: { campaignId } });
     if (!rule) return { rule: null };
+    const percentageOverrides = readPercentageOverrides(rule.percentageOverrides);
     const bundleProducts = await this.db.product.findMany({
       where: { id: { in: rule.bundleProductIds } },
       select: { slug: true },
       orderBy: { slug: 'asc' },
     });
+    const targets = percentageOverrides.length
+      ? await this.db.product.findMany({
+          where: { id: { in: percentageOverrides.map(({ productId }) => productId) } },
+          select: {
+            id: true,
+            name: true,
+            variants: {
+              where: {
+                id: { in: percentageOverrides.flatMap(({ variantId }) => variantId ?? []) },
+              },
+              select: { id: true, name: true, sku: true },
+            },
+          },
+        })
+      : [];
+    const productsById = new Map(targets.map((product) => [product.id, product]));
     return {
+      rateTargets: percentageOverrides.map(({ productId, variantId }) => {
+        const product = productsById.get(productId);
+        const variant = product?.variants.find(({ id }) => id === variantId);
+        return {
+          productId,
+          productName: product?.name ?? productId,
+          variantId: variantId ?? null,
+          variantLabel: variant ? variantLabel(variant) : (variantId ?? null),
+        };
+      }),
       rule: {
         kind: rule.kind,
         value: rule.value,
+        percentageOverrides,
         minSubtotalToman: rule.minSubtotalToman,
         maxDiscountToman: rule.maxDiscountToman,
         maxDiscountBps: rule.maxDiscountBps,
@@ -104,7 +135,7 @@ export class PromotionsService {
         await this.lockCampaign(tx, campaignId);
         const campaign = await tx.campaign.findUniqueOrThrow({
           where: { id: campaignId },
-          include: { promotion: { select: { version: true } } },
+          include: { promotion: { select: { version: true, percentageOverrides: true } } },
         });
         if (campaign.status !== 'DRAFT')
           throw new ConflictException('Only draft promotions can be edited.');
@@ -114,6 +145,17 @@ export class PromotionsService {
         if (discountBudget(campaign) <= 0)
           throw new BadRequestException('Set a campaign budget before configuring a promotion.');
 
+        const allowsOverrides = campaign.kind === 'FESTIVAL' && input.kind === 'PERCENT';
+        if (!allowsOverrides && input.percentageOverrides?.length)
+          throw new BadRequestException(
+            'Individual rates require a percentage festival promotion.',
+          );
+
+        const percentageOverrides = allowsOverrides
+          ? input.percentageOverrides === undefined
+            ? readPercentageOverrides(campaign.promotion?.percentageOverrides)
+            : await this.validatePercentageOverrides(tx, campaign, input.percentageOverrides)
+          : [];
         const products = await tx.product.findMany({
           where: { slug: { in: input.bundleProductSlugs }, status: 'ACTIVE', deletedAt: null },
           select: {
@@ -140,6 +182,11 @@ export class PromotionsService {
         const data = {
           kind: input.kind,
           value: input.value,
+          percentageOverrides: percentageOverrides.map(({ productId, variantId, rateBps }) => ({
+            productId,
+            variantId: variantId ?? null,
+            rateBps,
+          })),
           minSubtotalToman: input.minSubtotalToman,
           maxDiscountToman: input.maxDiscountToman,
           maxDiscountBps: input.maxDiscountBps,
@@ -168,6 +215,7 @@ export class PromotionsService {
             snapshot: {
               kind: updated.kind,
               value: updated.value,
+              percentageOverrides: data.percentageOverrides,
               minSubtotalToman: updated.minSubtotalToman,
               maxDiscountToman: updated.maxDiscountToman,
               maxDiscountBps: updated.maxDiscountBps,
@@ -181,7 +229,13 @@ export class PromotionsService {
         });
         return attachHumanAuditEvent(
           {
-            rule: { ...input, couponCode, maxUses, expectedVersion: updated.version },
+            rule: {
+              ...input,
+              percentageOverrides,
+              couponCode,
+              maxUses,
+              expectedVersion: updated.version,
+            },
           },
           {
             title: 'قانون تخفیف کمپین ذخیره شد.',
@@ -204,6 +258,68 @@ export class PromotionsService {
       }
       throw error;
     }
+  }
+
+  private async validatePercentageOverrides(
+    tx: Prisma.TransactionClient,
+    campaign: Parameters<typeof isPromotionTarget>[0],
+    overrides: PromotionPercentageOverrideDto[],
+  ) {
+    if (overrides.length > 500) throw new BadRequestException('Set at most 500 individual rates.');
+    const targets = new Map<string, PromotionPercentageOverrideDto>();
+    for (const { productId, variantId, rateBps } of overrides) {
+      if (!Number.isInteger(rateBps) || rateBps < 100 || rateBps > 5_000)
+        throw new BadRequestException('Individual rates must be between 1 and 50 percent.');
+      const product = productId.toLowerCase();
+      const variant = variantId?.toLowerCase() ?? null;
+      const key = variant ? `${product}/${variant}` : product;
+      if (targets.has(key))
+        throw new BadRequestException('Set only one individual rate for each product or variant.');
+      targets.set(key, { productId: product, variantId: variant, rateBps });
+    }
+    if (!targets.size) return [];
+
+    const sorted = [...targets.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([, target]) => target);
+    const products = await tx.product.findMany({
+      where: {
+        id: { in: sorted.map(({ productId }) => productId) },
+        status: 'ACTIVE',
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        categories: {
+          where: { category: { isActive: true, deletedAt: null } },
+          select: { categoryId: true },
+        },
+        variants: {
+          where: {
+            id: { in: sorted.flatMap(({ variantId }) => variantId ?? []) },
+            isActive: true,
+            deletedAt: null,
+          },
+          select: { id: true },
+        },
+      },
+    });
+    const eligible = new Map(
+      products
+        .filter((product) =>
+          isPromotionTarget(campaign, {
+            productId: product.id,
+            categoryIds: product.categories.map(({ categoryId }) => categoryId),
+          }),
+        )
+        .map(({ id, variants }) => [id, new Set(variants.map((variant) => variant.id))]),
+    );
+    for (const { productId, variantId } of sorted) {
+      const variants = eligible.get(productId);
+      if (!variants || (variantId && !variants.has(variantId)))
+        throw new BadRequestException('Choose active rate targets in the festival scope.');
+    }
+    return sorted;
   }
 
   async publicPromotions(now = new Date()): Promise<PublicPromotionsDto> {
@@ -238,6 +354,7 @@ export class PromotionsService {
         couponCode: true,
         kind: true,
         value: true,
+        percentageOverrides: true,
         minSubtotalToman: true,
         maxDiscountToman: true,
         maxDiscountBps: true,
@@ -337,16 +454,17 @@ export class PromotionsService {
           label,
           active,
           regularToman,
-          offer: selectCatalogPromotion(candidates, target, regularToman),
+          offer: selectCatalogPromotion(candidates, { ...target, variantId }, regularToman),
         });
         return {
+          productId: product.id,
           name: product.name,
           prices: [
             row(null, 'قیمت پیش‌فرض', product.status === 'ACTIVE', product.salePriceToman),
             ...product.variants.map((variant) =>
               row(
                 variant.id,
-                variant.name ? `${variant.name} · ${variant.sku}` : variant.sku,
+                variantLabel(variant),
                 product.status === 'ACTIVE' && variant.isActive,
                 variant.salePriceToman ?? product.salePriceToman,
               ),
@@ -406,8 +524,20 @@ export class PromotionsService {
             : eligible,
         );
         if (!quotaAllocations) continue;
+        const overrides =
+          rule.kind === 'PERCENT' ? readPercentageOverrides(rule.percentageOverrides) : [];
+        const eligibleLines = new Set(eligible);
         return {
           ...amounts,
+          ...(overrides.length
+            ? {
+                merchandiseDiscountWeights: percentageDiscountWeights(
+                  rule.value,
+                  overrides,
+                  lines,
+                ).map((weight, index) => (eligibleLines.has(lines[index]) ? weight : 0)),
+              }
+            : {}),
           ...(quotaAllocations.length ? { quotaAllocations } : {}),
           campaignId: rule.campaignId,
           campaignName: rule.campaign.name,
@@ -416,6 +546,7 @@ export class PromotionsService {
             campaignRevision: rule.campaign.revision,
             kind: rule.kind,
             value: rule.value,
+            ...(overrides.length ? { percentageOverrides: overrides } : {}),
             minSubtotalToman: rule.minSubtotalToman,
             maxDiscountToman: rule.maxDiscountToman,
             maxDiscountBps: rule.maxDiscountBps,
@@ -446,4 +577,8 @@ export class PromotionsService {
       budgetToman: { gt: 0 },
     };
   }
+}
+
+function variantLabel({ name, sku }: { name: string | null; sku: string }) {
+  return name ? `${name} · ${sku}` : sku;
 }

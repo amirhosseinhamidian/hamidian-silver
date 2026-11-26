@@ -589,18 +589,22 @@ async function seedDemoCatalog(): Promise<void> {
     { code: '54', label: '۵۴', sortOrder: 20 },
     { code: '56', label: '۵۶', sortOrder: 30 },
   ] as const;
+  const ringSizeGroup = await prisma.sizeGroup.findUniqueOrThrow({
+    where: { code: 'RING' },
+    select: { id: true },
+  });
   const sizeIdByCode = new Map<string, string>();
 
   for (const sizeDefinition of sizeDefinitions) {
     const size = await prisma.size.upsert({
-      where: { code: sizeDefinition.code },
+      where: { groupId_code: { groupId: ringSizeGroup.id, code: sizeDefinition.code } },
       update: {
         label: sizeDefinition.label,
         sortOrder: sizeDefinition.sortOrder,
         isActive: true,
         deletedAt: null,
       },
-      create: sizeDefinition,
+      create: { ...sizeDefinition, groupId: ringSizeGroup.id },
     });
 
     sizeIdByCode.set(size.code, size.id);

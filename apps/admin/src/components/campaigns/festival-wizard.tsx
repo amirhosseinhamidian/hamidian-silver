@@ -118,7 +118,12 @@ export async function FestivalWizard({
       panel = (
         <>
           {campaignEditor('promotion')}
-          <CampaignSalesPanel campaign={campaign} rule={rule} canWrite={canWrite} />
+          <CampaignSalesPanel
+            campaign={campaign}
+            rule={rule}
+            rateTargets={promotion?.data?.rateTargets}
+            canWrite={canWrite}
+          />
         </>
       );
       break;

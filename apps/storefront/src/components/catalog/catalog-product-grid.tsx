@@ -7,9 +7,8 @@ import {
   type CatalogProductCardVariant,
 } from '@/components/catalog/catalog-product-card';
 import { Button } from '@/components/ui/button';
-import { trackCatalogEvent } from '@/lib/analytics/commerce-events';
+import { measureCatalogProducts } from '@/lib/analytics/commerce-events';
 import type { CatalogList } from '@/lib/analytics/funnel-contract';
-import { trackFunnelEvent } from '@/lib/analytics/funnel-tracker';
 import {
   buildCatalogCollectionHref,
   buildCatalogHref,
@@ -84,28 +83,6 @@ function appendUniqueProducts(
   const existingIds = new Set(current.map(({ id }) => id));
 
   return [...current, ...incoming.filter(({ id }) => !existingIds.has(id))];
-}
-
-function measureCatalogProducts(
-  name: 'view_item_list' | 'select_item',
-  list: CatalogList,
-  products: readonly PublicCatalogProductSummary[],
-) {
-  void trackFunnelEvent(
-    { name, list, items: products.map((product) => ({ productId: product.slug })) },
-    {
-      publish: () =>
-        trackCatalogEvent(
-          name,
-          list,
-          products.map((product) => ({
-            itemId: product.slug,
-            itemName: product.name,
-            priceToman: product.salePriceToman,
-          })),
-        ),
-    },
-  );
 }
 
 export function CatalogProductGrid({

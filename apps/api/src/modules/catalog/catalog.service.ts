@@ -32,6 +32,7 @@ import {
   type CatalogFacetPageRow,
 } from './catalog-facets-query';
 import { CATALOG_RANKING_VERSION, isCommercialCatalogSort } from './catalog-ranking';
+import { readRelatedProductPage } from './catalog-related-products';
 import { catalogHierarchyTransaction } from './catalog-hierarchy-transaction';
 import { CatalogAttributesService } from './catalog-attributes.service';
 import {
@@ -2232,7 +2233,7 @@ export class CatalogService {
           promotions && variant.isAvailable
             ? selectCatalogPromotion(
                 promotions,
-                target,
+                { ...target, variantId: variant.id },
                 variant.salePriceToman,
                 campaignQuota?.remaining === 0 ? campaignQuota.campaignId : undefined,
               )
@@ -2299,49 +2300,23 @@ export class CatalogService {
         : 8;
     const product = await this.prisma.product.findFirst({
       where: { slug, status: ProductStatus.ACTIVE, deletedAt: null },
-      select: { id: true, categories: { select: { categoryId: true } } },
+      select: { id: true, salePriceToman: true },
     });
     if (!product) throw new NotFoundException('Product was not found.');
 
-    const relations = await this.prisma.productRelation.findMany({
-      where: { OR: [{ sourceProductId: product.id }, { targetProductId: product.id }] },
-      orderBy: { createdAt: 'asc' },
-      select: { sourceProductId: true, targetProductId: true },
-    });
-    const relationIds = relations.map((relation) =>
-      relation.sourceProductId === product.id ? relation.targetProductId : relation.sourceProductId,
-    );
-    const activeExplicitProducts = await this.prisma.product.findMany({
-      where: { id: { in: relationIds }, status: ProductStatus.ACTIVE, deletedAt: null },
-      select: { id: true },
-    });
-    const activeExplicitIdSet = new Set(activeExplicitProducts.map(({ id }) => id));
-    const explicitIds = relationIds.filter((id) => activeExplicitIdSet.has(id));
-    const categoryIds = product.categories.map(({ categoryId }) => categoryId);
-    const fallback =
-      categoryIds.length > 0
-        ? await this.prisma.product.findMany({
-            where: {
-              id: { notIn: [product.id, ...explicitIds] },
-              status: ProductStatus.ACTIVE,
-              deletedAt: null,
-              categories: { some: { categoryId: { in: categoryIds } } },
-            },
-            orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
-            select: { id: true },
-          })
-        : [];
-    const orderedIds = [...explicitIds, ...fallback.map(({ id }) => id)];
-    const pageIds = orderedIds.slice((page - 1) * pageSize, page * pageSize);
-    const summaries = await this.publicProductSummariesByIds(pageIds);
+    const { ids, total } = await readRelatedProductPage(this.prisma, product, page, pageSize);
+    const summaries = await this.publicProductSummariesByIds(ids);
     const byId = new Map(summaries.map((summary) => [summary.id, summary]));
 
     return {
-      items: pageIds.map((id) => byId.get(id)).filter(Boolean),
+      items: ids.flatMap((id) => {
+        const summary = byId.get(id);
+        return summary?.isAvailable ? [summary] : [];
+      }),
       page,
       pageSize,
-      total: orderedIds.length,
-      totalPages: Math.ceil(orderedIds.length / pageSize),
+      total,
+      totalPages: Math.ceil(total / pageSize),
     };
   }
 

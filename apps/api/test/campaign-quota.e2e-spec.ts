@@ -14,6 +14,7 @@ import { OrderReturnsService } from '../src/modules/orders/order-returns.service
 import { OrdersService } from '../src/modules/orders/orders.service';
 import type { PaymentGateway } from '../src/modules/payments/payment-gateway.port';
 import { PaymentsService } from '../src/modules/payments/payments.service';
+import type { SavePromotionDto } from '../src/modules/promotions/dto/promotion.dto';
 import { PromotionsService } from '../src/modules/promotions/promotions.service';
 import { createFestivalDraft, publishFestival } from './support/festival-purchase';
 
@@ -122,22 +123,82 @@ it('reconciles published festival prices with Checkout and protects quota across
       },
     });
     const campaignId = festival.id;
+    const individualRates = [
+      { productId: product.id, variantId: null, rateBps: 1_200 },
+      ...product.variants.map(({ id }) => ({
+        productId: product.id,
+        variantId: id,
+        rateBps: 1_000,
+      })),
+    ];
+    const promotionRule: SavePromotionDto = {
+      kind: 'PERCENT',
+      value: 800,
+      minSubtotalToman: 0,
+      maxDiscountToman: 10_000,
+      maxDiscountBps: 2_000,
+      priority: 10,
+      bundleProductSlugs: [],
+      expectedVersion: 0,
+    };
+    await expect(
+      promotions.save(
+        campaignId,
+        {
+          ...promotionRule,
+          percentageOverrides: [individualRates[0], individualRates[0]],
+        },
+        manager,
+      ),
+    ).rejects.toThrow('one individual rate');
+    await expect(
+      promotions.save(
+        campaignId,
+        {
+          ...promotionRule,
+          percentageOverrides: [{ productId: product.id, variantId: randomUUID(), rateBps: 1_000 }],
+        },
+        manager,
+      ),
+    ).rejects.toThrow('active rate targets');
     for (const id of [campaignId, overlappingId]) {
       await promotions.save(
         id,
-        {
-          kind: 'PERCENT',
-          value: 1_000,
-          minSubtotalToman: 0,
-          maxDiscountToman: 10_000,
-          maxDiscountBps: 2_000,
-          priority: 10,
-          bundleProductSlugs: [],
-          expectedVersion: 0,
-        },
+        id === campaignId
+          ? { ...promotionRule, percentageOverrides: individualRates }
+          : { ...promotionRule, value: 1_000 },
         manager,
       );
     }
+    await expect(promotions.adminRule(campaignId)).resolves.toMatchObject({
+      rule: { value: 800, percentageOverrides: expect.arrayContaining(individualRates) },
+      rateTargets: expect.arrayContaining([
+        expect.objectContaining({
+          productId: product.id,
+          productName: product.name,
+          variantId: null,
+        }),
+      ]),
+    });
+    await expect(promotions.productPricePreview(campaignId, slug)).resolves.toMatchObject({
+      productId: product.id,
+      prices: expect.arrayContaining([
+        expect.objectContaining({
+          variantId: null,
+          offer: expect.objectContaining({
+            price: expect.objectContaining({ regularToman: 25_000, finalToman: 22_000 }),
+          }),
+        }),
+        ...product.variants.map(({ id }) =>
+          expect.objectContaining({
+            variantId: id,
+            offer: expect.objectContaining({
+              price: expect.objectContaining({ regularToman: 20_000, finalToman: 18_000 }),
+            }),
+          }),
+        ),
+      ]),
+    });
     const update = (limit: number, manualSold: number, expectedRevision: number, id = campaignId) =>
       quotas.save(id, { slug, limit, manualSold, expectedRevision }, manager);
 
@@ -173,7 +234,7 @@ it('reconciles published festival prices with Checkout and protects quota across
       defaultSalePriceToman: 25_000,
       campaignOffer: {
         campaignId,
-        price: { regularToman: 25_000, discountToman: 2_500, finalToman: 22_500 },
+        price: { regularToman: 25_000, discountToman: 3_000, finalToman: 22_000 },
       },
       campaignQuota: { sold: 1, remaining: 1 },
     };
@@ -342,8 +403,12 @@ it('reconciles published festival prices with Checkout and protects quota across
       merchandiseDiscountToman: 2_000,
       snapshot: {
         payableToman: 18_700,
-        rule: { kind: 'PERCENT', version: 1 },
-        items: [{ unitSalePriceToman: 20_000 }],
+        rule: {
+          kind: 'PERCENT',
+          version: 1,
+          percentageOverrides: expect.arrayContaining(individualRates),
+        },
+        items: [{ unitSalePriceToman: 20_000, directDiscountToman: 2_000 }],
       },
     });
     const anotherOrder = await orders.createOrder(buyers[loser].id, baskets[loser]);
@@ -497,7 +562,10 @@ it('reconciles published festival prices with Checkout and protects quota across
       data: { onHand: 2 },
     });
     const restoredStock = await catalog.getPublicProduct(slug);
-    expect(restoredStock.campaignOffer).toMatchObject(expectedProductCard.campaignOffer);
+    expect(restoredStock.campaignOffer).toMatchObject({
+      campaignId,
+      price: { regularToman: 25_000, discountToman: 2_500, finalToman: 22_500 },
+    });
     expect(
       restoredStock.variants.find(({ id }) => id === product.variants[winner].id),
     ).toMatchObject({

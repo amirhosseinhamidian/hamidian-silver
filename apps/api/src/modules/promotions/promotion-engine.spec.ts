@@ -1,4 +1,9 @@
-import { calculatePromotion, isPromotionTarget } from './promotion-engine';
+import { allocateCheckoutDiscount } from '../wallet/wallet-checkout';
+import {
+  calculatePromotion,
+  isPromotionTarget,
+  percentageDiscountWeights,
+} from './promotion-engine';
 import { selectCatalogPromotion } from './promotion-presentation';
 import { createQuoteToken, matchesQuote, parseQuoteToken } from './promotion-quote';
 
@@ -70,6 +75,38 @@ describe('campaign pricing for the catalog', () => {
     expect(selectCatalogPromotion([candidate], { ...line, productId: 'chain' }, 5_005)).toBeNull();
   });
 
+  it('uses the selected variant rate, then the product rate, then the default', () => {
+    const rule = {
+      ...candidate,
+      maxDiscountBps: 5_000,
+      campaign: { ...candidate.campaign, allProducts: true },
+      percentageOverrides: [
+        { productId: 'ring', rateBps: 1_500 },
+        { productId: 'ring', variantId: 'small', rateBps: 2_525 },
+      ],
+    };
+    expect(selectCatalogPromotion([rule], line, 5_000)?.price?.finalToman).toBe(4_250);
+    expect(
+      selectCatalogPromotion([rule], { ...line, variantId: 'large' }, 4_000)?.price?.finalToman,
+    ).toBe(3_400);
+    expect(selectCatalogPromotion([rule], { ...line, variantId: 'small' }, 4_000)?.price).toEqual({
+      regularToman: 4_000,
+      discountToman: 1_010,
+      discountPercent: 25.25,
+      finalToman: 2_990,
+    });
+    expect(
+      selectCatalogPromotion([rule], { ...line, productId: 'chain' }, 5_000)?.price?.finalToman,
+    ).toBe(4_500);
+    expect(
+      selectCatalogPromotion(
+        [{ ...rule, couponCode: 'PRIVATE' }],
+        { ...line, variantId: 'small' },
+        4_000,
+      ),
+    ).toMatchObject({ price: null, conditions: ['COUPON'] });
+  });
+
   it('respects priority when a cart rule would win for a single unit', () => {
     const fixed = { ...candidate, kind: 'FIXED' as const };
     expect(selectCatalogPromotion([fixed, candidate], line, 5_005)).toMatchObject({
@@ -84,6 +121,45 @@ describe('campaign pricing for the catalog', () => {
 });
 
 describe('promotion amounts', () => {
+  it('allocates a capped mixed basket based on its per-line rates', () => {
+    const lines = [
+      { ...line, variantId: 'small', unitSalePriceToman: 4_000 },
+      { ...line, variantId: 'large', unitSalePriceToman: 5_000 },
+      { ...line, productId: 'chain', unitSalePriceToman: 3_000, quantity: 2 },
+    ];
+    const rule = {
+      ...cap,
+      kind: 'PERCENT' as const,
+      percentageOverrides: [
+        { productId: 'ring', rateBps: 1_600 },
+        { productId: 'ring', variantId: 'small', rateBps: 3_000 },
+      ],
+    };
+    expect(calculatePromotion(rule, lines, 0, 5_000)?.merchandiseDiscountToman).toBe(2_000);
+    const merchandiseDiscountToman = calculatePromotion(
+      rule,
+      lines,
+      0,
+      1_300,
+    )!.merchandiseDiscountToman;
+    expect(
+      allocateCheckoutDiscount(lines, {
+        merchandiseDiscountToman,
+        merchandiseDiscountWeights: percentageDiscountWeights(
+          rule.value,
+          rule.percentageOverrides,
+          lines,
+        ),
+        rule: {
+          kind: 'PERCENT',
+          coupon: false,
+          eligibleProductIds: ['ring', 'chain'],
+          bundleProductIds: [],
+        },
+      }),
+    ).toEqual([600, 400, 300]);
+  });
+
   it('uses integer rounding and every economic cap', () => {
     const rule = { ...cap, kind: 'PERCENT' as const, value: 1_500 };
     expect(calculatePromotion(rule, [line], 0, 900)?.merchandiseDiscountToman).toBe(750);

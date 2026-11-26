@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { DiscountBadge } from '@/components/catalog/discount-badge';
+import { ProductRecommendations } from '@/components/catalog/product-recommendations';
 import { PlatingTypeIndicator } from '@/components/plating/plating-type-indicator';
 import { ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -228,6 +229,10 @@ export default function CartPage() {
           </div>
         </div>
       </div>
+      <ProductRecommendations
+        list="cart_recommendations"
+        sources={items.map(({ productSlug }) => productSlug)}
+      />
     </main>
   );
 }
