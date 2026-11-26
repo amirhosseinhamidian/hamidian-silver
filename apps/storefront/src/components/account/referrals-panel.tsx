@@ -14,6 +14,7 @@ import {
   referralCodePattern,
   referralError,
   referralLink,
+  referralRewardLabels,
   type ReceivedReferral,
   type ReferralHistoryItem,
   type ReferralOverview,
@@ -44,6 +45,7 @@ function ReferralRecord({ item }: Readonly<{ item: ReferralHistoryItem }>) {
   return (
     <div className="space-y-1 text-sm leading-6">
       <p className="font-semibold">{statuses[item.status]}</p>
+      {item.rewardStatus && <p>{referralRewardLabels[item.rewardStatus]}</p>}
       <p>
         ثبت‌شده در <time dateTime={item.claimedAt}>{formatWalletDate(item.claimedAt)}</time>
       </p>

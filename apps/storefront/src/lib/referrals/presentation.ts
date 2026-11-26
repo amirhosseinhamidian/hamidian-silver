@@ -1,3 +1,5 @@
+import type { components } from '@hamidian/contracts';
+
 export const referralPath = '/account/referrals';
 export const referralCodePattern = /^[A-Za-z0-9_-]{24}$/;
 
@@ -7,6 +9,19 @@ export type ReferralHistoryItem = {
   claimedAt: string;
   expiresAt: string;
   firstPaidAt: string | null;
+  rewardStatus?: components['schemas']['ReferralHistoryItemDto']['rewardStatus'];
+};
+
+export const referralRewardLabels: Record<
+  NonNullable<ReferralHistoryItem['rewardStatus']>,
+  string
+> = {
+  AWAITING_PURCHASE: 'در انتظار اولین خرید دوست',
+  PENDING: 'در انتظار تأیید شرایط پاداش معرفی',
+  IN_REVIEW: 'پاداش معرفی در حال بررسی است.',
+  ISSUED: 'پاداش معرفی صادر شده است.',
+  INELIGIBLE: 'این معرفی مشمول پاداش نیست.',
+  EXPIRED: 'مهلت دریافت پاداش معرفی پایان یافته است.',
 };
 
 export type ReceivedReferral = ReferralHistoryItem & { firstOrderId: string | null };

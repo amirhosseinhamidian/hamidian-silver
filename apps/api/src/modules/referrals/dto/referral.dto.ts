@@ -3,6 +3,14 @@ import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Matches, Max, Min } from 'class-validator';
 
 const statuses = ['PENDING', 'FIRST_PURCHASE_CONFIRMED', 'EXPIRED'] as const;
+const rewardStatuses = [
+  'AWAITING_PURCHASE',
+  'PENDING',
+  'IN_REVIEW',
+  'ISSUED',
+  'INELIGIBLE',
+  'EXPIRED',
+] as const;
 
 export class ReferralClaimDto {
   @ApiProperty({ minLength: 24, maxLength: 24, pattern: '^[A-Za-z0-9_-]{24}$' })
@@ -42,6 +50,12 @@ export class ReferralHistoryItemDto {
 
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   firstPaidAt!: string | null;
+
+  @ApiPropertyOptional({
+    enum: [...rewardStatuses],
+    description: 'Referrer reward status for an outgoing referral.',
+  })
+  rewardStatus?: (typeof rewardStatuses)[number];
 }
 
 export class ReceivedReferralDto extends ReferralHistoryItemDto {

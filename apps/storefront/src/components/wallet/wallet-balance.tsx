@@ -1,7 +1,10 @@
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { formatWalletDate, type WalletBalance } from '@/lib/wallet/wallet-presentation';
 
-export function WalletBalanceView({ balance }: Readonly<{ balance: WalletBalance }>) {
+export function WalletBalanceView({
+  balance,
+  showNextExpiry = true,
+}: Readonly<{ balance: WalletBalance; showNextExpiry?: boolean }>) {
   return (
     <div className="space-y-2 text-sm leading-6">
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -12,7 +15,7 @@ export function WalletBalanceView({ balance }: Readonly<{ balance: WalletBalance
         <dt>رزروشده</dt>
         <dd>{formatTomanPrice(balance.reservedToman)}</dd>
       </dl>
-      {balance.nextExpiryAt && Boolean(balance.nextExpiryToman) && (
+      {showNextExpiry && balance.nextExpiryAt && Boolean(balance.nextExpiryToman) && (
         <p>
           {formatTomanPrice(balance.nextExpiryToman ?? 0)} از اعتبار شما تا{' '}
           <time dateTime={balance.nextExpiryAt}>{formatWalletDate(balance.nextExpiryAt)}</time> قابل

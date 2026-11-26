@@ -195,6 +195,7 @@ const CUSTOMER_ORDER_LIST_SELECT = {
         orderBy: { createdAt: 'desc' as const },
         select: {
           provider: true,
+          status: true,
           receiptOriginalName: true,
           receiptUploadedAt: true,
         },
@@ -222,6 +223,7 @@ const CUSTOMER_ORDER_DETAIL_SELECT = {
         orderBy: { createdAt: 'desc' as const },
         select: {
           provider: true,
+          status: true,
           failureCode: true,
           failureMessage: true,
           receiptOriginalName: true,
@@ -1102,6 +1104,9 @@ export class OrdersService {
       payment: payment
         ? {
             status: payment.status,
+            ...(payment.status === PaymentStatus.PENDING && latestAttempt?.status === 'FAILED'
+              ? { latestAttemptFailed: true }
+              : {}),
             method: latestAttempt
               ? latestAttempt.provider === 'card_to_card'
                 ? 'CARD_TO_CARD'

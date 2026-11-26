@@ -55,6 +55,7 @@ export type CustomerPaymentMethod = 'CARD_TO_CARD' | 'PAYMENT_GATEWAY';
 
 export type CustomerOrderPayment = Readonly<{
   status: string;
+  latestAttemptFailed?: boolean;
   method: CustomerPaymentMethod | null;
   receiptAvailable: boolean;
   receiptOriginalName: string | null;

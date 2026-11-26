@@ -10,6 +10,9 @@ export class CustomerOrderPaymentDto {
   @ApiProperty({ enum: PaymentStatus })
   status!: PaymentStatus;
 
+  @ApiPropertyOptional()
+  latestAttemptFailed?: boolean;
+
   @ApiProperty({ enum: CustomerPaymentMethod, nullable: true })
   method!: CustomerPaymentMethod | null;
 

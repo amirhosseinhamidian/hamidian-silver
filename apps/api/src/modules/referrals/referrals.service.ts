@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'node:crypto';
 import { DomainException } from '../../common/errors/domain-exception';
 import { ErrorCode } from '../../common/errors/error-codes';
-import type { Prisma } from '../../generated/prisma/client';
+import type { Prisma, ReferralGrantJob } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import type {
   ReceivedReferralDto,
@@ -52,6 +52,18 @@ function received(claim: Claim, now: Date): ReceivedReferralDto {
   return { ...item, firstOrderId: item.firstPaidAt ? claim.firstOrderId : null };
 }
 
+function outgoingRewardStatus(
+  status: ReferralHistoryItemDto['status'],
+  grant: Pick<ReferralGrantJob, 'status' | 'resultCode' | 'nextAttemptAt'> | null,
+): NonNullable<ReferralHistoryItemDto['rewardStatus']> {
+  if (status === 'EXPIRED' || grant?.status === 'EXPIRED') return 'EXPIRED';
+  if (status === 'PENDING') return 'AWAITING_PURCHASE';
+  if (grant?.status === 'REJECTED') return 'INELIGIBLE';
+  if (grant?.status === 'APPROVED' && !grant.nextAttemptAt) return 'ISSUED';
+  if (grant?.resultCode === 'RISK_PENDING' || grant?.status === 'APPROVED') return 'IN_REVIEW';
+  return 'PENDING';
+}
+
 @Injectable()
 export class ReferralsService {
   constructor(
@@ -90,7 +102,10 @@ export class ReferralsService {
         orderBy: [{ claimedAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize + 1,
-        select: historySelect,
+        select: {
+          ...historySelect,
+          grantJob: { select: { status: true, resultCode: true, nextAttemptAt: true } },
+        },
       }),
       findQualifyingReferralPurchase(this.db, userId, now),
     ]);
@@ -101,7 +116,10 @@ export class ReferralsService {
       code: purchase ? (code?.code ?? null) : null,
       incoming: incoming ? received(incoming, now) : null,
       outgoing: {
-        items: outgoing.slice(0, pageSize).map((claim) => historyItem(claim, now)),
+        items: outgoing.slice(0, pageSize).map((claim) => {
+          const item = historyItem(claim, now);
+          return { ...item, rewardStatus: outgoingRewardStatus(item.status, claim.grantJob) };
+        }),
         page,
         hasMore: outgoing.length > pageSize,
       },

@@ -20,69 +20,68 @@ afterEach(() => {
 
 describe('AccountDashboard', () => {
   it('renders the account tabs and product thumbnails in order history', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ id: 'user-1', phone: '+989121234567' }))
-      .mockResolvedValueOnce(
-        jsonResponse({
-          id: 'user-1',
-          phone: '+989121234567',
-          firstName: 'امیرحسین',
-          lastName: 'حمیدیان',
-          phoneVerifiedAt: '2026-09-01T00:00:00.000Z',
-          createdAt: '2026-09-01T00:00:00.000Z',
-          updatedAt: '2026-09-01T00:00:00.000Z',
-        }),
-      )
-      .mockResolvedValueOnce(jsonResponse([]))
-      .mockResolvedValueOnce(
-        jsonResponse({
-          total: 1,
-          items: [
-            {
-              id: 'order-1',
-              orderNumber: 'HS-1001',
-              status: 'DELIVERED',
-              grandTotalToman: 3_000_000,
-              trackingCode: 'POST-123',
-              createdAt: '2026-09-05T12:00:00.000Z',
-              items: [
-                {
-                  id: 'item-1',
-                  quantity: 1,
-                  productNameSnapshot: 'انگشتر نقره مهتاب',
-                  productSlug: 'silver-ring',
-                  primaryMedia: {
-                    url: 'https://media.example/ring.webp',
-                    mimeType: 'image/webp',
-                    altText: 'انگشتر نقره مهتاب',
-                    width: 800,
-                    height: 800,
-                  },
-                  fallbackSrc: null,
-                  variantNameSnapshot: 'مدل اصلی',
-                  sizeLabelSnapshot: '۷',
-                  platingType: null,
-                  lineTotalToman: 3_000_000,
+    const responses: Record<string, unknown> = {
+      '/api/auth/me': { id: 'user-1', phone: '+989121234567' },
+      '/api/profile': {
+        id: 'user-1',
+        phone: '+989121234567',
+        firstName: 'امیرحسین',
+        lastName: 'حمیدیان',
+        phoneVerifiedAt: '2026-09-01T00:00:00.000Z',
+        createdAt: '2026-09-01T00:00:00.000Z',
+        updatedAt: '2026-09-01T00:00:00.000Z',
+      },
+      '/api/profile/addresses': [],
+      '/api/orders': {
+        total: 1,
+        items: [
+          {
+            id: 'order-1',
+            orderNumber: 'HS-1001',
+            status: 'DELIVERED',
+            grandTotalToman: 3_000_000,
+            trackingCode: 'POST-123',
+            createdAt: '2026-09-05T12:00:00.000Z',
+            items: [
+              {
+                id: 'item-1',
+                quantity: 1,
+                productNameSnapshot: 'انگشتر نقره مهتاب',
+                productSlug: 'silver-ring',
+                primaryMedia: {
+                  url: 'https://media.example/ring.webp',
+                  mimeType: 'image/webp',
+                  altText: 'انگشتر نقره مهتاب',
+                  width: 800,
+                  height: 800,
                 },
-              ],
-            },
-          ],
-        }),
-      )
-      .mockResolvedValueOnce(
-        jsonResponse({ availableToman: 0, pendingToman: 0, reservedToman: 0, nextExpiryAt: null }),
-      );
+                fallbackSrc: null,
+                variantNameSnapshot: 'مدل اصلی',
+                sizeLabelSnapshot: '۷',
+                platingType: null,
+                lineTotalToman: 3_000_000,
+              },
+            ],
+          },
+        ],
+      },
+      '/api/cart/recovery': { current: null, itemCount: 0, expiresAt: null, showReminder: false },
+      '/api/wallet': { availableToman: 0, pendingToman: 0, reservedToman: 0, nextExpiryAt: null },
+    };
+    const fetchMock = vi.fn(async (path: string) =>
+      Object.hasOwn(responses, path) ? jsonResponse(responses[path]) : jsonResponse(null, 404),
+    );
     vi.stubGlobal('fetch', fetchMock);
 
     render(<AccountDashboard />);
 
     const tabs = await screen.findAllByRole('tab');
-    expect(tabs).toHaveLength(4);
+    expect(tabs).toHaveLength(5);
     expect(tabs[0]).toHaveAccessibleName('سفارش‌ها ۱');
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
     expect(tabs[0]).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('tab', { name: 'کیف پول' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'باشگاه مشتریان' })).toBeInTheDocument();
     for (const tab of tabs) {
       expect(tab).toHaveClass('text-base', 'font-bold', 'sm:text-lg');
     }
@@ -135,9 +134,14 @@ describe('AccountDashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'خروج از حساب کاربری' }));
     const logoutDialog = screen.getByRole('dialog', { name: 'خروج از حساب کاربری' });
     expect(within(logoutDialog).getByRole('button', { name: 'تأیید خروج' })).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/auth/logout', expect.anything());
     fireEvent.click(within(logoutDialog).getByRole('button', { name: 'انصراف' }));
     expect(screen.getByLabelText(/^نام\s*\*?$/)).toHaveAttribute('placeholder', 'مثلاً امیرحسین');
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/wallet',
+        expect.objectContaining({ cache: 'no-store' }),
+      ),
+    );
   });
 });

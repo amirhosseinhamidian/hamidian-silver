@@ -120,6 +120,9 @@ it('grants the referrer once after risk approval and corrects a returned purchas
     });
     await worker.run();
     await expect(db.walletLot.count({ where: { source: 'REFERRAL' } })).resolves.toBe(0);
+    await expect(referrals.overview(referrer.id, 1)).resolves.toMatchObject({
+      outgoing: { items: [{ id: claim.id, rewardStatus: 'IN_REVIEW' }] },
+    });
     const pendingReturn = await db.orderReturn.create({ data: { orderId: order.id } });
     await db.referralRiskAssessment.update({
       where: { attributionId: claim.id },
@@ -154,6 +157,10 @@ it('grants the referrer once after risk approval and corrects a returned purchas
     expect(+lot.expiresAt - +lot.createdAt).toBeLessThanOrEqual(12 * 86_400_000);
     await expect(db.walletLot.count({ where: expected })).resolves.toBe(1);
     await expect(db.walletOperation.count({ where: { userId: referrer.id } })).resolves.toBe(2);
+    const customerReferral = (await referrals.overview(referrer.id, 1)).outgoing.items[0];
+    expect(customerReferral).toMatchObject({ id: claim.id, rewardStatus: 'ISSUED' });
+    expect(customerReferral).not.toHaveProperty('resultCode');
+    expect(customerReferral).not.toHaveProperty('referredUserId');
     await expect(reports.report({ status: 'APPROVED' })).resolves.toMatchObject({
       totals: {
         registered: 1,
@@ -206,6 +213,9 @@ it('grants the referrer once after risk approval and corrects a returned purchas
       status: 'REJECTED',
       recoveryDueToman: 1_000,
       nextAttemptAt: expect.any(Date),
+    });
+    await expect(referrals.overview(referrer.id, 1)).resolves.toMatchObject({
+      outgoing: { items: [{ id: claim.id, rewardStatus: 'INELIGIBLE' }] },
     });
     await ledger.reverseCapture({
       userId: referrer.id,

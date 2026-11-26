@@ -8,7 +8,11 @@ import {
 import { createHash } from 'node:crypto';
 import { isNonNegativeTomanInt } from '../../common/toman';
 import { Prisma } from '../../generated/prisma/client';
-import type { WalletBucket, WalletOperationKind } from '../../generated/prisma/enums';
+import {
+  WalletSource,
+  type WalletBucket,
+  type WalletOperationKind,
+} from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { enqueueWalletCreditActivation } from '../notifications/wallet-credit-notifications.service';
 import type { WalletBalanceDto, WalletLedgerPageDto, WalletOperationDto } from './dto/wallet.dto';
@@ -56,9 +60,11 @@ type OperationContext = {
 };
 type ContextAction = (context: OperationContext) => Promise<void>;
 type BalanceRow = {
+  source: WalletSource | null;
   pending: bigint;
   available: bigint;
   reserved: bigint;
+  expired: bigint;
   nextExpiryAt: Date | null;
   nextExpiryToman: bigint;
 };
@@ -107,10 +113,12 @@ export class WalletLedgerService {
   }
 
   async balance(userId: string): Promise<WalletBalanceDto> {
-    const [balance] = await this.db.$queryRaw<BalanceRow[]>`
+    const rows = await this.db.$queryRaw<BalanceRow[]>`
       WITH lots AS (
-        SELECT "pendingToman", CASE WHEN COALESCE(j."recoveryDueToman", 0) = 0 AND j."nextAttemptAt" IS NULL
+        SELECT l.source, "pendingToman", CASE WHEN COALESCE(j."recoveryDueToman", 0) = 0 AND j."nextAttemptAt" IS NULL
             THEN "availableToman" ELSE 0 END AS "availableToman", "reservedToman", "expiresAt",
+          "expiredToman" + CASE WHEN "expiresAt" <= CURRENT_TIMESTAMP
+            THEN "pendingToman" + l."availableToman" ELSE 0 END AS expired,
           MIN("expiresAt") FILTER (WHERE "availableToman" > 0 AND "expiresAt" > CURRENT_TIMESTAMP
             AND COALESCE(j."recoveryDueToman", 0) = 0 AND j."nextAttemptAt" IS NULL)
             OVER () AS next_expiry
@@ -118,19 +126,33 @@ export class WalletLedgerService {
         WHERE l."userId" = ${userId}::uuid
       )
       SELECT
+        source,
         COALESCE(SUM("pendingToman") FILTER (WHERE "expiresAt" > CURRENT_TIMESTAMP), 0) AS pending,
         COALESCE(SUM("availableToman") FILTER (WHERE "expiresAt" > CURRENT_TIMESTAMP), 0) AS available,
         COALESCE(SUM("reservedToman"), 0) AS reserved,
+        COALESCE(SUM(expired), 0) AS expired,
         MIN(next_expiry) AS "nextExpiryAt",
         COALESCE(SUM("availableToman") FILTER (WHERE "expiresAt" = next_expiry), 0) AS "nextExpiryToman"
       FROM lots
+      GROUP BY GROUPING SETS ((), (source))
     `;
+    const balance = rows.find(({ source }) => source === null)!;
     return {
       pendingToman: exactWalletToman(balance.pending),
       availableToman: exactWalletToman(balance.available),
       reservedToman: exactWalletToman(balance.reserved),
       nextExpiryAt: balance.nextExpiryAt?.toISOString() ?? null,
       nextExpiryToman: exactWalletToman(balance.nextExpiryToman),
+      sourceBalances: Object.values(WalletSource).map((source) => {
+        const row = rows.find((entry) => entry.source === source);
+        return {
+          source,
+          availableToman: exactWalletToman(row?.available ?? 0n),
+          pendingToman: exactWalletToman(row?.pending ?? 0n),
+          reservedToman: exactWalletToman(row?.reserved ?? 0n),
+          expiredToman: exactWalletToman(row?.expired ?? 0n),
+        };
+      }),
     };
   }
 

@@ -20938,6 +20938,37 @@
           }
         }
       },
+      "WalletSourceBalanceDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "enum": [
+              "PURCHASE",
+              "REFERRAL"
+            ],
+            "type": "string"
+          },
+          "availableToman": {
+            "type": "number"
+          },
+          "pendingToman": {
+            "type": "number"
+          },
+          "reservedToman": {
+            "type": "number"
+          },
+          "expiredToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "source",
+          "availableToman",
+          "pendingToman",
+          "reservedToman",
+          "expiredToman"
+        ]
+      },
       "WalletBalanceDto": {
         "type": "object",
         "properties": {
@@ -20948,6 +20979,12 @@
           },
           "nextExpiryToman": {
             "type": "number"
+          },
+          "sourceBalances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletSourceBalanceDto"
+            }
           },
           "pendingToman": {
             "type": "number"
@@ -25288,6 +25325,9 @@
             ],
             "type": "string"
           },
+          "latestAttemptFailed": {
+            "type": "boolean"
+          },
           "method": {
             "nullable": true,
             "enum": [
@@ -27102,6 +27142,18 @@
             "nullable": true,
             "format": "date-time"
           },
+          "rewardStatus": {
+            "enum": [
+              "AWAITING_PURCHASE",
+              "PENDING",
+              "IN_REVIEW",
+              "ISSUED",
+              "INELIGIBLE",
+              "EXPIRED"
+            ],
+            "type": "string",
+            "description": "Referrer reward status for an outgoing referral."
+          },
           "firstOrderId": {
             "type": "string",
             "nullable": true,
@@ -27144,6 +27196,18 @@
             "type": "string",
             "nullable": true,
             "format": "date-time"
+          },
+          "rewardStatus": {
+            "enum": [
+              "AWAITING_PURCHASE",
+              "PENDING",
+              "IN_REVIEW",
+              "ISSUED",
+              "INELIGIBLE",
+              "EXPIRED"
+            ],
+            "type": "string",
+            "description": "Referrer reward status for an outgoing referral."
           }
         },
         "required": [

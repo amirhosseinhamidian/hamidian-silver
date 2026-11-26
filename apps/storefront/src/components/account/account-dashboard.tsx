@@ -7,6 +7,7 @@ import type { KeyboardEvent } from 'react';
 import { AccountAddressesPanel } from '@/components/account/account-addresses-panel';
 import { AccountOrdersPanel } from '@/components/account/account-orders-panel';
 import { AccountProfilePanel } from '@/components/account/account-profile-panel';
+import { LoyaltyPanel } from '@/components/account/loyalty-panel';
 import { CartRecoveryPanel } from '@/components/cart/cart-recovery-panel';
 import { AccountWalletPanel } from '@/components/wallet/account-wallet-panel';
 import { useWalletBalance } from '@/components/wallet/use-wallet-balance';
@@ -20,11 +21,15 @@ import { toPersianDigits } from '@/components/account/account-types';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AUTHENTICATION_SUCCEEDED_EVENT, openAuthModal } from '@/lib/auth/events';
+import {
+  AUTHENTICATION_ENDED_EVENT,
+  AUTHENTICATION_SUCCEEDED_EVENT,
+  openAuthModal,
+} from '@/lib/auth/events';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 import { cn } from '@/lib/ui/cn';
 
-type AccountTab = 'profile' | 'addresses' | 'orders' | 'wallet';
+type AccountTab = 'profile' | 'addresses' | 'orders' | 'wallet' | 'loyalty';
 type AccountState =
   | { status: 'loading' }
   | { status: 'anonymous' }
@@ -41,6 +46,7 @@ const TABS: ReadonlyArray<Readonly<{ id: AccountTab; label: string }>> = [
   { id: 'orders', label: 'سفارش‌ها' },
   { id: 'addresses', label: 'آدرس‌ها' },
   { id: 'wallet', label: 'کیف پول' },
+  { id: 'loyalty', label: 'باشگاه مشتریان' },
   { id: 'profile', label: 'اطلاعات حساب' },
 ];
 
@@ -58,6 +64,7 @@ export function AccountDashboard() {
     addresses: null,
     profile: null,
     wallet: null,
+    loyalty: null,
   });
 
   useEffect(() => {
@@ -93,11 +100,17 @@ export function AccountDashboard() {
       });
 
     const reloadAfterAuthentication = () => window.location.reload();
+    const clearAfterSignOut = () => {
+      active = false;
+      setState({ status: 'anonymous' });
+    };
     window.addEventListener(AUTHENTICATION_SUCCEEDED_EVENT, reloadAfterAuthentication);
+    window.addEventListener(AUTHENTICATION_ENDED_EVENT, clearAfterSignOut);
 
     return () => {
       active = false;
       window.removeEventListener(AUTHENTICATION_SUCCEEDED_EVENT, reloadAfterAuthentication);
+      window.removeEventListener(AUTHENTICATION_ENDED_EVENT, clearAfterSignOut);
     };
   }, []);
 
@@ -105,6 +118,11 @@ export function AccountDashboard() {
     const response = await fetch('/api/profile/addresses', { cache: 'no-store' });
     const addresses = await readJson<CustomerAddress[]>(response);
     setState((current) => (current.status === 'ready' ? { ...current, addresses } : current));
+  }
+
+  function openAccountTab(tab: AccountTab) {
+    setActiveTab(tab);
+    requestAnimationFrame(() => tabRefs.current[tab]?.focus());
   }
 
   function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) {
@@ -157,20 +175,14 @@ export function AccountDashboard() {
   return (
     <div className="grid gap-8 pt-8 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-12">
       <CartRecoveryPanel className="md:col-span-2" />
-      {activeTab !== 'wallet' && wallet.state.status === 'ready' && (
+      {activeTab !== 'wallet' && activeTab !== 'loyalty' && wallet.state.status === 'ready' && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-sm border border-[var(--sf-color-border)] px-4 py-2 md:col-span-2">
           <p className="text-sm">
             اعتبار قابل مصرف{' '}
             <strong>{formatTomanPrice(wallet.state.balance.availableToman)}</strong>
           </p>
-          <Button
-            variant="text"
-            onClick={() => {
-              setActiveTab('wallet');
-              requestAnimationFrame(() => tabRefs.current.wallet?.focus());
-            }}
-          >
-            مشاهدهٔ کیف پول
+          <Button variant="text" onClick={() => openAccountTab('loyalty')}>
+            مشاهدهٔ باشگاه مشتریان
           </Button>
         </div>
       )}
@@ -236,6 +248,13 @@ export function AccountDashboard() {
         ) : null}
         {activeTab === 'orders' ? <AccountOrdersPanel orders={state.orders} /> : null}
         {activeTab === 'wallet' ? <AccountWalletPanel wallet={wallet} /> : null}
+        {activeTab === 'loyalty' ? (
+          <LoyaltyPanel
+            wallet={wallet}
+            orders={state.orders}
+            openWallet={() => openAccountTab('wallet')}
+          />
+        ) : null}
       </div>
     </div>
   );

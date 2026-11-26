@@ -4,6 +4,15 @@ import { IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'cla
 import { TOMAN_INT_MAX } from '../../../common/toman';
 import { WalletBucket, WalletOperationKind, WalletSource } from '../../../generated/prisma/enums';
 
+export class WalletSourceBalanceDto {
+  @ApiProperty({ enum: WalletSource })
+  source!: WalletSource;
+  availableToman!: number;
+  pendingToman!: number;
+  reservedToman!: number;
+  expiredToman!: number;
+}
+
 export class WalletBalanceDto {
   pendingToman!: number;
   availableToman!: number;
@@ -14,6 +23,9 @@ export class WalletBalanceDto {
 
   @ApiPropertyOptional({ type: Number })
   nextExpiryToman?: number;
+
+  @ApiPropertyOptional({ type: () => WalletSourceBalanceDto, isArray: true })
+  sourceBalances?: WalletSourceBalanceDto[];
 }
 
 export class WalletLedgerQueryDto {

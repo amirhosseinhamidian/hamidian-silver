@@ -121,6 +121,22 @@ it('serializes concurrent spend, preserves append-only movements and reconciles 
       availableToman: 10_000,
       reservedToman: 0,
       nextExpiryAt: expiry.toISOString(),
+      sourceBalances: [
+        {
+          source: 'PURCHASE',
+          availableToman: 4_000,
+          pendingToman: 0,
+          reservedToman: 0,
+          expiredToman: 0,
+        },
+        {
+          source: 'REFERRAL',
+          availableToman: 6_000,
+          pendingToman: 0,
+          reservedToman: 0,
+          expiredToman: 0,
+        },
+      ],
     });
 
     const attempts = [first, second].map(({ id }, index) => ({
@@ -245,6 +261,13 @@ it('serializes concurrent spend, preserves append-only movements and reconciles 
         reservedToman: 0,
         nextExpiryAt: null,
         nextExpiryToman: 0,
+        sourceBalances: ['PURCHASE', 'REFERRAL'].map((source) => ({
+          source,
+          availableToman: 0,
+          pendingToman: 0,
+          reservedToman: 0,
+          expiredToman: 0,
+        })),
       });
     await api
       .get('/api/v1/wallet/ledger')
@@ -322,11 +345,18 @@ it('serializes concurrent spend, preserves append-only movements and reconciles 
       });
       return lot;
     });
-    await expect(wallet.balance(buyer.id)).resolves.toMatchObject({ pendingToman: 0 });
+    const referralExpiry = {
+      pendingToman: 0,
+      sourceBalances: expect.arrayContaining([
+        expect.objectContaining({ source: 'REFERRAL', expiredToman: 600 }),
+      ]),
+    };
+    await expect(wallet.balance(buyer.id)).resolves.toMatchObject(referralExpiry);
     const expiryInput = { ...requestFor('expire'), lotId: expiredLot.id };
     const expired = await wallet.expire(expiryInput);
     expect(expired.movements).toMatchObject([{ amountToman: 600, toBucket: 'EXPIRED' }]);
     await expect(wallet.expire(expiryInput)).resolves.toEqual(expired);
+    await expect(wallet.balance(buyer.id)).resolves.toMatchObject(referralExpiry);
 
     const lots = await db.walletLot.findMany({
       where: { userId: buyer.id },

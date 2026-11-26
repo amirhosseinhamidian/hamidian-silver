@@ -6746,10 +6746,19 @@ export interface components {
         ReverseOrderCostDto: {
             reason?: string;
         };
+        WalletSourceBalanceDto: {
+            /** @enum {string} */
+            source: "PURCHASE" | "REFERRAL";
+            availableToman: number;
+            pendingToman: number;
+            reservedToman: number;
+            expiredToman: number;
+        };
         WalletBalanceDto: {
             /** Format: date-time */
             nextExpiryAt: string | null;
             nextExpiryToman?: number;
+            sourceBalances?: components["schemas"]["WalletSourceBalanceDto"][];
             pendingToman: number;
             availableToman: number;
             reservedToman: number;
@@ -7782,6 +7791,7 @@ export interface components {
         CustomerOrderPaymentDto: {
             /** @enum {string} */
             status: "PENDING" | "AWAITING_REVIEW" | "PAID" | "PARTIALLY_REFUNDED" | "CANCELLED" | "RECONCILIATION_REQUIRED" | "REFUNDED";
+            latestAttemptFailed?: boolean;
             /** @enum {string|null} */
             method: "CARD_TO_CARD" | "PAYMENT_GATEWAY" | null;
             receiptOriginalName: string | null;
@@ -8243,6 +8253,11 @@ export interface components {
             expiresAt: string;
             /** Format: date-time */
             firstPaidAt: string | null;
+            /**
+             * @description Referrer reward status for an outgoing referral.
+             * @enum {string}
+             */
+            rewardStatus?: "AWAITING_PURCHASE" | "PENDING" | "IN_REVIEW" | "ISSUED" | "INELIGIBLE" | "EXPIRED";
             /** Format: uuid */
             firstOrderId: string | null;
         };
@@ -8257,6 +8272,11 @@ export interface components {
             expiresAt: string;
             /** Format: date-time */
             firstPaidAt: string | null;
+            /**
+             * @description Referrer reward status for an outgoing referral.
+             * @enum {string}
+             */
+            rewardStatus?: "AWAITING_PURCHASE" | "PENDING" | "IN_REVIEW" | "ISSUED" | "INELIGIBLE" | "EXPIRED";
         };
         OutgoingReferralPageDto: {
             items: components["schemas"]["ReferralHistoryItemDto"][];

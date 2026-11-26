@@ -15,7 +15,10 @@ type Notifications = {
   expiryReminder: { urgent: boolean; amountToman: number; expiresAt: string } | null;
 };
 
-export function WalletNotifications({ refreshKey }: Readonly<{ refreshKey: number }>) {
+export function WalletNotifications({
+  refreshKey,
+  reminderOnly = false,
+}: Readonly<{ refreshKey: number; reminderOnly?: boolean }>) {
   const [loaded, setLoaded] = useState<{ key: number; data: Notifications | null }>();
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<'saved' | 'error'>();
@@ -61,6 +64,21 @@ export function WalletNotifications({ refreshKey }: Readonly<{ refreshKey: numbe
   }
 
   const data = loaded?.key === refreshKey ? loaded.data : undefined;
+  const reminder = data?.expiryReminder;
+  const expiryNotice = reminder ? (
+    <div role="status" className="space-y-1 text-sm">
+      <p className="font-semibold">
+        {reminder.urgent ? 'انقضای اعتبار نزدیک است' : 'یادآوری انقضای اعتبار'}
+      </p>
+      <p>
+        {formatTomanPrice(reminder.amountToman)} تا{' '}
+        <time dateTime={reminder.expiresAt}>{formatWalletDate(reminder.expiresAt)}</time> قابل مصرف
+        است.
+      </p>
+    </div>
+  ) : null;
+  if (reminderOnly) return expiryNotice;
+
   return (
     <section
       aria-labelledby="wallet-notifications-heading"
@@ -81,20 +99,7 @@ export function WalletNotifications({ refreshKey }: Readonly<{ refreshKey: numbe
       )}
       {data && (
         <>
-          {data.expiryReminder && (
-            <div role="status" className="space-y-1 text-sm">
-              <p className="font-semibold">
-                {data.expiryReminder.urgent ? 'انقضای اعتبار نزدیک است' : 'یادآوری انقضای اعتبار'}
-              </p>
-              <p>
-                {formatTomanPrice(data.expiryReminder.amountToman)} تا{' '}
-                <time dateTime={data.expiryReminder.expiresAt}>
-                  {formatWalletDate(data.expiryReminder.expiresAt)}
-                </time>{' '}
-                قابل مصرف است.
-              </p>
-            </div>
-          )}
+          {expiryNotice}
           <form key={refreshKey} onSubmit={save} className="space-y-3 text-sm">
             <label className="flex items-center gap-2">
               <input
