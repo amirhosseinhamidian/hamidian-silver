@@ -4676,6 +4676,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/seo/technical-audits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoAuditController_overview_v1"];
+        put?: never;
+        post: operations["SeoAuditController_start_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/supplier-imports/sources": {
         parameters: {
             query?: never;
@@ -9327,6 +9343,56 @@ export interface components {
             urlTotal: number;
             cappedQueryDays: number;
             sufficient: boolean;
+        };
+        SeoAuditRunDto: {
+            /** Format: uuid */
+            id: string;
+            ruleVersion: number;
+            createdAt: string;
+            finishedAt: string | null;
+            sitemapChecked: boolean;
+        };
+        SeoAuditRedirectDto: {
+            status: number;
+            to: string | null;
+        };
+        SeoAuditObservationDto: {
+            status: number | null;
+            finalPath: string;
+            redirects: components["schemas"]["SeoAuditRedirectDto"][];
+            failure: string | null;
+            title: string | null;
+            description: string | null;
+            canonicals: string[];
+            robots: string[];
+            schema: string[];
+        };
+        SeoAuditIssueDto: {
+            code: string;
+            /** @enum {string} */
+            severity: "ERROR" | "REVIEW";
+            /** @enum {string} */
+            state: "NEW" | "EXISTING";
+            evidence: string[];
+        };
+        SeoAuditCheckDto: {
+            path: string;
+            source: string;
+            inSitemap: boolean | null;
+            sourcePath: string | null;
+            checkedAt: string | null;
+            observation: components["schemas"]["SeoAuditObservationDto"] | null;
+            issues: components["schemas"]["SeoAuditIssueDto"][];
+        };
+        SeoAuditOverviewDto: {
+            configured: boolean;
+            history: components["schemas"]["SeoAuditRunDto"][];
+            run: components["schemas"]["SeoAuditRunDto"] | null;
+            checks: components["schemas"]["SeoAuditCheckDto"][];
+        };
+        SeoAuditQueuedDto: {
+            /** Format: uuid */
+            id: string;
         };
         Object: Record<string, never>;
         UpdateSupplierCategoryMappingDto: {
@@ -17346,6 +17412,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchEntityDetailDto"];
+                };
+            };
+        };
+    };
+    SeoAuditController_overview_v1: {
+        parameters: {
+            query?: {
+                runId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoAuditOverviewDto"];
+                };
+            };
+        };
+    };
+    SeoAuditController_start_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoAuditQueuedDto"];
                 };
             };
         };

@@ -3401,3 +3401,42 @@ model ShipmentStatusHistory {
   @@index([actorUserId])
   @@map("shipment_status_history")
 }
+
+model SeoAuditRun {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  origin         String
+  ruleVersion    Int
+  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+  finishedAt     DateTime?       @db.Timestamptz(3)
+  leaseToken     String?         @db.Uuid
+  leaseUntil     DateTime?       @db.Timestamptz(3)
+  sitemapPaths   String[]        @default([])
+  pauseUntil     DateTime?       @db.Timestamptz(3)
+  sitemapChecked Boolean         @default(false)
+  checks         SeoAuditCheck[]
+
+  @@index([origin, createdAt])
+  @@map("seo_audit_runs")
+}
+
+model SeoAuditCheck {
+  runId             String      @db.Uuid
+  path              String
+  priority          Int
+  source            String
+  sourcePath        String?
+  expectedCanonical String?
+  productId         String?     @db.Uuid
+  attempts          Int         @default(0)
+  nextAttemptAt     DateTime    @default(now()) @db.Timestamptz(3)
+  checkedAt         DateTime?   @db.Timestamptz(3)
+  inSitemap         Boolean?
+  observation       Json?
+  issues            Json?
+  run               SeoAuditRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@id([runId, path])
+  @@index([runId, checkedAt, nextAttemptAt, priority])
+  @@index([path, checkedAt])
+  @@map("seo_audit_checks")
+}

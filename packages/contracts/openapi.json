@@ -12686,6 +12686,56 @@
         ]
       }
     },
+    "/api/v1/seo/technical-audits": {
+      "get": {
+        "operationId": "SeoAuditController_overview_v1",
+        "parameters": [
+          {
+            "name": "runId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoAuditOverviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      },
+      "post": {
+        "operationId": "SeoAuditController_start_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeoAuditQueuedDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SEO"
+        ]
+      }
+    },
     "/api/v1/supplier-imports/sources": {
       "get": {
         "operationId": "SupplierImportsController_listSources_v1",
@@ -31701,6 +31751,238 @@
           "urlTotal",
           "cappedQueryDays",
           "sufficient"
+        ]
+      },
+      "SeoAuditRunDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ruleVersion": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "finishedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "sitemapChecked": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "ruleVersion",
+          "createdAt",
+          "finishedAt",
+          "sitemapChecked"
+        ]
+      },
+      "SeoAuditRedirectDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "number"
+          },
+          "to": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "to"
+        ]
+      },
+      "SeoAuditObservationDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "number",
+            "nullable": true
+          },
+          "finalPath": {
+            "type": "string"
+          },
+          "redirects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeoAuditRedirectDto"
+            }
+          },
+          "failure": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "canonicals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "robots": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "finalPath",
+          "redirects",
+          "failure",
+          "title",
+          "description",
+          "canonicals",
+          "robots",
+          "schema"
+        ]
+      },
+      "SeoAuditIssueDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "ERROR",
+              "REVIEW"
+            ],
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "NEW",
+              "EXISTING"
+            ],
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "state",
+          "evidence"
+        ]
+      },
+      "SeoAuditCheckDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "inSitemap": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "sourcePath": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "observation": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeoAuditObservationDto"
+              }
+            ]
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeoAuditIssueDto"
+            }
+          }
+        },
+        "required": [
+          "path",
+          "source",
+          "inSitemap",
+          "sourcePath",
+          "checkedAt",
+          "observation",
+          "issues"
+        ]
+      },
+      "SeoAuditOverviewDto": {
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeoAuditRunDto"
+            }
+          },
+          "run": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeoAuditRunDto"
+              }
+            ]
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeoAuditCheckDto"
+            }
+          }
+        },
+        "required": [
+          "configured",
+          "history",
+          "run",
+          "checks"
+        ]
+      },
+      "SeoAuditQueuedDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
         ]
       },
       "Object": {

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { ProductRecommendations } from './product-recommendations';
@@ -36,13 +36,14 @@ it('deduplicates recommendations and measures a visible card and selection once'
     vi.fn(async () => new Response(JSON.stringify({ items: [cart, item, unavailable] }))),
   );
   const observer = { notify: undefined as IntersectionObserverCallback | undefined };
+  const observeCard = vi.fn();
   vi.stubGlobal(
     'IntersectionObserver',
     class {
       constructor(callback: IntersectionObserverCallback) {
         observer.notify = callback;
       }
-      observe = vi.fn();
+      observe = observeCard;
       unobserve = vi.fn();
       disconnect = vi.fn();
     },
@@ -55,6 +56,9 @@ it('deduplicates recommendations and measures a visible card and selection once'
 
   const target = button.closest('li');
   if (!target) throw new Error('Expected the recommendation card to be a list item.');
+  await waitFor(() => expect(observeCard).toHaveBeenCalledWith(target));
+  const notify = observer.notify;
+  if (!notify) throw new Error('Expected the recommendation card observer to be registered.');
   const rect = target.getBoundingClientRect();
   const entry: IntersectionObserverEntry = {
     target,
@@ -65,16 +69,14 @@ it('deduplicates recommendations and measures a visible card and selection once'
     rootBounds: null,
     time: 0,
   };
-  observer.notify?.([entry], {} as IntersectionObserver);
-  observer.notify?.([entry], {} as IntersectionObserver);
+  notify([entry], {} as IntersectionObserver);
+  notify([entry], {} as IntersectionObserver);
+  expect(measureCatalogProducts).toHaveBeenCalledTimes(1);
+  expect(measureCatalogProducts).toHaveBeenCalledWith('view_item_list', 'cart_recommendations', [
+    item,
+  ]);
   fireEvent.click(button);
   expect(measureCatalogProducts).toHaveBeenCalledTimes(2);
-  expect(measureCatalogProducts).toHaveBeenNthCalledWith(
-    1,
-    'view_item_list',
-    'cart_recommendations',
-    [item],
-  );
   expect(measureCatalogProducts).toHaveBeenNthCalledWith(2, 'select_item', 'cart_recommendations', [
     item,
   ]);

@@ -257,9 +257,14 @@ export function SearchOverviewView({
     <main className="admin-container space-y-6 py-6 sm:py-8 lg:py-10">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-black">عملکرد جست‌وجو</h1>
-        <ButtonLink href="/seo/entities" variant="outline">
-          عملکرد صفحات و فرصت‌ها
-        </ButtonLink>
+        <div className="flex flex-wrap gap-2">
+          <ButtonLink href="/seo/entities" variant="outline">
+            عملکرد صفحات و فرصت‌ها
+          </ButtonLink>
+          <ButtonLink href="/seo/technical" variant="outline">
+            مشکلات فنی سئو
+          </ButtonLink>
+        </div>
       </header>
       <Card
         title="بازه و فیلترها"
