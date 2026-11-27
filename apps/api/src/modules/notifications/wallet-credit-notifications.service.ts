@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import type { Prisma, WalletNotificationSettings } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
@@ -95,7 +96,10 @@ export async function enqueueWalletCreditActivation(
 
 @Injectable()
 export class WalletCreditNotificationsService {
-  constructor(private readonly db: PrismaService) {}
+  constructor(
+    private readonly db: PrismaService,
+    @Optional() private readonly config?: ConfigService,
+  ) {}
 
   async settings(): Promise<WalletNotificationSettingsDto> {
     return settingsDto(
@@ -163,6 +167,7 @@ export class WalletCreditNotificationsService {
         activationSmsEnabled: preference?.activationSmsEnabled ?? false,
         expiryInAppEnabled: expiryEnabled,
         smsAvailable:
+          this.config?.get<boolean>('WALLET_ACTIVATION_SMS_ENABLED') !== false &&
           settings.activationSmsEnabled &&
           settings.activationTemplateVersion === activationTemplateVersion,
         expiryReminderAvailable: settings.expiryInAppEnabled,
@@ -214,6 +219,8 @@ export class WalletCreditNotificationsService {
         });
         return null;
       };
+      if (this.config?.get<boolean>('WALLET_ACTIVATION_SMS_ENABLED') === false)
+        return skip('WALLET_SMS_DISABLED');
       if (event.aggregateType !== 'WALLET_LOT') return skip('WALLET_SMS_INVALID_EVENT');
       const origin = await tx.walletLot.findUnique({
         where: { id: event.aggregateId },

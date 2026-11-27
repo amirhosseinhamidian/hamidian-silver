@@ -28,6 +28,9 @@ const optionalKavenegarTemplate = Joi.string()
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
   PURCHASE_REWARD_WORKER_ENABLED: Joi.boolean().default(false),
+  CAMPAIGN_PROMOTIONS_ENABLED: Joi.boolean().default(true),
+  WALLET_CHECKOUT_ENABLED: Joi.boolean().default(true),
+  WALLET_ACTIVATION_SMS_ENABLED: Joi.boolean().default(true),
   WALLET_MAINTENANCE_ENABLED: Joi.boolean().default(false),
   REFERRALS_ENABLED: Joi.boolean().default(false),
   REFERRAL_RISK_WORKER_ENABLED: Joi.boolean().default(false),

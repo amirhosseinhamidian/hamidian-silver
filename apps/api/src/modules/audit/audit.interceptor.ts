@@ -21,6 +21,8 @@ const NON_AUDITED_ACTIONS = new Set([
   'POST /campaigns/:id/landing/preview',
   'POST /campaigns/:id/simulation',
   'POST /reward-policies/simulation',
+  'POST /reward-policies/policy-simulator/basket',
+  'POST /reward-policies/policy-simulator/history',
   'POST /referral-reward-policies/simulation',
   'POST /referral-risk/simulation',
   // Cart recovery is measured through aggregate lifecycle counts.

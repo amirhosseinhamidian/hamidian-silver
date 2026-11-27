@@ -13,4 +13,17 @@ describe('verified payment result', () => {
     expect(verifiedPaymentStatus('SHIPPED')).toBe('success');
     expect(verifiedPaymentStatus('EXPIRED')).toBe('failed');
   });
+
+  it('shows ongoing reconciliation for a late confirmation on an expired order', () => {
+    expect(verifiedPaymentStatus('EXPIRED', 'RECONCILIATION_REQUIRED', true)).toBe('pending');
+    expect(verifiedPaymentStatus('EXPIRED', 'REFUNDED')).toBe('failed');
+    expect(verifiedPaymentStatus('PAID', 'PAID', true)).toBe('success');
+  });
+
+  it('uses the receipt message only when the server confirms a receipt awaiting review', () => {
+    expect(verifiedPaymentStatus('PENDING_PAYMENT', undefined, true)).toBe('pending');
+    expect(verifiedPaymentStatus('PENDING_PAYMENT', 'AWAITING_REVIEW', true)).toBe(
+      'receipt-pending',
+    );
+  });
 });

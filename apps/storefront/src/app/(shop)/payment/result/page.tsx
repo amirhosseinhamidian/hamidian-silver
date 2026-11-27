@@ -33,7 +33,7 @@ export default async function PaymentResultPage({ searchParams }: PaymentResultP
 
   return (
     <PaymentResult
-      status={receiptSubmitted ? 'receipt-pending' : verifiedPaymentStatus(order?.status)}
+      status={verifiedPaymentStatus(order?.status, order?.payment?.status, receiptSubmitted)}
       orderId={orderId}
       order={order}
     />

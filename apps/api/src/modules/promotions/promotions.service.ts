@@ -3,7 +3,9 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { planQuotaAllocations } from '../campaigns/campaign-quota';
@@ -41,7 +43,10 @@ export function normalizeCoupon(value: string | undefined | null) {
 
 @Injectable()
 export class PromotionsService {
-  constructor(private readonly db: PrismaService) {}
+  constructor(
+    private readonly db: PrismaService,
+    @Optional() private readonly config?: ConfigService,
+  ) {}
 
   async lockCampaign(tx: Prisma.TransactionClient, campaignId: string) {
     const [campaign] = await tx.$queryRaw<
@@ -351,6 +356,8 @@ export class PromotionsService {
     now = new Date(),
     previewCampaignId?: string,
   ) {
+    if (!previewCampaignId && this.config?.get<boolean>('CAMPAIGN_PROMOTIONS_ENABLED') === false)
+      return [];
     const candidates = await reader.campaignPromotion.findMany({
       where: { campaign: previewCampaignId ? { id: previewCampaignId } : this.activeCampaign(now) },
       orderBy: [{ priority: 'desc' }, { campaignId: 'asc' }],
@@ -488,6 +495,7 @@ export class PromotionsService {
     coupon: string | null,
     userId?: string,
   ) {
+    if (this.config?.get<boolean>('CAMPAIGN_PROMOTIONS_ENABLED') === false) return null;
     const candidates = await tx.campaignPromotion.findMany({
       where: { campaign: this.activeCampaign(now), couponCode: coupon },
       include: { campaign: true },

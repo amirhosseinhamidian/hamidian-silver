@@ -20,7 +20,7 @@ import { WalletCheckoutService } from '../src/modules/wallet/wallet-checkout.ser
 import { WalletLedgerService } from '../src/modules/wallet/wallet-ledger.service';
 import { createFestivalDraft, publishFestival } from './support/festival-purchase';
 
-it('reserves once, holds uncertain attempts and restores the exact credit on returns and full refunds', async () => {
+it('reserves once, restores credit on returns and reconciles a late payment without capturing released reservations', async () => {
   const config = new ConfigService({
     OTP_PEPPER: 'wallet-checkout-test',
     SHIPPING_PROVIDER: 'disabled',
@@ -28,13 +28,13 @@ it('reserves once, holds uncertain attempts and restores the exact credit on ret
   });
   const db = new PrismaService(config);
   const ledger = new WalletLedgerService(db);
-  const wallet = new WalletCheckoutService(new RewardPoliciesService(db), ledger);
-  const promotions = new PromotionsService(db);
+  const wallet = new WalletCheckoutService(new RewardPoliciesService(db), ledger, config);
+  const promotions = new PromotionsService(db, config);
   const quotas = new CampaignQuotasService(db, promotions);
   const media = new PublicMediaUrlService(config);
   const catalog = new CatalogService(db, media, undefined, promotions);
-  const landings = new CampaignLandingsService(db, catalog, media);
-  const campaigns = new CampaignsService(db, media, landings);
+  const landings = new CampaignLandingsService(db, catalog, media, undefined, config);
+  const campaigns = new CampaignsService(db, media, landings, config);
   const orders = new OrdersService(
     db,
     undefined,
@@ -273,6 +273,21 @@ it('reserves once, holds uncertain attempts and restores the exact credit on ret
       reserved: 2,
       siteSold: 0,
     });
+    config.set('CAMPAIGN_PROMOTIONS_ENABLED', false);
+    config.set('WALLET_CHECKOUT_ENABLED', false);
+    await expect(promotions.catalogPromotions(db)).resolves.toEqual([]);
+    await expect(campaigns.publicActivity()).resolves.toEqual({ activeIds: [] });
+    await expect(landings.publicLanding(product.slug, 1)).resolves.toMatchObject({
+      slug: product.slug,
+      seoMode: 'TEMPORARY',
+      active: true,
+    });
+    await expect(freshQuote()).resolves.toMatchObject({
+      payableToman: 40_000,
+      discountTotalToman: 0,
+      walletAppliedToman: 0,
+      walletUnavailableReason: 'POLICY_DISABLED',
+    });
 
     const initiate = (id: string) =>
       payments.initiateOrderPayment(user.id, id, { idempotencyKey: randomUUID() });
@@ -379,6 +394,8 @@ it('reserves once, holds uncertain attempts and restores the exact credit on ret
       siteSold: 2,
     });
 
+    config.set('CAMPAIGN_PROMOTIONS_ENABLED', true);
+    config.set('WALLET_CHECKOUT_ENABLED', true);
     const anotherOrder = await create((await freshQuote()).quoteToken);
     const online = await initiate(anotherOrder.id);
     failureCode = null;
@@ -398,7 +415,58 @@ it('reserves once, holds uncertain attempts and restores the exact credit on ret
       availableToman: 50_000,
       reservedToman: 0,
     });
+
+    const lateOrder = await create((await freshQuote()).quoteToken);
+    const lateAttempt = await initiate(lateOrder.id);
+    failureCode = '-51';
+    await expect(
+      payments.verifyCallback(lateAttempt.attemptId, lateAttempt.authority!),
+    ).rejects.toMatchObject({ code: 'PAYMENT_FAILED' });
+    const expiresAt = (
+      await db.order.findUniqueOrThrow({
+        where: { id: lateOrder.id },
+        select: { reservationExpiresAt: true },
+      })
+    ).reservationExpiresAt;
+    await expect(expiration.expireOrder(lateOrder.id, expiresAt)).resolves.toBe(true);
+    const quotaAfterRelease = await quotas.get(campaign.id, product.slug);
+    const balanceAfterRelease = await ledger.balance(user.id);
+    const inventoryAfterRelease = await db.inventory.findFirstOrThrow({ where: { variantId } });
+    expect(balanceAfterRelease).toMatchObject({ availableToman: 50_000, reservedToman: 0 });
+    expect(quotaAfterRelease).toMatchObject({ reserved: 0 });
+    expect(inventoryAfterRelease.reserved).toBe(0);
+
+    failureCode = null;
+    const lateResults = await Promise.all(
+      [0, 1].map(() => payments.verifyCallback(lateAttempt.attemptId, lateAttempt.authority!)),
+    );
+    for (const result of lateResults)
+      expect(result).toMatchObject({
+        success: true,
+        orderId: lateOrder.id,
+        reconciliationRequired: true,
+      });
+    await expect(
+      db.paymentReconciliation.findMany({ where: { paymentAttemptId: lateAttempt.attemptId } }),
+    ).resolves.toMatchObject([{ status: 'OPEN', detectedOrderStatus: 'EXPIRED' }]);
+    await expect(db.order.findUnique({ where: { id: lateOrder.id } })).resolves.toMatchObject({
+      status: 'EXPIRED',
+      paidAt: null,
+    });
+    await expect(
+      db.payment.findUnique({ where: { orderId: lateOrder.id } }),
+    ).resolves.toMatchObject({
+      status: 'RECONCILIATION_REQUIRED',
+    });
+    await expect(ledger.balance(user.id)).resolves.toEqual(balanceAfterRelease);
+    await expect(quotas.get(campaign.id, product.slug)).resolves.toEqual(quotaAfterRelease);
+    await expect(db.inventory.findFirst({ where: { variantId } })).resolves.toEqual(
+      inventoryAfterRelease,
+    );
+    await expect(
+      db.orderFinanceSnapshot.findUnique({ where: { orderId: lateOrder.id } }),
+    ).resolves.toBeNull();
   } finally {
     await db.$disconnect();
   }
-}, 30_000);
+}, 45_000);

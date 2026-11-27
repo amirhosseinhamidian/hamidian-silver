@@ -138,7 +138,7 @@ it('filters campaigns before pagination and preserves mixed and legacy records',
   }
 }, 20_000);
 
-it('pages through more than 500 matching products and restores selections across pages', async () => {
+it('pages through a 3,001-product catalog and restores selections with real inventory', async () => {
   const config = new ConfigService();
   const prisma = new PrismaService(config);
   const mediaUrls = new PublicMediaUrlService(config);
@@ -148,21 +148,39 @@ it('pages through more than 500 matching products and restores selections across
     await prisma.$transaction(
       async (db) => {
         const prefix = `picker-${randomUUID()}`;
-        const slug = (index: number) => `${prefix}-${String(index).padStart(3, '0')}`;
-        const products = Array.from({ length: 505 }, (_, index) => ({
+        const slug = (index: number) => `${prefix}-${String(index).padStart(4, '0')}`;
+        const products = Array.from({ length: 3001 }, (_, index) => ({
+          id: randomUUID(),
           slug: slug(index),
           name: slug(index),
           status: 'ACTIVE' as const,
           salePriceToman: 50_000,
         }));
-        const draft = slug(505);
+        const draft = slug(3001);
         await db.product.createMany({
           data: [...products, { slug: draft, name: draft, status: 'DRAFT' }],
         });
+        const variants = products.map(({ id, slug: sku }) => ({
+          id: randomUUID(),
+          productId: id,
+          sku,
+        }));
+        await db.productVariant.createMany({ data: variants });
+        const warehouse =
+          (await db.warehouse.findFirst({
+            where: { isDefault: true, isActive: true, deletedAt: null },
+          })) ??
+          (await db.warehouse.create({ data: { code: prefix, name: prefix, isDefault: true } }));
+        await db.inventory.createMany({
+          data: variants
+            .filter((_, index) => index % 2 === 0)
+            .map(({ id }) => ({ warehouseId: warehouse.id, variantId: id, onHand: 1 })),
+        });
 
+        const startedAt = performance.now();
         const first = await selectCampaignProducts(db, mediaUrls, { q: prefix });
         const second = await selectCampaignProducts(db, mediaUrls, { q: prefix, page: 2 });
-        const last = await selectCampaignProducts(db, mediaUrls, { q: prefix, page: 43 });
+        const last = await selectCampaignProducts(db, mediaUrls, { q: prefix, page: 251 });
         expect(first.items.map((item) => item.slug)).toEqual(
           products.slice(0, 12).map((p) => p.slug),
         );
@@ -171,23 +189,36 @@ it('pages through more than 500 matching products and restores selections across
           products.slice(12, 24).map((p) => p.slug),
         );
         expect(last).toMatchObject({
-          page: 43,
+          page: 251,
           hasMore: false,
-          items: [{ slug: slug(504), defaultPriceToman: 50_000 }],
+          items: [{ slug: slug(3000), defaultPriceToman: 50_000, availableQuantity: 1 }],
         });
 
-        const restored = await selectCampaignProducts(db, mediaUrls, {
-          selected: [slug(504), draft, slug(0), slug(504)],
+        const stockPage = await selectCampaignProducts(db, mediaUrls, {
+          q: prefix,
+          stock: 'in-stock',
+          page: 126,
         });
-        expect(restored.items.map((item) => item.slug)).toEqual([slug(0), slug(504)]);
+        expect(stockPage).toMatchObject({
+          page: 126,
+          hasMore: false,
+          items: [{ slug: slug(3000), availableQuantity: 1 }],
+        });
+        const restored = await selectCampaignProducts(db, mediaUrls, {
+          selected: [slug(3000), draft, slug(0), slug(3000)],
+        });
+        expect(restored.items.map((item) => item.slug)).toEqual([slug(0), slug(3000)]);
         expect(restored.hasMore).toBe(false);
+        console.info(
+          `QA-02 catalog selection, 3,001 products, five reads: ${Math.round(performance.now() - startedAt)} ms`,
+        );
         throw rollback;
       },
-      { timeout: 15_000 },
+      { timeout: 45_000 },
     );
   } catch (error) {
     if (error !== rollback) throw error;
   } finally {
     await prisma.$disconnect();
   }
-}, 20_000);
+}, 55_000);

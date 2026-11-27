@@ -8,6 +8,7 @@ import { OrdersService } from '../src/modules/orders/orders.service';
 import type { PaymentGateway } from '../src/modules/payments/payment-gateway.port';
 import { PaymentsService } from '../src/modules/payments/payments.service';
 import { RewardPoliciesService } from '../src/modules/reward-policies/reward-policies.service';
+import { GrowthCreditIssuanceService } from '../src/modules/wallet/growth-credit-issuance.service';
 import { PurchaseRewardWorker } from '../src/modules/wallet/purchase-reward.worker';
 import { WalletCheckoutService } from '../src/modules/wallet/wallet-checkout.service';
 import { WalletLedgerService } from '../src/modules/wallet/wallet-ledger.service';
@@ -22,6 +23,7 @@ it('keeps payments committed across worker failure and issues and activates each
   });
   const { db, close } = await createIsolatedTestDatabase();
   const policies = new RewardPoliciesService(db);
+  const issuance = new GrowthCreditIssuanceService(db, config);
   const ledger = new WalletLedgerService(db);
   const checkout = new WalletCheckoutService(policies, ledger);
   const worker = new PurchaseRewardWorker(db, policies, ledger, checkout, config);
@@ -143,6 +145,9 @@ it('keeps payments committed across worker failure and issues and activates each
         payments.verifyCallback(attempt.attemptId, attempt.authority!),
       ).resolves.toMatchObject({ alreadyVerified: true });
     }
+    const original = await issuance.status();
+    const shadow = await issuance.setMode('SHADOW', original.version);
+    await expect(issuance.setMode('LIVE', original.version)).rejects.toMatchObject({ status: 409 });
     const initial = [await register(), await register(product.variants[1].id)];
     await Promise.all(initial.map(({ id }) => pay(id)));
     await worker.tick();
@@ -154,6 +159,10 @@ it('keeps payments committed across worker failure and issues and activates each
     await expect(
       db.payment.count({ where: { orderId: { in: initial.map(({ id }) => id) }, status: 'PAID' } }),
     ).resolves.toBe(2);
+    await expect(worker.run()).resolves.toMatchObject({ claimed: 0 });
+    await expect(db.walletLot.count({ where: { userId: buyer.id } })).resolves.toBe(0);
+    expect(jobs.map(({ attempts }) => attempts)).toEqual([0, 0]);
+    const live = await issuance.setMode('LIVE', shadow.version);
 
     const failedAt = new Date();
     await worker.setReviewHold(jobs[0].orderId, true, failedAt);
@@ -230,6 +239,7 @@ it('keeps payments committed across worker failure and issues and activates each
       items: [{ returnItemId: pendingReturn.items[0].id, disposition: 'RESTOCK' }],
     });
     const dueAt = new Date(+deliveredAt + 7 * day + 60 * minute);
+    const paused = await issuance.setMode('PAUSED', live.version);
     await Promise.all([restarted.run(dueAt), worker.run(dueAt)]);
     await expect(ledger.balance(buyer.id)).resolves.toMatchObject({
       availableToman: 1_500,
@@ -241,6 +251,7 @@ it('keeps payments committed across worker failure and issues and activates each
     await expect(
       db.walletLot.count({ where: { userId: buyer.id, source: 'PURCHASE' } }),
     ).resolves.toBe(2);
+    await issuance.setMode('LIVE', paused.version);
 
     const third = await register();
     await pay(third.id);

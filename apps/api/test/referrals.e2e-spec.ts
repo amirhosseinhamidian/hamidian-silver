@@ -181,7 +181,23 @@ it('stores one attribution before first payment, confirms it once and never gran
       await expect(referrals.overview(concurrent.id, 1)).resolves.toMatchObject({ incoming: null });
     }
 
-    await db.referralRequestLimit.update({ where: { userId: first.id }, data: { attempts: 10 } });
+    await db.referralRequestLimit.update({
+      where: { userId: first.id },
+      data: { attempts: 9, windowStartAt: new Date() },
+    });
+    const simultaneous = await Promise.allSettled([
+      referrals.issueCode(first.id),
+      referrals.issueCode(first.id),
+    ]);
+    expect(simultaneous.filter((result) => result.status === 'fulfilled')).toEqual([
+      { status: 'fulfilled', value: firstCode },
+    ]);
+    expect(simultaneous.filter((result) => result.status === 'rejected')).toEqual([
+      { status: 'rejected', reason: expect.objectContaining({ status: 429 }) },
+    ]);
+    await expect(
+      db.referralRequestLimit.findUnique({ where: { userId: first.id } }),
+    ).resolves.toMatchObject({ attempts: 10 });
     await expect(referrals.issueCode(first.id)).rejects.toMatchObject({ status: 429 });
     await db.referralRequestLimit.update({
       where: { userId: first.id },

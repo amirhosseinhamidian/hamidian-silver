@@ -96,4 +96,22 @@ describe('admin proxy', () => {
 
     expect(isTrustedMutationRequest(request)).toBe(true);
   });
+
+  it.each([
+    ['same-site', 'https://shop.example'],
+    ['cross-site', null],
+  ] as const)('requires the admin origin when the browser reports %s', (site, origin) => {
+    const response = proxy(
+      new NextRequest('https://admin.example/api/reward-policies/policy-simulator/basket', {
+        method: 'POST',
+        headers: {
+          ...(origin ? { origin } : {}),
+          'sec-fetch-site': site,
+          cookie: `${SESSION_COOKIE_NAME}=opaque-session`,
+        },
+      }),
+    );
+    expect(response.status).toBe(403);
+    expect(response.headers.get('x-middleware-next')).toBeNull();
+  });
 });

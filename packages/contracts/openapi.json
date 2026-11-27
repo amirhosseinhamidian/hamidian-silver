@@ -5494,6 +5494,56 @@
         ]
       }
     },
+    "/api/v1/wallet/admin/credit-issuance": {
+      "get": {
+        "operationId": "GrowthCreditIssuanceController_status_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrowthCreditRolloutStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "GrowthCreditIssuance"
+        ]
+      },
+      "patch": {
+        "operationId": "GrowthCreditIssuanceController_update_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGrowthCreditModeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrowthCreditModeDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "GrowthCreditIssuance"
+        ]
+      }
+    },
     "/api/v1/reward-policies": {
       "get": {
         "operationId": "RewardPoliciesController_list_v1",
@@ -5718,6 +5768,100 @@
         },
         "tags": [
           "RewardPolicies"
+        ]
+      }
+    },
+    "/api/v1/reward-policies/policy-simulator/basket": {
+      "post": {
+        "operationId": "PolicySimulationController_basket_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyBasketScenarioDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyBasketResultDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PolicySimulation"
+        ]
+      }
+    },
+    "/api/v1/reward-policies/policy-simulator/history": {
+      "post": {
+        "operationId": "PolicySimulationController_history_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyHistoryScenarioDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyHistoryResultDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PolicySimulation"
+        ]
+      }
+    },
+    "/api/v1/reward-policies/policy-simulator/reviews": {
+      "get": {
+        "operationId": "PolicySimulationController_reviews_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyReviewListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PolicySimulation"
         ]
       }
     },
@@ -22364,6 +22508,70 @@
           "hasMore"
         ]
       },
+      "GrowthCreditRolloutStatusDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "LIVE",
+              "SHADOW",
+              "PAUSED"
+            ]
+          },
+          "changedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "mode",
+          "changedAt"
+        ]
+      },
+      "UpdateGrowthCreditModeDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "LIVE",
+              "SHADOW",
+              "PAUSED"
+            ]
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "mode",
+          "expectedVersion"
+        ]
+      },
+      "GrowthCreditModeDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "LIVE",
+              "SHADOW",
+              "PAUSED"
+            ]
+          },
+          "changedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "mode",
+          "changedAt"
+        ]
+      },
       "RewardPolicyVersionDto": {
         "type": "object",
         "properties": {
@@ -23031,6 +23239,684 @@
           "remainingRewardBudgetToman",
           "existingIncentivesExceedLimit",
           "expiryDays"
+        ]
+      },
+      "PolicySimulationDecisionDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "decision": {
+            "enum": [
+              "RECOMMEND",
+              "HOLD",
+              "REJECT"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestId",
+          "decision"
+        ]
+      },
+      "PolicyBasketLineDto": {
+        "type": "object",
+        "properties": {
+          "productSlug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220
+          },
+          "variantSku": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "productSlug",
+          "quantity"
+        ]
+      },
+      "ReferralRewardUseDto": {
+        "type": "object",
+        "properties": {
+          "recipientUses": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "committedToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "ruleCode": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$"
+          }
+        },
+        "required": [
+          "recipientUses",
+          "committedToman",
+          "ruleCode"
+        ]
+      },
+      "ReferralRiskMetricDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "enum": [
+              "SELF_REFERRAL",
+              "SHARED_DEVICE",
+              "SHARED_NETWORK",
+              "SHARED_ADDRESS",
+              "SHARED_RECIPIENT",
+              "VERIFIED_PAYMENT_REUSE",
+              "REFERRAL_FREQUENCY",
+              "CANCELLED_ORDERS",
+              "FAST_PAYMENT"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "code",
+          "value"
+        ]
+      },
+      "PolicyReferralScenarioDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "riskVersion": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "referrerHasPurchased": {
+            "type": "boolean"
+          },
+          "delivered": {
+            "type": "boolean"
+          },
+          "returnPending": {
+            "type": "boolean"
+          },
+          "referrerIncentivesToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "claimAgeDays": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3650
+          },
+          "programCommittedToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "usage": {
+            "uniqueItems": true,
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRewardUseDto"
+            }
+          },
+          "metrics": {
+            "uniqueItems": true,
+            "maxItems": 9,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRiskMetricDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "referrerHasPurchased",
+          "delivered",
+          "returnPending",
+          "referrerIncentivesToman",
+          "claimAgeDays",
+          "programCommittedToman",
+          "usage",
+          "metrics"
+        ]
+      },
+      "PolicyBasketScenarioDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "review": {
+            "$ref": "#/components/schemas/PolicySimulationDecisionDto"
+          },
+          "items": {
+            "uniqueItems": true,
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PolicyBasketLineDto"
+            }
+          },
+          "occurredAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$",
+            "format": "date-time"
+          },
+          "outcome": {
+            "enum": [
+              "PAID",
+              "UNPAID",
+              "CANCELLED",
+              "FULLY_RETURNED"
+            ],
+            "type": "string"
+          },
+          "previousCompletedPurchases": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 9999
+          },
+          "shippingToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "availableCreditToman": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "campaignId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "couponApplied": {
+            "type": "boolean"
+          },
+          "hadPriorPaidOrder": {
+            "type": "boolean"
+          },
+          "promotionPreviouslyRedeemed": {
+            "type": "boolean"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/RewardPeriodUsageDto"
+          },
+          "referral": {
+            "$ref": "#/components/schemas/PolicyReferralScenarioDto"
+          }
+        },
+        "required": [
+          "version",
+          "items",
+          "occurredAt",
+          "outcome",
+          "previousCompletedPurchases",
+          "shippingToman",
+          "availableCreditToman",
+          "couponApplied",
+          "usage"
+        ]
+      },
+      "PolicyBasketResultLineDto": {
+        "type": "object",
+        "properties": {
+          "productSlug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 220
+          },
+          "variantSku": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "defaultPriceToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "unitPriceToman": {
+            "type": "number"
+          },
+          "merchandiseDiscountToman": {
+            "type": "number"
+          },
+          "referralDiscountToman": {
+            "type": "number"
+          },
+          "walletToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "productSlug",
+          "quantity",
+          "defaultPriceToman",
+          "unitPriceToman",
+          "merchandiseDiscountToman",
+          "referralDiscountToman",
+          "walletToman"
+        ]
+      },
+      "ReferralRewardPreviewLineDto": {
+        "type": "object",
+        "properties": {
+          "recipient": {
+            "enum": [
+              "REFERRER",
+              "REFERRED"
+            ],
+            "type": "string"
+          },
+          "ruleCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "enum": [
+              "AWARDED",
+              "PROGRAM_DISABLED",
+              "UNCONFIRMED",
+              "NO_MATCH",
+              "USE_LIMIT",
+              "BUDGET_LIMIT",
+              "VALUE_LIMIT"
+            ],
+            "type": "string"
+          },
+          "expiryDays": {
+            "type": "number",
+            "nullable": true
+          },
+          "eligibleToman": {
+            "type": "number"
+          },
+          "amountToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "recipient",
+          "ruleCode",
+          "reason",
+          "expiryDays",
+          "eligibleToman",
+          "amountToman"
+        ]
+      },
+      "ReferralRewardPreviewDto": {
+        "type": "object",
+        "properties": {
+          "recipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRewardPreviewLineDto"
+            }
+          },
+          "totalToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "recipients",
+          "totalToman"
+        ]
+      },
+      "ReferralRiskEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "enum": [
+              "SELF_REFERRAL",
+              "SHARED_DEVICE",
+              "SHARED_NETWORK",
+              "SHARED_ADDRESS",
+              "SHARED_RECIPIENT",
+              "VERIFIED_PAYMENT_REUSE",
+              "REFERRAL_FREQUENCY",
+              "CANCELLED_ORDERS",
+              "FAST_PAYMENT"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "weight": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "value",
+          "weight"
+        ]
+      },
+      "ReferralRiskPreviewDto": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "enum": [
+              "ALLOW",
+              "REVIEW",
+              "HOLD",
+              "REJECT"
+            ],
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ],
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralRiskEvidenceDto"
+            }
+          },
+          "score": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "action",
+          "confidence",
+          "evidence",
+          "score"
+        ]
+      },
+      "PolicyBasketResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PolicyBasketResultLineDto"
+            }
+          },
+          "campaignRevision": {
+            "type": "number",
+            "nullable": true
+          },
+          "promotionVersion": {
+            "type": "number",
+            "nullable": true
+          },
+          "remainingCampaignBudgetToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "reward": {
+            "$ref": "#/components/schemas/RewardSimulationDto"
+          },
+          "referral": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferralRewardPreviewDto"
+              }
+            ]
+          },
+          "risk": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferralRiskPreviewDto"
+              }
+            ]
+          },
+          "resolvedRiskVersion": {
+            "type": "number",
+            "nullable": true
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reviewId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "merchandiseToman": {
+            "type": "number"
+          },
+          "merchandiseDiscountToman": {
+            "type": "number"
+          },
+          "shippingToman": {
+            "type": "number"
+          },
+          "shippingDiscountToman": {
+            "type": "number"
+          },
+          "referralDiscountToman": {
+            "type": "number"
+          },
+          "walletToman": {
+            "type": "number"
+          },
+          "payableToman": {
+            "type": "number"
+          },
+          "activationDelayDays": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "campaignRevision",
+          "promotionVersion",
+          "remainingCampaignBudgetToman",
+          "reward",
+          "referral",
+          "risk",
+          "resolvedRiskVersion",
+          "warnings",
+          "reviewId",
+          "merchandiseToman",
+          "merchandiseDiscountToman",
+          "shippingToman",
+          "shippingDiscountToman",
+          "referralDiscountToman",
+          "walletToman",
+          "payableToman",
+          "activationDelayDays"
+        ]
+      },
+      "PolicyHistoryScenarioDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "review": {
+            "$ref": "#/components/schemas/PolicySimulationDecisionDto"
+          },
+          "from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
+          },
+          "pendingOnly": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "version",
+          "from",
+          "to"
+        ]
+      },
+      "PolicyHistoryResultDto": {
+        "type": "object",
+        "properties": {
+          "reviewId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "version": {
+            "type": "number"
+          },
+          "pendingOnly": {
+            "type": "boolean"
+          },
+          "scannedOrders": {
+            "type": "number"
+          },
+          "evaluatedOrders": {
+            "type": "number"
+          },
+          "withoutEvidence": {
+            "type": "number"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "recordedRewardToman": {
+            "type": "number"
+          },
+          "estimatedRewardToman": {
+            "type": "number"
+          },
+          "limitedOrders": {
+            "type": "number"
+          },
+          "fingerprint": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reviewId",
+          "version",
+          "pendingOnly",
+          "scannedOrders",
+          "evaluatedOrders",
+          "withoutEvidence",
+          "truncated",
+          "recordedRewardToman",
+          "estimatedRewardToman",
+          "limitedOrders",
+          "fingerprint"
+        ]
+      },
+      "PolicyReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mode": {
+            "enum": [
+              "BASKET",
+              "HISTORY"
+            ],
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "RECOMMEND",
+              "HOLD",
+              "REJECT"
+            ],
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "result": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "actorUserId",
+          "mode",
+          "decision",
+          "createdAt",
+          "input",
+          "result"
+        ]
+      },
+      "PolicyReviewListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PolicyReviewDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "hasMore"
         ]
       },
       "GuideMediaDto": {
@@ -28758,30 +29644,6 @@
           "categoryIds"
         ]
       },
-      "ReferralRewardUseDto": {
-        "type": "object",
-        "properties": {
-          "recipientUses": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 10000
-          },
-          "committedToman": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "ruleCode": {
-            "type": "string",
-            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$"
-          }
-        },
-        "required": [
-          "recipientUses",
-          "committedToman",
-          "ruleCode"
-        ]
-      },
       "ReferralRewardSampleDto": {
         "type": "object",
         "properties": {
@@ -28861,70 +29723,6 @@
         "required": [
           "definition",
           "sample"
-        ]
-      },
-      "ReferralRewardPreviewLineDto": {
-        "type": "object",
-        "properties": {
-          "recipient": {
-            "enum": [
-              "REFERRER",
-              "REFERRED"
-            ],
-            "type": "string"
-          },
-          "ruleCode": {
-            "type": "string",
-            "nullable": true
-          },
-          "reason": {
-            "enum": [
-              "AWARDED",
-              "PROGRAM_DISABLED",
-              "UNCONFIRMED",
-              "NO_MATCH",
-              "USE_LIMIT",
-              "BUDGET_LIMIT",
-              "VALUE_LIMIT"
-            ],
-            "type": "string"
-          },
-          "expiryDays": {
-            "type": "number",
-            "nullable": true
-          },
-          "eligibleToman": {
-            "type": "number"
-          },
-          "amountToman": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "recipient",
-          "ruleCode",
-          "reason",
-          "expiryDays",
-          "eligibleToman",
-          "amountToman"
-        ]
-      },
-      "ReferralRewardPreviewDto": {
-        "type": "object",
-        "properties": {
-          "recipients": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ReferralRewardPreviewLineDto"
-            }
-          },
-          "totalToman": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "recipients",
-          "totalToman"
         ]
       },
       "ReferralRiskSignalDto": {
@@ -29153,34 +29951,6 @@
           "definition"
         ]
       },
-      "ReferralRiskMetricDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "enum": [
-              "SELF_REFERRAL",
-              "SHARED_DEVICE",
-              "SHARED_NETWORK",
-              "SHARED_ADDRESS",
-              "SHARED_RECIPIENT",
-              "VERIFIED_PAYMENT_REUSE",
-              "REFERRAL_FREQUENCY",
-              "CANCELLED_ORDERS",
-              "FAST_PAYMENT"
-            ],
-            "type": "string"
-          },
-          "value": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 2147483647
-          }
-        },
-        "required": [
-          "code",
-          "value"
-        ]
-      },
       "SimulateReferralRiskDto": {
         "type": "object",
         "properties": {
@@ -29203,73 +29973,6 @@
         "required": [
           "definition",
           "metrics"
-        ]
-      },
-      "ReferralRiskEvidenceDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "enum": [
-              "SELF_REFERRAL",
-              "SHARED_DEVICE",
-              "SHARED_NETWORK",
-              "SHARED_ADDRESS",
-              "SHARED_RECIPIENT",
-              "VERIFIED_PAYMENT_REUSE",
-              "REFERRAL_FREQUENCY",
-              "CANCELLED_ORDERS",
-              "FAST_PAYMENT"
-            ],
-            "type": "string"
-          },
-          "value": {
-            "type": "number"
-          },
-          "weight": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "code",
-          "value",
-          "weight"
-        ]
-      },
-      "ReferralRiskPreviewDto": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "enum": [
-              "ALLOW",
-              "REVIEW",
-              "HOLD",
-              "REJECT"
-            ],
-            "type": "string"
-          },
-          "confidence": {
-            "enum": [
-              "LOW",
-              "MEDIUM",
-              "HIGH"
-            ],
-            "type": "string"
-          },
-          "evidence": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ReferralRiskEvidenceDto"
-            }
-          },
-          "score": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "action",
-          "confidence",
-          "evidence",
-          "score"
         ]
       },
       "ReferralRiskReviewDto": {

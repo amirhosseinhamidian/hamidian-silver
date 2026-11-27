@@ -1,4 +1,5 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { MIN_WALLET_CASH_PAYMENT_TOMAN, TOMAN_INT_MAX } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
@@ -42,6 +43,7 @@ export class WalletCheckoutService {
   constructor(
     private readonly policies: RewardPoliciesService,
     private readonly ledger: WalletLedgerService,
+    @Optional() private readonly config?: ConfigService,
   ) {}
 
   async quote(
@@ -52,6 +54,8 @@ export class WalletCheckoutService {
     promotion?: CheckoutPromotion | null,
     appliedDiscounts?: readonly number[],
   ): Promise<WalletQuote> {
+    if (this.config?.get<boolean>('WALLET_CHECKOUT_ENABLED') === false)
+      return { allocation: null, reason: 'POLICY_DISABLED' };
     const cashCap = payableBeforeWalletToman - MIN_WALLET_CASH_PAYMENT_TOMAN;
     if (cashCap <= 0) return { allocation: null, reason: 'MINIMUM_CASH' };
 

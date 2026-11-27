@@ -6,6 +6,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { Prisma, type Campaign, type Media } from '../../generated/prisma/client';
 import { attachHumanAuditEvent } from '../audit/audit-event';
@@ -92,6 +93,7 @@ export class CampaignsService {
     private readonly db: PrismaService,
     private readonly mediaUrls: PublicMediaUrlService,
     @Optional() private readonly landings?: CampaignLandingsService,
+    @Optional() private readonly config?: ConfigService,
   ) {}
 
   async list({
@@ -506,6 +508,8 @@ export class CampaignsService {
   }
 
   async publicActivity(now = new Date()) {
+    if (this.config?.get<boolean>('CAMPAIGN_PROMOTIONS_ENABLED') === false)
+      return { activeIds: [] };
     const campaigns = await this.db.campaign.findMany({
       where: {
         status: 'ACTIVE',
@@ -532,6 +536,7 @@ export class CampaignsService {
   }
 
   async publicBanner(now = new Date()): Promise<PublicCampaignDto> {
+    if (this.config?.get<boolean>('CAMPAIGN_PROMOTIONS_ENABLED') === false) return { banner: null };
     const [campaign, placement] = await Promise.all([
       this.db.campaign.findFirst({
         where: {

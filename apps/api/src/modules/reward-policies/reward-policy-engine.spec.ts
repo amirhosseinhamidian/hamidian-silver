@@ -1,3 +1,4 @@
+import { TOMAN_INT_MAX } from '../../common/toman';
 import type { RewardPolicyDefinitionDto, SimulateRewardPolicyDto } from './dto/reward-policy.dto';
 import { calculateRewardPolicy, validateRewardPolicy } from './reward-policy-engine';
 
@@ -80,6 +81,50 @@ function sample(merchandiseToman: number): SimulateRewardPolicyDto {
 }
 
 describe('reward policy calculator', () => {
+  it('keeps reward and redemption integral and bounded around policy thresholds', () => {
+    const amounts = [
+      1,
+      2_999_999,
+      3_000_000,
+      3_000_001,
+      4_999_999,
+      5_000_000,
+      9_999_999,
+      10_000_000,
+      TOMAN_INT_MAX,
+    ];
+    const remainingCustomerRewards = 7_001;
+    for (const amount of amounts) {
+      for (const rank of [0, 1, 2]) {
+        for (const credit of [0, 31_001, 1_000_000]) {
+          const basket = sample(amount);
+          basket.previousCompletedPurchases = rank;
+          basket.availableCreditToman = credit;
+          basket.campaignRedemptionCapToman = 57_001;
+          basket.usage = {
+            customerRewardsToman:
+              policy.budget.rewardPerCustomerPeriodToman - remainingCustomerRewards,
+            periodRewardsToman:
+              policy.budget.rewardPerCustomerPeriodToman - remainingCustomerRewards,
+            customerIncentivesToman:
+              policy.budget.rewardPerCustomerPeriodToman - remainingCustomerRewards,
+            periodIncentivesToman:
+              policy.budget.rewardPerCustomerPeriodToman - remainingCustomerRewards,
+          };
+          const applied = calculateRewardPolicy(1, policy, basket);
+          expect(Number.isInteger(applied.estimatedRewardToman)).toBe(true);
+          expect(Number.isInteger(applied.maxRedemptionToman)).toBe(true);
+          expect(applied.estimatedRewardToman).toBeGreaterThanOrEqual(0);
+          expect(applied.estimatedRewardToman).toBeLessThanOrEqual(
+            Math.min(applied.calculatedRewardToman, remainingCustomerRewards),
+          );
+          expect(applied.maxRedemptionToman).toBeGreaterThanOrEqual(0);
+          expect(applied.maxRedemptionToman).toBeLessThanOrEqual(Math.min(credit, amount, 57_001));
+        }
+      }
+    }
+  });
+
   it.each<[number, string | null, number]>([
     [2_999_999, null, 0],
     [3_000_000, 'three', 150_000],

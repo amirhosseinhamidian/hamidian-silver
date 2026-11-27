@@ -6,6 +6,7 @@ import { ReferralGrantWorker } from '../src/modules/referrals/referral-grant.wor
 import { defaultReferralRiskPolicy } from '../src/modules/referrals/referral-risk-engine';
 import { ReferralsService } from '../src/modules/referrals/referrals.service';
 import { RewardPoliciesService } from '../src/modules/reward-policies/reward-policies.service';
+import { GrowthCreditIssuanceService } from '../src/modules/wallet/growth-credit-issuance.service';
 import { WalletLedgerService } from '../src/modules/wallet/wallet-ledger.service';
 import { createIsolatedTestDatabase } from './support/isolated-test-database';
 import { seedReferralPurchase } from './support/referral-purchase';
@@ -17,6 +18,7 @@ it('grants the referrer once after risk approval and corrects a returned purchas
   const ledger = new WalletLedgerService(db);
   const reports = new ReferralGrantReportService(db);
   const worker = new ReferralGrantWorker(db, ledger, new RewardPoliciesService(db), config);
+  const issuance = new GrowthCreditIssuanceService(db, config);
   try {
     const [referrer, buyer] = await Promise.all(
       ['+989120114001', '+989120114002'].map((phone) =>
@@ -143,6 +145,14 @@ it('grants the referrer once after risk approval and corrects a returned purchas
       where: { id: pendingReturn.id },
       data: { status: 'CANCELLED', cancelledAt: new Date() },
     });
+    const initial = await issuance.status();
+    const paused = await issuance.setMode('PAUSED', initial.version);
+    await worker.run();
+    await expect(db.walletLot.count({ where: { source: 'REFERRAL' } })).resolves.toBe(0);
+    await expect(
+      db.referralGrantJob.findUnique({ where: { attributionId: claim.id } }),
+    ).resolves.toMatchObject({ status: 'PENDING', attempts: 0 });
+    const live = await issuance.setMode('LIVE', paused.version);
     await Promise.all([worker.run(), worker.run()]);
     const expected = { userId: referrer.id, source: 'REFERRAL' as const, sourceKey: claim.id };
     const lot = await db.walletLot.findFirstOrThrow({ where: expected });
@@ -200,6 +210,7 @@ it('grants the referrer once after risk approval and corrects a returned purchas
       },
     });
     await expect(ledger.balance(referrer.id)).resolves.toMatchObject({ availableToman: 0 });
+    await issuance.setMode('PAUSED', live.version);
     await worker.run();
     await expect(db.walletLot.findUnique({ where: { id: lot.id } })).resolves.toMatchObject({
       revokedToman: 1_000,

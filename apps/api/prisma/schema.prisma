@@ -97,6 +97,7 @@ model User {
   walletOperations                    WalletOperation[]            @relation("WalletOwner")
   walletCorrections                   WalletOperation[]            @relation("WalletActor")
   editedPromotions                    CampaignPromotion[]
+  policySimulationReviews             PolicySimulationReview[]
   campaignQuotaChanges CampaignQuotaChange[]
 
   @@index([isActive])
@@ -2141,6 +2142,29 @@ model RewardPolicyVersion {
 
   @@index([effectiveAt, version])
   @@map("reward_policy_versions")
+}
+
+model PolicySimulationReview {
+  id          String   @id @db.Uuid
+  actorUserId String   @db.Uuid
+  mode        String   @db.VarChar(10)
+  decision    String   @db.VarChar(12)
+  input       Json
+  result      Json
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  actor       User     @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([createdAt, id])
+  @@map("policy_simulation_reviews")
+}
+
+model GrowthCreditIssuanceControl {
+  id        Int      @id @default(1)
+  mode      String   @default("LIVE") @db.VarChar(8)
+  version   Int      @default(1)
+  changedAt DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+
+  @@map("growth_credit_issuance_control")
 }
 
 enum PurchaseRewardJobStatus {

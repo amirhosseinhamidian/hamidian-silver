@@ -3,8 +3,10 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createHash } from 'node:crypto';
 import { isNonNegativeTomanInt } from '../../common/toman';
 import { Prisma } from '../../generated/prisma/client';
@@ -106,7 +108,10 @@ export function exactWalletToman(total: bigint) {
 
 @Injectable()
 export class WalletLedgerService {
-  constructor(private readonly db: PrismaService) {}
+  constructor(
+    private readonly db: PrismaService,
+    @Optional() private readonly config?: ConfigService,
+  ) {}
 
   async lockAccount(tx: Prisma.TransactionClient, userId: string) {
     await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended('wallet:' || ${userId}::uuid::text, 0))`;
@@ -273,7 +278,8 @@ export class WalletLedgerService {
           where: { id: lot.id },
           data: { activatedAt: context.now },
         });
-        await enqueueWalletCreditActivation(context.db, context.userId, lot, context.now);
+        if (this.config?.get<boolean>('WALLET_ACTIVATION_SMS_ENABLED') !== false)
+          await enqueueWalletCreditActivation(context.db, context.userId, lot, context.now);
       },
       tx,
     );

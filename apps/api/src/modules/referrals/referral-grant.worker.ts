@@ -19,6 +19,7 @@ import {
 } from '../wallet/purchase-reward-basis';
 import { purchaseRewardBudget } from '../wallet/purchase-reward-calculation';
 import { exactWalletToman, WalletLedgerService } from '../wallet/wallet-ledger.service';
+import { permitsNewGrowthCredit } from '../wallet/growth-credit-issuance.service';
 import type {
   ReferralRewardDefinitionDto,
   ReferralRewardRuleDto,
@@ -107,6 +108,9 @@ export class ReferralGrantWorker {
       FROM "referral_grant_jobs" j JOIN "referral_attributions" a ON a.id = j."attributionId"
       CROSS JOIN batch_clock
       WHERE j."nextAttemptAt" <= batch_clock.now
+        AND (j."lotId" IS NOT NULL OR EXISTS (
+          SELECT 1 FROM "growth_credit_issuance_control" WHERE id = 1 AND mode = 'LIVE'
+        ))
       ORDER BY j."nextAttemptAt", j."attributionId" LIMIT 20
     `;
     for (const candidate of candidates) {
@@ -178,6 +182,7 @@ export class ReferralGrantWorker {
       await this.correct(tx, job, job.lot, order, now, risk?.action === 'REJECT', risk?.revision);
       return;
     }
+    if (!(await permitsNewGrowthCredit(tx, true))) return;
     if (
       !paidAt ||
       paidAt < attribution.claimedAt ||

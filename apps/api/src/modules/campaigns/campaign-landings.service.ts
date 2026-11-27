@@ -5,6 +5,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   Prisma,
   type Campaign,
@@ -84,6 +85,7 @@ export class CampaignLandingsService {
     private readonly catalog: CatalogService,
     private readonly mediaUrls: PublicMediaUrlService,
     @Optional() private readonly festivals?: FestivalDesignService,
+    @Optional() private readonly config?: ConfigService,
   ) {}
 
   async editor(campaignId: string): Promise<CampaignLandingEditorDto> {
@@ -558,7 +560,9 @@ export class CampaignLandingsService {
           : readFestivalPublication(stored.publication);
         const campaign = await this.publicPresentation(tx, stored.campaign, published);
         const landing = { ...stored, ...published?.landing, campaign };
-        const design = live && !productsOnly ? readFestivalDesign(landing.design) : null;
+        const showOffer =
+          live && this.config?.get<boolean>('CAMPAIGN_PROMOTIONS_ENABLED') !== false;
+        const design = showOffer && !productsOnly ? readFestivalDesign(landing.design) : null;
         const rebase = Object.values(selected).some((value) => value !== undefined);
         const loaded = live
           ? await this.publicCollection(
@@ -603,8 +607,8 @@ export class CampaignLandingsService {
           isFestival: landing.campaign.kind === 'FESTIVAL',
           active: Boolean(live),
           media: this.media(landing.campaign.media),
-          ctaPath: live ? (landing.campaign.ctaPath ?? '/products') : '/products',
-          ctaLabel: live
+          ctaPath: showOffer ? (landing.campaign.ctaPath ?? '/products') : '/products',
+          ctaLabel: showOffer
             ? (landing.campaign.ctaLabel ?? 'مشاهدهٔ محصولات')
             : 'مشاهدهٔ محصولات فروشگاه',
           products,
@@ -655,6 +659,7 @@ export class CampaignLandingsService {
   }
 
   async placement(slot: CampaignBannerSlot, slug: string | undefined, now = new Date()) {
+    if (this.config?.get<boolean>('CAMPAIGN_PROMOTIONS_ENABLED') === false) return null;
     return this.db.$transaction(
       async (tx) => {
         const selected = await this.findPlacement(tx, slot, slug, now);

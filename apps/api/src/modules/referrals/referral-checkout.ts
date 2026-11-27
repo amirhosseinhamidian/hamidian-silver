@@ -3,6 +3,7 @@ import { MIN_WALLET_CASH_PAYMENT_TOMAN } from '../../common/toman';
 import type { Prisma } from '../../generated/prisma/client';
 import type { PromotionLine } from '../promotions/promotion-engine';
 import { allocateCheckoutToman } from '../wallet/wallet-checkout';
+import { permitsNewGrowthCredit } from '../wallet/growth-credit-issuance.service';
 import { openWalletAttemptStatuses } from '../wallet/wallet-checkout.service';
 import type { ReferralRewardDefinitionDto } from './dto/referral-reward-policy.dto';
 import { lockReferralBudget, referralBudgetUsage } from './referral-budget';
@@ -51,6 +52,7 @@ async function availableClaim(tx: Prisma.TransactionClient, userId: string, now:
 }
 
 export async function referralCheckoutAvailable(db: Prisma.TransactionClient, userId: string) {
+  if (!(await permitsNewGrowthCredit(db))) return false;
   return Boolean(await availableClaim(db, userId, new Date()));
 }
 
@@ -68,12 +70,16 @@ export async function quoteReferralCheckout(
 ) {
   const remainingIncentiveToman = input.payableToman - MIN_WALLET_CASH_PAYMENT_TOMAN;
   if (remainingIncentiveToman <= 0) return null;
+  if (!(await permitsNewGrowthCredit(tx))) return null;
   const [{ now, budgetAt }] = await tx.$queryRaw<{ now: Date; budgetAt: Date }[]>`
     SELECT clock_timestamp()::timestamptz(3) AS now, CURRENT_TIMESTAMP AS "budgetAt"
   `;
   const claim = await availableClaim(tx, input.userId, now);
   if (!claim) return null;
-  if (input.reserve) await lockReferralBudget(tx, claim.version, budgetAt);
+  if (input.reserve) {
+    if (!(await permitsNewGrowthCredit(tx, true))) return null;
+    await lockReferralBudget(tx, claim.version, budgetAt);
+  }
   const rows = await referralBudgetUsage(tx, input.userId, claim.version, budgetAt);
   const lines = input.lines.map((line, index) => ({
     categoryIds: [...line.categoryIds],

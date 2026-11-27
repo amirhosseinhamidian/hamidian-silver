@@ -78,6 +78,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         </div>
         <CatalogFacetedListing
           path="/products"
+          filtersEnabled={process.env.CATALOG_FACETS_ENABLED !== 'false'}
           filters={filters}
           listing={listing}
           fallbackSources={getCatalogDevProductImageSources(listing.items)}

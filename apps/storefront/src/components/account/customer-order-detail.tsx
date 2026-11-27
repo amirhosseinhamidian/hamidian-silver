@@ -404,7 +404,12 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
         </div>
 
         <aside className="space-y-6 lg:sticky lg:top-24">
-          {order.status === 'PENDING_PAYMENT' && order.payment?.status !== 'AWAITING_REVIEW' ? (
+          {order.payment?.status === 'RECONCILIATION_REQUIRED' ? (
+            <OrderReasonNotice
+              title="پرداخت در حال بررسی"
+              reason="تا مشخص شدن نتیجهٔ نهایی، پرداخت این سفارش را تکرار نکنید."
+            />
+          ) : order.status === 'PENDING_PAYMENT' && order.payment?.status !== 'AWAITING_REVIEW' ? (
             <section
               aria-labelledby="order-payment-heading"
               className="border border-[var(--sf-color-ink)] p-5"

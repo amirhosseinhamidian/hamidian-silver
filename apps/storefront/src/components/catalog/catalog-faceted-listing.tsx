@@ -94,6 +94,7 @@ type Props = Readonly<{
   scope?: CatalogFacetScope;
   fallbackSources?: Readonly<Record<string, string>>;
   prioritizeFirstImage?: boolean;
+  filtersEnabled?: boolean;
 }>;
 
 export function CatalogFacetedListing({
@@ -103,6 +104,7 @@ export function CatalogFacetedListing({
   scope = defaultScope,
   fallbackSources,
   prioritizeFirstImage = false,
+  filtersEnabled = true,
 }: Props) {
   const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -167,24 +169,26 @@ export function CatalogFacetedListing({
           ) : null}
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="lg:hidden">
-            <CatalogFilterSheet
-              activeCount={chips.length}
-              open={sheetOpen}
-              onOpenChange={setSheetOpen}
-            >
-              <CatalogFilterForm
-                key={href}
-                path={path}
-                filters={filters}
-                facets={listing.facets}
-                scope={scope}
-                idPrefix="mobile-catalog-filter"
-                className="h-full pt-2"
-                onApply={navigate}
-              />
-            </CatalogFilterSheet>
-          </div>
+          {filtersEnabled && (
+            <div className="lg:hidden">
+              <CatalogFilterSheet
+                activeCount={chips.length}
+                open={sheetOpen}
+                onOpenChange={setSheetOpen}
+              >
+                <CatalogFilterForm
+                  key={href}
+                  path={path}
+                  filters={filters}
+                  facets={listing.facets}
+                  scope={scope}
+                  idPrefix="mobile-catalog-filter"
+                  className="h-full pt-2"
+                  onApply={navigate}
+                />
+              </CatalogFilterSheet>
+            </div>
+          )}
           <div className="w-[10.5rem] max-w-full sm:w-48">
             <Select
               aria-label="مرتب‌سازی محصولات"
@@ -219,21 +223,27 @@ export function CatalogFacetedListing({
         </section>
       ) : null}
 
-      <div className="grid gap-8 pt-8 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-10">
-        <aside aria-label="فیلتر محصولات" className="hidden lg:block">
-          <div className="sticky top-6 flex max-h-[calc(100dvh-3rem)] flex-col">
-            <h2 className="mb-5 text-base font-medium">فیلترها</h2>
-            <CatalogFilterForm
-              key={href}
-              path={path}
-              filters={filters}
-              facets={listing.facets}
-              scope={scope}
-              idPrefix="desktop-catalog-filter"
-              onApply={navigate}
-            />
-          </div>
-        </aside>
+      <div
+        className={
+          filtersEnabled ? 'grid gap-8 pt-8 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-10' : 'pt-8'
+        }
+      >
+        {filtersEnabled && (
+          <aside aria-label="فیلتر محصولات" className="hidden lg:block">
+            <div className="sticky top-6 flex max-h-[calc(100dvh-3rem)] flex-col">
+              <h2 className="mb-5 text-base font-medium">فیلترها</h2>
+              <CatalogFilterForm
+                key={href}
+                path={path}
+                filters={filters}
+                facets={listing.facets}
+                scope={scope}
+                idPrefix="desktop-catalog-filter"
+                onApply={navigate}
+              />
+            </div>
+          </aside>
+        )}
         <section className="min-w-0" aria-busy={pending} aria-label="نتایج محصولات">
           {listing.items.length ? (
             <CatalogProductGrid

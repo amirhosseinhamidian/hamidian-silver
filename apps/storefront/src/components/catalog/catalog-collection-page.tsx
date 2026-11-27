@@ -172,6 +172,7 @@ export function CatalogCollectionPage({
 
         <CatalogFacetedListing
           path={path}
+          filtersEnabled={process.env.CATALOG_FACETS_ENABLED !== 'false'}
           filters={filters}
           scope={scope}
           listing={products}

@@ -79,6 +79,15 @@ export async function purchaseRewardBudget(
   // One grant transaction at a time can commit spend against this shared period.
   await db.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(
     'purchase-reward-budget:' || to_char(${paidAt}::timestamptz AT TIME ZONE 'Asia/Tehran', 'YYYY-MM'), 0))`;
+  return readPurchaseRewardBudget(db, userId, orderId, paidAt);
+}
+
+export async function readPurchaseRewardBudget(
+  db: Prisma.TransactionClient,
+  userId: string,
+  orderId: string,
+  paidAt: Date,
+) {
   type Totals = {
     customerRewards: bigint;
     periodRewards: bigint;

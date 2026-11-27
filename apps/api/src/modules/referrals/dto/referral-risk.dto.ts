@@ -162,7 +162,7 @@ export class ReferralRiskEvidenceDto {
   weight!: number;
 }
 
-class ReferralRiskMetricDto {
+export class ReferralRiskMetricDto {
   @ApiProperty({ enum: [...riskCodes] })
   @IsIn(riskCodes)
   code!: RiskCode;

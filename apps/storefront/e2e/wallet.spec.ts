@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test';
+import { SESSION_COOKIE_NAME } from '../src/lib/auth/session-cookie';
+import { formatTomanPrice } from '../src/lib/catalog/presentation';
 import { expectNoHorizontalOverflow, waitForClientHydration } from './support/accessibility';
 
 test('shows the amount due to expire and reloads the wallet after a reservation is released', async ({
@@ -93,4 +95,89 @@ test('shows the amount due to expire and reloads the wallet after a reservation 
   await panel.getByRole('button', { name: 'به‌روزرسانی کیف پول' }).click();
   await expect(panel.getByText('آزادسازی رزرو')).toBeVisible();
   await expect(panel.getByText(/۶۰.۰۰۰ تومان/)).toBeVisible();
+});
+
+test('shows released wallet credit and keeps a late confirmation in review', async ({
+  page,
+  request,
+}) => {
+  const mockApi = 'http://127.0.0.1:4311';
+  const orderId = '30000000-0000-4000-8000-000000000001';
+  const setup = await request.post(`${mockApi}/__e2e/reset`);
+  expect(setup.ok()).toBeTruthy();
+  type WalletPaymentState = 'pending' | 'expired' | 'reconciliation';
+  let state: WalletPaymentState = 'pending';
+  async function changePayment(newState: WalletPaymentState) {
+    const response = await request.post(`${mockApi}/__e2e/wallet-payment`, {
+      data: { state: newState },
+    });
+    expect(response.ok()).toBeTruthy();
+    state = newState;
+  }
+
+  try {
+    await page.context().addCookies([
+      {
+        name: SESSION_COOKIE_NAME,
+        value: 'e2e-access-token',
+        url: 'http://localhost:4310/',
+        httpOnly: true,
+        secure: true,
+        sameSite: 'Lax',
+      },
+    ]);
+    await page.route('**/api/profile', (route) =>
+      route.fulfill({ json: { phone: '09123456789' } }),
+    );
+    await page.route('**/api/profile/addresses', (route) => route.fulfill({ json: [] }));
+    await page.route('**/api/orders', (route) => route.fulfill({ json: { items: [], total: 0 } }));
+    await page.route('**/api/wallet', (route) =>
+      route.fulfill({
+        json: {
+          availableToman: state === 'pending' ? 40_000 : 60_000,
+          pendingToman: 0,
+          reservedToman: state === 'pending' ? 20_000 : 0,
+          nextExpiryAt: null,
+          nextExpiryToman: 0,
+        },
+      }),
+    );
+    await page.route('**/api/wallet/ledger?*', (route) =>
+      route.fulfill({ json: { page: 1, hasMore: false, items: [] } }),
+    );
+
+    await changePayment('pending');
+    const paymentPage = `/payment/result?orderId=${orderId}&receipt=1`;
+    await page.goto(paymentPage);
+    await expect(
+      page.getByRole('heading', { name: 'نتیجه پرداخت در حال بررسی است' }),
+    ).toBeVisible();
+    await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute('content', /noindex/);
+
+    async function walletAvailable(amount: number) {
+      await page.goto('/account');
+      await waitForClientHydration(page);
+      await page.getByRole('tab', { name: 'کیف پول' }).click();
+      const wallet = page.getByRole('tabpanel', { name: 'کیف پول' });
+      await expect(wallet.getByText(formatTomanPrice(amount), { exact: true })).toBeVisible();
+    }
+    await walletAvailable(40_000);
+    await changePayment('expired');
+    await page.goto(paymentPage);
+    await expect(page.getByRole('heading', { name: 'پرداخت تکمیل نشد' })).toBeVisible();
+    await walletAvailable(60_000);
+
+    await changePayment('reconciliation');
+    await page.goto(paymentPage);
+    await expect(
+      page.getByRole('heading', { name: 'نتیجه پرداخت در حال بررسی است' }),
+    ).toBeVisible();
+    await page.getByRole('link', { name: 'بررسی وضعیت سفارش' }).click();
+    await expect(page.getByRole('heading', { name: 'پرداخت در حال بررسی' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'پرداخت سفارش', exact: true })).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+    await walletAvailable(60_000);
+  } finally {
+    await request.post(`${mockApi}/__e2e/reset`);
+  }
 });

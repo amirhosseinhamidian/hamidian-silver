@@ -1796,6 +1796,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/wallet/admin/credit-issuance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GrowthCreditIssuanceController_status_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["GrowthCreditIssuanceController_update_v1"];
+        trace?: never;
+    };
     "/api/v1/reward-policies": {
         parameters: {
             query?: never;
@@ -1886,6 +1902,54 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["RewardPoliciesController_publish_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/policy-simulator/basket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PolicySimulationController_basket_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/policy-simulator/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PolicySimulationController_history_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/policy-simulator/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PolicySimulationController_reviews_v1"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7105,6 +7169,23 @@ export interface components {
             page: number;
             hasMore: boolean;
         };
+        GrowthCreditRolloutStatusDto: {
+            /** @enum {string} */
+            mode: "LIVE" | "SHADOW" | "PAUSED";
+            /** Format: date-time */
+            changedAt: string;
+        };
+        UpdateGrowthCreditModeDto: {
+            /** @enum {string} */
+            mode: "LIVE" | "SHADOW" | "PAUSED";
+            expectedVersion: number;
+        };
+        GrowthCreditModeDto: {
+            /** @enum {string} */
+            mode: "LIVE" | "SHADOW" | "PAUSED";
+            /** Format: date-time */
+            changedAt: string;
+        };
         RewardPolicyVersionDto: {
             /** Format: date-time */
             createdAt: string;
@@ -7255,6 +7336,163 @@ export interface components {
             remainingRewardBudgetToman: number;
             existingIncentivesExceedLimit: boolean;
             expiryDays: number;
+        };
+        PolicySimulationDecisionDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** @enum {string} */
+            decision: "RECOMMEND" | "HOLD" | "REJECT";
+        };
+        PolicyBasketLineDto: {
+            productSlug: string;
+            variantSku?: string;
+            quantity: number;
+        };
+        ReferralRewardUseDto: {
+            recipientUses: number;
+            committedToman: number;
+            ruleCode: string;
+        };
+        ReferralRiskMetricDto: {
+            /** @enum {string} */
+            code: "SELF_REFERRAL" | "SHARED_DEVICE" | "SHARED_NETWORK" | "SHARED_ADDRESS" | "SHARED_RECIPIENT" | "VERIFIED_PAYMENT_REUSE" | "REFERRAL_FREQUENCY" | "CANCELLED_ORDERS" | "FAST_PAYMENT";
+            value: number;
+        };
+        PolicyReferralScenarioDto: {
+            version: number;
+            riskVersion?: number;
+            referrerHasPurchased: boolean;
+            delivered: boolean;
+            returnPending: boolean;
+            referrerIncentivesToman: number;
+            claimAgeDays: number;
+            programCommittedToman: number;
+            usage: components["schemas"]["ReferralRewardUseDto"][];
+            metrics: components["schemas"]["ReferralRiskMetricDto"][];
+        };
+        PolicyBasketScenarioDto: {
+            version: number;
+            review?: components["schemas"]["PolicySimulationDecisionDto"];
+            items: components["schemas"]["PolicyBasketLineDto"][];
+            /** Format: date-time */
+            occurredAt: string;
+            /** @enum {string} */
+            outcome: "PAID" | "UNPAID" | "CANCELLED" | "FULLY_RETURNED";
+            previousCompletedPurchases: number;
+            shippingToman: number;
+            availableCreditToman: number;
+            /** Format: uuid */
+            campaignId?: string;
+            couponApplied: boolean;
+            hadPriorPaidOrder?: boolean;
+            promotionPreviouslyRedeemed?: boolean;
+            usage: components["schemas"]["RewardPeriodUsageDto"];
+            referral?: components["schemas"]["PolicyReferralScenarioDto"];
+        };
+        PolicyBasketResultLineDto: {
+            productSlug: string;
+            variantSku?: string;
+            quantity: number;
+            defaultPriceToman: number | null;
+            unitPriceToman: number;
+            merchandiseDiscountToman: number;
+            referralDiscountToman: number;
+            walletToman: number;
+        };
+        ReferralRewardPreviewLineDto: {
+            /** @enum {string} */
+            recipient: "REFERRER" | "REFERRED";
+            ruleCode: string | null;
+            /** @enum {string} */
+            reason: "AWARDED" | "PROGRAM_DISABLED" | "UNCONFIRMED" | "NO_MATCH" | "USE_LIMIT" | "BUDGET_LIMIT" | "VALUE_LIMIT";
+            expiryDays: number | null;
+            eligibleToman: number;
+            amountToman: number;
+        };
+        ReferralRewardPreviewDto: {
+            recipients: components["schemas"]["ReferralRewardPreviewLineDto"][];
+            totalToman: number;
+        };
+        ReferralRiskEvidenceDto: {
+            /** @enum {string} */
+            code: "SELF_REFERRAL" | "SHARED_DEVICE" | "SHARED_NETWORK" | "SHARED_ADDRESS" | "SHARED_RECIPIENT" | "VERIFIED_PAYMENT_REUSE" | "REFERRAL_FREQUENCY" | "CANCELLED_ORDERS" | "FAST_PAYMENT";
+            value: number;
+            weight: number;
+        };
+        ReferralRiskPreviewDto: {
+            /** @enum {string} */
+            action: "ALLOW" | "REVIEW" | "HOLD" | "REJECT";
+            /** @enum {string} */
+            confidence: "LOW" | "MEDIUM" | "HIGH";
+            evidence: components["schemas"]["ReferralRiskEvidenceDto"][];
+            score: number;
+        };
+        PolicyBasketResultDto: {
+            items: components["schemas"]["PolicyBasketResultLineDto"][];
+            campaignRevision: number | null;
+            promotionVersion: number | null;
+            remainingCampaignBudgetToman: number | null;
+            reward: components["schemas"]["RewardSimulationDto"];
+            referral: components["schemas"]["ReferralRewardPreviewDto"] | null;
+            risk: components["schemas"]["ReferralRiskPreviewDto"] | null;
+            resolvedRiskVersion: number | null;
+            warnings: string[];
+            /** Format: uuid */
+            reviewId: string | null;
+            merchandiseToman: number;
+            merchandiseDiscountToman: number;
+            shippingToman: number;
+            shippingDiscountToman: number;
+            referralDiscountToman: number;
+            walletToman: number;
+            payableToman: number;
+            activationDelayDays: number;
+        };
+        PolicyHistoryScenarioDto: {
+            version: number;
+            review?: components["schemas"]["PolicySimulationDecisionDto"];
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            pendingOnly?: boolean;
+        };
+        PolicyHistoryResultDto: {
+            /** Format: uuid */
+            reviewId: string | null;
+            version: number;
+            pendingOnly: boolean;
+            scannedOrders: number;
+            evaluatedOrders: number;
+            withoutEvidence: number;
+            truncated: boolean;
+            recordedRewardToman: number;
+            estimatedRewardToman: number;
+            limitedOrders: number;
+            fingerprint: string;
+        };
+        PolicyReviewDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            actorUserId: string;
+            /** @enum {string} */
+            mode: "BASKET" | "HISTORY";
+            /** @enum {string} */
+            decision: "RECOMMEND" | "HOLD" | "REJECT";
+            /** Format: date-time */
+            createdAt: string;
+            input: {
+                [key: string]: unknown;
+            };
+            result: {
+                [key: string]: unknown;
+            };
+        };
+        PolicyReviewListDto: {
+            items: components["schemas"]["PolicyReviewDto"][];
+            page: number;
+            hasMore: boolean;
         };
         GuideMediaDto: {
             id: string;
@@ -8649,11 +8887,6 @@ export interface components {
             eligibleToman: number;
             categoryIds: string[];
         };
-        ReferralRewardUseDto: {
-            recipientUses: number;
-            committedToman: number;
-            ruleCode: string;
-        };
         ReferralRewardSampleDto: {
             /** Format: date-time */
             occurredAt: string;
@@ -8671,20 +8904,6 @@ export interface components {
         SimulateReferralRewardPolicyDto: {
             definition: components["schemas"]["ReferralRewardDefinitionDto"];
             sample: components["schemas"]["ReferralRewardSampleDto"];
-        };
-        ReferralRewardPreviewLineDto: {
-            /** @enum {string} */
-            recipient: "REFERRER" | "REFERRED";
-            ruleCode: string | null;
-            /** @enum {string} */
-            reason: "AWARDED" | "PROGRAM_DISABLED" | "UNCONFIRMED" | "NO_MATCH" | "USE_LIMIT" | "BUDGET_LIMIT" | "VALUE_LIMIT";
-            expiryDays: number | null;
-            eligibleToman: number;
-            amountToman: number;
-        };
-        ReferralRewardPreviewDto: {
-            recipients: components["schemas"]["ReferralRewardPreviewLineDto"][];
-            totalToman: number;
         };
         ReferralRiskSignalDto: {
             /** @enum {string} */
@@ -8732,30 +8951,11 @@ export interface components {
             expectedVersion: number | null;
             definition: components["schemas"]["ReferralRiskPolicyDto"];
         };
-        ReferralRiskMetricDto: {
-            /** @enum {string} */
-            code: "SELF_REFERRAL" | "SHARED_DEVICE" | "SHARED_NETWORK" | "SHARED_ADDRESS" | "SHARED_RECIPIENT" | "VERIFIED_PAYMENT_REUSE" | "REFERRAL_FREQUENCY" | "CANCELLED_ORDERS" | "FAST_PAYMENT";
-            value: number;
-        };
         SimulateReferralRiskDto: {
             definition: components["schemas"]["ReferralRiskPolicyDto"];
             /** Format: uuid */
             attributionId?: string;
             metrics: components["schemas"]["ReferralRiskMetricDto"][];
-        };
-        ReferralRiskEvidenceDto: {
-            /** @enum {string} */
-            code: "SELF_REFERRAL" | "SHARED_DEVICE" | "SHARED_NETWORK" | "SHARED_ADDRESS" | "SHARED_RECIPIENT" | "VERIFIED_PAYMENT_REUSE" | "REFERRAL_FREQUENCY" | "CANCELLED_ORDERS" | "FAST_PAYMENT";
-            value: number;
-            weight: number;
-        };
-        ReferralRiskPreviewDto: {
-            /** @enum {string} */
-            action: "ALLOW" | "REVIEW" | "HOLD" | "REJECT";
-            /** @enum {string} */
-            confidence: "LOW" | "MEDIUM" | "HIGH";
-            evidence: components["schemas"]["ReferralRiskEvidenceDto"][];
-            score: number;
         };
         ReferralRiskReviewDto: {
             /** @enum {string} */
@@ -13308,6 +13508,48 @@ export interface operations {
             };
         };
     };
+    GrowthCreditIssuanceController_status_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthCreditRolloutStatusDto"];
+                };
+            };
+        };
+    };
+    GrowthCreditIssuanceController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGrowthCreditModeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthCreditModeDto"];
+                };
+            };
+        };
+    };
     RewardPoliciesController_list_v1: {
         parameters: {
             query?: {
@@ -13474,6 +13716,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RewardPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    PolicySimulationController_basket_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyBasketScenarioDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyBasketResultDto"];
+                };
+            };
+        };
+    };
+    PolicySimulationController_history_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyHistoryScenarioDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyHistoryResultDto"];
+                };
+            };
+        };
+    };
+    PolicySimulationController_reviews_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyReviewListDto"];
                 };
             };
         };

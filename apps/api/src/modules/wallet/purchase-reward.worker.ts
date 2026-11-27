@@ -21,6 +21,7 @@ import {
 } from './purchase-reward-calculation';
 import { WalletCheckoutService } from './wallet-checkout.service';
 import { WalletLedgerService } from './wallet-ledger.service';
+import { permitsNewGrowthCredit } from './growth-credit-issuance.service';
 
 const batchSize = 12;
 const maxAttempts = 8;
@@ -79,6 +80,7 @@ export class PurchaseRewardWorker {
       retry: 0,
       deadLetter: recovery.count,
       lost: 0,
+      paused: 0,
     };
     for (let index = 0; index < batchSize; index += 1) {
       const claim = await this.claim(now);
@@ -198,7 +200,9 @@ export class PurchaseRewardWorker {
         WHERE due."reviewHeldAt" IS NULL AND due.attempts < ${maxAttempts} AND (
           (due.status IN ('PENDING', 'WAITING') AND due."nextAttemptAt" <= ${now})
           OR (due.status = 'PROCESSING' AND due."leaseUntil" <= ${now})
-        ) AND (due.calculation IS NOT NULL OR NOT EXISTS (
+        ) AND (due.calculation IS NOT NULL OR EXISTS (
+          SELECT 1 FROM "growth_credit_issuance_control" WHERE id = 1 AND mode = 'LIVE'
+        )) AND (due.calculation IS NOT NULL OR NOT EXISTS (
           SELECT 1 FROM "purchase_reward_jobs" prior
           WHERE prior."userId" = due."userId" AND prior.sequence < due.sequence
             AND prior.calculation IS NULL AND prior.status IN ('PENDING', 'PROCESSING')
@@ -229,6 +233,13 @@ export class PurchaseRewardWorker {
         const job = await tx.purchaseRewardJob.findUniqueOrThrow({
           where: { orderId: claim.orderId },
         });
+        if (!job.calculation && !(await permitsNewGrowthCredit(tx, true))) {
+          await tx.purchaseRewardJob.update({
+            where: { orderId: job.orderId },
+            data: { status: 'PENDING', attempts: { decrement: 1 }, ...leaseCleared },
+          });
+          return 'paused' as const;
+        }
         const order = await tx.order.findUniqueOrThrow({
           where: { id: claim.orderId },
           select: purchaseRewardOrderSelect,

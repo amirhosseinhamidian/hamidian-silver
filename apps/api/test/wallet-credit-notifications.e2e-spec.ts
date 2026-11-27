@@ -9,8 +9,9 @@ import { seedReferralPurchase } from './support/referral-purchase';
 
 it('queues one transactional SMS on activation and retries without altering the activated credit', async () => {
   const { db, close } = await createIsolatedTestDatabase();
-  const wallet = new WalletLedgerService(db);
-  const notifications = new WalletCreditNotificationsService(db);
+  const config = new ConfigService();
+  const wallet = new WalletLedgerService(db, config);
+  const notifications = new WalletCreditNotificationsService(db, config);
   const sendMessage = jest
     .fn<() => Promise<void>>()
     .mockRejectedValueOnce(new Error('Provider unavailable'))
@@ -18,7 +19,7 @@ it('queues one transactional SMS on activation and retries without altering the 
   const worker = new NotificationOutboxWorker(
     db,
     { sendOtp: async () => undefined, sendMessage },
-    new ConfigService(),
+    config,
     notifications,
   );
   try {
@@ -184,6 +185,42 @@ it('queues one transactional SMS on activation and retries without altering the 
       lastError: 'WALLET_SMS_DISABLED',
     });
     await expect(notifications.customer(user.id)).resolves.toMatchObject({ expiryReminder: null });
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+
+    async function activateExtraCredit() {
+      const credit = await wallet.grant({
+        userId: user.id,
+        orderId: order.id,
+        source: 'REFERRAL',
+        sourceKey: randomUUID(),
+        policyVersion: policy.version,
+        amountToman: 1_000,
+        expiresAt,
+        idempotencyKey: randomUUID(),
+      });
+      const { lotId } = credit.movements[0];
+      await wallet.activate({ userId: user.id, lotId, idempotencyKey: randomUUID() });
+      return { deduplicationKey: `wallet-credit:activated:${lotId}` };
+    }
+    const queuedBeforeOff = await activateExtraCredit();
+    await db.notificationOutboxEvent.update({
+      where: queuedBeforeOff,
+      data: { nextAttemptAt: effectiveAt },
+    });
+    config.set('WALLET_ACTIVATION_SMS_ENABLED', false);
+    await worker.dispatchPending();
+    await expect(
+      db.notificationOutboxEvent.findUnique({ where: queuedBeforeOff }),
+    ).resolves.toMatchObject({
+      status: 'SKIPPED',
+      lastError: 'WALLET_SMS_DISABLED',
+    });
+    const activatedWhileOff = await activateExtraCredit();
+    await expect(
+      db.notificationOutboxEvent.findUnique({ where: activatedWhileOff }),
+    ).resolves.toBeNull();
+    await expect(wallet.balance(user.id)).resolves.toMatchObject({ availableToman: 42_000 });
+    await expect(notifications.customer(user.id)).resolves.toMatchObject({ smsAvailable: false });
     expect(sendMessage).toHaveBeenCalledTimes(2);
   } finally {
     await close();

@@ -17,6 +17,7 @@ const CREATED_AT = '2026-09-11T08:00:00.000Z';
 const PAID_AT = '2026-09-11T08:02:00.000Z';
 
 let paymentConfirmed = false;
+let walletPayment = null;
 let orderCreatedAt = CREATED_AT;
 let paymentConfirmedAt = PAID_AT;
 let orderCreated = false;
@@ -464,7 +465,11 @@ const address = {
 };
 
 function order() {
-  const status = paymentConfirmed ? 'PAID' : 'PENDING_PAYMENT';
+  const status = paymentConfirmed
+    ? 'PAID'
+    : walletPayment && walletPayment !== 'pending'
+      ? 'EXPIRED'
+      : 'PENDING_PAYMENT';
   return {
     id: ORDER_ID,
     orderNumber: 'HS-E2E-1001',
@@ -478,20 +483,32 @@ function order() {
     discountTotalToman: 0,
     shippingTotalToman: 0,
     taxTotalToman: 0,
-    grandTotalToman: 800_000,
+    grandTotalToman: walletPayment ? 780_000 : 800_000,
+    ...(walletPayment ? { walletAppliedToman: 20_000 } : {}),
     returnAuthorized: false,
     reservationExpiresAt: '2026-09-11T08:30:00.000Z',
     createdAt: orderCreatedAt,
     updatedAt: paymentConfirmed ? paymentConfirmedAt : orderCreatedAt,
-    payment: receiptSubmitted
+    payment: walletPayment
       ? {
-          status: paymentConfirmed ? 'PAID' : 'AWAITING_REVIEW',
-          method: 'CARD_TO_CARD',
-          receiptAvailable: true,
-          receiptOriginalName: 'receipt.png',
-          receiptUploadedAt: PAID_AT,
+          status:
+            walletPayment === 'reconciliation'
+              ? 'RECONCILIATION_REQUIRED'
+              : walletPayment === 'expired'
+                ? 'CANCELLED'
+                : 'PENDING',
+          method: 'PAYMENT_GATEWAY',
+          receiptAvailable: false,
         }
-      : null,
+      : receiptSubmitted
+        ? {
+            status: paymentConfirmed ? 'PAID' : 'AWAITING_REVIEW',
+            method: 'CARD_TO_CARD',
+            receiptAvailable: true,
+            receiptOriginalName: 'receipt.png',
+            receiptUploadedAt: PAID_AT,
+          }
+        : null,
     items: [
       {
         id: '60000000-0000-4000-8000-000000000001',
@@ -588,6 +605,7 @@ async function handler(request, response) {
 
   if (request.method === 'POST' && url.pathname === '/__e2e/reset') {
     paymentConfirmed = false;
+    walletPayment = null;
     orderCreatedAt = CREATED_AT;
     paymentConfirmedAt = PAID_AT;
     orderCreated = false;
@@ -597,6 +615,15 @@ async function handler(request, response) {
     festivalHeader = null;
     measuredStages.clear();
     return json(response, 200, { reset: true });
+  }
+
+  if (request.method === 'POST' && url.pathname === '/__e2e/wallet-payment') {
+    const { state } = await body(request);
+    if (!['pending', 'expired', 'reconciliation'].includes(state))
+      return json(response, 400, { message: 'Unknown wallet payment state.' });
+    walletPayment = state;
+    orderCreated = true;
+    return json(response, 200, { state });
   }
 
   if (request.method === 'POST' && url.pathname === '/__e2e/campaign-placements') {
