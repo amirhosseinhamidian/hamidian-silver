@@ -116,16 +116,32 @@ test('shows released wallet credit and keeps a late confirmation in review', asy
   }
 
   try {
-    await page.context().addCookies([
-      {
-        name: SESSION_COOKIE_NAME,
-        value: 'e2e-access-token',
-        url: 'http://localhost:4310/',
-        httpOnly: true,
-        secure: true,
-        sameSite: 'Lax',
-      },
-    ]);
+    await test.step('sign in through the storefront OTP routes', async () => {
+      await page.goto('/privacy');
+      const status = await page.evaluate(async () => {
+        const phone = '09123456789';
+        const headers = { 'Content-Type': 'application/json' };
+        const challenge = await fetch('/api/auth/otp/request', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ phone }),
+        });
+        if (!challenge.ok) return { challenge: challenge.status };
+
+        const verification = await fetch('/api/auth/otp/verify', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ phone, code: '12345' }),
+        });
+        return { challenge: challenge.status, verification: verification.status };
+      });
+      expect(status).toEqual({ challenge: 202, verification: 200 });
+      expect(await page.context().cookies(page.url())).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: SESSION_COOKIE_NAME, secure: true, httpOnly: true }),
+        ]),
+      );
+    });
     await page.route('**/api/profile', (route) =>
       route.fulfill({ json: { phone: '09123456789' } }),
     );
