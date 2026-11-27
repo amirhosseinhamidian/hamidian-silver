@@ -60,6 +60,10 @@ export class CampaignQuotasService {
           },
         }),
       ]);
+      if (campaign.marketingDestinationPath)
+        throw new BadRequestException(
+          'Advertising campaigns use a separate advertising budget and destination.',
+        );
       if (!product) throw new NotFoundException('Product not found.');
       const rule = campaign.promotion;
       const target = {

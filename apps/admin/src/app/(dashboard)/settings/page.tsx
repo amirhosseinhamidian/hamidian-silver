@@ -25,7 +25,11 @@ export default async function SiteSettingsPage() {
       </header>
       <div className="pt-6">
         <SiteSettingsView data={data} canWrite={user.permissions.includes('settings.write')} />
-        {user.permissions.includes('settings.write') ? <CampaignLinkBuilder /> : null}
+        {user.permissions.includes('settings.write') ? (
+          <div id="campaign-links" className="scroll-mt-24">
+            <CampaignLinkBuilder canReadReports={user.permissions.includes('finance.read')} />
+          </div>
+        ) : null}
       </div>
     </main>
   );

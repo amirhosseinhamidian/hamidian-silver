@@ -64,6 +64,7 @@ type Props = Readonly<{
   name?: string;
   kind?: CalendarValueKind;
   required?: boolean;
+  error?: string;
   defaultValue?: string;
   value?: string;
   onChange?: (value: string) => void;
@@ -80,6 +81,7 @@ export function DualCalendarPicker({
   name,
   kind = 'date-time',
   required,
+  error,
   defaultValue = '',
   value,
   onChange,
@@ -156,7 +158,14 @@ export function DualCalendarPicker({
               variant="outline"
               className="min-w-0 flex-1 justify-start text-start"
               aria-label={label}
-              aria-describedby={required ? `${id}-value ${id}-required` : `${id}-value`}
+              aria-describedby={[
+                `${id}-value`,
+                required && `${id}-required`,
+                error && `${id}-error`,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              aria-invalid={error ? true : undefined}
               data-calendar-field={name}
             >
               <bdi id={`${id}-value`}>
@@ -325,6 +334,11 @@ export function DualCalendarPicker({
           </DialogContent>
         )}
       </Dialog>
+      {error && (
+        <p id={`${id}-error`} role="alert" className="text-xs text-[var(--admin-color-danger)]">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

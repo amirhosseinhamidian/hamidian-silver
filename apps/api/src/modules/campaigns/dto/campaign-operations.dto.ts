@@ -124,7 +124,12 @@ export class CampaignCollectionOptionsDto {
 export class CampaignCollectionOptionsQueryDto extends PickType(CampaignProductQueryDto, [
   'q',
   'page',
-]) {}
+]) {
+  @ApiPropertyOptional({ enum: ['live'] })
+  @IsOptional()
+  @IsIn(['live'])
+  visibility?: 'live';
+}
 
 export class CampaignProductOptionDto extends CampaignNamedOptionDto {
   @ApiProperty({ type: Number, nullable: true })

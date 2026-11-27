@@ -39,6 +39,10 @@ describe('DualCalendarPicker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'روز پایان' }));
     expect(screen.queryByRole('combobox', { name: 'ساعت' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '۲ فروردین' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'تقویم' }), {
+      target: { value: 'gregory' },
+    });
+    expect(screen.getByRole('button', { name: '۲۱ مارس' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'تأیید انتخاب' }));
     const form = container.querySelector('form')!;
     expect(new FormData(form).get('to')).toBe('2024-03-21');

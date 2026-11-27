@@ -143,10 +143,13 @@ export default async function ReferralGrantPage({
       </nav>
       {report && totals ? (
         <>
-          <Card title="معرفی و تبدیل">
+          <Card
+            title="معرفی و تبدیل"
+            description={`خلاصهٔ تمام معرفی‌های ثبت‌شده در ${formatAdminInteger(Number(days))} روز اخیر`}
+          >
             <p className="mb-4 text-sm">
-              نرخ تبدیل، سهم معرفی‌های ثبت‌شده در این بازه با خرید اول تحویل‌شده و مستردنشدهٔ کامل
-              است.
+              نرخ تبدیل، سهم معرفی‌های این بازه است که خرید اول آن‌ها تحویل شده و بازپرداخت کامل
+              نداشته است. وضعیت پاداش در زمان گزارش خوانده می‌شود.
             </p>
             <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
               <div>
@@ -160,7 +163,9 @@ export default async function ReferralGrantPage({
               <div>
                 <dt>نرخ تبدیل</dt>
                 <dd className="font-bold">
-                  {totals.registered ? rate.format(totals.converted / totals.registered) : '—'}
+                  {totals.registered
+                    ? rate.format(totals.converted / totals.registered)
+                    : 'معرفی‌ای ثبت نشده است'}
                 </dd>
               </div>
               {Object.entries(countLabels).map(([key, label]) => (
@@ -173,7 +178,10 @@ export default async function ReferralGrantPage({
               ))}
             </dl>
           </Card>
-          <Card title="هزینه و اصلاح اعتبار">
+          <Card
+            title="هزینه و اصلاح اعتبار"
+            description="مجموع ثبت‌های مربوط به معرفی‌های همین بازه"
+          >
             <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
               {Object.entries(costLabels).map(([key, label]) => (
                 <div key={key}>
@@ -187,7 +195,7 @@ export default async function ReferralGrantPage({
               نمی‌شود.
             </p>
           </Card>
-          <Card title="معرفی‌ها">
+          <Card title="معرفی‌ها" description="فیلتر وضعیت فقط ردیف‌های این فهرست را محدود می‌کند.">
             <nav className="mb-4 flex flex-wrap gap-2" aria-label="وضعیت پاداش">
               <ButtonLink
                 href={`${path}?days=${days}`}
@@ -259,7 +267,11 @@ export default async function ReferralGrantPage({
                 ))}
               </ul>
             ) : (
-              <p className="text-sm">معرفی‌ای در این بازه و وضعیت ثبت نشده است.</p>
+              <p className="text-sm">
+                {page > 1
+                  ? 'ردیفی در این صفحه وجود ندارد.'
+                  : 'معرفی‌ای در این بازه و وضعیت ثبت نشده است.'}
+              </p>
             )}
             <nav className="mt-4 flex flex-wrap items-center gap-2" aria-label="صفحه‌بندی معرفی‌ها">
               {page > 1 && (

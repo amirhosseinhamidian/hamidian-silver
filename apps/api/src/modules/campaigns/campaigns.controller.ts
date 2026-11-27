@@ -29,6 +29,7 @@ import {
 import {
   CampaignDetailDto,
   CampaignListDto,
+  CampaignListQueryDto,
   CampaignPageQueryDto,
   CampaignSummaryDto,
   CampaignTransitionDto,
@@ -61,8 +62,8 @@ export class CampaignsController {
   @Get()
   @RequirePermissions(PERMISSION_CODES.SETTINGS_READ)
   @ApiOkResponse({ type: CampaignListDto })
-  list(@Query() query: CampaignPageQueryDto): Promise<CampaignListDto> {
-    return this.campaigns.list(query.page ?? 1);
+  list(@Query() query: CampaignListQueryDto): Promise<CampaignListDto> {
+    return this.campaigns.list(query);
   }
 
   @Get('product-options')
@@ -93,7 +94,7 @@ export class CampaignsController {
   selectCollections(
     @Query() query: CampaignCollectionOptionsQueryDto,
   ): Promise<CampaignCollectionOptionsDto> {
-    return this.campaigns.selectCollections(query.q, query.page ?? 1);
+    return this.campaigns.selectCollections(query.q, query.page ?? 1, query.visibility);
   }
 
   @Get(':id')

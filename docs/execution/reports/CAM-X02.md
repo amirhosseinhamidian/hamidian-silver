@@ -16,7 +16,7 @@
 
 ## اجرای محلی
 
-~~~bash
+```bash
 cd "/Users/amirhosseinhamidian/Projects/hamidian-silver" &&
 pnpm contracts:generate &&
 pnpm contracts:typecheck &&
@@ -28,11 +28,11 @@ pnpm frontend:typecheck &&
 pnpm admin:test orders-model.test.ts &&
 pnpm storefront:test campaign-visibility.test.tsx campaign-banner.test.tsx storefront-header.test.tsx storefront-search.test.tsx catalog-product-card.test.tsx product-purchase-panel.test.tsx customer-order-detail.test.tsx structured-data.test.ts &&
 pnpm frontend:build
-~~~
+```
 
 PostgreSQL آزمایشی روی یک پورت آزاد اجرا می‌شود. در پایان بلوک همان کانتینر جمع می‌شود.
 
-~~~bash
+```bash
 (
   cd "/Users/amirhosseinhamidian/Projects/hamidian-silver" || exit 1
   cam_x02_db="$(docker run -d --rm \
@@ -51,11 +51,11 @@ PostgreSQL آزمایشی روی یک پورت آزاد اجرا می‌شود. 
   pnpm exec prisma migrate deploy &&
   pnpm api:test:e2e --runInBand 'campaign-landing|campaign-lifecycle|promotion-checkout|campaign-quota'
 )
-~~~
+```
 
-~~~bash
+```bash
 cd "/Users/amirhosseinhamidian/Projects/hamidian-silver" &&
 pnpm storefront:test:e2e campaign-landing.spec.ts catalog-seo.spec.ts purchase-flow.spec.ts
-~~~
+```
 
 برای بازبینی دستی، یک کمپین محلی با محصول موجود، تخفیف مستقیم و سهمیه تعریف کنید. یک تصویر ثابت موبایل و یک GIF دسکتاپ همراه تصویر جایگزین در جایگاه شمارش معکوس قرار دهید. اولویت، زمان شروع و پایان، ارتفاع، رنگ متن و لینک را در اندازه‌های موبایل و دسکتاپ بررسی کنید. کاهش حرکت را از تنظیم مرورگر فعال کنید و سپس در حالت عادی دکمهٔ توقف تصویر را امتحان کنید. نام کمپین، قیمت و سهمیه را در کارت، جست‌وجو و صفحهٔ کالا مقایسه کنید. یک سفارش کمپینی ثبت کنید، کمپین را متوقف کنید و حذف عناصر عمومی را با باز ماندن تب بررسی کنید. تگ سفارش در حساب مشتری و پنل باید با نام ثبت‌شدهٔ زمان خرید دیده شود.

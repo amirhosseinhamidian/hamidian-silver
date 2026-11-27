@@ -11,11 +11,17 @@ import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Select } from '@/components/ui/select';
+import { campaignFormError } from '@/lib/campaigns/campaign-api-errors';
+import {
+  campaignIntMax,
+  focusCampaignField,
+  type CampaignFieldError,
+} from '@/lib/campaigns/campaign-form';
 import { addCampaignSelection, useCampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
 import {
   formatAdminInteger,
   formatAdminToman,
-  parseAdminMoneyInput,
+  parseAdminWholeToman,
   toAsciiDigits,
   toPersianDigits,
 } from '@/lib/presentation/formatters';
@@ -23,6 +29,7 @@ import { CampaignPercentageOverrides, formatRateDrafts } from './campaign-percen
 import { CampaignProductSearch } from './campaign-product-search';
 
 type Rule = components['schemas']['SavePromotionDto'];
+const percentageFormatter = new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 2 });
 const labels: Record<Rule['kind'], string> = {
   PERCENT: 'درصدی',
   FIXED: 'مبلغ ثابت',
@@ -30,6 +37,26 @@ const labels: Record<Rule['kind'], string> = {
   BUNDLE: 'بستهٔ ترکیبی',
   FREE_SHIPPING: 'ارسال رایگان',
 };
+const promotionServerFields = {
+  'This coupon is already in use.': {
+    field: 'coupon',
+    message: 'این کد تخفیف قبلاً برای کمپینی ثبت شده است.',
+  },
+  'Enter a valid coupon code.': {
+    field: 'coupon',
+    message:
+      'برای کد تخفیف از ۲ تا ۳۲ حرف لاتین، عدد یا خط تیره استفاده کنید. کد باید با حرف یا عدد آغاز شود.',
+  },
+  'A coupon needs a redemption limit.': {
+    field: 'uses',
+    message: 'برای کد تخفیف، سقف تعداد استفاده را تعیین کنید.',
+  },
+} satisfies Record<string, CampaignFieldError>;
+
+function percentageBps(text: string) {
+  const value = toAsciiDigits(text.trim()).replace('٫', '.');
+  return /^\d{1,2}(\.\d{1,2})?$/.test(value) ? Math.round(Number(value) * 100) : NaN;
+}
 
 export function CampaignPromotionEditor({
   id,
@@ -53,25 +80,31 @@ export function CampaignPromotionEditor({
   const taxonomy = useCampaignTaxonomy();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<CampaignFieldError | null>(null);
+  const errorFor = (field: string) =>
+    fieldError?.field === field ? fieldError.message : undefined;
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
-    const fields = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const fields = new FormData(form);
+    setError(null);
+    setFieldError(null);
+    function invalid(issue: CampaignFieldError) {
+      setFieldError(issue);
+      focusCampaignField(form, issue.field);
+    }
     const text = (field: string) => String(fields.get(field) ?? '').trim();
     const integer = (field: string) => {
       const value = toAsciiDigits(text(field));
       return /^\d+$/.test(value) ? Number(value) : NaN;
     };
-    const money = (field: string) => parseAdminMoneyInput(text(field));
+    const money = (field: string) => parseAdminWholeToman(text(field));
     const percentageOverrides =
       allowPercentageOverrides && kind === 'PERCENT'
         ? rates.map(({ productId, variantId, percentage }) => {
-            const normalized = toAsciiDigits(percentage.trim()).replace('٫', '.');
-            const rateBps = /^\d{1,2}(\.\d{1,2})?$/.test(normalized)
-              ? Math.round(Number(normalized) * 100)
-              : NaN;
-            return { productId, variantId, rateBps };
+            return { productId, variantId, rateBps: percentageBps(percentage) };
           })
         : undefined;
     if (
@@ -82,21 +115,68 @@ export function CampaignPromotionEditor({
       setError('نرخ اختصاصی باید بین ۱ و ۵۰ درصد و حداکثر دارای دو رقم اعشار باشد.');
       return;
     }
+    const value =
+      kind === 'FREE_SHIPPING'
+        ? 0
+        : kind === 'PERCENT'
+          ? percentageBps(text('percentage'))
+          : money('amount');
+    const minimum = text('minimum') ? money('minimum') : 0;
+    const limit = money('limit');
+    const percentCap = percentageBps(text('percentCap'));
+    const priority = text('priority') ? integer('priority') : 0;
+    const couponCode = text('coupon').toUpperCase() || null;
+    const maxUses = text('uses') ? integer('uses') : null;
+    if (kind === 'PERCENT' && (!value || value > 5_000))
+      return invalid({
+        field: 'percentage',
+        message: 'درصد را بین ۰٫۰۱ تا ۵۰ با حداکثر دو رقم اعشار وارد کنید.',
+      });
+    if (kind !== 'PERCENT' && kind !== 'FREE_SHIPPING' && (!value || value > campaignIntMax))
+      return invalid({
+        field: 'amount',
+        message: 'مبلغ تخفیف را به تومان و به‌صورت عدد صحیح مثبت وارد کنید.',
+      });
+    if (minimum === null || minimum > campaignIntMax || (kind === 'THRESHOLD' && minimum === 0))
+      return invalid({
+        field: 'minimum',
+        message:
+          kind === 'THRESHOLD'
+            ? 'برای این نوع تخفیف، حداقل خرید مثبت و به تومان لازم است.'
+            : 'حداقل خرید را به تومان و به‌صورت عدد صحیح وارد کنید.',
+      });
+    if (limit === null || limit < 1 || limit > campaignIntMax)
+      return invalid({
+        field: 'limit',
+        message: 'سقف تخفیف هر سفارش را به تومان و به‌صورت عدد صحیح مثبت وارد کنید.',
+      });
+    if (!percentCap || percentCap > 5_000)
+      return invalid({
+        field: 'percentCap',
+        message: 'سقف درصد را بین ۰٫۰۱ تا ۵۰ با حداکثر دو رقم اعشار وارد کنید.',
+      });
+    if (!Number.isInteger(priority) || priority < 0 || priority > 100)
+      return invalid({ field: 'priority', message: 'اولویت باید عدد صحیح بین ۰ تا ۱۰۰ باشد.' });
+    if (couponCode && !/^[A-Z0-9][A-Z0-9-]{1,31}$/.test(couponCode))
+      return invalid(promotionServerFields['Enter a valid coupon code.']);
+    if (couponCode && maxUses === null)
+      return invalid(promotionServerFields['A coupon needs a redemption limit.']);
+    if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 1_000_000))
+      return invalid({
+        field: 'uses',
+        message: 'تعداد استفاده باید عدد صحیح بین ۱ و ۱٬۰۰۰٬۰۰۰ باشد.',
+      });
+
     const draft: Rule = {
       kind,
       ...(percentageOverrides ? { percentageOverrides } : {}),
-      value:
-        kind === 'FREE_SHIPPING'
-          ? 0
-          : kind === 'PERCENT'
-            ? integer('percentage') * 100
-            : (money('amount') ?? 0),
-      minSubtotalToman: money('minimum') ?? 0,
-      maxDiscountToman: money('limit') ?? 0,
-      maxDiscountBps: integer('percentCap') * 100,
-      priority: integer('priority'),
-      couponCode: text('coupon') || null,
-      maxUses: text('uses') ? integer('uses') : null,
+      value: value ?? 0,
+      minSubtotalToman: minimum,
+      maxDiscountToman: limit,
+      maxDiscountBps: percentCap,
+      priority,
+      couponCode,
+      maxUses,
       bundleProductSlugs: kind === 'BUNDLE' ? bundle : [],
       expectedVersion: rule?.expectedVersion ?? 0,
     };
@@ -104,16 +184,7 @@ export function CampaignPromotionEditor({
       setError('حداقل دو محصول متمایز برای بسته انتخاب کنید.');
       return;
     }
-    if (
-      [draft.value, draft.maxDiscountBps, draft.priority, draft.maxUses ?? 1].some(
-        (value) => !Number.isSafeInteger(value),
-      )
-    ) {
-      setError('مقادیر عددی قانون را بررسی کنید.');
-      return;
-    }
     setBusy(true);
-    setError(null);
     try {
       const response = await fetch(`/api/promotions/${id}`, {
         method: 'PUT',
@@ -121,21 +192,9 @@ export function CampaignPromotionEditor({
         body: JSON.stringify(draft),
       });
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as {
-          error?: { message?: string };
-        } | null;
-        const message = payload?.error?.message;
-        if (message === 'Set a campaign budget before configuring a promotion.')
-          setError('ابتدا بودجهٔ کمپین را در پیش‌نویس ثبت کنید.');
-        else if (message === 'This coupon is already in use.')
-          setError('این کد تخفیف قبلاً برای کمپینی ثبت شده است.');
-        else if (message === 'Choose active rate targets in the festival scope.')
-          setError('نرخ اختصاصی را فقط برای محصول یا واریانت فعال در محدودهٔ جشنواره ثبت کنید.');
-        else if (response.status === 409)
-          setError('نسخه یا وضعیت کمپین تغییر کرده است. صفحه را تازه کنید.');
-        else if (response.status === 400)
-          setError('نوع قانون، سقف‌ها، تعداد استفاده و محدودهٔ محصول را بررسی کنید.');
-        else setError('ذخیرهٔ قانون ممکن نشد.');
+        const issue = await campaignFormError(response, promotionServerFields);
+        if (typeof issue === 'string') setError(issue);
+        else invalid(issue);
         return;
       }
       router.refresh();
@@ -162,7 +221,7 @@ export function CampaignPromotionEditor({
                 </dt>
                 <dd>
                   {rule.kind === 'PERCENT'
-                    ? `${formatAdminInteger(rule.value / 100)}٪`
+                    ? `${percentageFormatter.format(rule.value / 100)}٪`
                     : formatAdminToman(rule.value)}
                 </dd>
               </div>
@@ -188,7 +247,7 @@ export function CampaignPromotionEditor({
               <dt>سقف هر سفارش</dt>
               <dd>
                 {formatAdminToman(rule.maxDiscountToman)} ·{' '}
-                {formatAdminInteger(rule.maxDiscountBps / 100)}٪
+                {percentageFormatter.format(rule.maxDiscountBps / 100)}٪
               </dd>
             </div>
             <div>
@@ -225,7 +284,7 @@ export function CampaignPromotionEditor({
 
   return (
     <Card title="قانون تخفیف" description="این قانون پس از تأیید و انتشار کمپین قابل اعمال است.">
-      <form className="space-y-4" onSubmit={(event) => void save(event)}>
+      <form className="space-y-4" onSubmit={(event) => void save(event)} noValidate>
         <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">
           <FormField id="promotion-kind" label="نوع تخفیف">
             {(control) => (
@@ -242,14 +301,15 @@ export function CampaignPromotionEditor({
             <FormField
               id="promotion-percent"
               label={allowPercentageOverrides ? 'درصد تخفیف پیش‌فرض' : 'درصد تخفیف'}
-              hint="از ۱ تا ۵۰"
+              hint="از ۰٫۰۱ تا ۵۰ درصد، با حداکثر دو رقم اعشار."
+              error={errorFor('percentage')}
               required
             >
               {(control) => (
                 <Input
                   {...control}
                   name="percentage"
-                  inputMode="numeric"
+                  inputMode="decimal"
                   defaultValue={rule?.kind === 'PERCENT' ? rule.value / 100 : 10}
                   required
                 />
@@ -260,12 +320,15 @@ export function CampaignPromotionEditor({
               <FormField
                 id="promotion-amount"
                 label={kind === 'BUNDLE' ? 'تخفیف هر بسته (تومان)' : 'مبلغ تخفیف (تومان)'}
+                hint="مبلغ باید بیشتر از صفر باشد."
+                error={errorFor('amount')}
                 required
               >
                 {(control) => (
                   <MoneyInput
                     {...control}
                     name="amount"
+                    wholeToman
                     defaultValue={rule && rule.kind !== 'PERCENT' ? rule.value : ''}
                     required
                   />
@@ -273,16 +336,38 @@ export function CampaignPromotionEditor({
               </FormField>
             )
           )}
-          <FormField id="promotion-min" label="حداقل خرید کالا (تومان)">
+          <FormField
+            id="promotion-min"
+            label="حداقل خرید کالا (تومان)"
+            hint={
+              kind === 'THRESHOLD'
+                ? 'حداقل مبلغ لازم برای اعمال این تخفیف.'
+                : 'صفر یا خالی یعنی شرط حداقل خرید اعمال نمی‌شود.'
+            }
+            error={errorFor('minimum')}
+            required={kind === 'THRESHOLD'}
+          >
             {(control) => (
-              <MoneyInput {...control} name="minimum" defaultValue={rule?.minSubtotalToman ?? 0} />
+              <MoneyInput
+                {...control}
+                name="minimum"
+                wholeToman
+                defaultValue={rule?.minSubtotalToman ?? 0}
+              />
             )}
           </FormField>
-          <FormField id="promotion-limit" label="سقف مبلغ هر سفارش (تومان)" required>
+          <FormField
+            id="promotion-limit"
+            label="سقف مبلغ هر سفارش (تومان)"
+            hint="حداکثر تخفیف این قانون در یک سفارش. مقدار مثبت وارد کنید."
+            error={errorFor('limit')}
+            required
+          >
             {(control) => (
               <MoneyInput
                 {...control}
                 name="limit"
+                wholeToman
                 defaultValue={rule?.maxDiscountToman}
                 required
               />
@@ -291,35 +376,26 @@ export function CampaignPromotionEditor({
           <FormField
             id="promotion-percent-limit"
             label="سقف درصد از مبلغ کالای واجد شرایط"
-            hint={
-              allowPercentageOverrides
-                ? 'از ۱ تا ۵۰. این سقف روی مجموع تخفیف سفارش اعمال می‌شود.'
-                : 'از ۱ تا ۵۰'
-            }
+            hint="از ۰٫۰۱ تا ۵۰ درصد. سقف نهایی از مبلغ کالای واجد شرایط محاسبه می‌شود."
+            error={errorFor('percentCap')}
             required
           >
             {(control) => (
               <Input
                 {...control}
                 name="percentCap"
-                inputMode="numeric"
+                inputMode="decimal"
                 defaultValue={rule ? rule.maxDiscountBps / 100 : 20}
                 required
               />
             )}
           </FormField>
-          <FormField id="promotion-priority" label="اولویت میان کمپین‌ها" hint="از ۰ تا ۱۰۰">
-            {(control) => (
-              <Input
-                {...control}
-                name="priority"
-                inputMode="numeric"
-                defaultValue={rule?.priority ?? 0}
-                required
-              />
-            )}
-          </FormField>
-          <FormField id="promotion-coupon" label="کد تخفیف" hint="برای اعمال خودکار خالی بگذارید.">
+          <FormField
+            id="promotion-coupon"
+            label="کد تخفیف"
+            hint="مانند NOROUZ20. برای اعمال خودکار خالی بگذارید."
+            error={errorFor('coupon')}
+          >
             {(control) => (
               <Input
                 {...control}
@@ -330,7 +406,12 @@ export function CampaignPromotionEditor({
               />
             )}
           </FormField>
-          <FormField id="promotion-uses" label="سقف تعداد استفاده" hint="برای کوپن الزامی است.">
+          <FormField
+            id="promotion-uses"
+            label="سقف تعداد استفاده"
+            hint="از ۱ تا ۱٬۰۰۰٬۰۰۰. خالی یعنی بدون سقف تعداد و فقط برای قانون بدون کوپن مجاز است."
+            error={errorFor('uses')}
+          >
             {(control) => (
               <Input
                 {...control}
@@ -340,6 +421,24 @@ export function CampaignPromotionEditor({
               />
             )}
           </FormField>
+          <details className="space-y-3 rounded-lg border border-[var(--admin-color-border)] p-3 sm:col-span-2">
+            <summary className="cursor-pointer text-sm font-semibold">تنظیمات پیشرفته</summary>
+            <FormField
+              id="promotion-priority"
+              label="اولویت میان کمپین‌ها"
+              hint="از ۰ تا ۱۰۰. مقدار خالی برابر صفر است."
+              error={errorFor('priority')}
+            >
+              {(control) => (
+                <Input
+                  {...control}
+                  name="priority"
+                  inputMode="numeric"
+                  defaultValue={rule?.priority ?? 0}
+                />
+              )}
+            </FormField>
+          </details>
           {allowPercentageOverrides && kind === 'PERCENT' && (
             <CampaignPercentageOverrides
               campaignId={id}

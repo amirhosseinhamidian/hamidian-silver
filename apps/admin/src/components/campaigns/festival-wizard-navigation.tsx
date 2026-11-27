@@ -77,8 +77,8 @@ export function FestivalWizardNavigation({
   return (
     <div className="min-w-0 space-y-3">
       <nav aria-label="مسیر جشنواره" className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
-        <Link href="/campaigns" className="underline">
-          جشنواره‌ها و کمپین‌ها
+        <Link href="/campaigns?view=festivals" className="underline">
+          جشنواره‌های فروش
         </Link>
         <span aria-hidden="true">‹</span>
         <span className="break-words font-semibold" aria-current="page">

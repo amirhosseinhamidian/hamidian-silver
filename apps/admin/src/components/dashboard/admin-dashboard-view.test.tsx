@@ -125,4 +125,15 @@ describe('AdminDashboardView', () => {
     expect(screen.getByText(formatAdminToman(12_345_000))).toBeInTheDocument();
     expect(screen.getByText('هشدار فعال').parentElement).toHaveTextContent('—');
   });
+
+  it('does not present an unavailable priority queue as an empty queue', () => {
+    render(
+      <AdminDashboardView data={dashboardData({ priorityWork: { data: null, failed: true } })} />,
+    );
+
+    const queue = screen.getByRole('heading', { name: 'اقدامات اولویت‌دار' }).closest('section');
+    expect(queue).toHaveTextContent('اطلاعات دریافت نشد');
+    expect(queue).not.toHaveTextContent('۰ مورد');
+    expect(queue).not.toHaveTextContent('صف اقدام فوری خالی است');
+  });
 });

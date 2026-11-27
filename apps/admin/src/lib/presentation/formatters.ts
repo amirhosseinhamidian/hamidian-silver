@@ -56,6 +56,11 @@ export function parseAdminMoneyInput(value: string): number | null {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
+export function parseAdminWholeToman(value: string): number | null {
+  const text = toAsciiDigits(value.trim());
+  return /^\d+$|^\d{1,3}(?:[٬,]\d{3})+$/.test(text) ? parseAdminMoneyInput(text) : null;
+}
+
 const ONES = [
   '',
   'یک',

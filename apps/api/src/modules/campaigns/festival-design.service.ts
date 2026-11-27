@@ -183,6 +183,7 @@ export class FestivalDesignService {
     const campaign = await this.db.campaign.findUnique({
       where: { id: campaignId },
       select: {
+        managementPurpose: true,
         revision: true,
         landing: { select: { design: true } },
         revisions: {
@@ -194,6 +195,8 @@ export class FestivalDesignService {
       },
     });
     if (!campaign) throw new NotFoundException('Campaign not found.');
+    if (campaign.managementPurpose === 'SALES')
+      throw new BadRequestException('Sales offers do not have a landing.');
     const design = readFestivalDesign(campaign.landing?.design);
     const [templates, assets] = await Promise.all([
       this.db.festivalThemeTemplate.findMany({
@@ -278,6 +281,8 @@ export class FestivalDesignService {
           where: { id: campaignId },
           include: { landing: true },
         });
+        if (campaign?.managementPurpose === 'SALES')
+          throw new BadRequestException('Sales offers do not have a landing.');
         if (!campaign?.landing)
           throw new NotFoundException('Save the campaign landing before setting a theme.');
         if (campaign.status !== 'DRAFT' || campaign.revision !== expectedRevision)
@@ -335,6 +340,8 @@ export class FestivalDesignService {
         });
         if (!saved) throw new NotFoundException('Campaign landing not found.');
         const { campaign } = saved;
+        if (campaign.managementPurpose === 'SALES')
+          throw new BadRequestException('Sales offers do not have a landing.');
         await validateSections(tx, campaign, design);
         const { landing, placements } = (await resolve?.(tx, saved, design)) ?? {
           landing: saved,

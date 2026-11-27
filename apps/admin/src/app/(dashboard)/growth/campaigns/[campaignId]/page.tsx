@@ -14,9 +14,11 @@ export default async function GrowthCampaignPage({ params, searchParams }: PageP
   const { campaignId } = await params;
   const path = `/growth/campaigns/${encodeURIComponent(campaignId)}`;
   const user = await requireAdminSession({ permissions: ['finance.read'], returnTo: path });
-  const { from, to, page } = parseGrowthFilters(await searchParams);
+  const search = await searchParams;
+  const { from, to, page } = parseGrowthFilters(search);
+  const { page: contentPage } = parseGrowthFilters({ page: search.contentPage });
   const result = /^[a-z0-9][a-z0-9._-]{0,63}$/.test(campaignId)
-    ? await loadCampaignPerformance(campaignId, { from, to, page })
+    ? await loadCampaignPerformance(campaignId, { from, to, page, contentPage })
     : { report: null, status: 404 };
 
   return (
@@ -26,6 +28,7 @@ export default async function GrowthCampaignPage({ params, searchParams }: PageP
       to={to}
       path={path}
       canReadOrders={user.permissions.includes('orders.read')}
+      canReadSettings={user.permissions.includes('settings.read')}
     />
   );
 }

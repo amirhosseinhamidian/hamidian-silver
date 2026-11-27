@@ -18,7 +18,7 @@ Hero از اسلایدشوی فعلی فروشگاه برای تصویر، GIF �
 
 ## اجرای محلی
 
-~~~bash
+```bash
 cd "/Users/amirhosseinhamidian/Projects/hamidian-silver" &&
 pnpm contracts:generate &&
 pnpm contracts:typecheck &&
@@ -29,11 +29,11 @@ pnpm frontend:lint &&
 pnpm frontend:typecheck &&
 pnpm storefront:test catalog-product-grid.test.tsx homepage-hero.test.tsx campaign-banner.test.tsx campaign-visibility.test.tsx &&
 pnpm frontend:build
-~~~
+```
 
 برای تست PostgreSQL، Docker Desktop را روشن کنید. این بلوک دیتابیس آزمایشی را روی یک پورت آزاد راه می‌اندازد و در پایان کانتینر را جمع می‌کند.
 
-~~~bash
+```bash
 (
   cd "/Users/amirhosseinhamidian/Projects/hamidian-silver" || exit 1
   cam_x03_db="$(docker run -d --rm \
@@ -52,11 +52,11 @@ pnpm frontend:build
   pnpm exec prisma migrate deploy &&
   pnpm api:test:e2e --runInBand 'campaign-landing|campaign-lifecycle|campaign-quota|promotion-checkout'
 )
-~~~
+```
 
-~~~bash
+```bash
 cd "/Users/amirhosseinhamidian/Projects/hamidian-silver" &&
 pnpm storefront:test:e2e campaign-landing.spec.ts catalog-facets.spec.ts catalog-seo.spec.ts
-~~~
+```
 
 برای بررسی دستی یک مجموعهٔ محلی دارای بیش از یک صفحه و یک قانون تخفیف فعال آماده کنید. Hero را با تصویر موبایل و GIF دارای تصویر ثابت جایگزین تنظیم کنید. ترتیب بخش‌ها را با ماوس و صفحه‌کلید تغییر دهید و دو اندازهٔ پیش‌نمایش را باز کنید. دو نسخه ذخیره کنید و نسخهٔ قبلی را بازگردانید. پس از تأیید و شروع کمپین، تایمر، سکشن زمان‌دار، فیلترها، پیوند صفحهٔ بعد و رفتن به پایان فهرست را بررسی کنید. پس از بارگیری یک صفحهٔ اضافه، یک محصول باز کنید و با Back موقعیت فهرست را بررسی کنید. صفحهٔ فیلترشده را برای Canonical و Robots و پایان کمپین را برای وضعیت عمومی بازبینی کنید.

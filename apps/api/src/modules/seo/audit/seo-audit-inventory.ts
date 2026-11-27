@@ -46,7 +46,14 @@ export async function readAuditInventory(db: PrismaService, origin: string, now:
       select,
     }),
     db.campaignLanding.findMany({
-      where: { campaign: { status: 'ACTIVE', startsAt: { lte: now }, endsAt: { gt: now } } },
+      where: {
+        campaign: {
+          managementPurpose: null,
+          status: 'ACTIVE',
+          startsAt: { lte: now },
+          endsAt: { gt: now },
+        },
+      },
       orderBy: [{ campaign: { startsAt: 'desc' } }, { campaignId: 'asc' }],
       take: 2,
       select: { slug: true, campaign: { select: { kind: true } } },

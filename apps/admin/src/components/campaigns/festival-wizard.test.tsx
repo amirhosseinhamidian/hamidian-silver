@@ -5,7 +5,9 @@ import type { CampaignDetail } from '@/lib/campaigns/campaign-model';
 import { festivalStepHref, suggestedFestivalSlug } from '@/lib/campaigns/festival-wizard';
 import { CampaignEditor } from './campaign-editor';
 import { CampaignLandingEditor } from './campaign-landing-editor';
+import { CampaignPromotionEditor } from './campaign-promotion-editor';
 import { FestivalDraftLink, FestivalWizardNavigation } from './festival-wizard-navigation';
+import { MarketingCampaignEditor } from './marketing-campaign-editor';
 
 const router = vi.hoisted(() => ({ refresh: vi.fn(), replace: vi.fn(), push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
@@ -19,15 +21,23 @@ vi.mock('@/components/ui/dual-calendar-picker', () => ({
     name,
     defaultValue,
     required,
+    error,
   }: {
     label: string;
     name?: string;
     defaultValue?: string;
     required?: boolean;
+    error?: string;
   }) => (
     <label>
       {label}
-      <input name={name} defaultValue={defaultValue} required={required} />
+      <input
+        name={name}
+        defaultValue={defaultValue}
+        required={required}
+        aria-invalid={error ? true : undefined}
+        data-calendar-field={name}
+      />
     </label>
   ),
 }));
@@ -97,8 +107,15 @@ it('starts with the basic fields and opens product selection after an automatica
   fireEvent.change(screen.getByLabelText('زمان آغاز'), {
     target: { value: campaign.startsTehran },
   });
+  const saveButton = screen.getByRole('button', { name: 'ذخیره و انتخاب محصولات' });
+  fireEvent.change(screen.getByLabelText('زمان پایان'), {
+    target: { value: campaign.startsTehran },
+  });
+  fireEvent.click(saveButton);
+  expect(save).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('زمان پایان')).toHaveAttribute('aria-invalid', 'true');
   fireEvent.change(screen.getByLabelText('زمان پایان'), { target: { value: campaign.endsTehran } });
-  fireEvent.click(screen.getByRole('button', { name: 'ذخیره و انتخاب محصولات' }));
+  fireEvent.click(saveButton);
 
   await waitFor(() =>
     expect(router.replace).toHaveBeenCalledWith(festivalStepHref(id, 'products')),
@@ -111,6 +128,72 @@ it('starts with the basic fields and opens product selection after an automatica
     budgetToman: 0,
   });
   expect(suggestedFestivalSlug('Black Friday 2026', 'abcd1234')).toBe('black-friday-2026-abcd1234');
+});
+
+it('marks the missing coupon limit and submits fractional percentages without rounding', async () => {
+  const save = vi.fn(async (_path: string, _request: RequestInit) => Response.json({}));
+  vi.stubGlobal('fetch', save);
+  render(<CampaignPromotionEditor id={id} rule={null} editable allowPercentageOverrides={false} />);
+  fireEvent.change(screen.getByLabelText('درصد تخفیف', { exact: false }), {
+    target: { value: '۱۲٫۵' },
+  });
+  fireEvent.change(screen.getByLabelText('سقف مبلغ هر سفارش (تومان)', { exact: false }), {
+    target: { value: '۱۰۰۰۰' },
+  });
+  fireEvent.change(screen.getByLabelText('کد تخفیف'), { target: { value: 'sale12' } });
+  const submit = screen.getByRole('button', { name: /ذخیره.*قانون/ });
+  fireEvent.click(submit);
+  expect(save).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('سقف تعداد استفاده')).toHaveAttribute('aria-invalid', 'true');
+  fireEvent.change(screen.getByLabelText('سقف تعداد استفاده'), { target: { value: '۲' } });
+  fireEvent.click(submit);
+  await waitFor(() => expect(save).toHaveBeenCalledOnce());
+  expect(JSON.parse(String(save.mock.calls[0][1].body))).toMatchObject({
+    value: 1250,
+    maxDiscountBps: 2000,
+    maxUses: 2,
+    couponCode: 'SALE12',
+  });
+});
+
+it('saves a standalone offer and opens its discount step with the list filters', async () => {
+  const save = vi.fn(async (_path: string, _request: RequestInit) => Response.json({ id }));
+  vi.stubGlobal('fetch', save);
+  render(<CampaignEditor createKind="SALES" listQuery={{ view: 'sales', status: 'DRAFT' }} />);
+
+  expect(screen.queryByLabelText('کانال', { exact: false })).toBeNull();
+  expect(screen.queryByText('تنظیمات نمایش کمپین')).toBeNull();
+  fireEvent.change(screen.getByLabelText('نام پیشنهاد', { exact: false }), {
+    target: { value: 'پیشنهاد نقره' },
+  });
+  fireEvent.change(screen.getByLabelText('هدف', { exact: false }), {
+    target: { value: campaign.goal },
+  });
+  fireEvent.change(screen.getByLabelText('زمان آغاز'), {
+    target: { value: campaign.startsTehran },
+  });
+  fireEvent.change(screen.getByLabelText('زمان پایان'), { target: { value: campaign.endsTehran } });
+  fireEvent.change(screen.getByLabelText('سقف بودجهٔ تخفیف (تومان)', { exact: false }), {
+    target: { value: '۵۰۰۰۰' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'ذخیرهٔ پیش‌نویس' }));
+
+  await waitFor(() =>
+    expect(router.replace).toHaveBeenCalledWith(
+      `/campaigns?view=sales&status=DRAFT&id=${id}&step=promotion`,
+    ),
+  );
+  const [path, request] = save.mock.calls[0];
+  expect(path).toBe('/api/campaigns');
+  const body = JSON.parse(String(request.body));
+  expect(body).toMatchObject({
+    managementPurpose: 'SALES',
+    bannerEnabled: false,
+    bannerPriority: 0,
+    budgetToman: 50_000,
+  });
+  expect(body).not.toHaveProperty('trackingId');
+  expect(body).not.toHaveProperty('kind');
 });
 
 it('keeps the saved scope, schedule and placement settings when the budget step is saved', async () => {
@@ -138,6 +221,49 @@ it('keeps the saved scope, schedule and placement settings when the budget step 
     ctaPath: campaign.ctaPath,
     ctaLabel: campaign.ctaLabel,
     mediaId: campaign.media?.id,
+  });
+});
+
+it('creates a marketing draft with a destination and a separate advertising budget', async () => {
+  const save = vi.fn(async (_path: string, _request: RequestInit) => Response.json({ id }));
+  vi.stubGlobal('fetch', save);
+  const listPath = '/campaigns?view=marketing';
+  render(<MarketingCampaignEditor listPath={listPath} />);
+
+  fireEvent.change(screen.getByLabelText('نام کمپین', { exact: false }), {
+    target: { value: 'تبلیغ نقره' },
+  });
+  fireEvent.change(screen.getByLabelText('هدف تجاری', { exact: false }), {
+    target: { value: 'معرفی فروشگاه' },
+  });
+  fireEvent.change(screen.getByLabelText('توضیحات', { exact: false }), {
+    target: { value: 'معرفی محصولات تازه' },
+  });
+  fireEvent.change(screen.getByLabelText('زمان آغاز'), {
+    target: { value: campaign.startsTehran },
+  });
+  fireEvent.change(screen.getByLabelText('زمان پایان'), { target: { value: campaign.endsTehran } });
+  fireEvent.change(
+    screen.getByLabelText('بودجهٔ برنامه‌ریزی‌شدهٔ تبلیغات (تومان)', { exact: false }),
+    { target: { value: '۲۰۰۰۰' } },
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'ذخیرهٔ پیش‌نویس' }));
+
+  await waitFor(() =>
+    expect(router.replace).toHaveBeenCalledWith(`${listPath}&id=${id}&step=review`),
+  );
+  const [path, request] = save.mock.calls[0];
+  expect(path).toBe('/api/campaigns');
+  expect(JSON.parse(String(request.body))).toMatchObject({
+    kind: 'MARKETING',
+    channel: 'instagram',
+    budgetToman: 20_000,
+    bannerEnabled: false,
+    marketing: {
+      destinationPath: '/products',
+      relatedFestivalId: null,
+      relatedSalesCampaignId: null,
+    },
   });
 });
 

@@ -169,15 +169,14 @@ export default async function WalletOperationsPage({
                   <dt>رزروشده</dt>
                   <dd>{formatAdminToman(balance.reservedToman)}</dd>
                 </div>
-                {balance.nextExpiryAt && (
-                  <div>
-                    <dt>نزدیک‌ترین سررسید</dt>
-                    <dd>
-                      {formatAdminToman(balance.nextExpiryToman ?? 0)} در{' '}
-                      {formatAdminDateTime(balance.nextExpiryAt)}
-                    </dd>
-                  </div>
-                )}
+                <div>
+                  <dt>نزدیک‌ترین سررسید</dt>
+                  <dd>
+                    {balance.nextExpiryAt
+                      ? `${typeof balance.nextExpiryToman === 'number' ? formatAdminToman(balance.nextExpiryToman) : 'مبلغ در دسترس نیست'} · ${formatAdminDateTime(balance.nextExpiryAt)}`
+                      : 'سررسید فعالی ثبت نشده است'}
+                  </dd>
+                </div>
               </dl>
             ) : (
               <Alert tone="danger">دریافت مانده انجام نشد.</Alert>

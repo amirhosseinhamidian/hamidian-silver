@@ -7,30 +7,44 @@ import {
   adminMoneyToWords,
   formatAdminMoneyInput,
   parseAdminMoneyInput,
+  parseAdminWholeToman,
+  toPersianDigits,
 } from '@/lib/presentation/formatters';
 
-type MoneyInputProps = Omit<ComponentPropsWithoutRef<'input'>, 'type' | 'inputMode'>;
+type MoneyInputProps = Omit<ComponentPropsWithoutRef<'input'>, 'type' | 'inputMode'> & {
+  wholeToman?: boolean;
+};
 
 export function MoneyInput({
   value,
   defaultValue,
   onChange,
+  onFocus,
+  onBlur,
   id,
+  wholeToman = false,
   'aria-describedby': describedBy,
   ...props
 }: MoneyInputProps) {
-  const [localValue, setLocalValue] = useState(() =>
-    formatAdminMoneyInput(String(defaultValue ?? '')),
-  );
+  const [editing, setEditing] = useState(false);
+  function format(value: string) {
+    if (!wholeToman) return formatAdminMoneyInput(value);
+    const amount = parseAdminWholeToman(value);
+    if (amount === null) return value;
+    return editing ? toPersianDigits(amount) : formatAdminMoneyInput(amount);
+  }
+  const [localValue, setLocalValue] = useState(() => String(defaultValue ?? ''));
   const controlled = value !== undefined;
-  const formattedValue = controlled ? formatAdminMoneyInput(String(value ?? '')) : localValue;
-  const amount = parseAdminMoneyInput(formattedValue);
+  const formattedValue = format(controlled ? String(value ?? '') : localValue);
+  const amount = wholeToman
+    ? parseAdminWholeToman(formattedValue)
+    : parseAdminMoneyInput(formattedValue);
   const words = amount === null ? null : adminMoneyToWords(amount);
   const wordsId = id ? `${id}-words` : undefined;
   const inputDescribedBy = [describedBy, wordsId].filter(Boolean).join(' ') || undefined;
 
   function change(event: ChangeEvent<HTMLInputElement>) {
-    const formatted = formatAdminMoneyInput(event.currentTarget.value);
+    const formatted = format(event.currentTarget.value);
     event.currentTarget.value = formatted;
     if (!controlled) setLocalValue(formatted);
     onChange?.(event);
@@ -46,6 +60,14 @@ export function MoneyInput({
         value={formattedValue}
         aria-describedby={inputDescribedBy}
         onChange={change}
+        onFocus={(event) => {
+          if (wholeToman) setEditing(true);
+          onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          if (wholeToman) setEditing(false);
+          onBlur?.(event);
+        }}
       />
       <p
         id={wordsId}

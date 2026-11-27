@@ -10,9 +10,11 @@ type FinancialReportsPageProps = Readonly<{
 export const dynamic = 'force-dynamic';
 
 export default async function FinancialReportsPage({ searchParams }: FinancialReportsPageProps) {
-  await requireAdminSession({ permissions: ['finance.read'], returnTo: '/finance' });
+  const user = await requireAdminSession({ permissions: ['finance.read'], returnTo: '/finance' });
   const period = parseFinancialReportPeriod((await searchParams).period);
   const data = await loadAdminFinancialReports(period);
 
-  return <FinancialReportsView data={data} />;
+  return (
+    <FinancialReportsView data={data} canReadOrders={user.permissions.includes('orders.read')} />
+  );
 }

@@ -287,6 +287,88 @@
               "default": 1,
               "type": "number"
             }
+          },
+          {
+            "name": "view",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "festivals",
+                "sales",
+                "marketing"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 150,
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "APPROVED",
+                "SCHEDULED",
+                "ACTIVE",
+                "PAUSED",
+                "ENDED"
+              ]
+            }
+          },
+          {
+            "name": "fromTehran",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 16,
+              "maxLength": 24,
+              "type": "string"
+            }
+          },
+          {
+            "name": "toTehran",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 16,
+              "maxLength": 24,
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest"
+              ]
+            }
+          },
+          {
+            "name": "salesKind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "offers",
+                "existing"
+              ]
+            }
           }
         ],
         "responses": {
@@ -527,6 +609,17 @@
               "minimum": 1,
               "maximum": 1000,
               "type": "number"
+            }
+          },
+          {
+            "name": "visibility",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "live"
+              ]
             }
           }
         ],
@@ -1461,7 +1554,8 @@
                 "PAYMENT_FAILED",
                 "RECONCILIATION",
                 "CANCELLED",
-                "EXPIRED"
+                "EXPIRED",
+                "OVERDUE_RESERVATION"
               ]
             }
           },
@@ -6464,6 +6558,39 @@
             }
           },
           {
+            "name": "product",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 180,
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 180,
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "purchases",
+                "net",
+                "spend"
+              ]
+            }
+          },
+          {
             "name": "device",
             "required": false,
             "in": "query",
@@ -6589,6 +6716,16 @@
               "maximum": 10000,
               "type": "number"
             }
+          },
+          {
+            "name": "contentPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
           }
         ],
         "responses": {
@@ -6640,6 +6777,39 @@
               "minLength": 1,
               "maxLength": 180,
               "type": "string"
+            }
+          },
+          {
+            "name": "product",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 180,
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 180,
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "purchases",
+                "net",
+                "spend"
+              ]
             }
           },
           {
@@ -14717,6 +14887,33 @@
           "activeIds"
         ]
       },
+      "SalesCampaignListDetailsDto": {
+        "type": "object",
+        "properties": {
+          "allProducts": {
+            "type": "boolean"
+          },
+          "selectedProducts": {
+            "type": "number"
+          },
+          "selectedCategories": {
+            "type": "number"
+          },
+          "discountBudgetToman": {
+            "type": "number"
+          },
+          "quotaProducts": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "allProducts",
+          "selectedProducts",
+          "selectedCategories",
+          "discountBudgetToman",
+          "quotaProducts"
+        ]
+      },
       "CampaignSummaryDto": {
         "type": "object",
         "properties": {
@@ -14727,6 +14924,15 @@
               "FESTIVAL"
             ],
             "type": "string"
+          },
+          "managementPurpose": {
+            "type": "string",
+            "enum": [
+              "SALES"
+            ]
+          },
+          "salesDetails": {
+            "$ref": "#/components/schemas/SalesCampaignListDetailsDto"
           },
           "status": {
             "enum": [
@@ -15040,6 +15246,29 @@
           "hasMore"
         ]
       },
+      "CampaignMarketingSettingsDto": {
+        "type": "object",
+        "properties": {
+          "destinationPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "relatedFestivalId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "relatedSalesCampaignId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "destinationPath"
+        ]
+      },
       "CampaignBudgetDto": {
         "type": "object",
         "properties": {
@@ -15126,6 +15355,15 @@
             ],
             "type": "string"
           },
+          "managementPurpose": {
+            "type": "string",
+            "enum": [
+              "SALES"
+            ]
+          },
+          "salesDetails": {
+            "$ref": "#/components/schemas/SalesCampaignListDetailsDto"
+          },
           "status": {
             "enum": [
               "DRAFT",
@@ -15149,6 +15387,9 @@
           "endsAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "marketing": {
+            "$ref": "#/components/schemas/CampaignMarketingSettingsDto"
           },
           "productSlugs": {
             "type": "array",
@@ -15293,6 +15534,9 @@
       "CreateCampaignDto": {
         "type": "object",
         "properties": {
+          "marketing": {
+            "$ref": "#/components/schemas/CampaignMarketingSettingsDto"
+          },
           "channel": {
             "type": "string",
             "minLength": 1,
@@ -15353,6 +15597,12 @@
               "FESTIVAL"
             ],
             "type": "string"
+          },
+          "managementPurpose": {
+            "type": "string",
+            "enum": [
+              "SALES"
+            ]
           },
           "trackingId": {
             "type": "string",
@@ -15430,6 +15680,9 @@
       "UpdateCampaignDto": {
         "type": "object",
         "properties": {
+          "marketing": {
+            "$ref": "#/components/schemas/CampaignMarketingSettingsDto"
+          },
           "channel": {
             "type": "string",
             "minLength": 1,
@@ -18032,6 +18285,9 @@
               }
             ]
           },
+          "salesRuleConfigured": {
+            "type": "boolean"
+          },
           "landingSlug": {
             "type": "string",
             "nullable": true
@@ -18079,6 +18335,7 @@
           "quota",
           "quotaItems",
           "finance",
+          "salesRuleConfigured",
           "landingSlug",
           "publication",
           "festival",
@@ -24120,6 +24377,10 @@
       "GrowthDashboardMetricsDto": {
         "type": "object",
         "properties": {
+          "walletAppliedToman": {
+            "type": "number",
+            "nullable": true
+          },
           "conversionPercent": {
             "type": "number",
             "nullable": true
@@ -24163,10 +24424,19 @@
           "confirmedCustomers": {
             "type": "number"
           },
+          "newCustomers": {
+            "type": "number"
+          },
+          "returningCustomers": {
+            "type": "number"
+          },
           "submittedOrders": {
             "type": "number"
           },
           "confirmedOrders": {
+            "type": "number"
+          },
+          "campaignAttributedOrders": {
             "type": "number"
           },
           "confirmedSubmissions": {
@@ -24180,9 +24450,13 @@
           },
           "netCollectedToman": {
             "type": "number"
+          },
+          "orderDiscountToman": {
+            "type": "number"
           }
         },
         "required": [
+          "walletAppliedToman",
           "conversionPercent",
           "averageOrderToman",
           "recordedSpendToman",
@@ -24194,17 +24468,25 @@
           "cartAdds",
           "checkouts",
           "confirmedCustomers",
+          "newCustomers",
+          "returningCustomers",
           "submittedOrders",
           "confirmedOrders",
+          "campaignAttributedOrders",
           "confirmedSubmissions",
           "collectedToman",
           "refundedToman",
-          "netCollectedToman"
+          "netCollectedToman",
+          "orderDiscountToman"
         ]
       },
       "GrowthDashboardGroupDto": {
         "type": "object",
         "properties": {
+          "walletAppliedToman": {
+            "type": "number",
+            "nullable": true
+          },
           "conversionPercent": {
             "type": "number",
             "nullable": true
@@ -24264,10 +24546,19 @@
           "confirmedCustomers": {
             "type": "number"
           },
+          "newCustomers": {
+            "type": "number"
+          },
+          "returningCustomers": {
+            "type": "number"
+          },
           "submittedOrders": {
             "type": "number"
           },
           "confirmedOrders": {
+            "type": "number"
+          },
+          "campaignAttributedOrders": {
             "type": "number"
           },
           "confirmedSubmissions": {
@@ -24281,9 +24572,13 @@
           },
           "netCollectedToman": {
             "type": "number"
+          },
+          "orderDiscountToman": {
+            "type": "number"
           }
         },
         "required": [
+          "walletAppliedToman",
           "conversionPercent",
           "averageOrderToman",
           "recordedSpendToman",
@@ -24299,12 +24594,118 @@
           "campaign",
           "campaignId",
           "confirmedCustomers",
+          "newCustomers",
+          "returningCustomers",
           "submittedOrders",
           "confirmedOrders",
+          "campaignAttributedOrders",
           "confirmedSubmissions",
           "collectedToman",
           "refundedToman",
-          "netCollectedToman"
+          "netCollectedToman",
+          "orderDiscountToman"
+        ]
+      },
+      "GrowthDashboardDayDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "walletAppliedToman": {
+            "type": "number",
+            "nullable": true
+          },
+          "collectedToman": {
+            "type": "number"
+          },
+          "netCollectedToman": {
+            "type": "number"
+          },
+          "confirmedOrders": {
+            "type": "number"
+          },
+          "campaignAttributedOrders": {
+            "type": "number"
+          },
+          "newCustomers": {
+            "type": "number"
+          },
+          "orderDiscountToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "day",
+          "walletAppliedToman",
+          "collectedToman",
+          "netCollectedToman",
+          "confirmedOrders",
+          "campaignAttributedOrders",
+          "newCustomers",
+          "orderDiscountToman"
+        ]
+      },
+      "GrowthDashboardVisitStagesDto": {
+        "type": "object",
+        "properties": {
+          "itemList": {
+            "type": "number"
+          },
+          "item": {
+            "type": "number"
+          },
+          "cart": {
+            "type": "number"
+          },
+          "checkout": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itemList",
+          "item",
+          "cart",
+          "checkout"
+        ]
+      },
+      "GrowthDashboardCampaignLeaderDto": {
+        "type": "object",
+        "properties": {
+          "campaignId": {
+            "type": "string"
+          },
+          "campaign": {
+            "type": "string"
+          },
+          "confirmedOrders": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "campaignId",
+          "campaign",
+          "confirmedOrders"
+        ]
+      },
+      "GrowthDashboardChannelLeaderDto": {
+        "type": "object",
+        "properties": {
+          "medium": {
+            "type": "string"
+          },
+          "submittedOrders": {
+            "type": "number"
+          },
+          "confirmedSubmissions": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "medium",
+          "submittedOrders",
+          "confirmedSubmissions"
         ]
       },
       "GrowthDashboardDto": {
@@ -24322,6 +24723,46 @@
               "$ref": "#/components/schemas/GrowthDashboardGroupDto"
             }
           },
+          "daily": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrowthDashboardDayDto"
+            }
+          },
+          "visitStages": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GrowthDashboardVisitStagesDto"
+              }
+            ]
+          },
+          "leadingCampaign": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GrowthDashboardCampaignLeaderDto"
+              }
+            ]
+          },
+          "leadingChannel": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GrowthDashboardChannelLeaderDto"
+              }
+            ]
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "minimumChannelOrders": {
+            "type": "number"
+          },
           "page": {
             "type": "number"
           },
@@ -24336,9 +24777,82 @@
           "period",
           "totals",
           "items",
+          "daily",
+          "visitStages",
+          "leadingCampaign",
+          "leadingChannel",
+          "generatedAt",
+          "minimumChannelOrders",
           "page",
           "limit",
           "total"
+        ]
+      },
+      "GrowthCampaignOfferPerformanceDto": {
+        "type": "object",
+        "properties": {
+          "conversionPercent": {
+            "type": "number",
+            "nullable": true
+          },
+          "quota": {
+            "$ref": "#/components/schemas/CampaignQuotaTotalsDto"
+          },
+          "submittedOrders": {
+            "type": "number"
+          },
+          "confirmedOrders": {
+            "type": "number"
+          },
+          "collectedToman": {
+            "type": "number"
+          },
+          "refundedToman": {
+            "type": "number"
+          },
+          "netCollectedToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "conversionPercent",
+          "quota",
+          "submittedOrders",
+          "confirmedOrders",
+          "collectedToman",
+          "refundedToman",
+          "netCollectedToman"
+        ]
+      },
+      "GrowthCampaignTrackingContentDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "medium": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "submittedOrders": {
+            "type": "number"
+          },
+          "confirmedOrders": {
+            "type": "number"
+          },
+          "netCollectedToman": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "source",
+          "medium",
+          "content",
+          "submittedOrders",
+          "confirmedOrders",
+          "netCollectedToman"
         ]
       },
       "GrowthCampaignBudgetDto": {
@@ -24371,6 +24885,9 @@
           },
           "unpaidDiscountCommitmentToman": {
             "type": "number"
+          },
+          "remainingDiscountToman": {
+            "type": "number"
           }
         },
         "required": [
@@ -24380,7 +24897,8 @@
           "budgetVarianceToman",
           "budgetToman",
           "lifetimeCommittedDiscountToman",
-          "unpaidDiscountCommitmentToman"
+          "unpaidDiscountCommitmentToman",
+          "remainingDiscountToman"
         ]
       },
       "GrowthCampaignHistoryItemDto": {
@@ -24436,11 +24954,61 @@
       "GrowthCampaignPerformanceDto": {
         "type": "object",
         "properties": {
+          "managedCampaignId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "campaignType": {
+            "enum": [
+              "SALES",
+              "MARKETING",
+              "FESTIVAL",
+              "LEGACY",
+              "TRACKING_ONLY"
+            ],
+            "type": "string"
+          },
           "period": {
             "$ref": "#/components/schemas/GrowthRevenuePeriodDto"
           },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
           "totals": {
             "$ref": "#/components/schemas/GrowthDashboardMetricsDto"
+          },
+          "spendCoverage": {
+            "enum": [
+              "MATCHED",
+              "NO_COST",
+              "NON_POSITIVE_COST",
+              "NO_CONFIRMED_ORDERS",
+              "INCOMPLETE_COST"
+            ],
+            "type": "string"
+          },
+          "offer": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GrowthCampaignOfferPerformanceDto"
+              }
+            ]
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrowthDashboardGroupDto"
+            }
+          },
+          "trackingContents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrowthCampaignTrackingContentDto"
+            }
           },
           "cacToman": {
             "type": "number",
@@ -24491,6 +25059,15 @@
           "campaign": {
             "type": "string"
           },
+          "channelCount": {
+            "type": "number"
+          },
+          "contentPage": {
+            "type": "number"
+          },
+          "hasMoreTrackingContents": {
+            "type": "boolean"
+          },
           "newCustomers": {
             "type": "number"
           },
@@ -24502,8 +25079,15 @@
           }
         },
         "required": [
+          "managedCampaignId",
+          "campaignType",
           "period",
+          "generatedAt",
           "totals",
+          "spendCoverage",
+          "offer",
+          "channels",
+          "trackingContents",
           "cacToman",
           "roas",
           "merchandiseDiscountToman",
@@ -24515,6 +25099,9 @@
           "history",
           "campaignId",
           "campaign",
+          "channelCount",
+          "contentPage",
+          "hasMoreTrackingContents",
           "newCustomers",
           "page",
           "hasMoreHistory"

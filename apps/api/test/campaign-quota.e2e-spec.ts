@@ -432,6 +432,7 @@ it('reconciles published festival prices with Checkout and protects quota across
     });
     await expect(operations.read(campaignId, {}, true)).resolves.toMatchObject({
       orders: { registered: 2, confirmed: 1, pending: 1, rejectedReceipt: 0 },
+      salesRuleConfigured: true,
       orderItems: expect.arrayContaining([
         expect.objectContaining({ id: pending.id, discountApplied: true }),
         expect.objectContaining({ id: anotherOrder.id, discountApplied: false }),
@@ -592,9 +593,23 @@ it('reconciles published festival prices with Checkout and protects quota across
     });
     const expiring = await createPending();
     const order = await db.order.findUniqueOrThrow({ where: { id: expiring.id } });
-    await expect(
-      expiration.expireOrder(expiring.id, new Date(order.reservationExpiresAt.getTime() + 1)),
-    ).resolves.toBe(true);
+    const overdueQuery = { orderState: 'OVERDUE_RESERVATION' } as const;
+    const deadline = order.reservationExpiresAt;
+    const early = await operations.read(
+      campaignId,
+      overdueQuery,
+      false,
+      new Date(deadline.getTime() - 1),
+    );
+    expect(early.orderItems.some(({ id }) => id === expiring.id)).toBe(false);
+    const overdue = await operations.read(campaignId, overdueQuery, false, deadline);
+    expect(overdue.orderItems).toContainEqual(expect.objectContaining({ id: expiring.id }));
+    expect(overdue.orderItems).not.toContainEqual(expect.objectContaining({ id: pending.id }));
+    expect(overdue.orders.overdueReservations).toBe(overdue.orderItems.length);
+    const expiredAt = new Date(deadline.getTime() + 1);
+    await expect(expiration.expireOrder(expiring.id, expiredAt)).resolves.toBe(true);
+    const after = await operations.read(campaignId, overdueQuery, false, expiredAt);
+    expect(after.orderItems.some(({ id }) => id === expiring.id)).toBe(false);
     await expect(quotas.get(campaignId, slug)).resolves.toMatchObject({
       reserved: 0,
       remaining: 1,

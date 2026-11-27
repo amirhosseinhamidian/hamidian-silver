@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { CampaignProductSearch } from '@/components/campaigns/campaign-product-search';
 import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
+import { TableScrollRegion } from '@/components/ui/data-table';
 import { useCampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
 import { formatAdminToman, toPersianDigits } from '@/lib/presentation/formatters';
 
@@ -64,7 +65,7 @@ export function CampaignProductPricePreview({ campaignId }: { campaignId: string
         )}
         {error && <Alert tone="danger">دریافت پیش‌نمایش قیمت ممکن نشد.</Alert>}
         {preview && (
-          <div className="overflow-x-auto">
+          <TableScrollRegion label="جدول پیش‌نمایش قیمت کمپین">
             <table className="w-full min-w-[36rem] text-sm">
               <caption className="mb-2 text-start font-semibold">{preview.name}</caption>
               <thead>
@@ -97,7 +98,7 @@ export function CampaignProductPricePreview({ campaignId }: { campaignId: string
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScrollRegion>
         )}
       </div>
     </Card>

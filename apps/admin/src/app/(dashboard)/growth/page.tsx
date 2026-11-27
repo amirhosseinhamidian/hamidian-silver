@@ -20,6 +20,7 @@ export default async function GrowthPage({ searchParams }: GrowthPageProps) {
         filters={filters}
         {...result}
         canWriteCosts={user.permissions.includes('finance.write')}
+        canPickCatalog={user.permissions.includes('settings.read')}
       />
       <CartRecoveryReport canEdit={user.permissions.includes('settings.write')} />
     </div>

@@ -63,16 +63,30 @@ describe('admin navigation', () => {
       'supplier-payables',
       'supplier-settlements',
       'finance',
-      'growth',
       'reward-policies',
+      'campaigns',
+      'growth',
       'users',
       'roles',
       'shipping-settings',
       'settings',
-      'campaigns',
       'seo',
       'audit',
     ]);
+  });
+
+  it('keeps the marketing workspace and growth reporting independently permissioned', () => {
+    const settingsNavigation = getAdminNavigation(user({ permissions: ['settings.read'] }));
+    const financeNavigation = getAdminNavigation(user({ permissions: ['finance.read'] }));
+
+    expect(
+      settingsNavigation.find(({ id }) => id === 'marketing')?.items.map(({ href }) => href),
+    ).toEqual(['/campaigns']);
+    expect(
+      financeNavigation.find(({ id }) => id === 'marketing')?.items.map(({ href }) => href),
+    ).toEqual(['/growth']);
+    expect(findAdminNavigationItem('/campaigns/themes', settingsNavigation)?.id).toBe('campaigns');
+    expect(findAdminNavigationItem('/growth/festivals/123', financeNavigation)?.id).toBe('growth');
   });
 
   it('exposes plating, pricing and supplier settings to pricing readers', () => {

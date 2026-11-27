@@ -273,6 +273,9 @@ it('separates festival publication and archival from existing campaign tracking'
     });
     await expect(move('APPROVE', 1)).rejects.toThrow('A festival needs a landing');
     await landings.save(festival.id, { ...landing, expectedRevision: 1 }, owner.id);
+    await expect(campaigns.selectCollections(slug, 1, 'live')).resolves.toMatchObject({
+      items: [],
+    });
     await expect(move('APPROVE', 2)).resolves.toMatchObject({ status: 'APPROVED', revision: 3 });
     await expect(move('PUBLISH_NOW', 3)).rejects.toThrow('start time has not arrived');
     await expect(move('SCHEDULE', 3)).resolves.toMatchObject({ status: 'SCHEDULED', revision: 4 });
@@ -307,6 +310,10 @@ it('separates festival publication and archival from existing campaign tracking'
     await expect(move('REOPEN', 5)).resolves.toMatchObject({ status: 'DRAFT', revision: 6 });
     await expect(move('APPROVE', 6)).resolves.toMatchObject({ status: 'APPROVED', revision: 7 });
     await expect(move('PUBLISH_NOW', 7)).resolves.toMatchObject({ status: 'ACTIVE', revision: 8 });
+    await expect(campaigns.selectCollections(slug, 1, 'live')).resolves.toMatchObject({
+      items: expect.arrayContaining([expect.objectContaining({ id: festival.id, slug })]),
+    });
+    await expect(campaigns.selectCollections(slug)).resolves.toMatchObject({ items: [] });
     await expect(landings.publicLanding(slug, 1)).resolves.toMatchObject({
       active: true,
       isFestival: true,

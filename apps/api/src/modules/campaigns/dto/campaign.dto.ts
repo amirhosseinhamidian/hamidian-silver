@@ -7,17 +7,21 @@ import {
   IsEnum,
   IsIn,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
   Length,
   Matches,
   Max,
+  MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import {
   CampaignAudience,
   CampaignKind,
+  CampaignManagementPurpose,
   CampaignNavigationEffect,
   CampaignStatus,
 } from '../../../generated/prisma/enums';
@@ -31,7 +35,33 @@ function Trimmed() {
   );
 }
 
+export class CampaignMarketingSettingsDto {
+  @ApiProperty({ type: String, maxLength: 1000 })
+  @Trimmed()
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 1000)
+  destinationPath!: string;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true })
+  @IsOptional()
+  @IsUUID('4')
+  relatedFestivalId?: string | null;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true })
+  @IsOptional()
+  @IsUUID('4')
+  relatedSalesCampaignId?: string | null;
+}
+
 export class CampaignDraftDto {
+  @ApiPropertyOptional({ type: () => CampaignMarketingSettingsDto })
+  @IsOptional()
+  @Type(() => CampaignMarketingSettingsDto)
+  @IsObject()
+  @ValidateNested()
+  marketing?: CampaignMarketingSettingsDto;
+
   @Trimmed()
   @Type(() => Object)
   @IsString()
@@ -145,6 +175,11 @@ export class CreateCampaignDto extends CampaignDraftDto {
   @IsIn([CampaignKind.MARKETING, CampaignKind.FESTIVAL])
   kind?: 'MARKETING' | 'FESTIVAL';
 
+  @ApiPropertyOptional({ enum: CampaignManagementPurpose })
+  @IsOptional()
+  @IsEnum(CampaignManagementPurpose)
+  managementPurpose?: CampaignManagementPurpose;
+
   @Type(() => Object)
   @IsString()
   @Length(1, 64)
@@ -207,6 +242,50 @@ export class CampaignPageQueryDto {
   page?: number;
 }
 
+const campaignListViews = ['festivals', 'sales', 'marketing'] as const;
+export type CampaignListView = (typeof campaignListViews)[number];
+const campaignListSorts = ['newest', 'oldest'] as const;
+const salesListKinds = ['offers', 'existing'] as const;
+
+export class CampaignListQueryDto extends CampaignPageQueryDto {
+  @ApiPropertyOptional({ enum: [...campaignListViews] })
+  @IsOptional()
+  @IsIn(campaignListViews)
+  view?: CampaignListView;
+
+  @ApiPropertyOptional({ maxLength: 150 })
+  @IsOptional()
+  @Trimmed()
+  @IsString()
+  @MaxLength(150)
+  q?: string;
+
+  @ApiPropertyOptional({ enum: CampaignStatus })
+  @IsOptional()
+  @IsEnum(CampaignStatus)
+  status?: CampaignStatus;
+
+  @ApiPropertyOptional({ minLength: 16, maxLength: 24 })
+  @IsOptional()
+  @Length(16, 24)
+  fromTehran?: string;
+
+  @ApiPropertyOptional({ minLength: 16, maxLength: 24 })
+  @IsOptional()
+  @Length(16, 24)
+  toTehran?: string;
+
+  @ApiPropertyOptional({ enum: [...campaignListSorts] })
+  @IsOptional()
+  @IsIn(campaignListSorts)
+  sort?: (typeof campaignListSorts)[number];
+
+  @ApiPropertyOptional({ enum: [...salesListKinds] })
+  @IsOptional()
+  @IsIn(salesListKinds)
+  salesKind?: (typeof salesListKinds)[number];
+}
+
 export class CampaignMediaDto {
   id!: string;
   mimeType!: string;
@@ -218,6 +297,14 @@ export class CampaignMediaDto {
   altText!: string | null;
 }
 
+export class SalesCampaignListDetailsDto {
+  allProducts!: boolean;
+  selectedProducts!: number;
+  selectedCategories!: number;
+  discountBudgetToman!: number;
+  quotaProducts!: number;
+}
+
 export class CampaignSummaryDto {
   id!: string;
   slug!: string;
@@ -226,6 +313,12 @@ export class CampaignSummaryDto {
 
   @ApiProperty({ enum: CampaignKind })
   kind!: CampaignKind;
+
+  @ApiPropertyOptional({ enum: CampaignManagementPurpose })
+  managementPurpose?: CampaignManagementPurpose;
+
+  @ApiPropertyOptional({ type: () => SalesCampaignListDetailsDto })
+  salesDetails?: SalesCampaignListDetailsDto;
 
   @ApiProperty({ enum: CampaignStatus })
   status!: CampaignStatus;
@@ -267,6 +360,9 @@ export class CampaignListDto {
 }
 
 export class CampaignDetailDto extends CampaignSummaryDto {
+  @ApiPropertyOptional({ type: () => CampaignMarketingSettingsDto })
+  marketing?: CampaignMarketingSettingsDto;
+
   goal!: string;
   channel!: string;
   trackingId!: string;

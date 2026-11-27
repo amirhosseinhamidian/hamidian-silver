@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { isDirectAttribution, normalizeAttributionToken } from './attribution';
+import { assertAvailableCampaignDestination } from './campaign-destination';
 import type { CampaignLinkDto, CreateCampaignLinkDto } from './dto/attribution.dto';
 
 const publicPath = /^\/(?:$|(?:products|categories|brands|guide)(?:\/[^/]+)?\/?$)/;
@@ -100,6 +101,11 @@ export class CampaignLinksService {
     const origin = new URL(this.config.get<string>('STOREFRONT_PUBLIC_ORIGIN') ?? defaultOrigin)
       .origin;
     const link = buildCampaignUrl(origin, input);
+    const destination = new URL(link.url);
+    const page = destination.searchParams.get('page');
+    if (page !== null && (!/^[1-9]\d{0,3}$/.test(page) || Number(page) > 1000))
+      throw new BadRequestException('Choose a supported campaign destination page.');
+    await assertAvailableCampaignDestination(this.prisma, destination, new Date());
     await ensureCampaignLinkIdentity(this.prisma, link.campaignId, link.campaign);
     return link;
   }

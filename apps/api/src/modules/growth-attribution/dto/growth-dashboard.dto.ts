@@ -23,6 +23,7 @@ export const growthDevices = ['desktop', 'mobile', 'tablet'] as const;
 const reportDevices = [...growthDevices, 'unknown'] as const;
 const slug = /^[\p{L}\p{N}_-]+$/u;
 const token = /^[a-z0-9][a-z0-9._-]*$/;
+const dashboardSorts = ['purchases', 'net', 'spend'] as const;
 export const funnelStages = [
   'view_item_list',
   'select_item',
@@ -38,6 +39,25 @@ export class GrowthDashboardQueryDto extends GrowthRevenueQueryDto {
   @Length(1, 180)
   @Matches(slug)
   category?: string;
+
+  @ApiPropertyOptional({ maxLength: 180 })
+  @IsOptional()
+  @IsString()
+  @Length(1, 180)
+  @Matches(slug)
+  product?: string;
+
+  @ApiPropertyOptional({ maxLength: 180 })
+  @IsOptional()
+  @IsString()
+  @Length(1, 180)
+  @Matches(slug)
+  brand?: string;
+
+  @ApiPropertyOptional({ enum: dashboardSorts })
+  @IsOptional()
+  @IsIn(dashboardSorts)
+  sort?: (typeof dashboardSorts)[number];
 
   @ApiPropertyOptional({ enum: [...reportDevices] })
   @IsOptional()
@@ -152,12 +172,19 @@ export class RecordGrowthCostDto {
 
 export class GrowthDashboardMetricsDto {
   confirmedCustomers!: number;
+  newCustomers!: number;
+  returningCustomers!: number;
   submittedOrders!: number;
   confirmedOrders!: number;
+  campaignAttributedOrders!: number;
   confirmedSubmissions!: number;
   collectedToman!: number;
   refundedToman!: number;
   netCollectedToman!: number;
+  orderDiscountToman!: number;
+
+  @ApiProperty({ type: Number, nullable: true })
+  walletAppliedToman!: number | null;
 
   @ApiProperty({ type: Number, nullable: true })
   conversionPercent!: number | null;
@@ -193,6 +220,40 @@ export class GrowthDashboardGroupDto extends GrowthDashboardMetricsDto {
   campaignId!: string | null;
 }
 
+export class GrowthDashboardDayDto {
+  @ApiProperty({ format: 'date' })
+  day!: string;
+
+  collectedToman!: number;
+  netCollectedToman!: number;
+  confirmedOrders!: number;
+  campaignAttributedOrders!: number;
+  newCustomers!: number;
+  orderDiscountToman!: number;
+
+  @ApiProperty({ type: Number, nullable: true })
+  walletAppliedToman!: number | null;
+}
+
+export class GrowthDashboardVisitStagesDto {
+  itemList!: number;
+  item!: number;
+  cart!: number;
+  checkout!: number;
+}
+
+export class GrowthDashboardCampaignLeaderDto {
+  campaignId!: string;
+  campaign!: string;
+  confirmedOrders!: number;
+}
+
+export class GrowthDashboardChannelLeaderDto {
+  medium!: string;
+  submittedOrders!: number;
+  confirmedSubmissions!: number;
+}
+
 export class GrowthDashboardDto {
   @ApiProperty({ type: () => GrowthRevenuePeriodDto })
   period!: GrowthRevenuePeriodDto;
@@ -200,6 +261,23 @@ export class GrowthDashboardDto {
   totals!: GrowthDashboardMetricsDto;
   @ApiProperty({ type: () => GrowthDashboardGroupDto, isArray: true })
   items!: GrowthDashboardGroupDto[];
+
+  @ApiProperty({ type: () => GrowthDashboardDayDto, isArray: true })
+  daily!: GrowthDashboardDayDto[];
+
+  @ApiProperty({ type: () => GrowthDashboardVisitStagesDto, nullable: true })
+  visitStages!: GrowthDashboardVisitStagesDto | null;
+
+  @ApiProperty({ type: () => GrowthDashboardCampaignLeaderDto, nullable: true })
+  leadingCampaign!: GrowthDashboardCampaignLeaderDto | null;
+
+  @ApiProperty({ type: () => GrowthDashboardChannelLeaderDto, nullable: true })
+  leadingChannel!: GrowthDashboardChannelLeaderDto | null;
+
+  minimumChannelOrders!: number;
+
+  @ApiProperty({ format: 'date-time' })
+  generatedAt!: string;
   page!: number;
   limit!: number;
   total!: number;

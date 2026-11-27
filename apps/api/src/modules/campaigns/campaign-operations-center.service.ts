@@ -14,7 +14,7 @@ import { confirmedGrowthOrders } from '../growth-attribution/growth-revenue-even
 import { readCampaignProducts } from './campaign-collection';
 import { scopedCampaignOrders } from './campaign-order-scope';
 import { CampaignLandingsService } from './campaign-landings.service';
-import { quotaCounts, quotaStock, quotaUsage } from './campaign-quota';
+import { campaignQuotaTotals, quotaCounts, quotaStock, quotaUsage } from './campaign-quota';
 import type {
   CampaignOperationsCenterDto,
   CampaignOperationsQueryDto,
@@ -53,7 +53,7 @@ export class CampaignOperationsCenterService {
       async (tx) => {
         const campaign = await tx.campaign.findUnique({
           where: { id: campaignId },
-          include: { landing: true },
+          include: { landing: true, promotion: { select: { campaignId: true } } },
         });
         if (!campaign) throw new NotFoundException('Campaign not found.');
 
@@ -62,11 +62,12 @@ export class CampaignOperationsCenterService {
         const orders = await this.orders(tx, campaign, orderPage, query, now);
         const quotas = await this.readQuotas(tx, campaignId, quotaPage);
         const finance = includeFinance ? await this.finance(tx, campaignId) : null;
+        const landing = campaign.managementPurpose === 'SALES' ? null : campaign.landing;
         const status =
           campaign.kind === 'FESTIVAL'
-            ? await this.festivalStatus(tx, campaign, campaign.landing, now)
+            ? await this.festivalStatus(tx, campaign, landing, now)
             : {
-                publication: await this.publication(tx, campaign, campaign.landing, now),
+                publication: await this.publication(tx, campaign, landing, now),
                 festival: null,
               };
 
@@ -76,8 +77,9 @@ export class CampaignOperationsCenterService {
           orderPage,
           quotaPage,
           finance,
+          salesRuleConfigured: campaign.promotion !== null,
           ...status,
-          landingSlug: campaign.landing?.slug ?? null,
+          landingSlug: landing?.slug ?? null,
           checkedAt: now.toISOString(),
         };
       },
@@ -94,6 +96,7 @@ export class CampaignOperationsCenterService {
   ) {
     const scope = scopedCampaignOrders(campaign);
     const sort = orderSort === 'oldest' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
+    const overdue = Prisma.sql`"waitingForPayment" AND "reservationExpiresAt" <= ${now}`;
     const [counts] = await tx.$queryRaw<CountRow[]>`
         ${scope}
         SELECT COUNT(*) AS registered,
@@ -105,7 +108,7 @@ export class CampaignOperationsCenterService {
           COUNT(*) FILTER (WHERE state = 'RECONCILIATION') AS reconciliation,
           COUNT(*) FILTER (WHERE state = 'CANCELLED') AS cancelled,
           COUNT(*) FILTER (WHERE state = 'EXPIRED') AS expired,
-          COUNT(*) FILTER (WHERE "waitingForPayment" AND "reservationExpiresAt" <= ${now}) AS "overdueReservations"
+          COUNT(*) FILTER (WHERE ${overdue}) AS "overdueReservations"
         FROM classified
       `;
     const rows = await tx.$queryRaw<OrderRow[]>`
@@ -114,9 +117,11 @@ export class CampaignOperationsCenterService {
         ${
           state === 'CONFIRMED'
             ? Prisma.sql`WHERE confirmed`
-            : state
-              ? Prisma.sql`WHERE state = ${state}`
-              : Prisma.empty
+            : state === 'OVERDUE_RESERVATION'
+              ? Prisma.sql`WHERE ${overdue}`
+              : state
+                ? Prisma.sql`WHERE state = ${state}`
+                : Prisma.empty
         }
         ORDER BY "createdAt" ${sort}, id ${sort}
         LIMIT ${pageSize + 1} OFFSET ${(page - 1) * pageSize}
@@ -180,16 +185,7 @@ export class CampaignOperationsCenterService {
               },
             },
           });
-    const totals = await tx.campaignQuota.aggregate({
-      where: { campaignId },
-      _sum: { limit: true, manualSold: true },
-      _count: { _all: true },
-    });
-    const allocations = await tx.campaignQuotaAllocation.groupBy({
-      by: ['state'],
-      where: { quota: { campaignId }, state: { in: ['RESERVED', 'CAPTURED'] } },
-      _sum: { quantity: true },
-    });
+    const quota = await campaignQuotaTotals(tx, campaignId);
 
     const items = rows.slice(0, pageSize);
     const usage = await quotaUsage(
@@ -200,19 +196,8 @@ export class CampaignOperationsCenterService {
       tx,
       items.map(({ productId }) => productId),
     );
-    const siteSold = allocations.find(({ state }) => state === 'CAPTURED')?._sum.quantity ?? 0;
-    const reserved = allocations.find(({ state }) => state === 'RESERVED')?._sum.quantity ?? 0;
-    const limit = totals._sum.limit ?? 0;
-    const manualSold = totals._sum.manualSold ?? 0;
     return {
-      quota: {
-        products: totals._count._all,
-        limit,
-        manualSold,
-        siteSold,
-        reserved,
-        remaining: Math.max(0, limit - manualSold - siteSold - reserved),
-      },
+      quota,
       hasMoreQuotas: rows.length > pageSize,
       quotaItems: items.map((row) => {
         const counts = quotaCounts(row, usage);

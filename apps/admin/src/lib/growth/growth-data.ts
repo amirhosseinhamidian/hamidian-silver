@@ -4,7 +4,12 @@ import { cookies } from 'next/headers';
 import { createAdminApiClient } from '@/lib/auth/server-api';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
 import type { FestivalReportFilters } from '@/lib/growth/festival-report';
-import { growthQuery, type GrowthDashboard, type GrowthFilters } from '@/lib/growth/growth-report';
+import {
+  growthQuery,
+  previousGrowthPeriod,
+  type GrowthDashboard,
+  type GrowthFilters,
+} from '@/lib/growth/growth-report';
 
 type ReportEndpoint =
   '/api/v1/growth-attribution/dashboard' | '/api/v1/growth-attribution/dashboard/costs';
@@ -33,20 +38,25 @@ async function loadResource(path: ReportEndpoint, filters: GrowthFilters) {
 }
 
 export async function loadGrowthDashboard(filters: GrowthFilters) {
-  const [dashboard, costs] = await Promise.all([
+  const previous = filters.compare ? previousGrowthPeriod(filters) : null;
+  const [dashboard, costs, comparison] = await Promise.all([
     loadResource('/api/v1/growth-attribution/dashboard', filters),
     loadResource('/api/v1/growth-attribution/dashboard/costs', filters),
+    previous
+      ? loadResource('/api/v1/growth-attribution/dashboard', { ...filters, ...previous, page: 1 })
+      : null,
   ]);
   return {
     report: dashboard.data && 'totals' in dashboard.data ? dashboard.data : null,
     status: dashboard.status,
     costs: costs.data && 'items' in costs.data && !('totals' in costs.data) ? costs.data : null,
+    comparison: comparison?.data && 'totals' in comparison.data ? comparison.data : null,
   };
 }
 
 export async function loadCampaignPerformance(
   campaignId: string,
-  query: Pick<GrowthFilters, 'from' | 'to' | 'page'>,
+  query: Pick<GrowthFilters, 'from' | 'to' | 'page'> & { contentPage?: number },
 ) {
   try {
     const client = await apiClient();

@@ -5,8 +5,9 @@ import { CampaignReportPeriod } from '@/components/growth/campaign-report-period
 import { Alert } from '@/components/ui/alert';
 import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { TableScrollRegion } from '@/components/ui/data-table';
 import { DonutChart } from '@/components/ui/donut-chart';
-import { Input } from '@/components/ui/form-control';
+import { CampaignReportCatalogFilters } from '@/components/growth/campaign-report-catalog-filters';
 import { campaignOrderLabels } from '@/lib/campaigns/campaign-model';
 import {
   festivalReportHref,
@@ -64,7 +65,7 @@ function Table({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-x-auto" role="region" aria-label={label} tabIndex={0}>
+    <TableScrollRegion label={label}>
       <table className="w-full min-w-[31rem] text-sm" aria-label={label}>
         <thead className="bg-[var(--admin-color-surface-subtle)]">
           <tr>
@@ -77,7 +78,7 @@ function Table({
         </thead>
         <tbody className="divide-y divide-[var(--admin-color-border)]">{children}</tbody>
       </table>
-    </div>
+    </TableScrollRegion>
   );
 }
 
@@ -364,6 +365,7 @@ export function FestivalAnalyticsView({
   path,
   canReadOrders,
   canReadOperations,
+  canPickCatalog,
 }: {
   report: FestivalReport | null;
   status: number;
@@ -371,6 +373,7 @@ export function FestivalAnalyticsView({
   path: string;
   canReadOrders: boolean;
   canReadOperations: boolean;
+  canPickCatalog: boolean;
 }) {
   const href = (changes: Partial<FestivalReportFilters>) =>
     festivalReportHref(path, { ...filters, ...changes });
@@ -419,48 +422,26 @@ export function FestivalAnalyticsView({
           <input type="hidden" name="section" value={section} />
           <input type="hidden" name="sort" value={sort} />
           <div className="grid gap-3 sm:grid-cols-3">
-            <label className="grid gap-1 text-sm">
-              محصول
-              <Input
-                name="product"
-                defaultValue={filters.product}
-                list="festival-products"
-                maxLength={220}
-                placeholder="بخش پایانی نشانی محصول"
-              />
-            </label>
-            <datalist id="festival-products">
-              {report?.topProducts.flatMap(({ slug, label }) =>
-                slug
-                  ? [
-                      <option key={slug} value={slug}>
-                        {label}
-                      </option>,
-                    ]
-                  : [],
-              )}
-            </datalist>
-            <label className="grid gap-1 text-sm">
-              دسته‌بندی
-              <Input
-                name="category"
-                defaultValue={filters.category}
-                list="festival-categories"
-                maxLength={220}
-                placeholder="بخش پایانی نشانی دسته‌بندی"
-              />
-            </label>
-            <datalist id="festival-categories">
-              {report?.topCategories.flatMap(({ slug, label }) =>
-                slug
-                  ? [
-                      <option key={slug} value={slug}>
-                        {label}
-                      </option>,
-                    ]
-                  : [],
-              )}
-            </datalist>
+            <CampaignReportCatalogFilters
+              canPickCatalog={canPickCatalog}
+              manualLabel="ورود دستی نشانی برای دادهٔ تاریخی"
+              filters={[
+                {
+                  name: 'product',
+                  value: filters.product,
+                  suggestions: report?.topProducts.flatMap(({ slug, label }) =>
+                    slug ? [{ slug, label }] : [],
+                  ),
+                },
+                {
+                  name: 'category',
+                  value: filters.category,
+                  suggestions: report?.topCategories.flatMap(({ slug, label }) =>
+                    slug ? [{ slug, label }] : [],
+                  ),
+                },
+              ]}
+            />
             <label className="grid gap-1 text-sm">
               وضعیت سفارش
               <select
@@ -535,6 +516,14 @@ function ReportSections({
   const { totals, quota, budget, funnel } = report;
   const budgetUsed = Math.max(0, budget.discountBudgetToman - budget.remainingDiscountToman);
   const usedQuota = quota.siteSold + quota.manualSold + quota.reserved;
+  const [categoryLeader, categoryRunnerUp] = report.topCategories;
+  const categoryInsight =
+    categoryLeader?.slug &&
+    categoryLeader.units !== null &&
+    categoryRunnerUp?.units != null &&
+    categoryLeader.units > categoryRunnerUp.units
+      ? categoryLeader
+      : null;
   return (
     <>
       <Card title="خلاصهٔ فروش">
@@ -583,6 +572,24 @@ function ReportSections({
       </Card>
       {totals.confirmedOrders > 0 && report.daily.length > 0 && (
         <DailyTrends daily={report.daily} />
+      )}
+      {categoryInsight?.slug && categoryInsight.units !== null && (
+        <Card title="تحلیل فروش دسته‌ها">
+          <p className="text-sm">
+            <Link
+              className="font-semibold underline"
+              href={filterHref({ category: categoryInsight.slug })}
+            >
+              {categoryInsight.label}
+            </Link>{' '}
+            با {integer(categoryInsight.units)} واحد فروخته‌شده در خریدهای قطعی این برش، بیشترین
+            تعداد را داشته است.
+          </p>
+          <p className={`mt-2 ${muted}`}>
+            منبع، تعداد اقلام خرید قطعی و عضویت فعلی کالا در کاتالوگ است. یک قلم ممکن است در بیش از
+            یک دسته شمرده شود.
+          </p>
+        </Card>
       )}
       <div className="grid gap-4 lg:grid-cols-3">
         <RankedBars

@@ -5387,9 +5387,19 @@ export interface components {
                 [key: string]: number;
             };
         };
+        SalesCampaignListDetailsDto: {
+            allProducts: boolean;
+            selectedProducts: number;
+            selectedCategories: number;
+            discountBudgetToman: number;
+            quotaProducts: number;
+        };
         CampaignSummaryDto: {
             /** @enum {string} */
             kind: "LEGACY" | "MARKETING" | "FESTIVAL";
+            /** @enum {string} */
+            managementPurpose?: "SALES";
+            salesDetails?: components["schemas"]["SalesCampaignListDetailsDto"];
             /** @enum {string} */
             status: "DRAFT" | "APPROVED" | "SCHEDULED" | "ACTIVE" | "PAUSED" | "ENDED";
             /** Format: date-time */
@@ -5465,6 +5475,13 @@ export interface components {
             page: number;
             hasMore: boolean;
         };
+        CampaignMarketingSettingsDto: {
+            destinationPath: string;
+            /** Format: uuid */
+            relatedFestivalId?: string | null;
+            /** Format: uuid */
+            relatedSalesCampaignId?: string | null;
+        };
         CampaignBudgetDto: {
             committedReferralRewardToman?: number;
             remainingUses: number | null;
@@ -5489,6 +5506,9 @@ export interface components {
             /** @enum {string} */
             kind: "LEGACY" | "MARKETING" | "FESTIVAL";
             /** @enum {string} */
+            managementPurpose?: "SALES";
+            salesDetails?: components["schemas"]["SalesCampaignListDetailsDto"];
+            /** @enum {string} */
             status: "DRAFT" | "APPROVED" | "SCHEDULED" | "ACTIVE" | "PAUSED" | "ENDED";
             /** Format: date-time */
             archivedAt: string | null;
@@ -5496,6 +5516,7 @@ export interface components {
             startsAt: string;
             /** Format: date-time */
             endsAt: string;
+            marketing?: components["schemas"]["CampaignMarketingSettingsDto"];
             productSlugs: string[];
             categorySlugs: string[];
             plannedChannelCostToman: number | null;
@@ -5526,6 +5547,7 @@ export interface components {
             revision: number;
         };
         CreateCampaignDto: {
+            marketing?: components["schemas"]["CampaignMarketingSettingsDto"];
             channel?: string;
             productSlugs: string[];
             categorySlugs: string[];
@@ -5538,6 +5560,8 @@ export interface components {
             ctaLabel?: string | null;
             /** @enum {string} */
             kind?: "MARKETING" | "FESTIVAL";
+            /** @enum {string} */
+            managementPurpose?: "SALES";
             trackingId?: string;
             trackingLabel?: string;
             slug: string;
@@ -5552,6 +5576,7 @@ export interface components {
             bannerPriority: number;
         };
         UpdateCampaignDto: {
+            marketing?: components["schemas"]["CampaignMarketingSettingsDto"];
             channel?: string;
             productSlugs: string[];
             categorySlugs: string[];
@@ -6130,6 +6155,7 @@ export interface components {
             quota: components["schemas"]["CampaignQuotaTotalsDto"];
             quotaItems: components["schemas"]["CampaignQuotaOperationDto"][];
             finance: components["schemas"]["CampaignOperationsFinanceDto"] | null;
+            salesRuleConfigured: boolean;
             landingSlug: string | null;
             /** @enum {string} */
             publication: "NO_LANDING" | "INACTIVE" | "EMPTY" | "LIVE" | "UNKNOWN" | "HISTORICAL";
@@ -7529,6 +7555,7 @@ export interface components {
             total: number;
         };
         GrowthDashboardMetricsDto: {
+            walletAppliedToman: number | null;
             conversionPercent: number | null;
             averageOrderToman: number | null;
             recordedSpendToman: number | null;
@@ -7540,14 +7567,19 @@ export interface components {
             cartAdds: number | null;
             checkouts: number | null;
             confirmedCustomers: number;
+            newCustomers: number;
+            returningCustomers: number;
             submittedOrders: number;
             confirmedOrders: number;
+            campaignAttributedOrders: number;
             confirmedSubmissions: number;
             collectedToman: number;
             refundedToman: number;
             netCollectedToman: number;
+            orderDiscountToman: number;
         };
         GrowthDashboardGroupDto: {
+            walletAppliedToman: number | null;
             conversionPercent: number | null;
             averageOrderToman: number | null;
             recordedSpendToman: number | null;
@@ -7563,20 +7595,75 @@ export interface components {
             campaign: string | null;
             campaignId: string | null;
             confirmedCustomers: number;
+            newCustomers: number;
+            returningCustomers: number;
             submittedOrders: number;
             confirmedOrders: number;
+            campaignAttributedOrders: number;
             confirmedSubmissions: number;
             collectedToman: number;
             refundedToman: number;
             netCollectedToman: number;
+            orderDiscountToman: number;
+        };
+        GrowthDashboardDayDto: {
+            /** Format: date */
+            day: string;
+            walletAppliedToman: number | null;
+            collectedToman: number;
+            netCollectedToman: number;
+            confirmedOrders: number;
+            campaignAttributedOrders: number;
+            newCustomers: number;
+            orderDiscountToman: number;
+        };
+        GrowthDashboardVisitStagesDto: {
+            itemList: number;
+            item: number;
+            cart: number;
+            checkout: number;
+        };
+        GrowthDashboardCampaignLeaderDto: {
+            campaignId: string;
+            campaign: string;
+            confirmedOrders: number;
+        };
+        GrowthDashboardChannelLeaderDto: {
+            medium: string;
+            submittedOrders: number;
+            confirmedSubmissions: number;
         };
         GrowthDashboardDto: {
             period: components["schemas"]["GrowthRevenuePeriodDto"];
             totals: components["schemas"]["GrowthDashboardMetricsDto"];
             items: components["schemas"]["GrowthDashboardGroupDto"][];
+            daily: components["schemas"]["GrowthDashboardDayDto"][];
+            visitStages: components["schemas"]["GrowthDashboardVisitStagesDto"] | null;
+            leadingCampaign: components["schemas"]["GrowthDashboardCampaignLeaderDto"] | null;
+            leadingChannel: components["schemas"]["GrowthDashboardChannelLeaderDto"] | null;
+            /** Format: date-time */
+            generatedAt: string;
+            minimumChannelOrders: number;
             page: number;
             limit: number;
             total: number;
+        };
+        GrowthCampaignOfferPerformanceDto: {
+            conversionPercent: number | null;
+            quota: components["schemas"]["CampaignQuotaTotalsDto"];
+            submittedOrders: number;
+            confirmedOrders: number;
+            collectedToman: number;
+            refundedToman: number;
+            netCollectedToman: number;
+        };
+        GrowthCampaignTrackingContentDto: {
+            source: string;
+            medium: string;
+            content: string;
+            submittedOrders: number;
+            confirmedOrders: number;
+            netCollectedToman: number;
         };
         GrowthCampaignBudgetDto: {
             plannedChannelCostToman: number | null;
@@ -7587,6 +7674,7 @@ export interface components {
             budgetToman: number;
             lifetimeCommittedDiscountToman: number;
             unpaidDiscountCommitmentToman: number;
+            remainingDiscountToman: number;
         };
         GrowthCampaignHistoryItemDto: {
             /** @enum {string} */
@@ -7602,8 +7690,19 @@ export interface components {
             selectedCampaignId: string | null;
         };
         GrowthCampaignPerformanceDto: {
+            /** Format: uuid */
+            managedCampaignId: string | null;
+            /** @enum {string} */
+            campaignType: "SALES" | "MARKETING" | "FESTIVAL" | "LEGACY" | "TRACKING_ONLY";
             period: components["schemas"]["GrowthRevenuePeriodDto"];
+            /** Format: date-time */
+            generatedAt: string;
             totals: components["schemas"]["GrowthDashboardMetricsDto"];
+            /** @enum {string} */
+            spendCoverage: "MATCHED" | "NO_COST" | "NON_POSITIVE_COST" | "NO_CONFIRMED_ORDERS" | "INCOMPLETE_COST";
+            offer: components["schemas"]["GrowthCampaignOfferPerformanceDto"] | null;
+            channels: components["schemas"]["GrowthDashboardGroupDto"][];
+            trackingContents: components["schemas"]["GrowthCampaignTrackingContentDto"][];
             cacToman: number | null;
             roas: number | null;
             merchandiseDiscountToman: number | null;
@@ -7615,6 +7714,9 @@ export interface components {
             history: components["schemas"]["GrowthCampaignHistoryItemDto"][];
             campaignId: string;
             campaign: string;
+            channelCount: number;
+            contentPage: number;
+            hasMoreTrackingContents: boolean;
             newCustomers: number;
             page: number;
             hasMoreHistory: boolean;
@@ -10097,6 +10199,13 @@ export interface operations {
         parameters: {
             query?: {
                 page?: number;
+                view?: "festivals" | "sales" | "marketing";
+                q?: string;
+                status?: "DRAFT" | "APPROVED" | "SCHEDULED" | "ACTIVE" | "PAUSED" | "ENDED";
+                fromTehran?: string;
+                toTehran?: string;
+                sort?: "newest" | "oldest";
+                salesKind?: "offers" | "existing";
             };
             header?: never;
             path?: never;
@@ -10213,6 +10322,7 @@ export interface operations {
             query?: {
                 q?: string;
                 page?: number;
+                visibility?: "live";
             };
             header?: never;
             path?: never;
@@ -10734,7 +10844,7 @@ export interface operations {
             query?: {
                 orderPage?: number;
                 quotaPage?: number;
-                orderState?: "PENDING" | "CONFIRMED" | "RECEIPT_REVIEW" | "RECEIPT_REJECTED" | "PAYMENT_FAILED" | "RECONCILIATION" | "CANCELLED" | "EXPIRED";
+                orderState?: "PENDING" | "CONFIRMED" | "RECEIPT_REVIEW" | "RECEIPT_REJECTED" | "PAYMENT_FAILED" | "RECONCILIATION" | "CANCELLED" | "EXPIRED" | "OVERDUE_RESERVATION";
                 orderSort?: "newest" | "oldest";
             };
             header?: never;
@@ -13802,6 +13912,9 @@ export interface operations {
                 /** @description Last included calendar day in Asia/Tehran. */
                 to: string;
                 category?: string;
+                product?: string;
+                brand?: string;
+                sort?: "purchases" | "net" | "spend";
                 device?: "desktop" | "mobile" | "tablet" | "unknown";
                 page?: number;
                 limit?: number;
@@ -13833,6 +13946,7 @@ export interface operations {
                 /** @description Last included calendar day in Asia/Tehran. */
                 to: string;
                 page?: number;
+                contentPage?: number;
             };
             header?: never;
             path: {
@@ -13860,6 +13974,9 @@ export interface operations {
                 /** @description Last included calendar day in Asia/Tehran. */
                 to: string;
                 category?: string;
+                product?: string;
+                brand?: string;
+                sort?: "purchases" | "net" | "spend";
                 device?: "desktop" | "mobile" | "tablet" | "unknown";
                 page?: number;
                 limit?: number;

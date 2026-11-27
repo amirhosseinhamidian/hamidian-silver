@@ -98,14 +98,16 @@ export function CampaignBudgetReview({
     <Card title="بودجه و پیش‌نمایش تخفیف">
       <div className="space-y-4">
         <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-          <div>
-            <dt>هزینهٔ برنامه‌ریزی‌شدهٔ کانال</dt>
-            <dd>
-              {campaign.plannedChannelCostToman === null
-                ? 'ثبت نشده'
-                : formatAdminToman(campaign.plannedChannelCostToman)}
-            </dd>
-          </div>
+          {campaign.managementPurpose !== 'SALES' && (
+            <div>
+              <dt>هزینهٔ برنامه‌ریزی‌شدهٔ کانال</dt>
+              <dd>
+                {campaign.plannedChannelCostToman === null
+                  ? 'ثبت نشده'
+                  : formatAdminToman(campaign.plannedChannelCostToman)}
+              </dd>
+            </div>
+          )}
           <div>
             <dt>سقف تخفیف</dt>
             <dd>{formatAdminToman(budget.discountBudgetToman)}</dd>

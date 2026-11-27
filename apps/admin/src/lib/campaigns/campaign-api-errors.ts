@@ -1,4 +1,24 @@
+import type { CampaignFieldError } from './campaign-form';
+
 const messages: Record<string, string> = {
+  'Set a campaign budget before configuring a promotion.':
+    'ابتدا بودجهٔ مثبت کمپین را در پیش‌نویس ثبت کنید.',
+  'Set an eligible product and promotion for a current campaign.':
+    'محصول مشمول قانون تخفیف یک کمپین جاری را انتخاب کنید.',
+  'Choose active rate targets in the festival scope.':
+    'نرخ اختصاصی را برای محصول یا واریانت فعال در محدودهٔ جشنواره ثبت کنید.',
+  'Choose an available campaign destination.': 'مقصد انتخاب‌شده در فروشگاه در دسترس نیست.',
+  'Choose a campaign destination without a page number.':
+    'نشانی مقصد را بدون شمارهٔ صفحه وارد کنید.',
+  'Choose an available festival.': 'جشنوارهٔ انتخاب‌شده در دسترس نیست.',
+  'Choose an available sales campaign.': 'پیشنهاد فروش انتخاب‌شده در دسترس نیست.',
+  'The encoded campaign destination is too long.': 'مسیر مقصد بیش از حد طولانی است.',
+  'Marketing settings require a dedicated marketing campaign.':
+    'این تنظیمات برای کمپین بازاریابی مستقل در دسترس‌اند.',
+  'Provide the campaign destination and marketing settings.':
+    'مقصد و تنظیمات بازاریابی کمپین را وارد کنید.',
+  'Advertising campaigns use a separate advertising budget and destination.':
+    'بودجه و مقصد تبلیغات را در فرم کمپین بازاریابی ثبت کنید.',
   'Enter a valid festival theme name.': 'نام معتبر برای تم وارد کنید.',
   'Enter a valid festival theme description.': 'توضیحات تم دارای نویسهٔ نامعتبر است.',
   'This archived theme cannot be selected for a new design.':
@@ -15,6 +35,13 @@ const messages: Record<string, string> = {
   'The campaign end time has passed.': 'زمان پایان کمپین گذشته است.',
   'The festival start time has not arrived.': 'زمان آغاز جشنواره هنوز نرسیده است.',
   'A festival needs a landing before publication.': 'پیش از انتشار، لندینگ جشنواره را ذخیره کنید.',
+  'Configure a promotion for this sales offer.':
+    'پیش از تأیید، قانون تخفیف پیشنهاد فروش را ذخیره کنید.',
+  'Sales offers do not have a landing.': 'پیشنهاد فروش صفحهٔ اختصاصی ندارد.',
+  'Sales offers do not use campaign banners or channel settings.':
+    'برای پیشنهاد فروش، تنظیمات بنر و کانال را وارد نکنید.',
+  'Sales offers use an internal campaign identity.':
+    'شناسهٔ داخلی پیشنهاد فروش خودکار ساخته می‌شود.',
   'Only the current festival draft can restore a published version.':
     'برای بازگردانی، آخرین پیش‌نویس جشنواره را باز کنید.',
   'Published festival version not found.': 'نسخهٔ منتشرشدهٔ انتخابی برای این جشنواره پیدا نشد.',
@@ -110,13 +137,30 @@ export function campaignMessage(message: string, fallback: string) {
   return Object.hasOwn(messages, message) ? messages[message] : fallback;
 }
 
-export async function campaignError(response: Response): Promise<string> {
-  const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
-  const message = body?.error?.message;
+async function readCampaignError(response: Response) {
+  const body = (await response.json().catch(() => null)) as {
+    error?: { message?: unknown };
+  } | null;
+  return typeof body?.error?.message === 'string' ? body.error.message : '';
+}
+
+function campaignErrorMessage(status: number, message: string) {
   if (message && Object.hasOwn(messages, message)) return messages[message];
-  if (response.status === 400) return 'مقادیر واردشده را بررسی کنید.';
-  if (response.status === 409) return 'کمپین تغییر کرده است. صفحه را تازه کنید و دوباره تلاش کنید.';
-  if (response.status === 401 || response.status === 403)
-    return 'دسترسی انجام این عملیات را ندارید.';
+  if (status === 400) return 'مقادیر واردشده را بررسی کنید.';
+  if (status === 409) return 'کمپین تغییر کرده است. صفحه را تازه کنید و دوباره تلاش کنید.';
+  if (status === 401 || status === 403) return 'دسترسی انجام این عملیات را ندارید.';
   return 'ثبت عملیات ممکن نشد. دوباره تلاش کنید.';
+}
+
+export async function campaignError(response: Response): Promise<string> {
+  return campaignErrorMessage(response.status, await readCampaignError(response));
+}
+
+export async function campaignFormError(
+  response: Response,
+  fields: Readonly<Record<string, CampaignFieldError>>,
+): Promise<CampaignFieldError | string> {
+  const message = await readCampaignError(response);
+  if (Object.hasOwn(fields, message)) return fields[message];
+  return campaignErrorMessage(response.status, message);
 }

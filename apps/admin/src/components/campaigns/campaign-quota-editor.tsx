@@ -8,10 +8,26 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { campaignFormError } from '@/lib/campaigns/campaign-api-errors';
+import {
+  campaignIntMax,
+  focusCampaignField,
+  type CampaignFieldError,
+} from '@/lib/campaigns/campaign-form';
 import { useCampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
-import { toPersianDigits } from '@/lib/presentation/formatters';
+import { toAsciiDigits, toPersianDigits } from '@/lib/presentation/formatters';
 
 type Quota = components['schemas']['CampaignQuotaAdminDto'];
+const quotaServerFields = {
+  'The quota is below confirmed, manual, or reserved quantities.': {
+    field: 'limit',
+    message: 'سقف سهمیه باید همهٔ فروش‌های قطعی، دستی و رزروهای فعال را پوشش دهد.',
+  },
+  'The quota exceeds sellable stock.': {
+    field: 'limit',
+    message: 'افزایش سهمیه از موجودی قابل فروش بیشتر است.',
+  },
+} satisfies Record<string, CampaignFieldError>;
 
 export function CampaignQuotaEditor({
   campaignId,
@@ -25,6 +41,7 @@ export function CampaignQuotaEditor({
   const [quota, setQuota] = useState<Quota | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<CampaignFieldError | null>(null);
   const [saved, setSaved] = useState(false);
   const formId = useId();
   const taxonomy = useCampaignTaxonomy();
@@ -33,6 +50,7 @@ export function CampaignQuotaEditor({
   async function load(slug: string) {
     setBusy(true);
     setError(null);
+    setFieldError(null);
     setSaved(false);
     setQuota(null);
     try {
@@ -51,18 +69,40 @@ export function CampaignQuotaEditor({
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!quota || busy) return;
-    const fields = new FormData(event.currentTarget);
-    setBusy(true);
+    const form = event.currentTarget;
+    const fields = new FormData(form);
     setError(null);
+    setFieldError(null);
     setSaved(false);
+    const integer = (field: string) => {
+      const value = toAsciiDigits(String(fields.get(field) ?? '').trim());
+      return /^\d+$/.test(value) ? Number(value) : NaN;
+    };
+    function invalid(issue: CampaignFieldError) {
+      setFieldError(issue);
+      focusCampaignField(form, issue.field);
+    }
+    const limit = integer('limit');
+    const manualSold = integer('manualSold');
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > campaignIntMax)
+      return invalid({
+        field: 'limit',
+        message: 'سقف سهمیه را به‌صورت تعداد صحیح بین ۱ و ۲٬۱۴۷٬۴۸۳٬۶۴۷ وارد کنید.',
+      });
+    if (!Number.isSafeInteger(manualSold) || manualSold > campaignIntMax)
+      return invalid({
+        field: 'manualSold',
+        message: 'فروش دستی را به‌صورت تعداد صحیح بین ۰ و ۲٬۱۴۷٬۴۸۳٬۶۴۷ وارد کنید.',
+      });
+    setBusy(true);
     try {
       const response = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           slug: quota.slug,
-          limit: Number(fields.get('limit')),
-          manualSold: Number(fields.get('manualSold')),
+          limit,
+          manualSold,
           expectedRevision: quota.revision,
         }),
       });
@@ -70,13 +110,12 @@ export function CampaignQuotaEditor({
         setError('سهمیه تغییر کرده یا با کمپین دیگری تداخل دارد. محصول را دوباره بارگذاری کنید.');
         return;
       }
-      if (response.status === 400) {
-        setError(
-          'محصول باید مشمول قانون کمپین باشد و سهمیه با موجودی و تعداد ثبت‌شده هم‌خوانی داشته باشد.',
-        );
+      if (!response.ok) {
+        const issue = await campaignFormError(response, quotaServerFields);
+        if (typeof issue === 'string') setError(issue);
+        else invalid(issue);
         return;
       }
-      if (!response.ok) throw new Error('Could not save quota.');
       setQuota((await response.json()) as Quota);
       setSaved(true);
     } catch {
@@ -125,29 +164,42 @@ export function CampaignQuotaEditor({
               ))}
             </dl>
             {canWrite && (canAdd || quota.revision > 0) && (
-              <form key={`${quota.slug}:${quota.revision}`} className="space-y-3" onSubmit={save}>
+              <form
+                key={`${quota.slug}:${quota.revision}`}
+                className="space-y-3"
+                onSubmit={save}
+                noValidate
+              >
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <FormField id={`${formId}-limit`} label="سقف سهمیه">
+                  <FormField
+                    id={`${formId}-limit`}
+                    label="سقف سهمیه (تعداد)"
+                    hint="حداقل یک واحد. فروش دستی، خرید قطعی سایت و رزروهای فعال از همین سهمیه کم می‌شوند."
+                    error={fieldError?.field === 'limit' ? fieldError.message : undefined}
+                    required
+                  >
                     {(props) => (
                       <Input
                         {...props}
                         name="limit"
-                        type="number"
-                        min={1}
-                        step={1}
+                        inputMode="numeric"
                         defaultValue={quota.limit || undefined}
                         required
                       />
                     )}
                   </FormField>
-                  <FormField id={`${formId}-manual`} label="تعداد کل فروش دستی">
+                  <FormField
+                    id={`${formId}-manual`}
+                    label="تعداد کل فروش دستی"
+                    hint="مجموع فروش دستی محصول در این کمپین را وارد کنید. اگر فروش دستی ندارید، صفر وارد کنید."
+                    error={fieldError?.field === 'manualSold' ? fieldError.message : undefined}
+                    required
+                  >
                     {(props) => (
                       <Input
                         {...props}
                         name="manualSold"
-                        type="number"
-                        min={0}
-                        step={1}
+                        inputMode="numeric"
                         defaultValue={quota.manualSold}
                         required
                       />
@@ -155,8 +207,8 @@ export function CampaignQuotaEditor({
                   </FormField>
                 </div>
                 <p className="text-xs text-[var(--admin-color-muted)]">
-                  این عدد فقط شمار فروش کمپین را تغییر می‌دهد. اگر کالا از انبار سایت خارج شده،
-                  موجودی واریانت را در بخش انبار اصلاح کنید.
+                  ثبت فروش دستی، شمار فروش و ماندهٔ سهمیهٔ کمپین را تغییر می‌دهد. اگر کالا از انبار
+                  سایت خارج شده، موجودی واریانت را در بخش انبار اصلاح کنید.
                 </p>
                 <Button type="submit" loading={busy}>
                   ذخیره سهمیه

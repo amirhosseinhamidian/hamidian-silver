@@ -1819,6 +1819,10 @@ enum CampaignKind {
   FESTIVAL
 }
 
+enum CampaignManagementPurpose {
+  SALES
+}
+
 model Campaign {
   id                      String               @id @default(uuid()) @db.Uuid
   slug                    String               @unique @db.VarChar(64)
@@ -1828,6 +1832,7 @@ model Campaign {
   ownerId                 String               @db.Uuid
   trackingId              String               @unique @db.VarChar(64)
   kind                    CampaignKind         @default(LEGACY)
+  managementPurpose       CampaignManagementPurpose?
   status                  CampaignStatus       @default(DRAFT)
   archivedAt              DateTime?            @db.Timestamptz(3)
   allProducts             Boolean
@@ -1837,6 +1842,9 @@ model Campaign {
   endsAt                  DateTime             @db.Timestamptz(3)
   budgetToman             Int
   plannedChannelCostToman Int?
+  marketingDestinationPath String? @db.VarChar(1000)
+  relatedFestivalId       String? @db.Uuid
+  relatedSalesCampaignId  String? @db.Uuid
   audience                CampaignAudience     @default(ALL_CUSTOMERS)
   message                 String               @db.VarChar(500)
   bannerEnabled           Boolean              @default(false)
@@ -1854,10 +1862,16 @@ model Campaign {
   promotion               CampaignPromotion?
   orderQuotes             OrderPriceQuote[]
   landing                 CampaignLanding?
+  relatedFestival         Campaign? @relation("MarketingFestival", fields: [relatedFestivalId], references: [id], onDelete: SetNull)
+  festivalMarketing       Campaign[] @relation("MarketingFestival")
+  relatedSalesCampaign    Campaign? @relation("MarketingSales", fields: [relatedSalesCampaignId], references: [id], onDelete: SetNull)
+  salesMarketing          Campaign[] @relation("MarketingSales")
   quotas CampaignQuota[]
 
   @@index([status, startsAt])
   @@index([status, endsAt])
+  @@index([relatedFestivalId])
+  @@index([relatedSalesCampaignId])
   @@map("campaigns")
 }
 

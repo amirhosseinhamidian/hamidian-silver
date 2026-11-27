@@ -1,5 +1,6 @@
 import { Controller, Get, INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
@@ -107,6 +108,37 @@ describe('Application (e2e)', () => {
       .expect({
         status: 'ok',
       });
+  });
+
+  it('enforces campaign management, operations and finance permissions on the real routes', async () => {
+    const api = request(app.getHttpServer());
+    const campaigns = '/api/v1/campaigns';
+    const growth = '/api/v1/growth-attribution';
+    const dashboard = `${growth}/dashboard?from=2026-11-01&to=2026-11-02`;
+    const operations = `${campaigns}/${randomUUID()}/operations`;
+    const auth = 'Bearer admin-token';
+    const permissions = (...permissionCodes: AuthenticatedPrincipal['permissionCodes']) =>
+      authService.authenticateAccessToken.mockResolvedValueOnce({
+        ...adminPrincipal,
+        permissionCodes,
+      });
+
+    await api.get(campaigns).expect(401);
+    await api.get(dashboard).set('Authorization', auth).expect(403);
+
+    permissions(PERMISSION_CODES.SETTINGS_READ);
+    await api.get(campaigns).query({ view: 'sales' }).set('Authorization', auth).expect(200);
+    permissions(PERMISSION_CODES.SETTINGS_READ);
+    await api.post(campaigns).set('Authorization', auth).send({}).expect(403);
+    permissions(PERMISSION_CODES.SETTINGS_READ);
+    await api.post(`${growth}/campaign-links`).set('Authorization', auth).send({}).expect(403);
+    permissions(PERMISSION_CODES.SETTINGS_READ);
+    await api.get(operations).set('Authorization', auth).expect(403);
+    permissions(PERMISSION_CODES.SETTINGS_READ, PERMISSION_CODES.ORDERS_READ);
+    await api.get(operations).set('Authorization', auth).expect(404);
+
+    permissions(PERMISSION_CODES.FINANCE_READ);
+    await api.get(dashboard).set('Authorization', auth).expect(200);
   });
 
   afterEach(async () => {

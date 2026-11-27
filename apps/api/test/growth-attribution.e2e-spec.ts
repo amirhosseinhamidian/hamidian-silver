@@ -28,6 +28,33 @@ it('reuses a campaign identity and persists only normalized attribution on an or
         await expect(links.create({ ...input, source: 'Telegram' })).resolves.toMatchObject({
           campaignId: identity,
         });
+        const invalidIdentity = `invalid-${suffix}`;
+        await expect(
+          links.create({
+            ...input,
+            campaignId: invalidIdentity,
+            campaign: invalidIdentity,
+            destination: `/products/${invalidIdentity}`,
+          }),
+        ).rejects.toThrow('available campaign destination');
+        await expect(
+          transaction.campaignLinkIdentity.findUnique({ where: { id: invalidIdentity } }),
+        ).resolves.toBeNull();
+        await expect(
+          links.create({ ...input, destination: '/products?page=1001' }),
+        ).rejects.toThrow('supported campaign destination page');
+        await transaction.product.create({
+          data: { name: 'محصول ردیابی', slug: identity, status: 'ACTIVE' },
+        });
+        const productLink = await links.create({
+          ...input,
+          destination: `/products/${identity}`,
+          content: 'Header',
+        });
+        const url = new URL(productLink.url);
+        expect(url.pathname).toBe(`/products/${identity}`);
+        expect(url.searchParams.get('utm_content')).toBe('header');
+        expect(url.searchParams.get('utm_id')).toBe(identity);
         await expect(links.create({ ...input, campaign: 'Conflicting Sale' })).rejects.toThrow(
           'already assigned',
         );
@@ -48,10 +75,11 @@ it('reuses a campaign identity and persists only normalized attribution on an or
             version: 1,
             touches: [
               {
-                source: input.source,
-                medium: input.medium,
-                campaign: input.campaign,
-                campaignId: identity,
+                source: url.searchParams.get('utm_source'),
+                medium: url.searchParams.get('utm_medium'),
+                campaign: url.searchParams.get('utm_campaign'),
+                campaignId: url.searchParams.get('utm_id'),
+                content: url.searchParams.get('utm_content'),
                 occurredAt: now.toISOString(),
                 phone: owner.phone,
               },
@@ -78,6 +106,7 @@ it('reuses a campaign identity and persists only normalized attribution on an or
           campaignId: identity,
           source: 'newsletter',
           medium: 'email',
+          content: 'header',
         });
         expect(order.attribution?.firstTouch).not.toHaveProperty('phone');
         await transaction.order.delete({ where: { id: order.id } });

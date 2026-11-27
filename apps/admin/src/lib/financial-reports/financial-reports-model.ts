@@ -101,6 +101,8 @@ export type FinanceCostReconciliationReport = Readonly<{
   orders: readonly FinanceCostReconciliationRow[];
 }>;
 
+export const financeReconciliationLimit = 100;
+
 type UnknownRecord = Record<string, unknown>;
 
 const PERIODS: ReadonlySet<FinancialReportPeriod> = new Set(['7d', '30d', '90d', 'all']);

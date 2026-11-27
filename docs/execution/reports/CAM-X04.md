@@ -14,7 +14,7 @@
 
 ## اجرای محلی
 
-~~~bash
+```bash
 cd "/Users/amirhosseinhamidian/Projects/hamidian-silver" &&
 pnpm contracts:generate &&
 pnpm contracts:typecheck &&
@@ -25,11 +25,11 @@ pnpm admin:lint &&
 pnpm admin:typecheck &&
 pnpm admin:test orders-model.test.ts order-management-view.test.tsx &&
 pnpm admin:build
-~~~
+```
 
 برای آزمون PostgreSQL، کانتینر آزمایشی روی پورت آزاد ایجاد می‌شود. این بلوک از دیتابیس اجرای لوکال استفاده نمی‌کند.
 
-~~~bash
+```bash
 (
   cd "/Users/amirhosseinhamidian/Projects/hamidian-silver" || exit 1
   cam_x04_db="$(docker run -d --rm \
@@ -48,6 +48,6 @@ pnpm admin:build
   pnpm exec prisma migrate deploy &&
   pnpm api:test:e2e --runInBand 'campaign-quota|campaign-lifecycle|campaign-landing|campaign-operations|growth-dashboard|growth-revenue'
 )
-~~~
+```
 
 برای بازبینی دستی، در محیط لوکال برای یک کمپین فعال با سهمیهٔ ذخیره‌شده، یک فروش دستی و یک سفارش واقعی آزمایشی ثبت کنید. وضعیت سفارش را در مرحلهٔ انتظار رسید، رد یا تأیید با مرکز عملیات مقایسه کنید. از جدول سهمیه، محصول و از جدول سفارش‌ها سفارش مرتبط را باز کنید. هزینهٔ قطعی را با گزارش عملکرد کمپین مقایسه کنید. با حساب فقط‌خواندنی، دکمهٔ توقف و با حساب بدون مجوز مالی، بخش هزینه نباید دیده شود. با نقش مجاز توقف را اجرا و وضعیت و ثبت آن را در تاریخچه و Audit بررسی کنید.

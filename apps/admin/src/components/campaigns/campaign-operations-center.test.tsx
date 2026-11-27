@@ -64,14 +64,19 @@ const data: Props['data'] = {
   quotaItems: [],
   hasMoreQuotas: true,
   finance: { confirmedMerchandiseDiscountToman: 0, confirmedShippingDiscountToman: 0 },
+  salesRuleConfigured: true,
 };
 
-describe('festival operations', () => {
+describe('campaign operations', () => {
   it('keeps order state and sort in pagination and shows the festival-wide shortfall', () => {
     render(
       <CampaignOperationsCenter
         campaign={campaign}
-        data={data}
+        data={{
+          ...data,
+          orders: { ...data.orders, awaitingReceipt: 3, overdueReservations: 2 },
+        }}
+        listQuery={{ view: 'festivals', page: '3' }}
         orderState="PENDING"
         orderSort="oldest"
         canWrite
@@ -84,18 +89,37 @@ describe('festival operations', () => {
       expect.stringMatching(/\/campaigns\/festival-test$/),
     );
     expect(screen.getByText('محصولات با کسری موجودی نسبت به سهمیه ۱')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'قانون تخفیف ثبت شده' })).toHaveAttribute(
+      'href',
+      '/campaigns?id=festival-id&step=promotion&view=festivals&page=3',
+    );
+    expect(screen.getByRole('link', { name: 'رسید در انتظار بررسی ۳' })).toHaveAttribute(
+      'href',
+      '/campaigns?id=festival-id&step=operations&view=festivals&page=3&orderState=RECEIPT_REVIEW&orderSort=oldest#campaign-orders',
+    );
+    expect(screen.getByRole('link', { name: 'رزرو گذشته از مهلت ۲' })).toHaveAttribute(
+      'href',
+      '/campaigns?id=festival-id&step=operations&view=festivals&page=3&orderState=OVERDUE_RESERVATION&orderSort=oldest#campaign-orders',
+    );
     expect(screen.getByRole('progressbar')).toHaveAttribute('value', '3000');
     expect(screen.getByRole('button', { name: 'توقف اضطراری' })).toBeVisible();
     const pager = screen.getByRole('navigation', { name: 'صفحات سفارش‌های کمپین' });
     expect(within(pager).getByRole('link', { name: 'صفحهٔ بعد' }).getAttribute('href')).toBe(
-      '/campaigns?id=festival-id&step=operations&orderPage=2&orderState=PENDING&orderSort=oldest',
+      '/campaigns?id=festival-id&step=operations&view=festivals&page=3&orderPage=2&orderState=PENDING&orderSort=oldest#campaign-orders',
     );
   });
 
   it('shows the publication blocker and limits actions for the read-only role', () => {
     render(
       <CampaignOperationsCenter
-        campaign={{ ...campaign, status: 'PAUSED' }}
+        campaign={{
+          ...campaign,
+          status: 'PAUSED',
+          budget: {
+            ...campaign.budget,
+            blockers: ['No discount budget remains for this campaign.'],
+          },
+        }}
         data={{
           ...data,
           publication: 'INACTIVE',
@@ -119,5 +143,41 @@ describe('festival operations', () => {
     expect(screen.queryByRole('link', { name: 'گزارش عملیات مدیران' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'توقف اضطراری' })).toBeNull();
     expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByText('ماندهٔ بودجهٔ تخفیف')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'بررسی موانع و هشدارهای قانون و بودجه' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'گزارش مالی و درآمد' })).toBeNull();
+  });
+
+  it('shows the finance report and budget signal for a sales offer only when finance data is allowed', () => {
+    const props = {
+      campaign: {
+        ...campaign,
+        kind: 'LEGACY',
+        managementPurpose: 'SALES',
+        trackingId: 'sales-test',
+        budget: {
+          ...campaign.budget,
+          committedDiscountToman: 8_000,
+          remainingDiscountToman: 2_000,
+        },
+      },
+      data: { ...data, publication: 'NO_LANDING', festival: null, landingSlug: null },
+      orderSort: 'newest',
+      canWrite: false,
+      canReadAudit: false,
+      canEditCatalog: false,
+    } satisfies Props;
+    const { rerender } = render(<CampaignOperationsCenter {...props} />);
+    expect(screen.getByRole('link', { name: 'گزارش مالی و درآمد' })).toHaveAttribute(
+      'href',
+      '/growth/campaigns/sales-test',
+    );
+    expect(screen.getByRole('link', { name: 'تعهدها به سقف تخفیف نزدیک‌اند' })).toHaveAttribute(
+      'href',
+      '#campaign-budget',
+    );
+    rerender(<CampaignOperationsCenter {...props} data={{ ...props.data, finance: null }} />);
+    expect(screen.queryByRole('link', { name: 'تعهدها به سقف تخفیف نزدیک‌اند' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'گزارش مالی و درآمد' })).toBeNull();
   });
 });

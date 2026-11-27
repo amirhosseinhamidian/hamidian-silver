@@ -6,6 +6,18 @@ export type CampaignMedia = components['schemas']['CampaignMediaDto'];
 export type CampaignDraft = components['schemas']['CreateCampaignDto'];
 export type CampaignAction = components['schemas']['CampaignTransitionDto']['action'];
 
+export const marketingChannels = [
+  { value: 'instagram', label: 'اینستاگرام' },
+  { value: 'cpc', label: 'تبلیغات کلیکی، از جمله Google Ads' },
+  { value: 'organic', label: 'جست‌وجوی ارگانیک' },
+  { value: 'influencer', label: 'اینفلوئنسر' },
+  { value: 'referral', label: 'ارجاع' },
+  { value: 'affiliate', label: 'همکاری در فروش' },
+  { value: 'direct', label: 'مستقیم' },
+  { value: 'email', label: 'ایمیل' },
+  { value: 'other', label: 'سایر' },
+] as const;
+
 export const campaignAudienceLabels: Record<CampaignDetail['audience'], string> = {
   ALL_CUSTOMERS: 'همهٔ مشتریان',
   FIRST_PURCHASE: 'مشتری بدون خرید پرداخت‌شده',
@@ -58,4 +70,9 @@ export const campaignOrderLabels: Record<
   RECONCILIATION: 'نیازمند تطبیق پرداخت',
   CANCELLED: 'لغوشده',
   EXPIRED: 'منقضی',
+};
+
+export const campaignOperationsOrderLabels = {
+  ...campaignOrderLabels,
+  OVERDUE_RESERVATION: 'رزرو گذشته از مهلت',
 };

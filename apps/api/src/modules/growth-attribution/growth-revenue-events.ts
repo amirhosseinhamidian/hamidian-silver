@@ -18,9 +18,39 @@ export function growthReportPeriodSql({ from, to }: Pick<GrowthRevenueQueryDto, 
   `;
 }
 
+type CatalogScope = Pick<GrowthDashboardQueryDto, 'category' | 'product' | 'brand'>;
+
+export function hasGrowthCatalogScope(scope?: CatalogScope) {
+  return Boolean(scope?.category || scope?.product || scope?.brand);
+}
+
+// The caller supplies a single product row so combined filters describe the same item.
+export function growthCatalogConditions(scope?: CatalogScope) {
+  return Prisma.sql`
+    ${scope?.product ? Prisma.sql`AND product.slug = ${scope.product}` : Prisma.empty}
+    ${
+      scope?.brand
+        ? Prisma.sql`AND EXISTS (
+      SELECT 1 FROM brands brand WHERE brand.id = product."brandId" AND brand.slug = ${scope.brand}
+    )`
+        : Prisma.empty
+    }
+    ${
+      scope?.category
+        ? Prisma.sql`AND EXISTS (
+      SELECT 1 FROM product_categories membership
+      JOIN categories category ON category.id = membership."categoryId"
+      WHERE membership."productId" = product.id AND category.slug = ${scope.category}
+        AND category."isActive" AND category."deletedAt" IS NULL
+    )`
+        : Prisma.empty
+    }
+  `;
+}
+
 export function growthRevenueEvents(
   query: GrowthRevenueQueryDto,
-  scope?: Pick<GrowthDashboardQueryDto, 'category' | 'device'>,
+  scope?: CatalogScope & Pick<GrowthDashboardQueryDto, 'device'>,
 ) {
   const within = (time: Prisma.Sql) =>
     Prisma.sql`${time} >= report_period.starts_at AND ${time} < report_period.ends_before`;
@@ -29,14 +59,12 @@ export function growthRevenueEvents(
   const campaign = query.campaignId
     ? Prisma.sql`AND attribution."campaignId" = ${query.campaignId}`
     : Prisma.empty;
-  const category = scope?.category
+  const catalog = hasGrowthCatalogScope(scope)
     ? Prisma.sql`AND EXISTS (
         SELECT 1 FROM "order_items" item
         JOIN "product_variants" variant ON variant.id = item."variantId"
-        JOIN "product_categories" membership ON membership."productId" = variant."productId"
-        JOIN "categories" category ON category.id = membership."categoryId"
-        WHERE item."orderId" = orders.id AND category.slug = ${scope.category}
-          AND category."isActive" AND category."deletedAt" IS NULL
+        JOIN products product ON product.id = variant."productId"
+        WHERE item."orderId" = orders.id ${growthCatalogConditions(scope)}
       )`
     : Prisma.empty;
   const device =
@@ -132,11 +160,12 @@ export function growthRevenueEvents(
         activity.kind || ':' || activity."entityId"::text AS "eventId",
         activity."orderId", activity.kind, activity."occurredAt", activity.provider,
         activity."awaitingReview" AND orders.status = 'PENDING_PAYMENT' AS "awaitingReview",
-        attribution.source, attribution.medium, attribution.campaign, attribution."campaignId",
+        attribution.source, attribution.medium, attribution.campaign, attribution."campaignId", attribution.content,
         CASE WHEN activity.kind = ${Kind.PURCHASE_CONFIRMED} THEN COALESCE(finance."customerTotalToman", activity.amount) ELSE activity.amount END AS "amountToman",
         CASE WHEN activity.kind = ${Kind.PURCHASE_CONFIRMED} THEN COALESCE(finance."merchandiseRevenueToman", orders."merchandiseTotalToman") END AS "merchandiseToman",
         CASE WHEN activity.kind = ${Kind.PURCHASE_CONFIRMED} THEN COALESCE(finance."platingRevenueToman", orders."platingTotalToman") END AS "platingToman",
         CASE WHEN activity.kind = ${Kind.PURCHASE_CONFIRMED} THEN COALESCE(finance."discountToman", orders."discountTotalToman") END AS "orderDiscountToman",
+        finance."walletAppliedToman",
         CASE WHEN price_quote."campaignId" IS NOT NULL THEN price_quote."merchandiseDiscountToman" + price_quote."shippingDiscountToman" END AS "campaignDiscountToman",
         CASE WHEN activity.kind = ${Kind.PURCHASE_CONFIRMED} THEN COALESCE(finance."shippingChargedToman", orders."shippingTotalToman") END AS "shippingChargedToman",
         CASE WHEN activity.kind = ${Kind.PURCHASE_CONFIRMED} THEN COALESCE(finance."taxToman", orders."taxTotalToman") END AS "taxToman",
@@ -146,7 +175,7 @@ export function growthRevenueEvents(
       LEFT JOIN "order_finance_snapshots" AS finance ON finance."orderId" = orders.id AND activity.kind = ${Kind.PURCHASE_CONFIRMED}
       LEFT JOIN "order_price_quotes" AS price_quote ON price_quote."orderId" = orders.id AND activity.kind = ${Kind.PURCHASE_CONFIRMED}
       LEFT JOIN "order_attributions" AS attribution ON attribution."orderId" = orders.id
-      WHERE TRUE ${source} ${medium} ${campaign} ${category} ${device}
+      WHERE TRUE ${source} ${medium} ${campaign} ${catalog} ${device}
     )
   `;
 }

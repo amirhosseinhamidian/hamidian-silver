@@ -16,6 +16,7 @@ type Props = Readonly<{
   max: number;
   disabled?: boolean;
   categoryMode?: 'direct' | 'tree';
+  describeScope?: boolean;
   campaignId?: string;
 }>;
 
@@ -31,6 +32,7 @@ export function CampaignTaxonomyPicker({
   max,
   disabled = false,
   categoryMode = 'tree',
+  describeScope = true,
   campaignId,
 }: Props) {
   const id = useId();
@@ -73,7 +75,7 @@ export function CampaignTaxonomyPicker({
       <p className="text-sm font-semibold">
         {label} ({formatAdminInteger(selected.length)} از {formatAdminInteger(max)})
       </p>
-      {category && (
+      {category && describeScope && (
         <p className="text-xs text-[var(--admin-color-muted)]">
           {categoryMode === 'direct'
             ? 'هر انتخاب محصولات ثبت‌شده در همان دسته را شامل می‌شود. زیرمجموعه‌ها جداگانه قابل انتخاب‌اند.'

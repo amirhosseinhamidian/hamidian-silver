@@ -4,8 +4,10 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { DualCalendarPicker } from '@/components/ui/dual-calendar-picker';
 import { Input } from '@/components/ui/form-control';
 import type { GrowthCostInput } from '@/lib/growth/growth-report';
+import { readCalendarValue } from '@/lib/presentation/dual-calendar';
 import { toAsciiDigits } from '@/lib/presentation/formatters';
 
 type Defaults = Readonly<{ day: string; campaignId?: string; source?: string; medium?: string }>;
@@ -15,6 +17,7 @@ export function GrowthCostForm({ defaults }: Readonly<{ defaults: Defaults }>) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [day, setDay] = useState(defaults.day);
   const attempt = useRef<{ values: string; id: string } | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -27,6 +30,11 @@ export function GrowthCostForm({ defaults }: Readonly<{ defaults: Defaults }>) {
     const amountToman = Number(rawAmount);
     setSaved(false);
     setError('');
+    const recordedDay = read('day');
+    if (!readCalendarValue(recordedDay, 'date')) {
+      setError('روز ثبت هزینه را انتخاب کنید.');
+      return;
+    }
     if (
       !/^-?\d+$/.test(rawAmount) ||
       !Number.isInteger(amountToman) ||
@@ -37,7 +45,7 @@ export function GrowthCostForm({ defaults }: Readonly<{ defaults: Defaults }>) {
       return;
     }
     const values = {
-      day: read('day'),
+      day: recordedDay,
       campaignId: read('campaignId').toLowerCase(),
       source: read('source').toLowerCase(),
       medium: read('medium').toLowerCase(),
@@ -64,6 +72,7 @@ export function GrowthCostForm({ defaults }: Readonly<{ defaults: Defaults }>) {
       setSaved(true);
       attempt.current = null;
       formElement.reset();
+      setDay(defaults.day);
       router.refresh();
     } catch {
       setError('نتیجهٔ ثبت هزینه مشخص نیست. برای پیگیری، همان اطلاعات را دوباره ارسال کنید.');
@@ -77,10 +86,14 @@ export function GrowthCostForm({ defaults }: Readonly<{ defaults: Defaults }>) {
       {error ? <Alert tone="danger">{error}</Alert> : null}
       {saved ? <Alert tone="success">هزینه ثبت شد.</Alert> : null}
       <fieldset disabled={busy} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <label className="text-sm">
-          روز هزینه
-          <Input type="date" name="day" dir="ltr" defaultValue={defaults.day} required />
-        </label>
+        <DualCalendarPicker
+          kind="date"
+          label="روز هزینه"
+          name="day"
+          value={day}
+          onChange={setDay}
+          required
+        />
         <label className="text-sm">
           شناسهٔ کمپین
           <Input

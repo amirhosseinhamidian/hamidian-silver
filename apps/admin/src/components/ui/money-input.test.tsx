@@ -18,4 +18,22 @@ describe('MoneyInput', () => {
     expect(formatAdminMoneyInput('٠۱۲۳۴۵۶')).toBe('۱۲۳٬۴۵۶');
     expect(adminMoneyToWords(0)).toBe('صفر');
   });
+
+  it('keeps whole-toman typing editable and preserves invalid decimal text', () => {
+    render(<MoneyInput id="amount" aria-label="مبلغ" wholeToman />);
+    const input = screen.getByLabelText('مبلغ');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '1000' } });
+    expect(input).toHaveValue('۱۰۰۰');
+    fireEvent.change(input, { target: { value: '۱۰۰۰0' } });
+    expect(input).toHaveValue('۱۰۰۰۰');
+    fireEvent.blur(input);
+    expect(input).toHaveValue('۱۰٬۰۰۰');
+    fireEvent.focus(input);
+    expect(input).toHaveValue('۱۰۰۰۰');
+    fireEvent.change(input, { target: { value: '۱٫۵' } });
+    fireEvent.blur(input);
+    expect(input).toHaveValue('۱٫۵');
+    expect(screen.queryByText(/پانزده تومان/)).toBeNull();
+  });
 });

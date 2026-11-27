@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, PickType } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsString, Length, Matches, Max, Min } from 'class-validator';
-import { GrowthDashboardMetricsDto } from './growth-dashboard.dto';
+import { CampaignQuotaTotalsDto } from '../../campaigns/dto/campaign-operations-center.dto';
+import { GrowthDashboardGroupDto, GrowthDashboardMetricsDto } from './growth-dashboard.dto';
 import { GrowthRevenuePeriodDto, GrowthRevenueQueryDto } from './growth-revenue.dto';
 
 export class GrowthCampaignPerformancePathDto {
@@ -20,6 +21,13 @@ export class GrowthCampaignPerformanceQueryDto extends PickType(GrowthRevenueQue
   @Min(1)
   @Max(10_000)
   page?: number;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 10_000 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10_000)
+  contentPage?: number;
 }
 
 export class GrowthCampaignBudgetDto {
@@ -35,6 +43,7 @@ export class GrowthCampaignBudgetDto {
   @ApiPropertyOptional()
   lifetimeCommittedReferralRewardToman?: number;
   unpaidDiscountCommitmentToman!: number;
+  remainingDiscountToman!: number;
 
   @ApiProperty({ type: Number, nullable: true })
   mediaVarianceToman!: number | null;
@@ -42,6 +51,37 @@ export class GrowthCampaignBudgetDto {
   @ApiProperty({ type: Number, nullable: true })
   budgetVarianceToman!: number | null;
 }
+
+export class GrowthCampaignOfferPerformanceDto {
+  submittedOrders!: number;
+  confirmedOrders!: number;
+  collectedToman!: number;
+  refundedToman!: number;
+  netCollectedToman!: number;
+
+  @ApiProperty({ type: Number, nullable: true })
+  conversionPercent!: number | null;
+
+  @ApiProperty({ type: () => CampaignQuotaTotalsDto })
+  quota!: CampaignQuotaTotalsDto;
+}
+
+export class GrowthCampaignTrackingContentDto {
+  source!: string;
+  medium!: string;
+  content!: string;
+  submittedOrders!: number;
+  confirmedOrders!: number;
+  netCollectedToman!: number;
+}
+
+const spendCoverageStates = [
+  'MATCHED',
+  'NO_COST',
+  'NON_POSITIVE_COST',
+  'NO_CONFIRMED_ORDERS',
+  'INCOMPLETE_COST',
+] as const;
 
 export class GrowthCampaignHistoryItemDto {
   @ApiProperty({ enum: ['attribution', 'cancellation'] })
@@ -73,11 +113,35 @@ export class GrowthCampaignPerformanceDto {
   campaignId!: string;
   campaign!: string;
 
+  @ApiProperty({ format: 'uuid', type: String, nullable: true })
+  managedCampaignId!: string | null;
+
+  @ApiProperty({ enum: ['SALES', 'MARKETING', 'FESTIVAL', 'LEGACY', 'TRACKING_ONLY'] })
+  campaignType!: 'SALES' | 'MARKETING' | 'FESTIVAL' | 'LEGACY' | 'TRACKING_ONLY';
+
   @ApiProperty({ type: () => GrowthRevenuePeriodDto })
   period!: GrowthRevenuePeriodDto;
 
+  @ApiProperty({ format: 'date-time' })
+  generatedAt!: string;
+
   @ApiProperty({ type: () => GrowthDashboardMetricsDto })
   totals!: GrowthDashboardMetricsDto;
+
+  @ApiProperty({ enum: spendCoverageStates })
+  spendCoverage!: (typeof spendCoverageStates)[number];
+
+  @ApiProperty({ type: () => GrowthCampaignOfferPerformanceDto, nullable: true })
+  offer!: GrowthCampaignOfferPerformanceDto | null;
+
+  @ApiProperty({ type: () => GrowthDashboardGroupDto, isArray: true })
+  channels!: GrowthDashboardGroupDto[];
+  channelCount!: number;
+
+  @ApiProperty({ type: () => GrowthCampaignTrackingContentDto, isArray: true })
+  trackingContents!: GrowthCampaignTrackingContentDto[];
+  contentPage!: number;
+  hasMoreTrackingContents!: boolean;
 
   newCustomers!: number;
 

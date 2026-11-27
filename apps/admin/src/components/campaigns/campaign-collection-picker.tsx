@@ -9,16 +9,20 @@ import { useCampaignSelection } from '@/lib/campaigns/campaign-selection';
 
 type Filters = components['schemas']['CampaignCollectionFiltersDto'];
 type Editor = components['schemas']['CampaignLandingEditorDto'];
+type Option = components['schemas']['CampaignNamedOptionDto'];
 
-export function CampaignCollectionPicker({
-  campaignId,
-  disabled,
-  onApply,
-}: {
-  campaignId: string;
+type Props = {
   disabled?: boolean;
-  onApply: (filters: Filters) => void;
-}) {
+} & (
+  | { campaignId: string; onApply: (filters: Filters) => void }
+  | { selectedSlug?: string; onSelect: (option: Option) => void }
+);
+
+export function CampaignCollectionPicker(props: Props) {
+  const { disabled } = props;
+  const choosingLink = 'onSelect' in props;
+  const selectedSlug = 'onSelect' in props ? props.selectedSlug : undefined;
+  const excludedId = 'campaignId' in props ? props.campaignId : undefined;
   const id = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -28,14 +32,19 @@ export function CampaignCollectionPicker({
   const q = query.trim();
   const data = useCampaignSelection<components['schemas']['CampaignCollectionOptionsDto']>(
     open && q.length !== 1
-      ? `/api/campaigns/collection-options?${new URLSearchParams({ ...(q ? { q } : {}), page: String(page) })}`
+      ? `/api/campaigns/collection-options?${new URLSearchParams({ ...(q ? { q } : {}), page: String(page), ...(choosingLink ? { visibility: 'live' } : {}) })}`
       : null,
     250,
   );
-  const items = data.data?.items.filter(({ id }) => id !== campaignId);
+  const items = data.data?.items.filter(({ id }) => id !== excludedId);
 
-  async function apply(source: string, name: string) {
+  async function apply(option: Option) {
     if (pending || disabled) return;
+    if ('onSelect' in props) {
+      props.onSelect(option);
+      return;
+    }
+    const { id: source, name } = option;
     setPending(source);
     setNotice(null);
     try {
@@ -43,7 +52,7 @@ export function CampaignCollectionPicker({
       if (!response.ok) throw new Error('Collection unavailable.');
       const { landing } = (await response.json()) as Editor;
       if (landing?.collectionMode !== 'FILTERED') throw new Error('Collection unavailable.');
-      onApply(landing.filters);
+      props.onApply(landing.filters);
       setNotice({ message: `قواعد «${name}» در پیش‌نویس کپی شد.` });
     } catch {
       setNotice({ message: 'دریافت قواعد مجموعه ممکن نشد.', failed: true });
@@ -58,14 +67,16 @@ export function CampaignCollectionPicker({
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary className="cursor-pointer text-sm font-semibold">
-        استفاده از قواعد یک مجموعهٔ هوشمند
+        {choosingLink ? 'انتخاب صفحهٔ فعال کمپین' : 'استفاده از قواعد یک مجموعهٔ هوشمند'}
       </summary>
-      <p className="text-xs text-[var(--admin-color-muted)]">
-        قواعد فعلی از مجموعهٔ انتخابی جایگزین می‌شوند. محصولات همچنان بر اساس کاتالوگ و دامنهٔ همین
-        جشنواره انتخاب می‌شوند.
-      </p>
+      {!choosingLink && (
+        <p className="text-xs text-[var(--admin-color-muted)]">
+          قواعد فعلی از مجموعهٔ انتخابی جایگزین می‌شوند. محصولات همچنان بر اساس کاتالوگ و دامنهٔ
+          همین جشنواره انتخاب می‌شوند.
+        </p>
+      )}
       <label htmlFor={id} className="text-xs">
-        عنوان یا اسلاگ مجموعه
+        عنوان یا بخش پایانی نشانی
       </label>
       <Input
         id={id}
@@ -106,17 +117,24 @@ export function CampaignCollectionPicker({
       )}
       {items?.length ? (
         <ul className="space-y-2">
-          {items.map(({ id, name }) => (
-            <li key={id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-              {name}
+          {items.map((option) => (
+            <li
+              key={option.id}
+              className="flex flex-wrap items-center justify-between gap-2 text-sm"
+            >
+              {option.name}
               <Button
                 size="sm"
                 variant="outline"
-                disabled={disabled || Boolean(pending)}
-                loading={pending === id}
-                onClick={() => void apply(id, name)}
+                disabled={disabled || Boolean(pending) || selectedSlug === option.slug}
+                loading={pending === option.id}
+                onClick={() => void apply(option)}
               >
-                کپی قواعد
+                {choosingLink
+                  ? selectedSlug === option.slug
+                    ? 'انتخاب‌شده'
+                    : 'انتخاب'
+                  : 'کپی قواعد'}
               </Button>
             </li>
           ))}

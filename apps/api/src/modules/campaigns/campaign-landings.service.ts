@@ -68,6 +68,7 @@ const publicationActions = ['PUBLISH', 'PUBLISH_NOW'];
 const activeWindow = (now: Date) =>
   ({
     status: 'ACTIVE',
+    managementPurpose: null,
     startsAt: { lte: now },
     endsAt: { gt: now },
   }) satisfies Prisma.CampaignWhereInput;
@@ -90,6 +91,7 @@ export class CampaignLandingsService {
       where: { id: campaignId },
       select: {
         kind: true,
+        managementPurpose: true,
         revision: true,
         landing: { include: { placements: { include: placementMedia } } },
       },
@@ -419,6 +421,7 @@ export class CampaignLandingsService {
           where: {
             slug: input.slug,
             campaignId: { not: campaignId },
+            campaign: { managementPurpose: null },
             ...(input.seoMode === 'RECURRING' ? { seoMode: 'TEMPORARY' } : {}),
           },
           select: { campaignId: true },
@@ -470,6 +473,7 @@ export class CampaignLandingsService {
   }
 
   async validateForPublication(tx: Prisma.TransactionClient, campaign: Campaign) {
+    if (campaign.managementPurpose === 'SALES') return;
     const landing = await tx.campaignLanding.findUnique({
       where: { campaignId: campaign.id },
       include: { placements: true },
@@ -486,6 +490,7 @@ export class CampaignLandingsService {
         slug: landing.slug,
         campaignId: { not: campaign.id },
         campaign: {
+          managementPurpose: null,
           ...(campaign.kind !== 'FESTIVAL' && landing.seoMode !== 'RECURRING'
             ? { kind: 'FESTIVAL' }
             : {}),
@@ -616,6 +621,7 @@ export class CampaignLandingsService {
         seoMode: 'RECURRING',
         campaign: {
           archivedAt: null,
+          managementPurpose: null,
           OR: [{ status: 'ENDED' }, { status: { in: ['ACTIVE', 'PAUSED'] }, endsAt: { lte: now } }],
           revisions: { some: { action: { in: publicationActions } } },
         },
@@ -888,9 +894,15 @@ export class CampaignLandingsService {
     );
   }
 
-  private assertLandingKind({ kind }: Pick<Campaign, 'kind'>) {
+  private assertLandingKind({
+    kind,
+    managementPurpose,
+  }: Pick<Campaign, 'kind' | 'managementPurpose'>) {
     if (kind === 'MARKETING') {
       throw new BadRequestException('Marketing campaigns do not have a landing.');
+    }
+    if (managementPurpose === 'SALES') {
+      throw new BadRequestException('Sales offers do not have a landing.');
     }
   }
 

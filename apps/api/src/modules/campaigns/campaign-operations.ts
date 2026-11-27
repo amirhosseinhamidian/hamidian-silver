@@ -64,7 +64,9 @@ export async function campaignBudget(
   const blockers: string[] = [];
   const warnings: string[] = [];
 
-  if (!rule && campaign.audience !== 'ALL_CUSTOMERS')
+  if (!rule && campaign.managementPurpose === 'SALES')
+    blockers.push('Configure a promotion for this sales offer.');
+  else if (!rule && campaign.audience !== 'ALL_CUSTOMERS')
     blockers.push('Configure a promotion for the selected audience.');
   if (rule) {
     if (remainingDiscountToman === 0)

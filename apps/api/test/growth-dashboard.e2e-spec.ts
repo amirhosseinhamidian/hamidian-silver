@@ -36,11 +36,15 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
         const category = await db.category.create({
           data: { slug: `category-${suffix}`, name: 'Growth fixture' },
         });
+        const brand = await db.brand.create({
+          data: { slug: `brand-${suffix}`, name: 'Growth fixture' },
+        });
         const product = await db.product.create({
           data: {
             slug: `product-${suffix}`,
             name: 'Growth fixture',
             status: ProductStatus.ACTIVE,
+            brandId: brand.id,
             categories: { create: { categoryId: category.id } },
             variants: { create: { sku: `growth-${suffix}` } },
           },
@@ -65,6 +69,7 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
           medium,
           campaign: campaign.campaign,
           campaignId,
+          content: 'hero',
           occurredAt: before.toISOString(),
         };
 
@@ -93,6 +98,7 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
                   medium,
                   campaign: campaign.campaign,
                   campaignId,
+                  content: touch.content,
                   firstTouch: touch,
                   lastTouch: touch,
                   attributedAt: before,
@@ -159,10 +165,12 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
         };
         await measurement.record(observed);
         await measurement.record(observed);
+        const anotherView = { ...observed, id: randomUUID() };
+        await measurement.record(anotherView);
         const checkout = { ...observed, id: randomUUID(), stage: 'begin_checkout' as const };
         await measurement.record(checkout);
         await db.growthFunnelEvent.updateMany({
-          where: { id: { in: [observed.id, checkout.id] } },
+          where: { id: { in: [observed.id, anotherView.id, checkout.id] } },
           data: { recordedAt: inPeriod },
         });
         const spend = {
@@ -184,6 +192,10 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
         const financial = await revenue.summary(period);
         expect(result.totals).toMatchObject({
           confirmedCustomers: 1,
+          newCustomers: 1,
+          returningCustomers: 0,
+          campaignAttributedOrders: 2,
+          walletAppliedToman: null,
           submittedOrders: 2,
           confirmedOrders: financial.paidOrderCount,
           confirmedSubmissions: 1,
@@ -195,9 +207,20 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
           recordedSpendToman: 4_000,
           recordedSpendPerConfirmedOrderToman: 2_000,
           measuredVisits: 1,
-          itemViews: 1,
+          itemViews: 2,
           checkouts: 1,
         });
+        expect(result.visitStages).toEqual({ itemList: 0, item: 1, cart: 0, checkout: 1 });
+        expect(result.daily).toEqual([
+          expect.objectContaining({
+            day: period.from,
+            confirmedOrders: 2,
+            campaignAttributedOrders: 2,
+            newCustomers: 1,
+            netCollectedToman: 20_000,
+            walletAppliedToman: null,
+          }),
+        ]);
         expect(result.items).toHaveLength(1);
         expect(await dashboard.read({ ...period, page: 2, limit: 1 })).toMatchObject({
           total: 1,
@@ -208,9 +231,22 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
           items: [expect.any(Object)],
         });
         expect(
-          await dashboard.read({ ...period, category: category.slug, device: 'mobile' }),
+          await dashboard.read({
+            ...period,
+            category: category.slug,
+            product: product.slug,
+            brand: brand.slug,
+            device: 'mobile',
+          }),
         ).toMatchObject({
           totals: { confirmedOrders: 1, measuredVisits: 1, recordedSpendToman: null },
+        });
+        expect(
+          await dashboard.read({ ...period, product: product.slug, brand: 'other-brand' }),
+        ).toMatchObject({
+          totals: { confirmedOrders: 0, recordedSpendToman: null },
+          visitStages: null,
+          items: [],
         });
         expect(await dashboard.read({ ...period, device: 'unknown' })).toMatchObject({
           totals: { confirmedOrders: 0, conversionPercent: null, measuredVisits: null },
@@ -292,9 +328,46 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
             snapshot: { version: 1 },
           })),
         });
+        const quota = await db.campaignQuota.create({
+          data: { campaignId: lifecycle.id, productId: product.id, limit: 10, manualSold: 1 },
+        });
+        await db.campaignQuotaAllocation.createMany({
+          data: [
+            { quotaId: quota.id, orderId: first.id, quantity: 2, state: 'CAPTURED' },
+            { quotaId: quota.id, orderId: pending.id, quantity: 3, state: 'RESERVED' },
+          ],
+        });
         const performance = await dashboard.campaignPerformance(campaignId, period);
         expect(performance).toMatchObject({
+          campaignType: 'LEGACY',
+          managedCampaignId: lifecycle.id,
+          spendCoverage: 'MATCHED',
           totals: { submittedOrders: 3, confirmedOrders: 2, measuredVisits: 1 },
+          offer: {
+            submittedOrders: 3,
+            confirmedOrders: 2,
+            collectedToman: 20_000,
+            refundedToman: 0,
+            quota: {
+              products: 1,
+              limit: 10,
+              manualSold: 1,
+              siteSold: 2,
+              reserved: 3,
+              remaining: 4,
+            },
+          },
+          channels: [{ source, medium, confirmedOrders: 2, recordedSpendToman: 4_000 }],
+          trackingContents: [
+            {
+              source,
+              medium,
+              content: 'hero',
+              submittedOrders: 3,
+              confirmedOrders: 2,
+              netCollectedToman: 20_000,
+            },
+          ],
           newCustomers: 1,
           cacToman: 4_000,
           roas: 5,
@@ -308,9 +381,17 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
             lifetimeMediaSpendToman: 4_000,
             lifetimeCommittedDiscountToman: 1_500,
             unpaidDiscountCommitmentToman: 200,
+            remainingDiscountToman: 1_500,
             mediaVarianceToman: 1_000,
             budgetVarianceToman: -500,
           },
+        });
+        await expect(
+          dashboard.campaignPerformance(campaignId, { ...period, contentPage: 2 }),
+        ).resolves.toMatchObject({
+          contentPage: 2,
+          trackingContents: [],
+          hasMoreTrackingContents: false,
         });
         expect(performance.history).toEqual(
           expect.arrayContaining([
@@ -327,6 +408,10 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
         const nextDay = { from: '2026-11-21', to: '2026-11-21' };
         await expect(dashboard.campaignPerformance(campaignId, nextDay)).resolves.toMatchObject({
           totals: { confirmedOrders: 0, refundedToman: 500 },
+          offer: { confirmedOrders: 0, refundedToman: 500, netCollectedToman: -500 },
+          trackingContents: [
+            { content: 'hero', submittedOrders: 0, confirmedOrders: 0, netCollectedToman: -500 },
+          ],
           cacToman: null,
           roas: null,
           merchandiseDiscountToman: 0,
@@ -334,6 +419,8 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
         });
         await expect(dashboard.campaignPerformance(otherCampaignId, period)).resolves.toMatchObject(
           {
+            campaignType: 'TRACKING_ONLY',
+            offer: null,
             budget: null,
             merchandiseDiscountToman: null,
             cacToman: null,
@@ -346,11 +433,214 @@ it('reconciles confirmed orders and dated refunds, filters reports and records c
           data: { campaignId: otherCampaignId, campaign: otherCampaignId },
         });
         await expect(dashboard.campaignPerformance(campaignId, period)).resolves.toMatchObject({
-          totals: { confirmedOrders: 2 },
+          totals: { confirmedOrders: 2, newCustomers: 0, returningCustomers: 1 },
           newCustomers: 0,
           cacToman: null,
           roas: 5,
         });
+        await dashboard.recordCost({
+          ...spend,
+          id: randomUUID(),
+          day: nextDay.from,
+          amountToman: 1_000,
+        });
+        const extended = await dashboard.read({ ...period, to: nextDay.to, sort: 'net' });
+        expect(extended.totals).toMatchObject({
+          recordedSpendToman: 5_000,
+          recordedSpendPerConfirmedOrderToman: 2_500,
+          confirmedOrders: 2,
+          refundedToman: 500,
+          netCollectedToman: 19_500,
+        });
+        expect(
+          extended.daily.map(({ day, netCollectedToman }) => [day, netCollectedToman]),
+        ).toEqual([
+          [period.from, 20_000],
+          [nextDay.from, -500],
+        ]);
+        await db.orderFinanceSnapshot.createMany({
+          data: [first.id, second.id].map((orderId) => ({
+            orderId,
+            paidAt: inPeriod,
+            merchandiseRevenueToman: 10_300,
+            platingRevenueToman: 0,
+            discountToman: 100,
+            shippingChargedToman: 0,
+            taxToman: 0,
+            customerTotalToman: 10_000,
+            walletAppliedToman: 200,
+            supplierCostToman: 0,
+            grossSalesToman: 10_300,
+            netSalesToman: 10_200,
+            grossMarginBeforeServiceCostsToman: 10_200,
+          })),
+        });
+        await expect(dashboard.read({ ...period, sort: 'spend' })).resolves.toMatchObject({
+          totals: { orderDiscountToman: 200, walletAppliedToman: 400 },
+          daily: [{ day: period.from, orderDiscountToman: 200, walletAppliedToman: 400 }],
+        });
+        // A paid order came from the marketing link but applied the sales campaign's quote.
+        await db.campaign.update({
+          where: { id: lifecycle.id },
+          data: { managementPurpose: 'SALES', channel: 'sales', plannedChannelCostToman: null },
+        });
+        await db.campaign.create({
+          data: {
+            slug: otherCampaignId,
+            trackingId: otherCampaignId,
+            name: 'تبلیغات نمونه',
+            kind: 'MARKETING',
+            goal: 'تطبیق انتساب و تخفیف',
+            channel: medium,
+            ownerId: user.id,
+            budgetToman: 2_000,
+            plannedChannelCostToman: 2_000,
+            allProducts: true,
+            startsAt: before,
+            endsAt: after,
+            message: 'تبلیغات نمونه',
+            marketingDestinationPath: '/products',
+            relatedSalesCampaignId: lifecycle.id,
+          },
+        });
+        await db.orderAttribution.update({
+          where: { orderId: first.id },
+          data: { campaignId: otherCampaignId, campaign: otherCampaignId },
+        });
+        const bothDays = { from: period.from, to: nextDay.to };
+        await expect(dashboard.campaignPerformance(campaignId, bothDays)).resolves.toMatchObject({
+          campaignType: 'SALES',
+          consumedCreditToman: 200,
+          totals: { confirmedOrders: 1, refundedToman: 0, netCollectedToman: 10_000 },
+          offer: {
+            confirmedOrders: 2,
+            refundedToman: 500,
+            netCollectedToman: 19_500,
+            quota: { manualSold: 1, siteSold: 2, reserved: 3, remaining: 4 },
+          },
+          merchandiseDiscountToman: 1_000,
+          shippingDiscountToman: 300,
+          budget: { remainingDiscountToman: 4_500 },
+        });
+        await expect(
+          dashboard.campaignPerformance(otherCampaignId, bothDays),
+        ).resolves.toMatchObject({
+          campaignType: 'MARKETING',
+          spendCoverage: 'NO_COST',
+          cacToman: null,
+          roas: null,
+          offer: null,
+          totals: { confirmedOrders: 1, refundedToman: 500, netCollectedToman: 9_500 },
+          trackingContents: [{ content: 'hero', confirmedOrders: 1, netCollectedToman: 9_500 }],
+        });
+        await db.orderAttribution.update({
+          where: { orderId: second.id },
+          data: { source: 'uncovered' },
+        });
+        await expect(dashboard.campaignPerformance(campaignId, bothDays)).resolves.toMatchObject({
+          spendCoverage: 'INCOMPLETE_COST',
+          roas: null,
+          cacToman: null,
+        });
+
+        const rankSource = `ranking-${suffix}`;
+        const cohorts = [
+          { medium: 'email', id: campaignId, submitted: 10, confirmed: 7 },
+          { medium: 'email', id: otherCampaignId, submitted: 10, confirmed: 8 },
+          { medium: 'sms', id: campaignId, submitted: 12, confirmed: 12 },
+          { medium: 'sms', id: otherCampaignId, submitted: 8, confirmed: 4 },
+          { medium: 'social', id: otherCampaignId, submitted: 1, confirmed: 1 },
+        ];
+        const rankedOrders = cohorts.flatMap((cohort) =>
+          Array.from({ length: cohort.submitted }, (_, index) => ({
+            cohort,
+            id: randomUUID(),
+            paidAt: index < cohort.confirmed ? inPeriod : null,
+          })),
+        );
+        await db.order.createMany({
+          data: rankedOrders.map(({ id, paidAt }) => ({
+            id,
+            paidAt,
+            orderNumber: id.replaceAll('-', ''),
+            userId: user.id,
+            warehouseId: warehouse.id,
+            createdAt: inPeriod,
+            reservationExpiresAt: after,
+            status: paidAt ? OrderStatus.PAID : OrderStatus.PENDING_PAYMENT,
+            merchandiseTotalToman: 10_000,
+            grandTotalToman: 10_000,
+          })),
+        });
+        await db.payment.createMany({
+          data: rankedOrders.map(({ id, paidAt }) => ({
+            orderId: id,
+            paidAt,
+            amountToman: 10_000,
+            status: paidAt ? PaymentStatus.PAID : PaymentStatus.PENDING,
+          })),
+        });
+        await db.orderAttribution.createMany({
+          data: rankedOrders.map(({ cohort, id }) => ({
+            orderId: id,
+            policyVersion: 1,
+            windowDays: 30,
+            model: AttributionModel.LAST_NON_DIRECT,
+            firstTouch: {
+              ...touch,
+              source: rankSource,
+              medium: cohort.medium,
+              campaignId: cohort.id,
+              campaign: cohort.id,
+            },
+            lastTouch: {
+              ...touch,
+              source: rankSource,
+              medium: cohort.medium,
+              campaignId: cohort.id,
+              campaign: cohort.id,
+            },
+            campaignId: cohort.id,
+            campaign: cohort.id,
+            source: rankSource,
+            medium: cohort.medium,
+            attributedAt: before,
+          })),
+        });
+        const rankQuery = {
+          from: period.from,
+          to: period.to,
+          source: rankSource,
+          page: 99,
+          limit: 1,
+        };
+        await expect(dashboard.read(rankQuery)).resolves.toMatchObject({
+          items: [],
+          total: 5,
+          leadingCampaign: { campaignId, confirmedOrders: 19 },
+          leadingChannel: { medium: 'sms', submittedOrders: 20, confirmedSubmissions: 16 },
+          minimumChannelOrders: 20,
+        });
+        const tiedOrders = rankedOrders
+          .filter(({ cohort, paidAt }) => cohort.id === campaignId && paidAt)
+          .slice(0, 3);
+        await db.orderAttribution.updateMany({
+          where: { orderId: { in: tiedOrders.map(({ id }) => id) } },
+          data: { campaignId: otherCampaignId, campaign: otherCampaignId },
+        });
+        await expect(dashboard.read(rankQuery)).resolves.toMatchObject({ leadingCampaign: null });
+        const completed = rankedOrders.find(
+          ({ cohort, paidAt }) => cohort.medium === 'email' && !paidAt,
+        )!;
+        await db.order.update({
+          where: { id: completed.id },
+          data: {
+            status: OrderStatus.PAID,
+            paidAt: inPeriod,
+            payment: { update: { status: PaymentStatus.PAID, paidAt: inPeriod } },
+          },
+        });
+        await expect(dashboard.read(rankQuery)).resolves.toMatchObject({ leadingChannel: null });
         throw rollback;
       },
       { timeout: 20_000 },

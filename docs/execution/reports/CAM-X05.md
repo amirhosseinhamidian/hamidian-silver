@@ -16,7 +16,7 @@
 
 ## اجرای محلی
 
-~~~bash
+```bash
 cd "/Users/amirhosseinhamidian/Projects/hamidian-silver" &&
 pnpm contracts:generate &&
 pnpm contracts:typecheck &&
@@ -27,11 +27,11 @@ pnpm frontend:lint &&
 pnpm frontend:typecheck &&
 pnpm storefront:test catalog-product-card.test.tsx product-purchase-panel.test.tsx checkout-flow.test.tsx structured-data.test.ts &&
 pnpm frontend:build
-~~~
+```
 
 بلوک زیر PostgreSQL آزمایشی را روی یک پورت آزاد لوکال راه می‌اندازد و پس از پایان اجرای بلوک، همان کانتینر را جمع می‌کند.
 
-~~~bash
+```bash
 (
   cd "/Users/amirhosseinhamidian/Projects/hamidian-silver" || exit 1
   cam_x05_db="$(docker run -d --rm \
@@ -51,12 +51,12 @@ pnpm frontend:build
   pnpm exec prisma migrate deploy &&
   pnpm api:test:e2e --runInBand 'campaign-quota|promotion-checkout|campaign-lifecycle'
 )
-~~~
+```
 
 آزمون سهمیه سقف موجودی، تداخل بازه‌ها، نسخهٔ قدیمی، فروش دستی بدون ثبت مالی، رقابت دو واریانت برای آخرین سهمیه، قیمت عادی، پاسخ نامشخص، شکست پرداخت، رد رسید، تلاش مجدد، Callback تکراری، مرجوعی، لغو و انقضا را بررسی می‌کند.
 
-~~~bash
+```bash
 pnpm storefront:test:e2e campaign-landing.spec.ts catalog-seo.spec.ts purchase-flow.spec.ts
-~~~
+```
 
 برای بازبینی دستی، در محیط محلی برای یک محصول چندواریانتیِ موجود کمپین درصدی و سهمیهٔ ۲ عدد تعریف کنید. مانده را روی کارت و صفحهٔ محصول ببینید. یک فروش دستی ثبت کنید و تغییر مانده و موجودی انبار را کنترل کنید. با ثبت یک سفارش کمپینی، افزایش رزرو را در پنل ببینید. بعد از رد رسید، آزاد شدن سهمیه و سپس امکان پرداخت دوبارهٔ همان سفارش را بررسی کنید. وقتی سهمیه صفر شد، لغو سفارش قبلی و ثبت سفارش عادی با قیمت تازه را در فروشگاه بررسی کنید.

@@ -20,6 +20,34 @@ function activeQuotaCampaign(now: Date) {
   return { status: 'ACTIVE', startsAt: { lte: now }, endsAt: { gt: now } } as const;
 }
 
+export async function campaignQuotaTotals(
+  reader: Pick<QuotaReader, 'campaignQuota' | 'campaignQuotaAllocation'>,
+  campaignId: string,
+) {
+  const totals = await reader.campaignQuota.aggregate({
+    where: { campaignId },
+    _sum: { limit: true, manualSold: true },
+    _count: { _all: true },
+  });
+  const allocations = await reader.campaignQuotaAllocation.groupBy({
+    by: ['state'],
+    where: { quota: { campaignId }, state: { in: ['RESERVED', 'CAPTURED'] } },
+    _sum: { quantity: true },
+  });
+  const siteSold = allocations.find(({ state }) => state === 'CAPTURED')?._sum.quantity ?? 0;
+  const reserved = allocations.find(({ state }) => state === 'RESERVED')?._sum.quantity ?? 0;
+  const limit = totals._sum.limit ?? 0;
+  const manualSold = totals._sum.manualSold ?? 0;
+  return {
+    products: totals._count._all,
+    limit,
+    manualSold,
+    siteSold,
+    reserved,
+    remaining: Math.max(0, limit - manualSold - siteSold - reserved),
+  };
+}
+
 export async function quotaUsage(reader: QuotaReader, ids: string[]) {
   const rows = ids.length
     ? await reader.campaignQuotaAllocation.groupBy({

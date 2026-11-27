@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
 import { Select } from '@/components/ui/select';
+import { CampaignDestinationPicker } from './campaign-destination-picker';
 
 type Slot = 'NAVIGATION' | 'COUNTDOWN';
 type Appearance = components['schemas']['CampaignPlacementAppearanceDto'];
@@ -95,24 +96,28 @@ export function CampaignPlacementStyleFields({ slot, saved }: { slot: Slot; save
 
   return (
     <>
-      {textFields.map(([key, label, value, maxLength]) => (
-        <FormField
-          key={key}
-          id={`${slot}-${key}`}
-          label={label}
-          hint={key === 'ctaPath' ? 'یک مسیر فروشگاه مانند /products' : undefined}
-        >
-          {(control) => (
-            <Input
-              {...control}
-              name={control.id}
-              defaultValue={value ?? ''}
-              maxLength={maxLength}
-              dir={key === 'ctaPath' ? 'ltr' : undefined}
-            />
-          )}
-        </FormField>
-      ))}
+      {textFields.map(([key, label, value, maxLength]) =>
+        key === 'ctaPath' ? (
+          <CampaignDestinationPicker
+            key={key}
+            name={`${slot}-${key}`}
+            label={label}
+            defaultValue={value ?? ''}
+            maxLength={maxLength}
+          />
+        ) : (
+          <FormField key={key} id={`${slot}-${key}`} label={label}>
+            {(control) => (
+              <Input
+                {...control}
+                name={control.id}
+                defaultValue={value ?? ''}
+                maxLength={maxLength}
+              />
+            )}
+          </FormField>
+        ),
+      )}
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"

@@ -27,6 +27,11 @@ import { assertExclusiveQuotaWindow } from './campaign-quota';
 import { CampaignLandingsService } from './campaign-landings.service';
 import { campaignBudget, simulateCampaign } from './campaign-operations';
 import { campaignTaxonomy, selectCampaignProducts } from './campaign-selection';
+import {
+  prepareMarketingSettings,
+  salesCampaignFilter,
+  validateMarketingDestination,
+} from './marketing-campaign';
 import type {
   CampaignProductQueryDto,
   CampaignSimulationInputDto,
@@ -35,6 +40,8 @@ import type {
   CampaignDetailDto,
   CampaignDraftDto,
   CampaignListDto,
+  CampaignListQueryDto,
+  CampaignListView,
   CampaignSummaryDto,
   CampaignTransitionDto,
   CreateCampaignDto,
@@ -45,6 +52,20 @@ import type {
 const pageSize = 25;
 const canonicalOrigin = 'https://campaign.invalid';
 
+const listFilters: Record<CampaignListView, Prisma.CampaignWhereInput> = {
+  festivals: { kind: 'FESTIVAL' },
+  sales: salesCampaignFilter,
+  marketing: {
+    kind: { not: 'FESTIVAL' },
+    managementPurpose: null,
+    OR: [
+      { kind: 'MARKETING' },
+      { plannedChannelCostToman: { gt: 0 } },
+      { tracking: { costs: { some: { amountToman: { gt: 0 } } } } },
+    ],
+  },
+};
+
 function summarize(campaign: Campaign): CampaignSummaryDto {
   return {
     id: campaign.id,
@@ -52,6 +73,7 @@ function summarize(campaign: Campaign): CampaignSummaryDto {
     name: campaign.name,
     ownerId: campaign.ownerId,
     kind: campaign.kind,
+    ...(campaign.managementPurpose ? { managementPurpose: campaign.managementPurpose } : {}),
     status: campaign.status,
     archivedAt: campaign.archivedAt?.toISOString() ?? null,
     revision: campaign.revision,
@@ -72,13 +94,56 @@ export class CampaignsService {
     @Optional() private readonly landings?: CampaignLandingsService,
   ) {}
 
-  async list(page: number): Promise<CampaignListDto> {
-    const rows = await this.db.campaign.findMany({
-      orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
+  async list({
+    page = 1,
+    view,
+    q,
+    status,
+    fromTehran,
+    toTehran,
+    sort,
+    salesKind,
+  }: CampaignListQueryDto = {}): Promise<CampaignListDto> {
+    if (q?.includes('\0')) throw new BadRequestException('Invalid campaign search.');
+    const from = fromTehran ? parseTehranDate(fromTehran) : null;
+    const to = toTehran ? parseTehranDate(toTehran) : null;
+    if (from && to && from >= to)
+      throw new BadRequestException('The end time must follow the start time.');
+    const direction = sort === 'oldest' ? 'asc' : 'desc';
+    const query = {
+      where: {
+        ...(view ? listFilters[view] : {}),
+        ...(view === 'sales' && salesKind
+          ? { managementPurpose: salesKind === 'offers' ? 'SALES' : null }
+          : {}),
+        ...(q ? { name: { contains: q.replace(/[\\%_]/g, '\\$&'), mode: 'insensitive' } } : {}),
+        ...(status ? { status } : {}),
+        ...(from ? { endsAt: { gt: from } } : {}),
+        ...(to ? { startsAt: { lt: to } } : {}),
+      },
+      orderBy: [{ startsAt: direction }, { id: direction }],
       skip: (page - 1) * pageSize,
       take: pageSize + 1,
-    });
-    return { items: rows.slice(0, pageSize).map(summarize), page, hasMore: rows.length > pageSize };
+    } satisfies Prisma.CampaignFindManyArgs;
+    const items =
+      view === 'sales'
+        ? (
+            await this.db.campaign.findMany({
+              ...query,
+              include: { _count: { select: { quotas: true } } },
+            })
+          ).map((campaign) => ({
+            ...summarize(campaign),
+            salesDetails: {
+              allProducts: campaign.allProducts,
+              selectedProducts: campaign.productIds.length,
+              selectedCategories: campaign.categoryIds.length,
+              discountBudgetToman: discountBudget(campaign),
+              quotaProducts: campaign._count.quotas,
+            },
+          }))
+        : (await this.db.campaign.findMany(query)).map(summarize);
+    return { items: items.slice(0, pageSize), page, hasMore: items.length > pageSize };
   }
 
   async detail(id: string, historyPage: number): Promise<CampaignDetailDto> {
@@ -115,6 +180,15 @@ export class CampaignsService {
       channel: campaign.channel,
       trackingId: campaign.trackingId,
       trackingLabel: campaign.tracking.campaign,
+      ...(campaign.marketingDestinationPath
+        ? {
+            marketing: {
+              destinationPath: campaign.marketingDestinationPath,
+              relatedFestivalId: campaign.relatedFestivalId,
+              relatedSalesCampaignId: campaign.relatedSalesCampaignId,
+            },
+          }
+        : {}),
       allProducts: campaign.allProducts,
       productSlugs: products.map(({ slug }) => slug),
       categorySlugs: categories.map(({ slug }) => slug),
@@ -154,12 +228,19 @@ export class CampaignsService {
     return campaignTaxonomy(this.db);
   }
 
-  async selectCollections(q?: string, page = 1) {
+  async selectCollections(q?: string, page = 1, visibility?: 'live', now = new Date()) {
     if (q?.includes('\0')) throw new BadRequestException('Invalid collection search.');
     const rows = await this.db.campaignLanding.findMany({
       where: {
-        collectionMode: 'FILTERED',
-        campaign: { kind: { not: 'MARKETING' }, archivedAt: null },
+        ...(visibility === 'live' ? {} : { collectionMode: 'FILTERED' }),
+        campaign: {
+          kind: { not: 'MARKETING' },
+          managementPurpose: null,
+          archivedAt: null,
+          ...(visibility === 'live'
+            ? { status: 'ACTIVE', startsAt: { lte: now }, endsAt: { gt: now } }
+            : {}),
+        },
         ...(q
           ? {
               OR: [
@@ -200,7 +281,18 @@ export class CampaignsService {
 
   async create(input: CreateCampaignDto, actorUserId: string): Promise<CampaignSummaryDto> {
     const kind = input.kind ?? 'LEGACY';
-    const internalIdentity = kind === 'FESTIVAL' ? `festival-${randomUUID()}` : null;
+    const managementPurpose = input.managementPurpose ?? null;
+    const isSalesOffer = managementPurpose === 'SALES';
+    if (isSalesOffer && (kind !== 'LEGACY' || input.trackingId || input.trackingLabel))
+      throw new BadRequestException('Sales offers use an internal campaign identity.');
+    const identityPrefix = input.marketing
+      ? 'marketing'
+      : isSalesOffer
+        ? 'sales'
+        : kind === 'FESTIVAL'
+          ? 'festival'
+          : null;
+    const internalIdentity = identityPrefix ? `${identityPrefix}-${randomUUID()}` : null;
     const trackingId = internalIdentity ?? normalizeAttributionToken(input.trackingId, 64);
     const trackingLabel = internalIdentity ?? normalizeAttributionToken(input.trackingLabel);
     if (!trackingId || !trackingLabel)
@@ -208,10 +300,17 @@ export class CampaignsService {
 
     try {
       return await this.db.$transaction(async (tx) => {
-        const draft = await this.prepareDraft(tx, input, kind);
+        const draft = await this.prepareDraft(tx, input, kind, managementPurpose);
         await ensureCampaignLinkIdentity(tx, trackingId, trackingLabel);
         const campaign = await tx.campaign.create({
-          data: { ...draft, kind, slug: input.slug, trackingId, ownerId: actorUserId },
+          data: {
+            ...draft,
+            kind,
+            managementPurpose,
+            slug: input.slug,
+            trackingId,
+            ownerId: actorUserId,
+          },
         });
         await this.recordRevision(tx, campaign, 'CREATE', actorUserId);
         return summarize(campaign);
@@ -236,10 +335,10 @@ export class CampaignsService {
         throw new ConflictException('Only draft campaigns can be edited.');
 
       const kind = input.kind ?? current.kind;
-      if (kind !== current.kind && current.kind !== 'LEGACY') {
+      if (kind !== current.kind && (current.kind !== 'LEGACY' || current.managementPurpose)) {
         throw new ConflictException('Only a legacy draft can be classified as a festival.');
       }
-      const draft = await this.prepareDraft(tx, input, kind, current);
+      const draft = await this.prepareDraft(tx, input, kind, current.managementPurpose, current);
       if (
         discountBudget(draft) < discountBudget(current) &&
         discountBudget(draft) < committedCampaignIncentives(await promotionUsage(tx, id))
@@ -369,7 +468,11 @@ export class CampaignsService {
               await this.setStatus(tx, campaign, 'ENDED', 'EXPIRE', null);
               return true;
             }
-            if (campaign.kind === 'FESTIVAL') {
+            if (
+              campaign.kind === 'FESTIVAL' ||
+              campaign.managementPurpose === 'SALES' ||
+              campaign.marketingDestinationPath
+            ) {
               try {
                 await this.validatePublication(tx, campaign, now);
               } catch (error) {
@@ -481,19 +584,63 @@ export class CampaignsService {
     tx: Prisma.TransactionClient,
     input: CampaignDraftDto,
     kind: Campaign['kind'],
+    managementPurpose: Campaign['managementPurpose'],
     current?: Campaign,
   ) {
     const startsAt = parseTehranDate(input.startsTehran);
     const endsAt = parseTehranDate(input.endsTehran);
     if (startsAt >= endsAt)
       throw new BadRequestException('The end time must follow the start time.');
-    const channel =
-      kind === 'FESTIVAL'
+    const isSalesOffer = managementPurpose === 'SALES';
+    const marketing = input.marketing;
+    if (
+      marketing &&
+      (kind !== 'MARKETING' ||
+        Boolean(managementPurpose) ||
+        (current && !current.marketingDestinationPath))
+    )
+      throw new BadRequestException('Marketing settings require a dedicated marketing campaign.');
+    if (!marketing && current?.marketingDestinationPath)
+      throw new BadRequestException('Provide the campaign destination and marketing settings.');
+    if (
+      marketing &&
+      (!input.allProducts ||
+        input.productSlugs.length ||
+        input.categorySlugs.length ||
+        (input.audience && input.audience !== 'ALL_CUSTOMERS') ||
+        input.bannerEnabled ||
+        input.bannerPriority ||
+        input.mediaId ||
+        input.ctaPath ||
+        input.ctaLabel ||
+        (input.plannedChannelCostToman != null &&
+          input.plannedChannelCostToman !== input.budgetToman))
+    )
+      throw new BadRequestException(
+        'Advertising campaigns use a separate advertising budget and destination.',
+      );
+    if (
+      isSalesOffer &&
+      (input.bannerEnabled ||
+        input.bannerPriority ||
+        input.mediaId ||
+        input.ctaPath ||
+        input.ctaLabel ||
+        input.plannedChannelCostToman != null ||
+        (input.channel && input.channel !== 'sales'))
+    )
+      throw new BadRequestException(
+        'Sales offers do not use campaign banners or channel settings.',
+      );
+    const channel = isSalesOffer
+      ? 'sales'
+      : kind === 'FESTIVAL'
         ? (current?.channel ?? 'festival')
         : normalizeAttributionToken(input.channel);
     if (!channel) throw new BadRequestException('Enter a valid campaign channel.');
-    const plannedChannelCostToman =
-      input.plannedChannelCostToman === undefined || (current && current.kind !== kind)
+    const plannedChannelCostToman = marketing
+      ? input.budgetToman
+      : input.plannedChannelCostToman === undefined || (current && current.kind !== kind)
         ? (current?.plannedChannelCostToman ?? null)
         : input.plannedChannelCostToman;
     if (plannedChannelCostToman !== null && plannedChannelCostToman > input.budgetToman)
@@ -545,6 +692,7 @@ export class CampaignsService {
       endsAt,
       budgetToman: input.budgetToman,
       plannedChannelCostToman,
+      ...(marketing ? await prepareMarketingSettings(tx, marketing, current) : {}),
       audience: input.audience ?? current?.audience ?? 'ALL_CUSTOMERS',
       message: input.message,
       bannerEnabled: input.bannerEnabled,
@@ -557,6 +705,10 @@ export class CampaignsService {
 
   private async validatePublication(tx: Prisma.TransactionClient, campaign: Campaign, now: Date) {
     if (campaign.endsAt <= now) throw new BadRequestException('The campaign end time has passed.');
+    if (campaign.marketingDestinationPath) {
+      await validateMarketingDestination(tx, campaign.marketingDestinationPath, now);
+      return;
+    }
     await this.validateScope(tx, campaign);
     if (campaign.mediaId) await this.checkMedia(tx, campaign.mediaId);
     if (campaign.kind === 'FESTIVAL' && !this.landings) {
@@ -654,6 +806,13 @@ export class CampaignsService {
     publicationError?: string,
     publication?: Awaited<ReturnType<CampaignLandingsService['recordPublication']>>,
   ) {
+    const {
+      managementPurpose,
+      marketingDestinationPath,
+      relatedFestivalId,
+      relatedSalesCampaignId,
+      ...campaignSnapshot
+    } = campaign;
     await tx.campaignRevision.create({
       data: {
         campaignId: campaign.id,
@@ -662,7 +821,11 @@ export class CampaignsService {
         actorUserId,
         requestId,
         snapshot: {
-          ...campaign,
+          ...campaignSnapshot,
+          ...(managementPurpose ? { managementPurpose } : {}),
+          ...(marketingDestinationPath
+            ? { marketingDestinationPath, relatedFestivalId, relatedSalesCampaignId }
+            : {}),
           archivedAt: campaign.archivedAt?.toISOString() ?? null,
           startsAt: campaign.startsAt.toISOString(),
           endsAt: campaign.endsAt.toISOString(),

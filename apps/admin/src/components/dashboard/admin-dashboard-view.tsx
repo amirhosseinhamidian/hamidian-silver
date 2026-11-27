@@ -264,11 +264,13 @@ function PriorityWork({ data }: Readonly<{ data: AdminDashboardData }>) {
       title="اقدامات اولویت‌دار"
       description="صف مرتب‌شده براساس شدت و زمان انتظار"
       action={
-        <Badge tone={items?.length ? 'warning' : 'success'}>
-          {items?.length === 6
-            ? `${formatAdminInteger(6)} مورد نخست`
-            : `${formatAdminInteger(items?.length ?? 0)} مورد`}
-        </Badge>
+        items !== null && (
+          <Badge tone={items.length ? 'warning' : 'success'}>
+            {items.length === 6
+              ? `${formatAdminInteger(6)} مورد نخست`
+              : `${formatAdminInteger(items.length)} مورد`}
+          </Badge>
+        )
       }
     >
       {items === null ? (

@@ -33,6 +33,9 @@ describe('admin operational patterns', () => {
 
     expect(screen.getByRole('table', { name: 'فهرست سفارش‌ها' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'سفارش اول' })).toBeInTheDocument();
+    const region = screen.getByRole('region', { name: /فهرست سفارش‌ها/ });
+    expect(region).toHaveAttribute('tabindex', '0');
+    expect(region).toContainElement(screen.getByRole('table', { name: 'فهرست سفارش‌ها' }));
   });
 
   it('shows a clear empty state instead of an empty table body', () => {

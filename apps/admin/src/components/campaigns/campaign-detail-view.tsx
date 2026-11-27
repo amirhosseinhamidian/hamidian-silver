@@ -12,6 +12,7 @@ import {
   campaignActionLabels,
   campaignKindLabels,
   campaignStatusLabels,
+  marketingChannels,
   type CampaignAction,
   type CampaignDetail,
 } from '@/lib/campaigns/campaign-model';
@@ -49,15 +50,19 @@ const historyLabels: Record<string, string> = {
 export function CampaignDetailView({
   campaign,
   canWrite,
+  detailPath = `/campaigns?id=${campaign.id}`,
 }: {
   campaign: CampaignDetail;
   canWrite: boolean;
+  detailPath?: string;
 }) {
   const router = useRouter();
   const requests = useRef(new Map<CampaignAction, string>());
   const [pending, setPending] = useState<CampaignAction | null>(null);
   const [error, setError] = useState<string | null>(null);
   const isFestival = campaign.kind === 'FESTIVAL';
+  const isSalesOffer = campaign.managementPurpose === 'SALES';
+  const isMarketing = Boolean(campaign.marketing);
   const actions = [...statusActions[campaign.status]];
   if (isFestival && (campaign.status === 'APPROVED' || campaign.status === 'SCHEDULED')) {
     actions.unshift('PUBLISH_NOW');
@@ -95,7 +100,7 @@ export function CampaignDetailView({
   }
 
   const details = [
-    ['نوع', campaignKindLabels[campaign.kind]],
+    ['نوع', isSalesOffer ? 'پیشنهاد فروش' : campaignKindLabels[campaign.kind]],
     ['هدف', campaign.goal],
     [
       'مالک',
@@ -103,41 +108,60 @@ export function CampaignDetailView({
         {campaign.ownerId}
       </span>,
     ],
-    ...(!isFestival
+    ...(isMarketing
       ? ([
-          ['کانال', campaign.channel],
           [
-            'شناسه و نام ردیابی',
-            <span key="tracking" className="break-all" dir="ltr">
-              {campaign.trackingId} / {campaign.trackingLabel}
-            </span>,
+            'کانال بازاریابی',
+            marketingChannels.find(({ value }) => value === campaign.channel)?.label ??
+              campaign.channel,
+          ],
+          ['توضیحات', campaign.message],
+        ] as const)
+      : !isFestival && !isSalesOffer
+        ? ([
+            ['کانال', campaign.channel],
+            [
+              'شناسه و نام ردیابی',
+              <span key="tracking" className="break-all" dir="ltr">
+                {campaign.trackingId} / {campaign.trackingLabel}
+              </span>,
+            ],
+          ] as const)
+        : []),
+    ['زمان آغاز به وقت تهران', <bdi key="start">{toPersianDigits(campaign.startsTehran)}</bdi>],
+    ['زمان پایان به وقت تهران', <bdi key="end">{toPersianDigits(campaign.endsTehran)}</bdi>],
+    ...(!isMarketing
+      ? ([
+          [
+            'محدوده',
+            campaign.allProducts
+              ? 'همهٔ محصولات'
+              : [...campaign.productSlugs, ...campaign.categorySlugs].join('، '),
+          ],
+          [
+            isSalesOffer ? 'سقف بودجهٔ تخفیف' : 'سقف کل بودجه',
+            formatAdminToman(campaign.budgetToman),
           ],
         ] as const)
       : []),
-    ['زمان آغاز به وقت تهران', <bdi key="start">{toPersianDigits(campaign.startsTehran)}</bdi>],
-    ['زمان پایان به وقت تهران', <bdi key="end">{toPersianDigits(campaign.endsTehran)}</bdi>],
-    [
-      'محدوده',
-      campaign.allProducts
-        ? 'همهٔ محصولات'
-        : [...campaign.productSlugs, ...campaign.categorySlugs].join('، '),
-    ],
-    ['سقف کل بودجه', formatAdminToman(campaign.budgetToman)],
-    [
-      'نمایش بنر',
-      campaign.bannerEnabled
-        ? `فعال با اولویت ${formatAdminInteger(campaign.bannerPriority)}`
-        : 'غیرفعال',
-    ],
-    ['مسیر بنر', campaign.ctaPath ?? '—'],
+    ...(!isSalesOffer && !isMarketing
+      ? ([
+          [
+            'نمایش بنر',
+            campaign.bannerEnabled
+              ? `فعال با اولویت ${formatAdminInteger(campaign.bannerPriority)}`
+              : 'غیرفعال',
+          ],
+          ['مسیر بنر', campaign.ctaPath ?? '—'],
+        ] as const)
+      : []),
   ] as const;
-  const url = `/campaigns?id=${campaign.id}`;
 
   return (
     <div className="space-y-5">
       <Card
         title={campaign.name}
-        description={campaign.slug}
+        description={isSalesOffer || isMarketing ? undefined : campaign.slug}
         action={
           <Badge tone={campaign.status === 'ACTIVE' ? 'success' : 'neutral'}>
             {campaign.archivedAt ? 'بایگانی‌شده' : campaignStatusLabels[campaign.status]}
@@ -162,7 +186,7 @@ export function CampaignDetailView({
             )}
             <div className="flex flex-wrap gap-2">
               {campaign.status === 'DRAFT' && (
-                <ButtonLink href={`${url}&edit=1`} variant="outline">
+                <ButtonLink href={`${detailPath}&edit=1`} variant="outline">
                   ویرایش
                 </ButtonLink>
               )}
@@ -189,14 +213,16 @@ export function CampaignDetailView({
         )}
       </Card>
 
-      <Card title="پیش‌نمایش بنر ذخیره‌شده">
-        <CampaignPreview
-          name={campaign.name}
-          message={campaign.message}
-          ctaLabel={campaign.ctaLabel}
-          media={campaign.media}
-        />
-      </Card>
+      {!isSalesOffer && !isMarketing && (
+        <Card title="پیش‌نمایش بنر ذخیره‌شده">
+          <CampaignPreview
+            name={campaign.name}
+            message={campaign.message}
+            ctaLabel={campaign.ctaLabel}
+            media={campaign.media}
+          />
+        </Card>
+      )}
 
       <Card title="تاریخچهٔ نسخه‌ها">
         <ul className="divide-y divide-[var(--admin-color-border)] text-sm">
@@ -225,7 +251,7 @@ export function CampaignDetailView({
           <nav aria-label="صفحات تاریخچه" className="mt-4 flex flex-wrap gap-2">
             {campaign.historyPage > 1 && (
               <ButtonLink
-                href={`${url}&history=${campaign.historyPage - 1}`}
+                href={`${detailPath}&history=${campaign.historyPage - 1}`}
                 variant="outline"
                 size="sm"
               >
@@ -234,7 +260,7 @@ export function CampaignDetailView({
             )}
             {campaign.hasMoreHistory && campaign.historyPage < 10_000 && (
               <ButtonLink
-                href={`${url}&history=${campaign.historyPage + 1}`}
+                href={`${detailPath}&history=${campaign.historyPage + 1}`}
                 variant="outline"
                 size="sm"
               >

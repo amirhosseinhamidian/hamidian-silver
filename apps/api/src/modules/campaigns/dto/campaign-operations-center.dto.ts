@@ -14,6 +14,8 @@ export const campaignOrderStates = [
   'EXPIRED',
 ] as const;
 export type CampaignOrderState = (typeof campaignOrderStates)[number];
+const campaignOperationsOrderFilters = [...campaignOrderStates, 'OVERDUE_RESERVATION'] as const;
+type CampaignOperationsOrderFilter = (typeof campaignOperationsOrderFilters)[number];
 export const campaignOrderSorts = ['newest', 'oldest'] as const;
 export type CampaignOrderSort = (typeof campaignOrderSorts)[number];
 const publicationStates = [
@@ -43,10 +45,10 @@ export class CampaignOperationsQueryDto {
   @Max(1000)
   quotaPage?: number;
 
-  @ApiPropertyOptional({ enum: campaignOrderStates })
+  @ApiPropertyOptional({ enum: campaignOperationsOrderFilters })
   @IsOptional()
-  @IsIn(campaignOrderStates)
-  orderState?: CampaignOrderState;
+  @IsIn(campaignOperationsOrderFilters)
+  orderState?: CampaignOperationsOrderFilter;
 
   @ApiPropertyOptional({ enum: campaignOrderSorts })
   @IsOptional()
@@ -160,6 +162,9 @@ export class CampaignOperationsCenterDto {
 
   @ApiProperty({ type: () => CampaignOperationsFinanceDto, nullable: true })
   finance!: CampaignOperationsFinanceDto | null;
+
+  @ApiProperty({ type: Boolean })
+  salesRuleConfigured!: boolean;
 
   @ApiProperty({ type: String, nullable: true })
   landingSlug!: string | null;

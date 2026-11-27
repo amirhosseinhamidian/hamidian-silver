@@ -27,6 +27,7 @@ export default async function FestivalAnalyticsPage({ params, searchParams }: Pr
       path={path}
       canReadOrders={canReadOrders}
       canReadOperations={canReadOrders && user.permissions.includes('settings.read')}
+      canPickCatalog={user.permissions.includes('settings.read')}
     />
   );
 }

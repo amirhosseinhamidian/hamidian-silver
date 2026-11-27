@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { InventoryAlertsView } from '@/components/inventory-alerts/inventory-alerts-view';
@@ -87,7 +88,7 @@ const notifications: AdminStockNotificationSummary = {
   ],
 };
 
-function view() {
+function view(overrides: Partial<ComponentProps<typeof InventoryAlertsView>> = {}) {
   return (
     <InventoryAlertsView
       warehouses={[warehouse]}
@@ -97,6 +98,8 @@ function view() {
       inventoryFailed={false}
       notifications={notifications}
       notificationsFailed={false}
+      canEditCatalog
+      {...overrides}
     />
   );
 }
@@ -123,5 +126,37 @@ describe('InventoryAlertsView', () => {
       'href',
       '/inventory?warehouse=warehouse-1',
     );
+  });
+
+  it('keeps store-wide demand visible when the warehouse list is unavailable', () => {
+    render(
+      view({ warehouses: [], inventory: [], selectedWarehouseId: null, warehousesFailed: true }),
+    );
+    expect(screen.getByText('فهرست انبارها از سرور دریافت نشد.')).toBeVisible();
+    expect(screen.getByText('کم‌موجود').parentElement).toHaveTextContent('داده در دسترس نیست');
+    expect(screen.getByText('درخواست منتظر').parentElement).toHaveTextContent('۳');
+    expect(screen.getByRole('heading', { name: 'درخواست‌های اطلاع‌رسانی مشتریان' })).toBeVisible();
+  });
+
+  it('separates missing demand from a valid zero and describes a filter with no stock matches', () => {
+    const { rerender } = render(view({ notifications: null, notificationsFailed: true }));
+    expect(screen.getByText('درخواست منتظر').parentElement).toHaveTextContent('داده در دسترس نیست');
+    rerender(
+      view({
+        notifications: { totals: { active: 0, queued: 0, notified: 0, cancelled: 0 }, targets: [] },
+      }),
+    );
+    expect(screen.getByText('درخواست منتظر').parentElement).toHaveTextContent('۰');
+    fireEvent.change(screen.getByRole('searchbox', { name: 'جستجوی هشدار موجودی' }), {
+      target: { value: 'محصول خارج از فیلتر' },
+    });
+    expect(screen.getAllByText('هشداری با این فیلترها پیدا نشد').length).toBeGreaterThan(0);
+    expect(screen.queryByText('هشدار موجودی ندارید')).toBeNull();
+  });
+
+  it('keeps notification demand readable without linking to product editing', () => {
+    render(view({ canEditCatalog: false }));
+    expect(screen.getByRole('heading', { name: 'درخواست‌های اطلاع‌رسانی مشتریان' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'مشاهده محصول' })).toBeNull();
   });
 });

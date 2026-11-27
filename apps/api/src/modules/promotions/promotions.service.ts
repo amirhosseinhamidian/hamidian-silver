@@ -139,6 +139,10 @@ export class PromotionsService {
         });
         if (campaign.status !== 'DRAFT')
           throw new ConflictException('Only draft promotions can be edited.');
+        if (campaign.marketingDestinationPath)
+          throw new BadRequestException(
+            'Advertising campaigns use a separate advertising budget and destination.',
+          );
         if ((campaign.promotion?.version ?? 0) !== input.expectedVersion) {
           throw new ConflictException('The promotion changed. Reload the campaign.');
         }

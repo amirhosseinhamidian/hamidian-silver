@@ -61,13 +61,14 @@ export async function loadInventoryManagement(
       };
     }
 
-    const catalogResponse = await requestAdminCatalog(
+    const items = await requestAdminCatalog(
       `/api/v1/inventory/stock/catalog?warehouseId=${encodeURIComponent(selected.id)}`,
       token,
-    );
-    const items = catalogResponse.ok
-      ? parseInventoryCatalog(await readJsonResponse(catalogResponse))
-      : null;
+    )
+      .then(async (catalogResponse) =>
+        catalogResponse.ok ? parseInventoryCatalog(await readJsonResponse(catalogResponse)) : null,
+      )
+      .catch(() => null);
     return {
       warehouses,
       items: items ?? [],
