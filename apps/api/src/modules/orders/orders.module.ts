@@ -3,6 +3,8 @@ import { DatabaseModule } from '../../infrastructure/database/database.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ShippingPricingModule } from '../shipping/shipping-pricing.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { PromotionsModule } from '../promotions/promotions.module';
+import { WalletModule } from '../wallet/wallet.module';
 import { FulfillmentReadinessController } from './fulfillment-readiness.controller';
 import { FulfillmentReadinessService } from './fulfillment-readiness.service';
 import { OperationsWorkQueueController } from './operations-work-queue.controller';
@@ -18,11 +20,22 @@ import { OrderReturnsController } from './order-returns.controller';
 import { OrderReturnsService } from './order-returns.service';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
+import { CartRecoveryController } from './cart-recovery.controller';
+import { CartRecoveryService } from './cart-recovery.service';
+import { CartRecoveryScheduler } from './cart-recovery.scheduler';
 
 @Module({
-  imports: [DatabaseModule, NotificationsModule, CatalogModule, ShippingPricingModule],
+  imports: [
+    DatabaseModule,
+    NotificationsModule,
+    CatalogModule,
+    ShippingPricingModule,
+    PromotionsModule,
+    WalletModule,
+  ],
   controllers: [
     OrdersController,
+    CartRecoveryController,
     OrderReturnsController,
     FulfillmentReadinessController,
     OperationsWorkQueueController,
@@ -31,6 +44,8 @@ import { OrdersService } from './orders.service';
   ],
   providers: [
     OrdersService,
+    CartRecoveryService,
+    CartRecoveryScheduler,
     OrderReturnsService,
     OrderExpirationService,
     OrderExpirationScheduler,

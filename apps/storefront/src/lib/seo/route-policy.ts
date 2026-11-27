@@ -1,3 +1,6 @@
+import { CAMPAIGN_PARAMETERS } from '@/lib/analytics/campaign-parameters';
+import { maxCatalogFacetPage, readCatalogFacetPage } from '@/lib/catalog/catalog-pagination';
+
 export type StorefrontSeoRoutePolicy = Readonly<{
   canonicalPath: string;
   follow: boolean;
@@ -60,6 +63,10 @@ export function resolveStorefrontSeoRoutePolicy(
 ): StorefrontSeoRoutePolicy {
   const normalizedPath = normalizePathname(pathname);
 
+  if (normalizedPath === '/gift-finder') {
+    return { canonicalPath: normalizedPath, index: false, follow: true, reason: 'catalog-variant' };
+  }
+
   if (PRIVATE_ROUTE_PREFIXES.some((prefix) => isRouteOrChild(normalizedPath, prefix))) {
     return {
       canonicalPath: normalizedPath,
@@ -69,33 +76,51 @@ export function resolveStorefrontSeoRoutePolicy(
     };
   }
 
-  if (isCatalogDocument(normalizedPath)) {
-    const entries = activeEntries(searchParams);
+  if (/^\/campaigns\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalizedPath)) {
     const page = canonicalPage(searchParams);
-    const rawPage = searchParams.get('page')?.trim();
-    const hasInvalidPage = Boolean(rawPage && rawPage !== '1' && page === null);
-    const hasCatalogVariant = entries.some(([key]) => key !== 'page') || hasInvalidPage;
-
+    const boundedPage =
+      page !== null && page <= 1000 && searchParams.getAll('page').length === 1 ? page : null;
     return {
-      canonicalPath: hasCatalogVariant ? normalizedPath : withPage(normalizedPath, page),
-      index: !hasCatalogVariant,
+      canonicalPath: withPage(normalizedPath, boundedPage),
+      index: [...searchParams.keys()].every((key) => CAMPAIGN_PARAMETERS.has(key.toLowerCase())),
       follow: true,
-      reason: hasCatalogVariant ? 'catalog-variant' : 'catalog-page',
+      reason: 'public-page',
     };
   }
 
-  if (isGuideDocument(normalizedPath)) {
-    const entries = activeEntries(searchParams);
-    const page = canonicalPage(searchParams);
+  const catalogDocument = isCatalogDocument(normalizedPath);
+  if (catalogDocument || isGuideDocument(normalizedPath)) {
+    const isListing = catalogDocument
+      ? !normalizedPath.startsWith('/products/')
+      : normalizedPath === '/guide';
+    const catalogListing = catalogDocument && isListing;
+    const entries = catalogListing ? [...searchParams.entries()] : activeEntries(searchParams);
+    const requestedPage = catalogListing
+      ? readCatalogFacetPage(searchParams.getAll('page'))
+      : canonicalPage(searchParams);
+    const page =
+      isListing &&
+      requestedPage !== null &&
+      requestedPage > 1 &&
+      (!catalogListing || requestedPage <= maxCatalogFacetPage)
+        ? requestedPage
+        : null;
     const rawPage = searchParams.get('page')?.trim();
-    const hasInvalidPage = Boolean(rawPage && rawPage !== '1' && page === null);
-    const hasGuideVariant = entries.some(([key]) => key !== 'page') || hasInvalidPage;
+    const invalidPage = catalogListing
+      ? searchParams.has('page') && page === null
+      : Boolean(rawPage && rawPage !== '1' && page === null);
+    const hasVariant = isListing
+      ? entries.some(([key]) => key !== 'page') || invalidPage
+      : entries.length > 0;
+    const hasCatalogParameters = entries.some(
+      ([key]) => key !== 'page' && !CAMPAIGN_PARAMETERS.has(key.toLowerCase()),
+    );
 
     return {
-      canonicalPath: hasGuideVariant ? normalizedPath : withPage(normalizedPath, page),
-      index: !hasGuideVariant,
+      canonicalPath: withPage(normalizedPath, hasCatalogParameters ? null : page),
+      index: !hasVariant,
       follow: true,
-      reason: hasGuideVariant ? 'catalog-variant' : 'public-page',
+      reason: hasVariant ? 'catalog-variant' : catalogDocument ? 'catalog-page' : 'public-page',
     };
   }
 

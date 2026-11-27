@@ -4,14 +4,15 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FiAlertCircle } from 'react-icons/fi';
 
-import { DiscountBadge } from '@/components/catalog/discount-badge';
+import { CampaignQuotaProgress } from '@/components/catalog/campaign-quota-progress';
+import { CatalogPrice } from '@/components/catalog/catalog-price';
 import { StockNotificationButton } from '@/components/catalog/stock-notification-button';
 import { PlatingTypeIndicator } from '@/components/plating/plating-type-indicator';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { QuantityControl } from '@/components/ui/quantity-control';
 import { trackAddToCart } from '@/lib/analytics/commerce-events';
+import { trackFunnelEvent } from '@/lib/analytics/funnel-tracker';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
-import { getDiscountPercent } from '@/lib/catalog/pricing';
 import type { PublicCatalogProductDetail } from '@/lib/catalog/public-catalog';
 import { cartItemKey, type CartPlatingType } from '@/lib/cart/cart-state';
 import { useCart } from '@/lib/cart/cart-store';
@@ -91,11 +92,8 @@ export function ProductPurchasePanel({
   const selectedSalePriceToman = selectedVariant?.salePriceToman ?? product.salePriceToman;
   const selectedCompareAtPriceToman =
     selectedVariant?.compareAtPriceToman ?? product.compareAtPriceToman;
-  const unitPriceToman =
-    selectedSalePriceToman === null
-      ? null
-      : selectedSalePriceToman + (selectedPlating?.unitPriceToman ?? 0);
-  const discountPercent = getDiscountPercent(selectedCompareAtPriceToman, selectedSalePriceToman);
+  const campaignOffer = selectedVariant ? selectedVariant.campaignOffer : product.campaignOffer;
+  const platingToman = selectedPlating?.unitPriceToman ?? 0;
   const canAdd =
     selectedVariant?.isAvailable === true &&
     selectedVariant.availableQuantity > 0 &&
@@ -167,7 +165,7 @@ export function ProductPurchasePanel({
       return;
     }
 
-    addItem({
+    const quantity = addItem({
       variantId: selectedVariant.id,
       productSlug: product.slug,
       productName: product.name,
@@ -181,20 +179,30 @@ export function ProductPurchasePanel({
       quantity: 1,
       maxQuantity,
     });
-    trackAddToCart({
-      itemId: product.slug,
-      itemName: product.name,
-      brand: product.brand?.name,
-      category: product.categories[0]?.name,
-      variant: [
-        getCartVariantLabel(selectedVariant, product.purchaseMode),
-        platingType && platingPresentation(platingType).label,
-      ]
-        .filter(Boolean)
-        .join(' / '),
-      priceToman: selectedSalePriceToman + (selectedPlating?.unitPriceToman ?? 0),
-      quantity: 1,
-    });
+    if (quantity <= 0) return;
+    void trackFunnelEvent(
+      {
+        name: 'add_to_cart',
+        items: [{ productId: product.slug, variantId: selectedVariant.id, quantity }],
+      },
+      {
+        publish: () =>
+          trackAddToCart({
+            itemId: product.slug,
+            itemName: product.name,
+            brand: product.brand?.name,
+            category: product.categories[0]?.name,
+            variant: [
+              getCartVariantLabel(selectedVariant, product.purchaseMode),
+              platingType && platingPresentation(platingType).label,
+            ]
+              .filter(Boolean)
+              .join(' / '),
+            priceToman: selectedSalePriceToman + (selectedPlating?.unitPriceToman ?? 0),
+            quantity,
+          }),
+      },
+    );
   }
 
   return (
@@ -213,6 +221,12 @@ export function ProductPurchasePanel({
           راهنمای انتخاب سایز
         </Link>
       </div>
+      {product.campaignQuota && (
+        <CampaignQuotaProgress
+          quota={product.campaignQuota}
+          showName={product.campaignQuota.campaignId !== product.campaignOffer?.campaignId}
+        />
+      )}
 
       {hasMultipleVariants ? (
         <fieldset ref={variantSelectorRef} className="mt-5 scroll-mt-28">
@@ -341,19 +355,16 @@ export function ProductPurchasePanel({
             </div>
           ) : null}
 
-          <div className="text-left">
+          <div className="space-y-1 text-left" aria-live="polite">
             <p className="text-xs text-[var(--sf-color-muted)]">قیمت هر واحد با انتخاب فعلی</p>
-            {discountPercent !== null ? (
-              <div className="mt-2 flex items-center justify-end gap-2 text-xs text-[var(--sf-color-muted)]">
-                <span className="line-through">
-                  {formatTomanPrice(selectedCompareAtPriceToman)}
-                </span>
-                <DiscountBadge percent={discountPercent} />
-              </div>
-            ) : null}
-            <p className={discountPercent !== null ? 'mt-1 text-lg' : 'mt-2 text-lg'}>
-              {formatTomanPrice(unitPriceToman)}
-            </p>
+            <CatalogPrice
+              sale={selectedSalePriceToman}
+              compare={selectedCompareAtPriceToman}
+              offer={campaignOffer}
+              extra={platingToman}
+              priceClassName="text-lg"
+              details
+            />
           </div>
         </div>
       ) : hasMultipleVariants ? (
@@ -420,21 +431,16 @@ export function ProductPurchasePanel({
         "
       >
         <div className="mx-auto w-full min-w-0 max-w-xl">
-          {discountPercent !== null ? (
-            <div className="flex items-center justify-end gap-2 text-xs text-[var(--sf-color-muted)]">
-              <span className="line-through">{formatTomanPrice(selectedCompareAtPriceToman)}</span>
-              <DiscountBadge percent={discountPercent} />
-            </div>
-          ) : null}
-          <p
-            className={
-              discountPercent !== null
-                ? 'mt-1 text-right text-xl font-semibold leading-none sm:text-2xl'
-                : 'text-right text-xl font-semibold leading-none sm:text-2xl'
-            }
-          >
-            {formatTomanPrice(unitPriceToman)}
-          </p>
+          <div className="space-y-1" aria-live="polite">
+            <CatalogPrice
+              sale={selectedSalePriceToman}
+              compare={selectedCompareAtPriceToman}
+              offer={campaignOffer}
+              extra={platingToman}
+              priceClassName="text-right text-xl font-semibold leading-none sm:text-2xl"
+              details
+            />
+          </div>
 
           <div
             className={

@@ -121,6 +121,7 @@ export class OperationalAlertOutboxService {
       SENT: 0,
       FAILED: 0,
       UNKNOWN: 0,
+      SKIPPED: 0,
     };
 
     for (const group of groups) {

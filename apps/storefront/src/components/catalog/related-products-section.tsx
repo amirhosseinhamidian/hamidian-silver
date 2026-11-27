@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
+import { RecommendationCards } from '@/components/catalog/product-recommendations';
 import { Button } from '@/components/ui/button';
 import type { PublicCatalogProductList } from '@/lib/catalog/public-catalog';
 
@@ -26,9 +26,14 @@ export function RelatedProductsSection({ productSlug, initial }: RelatedProducts
       );
       if (!response.ok) return;
       const result = (await response.json()) as PublicCatalogProductList;
-      setItems((current) => [...current, ...result.items]);
+      setItems((current) => {
+        const known = new Set(current.map(({ id }) => id));
+        return [...current, ...result.items.filter(({ id }) => !known.has(id))];
+      });
       setPage(result.page);
       setTotalPages(result.totalPages);
+    } catch {
+      // Keep the visible products and allow retrying the same page.
     } finally {
       setLoading(false);
     }
@@ -37,15 +42,7 @@ export function RelatedProductsSection({ productSlug, initial }: RelatedProducts
   if (items.length === 0) return null;
 
   return (
-    <section aria-labelledby="related-products-title" className="mt-16 sm:mt-20">
-      <h2 id="related-products-title" className="text-2xl font-medium sm:text-3xl">
-        محصولات مشابه
-      </h2>
-      <ul className="mt-7 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 lg:grid-cols-4">
-        {items.map((product) => (
-          <CatalogProductCard key={product.id} product={product} />
-        ))}
-      </ul>
+    <RecommendationCards list="product_recommendations" items={items}>
       {page < totalPages ? (
         <div className="mt-10 flex justify-center">
           <Button
@@ -58,6 +55,6 @@ export function RelatedProductsSection({ productSlug, initial }: RelatedProducts
           </Button>
         </div>
       ) : null}
-    </section>
+    </RecommendationCards>
   );
 }

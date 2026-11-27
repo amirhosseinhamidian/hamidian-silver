@@ -1,3 +1,5 @@
+import type { components } from '@hamidian/contracts';
+
 import type { PublicCatalogMedia } from '@/lib/catalog/public-catalog';
 
 export type CustomerProfile = Readonly<{
@@ -29,6 +31,8 @@ export type CustomerOrderItem = Readonly<{
   variantId: string;
   quantity: number;
   productNameSnapshot: string;
+  campaignIdSnapshot?: string | null;
+  campaignNameSnapshot?: string | null;
   productSlug: string;
   primaryMedia: PublicCatalogMedia | null;
   fallbackSrc: string | null;
@@ -51,6 +55,7 @@ export type CustomerPaymentMethod = 'CARD_TO_CARD' | 'PAYMENT_GATEWAY';
 
 export type CustomerOrderPayment = Readonly<{
   status: string;
+  latestAttemptFailed?: boolean;
   method: CustomerPaymentMethod | null;
   receiptAvailable: boolean;
   receiptOriginalName: string | null;
@@ -65,6 +70,8 @@ export type CustomerOrder = Readonly<{
   merchandiseTotalToman: number;
   platingTotalToman: number;
   discountTotalToman: number;
+  referralDiscountToman?: number;
+  walletAppliedToman?: number;
   shippingTotalToman: number;
   taxTotalToman: number;
   grandTotalToman: number;
@@ -106,6 +113,7 @@ export type CustomerOrderDetail = CustomerOrder &
     shippingAddress: CustomerOrderShippingAddress;
     statusHistory: CustomerOrderStatusHistory[];
     cancellationReason: string | null;
+    confirmedRefunds?: readonly components['schemas']['CustomerOrderConfirmedRefundDto'][];
   }>;
 
 export type CustomerOrderReturnItem = Readonly<{

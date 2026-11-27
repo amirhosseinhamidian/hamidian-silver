@@ -285,13 +285,15 @@ export function PaymentOperationsView({
       cell: (row) =>
         canWrite ? (
           <div className="flex justify-end gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => openAction({ kind: 'recovery', row, resolution: 'REDIRECTED' })}
-            >
-              بازیابی هدایت
-            </Button>
+            {row.status !== 'REDIRECTED' && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => openAction({ kind: 'recovery', row, resolution: 'REDIRECTED' })}
+              >
+                بازیابی هدایت
+              </Button>
+            )}
             <Button
               size="sm"
               variant="danger"
@@ -490,16 +492,18 @@ export function PaymentOperationsView({
               detailsFooter={
                 canWrite ? (
                   <div className="flex w-full gap-2">
-                    <Button
-                      className="flex-1"
-                      variant="outline"
-                      onClick={() => {
-                        setMobileDetailsId(null);
-                        openAction({ kind: 'recovery', row, resolution: 'REDIRECTED' });
-                      }}
-                    >
-                      بازیابی هدایت
-                    </Button>
+                    {row.status !== 'REDIRECTED' && (
+                      <Button
+                        className="flex-1"
+                        variant="outline"
+                        onClick={() => {
+                          setMobileDetailsId(null);
+                          openAction({ kind: 'recovery', row, resolution: 'REDIRECTED' });
+                        }}
+                      >
+                        بازیابی هدایت
+                      </Button>
+                    )}
                     <Button
                       className="flex-1"
                       variant="danger"
@@ -623,7 +627,7 @@ export function PaymentOperationsView({
           <form id={formId} onSubmit={submitAction} className="space-y-4">
             {action?.kind === 'recovery' && action.resolution === 'ABANDONED' ? (
               <Alert tone="danger" title="این عملیات برگشت‌پذیر نیست">
-                فقط پس از اطمینان از ساخته‌نشدن تراکنش در پنل درگاه، تلاش را مختومه کنید.
+                فقط پس از استعلام درگاه و اطمینان از وصول‌نشدن وجه، تلاش را مختومه کنید.
               </Alert>
             ) : null}
             {action?.kind === 'recovery' && action.resolution === 'REDIRECTED' ? (

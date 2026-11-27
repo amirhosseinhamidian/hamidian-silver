@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CustomerOrderDetail } from '@/components/account/account-types';
 import { PaymentResult } from '@/components/checkout/payment-result';
+import { setAnalyticsConsent } from '@/lib/analytics/analytics-consent';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
 
 const order: CustomerOrderDetail = {
@@ -78,6 +79,7 @@ const order: CustomerOrderDetail = {
 describe('PaymentResult', () => {
   afterEach(() => {
     window.localStorage.clear();
+    window.sessionStorage.clear();
     delete window.gtag;
   });
 
@@ -130,14 +132,16 @@ describe('PaymentResult', () => {
   it('emits purchase only for a verified successful order', async () => {
     const gtag = vi.fn();
     window.gtag = gtag;
+    setAnalyticsConsent(true);
+    const paidOrder = { ...order, paidAt: new Date().toISOString() };
     const pending = render(
-      <PaymentResult status="pending" order={{ ...order, status: 'PENDING_PAYMENT' }} />,
+      <PaymentResult status="pending" order={{ ...paidOrder, status: 'PENDING_PAYMENT' }} />,
     );
 
     expect(gtag).not.toHaveBeenCalled();
     pending.unmount();
 
-    render(<PaymentResult status="success" order={order} />);
+    render(<PaymentResult status="success" order={paidOrder} />);
 
     await waitFor(() =>
       expect(gtag).toHaveBeenCalledWith(

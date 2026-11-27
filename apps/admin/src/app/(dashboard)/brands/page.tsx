@@ -6,9 +6,11 @@ import { formatAdminInteger } from '@/lib/presentation/formatters';
 
 export const dynamic = 'force-dynamic';
 
-export default async function BrandsPage() {
+type Props = Readonly<{ searchParams: Promise<{ edit?: string | string[] }> }>;
+
+export default async function BrandsPage({ searchParams }: Props) {
   const user = await requireAdminSession({ permissions: ['catalog.read'], returnTo: '/brands' });
-  const data = await loadReferenceManagement();
+  const [data, { edit }] = await Promise.all([loadReferenceManagement(), searchParams]);
   return (
     <main className="admin-container py-6 sm:py-8 lg:py-10">
       <header className="border-b border-[var(--admin-color-border)] pb-6">
@@ -24,6 +26,7 @@ export default async function BrandsPage() {
         brandsFailed={data.brands.failed}
         countriesFailed={data.countries.failed}
         canWrite={user.permissions.includes('catalog.write')}
+        initialEditId={typeof edit === 'string' ? edit : undefined}
       />
     </main>
   );

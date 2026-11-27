@@ -26,9 +26,11 @@ export function SiteMediaField({
   disabled = false,
   uploadUrl = '/api/site-settings/media',
   aspect = 'wide',
+  allowCampaignGif = false,
   hint,
   onUploaded,
   onClear,
+  onPendingChange,
 }: Readonly<{
   label: string;
   media: SiteMedia | null;
@@ -36,9 +38,11 @@ export function SiteMediaField({
   disabled?: boolean;
   uploadUrl?: string;
   aspect?: 'wide' | 'page-desktop' | 'mobile' | 'card';
+  allowCampaignGif?: boolean;
   hint?: string;
   onUploaded: (media: SiteMedia) => void;
   onClear?: () => void;
+  onPendingChange?: (pending: boolean) => void;
 }>) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +51,12 @@ export function SiteMediaField({
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = '';
     if (!file) return;
-    if (!ACCEPTED_TYPES.has(file.type) || file.size > MAX_BYTES) {
+    const isGif = allowCampaignGif && file.type === 'image/gif';
+    if (isGif && file.size > 4 * 1024 * 1024) {
+      setError('حجم GIF کمپین باید حداکثر ۴ مگابایت باشد.');
+      return;
+    }
+    if ((!isGif && !ACCEPTED_TYPES.has(file.type)) || file.size > MAX_BYTES) {
       setError('تصویر باید JPEG، PNG، WebP یا AVIF و حداکثر ۱۰ مگابایت باشد.');
       return;
     }
@@ -55,6 +64,7 @@ export function SiteMediaField({
     body.set('file', file);
     body.set('altText', altText.trim() || label);
     setPending(true);
+    onPendingChange?.(true);
     setError(null);
     try {
       const response = await fetch(uploadUrl, { method: 'POST', body });
@@ -72,6 +82,7 @@ export function SiteMediaField({
       setError(caught instanceof Error ? caught.message : responseMessage(null));
     } finally {
       setPending(false);
+      onPendingChange?.(false);
     }
   }
 
@@ -110,7 +121,7 @@ export function SiteMediaField({
           {pending ? 'در حال آپلود…' : media ? 'جایگزینی تصویر' : 'انتخاب تصویر'}
           <input
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/avif"
+            accept={`image/jpeg,image/png,image/webp,image/avif${allowCampaignGif ? ',image/gif' : ''}`}
             disabled={disabled || pending}
             onChange={(event) => void upload(event)}
             className="sr-only"

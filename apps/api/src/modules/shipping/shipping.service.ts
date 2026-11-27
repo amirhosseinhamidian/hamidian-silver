@@ -155,6 +155,7 @@ export class ShippingService {
             },
           },
           shipment: true,
+          priceQuote: { select: { shippingDiscountToman: true } },
         },
       });
 
@@ -173,6 +174,13 @@ export class ShippingService {
         throw new DomainException(
           ErrorCode.SHIPMENT_INVALID_STATUS,
           'Shipping cannot be changed after payment initialization.',
+        );
+      }
+
+      if (currentOrder.priceQuote?.shippingDiscountToman) {
+        throw new DomainException(
+          ErrorCode.SHIPMENT_INVALID_STATUS,
+          'Shipping cannot be repriced on an order with a shipping promotion.',
         );
       }
 

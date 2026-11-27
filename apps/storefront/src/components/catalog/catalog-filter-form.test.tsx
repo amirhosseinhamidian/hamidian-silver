@@ -1,86 +1,79 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import type {
-  CatalogFilters,
-  PublicCatalogBrand,
-  PublicCatalogCategory,
-} from '@/lib/catalog/public-catalog';
+import {
+  emptyCatalogFacets,
+  type CatalogFacetFilters,
+  type PublicCatalogFacets,
+} from '@/lib/catalog/catalog-filter-state';
 import { CatalogFilterForm } from './catalog-filter-form';
 
-const filters: CatalogFilters = { page: 1, pageSize: 24, sort: 'newest' };
+const filters: CatalogFacetFilters = { page: 1, pageSize: 24, sort: 'newest' };
+const facets: PublicCatalogFacets = {
+  ...emptyCatalogFacets,
+  categories: ['انگشتر', 'دستبند', 'گردنبند', 'گوشواره', 'نیم‌ست'].map((label, index) => ({
+    value: `category-${index + 1}`,
+    label,
+    count: index + 1,
+  })),
+  brands: ['برند یک', 'برند دو', 'برند سه', 'برند چهار', 'برند پنج'].map((label, index) => ({
+    value: `brand-${index + 1}`,
+    label,
+    count: index + 1,
+  })),
+  priceToman: { min: 100_000, max: 900_000, count: 4 },
+};
 
-function category(id: string, name: string): PublicCatalogCategory {
-  return {
-    id,
-    name,
-    slug: id,
-    description: null,
-    parentId: null,
-    sortOrder: 0,
-    image: null,
-  };
-}
-
-function brand(id: string, name: string): PublicCatalogBrand {
-  return { id, name, slug: id, description: null, image: null, originCountry: null };
+function renderForm(onApply = vi.fn(), selected = filters) {
+  return render(
+    <CatalogFilterForm
+      path="/products"
+      filters={selected}
+      facets={facets}
+      idPrefix="test-filter"
+      onApply={onApply}
+    />,
+  );
 }
 
 describe('CatalogFilterForm', () => {
-  it('collapses long category and brand lists and keeps only one group expanded', () => {
-    render(
-      <CatalogFilterForm
-        filters={filters}
-        categories={[
-          category('rings', 'انگشتر'),
-          category('bracelets', 'دستبند'),
-          category('necklaces', 'گردنبند'),
-          category('earrings', 'گوشواره'),
-          category('sets', 'نیم‌ست'),
-        ]}
-        brands={[
-          brand('brand-1', 'برند یک'),
-          brand('brand-2', 'برند دو'),
-          brand('brand-3', 'برند سه'),
-          brand('brand-4', 'برند چهار'),
-          brand('brand-5', 'برند پنج'),
-        ]}
-        idPrefix="test-filter"
-        className="h-full"
-      />,
-    );
-
-    const categoryToggle = screen.getAllByRole('button', { name: /نمایش ۱ مورد بیشتر/ })[0];
-    const brandToggle = screen.getAllByRole('button', { name: /نمایش ۱ مورد بیشتر/ })[1];
-    expect(categoryToggle).toHaveAttribute('aria-expanded', 'false');
-    expect(brandToggle).toHaveAttribute('aria-expanded', 'false');
-
-    fireEvent.click(categoryToggle);
-    expect(categoryToggle).toHaveAttribute('aria-expanded', 'true');
-    fireEvent.click(brandToggle);
-    expect(categoryToggle).toHaveAttribute('aria-expanded', 'false');
-    expect(brandToggle).toHaveAttribute('aria-expanded', 'true');
+  it('collapses long choices and makes only the expanded group interactive', () => {
+    renderForm();
+    const [categories, brands] = screen.getAllByRole('button', { name: /نمایش ۱ مورد بیشتر/ });
+    expect(categories).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('checkbox', { name: /نیم‌ست/ })).not.toBeInTheDocument();
+    fireEvent.click(categories);
+    expect(screen.getByRole('checkbox', { name: /نیم‌ست.*۵ محصول/ })).toBeVisible();
+    fireEvent.click(brands);
+    expect(categories).toHaveAttribute('aria-expanded', 'false');
+    expect(brands).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('keeps a selected option outside the first four visible while collapsed', () => {
-    render(
-      <CatalogFilterForm
-        filters={{ ...filters, brand: 'brand-5' }}
-        categories={[]}
-        brands={[
-          brand('brand-1', 'برند یک'),
-          brand('brand-2', 'برند دو'),
-          brand('brand-3', 'برند سه'),
-          brand('brand-4', 'برند چهار'),
-          brand('brand-5', 'برند پنج'),
-        ]}
-        idPrefix="selected-filter"
-      />,
+  it('keeps selected choices visible and applies multiple values and a Persian price', () => {
+    const onApply = vi.fn();
+    renderForm(onApply, { ...filters, brands: ['brand-5'] });
+    expect(screen.getByRole('checkbox', { name: /برند پنج/ })).toBeChecked();
+    fireEvent.click(screen.getByRole('checkbox', { name: /برند یک/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: /حداکثر قیمت/ }), {
+      target: { value: '۵۰۰٬۰۰۰' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'اعمال فیلترها' }));
+    expect(onApply).toHaveBeenCalledWith(
+      expect.objectContaining({ brands: ['brand-1', 'brand-5'], maxPriceToman: 500_000 }),
     );
+  });
 
-    expect(screen.getByRole('radio', { name: 'برند پنج' })).toBeChecked();
-    expect(
-      screen.getByRole('radio', { name: 'برند پنج' }).closest('[aria-hidden="true"]'),
-    ).toBeNull();
+  it('shows an actionable validation message for reversed ranges', () => {
+    const onApply = vi.fn();
+    renderForm(onApply);
+    fireEvent.change(screen.getByRole('textbox', { name: /حداقل قیمت/ }), {
+      target: { value: '۶۰۰۰۰۰' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: /حداکثر قیمت/ }), {
+      target: { value: '۵۰۰۰۰۰' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'اعمال فیلترها' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('بازه‌ها را با عدد معتبر وارد کنید');
+    expect(onApply).not.toHaveBeenCalled();
   });
 });

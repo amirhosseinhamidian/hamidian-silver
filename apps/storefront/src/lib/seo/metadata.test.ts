@@ -138,6 +138,42 @@ describe('storefront metadata engine', () => {
     });
   });
 
+  it('uses the configured product canonical while excluding detail pagination from indexing', () => {
+    expect(
+      buildStorefrontPageMetadata(
+        settings,
+        {
+          pathname: '/products/silver-ring',
+          searchParams: { page: '2' },
+          title: 'انگشتر نقره',
+          seoCanonicalPath: '/products/canonical-ring',
+        },
+        origin,
+      ),
+    ).toMatchObject({
+      alternates: { canonical: new URL('https://silver.example/products/canonical-ring') },
+      robots: { index: false, follow: true, googleBot: { index: false, follow: true } },
+    });
+  });
+
+  it('keeps the page number with a configured self canonical on a collection', () => {
+    expect(
+      buildStorefrontPageMetadata(
+        settings,
+        {
+          pathname: '/brands/cartier',
+          searchParams: { page: '2' },
+          seoCanonicalPath: '/brands/cartier',
+          title: 'کارتیه',
+        },
+        origin,
+      ),
+    ).toMatchObject({
+      alternates: { canonical: new URL('https://silver.example/brands/cartier?page=2') },
+      robots: { index: true, follow: true },
+    });
+  });
+
   it('rejects unsafe or private canonical overrides at render time', () => {
     for (const seoCanonicalPath of [
       'https://evil.example/product',

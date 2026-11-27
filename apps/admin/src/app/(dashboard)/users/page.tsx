@@ -26,6 +26,7 @@ export default async function UsersPage() {
           {...data}
           currentUserId={user.id}
           canWrite={user.permissions.includes('users.write')}
+          canReadWallet={user.permissions.includes('finance.read')}
         />
       </div>
     </main>

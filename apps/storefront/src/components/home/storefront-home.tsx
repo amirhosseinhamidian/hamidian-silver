@@ -6,7 +6,9 @@ import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
 import { HomepageHero } from '@/components/home/homepage-hero';
 import type { PublicHomepage, PublicHomepageFeaturedCategory } from '@/lib/home/public-homepage';
 
-type StorefrontHomeProps = Readonly<{ homepage: PublicHomepage }>;
+type StorefrontHomeProps = Readonly<{
+  homepage: PublicHomepage;
+}>;
 
 function SectionHeading({
   id,

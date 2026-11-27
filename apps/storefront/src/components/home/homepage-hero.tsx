@@ -4,24 +4,42 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
+import { CampaignArtwork } from './campaign-artwork';
+import type { PublicCampaignBanner } from '@/lib/home/public-campaign-banner';
 import { ResponsiveHeroImage } from '@/components/media/responsive-hero-image';
 import type { PublicHomepageHeroSlide } from '@/lib/home/public-homepage';
 
+type FestivalArtwork = Pick<PublicCampaignBanner, 'media' | 'mobileMedia' | 'stillMedia'>;
+type HomepageSlide = Pick<
+  PublicHomepageHeroSlide,
+  'title' | 'subtitle' | 'actionLabel' | 'actionHref' | 'contentColor'
+> & {
+  media: Pick<NonNullable<FestivalArtwork['media']>, 'url' | 'altText'> | null;
+  mobileMedia?: Pick<NonNullable<FestivalArtwork['media']>, 'url' | 'altText'> | null;
+  festivalArtwork?: FestivalArtwork;
+};
+
 type HomepageHeroProps = Readonly<{
-  slides: PublicHomepageHeroSlide[];
+  slides: HomepageSlide[];
+  autoPlay?: boolean;
   label: string;
   compact?: boolean;
   preload?: boolean;
   headingLevel?: 1 | 2;
   fallbackTitle?: string;
+  preview?: boolean;
 }>;
 
-function HeroAction({ href, label }: Readonly<{ href: string; label: string }>) {
+function HeroAction({
+  href,
+  label,
+  preview,
+}: Readonly<{ href: string; label: string; preview: boolean }>) {
   const className =
     'inline-flex min-h-11 items-center justify-center border border-current px-7 text-sm font-medium text-current transition-opacity hover:opacity-75';
 
-  return href.startsWith('/') && !href.startsWith('//') ? (
-    <Link href={href} className={className}>
+  return (href.startsWith('/') && !href.startsWith('//')) || href.startsWith('#') ? (
+    <Link href={href} prefetch={preview ? false : undefined} className={className}>
       {label}
     </Link>
   ) : (
@@ -33,11 +51,13 @@ function HeroAction({ href, label }: Readonly<{ href: string; label: string }>) 
 
 export function HomepageHero({
   slides,
+  autoPlay = true,
   label,
   compact = false,
   preload = false,
   headingLevel = 1,
   fallbackTitle,
+  preview = false,
 }: HomepageHeroProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -46,7 +66,12 @@ export function HomepageHero({
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
 
   useEffect(() => {
-    if (!hasSlider || paused || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    if (
+      !autoPlay ||
+      !hasSlider ||
+      paused ||
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    ) {
       return;
     }
 
@@ -55,7 +80,7 @@ export function HomepageHero({
     }, 6000);
 
     return () => window.clearInterval(timer);
-  }, [hasSlider, paused, slides.length]);
+  }, [autoPlay, hasSlider, paused, slides.length]);
 
   if (!activeSlide) {
     return (
@@ -72,6 +97,7 @@ export function HomepageHero({
           </Heading>
           <Link
             href="/products"
+            prefetch={preview ? false : undefined}
             className="mt-8 inline-flex min-h-11 items-center border border-[var(--sf-color-ink)] px-7 text-sm"
           >
             مشاهده محصولات
@@ -97,23 +123,35 @@ export function HomepageHero({
       style={{ color: activeSlide.contentColor }}
       className={`relative isolate overflow-hidden bg-black ${compact ? 'min-h-[70svh]' : 'min-h-[calc(100svh-5rem)]'}`}
     >
-      {slides.map((slide, index) =>
-        slide.media.url ? (
-          <ResponsiveHeroImage
-            key={`${slide.media.url}-${slide.mobileMedia?.url ?? ''}-${index}`}
-            desktopSrc={slide.media.url}
-            mobileSrc={slide.mobileMedia?.url}
-            alt={slide.media.altText ?? slide.title ?? ''}
-            preload={preload && index === 0}
-            ariaHidden={index !== activeIndex}
-            className={`object-cover transition-opacity duration-700 ${index === activeIndex ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
-          />
-        ) : null,
+      {activeSlide.festivalArtwork ? (
+        <CampaignArtwork
+          key={activeIndex}
+          artwork={activeSlide.festivalArtwork}
+          sizes="100vw"
+          className="absolute inset-0"
+          preload={preload && activeIndex === 0}
+        />
+      ) : (
+        slides.map((slide, index) =>
+          slide.media?.url ? (
+            <ResponsiveHeroImage
+              key={`${slide.media.url}-${slide.mobileMedia?.url ?? ''}-${index}`}
+              desktopSrc={slide.media.url}
+              mobileSrc={slide.mobileMedia?.url}
+              alt={slide.media.altText ?? slide.title ?? ''}
+              preload={preload && index === 0}
+              ariaHidden={index !== activeIndex}
+              className={`object-cover transition-opacity duration-700 motion-reduce:transition-none ${index === activeIndex ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+            />
+          ) : null,
+        )
       )}
-      <div className="absolute inset-0 -z-0 bg-gradient-to-t from-black/60 via-black/5 to-black/10" />
+      <div className="pointer-events-none absolute inset-0 -z-0 bg-gradient-to-t from-black/60 via-black/5 to-black/10" />
 
       {showCopy ? (
-        <div className="absolute inset-x-0 bottom-[10%] z-10 mx-auto flex max-w-3xl flex-col items-center px-6 text-center">
+        <div
+          className={`absolute inset-x-0 bottom-[10%] z-10 mx-auto flex max-w-3xl flex-col items-center px-6 text-center ${activeSlide.festivalArtwork ? 'bg-black/70 py-4' : ''}`}
+        >
           {headingText ? (
             <Heading className="text-[clamp(2rem,5vw,4.75rem)] leading-tight font-normal drop-shadow-sm">
               {headingText}
@@ -126,7 +164,11 @@ export function HomepageHero({
           ) : null}
           {activeSlide.actionLabel && activeSlide.actionHref ? (
             <div className="mt-7">
-              <HeroAction href={activeSlide.actionHref} label={activeSlide.actionLabel} />
+              <HeroAction
+                href={activeSlide.actionHref}
+                label={activeSlide.actionLabel}
+                preview={preview}
+              />
             </div>
           ) : null}
         </div>

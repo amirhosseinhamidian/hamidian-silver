@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { DomainException } from '../../common/errors/domain-exception';
 
 import { ErrorCode } from '../../common/errors/error-codes';
+import { lockOrderRowForUpdate } from '../../common/order-row-lock';
 import { randomUUID } from 'node:crypto';
 import { calculatePlatingPriceToman } from '../../common/plating-price';
 import { isNonNegativeTomanInt } from '../../common/toman';
@@ -10,6 +11,7 @@ import type { Prisma } from '../../generated/prisma/client';
 import {
   NotificationOutboxEventType,
   OrderStatus,
+  PaymentRefundStatus,
   PaymentStatus,
   PlatingType,
   ProductStatus,
@@ -18,14 +20,30 @@ import {
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { normalizeIranianMobile } from '../auth/phone-normalizer';
 import { attachHumanAuditEvent } from '../audit/audit-event';
+import { releaseCampaignQuota } from '../campaigns/campaign-quota';
 import { PublicMediaUrlService } from '../catalog/public-media-url.service';
+import { attributionPolicy, buildOrderAttribution } from '../growth-attribution/attribution';
+import {
+  createQuoteToken,
+  matchesQuote,
+  parseQuoteToken,
+  quoteTokenHash,
+} from '../promotions/promotion-quote';
+import { normalizeCoupon, PromotionsService } from '../promotions/promotions.service';
 import { NotificationOutboxService } from '../notifications/notification-outbox.service';
 import { ShippingPricingService } from '../shipping/shipping-pricing.service';
 import { ShippingCarriersService } from '../shipping/shipping-carriers.service';
 import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
+import { CartRecoveryService } from './cart-recovery.service';
+import { loadRecoveryItems } from './cart-recovery-pricing';
+import { WalletCheckoutService } from '../wallet/wallet-checkout.service';
+import { allocateCheckoutDiscount } from '../wallet/wallet-checkout';
+import { quoteReferralCheckout } from '../referrals/referral-checkout';
+import { lockReferralBuyer } from '../referrals/referral-eligibility';
+import type { PurchaseRewardBasis } from '../wallet/purchase-reward-basis';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderAddressDto, CreateOrderDto, CreateOrderItemDto } from './dto/create-order.dto';
-import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import { AdminListOrdersQueryDto, ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 const RESERVATION_TTL_MINUTES = 15;
@@ -108,6 +126,8 @@ const CUSTOMER_ORDER_ITEM_SELECT = {
   variantId: true,
   quantity: true,
   productNameSnapshot: true,
+  campaignIdSnapshot: true,
+  campaignNameSnapshot: true,
   variantNameSnapshot: true,
   skuSnapshot: true,
   sizeLabelSnapshot: true,
@@ -137,6 +157,8 @@ const CUSTOMER_ORDER_LIST_SELECT = {
   merchandiseTotalToman: true,
   platingTotalToman: true,
   discountTotalToman: true,
+  walletAppliedToman: true,
+  referralDiscountToman: true,
   shippingTotalToman: true,
   shippingCarrierNameSnapshot: true,
   shippingCarrierTrackingUrlSnapshot: true,
@@ -173,6 +195,7 @@ const CUSTOMER_ORDER_LIST_SELECT = {
         orderBy: { createdAt: 'desc' as const },
         select: {
           provider: true,
+          status: true,
           receiptOriginalName: true,
           receiptUploadedAt: true,
         },
@@ -190,11 +213,17 @@ const CUSTOMER_ORDER_DETAIL_SELECT = {
   payment: {
     select: {
       status: true,
+      refunds: {
+        where: { status: PaymentRefundStatus.CONFIRMED, confirmedAt: { not: null } },
+        orderBy: [{ confirmedAt: 'asc' as const }, { id: 'asc' as const }],
+        select: { id: true, amountToman: true, confirmedAt: true },
+      },
       attempts: {
         take: 1,
         orderBy: { createdAt: 'desc' as const },
         select: {
           provider: true,
+          status: true,
           failureCode: true,
           failureMessage: true,
           receiptOriginalName: true,
@@ -355,6 +384,7 @@ type AdminOrderListRecord = Prisma.OrderGetPayload<{
 }>;
 
 type PreparedOrderItem = {
+  productId: string;
   variantId: string;
   quantity: number;
   productNameSnapshot: string;
@@ -383,13 +413,39 @@ export class OrdersService {
     @Optional() private readonly shippingPricing?: ShippingPricingService,
     @Optional() private readonly shippingCarriers?: ShippingCarriersService,
     @Optional() private readonly outbox?: NotificationOutboxService,
+    @Optional() private readonly promotions?: PromotionsService,
+    @Optional() private readonly walletCheckout?: WalletCheckoutService,
+    @Optional() private readonly cartRecovery?: CartRecoveryService,
   ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
     this.assertUniqueItemSelections(dto.items);
     const customerNote = dto.customerNote?.trim() || null;
+    const quote = dto.quoteToken ? parseQuoteToken(dto.quoteToken) : null;
+    if (
+      (dto.quoteToken ||
+        dto.couponCode ||
+        dto.useWalletCredit ||
+        dto.useReferralCredit ||
+        dto.savedCartId) &&
+      !quote
+    )
+      throw this.quoteChanged();
+    const tokenHash = dto.quoteToken ? quoteTokenHash(dto.quoteToken) : null;
 
     const order = await this.prisma.$transaction(async (transaction) => {
+      if (quote && tokenHash) {
+        await transaction.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${quote.orderId}, 0))`;
+        const existing = await transaction.order.findFirst({
+          where: { id: quote.orderId, userId, priceQuote: { tokenHash } },
+          select: CUSTOMER_ORDER_DETAIL_SELECT,
+        });
+        if (existing) return existing;
+        if (quote.expiresAt <= Date.now() || !this.promotions) throw this.quoteChanged();
+        // Match payment's buyer, campaign, and referral budget lock order.
+        if (dto.useReferralCredit) await lockReferralBuyer(transaction, userId);
+        if (quote.campaignId) await this.promotions.lockCampaign(transaction, quote.campaignId);
+      }
       const shippingAddress = await this.resolveShippingAddress(transaction, userId, dto);
 
       const warehouse = await transaction.warehouse.findFirst({
@@ -407,95 +463,58 @@ export class OrdersService {
         throw new BadRequestException('No active default warehouse is configured.');
       }
 
-      const variantIds = [...new Set(dto.items.map(({ variantId }) => variantId))];
-      const variants = await transaction.productVariant.findMany({
-        where: {
-          id: {
-            in: variantIds,
-          },
-          isActive: true,
-          deletedAt: null,
-          product: {
-            status: ProductStatus.ACTIVE,
-            deletedAt: null,
-          },
-        },
-        include: {
-          size: true,
-          product: {
-            include: {
-              suppliers: {
-                where: {
-                  isActive: true,
-                  supplier: {
-                    isActive: true,
-                    deletedAt: null,
-                  },
-                },
-                orderBy: [{ isPreferred: 'desc' }, { updatedAt: 'desc' }],
-                take: 1,
-                include: {
-                  supplier: true,
-                },
-              },
-            },
-          },
-          platingOptions: {
-            where: {
-              isActive: true,
-              platingRate: {
-                isActive: true,
-              },
-            },
-            include: {
-              platingRate: true,
-            },
-          },
-        },
-      });
-
-      if (variants.length !== variantIds.length) {
-        throw new NotFoundException('One or more product variants were not found.');
+      const {
+        preparedItems,
+        lines,
+        shippingSelection,
+        totals,
+        promotion,
+        wallet,
+        binding,
+        referral,
+        discounts,
+      } = await this.priceOrder(transaction, userId, dto, shippingAddress, Boolean(quote), true);
+      if (
+        quote &&
+        (quote.campaignId !== (promotion?.campaignId ?? null) ||
+          !matchesQuote(this.quoteSecret(), quote, binding, new Date()))
+      ) {
+        throw this.quoteChanged();
       }
-
-      const variantById = new Map(variants.map((variant) => [variant.id, variant]));
-      const preparedItems = dto.items.map((item) => {
-        const variant = variantById.get(item.variantId);
-
-        if (!variant) {
-          throw new NotFoundException('Product variant was not found.');
-        }
-
-        return this.prepareOrderItem(item, variant);
-      });
-
-      const merchandiseTotalToman = preparedItems.reduce(
-        (total, item) => total + item.unitSalePriceToman * item.quantity,
-        0,
-      );
-      const platingTotalToman = preparedItems.reduce(
-        (total, item) => total + item.unitPlatingPriceToman * item.quantity,
-        0,
-      );
-      const cartSubtotalToman = merchandiseTotalToman + platingTotalToman;
-      const shippingSelection = await this.resolveShippingSelection(
-        dto.shippingCarrierId,
-        cartSubtotalToman,
-        shippingAddress,
-        transaction,
-      );
-      const shippingTotalToman = shippingSelection.costToman;
-      const grandTotalToman = merchandiseTotalToman + platingTotalToman + shippingTotalToman;
-
-      this.assertSafeTomanAmount(merchandiseTotalToman);
-      this.assertSafeTomanAmount(platingTotalToman);
-      this.assertSafeTomanAmount(shippingTotalToman);
-      this.assertSafeTomanAmount(grandTotalToman);
-
-      const orderId = randomUUID();
+      const {
+        merchandiseTotalToman,
+        platingTotalToman,
+        shippingTotalToman,
+        payableToman: grandTotalToman,
+      } = totals;
+      const orderId = quote?.orderId ?? randomUUID();
       const orderNumber = `HS-${orderId.replaceAll('-', '').slice(0, 16).toUpperCase()}`;
-      const reservationExpiresAt = new Date(Date.now() + RESERVATION_TTL_MINUTES * 60 * 1000);
+      const inventoryExpiresAt = Date.now() + RESERVATION_TTL_MINUTES * 60 * 1000;
+      const reservationExpiresAt = new Date(
+        referral
+          ? Math.min(inventoryExpiresAt, Date.parse(referral.expiresAt))
+          : inventoryExpiresAt,
+      );
+      if (+reservationExpiresAt <= Date.now()) throw this.quoteChanged();
+      const attribution = await buildOrderAttribution(
+        transaction,
+        dto.attribution,
+        attributionPolicy(this.config),
+      );
 
+      const campaignProducts = new Set(promotion?.rule.eligibleProductIds);
+      const purchaseRewardBasis = {
+        couponApplied: promotion?.rule.coupon ?? false,
+        shippingDiscountToman: totals.shippingDiscountToman,
+        ...(referral ? { referralAllowsPurchaseReward: referral.allowPurchaseReward } : {}),
+        items: preparedItems.map((item, index) => ({
+          variantId: item.variantId,
+          platingType: item.platingType ?? null,
+          productId: item.productId,
+          categoryIds: [...lines[index].categoryIds],
+          directDiscountToman: discounts[index],
+        })),
+      } satisfies PurchaseRewardBasis;
       const order = await transaction.order.create({
         data: {
           id: orderId,
@@ -508,16 +527,76 @@ export class OrdersService {
           shippingTotalToman,
           ...shippingSelection.snapshot,
           grandTotalToman,
+          purchaseRewardBasis,
+          ...(wallet ? { walletAppliedToman: wallet.amountToman } : {}),
+          ...(referral
+            ? {
+                referralCheckoutAttributionId: referral.attributionId,
+                referralCheckoutRuleCode: referral.ruleCode,
+                referralCheckoutExpiresAt: new Date(referral.expiresAt),
+                referralDiscountToman: referral.amountToman,
+              }
+            : {}),
+          ...(promotion?.quotaAllocations?.length
+            ? {
+                campaignQuotaRestricted: true,
+                campaignQuotaAllocations: { createMany: { data: promotion.quotaAllocations } },
+              }
+            : {}),
+          ...(quote && tokenHash
+            ? {
+                discountTotalToman: totals.discountTotalToman,
+                priceQuote: {
+                  create: {
+                    tokenHash,
+                    campaignId: promotion?.campaignId ?? null,
+                    merchandiseDiscountToman: promotion?.merchandiseDiscountToman ?? 0,
+                    shippingDiscountToman: totals.shippingDiscountToman,
+                    snapshot: {
+                      version: 1,
+                      ...totals,
+                      baseShippingToman: shippingSelection.costToman,
+                      rule: promotion?.rule ?? null,
+                      ...(referral ? { referral } : {}),
+                      ...(wallet
+                        ? {
+                            walletPolicyVersion: wallet.policyVersion,
+                            walletBandCode: wallet.bandCode,
+                          }
+                        : {}),
+                      items: preparedItems.map((item, index) => ({
+                        ...purchaseRewardBasis.items[index],
+                        quantity: item.quantity,
+                        unitSalePriceToman: item.unitSalePriceToman,
+                        unitPlatingPriceToman: item.unitPlatingPriceToman,
+                        ...(wallet ? { walletAppliedToman: wallet.lineAmounts[index] } : {}),
+                      })),
+                    },
+                  },
+                },
+              }
+            : {}),
           customerNote,
           reservationExpiresAt,
+          ...(dto.growthDevice ? { growthDevice: dto.growthDevice } : {}),
+          ...(attribution ? { attribution: { create: attribution } } : {}),
           shippingAddress: {
             create: shippingAddress,
           },
           items: {
-            create: preparedItems.map((item) => ({
+            create: preparedItems.map((item, index) => ({
               variantId: item.variantId,
               quantity: item.quantity,
               productNameSnapshot: item.productNameSnapshot,
+              ...(promotion &&
+              campaignProducts.has(item.productId) &&
+              (promotion.rule.kind !== 'BUNDLE' ||
+                promotion.rule.bundleProductIds.includes(item.productId))
+                ? {
+                    campaignIdSnapshot: promotion.campaignId,
+                    campaignNameSnapshot: promotion.campaignName,
+                  }
+                : {}),
               variantNameSnapshot: item.variantNameSnapshot,
               skuSnapshot: item.skuSnapshot,
               sizeLabelSnapshot: item.sizeLabelSnapshot,
@@ -532,6 +611,7 @@ export class OrdersService {
               platingLeadTimeDays: item.platingLeadTimeDays,
               unitWeightGrams: item.unitWeightGrams,
               lineTotalToman: item.lineTotalToman,
+              ...(wallet ? { walletAppliedToman: wallet.lineAmounts[index] } : {}),
             })),
           },
         },
@@ -550,7 +630,25 @@ export class OrdersService {
         },
       });
 
+      if (wallet) {
+        await this.walletCheckout?.reserve(
+          transaction,
+          {
+            id: order.id,
+            userId,
+            walletAppliedToman: wallet.amountToman,
+          },
+          `checkout:order:${order.id}`,
+        );
+      }
       await this.reserveInventory(transaction, warehouse.id, order.id, preparedItems, userId);
+      await this.cartRecovery?.closeForOrder(transaction, {
+        userId,
+        orderId: order.id,
+        cartId: dto.savedCartId,
+        revision: dto.savedCartRevision,
+        items: dto.items,
+      });
 
       return transaction.order.findUniqueOrThrow({
         where: {
@@ -561,6 +659,315 @@ export class OrdersService {
     });
 
     return this.toCustomerOrder(order, null);
+  }
+
+  async estimatePromotions(items: CreateOrderItemDto[]) {
+    this.assertUniqueItemSelections(items);
+    return this.prisma.$transaction(async (tx) => {
+      const { lines, merchandiseTotalToman, platingTotalToman } = await this.preparePricingItems(
+        tx,
+        items,
+      );
+      const promotion = await this.promotions?.apply(tx, lines, 0, new Date(), null);
+      return this.promotionTotals(merchandiseTotalToman, platingTotalToman, 0, promotion);
+    });
+  }
+
+  async estimateWallet(userId: string, items: CreateOrderItemDto[]) {
+    this.assertUniqueItemSelections(items);
+    return this.prisma.$transaction(async (tx) => {
+      const { lines, merchandiseTotalToman, platingTotalToman } = await this.preparePricingItems(
+        tx,
+        items,
+      );
+      const promotion = await this.promotions?.apply(tx, lines, 0, new Date(), null, userId);
+      const totals = this.promotionTotals(merchandiseTotalToman, platingTotalToman, 0, promotion);
+      const preview = await this.walletCheckout?.quote(
+        tx,
+        userId,
+        lines,
+        totals.payableToman,
+        promotion,
+      );
+      return {
+        walletAppliedToman: preview?.allocation?.amountToman ?? 0,
+        walletUnavailableReason: preview ? preview.reason : ('POLICY_DISABLED' as const),
+      };
+    });
+  }
+
+  async quotePrice(userId: string, dto: CreateOrderDto) {
+    if (dto.items.length > 100)
+      throw new BadRequestException('A quote can contain up to 100 lines.');
+    this.assertUniqueItemSelections(dto.items);
+    return this.prisma.$transaction(async (tx) => {
+      const address = await this.resolveShippingAddress(tx, userId, dto);
+      if (dto.savedCartId) {
+        const available = await loadRecoveryItems(tx, dto.items);
+        if (available.some((item, index) => item?.quantity !== dto.items[index].quantity))
+          throw new DomainException(
+            ErrorCode.INVENTORY_NOT_AVAILABLE,
+            'Inventory is not available.',
+          );
+      }
+      const priced = await this.priceOrder(tx, userId, dto, address, true);
+      if (priced.binding.coupon && !priced.promotion) {
+        throw new BadRequestException('The coupon is unavailable for this basket.');
+      }
+      return {
+        ...priced.totals,
+        ...(dto.useWalletCredit ? { walletUnavailableReason: priced.walletUnavailableReason } : {}),
+        ...createQuoteToken(
+          this.quoteSecret(),
+          priced.promotion?.campaignId ?? null,
+          priced.binding,
+          new Date(),
+        ),
+      };
+    });
+  }
+
+  private quoteSecret() {
+    const secret = this.config?.get<string>('OTP_PEPPER');
+    if (!secret) throw new Error('Checkout quote signing is unavailable.');
+    return secret;
+  }
+
+  private quoteChanged() {
+    return new DomainException(
+      ErrorCode.ORDER_PRICE_QUOTE_CHANGED,
+      'The checkout quote changed or expired.',
+    );
+  }
+
+  private async preparePricingItems(
+    transaction: Prisma.TransactionClient,
+    items: CreateOrderItemDto[],
+  ) {
+    const variantIds = [...new Set(items.map(({ variantId }) => variantId))];
+    const variants = await transaction.productVariant.findMany({
+      where: {
+        id: {
+          in: variantIds,
+        },
+        isActive: true,
+        deletedAt: null,
+        product: {
+          status: ProductStatus.ACTIVE,
+          deletedAt: null,
+        },
+      },
+      include: {
+        size: true,
+        product: {
+          include: {
+            categories: {
+              where: { category: { isActive: true, deletedAt: null } },
+              select: { categoryId: true },
+            },
+            suppliers: {
+              where: {
+                isActive: true,
+                supplier: {
+                  isActive: true,
+                  deletedAt: null,
+                },
+              },
+              orderBy: [{ isPreferred: 'desc' }, { updatedAt: 'desc' }],
+              take: 1,
+              include: {
+                supplier: true,
+              },
+            },
+          },
+        },
+        platingOptions: {
+          where: {
+            isActive: true,
+            platingRate: {
+              isActive: true,
+            },
+          },
+          include: {
+            platingRate: true,
+          },
+        },
+      },
+    });
+
+    if (variants.length !== variantIds.length) {
+      throw new NotFoundException('One or more product variants were not found.');
+    }
+
+    const variantById = new Map(variants.map((variant) => [variant.id, variant]));
+    const preparedItems = items.map((item) => {
+      const variant = variantById.get(item.variantId);
+
+      if (!variant) {
+        throw new NotFoundException('Product variant was not found.');
+      }
+
+      return this.prepareOrderItem(item, variant);
+    });
+
+    const merchandiseTotalToman = preparedItems.reduce(
+      (total, item) => total + item.unitSalePriceToman * item.quantity,
+      0,
+    );
+    const platingTotalToman = preparedItems.reduce(
+      (total, item) => total + item.unitPlatingPriceToman * item.quantity,
+      0,
+    );
+    this.assertSafeTomanAmount(merchandiseTotalToman);
+    this.assertSafeTomanAmount(platingTotalToman);
+    const lines = preparedItems.map((item) => {
+      const variant = variantById.get(item.variantId)!;
+      return {
+        productId: variant.productId,
+        variantId: item.variantId,
+        categoryIds: variant.product.categories?.map(({ categoryId }) => categoryId) ?? [],
+        unitSalePriceToman: item.unitSalePriceToman,
+        quantity: item.quantity,
+      };
+    });
+    return { preparedItems, lines, merchandiseTotalToman, platingTotalToman };
+  }
+
+  private async priceOrder(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    dto: CreateOrderDto,
+    address: CreateOrderAddressDto,
+    usePromotions: boolean,
+    reserveReferral = false,
+  ) {
+    const { preparedItems, lines, merchandiseTotalToman, platingTotalToman } =
+      await this.preparePricingItems(tx, dto.items);
+    const shippingSelection = await this.resolveShippingSelection(
+      dto.shippingCarrierId,
+      merchandiseTotalToman + platingTotalToman,
+      address,
+      tx,
+    );
+    const baseShipping = shippingSelection.costToman;
+    const coupon = usePromotions ? normalizeCoupon(dto.couponCode) : null;
+    const promotion = usePromotions
+      ? await this.promotions?.apply(tx, lines, baseShipping, new Date(), coupon, userId)
+      : null;
+    const campaignTotals = this.promotionTotals(
+      merchandiseTotalToman,
+      platingTotalToman,
+      baseShipping,
+      promotion,
+    );
+    const campaignDiscounts = allocateCheckoutDiscount(lines, promotion);
+    const referral =
+      dto.useReferralCredit && this.config?.get<boolean>('REFERRALS_ENABLED', false) === true
+        ? await quoteReferralCheckout(tx, {
+            userId,
+            lines,
+            discounts: campaignDiscounts,
+            payableToman: campaignTotals.payableToman,
+            campaignId: promotion?.campaignId ?? null,
+            couponApplied: promotion?.rule.coupon ?? false,
+            reserve: reserveReferral,
+          })
+        : null;
+    const discounts = referral
+      ? campaignDiscounts.map((amount, index) => amount + referral.lineAmounts[index])
+      : campaignDiscounts;
+    const beforeWallet = referral
+      ? {
+          ...campaignTotals,
+          referralDiscountToman: referral.amountToman,
+          discountTotalToman: campaignTotals.discountTotalToman + referral.amountToman,
+          payableToman: campaignTotals.payableToman - referral.amountToman,
+        }
+      : campaignTotals;
+    const walletPreview = dto.useWalletCredit
+      ? await this.walletCheckout?.quote(
+          tx,
+          userId,
+          lines,
+          beforeWallet.payableToman,
+          promotion,
+          discounts,
+        )
+      : null;
+    const wallet = walletPreview?.allocation ?? null;
+    const totals = wallet
+      ? {
+          ...beforeWallet,
+          walletAppliedToman: wallet.amountToman,
+          payableToman: beforeWallet.payableToman - wallet.amountToman,
+        }
+      : beforeWallet;
+    const binding = {
+      userId,
+      address,
+      coupon,
+      shippingCarrierId: dto.shippingCarrierId ?? null,
+      shippingSelection,
+      totals,
+      promotion,
+      ...(dto.useWalletCredit ? { wallet: wallet ?? null } : {}),
+      ...(dto.useReferralCredit ? { referral } : {}),
+      items: preparedItems.map(
+        ({ variantId, quantity, platingType, unitSalePriceToman, unitPlatingPriceToman }) => ({
+          variantId,
+          quantity,
+          platingType,
+          unitSalePriceToman,
+          unitPlatingPriceToman,
+        }),
+      ),
+    };
+    return {
+      preparedItems,
+      lines,
+      shippingSelection,
+      promotion,
+      totals,
+      wallet,
+      binding,
+      referral,
+      discounts,
+      walletUnavailableReason: walletPreview ? walletPreview.reason : ('POLICY_DISABLED' as const),
+    };
+  }
+
+  private promotionTotals(
+    merchandiseTotalToman: number,
+    platingTotalToman: number,
+    baseShippingToman: number,
+    promotion?: {
+      merchandiseDiscountToman: number;
+      shippingDiscountToman: number;
+      campaignName: string;
+    } | null,
+  ) {
+    const discountTotalToman = promotion?.merchandiseDiscountToman ?? 0;
+    const shippingDiscountToman = promotion?.shippingDiscountToman ?? 0;
+    const shippingTotalToman = baseShippingToman - shippingDiscountToman;
+    const walletAppliedToman = 0;
+    const payableToman =
+      merchandiseTotalToman +
+      platingTotalToman -
+      discountTotalToman +
+      shippingTotalToman -
+      walletAppliedToman;
+    this.assertSafeTomanAmount(baseShippingToman);
+    this.assertSafeTomanAmount(payableToman);
+    return {
+      merchandiseTotalToman,
+      platingTotalToman,
+      discountTotalToman,
+      shippingTotalToman,
+      shippingDiscountToman,
+      walletAppliedToman,
+      payableToman,
+      campaignName: promotion?.campaignName ?? null,
+    };
   }
 
   private async resolveInitialShippingCostToman(
@@ -648,6 +1055,7 @@ export class OrdersService {
       payment,
       items: selectedItems,
       returnAuthorizedAt,
+      referralDiscountToman,
       shippingCarrierNameSnapshot,
       shippingCarrierTrackingUrlSnapshot,
       shippingPricingModeSnapshot,
@@ -657,6 +1065,12 @@ export class OrdersService {
     } = order;
     const items = Array.isArray(selectedItems) ? selectedItems : [];
     const latestAttempt = payment?.attempts[0];
+    const confirmedRefunds =
+      'statusHistory' in order
+        ? (order.payment?.refunds?.flatMap(({ id, amountToman, confirmedAt }) =>
+            confirmedAt ? [{ id, amountToman, confirmedAt }] : [],
+          ) ?? [])
+        : [];
     const statusHistory = 'statusHistory' in order ? order.statusHistory : undefined;
     const cancellationReason = customerFacingCancellationReason(
       [...(statusHistory ?? [])].reverse().find((entry) => entry.toStatus === OrderStatus.CANCELLED)
@@ -665,6 +1079,7 @@ export class OrdersService {
 
     return {
       ...summary,
+      ...(referralDiscountToman ? { referralDiscountToman } : {}),
       returnAuthorized: returnAuthorizedAt !== null,
       trackingCode: shipment?.trackingCode ?? null,
       shippingMethodName: shipment
@@ -689,6 +1104,9 @@ export class OrdersService {
       payment: payment
         ? {
             status: payment.status,
+            ...(payment.status === PaymentStatus.PENDING && latestAttempt?.status === 'FAILED'
+              ? { latestAttemptFailed: true }
+              : {}),
             method: latestAttempt
               ? latestAttempt.provider === 'card_to_card'
                 ? 'CARD_TO_CARD'
@@ -730,16 +1148,18 @@ export class OrdersService {
       ...(statusHistory
         ? {
             cancellationReason,
+            confirmedRefunds,
             statusHistory: statusHistory.map(({ reason: _reason, ...entry }) => entry),
           }
         : {}),
     };
   }
 
-  async listOrders(query: ListOrdersQueryDto) {
+  async listOrders(query: AdminListOrdersQueryDto) {
     const orders: AdminOrderListRecord[] = await this.prisma.order.findMany({
       where: {
         status: query.status,
+        ...(query.orderId ? { id: query.orderId } : {}),
       },
       take: query.limit ?? 50,
       orderBy: {
@@ -984,6 +1404,19 @@ export class OrdersService {
         );
       }
 
+      if (
+        (order.walletAppliedToman || order.referralCheckoutAttributionId) &&
+        this.walletCheckout
+      ) {
+        await lockOrderRowForUpdate(transaction, order.id);
+        if (await this.walletCheckout.hasOpenPayment(transaction, order.id)) {
+          throw new DomainException(
+            ErrorCode.ORDER_CANNOT_CANCEL,
+            'نتیجهٔ پرداخت در حال بررسی است. پس از مشخص شدن نتیجه می‌توانید سفارش را لغو کنید.',
+          );
+        }
+      }
+
       const cancelledAt = new Date();
       const claimed = await transaction.order.updateMany({
         where: {
@@ -1008,6 +1441,8 @@ export class OrdersService {
         );
       }
 
+      if (order.campaignQuotaRestricted) await releaseCampaignQuota(transaction, order.id);
+      await this.walletCheckout?.release(transaction, order);
       const quantitiesByVariant = await resolveVariantInventoryRequirements(
         transaction,
         order.items,
@@ -1141,6 +1576,7 @@ export class OrdersService {
     item: CreateOrderItemDto,
     variant: {
       id: string;
+      productId: string;
       sku: string;
       name: string | null;
       weightGrams: { toString(): string } | null;
@@ -1207,6 +1643,7 @@ export class OrdersService {
     this.assertSafeTomanAmount(lineTotalToman);
 
     return {
+      productId: variant.productId,
       variantId: variant.id,
       quantity: item.quantity,
       productNameSnapshot: variant.product.name,

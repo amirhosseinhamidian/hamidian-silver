@@ -27,6 +27,18 @@ const optionalKavenegarTemplate = Joi.string()
 
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
+  PURCHASE_REWARD_WORKER_ENABLED: Joi.boolean().default(false),
+  CAMPAIGN_PROMOTIONS_ENABLED: Joi.boolean().default(true),
+  WALLET_CHECKOUT_ENABLED: Joi.boolean().default(true),
+  WALLET_ACTIVATION_SMS_ENABLED: Joi.boolean().default(true),
+  WALLET_MAINTENANCE_ENABLED: Joi.boolean().default(false),
+  REFERRALS_ENABLED: Joi.boolean().default(false),
+  REFERRAL_RISK_WORKER_ENABLED: Joi.boolean().default(false),
+  REFERRAL_GRANT_WORKER_ENABLED: Joi.boolean().default(false),
+  REFERRAL_RISK_CONTEXT_SECRET: Joi.string().min(32).empty('').optional(),
+  REFERRAL_ATTRIBUTION_DAYS: Joi.number().integer().min(1).max(365).default(30),
+  REFERRAL_REQUIRE_VERIFIED_PHONE: Joi.boolean().default(true),
+  REFERRAL_MAX_ACCOUNT_AGE_DAYS: Joi.number().integer().min(0).max(3650).default(0),
   HOST: Joi.string().default('0.0.0.0'),
   PORT: Joi.number().port().default(3000),
   HTTP_REQUEST_TIMEOUT_MS: Joi.number().integer().min(1000).max(120000).default(30000),
@@ -100,6 +112,30 @@ export const envValidationSchema = Joi.object({
   ADMIN_APP_ORIGIN: Joi.string()
     .uri({ scheme: ['http', 'https'] })
     .default('http://localhost:3002'),
+  STOREFRONT_PUBLIC_ORIGIN: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .empty('')
+    .optional(),
+  SEO_ISSUES_ENABLED: Joi.boolean().default(false),
+  SEO_ISSUES_TELEGRAM_ENABLED: Joi.boolean().default(false),
+  SEO_ISSUES_COMPARISON_DAYS: Joi.number().valid(7, 14).default(7),
+  SEO_ISSUES_MIN_IMPRESSIONS: Joi.number().integer().min(100).max(10000).default(400),
+  SEO_ISSUES_MIN_CLICKS: Joi.number().integer().min(10).max(1000).default(30),
+  SEO_ISSUES_DROP_PERCENT: Joi.number().integer().min(25).max(85).default(40),
+  SEO_INSPECTION_ENABLED: Joi.boolean().default(false),
+  SEO_INSPECTION_ORIGIN: Joi.string()
+    .uri({ scheme: ['https'] })
+    .empty('')
+    .optional(),
+  SEO_INSPECTION_DAILY_LIMIT: Joi.number().integer().min(1).max(100).default(30),
+  SEO_AUDIT_ENABLED: Joi.boolean().default(false),
+  SEARCH_CONSOLE_SYNC_ENABLED: Joi.boolean().default(false),
+  SEARCH_CONSOLE_SYNC_HISTORY_DAYS: Joi.number().integer().min(3).max(90).default(30),
+  SEARCH_CONSOLE_SYNC_SEARCH_TYPES: Joi.string()
+    .pattern(/^(web|image|video|news)(,(web|image|video|news)){0,3}$/)
+    .default('web'),
+  ATTRIBUTION_MODEL: Joi.string().valid('FIRST_NON_DIRECT', 'LAST_NON_DIRECT').optional(),
+  ATTRIBUTION_WINDOW_DAYS: Joi.number().integer().min(1).max(90).optional(),
   TELEGRAM_BOT_TOKEN: Joi.string().min(20).allow('').optional(),
   TELEGRAM_RELAY_URL: Joi.string()
     .uri({ scheme: ['https'] })

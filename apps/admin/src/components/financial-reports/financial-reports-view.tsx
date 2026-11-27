@@ -13,11 +13,12 @@ import type {
   AdminFinancialReportsData,
   FinancialReportResource,
 } from '@/lib/financial-reports/financial-reports-data';
-import type {
-  FinanceCostReconciliationRow,
-  FinanceSupplierRow,
-  FinancialReportPeriod,
-  MissingOrderCostCode,
+import {
+  financeReconciliationLimit,
+  type FinanceCostReconciliationRow,
+  type FinanceSupplierRow,
+  type FinancialReportPeriod,
+  type MissingOrderCostCode,
 } from '@/lib/financial-reports/financial-reports-model';
 import {
   formatAdminDateTime,
@@ -126,7 +127,7 @@ function FlowBar({
   max,
   color,
 }: Readonly<{ label: string; value: number; max: number; color: string }>) {
-  const width = max === 0 ? 0 : Math.max(3, (Math.abs(value) / max) * 100);
+  const width = max === 0 || value === 0 ? 0 : Math.max(3, (Math.abs(value) / max) * 100);
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between gap-4 text-xs">
@@ -218,18 +219,25 @@ function SmallStat({ label, value }: Readonly<{ label: string; value: string }>)
 
 function ContributionPanel({ data }: Readonly<{ data: AdminFinancialReportsData }>) {
   const contribution = data.contribution.data;
+  const description = 'حاشیه پس از هزینه‌های ثبت‌شدهٔ خدمات و بازپرداخت';
   if (!contribution) {
     return (
-      <Card title="حاشیه مشارکت" description="سود پس از هزینه‌های خدمات و بازپرداخت">
+      <Card title="حاشیه مشارکت" description={description}>
         <ResourceAlert resource={data.contribution}>
           داده سود و هزینه از سرویس مالی دریافت نشد.
         </ResourceAlert>
       </Card>
     );
   }
+  const segments = [
+    { label: 'کارمزد درگاه', value: contribution.paymentGatewayFeeToman, color: '#2563eb' },
+    { label: 'ارسال', value: contribution.shippingProviderCostToman, color: '#d97706' },
+    { label: 'آبکاری', value: contribution.platingServiceCostToman, color: '#7c3aed' },
+    { label: 'اصلاح دستی', value: contribution.manualCostAdjustmentToman, color: '#64748b' },
+  ];
 
   return (
-    <Card title="حاشیه مشارکت" description="سود پس از هزینه‌های خدمات و بازپرداخت">
+    <Card title="حاشیه مشارکت" description={description}>
       <dl className="space-y-3 text-sm">
         <ReportLine
           label="سود ناخالص پیش از خدمات"
@@ -245,32 +253,22 @@ function ContributionPanel({ data }: Readonly<{ data: AdminFinancialReportsData 
         />
       </dl>
       <div className="mt-5 border-t border-[var(--admin-color-border)] pt-4">
-        <DonutChart
-          title="ترکیب هزینه‌های عملیاتی سفارش"
-          centerLabel="تومان هزینه"
-          segments={[
-            {
-              label: 'کارمزد درگاه',
-              value: Math.max(0, contribution.paymentGatewayFeeToman),
-              color: '#2563eb',
-            },
-            {
-              label: 'ارسال',
-              value: Math.max(0, contribution.shippingProviderCostToman),
-              color: '#d97706',
-            },
-            {
-              label: 'آبکاری',
-              value: Math.max(0, contribution.platingServiceCostToman),
-              color: '#7c3aed',
-            },
-            {
-              label: 'اصلاح دستی',
-              value: Math.max(0, contribution.manualCostAdjustmentToman),
-              color: '#64748b',
-            },
-          ]}
-        />
+        {segments.some(({ value }) => value < 0) ? (
+          <>
+            <h3 className="text-sm font-bold">خالص هزینه‌ها پس از اصلاحیه</h3>
+            <dl className="mt-3 space-y-3 text-sm">
+              {segments.map(({ label, value }) => (
+                <ReportLine key={label} label={label} value={value} />
+              ))}
+            </dl>
+          </>
+        ) : (
+          <DonutChart
+            title="ترکیب هزینه‌های عملیاتی سفارش"
+            centerLabel="تومان هزینه"
+            segments={segments}
+          />
+        )}
       </div>
     </Card>
   );
@@ -441,7 +439,26 @@ function MissingCostBadges({ costs }: Readonly<{ costs: readonly MissingOrderCos
   );
 }
 
-function ReconciliationCard({ row }: Readonly<{ row: FinanceCostReconciliationRow }>) {
+function ReconciliationOrderLink({ row }: Readonly<{ row: FinanceCostReconciliationRow }>) {
+  return (
+    <ButtonLink
+      href={`/orders?${new URLSearchParams({ orderId: row.orderId })}`}
+      aria-label={`بررسی سفارش ${row.orderNumber}`}
+      variant="outline"
+      size="sm"
+    >
+      جزئیات سفارش
+    </ButtonLink>
+  );
+}
+
+function ReconciliationCard({
+  row,
+  canReadOrders,
+}: Readonly<{
+  row: FinanceCostReconciliationRow;
+  canReadOrders: boolean;
+}>) {
   return (
     <article className="rounded-[var(--admin-radius-lg)] border border-[var(--admin-color-border)] bg-white p-3 shadow-[var(--admin-shadow-sm)]">
       <div className="flex items-start justify-between gap-3">
@@ -457,9 +474,11 @@ function ReconciliationCard({ row }: Readonly<{ row: FinanceCostReconciliationRo
       <p className="mt-3 text-xs text-[var(--admin-color-muted)]">
         پرداخت: {row.paidAt ? formatAdminDateTime(row.paidAt) : 'ثبت نشده'}
       </p>
-      <ButtonLink href="/orders" variant="ghost" size="sm" className="mt-2 w-full">
-        رفتن به سفارش‌ها
-      </ButtonLink>
+      {canReadOrders && (
+        <div className="mt-2">
+          <ReconciliationOrderLink row={row} />
+        </div>
+      )}
     </article>
   );
 }
@@ -496,20 +515,27 @@ const reconciliationColumns: readonly DataTableColumn<FinanceCostReconciliationR
       </Badge>
     ),
   },
-  {
-    id: 'action',
-    header: '',
-    align: 'end',
-    cell: () => (
-      <ButtonLink href="/orders" variant="ghost" size="sm">
-        بررسی سفارش‌ها
-      </ButtonLink>
-    ),
-  },
 ];
 
-function ReconciliationPanel({ data }: Readonly<{ data: AdminFinancialReportsData }>) {
+function ReconciliationPanel({
+  data,
+  canReadOrders,
+}: Readonly<{
+  data: AdminFinancialReportsData;
+  canReadOrders: boolean;
+}>) {
   const report = data.reconciliation.data;
+  const columns: readonly DataTableColumn<FinanceCostReconciliationRow>[] = canReadOrders
+    ? [
+        ...reconciliationColumns,
+        {
+          id: 'action',
+          header: 'جزئیات',
+          align: 'end',
+          cell: (row) => <ReconciliationOrderLink row={row} />,
+        },
+      ]
+    : reconciliationColumns;
   return (
     <section aria-labelledby="cost-reconciliation-heading" className="space-y-3">
       <div className="flex items-end justify-between gap-4">
@@ -519,25 +545,26 @@ function ReconciliationPanel({ data }: Readonly<{ data: AdminFinancialReportsDat
               کنترل ثبت هزینه سفارش
             </h2>
             {report ? (
-              <Badge tone={report.count > 0 ? 'warning' : 'success'}>
-                {formatAdminInteger(report.count)} سفارش نیازمند بررسی
+              <Badge tone={report.count > 0 ? 'warning' : 'neutral'}>
+                {formatAdminInteger(report.count)} سفارش در فهرست بررسی
               </Badge>
             ) : null}
           </div>
           <p className="mt-1 text-xs leading-6 text-[var(--admin-color-muted)]">
-            سفارش‌های پرداخت‌شده‌ای که هزینه درگاه، ارسال یا آبکاری آن‌ها هنوز ثبت نشده است.
+            تا {formatAdminInteger(financeReconciliationLimit)} سفارش اخیرِ بازه با پرداخت قطعی،
+            اسنپ‌شات مالی و هزینهٔ درگاه، ارسال یا آبکاریِ ثبت‌نشده نمایش داده می‌شود.
           </p>
         </div>
       </div>
       <ResponsiveDataView
         caption="سفارش‌های دارای هزینه ثبت‌نشده"
         mobileLabel="کارت‌های مغایرت هزینه سفارش"
-        columns={reconciliationColumns}
+        columns={columns}
         rows={report?.orders ?? []}
         getRowKey={(row) => row.orderId}
-        renderMobileCard={(row) => <ReconciliationCard row={row} />}
-        emptyTitle="هزینه‌های سفارش‌ها کامل است"
-        emptyDescription="در بازه انتخاب‌شده سفارش پرداخت‌شده‌ای با هزینه ثبت‌نشده پیدا نشد."
+        renderMobileCard={(row) => <ReconciliationCard row={row} canReadOrders={canReadOrders} />}
+        emptyTitle="مغایرتی در این گزارش پیدا نشد"
+        emptyDescription="در میان سفارش‌های دارای اسنپ‌شات مالی در بازهٔ انتخاب‌شده، موردی با هزینهٔ ثبت‌نشده پیدا نشد."
         error={
           data.reconciliation.failed
             ? { description: 'فهرست کنترل هزینه سفارش‌ها دریافت نشد.' }
@@ -548,7 +575,13 @@ function ReconciliationPanel({ data }: Readonly<{ data: AdminFinancialReportsDat
   );
 }
 
-export function FinancialReportsView({ data }: Readonly<{ data: AdminFinancialReportsData }>) {
+export function FinancialReportsView({
+  data,
+  canReadOrders,
+}: Readonly<{
+  data: AdminFinancialReportsData;
+  canReadOrders: boolean;
+}>) {
   const management = data.management.data;
   const contribution = data.contribution.data;
   const periodLabel = PERIODS.find((period) => period.value === data.range.period)?.description;
@@ -564,14 +597,15 @@ export function FinancialReportsView({ data }: Readonly<{ data: AdminFinancialRe
     <main className="admin-container py-6 sm:py-8 lg:py-10">
       <header className="flex flex-col gap-4 border-b border-[var(--admin-color-border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="info">مرحله {formatAdminInteger(31)}</Badge>
-            <Badge tone="neutral">{periodLabel}</Badge>
-          </div>
-          <h1 className="mt-3 text-2xl font-black sm:text-3xl">گزارش‌های مالی</h1>
+          <h1 className="text-2xl font-black sm:text-3xl">گزارش‌های مالی</h1>
           <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--admin-color-muted)]">
             جریان نقدی، سود مشارکت، هزینه‌های سفارش و وضعیت تعهد تأمین‌کنندگان را از یک نمای خواندنی
             بررسی کنید.
+          </p>
+          <p className="mt-2 text-xs text-[var(--admin-color-muted)]">
+            {data.range.from && data.range.to
+              ? `از ${formatAdminDateTime(data.range.from)} تا ${formatAdminDateTime(data.range.to)} به وقت تهران`
+              : periodLabel}
           </p>
         </div>
         <PeriodSelector period={data.range.period} />
@@ -607,7 +641,7 @@ export function FinancialReportsView({ data }: Readonly<{ data: AdminFinancialRe
             }
             description={
               contribution
-                ? `${formatAdminInteger(contribution.costEntryCount)} رکورد هزینه`
+                ? `بر اساس ${formatAdminInteger(contribution.costEntryCount)} رکورد هزینهٔ ثبت‌شده`
                 : 'داده در دسترس نیست'
             }
             icon="pulse"
@@ -639,10 +673,10 @@ export function FinancialReportsView({ data }: Readonly<{ data: AdminFinancialRe
         </section>
 
         <SuppliersPanel data={data} />
-        <ReconciliationPanel data={data} />
+        <ReconciliationPanel data={data} canReadOrders={canReadOrders} />
 
         <footer className="flex flex-col gap-1 border-t border-[var(--admin-color-border)] pt-4 text-xs text-[var(--admin-color-subtle)] sm:flex-row sm:items-center sm:justify-between">
-          <p>مبالغ بر حسب تومان و از snapshotهای قطعی مالی محاسبه شده‌اند.</p>
+          <p>مبالغ به تومان‌اند. وضعیت تعهد تأمین‌کنندگان لحظه‌ای است.</p>
           <p>آخرین محاسبه: {formatAdminDateTime(data.generatedAt)}</p>
         </footer>
       </div>

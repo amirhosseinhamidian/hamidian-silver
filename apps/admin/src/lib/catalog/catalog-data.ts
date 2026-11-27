@@ -1,8 +1,13 @@
 import 'server-only';
 
 import { cookies } from 'next/headers';
+import type { components } from '@hamidian/contracts';
 
 import { requestAdminCatalog, readJsonResponse } from '@/lib/catalog/catalog-api';
+import type {
+  AttributeDefinition,
+  ProductTypedAttribute,
+} from '@/lib/catalog/catalog-attribute-model';
 import {
   parseAdminProduct,
   parseAdminBrands,
@@ -36,7 +41,7 @@ export type ProductFormData = Readonly<{
   product: AdminProduct | null;
   brands: readonly CatalogLookup[];
   countries: readonly CatalogLookup[];
-  categories: readonly CatalogLookup[];
+  categories: readonly Pick<AdminCategory, 'id' | 'name' | 'active' | 'parentId'>[];
   sizes: readonly CatalogSize[];
   sizeGroups: readonly CatalogSizeGroup[];
   products?: readonly ProductRelationCandidate[];
@@ -194,7 +199,7 @@ export async function loadProductForm(productId?: string): Promise<ProductFormDa
       productRequest,
       load(requestAdminCatalog('/api/v1/catalog/brands', token), parseCatalogLookups),
       load(requestAdminCatalog('/api/v1/catalog/countries', token), parseCatalogLookups),
-      load(requestAdminCatalog('/api/v1/catalog/categories', token), parseCatalogLookups),
+      load(requestAdminCatalog('/api/v1/catalog/categories', token), parseAdminCategories),
       load(requestAdminCatalog('/api/v1/catalog/sizes', token), parseCatalogSizes),
       load(requestAdminCatalog('/api/v1/catalog/size-groups', token), parseCatalogSizeGroups),
       loadProductRelationCandidates(token),
@@ -233,7 +238,12 @@ export async function loadProductForm(productId?: string): Promise<ProductFormDa
     product: product.data,
     brands: brands.data,
     countries: countries.data,
-    categories: categories.data,
+    categories: categories.data.map(({ id, name, active, parentId }) => ({
+      id,
+      name,
+      active,
+      parentId,
+    })),
     sizes: sizes.data,
     sizeGroups: sizeGroups.data,
     products: products.data.filter(({ id }) => id !== productId),
@@ -244,6 +254,38 @@ export async function loadProductForm(productId?: string): Promise<ProductFormDa
 export async function loadCategoryManagement(): Promise<CategoryManagementData> {
   const token = await accessToken();
   return load(requestAdminCatalog('/api/v1/catalog/categories', token), parseAdminCategories);
+}
+
+export async function loadAttributeDefinitions() {
+  const token = await accessToken();
+  return load(requestAdminCatalog('/api/v1/catalog/attribute-definitions', token), (value) =>
+    Array.isArray(value) ? (value as AttributeDefinition[]) : null,
+  );
+}
+
+export async function loadProductTypedAttributes(productId: string) {
+  const token = await accessToken();
+  return load(
+    requestAdminCatalog(
+      `/api/v1/catalog/products/${encodeURIComponent(productId)}/typed-attributes`,
+      token,
+    ),
+    (value) => (Array.isArray(value) ? (value as ProductTypedAttribute[]) : null),
+  );
+}
+
+export async function loadProductMerchandising(productId: string) {
+  const token = await accessToken();
+  return load(
+    requestAdminCatalog(
+      `/api/v1/catalog/products/${encodeURIComponent(productId)}/merchandising`,
+      token,
+    ),
+    (value) =>
+      value && typeof value === 'object' && 'revision' in value
+        ? (value as components['schemas']['CatalogMerchandisingDto'])
+        : null,
+  );
 }
 
 export async function loadReferenceManagement(): Promise<ReferenceManagementData> {

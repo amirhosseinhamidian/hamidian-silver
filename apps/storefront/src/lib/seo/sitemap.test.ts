@@ -196,6 +196,7 @@ describe('buildStorefrontSitemap', () => {
   it('uses the same safe canonical fallback as page metadata', () => {
     const sources = sitemapSources();
     sources.products[0]!.seoCanonicalPath = 'https://evil.example/product';
+    sources.categories[0]!.seoCanonicalPath = '/categories/jewelry?brand=sample';
     sources.categories[1]!.seoCanonicalPath = '/products/wrong-family';
     sources.brands[0]!.seoCanonicalPath = '/account/orders';
 
@@ -204,11 +205,13 @@ describe('buildStorefrontSitemap', () => {
     expect(locations).toEqual(
       expect.arrayContaining([
         'https://silver.example/products/ring',
+        'https://silver.example/categories/jewelry',
         'https://silver.example/categories/rings',
         'https://silver.example/brands/visible-brand',
       ]),
     );
     expect(locations.some((url) => url.startsWith('https://evil.example'))).toBe(false);
+    expect(locations.every((url) => new URL(url).search === '')).toBe(true);
   });
 
   it('keeps collections populated by displayable no-index products', () => {

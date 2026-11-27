@@ -177,6 +177,7 @@ describe('ZarinpalPaymentGateway', () => {
     ).resolves.toEqual({
       success: false,
       code: '-51',
+      definitiveFailure: true,
       message: 'Payment not successful',
     });
   });

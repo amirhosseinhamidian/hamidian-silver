@@ -1,13 +1,8 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import { Suspense, type ReactNode } from 'react';
 
-import { AnalyticsPageView } from '@/components/analytics/analytics-page-view';
-import { WebVitalsReporter } from '@/components/analytics/web-vitals-reporter';
-import {
-  googleAnalyticsBootstrap,
-  validGoogleMeasurementId,
-} from '@/lib/analytics/google-analytics';
+import { StorefrontTelemetry } from '@/components/analytics/storefront-telemetry';
+import { validGoogleMeasurementId } from '@/lib/analytics/google-analytics';
 import { buildStorefrontRootMetadata } from '@/lib/seo/metadata';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 import { peyda } from '@/styles/fonts';
@@ -29,22 +24,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="fa" dir="rtl" className={peyda.variable}>
       <body>
         {children}
-        {measurementId ? (
-          <>
-            <Script id="google-analytics-bootstrap" strategy="beforeInteractive">
-              {googleAnalyticsBootstrap(measurementId)}
-            </Script>
-            <Script
-              id="google-analytics-library"
-              src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
-              strategy="afterInteractive"
-            />
-            <Suspense fallback={null}>
-              <AnalyticsPageView />
-            </Suspense>
-            <WebVitalsReporter />
-          </>
-        ) : null}
+        <Suspense fallback={null}>
+          <StorefrontTelemetry measurementId={measurementId} />
+        </Suspense>
       </body>
     </html>
   );

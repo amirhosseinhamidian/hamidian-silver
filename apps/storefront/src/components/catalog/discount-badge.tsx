@@ -1,5 +1,5 @@
 const persianNumber = new Intl.NumberFormat('fa-IR', {
-  maximumFractionDigits: 0,
+  maximumFractionDigits: 2,
 });
 
 type DiscountBadgeProps = Readonly<{
@@ -10,7 +10,7 @@ export function DiscountBadge({ percent }: DiscountBadgeProps) {
   return (
     <span
       className="
-        inline-flex min-h-6 items-center justify-center rounded-sm
+        sf-catalog-price__discount-badge inline-flex min-h-6 items-center justify-center rounded-sm
         bg-[var(--sf-color-ink)] px-2 py-1 text-xs font-medium
         leading-none text-white
       "

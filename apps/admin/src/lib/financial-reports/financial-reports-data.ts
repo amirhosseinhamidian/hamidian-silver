@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
 import { requestAdminCatalog, readJsonResponse } from '@/lib/catalog/catalog-api';
 import {
+  financeReconciliationLimit,
   financialReportRange,
   parseFinanceCashflowReport,
   parseFinanceContributionReport,
@@ -84,7 +85,9 @@ export async function loadAdminFinancialReports(
       parseFinanceSuppliersReport,
     ),
     loadResource(
-      reportPath('/api/v1/finance/cost-reconciliation', range, { limit: '100' }),
+      reportPath('/api/v1/finance/cost-reconciliation', range, {
+        limit: String(financeReconciliationLimit),
+      }),
       token,
       parseFinanceCostReconciliationReport,
     ),

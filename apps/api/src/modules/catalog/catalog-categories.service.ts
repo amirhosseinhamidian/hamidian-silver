@@ -1,13 +1,21 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { SeoRedirectEntityType } from '../../generated/prisma/enums';
+import type { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { attachHumanAuditEvent } from '../audit/audit-event';
+import { PERMISSION_CODES, type PermissionCode } from '../authorization/rbac.constants';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
+import { remapCatalogAttributeCategoryScopes } from './catalog-attributes.service';
+import { readActiveCategoryProductCounts } from './catalog-category-counts';
+import { catalogHierarchyTransaction } from './catalog-hierarchy-transaction';
 import { CreateCategoryDto } from './dto/create-category.dto';
+import { CategoryMergeResultDto, MergeCategoryDto } from './dto/merge-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { PublicMediaUrlService } from './public-media-url.service';
 
@@ -38,7 +46,7 @@ export class CatalogCategoriesService {
     if (!name || !slug) throw new BadRequestException('Category name and slug are required.');
 
     try {
-      const category = await this.prisma.$transaction(async (transaction) => {
+      const category = await catalogHierarchyTransaction(this.prisma, async (transaction) => {
         if (dto.parentId) await this.requireActiveParent(transaction, dto.parentId);
         if (dto.imageId) await this.requireMedia(transaction, dto.imageId);
         if (dto.seoOgMediaId) await this.requireImageMedia(transaction, dto.seoOgMediaId);
@@ -68,12 +76,19 @@ export class CatalogCategoriesService {
   }
 
   async list() {
-    const categories = await this.prisma.category.findMany({
-      where: { deletedAt: null },
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      include: categoryInclude,
-    });
-    return categories.map((category) => this.project(category));
+    const [categories, counts] = await Promise.all([
+      this.prisma.category.findMany({
+        where: { deletedAt: null },
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }, { id: 'asc' }],
+        include: categoryInclude,
+      }),
+      readActiveCategoryProductCounts(this.prisma),
+    ]);
+    return categories.map((category) => ({
+      ...this.project(category),
+      activeProductCount: counts.get(category.id)?.activeProductCount ?? 0,
+      activeSubtreeProductCount: counts.get(category.id)?.activeSubtreeProductCount ?? 0,
+    }));
   }
 
   async update(categoryId: string, dto: UpdateCategoryDto) {
@@ -83,12 +98,12 @@ export class CatalogCategoriesService {
     if (dto.slug !== undefined && !dto.slug.trim()) {
       throw new BadRequestException('Category slug cannot be empty.');
     }
-    if (dto.parentId === categoryId) {
+    if (dto.parentId?.toLowerCase() === categoryId.toLowerCase()) {
       throw new BadRequestException('A category cannot be its own parent.');
     }
 
     try {
-      const category = await this.prisma.$transaction(async (transaction) => {
+      const category = await catalogHierarchyTransaction(this.prisma, async (transaction) => {
         const current = await transaction.category.findFirst({
           where: { id: categoryId, deletedAt: null },
           select: { id: true, slug: true, isActive: true, parentId: true },
@@ -160,7 +175,7 @@ export class CatalogCategoriesService {
   }
 
   async archive(categoryId: string) {
-    return this.prisma.$transaction(async (transaction) => {
+    return catalogHierarchyTransaction(this.prisma, async (transaction) => {
       const category = await transaction.category.findFirst({
         where: { id: categoryId, deletedAt: null },
         select: {
@@ -182,6 +197,177 @@ export class CatalogCategoriesService {
       });
       return { archived: true };
     });
+  }
+
+  async merge(
+    categoryId: string,
+    dto: MergeCategoryDto,
+    permissions: readonly PermissionCode[],
+  ): Promise<CategoryMergeResultDto> {
+    const { targetCategoryId } = dto;
+    if (categoryId.toLowerCase() === targetCategoryId.toLowerCase()) {
+      throw new BadRequestException('A category cannot be merged into itself.');
+    }
+
+    return catalogHierarchyTransaction(this.prisma, async (transaction) => {
+      const [source, target] = await Promise.all([
+        transaction.category.findFirst({
+          where: { id: categoryId, deletedAt: null },
+          select: { slug: true },
+        }),
+        transaction.category.findFirst({
+          where: { id: targetCategoryId, isActive: true, deletedAt: null },
+          select: { slug: true },
+        }),
+      ]);
+      if (!source) throw new NotFoundException('Category was not found.');
+      if (!target) throw new NotFoundException('Merge target was not found or is inactive.');
+      await this.assertNoCycle(transaction, categoryId, targetCategoryId);
+      await this.requireMergePermissions(transaction, categoryId, permissions);
+
+      const children = { parentId: categoryId, deletedAt: null };
+      const [childCount, sourceProductCount, targetProductCount, sharedProductCount] =
+        await Promise.all([
+          transaction.category.count({ where: children }),
+          transaction.productCategory.count({ where: { categoryId } }),
+          transaction.productCategory.count({ where: { categoryId: targetCategoryId } }),
+          transaction.productCategory.count({
+            where: {
+              categoryId,
+              product: { categories: { some: { categoryId: targetCategoryId } } },
+            },
+          }),
+        ]);
+      const result = {
+        merged: dto.dryRun === false,
+        childCount,
+        sourceProductCount,
+        targetProductCount,
+        sharedProductCount,
+        sourcePath: `/categories/${source.slug}`,
+        targetPath: `/categories/${target.slug}`,
+      };
+      if (!result.merged) return result;
+
+      await this.transferCategoryReferences(transaction, categoryId, targetCategoryId);
+      await remapCatalogAttributeCategoryScopes(transaction, categoryId, targetCategoryId);
+      await transaction.category.updateMany({
+        where: children,
+        data: { parentId: targetCategoryId },
+      });
+      await transaction.category.updateMany({
+        where: { seoCanonicalPath: result.sourcePath, deletedAt: null },
+        data: { seoCanonicalPath: result.targetPath },
+      });
+      await recordSeoSlugChange(
+        transaction,
+        SeoRedirectEntityType.CATEGORY,
+        targetCategoryId,
+        source.slug,
+        target.slug,
+      );
+      // Historical sources must resolve against the active target after the source is archived.
+      await transaction.seoRedirect.updateMany({
+        where: { entityType: SeoRedirectEntityType.CATEGORY, entityId: categoryId },
+        data: { entityId: targetCategoryId, destinationPath: result.targetPath },
+      });
+      await transaction.category.update({
+        where: { id: categoryId },
+        data: { isActive: false, deletedAt: new Date() },
+      });
+      return attachHumanAuditEvent(result, {
+        title: 'ادغام دسته‌بندی',
+        operationType: 'UPDATE',
+        entityName: result.sourcePath,
+        changes: [
+          {
+            field: 'categoryPath',
+            label: 'مسیر دسته‌بندی',
+            before: result.sourcePath,
+            after: result.targetPath,
+          },
+        ],
+      });
+    });
+  }
+
+  private async requireMergePermissions(
+    transaction: Prisma.TransactionClient,
+    sourceId: string,
+    permissions: readonly PermissionCode[],
+  ) {
+    if (
+      !permissions.includes(PERMISSION_CODES.CMS_WRITE) &&
+      (await transaction.guideArticleCategory.count({ where: { categoryId: sourceId } })) > 0
+    ) {
+      throw new ForbiddenException('Merging this category requires guide editing permission.');
+    }
+    if (!permissions.includes(PERMISSION_CODES.SETTINGS_WRITE)) {
+      const [feature, navigation] = await Promise.all([
+        transaction.homepageFeaturedCategory.findUnique({ where: { categoryId: sourceId } }),
+        transaction.siteSettings.count({ where: { headerCategoryIds: { has: sourceId } } }),
+      ]);
+      if (feature || navigation > 0) {
+        throw new ForbiddenException('Merging this category requires site settings permission.');
+      }
+    }
+  }
+
+  private async transferCategoryReferences(
+    transaction: Prisma.TransactionClient,
+    sourceId: string,
+    targetId: string,
+  ) {
+    await transaction.$executeRaw`
+      INSERT INTO "product_categories" ("productId", "categoryId", "assignedAt")
+      SELECT "productId", ${targetId}::uuid, "assignedAt"
+      FROM "product_categories" WHERE "categoryId" = ${sourceId}::uuid
+      ON CONFLICT ("productId", "categoryId") DO NOTHING
+    `;
+    await transaction.product.updateMany({
+      where: { primaryCategoryId: sourceId },
+      data: { primaryCategoryId: targetId },
+    });
+    await transaction.productCategory.deleteMany({ where: { categoryId: sourceId } });
+
+    await transaction.$executeRaw`
+      INSERT INTO "guide_article_categories" ("articleId", "categoryId")
+      SELECT "articleId", ${targetId}::uuid
+      FROM "guide_article_categories" WHERE "categoryId" = ${sourceId}::uuid
+      ON CONFLICT ("articleId", "categoryId") DO NOTHING
+    `;
+    await transaction.guideArticleCategory.deleteMany({ where: { categoryId: sourceId } });
+    await transaction.supplierSourceCategory.updateMany({
+      where: { catalogCategoryId: sourceId },
+      data: { catalogCategoryId: targetId },
+    });
+
+    const targetFeature = await transaction.homepageFeaturedCategory.findUnique({
+      where: { categoryId: targetId },
+      select: { categoryId: true },
+    });
+    if (targetFeature) {
+      await transaction.homepageFeaturedCategory.deleteMany({ where: { categoryId: sourceId } });
+    } else {
+      await transaction.homepageFeaturedCategory.updateMany({
+        where: { categoryId: sourceId },
+        data: { categoryId: targetId },
+      });
+    }
+    const settings = await transaction.siteSettings.findMany({
+      where: { headerCategoryIds: { has: sourceId } },
+      select: { id: true, headerCategoryIds: true },
+    });
+    for (const { id, headerCategoryIds } of settings) {
+      await transaction.siteSettings.update({
+        where: { id },
+        data: {
+          headerCategoryIds: [
+            ...new Set(headerCategoryIds.map((item) => (item === sourceId ? targetId : item))),
+          ],
+        },
+      });
+    }
   }
 
   private async requireActiveParent(
@@ -217,10 +403,11 @@ export class CatalogCategoriesService {
     candidateParentId: string,
   ) {
     const visited = new Set<string>();
-    let cursor: string | null = candidateParentId;
+    const sourceId = categoryId.toLowerCase();
+    let cursor: string | null = candidateParentId.toLowerCase();
 
     while (cursor) {
-      if (cursor === categoryId) {
+      if (cursor === sourceId) {
         throw new BadRequestException('Category parent selection would create a cycle.');
       }
       if (visited.has(cursor)) {

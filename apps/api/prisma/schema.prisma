@@ -25,6 +25,7 @@ model User {
   priceChanges                        ProductPriceHistory[]            @relation("ProductPriceHistoryActor")
   platingRateChanges                  PlatingRateHistory[]             @relation("PlatingRateHistoryActor")
   orders                              Order[]
+  savedCarts                         SavedCart[]
   orderStatusChanges                  OrderStatusHistory[]             @relation("OrderStatusHistoryActor")
   addresses                           UserAddress[]
   shipmentStatusChanges               ShipmentStatusHistory[]          @relation("ShipmentStatusHistoryActor")
@@ -58,6 +59,10 @@ model User {
   operationalIncidentsAcknowledged    OperationalIncident[]            @relation("OperationalIncidentAcknowledger")
   operationalIncidentsAssigned        OperationalIncident[]            @relation("OperationalIncidentAssignee")
   operationalIncidentActivities       OperationalIncidentActivity[]    @relation("OperationalIncidentActivityActor")
+  seoOpportunityEvents                SeoOpportunityEvent[]             @relation("SeoOpportunityActor")
+  seoIssuesAssigned                   SeoIssue[]                        @relation("SeoIssueOwner")
+  seoIssueActivities                  SeoIssueEvent[]                   @relation("SeoIssueActor")
+  seoIssueDeliveries                  SeoIssueDelivery[]                @relation("SeoIssueRecipient")
   auditLogs                           AuditLog[]                        @relation("AuditLogActor")
   stockNotificationSubscriptions      StockNotificationSubscription[]
   storefrontContentPageChanges        StorefrontContentPage[]           @relation("StorefrontContentPageUpdater")
@@ -72,6 +77,28 @@ model User {
   supplierProductImportsImported      SupplierProductImportDraft[]       @relation("SupplierProductImportImporter")
   supplierCrawlRunsArchived           SupplierCrawlRun[]                  @relation("SupplierCrawlRunArchiver")
   supplierSourceChangesAcknowledged   SupplierProductSourceChange[]       @relation("SupplierSourceChangeAcknowledger")
+  ownedCampaigns                      Campaign[]
+  campaignRevisions                   CampaignRevision[]
+  festivalThemeVersions               FestivalThemeVersion[]
+  rewardPolicyDrafts                  RewardPolicyVersion[]         @relation("RewardPolicyCreator")
+  rewardPolicyPublications            RewardPolicyVersion[]         @relation("RewardPolicyPublisher")
+  referralCode                        ReferralCode?
+  sentReferrals                       ReferralAttribution[]        @relation("ReferralReferrer")
+  receivedReferral                    ReferralAttribution?         @relation("ReferralReferred")
+  referralRequestLimit                ReferralRequestLimit?
+  referralRewardDrafts                ReferralRewardPolicyVersion[] @relation("ReferralRewardPolicyCreator")
+  referralRewardPublications          ReferralRewardPolicyVersion[] @relation("ReferralRewardPolicyPublisher")
+  referralRiskObservation             ReferralRiskObservation?
+  referralRiskPublications            ReferralRiskPolicyVersion[]
+  referralRiskReviews                 ReferralRiskReview[]
+  walletLots                          WalletLot[]
+  walletNotificationPreference        WalletNotificationPreference?
+  walletReservations                  WalletReservation[]
+  walletOperations                    WalletOperation[]            @relation("WalletOwner")
+  walletCorrections                   WalletOperation[]            @relation("WalletActor")
+  editedPromotions                    CampaignPromotion[]
+  policySimulationReviews             PolicySimulationReview[]
+  campaignQuotaChanges CampaignQuotaChange[]
 
   @@index([isActive])
   @@index([deletedAt])
@@ -283,6 +310,111 @@ model SeoRedirect {
   @@map("seo_redirects")
 }
 
+enum SeoSyncStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model SeoIntegration {
+  id           String                @id @default(uuid()) @db.Uuid
+  property     String                @unique @db.VarChar(128)
+  plannedOn    DateTime?             @db.Date
+  plannedScope String?               @db.VarChar(100)
+  pausedUntil  DateTime?             @db.Timestamptz(3)
+  createdAt    DateTime              @default(now()) @db.Timestamptz(3)
+  runs         SeoSyncRun[]
+  performance  SeoPerformanceDaily[]
+  urls         SeoUrlInventory[]
+
+  @@map("seo_integrations")
+}
+
+model SeoSyncRun {
+  id             String                @id @default(uuid()) @db.Uuid
+  integrationId  String                @db.Uuid
+  metricDate     DateTime              @db.Date
+  scheduledOn    DateTime              @db.Date
+  searchType     String                @db.VarChar(20)
+  status         SeoSyncStatus         @default(PENDING)
+  attempts       Int                   @default(0)
+  availableAt    DateTime              @default(now()) @db.Timestamptz(3)
+  leaseUntil     DateTime?             @db.Timestamptz(3)
+  startedAt      DateTime?             @db.Timestamptz(3)
+  finishedAt     DateTime?             @db.Timestamptz(3)
+  errorCode      String?               @db.VarChar(50)
+  rowCount       Int?
+  coverage       Json?
+  integration    SeoIntegration        @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  performance    SeoPerformanceDaily[]
+
+  @@unique([integrationId, metricDate, searchType, scheduledOn], map: "seo_sync_runs_schedule_key")
+  @@index([integrationId, status, availableAt])
+  @@index([integrationId, status, leaseUntil])
+  @@index([integrationId, finishedAt])
+  @@map("seo_sync_runs")
+}
+
+model SeoUrlInventory {
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  integrationId   String                @db.Uuid
+  urlKey          String                @db.Char(64)
+  reportedUrl     String
+  reportedPath    String
+  reportedSearch  String?
+  normalizedPath  String
+  canonicalPath   String?
+  matchedBy       String?               @db.VarChar(12)
+  productId       String?               @db.Uuid
+  categoryId      String?               @db.Uuid
+  brandId         String?               @db.Uuid
+  articleId       String?               @db.Uuid
+  firstObservedAt DateTime              @default(now()) @db.Timestamptz(3)
+  lastObservedAt  DateTime              @default(now()) @db.Timestamptz(3)
+  integration     SeoIntegration        @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  product         Product?              @relation(fields: [productId], references: [id], onDelete: SetNull)
+  category        Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brand           Brand?                @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  article         GuideArticle?         @relation(fields: [articleId], references: [id], onDelete: SetNull)
+  performance     SeoPerformanceDaily[]
+
+  @@unique([integrationId, urlKey])
+  @@index([productId])
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([articleId])
+  @@map("seo_url_inventory")
+}
+
+model SeoPerformanceDaily {
+  integrationId   String           @db.Uuid
+  metricDate      DateTime         @db.Date
+  dimensionKey    String           @db.Char(64)
+  searchType      String           @db.VarChar(20)
+  scope           String           @db.VarChar(24)
+  aggregation     String?          @db.VarChar(16)
+  device          String?          @db.VarChar(16)
+  searchQuery     String?
+  brand           String?          @db.VarChar(16)
+  brandSource     String?          @db.VarChar(12)
+  urlId           String?          @db.Uuid
+  clicks          Float
+  impressions     Float
+  averagePosition Float?
+  syncRunId       String?          @db.Uuid
+  sourceVersion   DateTime         @db.Date
+  integration     SeoIntegration   @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  url             SeoUrlInventory? @relation(fields: [urlId], references: [id], onDelete: SetNull)
+  syncRun         SeoSyncRun?      @relation(fields: [syncRunId], references: [id], onDelete: SetNull)
+
+  @@id([integrationId, metricDate, dimensionKey])
+  @@index([integrationId, searchType, scope, metricDate], map: "seo_performance_daily_scope_idx")
+  @@index([urlId, searchType, scope, metricDate])
+  @@index([syncRunId])
+  @@map("seo_performance_daily")
+}
+
 model Media {
   id                      String         @id @default(uuid()) @db.Uuid
   storageKey              String         @unique @db.VarChar(500)
@@ -327,6 +459,11 @@ model Media {
   guideTopicCoverImages           GuideTopic[]              @relation("GuideTopicCover")
   guideTopicSeoOgImages           GuideTopic[]              @relation("GuideTopicSeoOg")
   guideBlockPrimaryMedia          GuideArticleBlock[]       @relation("GuideBlockPrimaryMedia")
+  festivalDesignAssets    FestivalDesignAsset[]
+  campaignBanners                 Campaign[]
+  campaignPlacementImages        CampaignPlacement[] @relation("CampaignPlacementMedia")
+  campaignPlacementMobileImages  CampaignPlacement[] @relation("CampaignPlacementMobileMedia")
+  campaignPlacementStillImages   CampaignPlacement[] @relation("CampaignPlacementStillMedia")
 
   @@index([deletedAt])
   @@map("media")
@@ -367,6 +504,9 @@ model SiteSettings {
   seoHomeDescription          String?  @db.VarChar(500)
   seoHomeOgMediaId            String?  @db.Uuid
   manufacturerCountriesEnabled Boolean @default(false)
+  cartRecoveryRemindersEnabled Boolean @default(true)
+  cartRecoveryIdleHours Int @default(24)
+  cartRecoveryRetentionDays Int @default(14)
   updatedByUserId     String?  @db.Uuid
   createdAt           DateTime @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime @updatedAt @db.Timestamptz(3)
@@ -500,9 +640,11 @@ model Category {
   heroMobileImage Media?        @relation("CategoryHeroMobileImage", fields: [heroMobileImageId], references: [id], onDelete: SetNull)
   seoOgMedia       Media?            @relation("CategorySeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   products    ProductCategory[]
+  primaryForProducts Product[] @relation("ProductPrimaryCategory")
   homepageFeature HomepageFeaturedCategory?
   guideArticles     GuideArticleCategory[]
   supplierSourceCategories SupplierSourceCategory[]
+  seoUrls SeoUrlInventory[]
 
   @@index([parentId])
   @@index([imageId])
@@ -540,6 +682,7 @@ model Brand {
   products    Product[]
   homepageFeature HomepageFeaturedBrand?
   guideArticles     GuideArticleBrand[]
+  seoUrls           SeoUrlInventory[]
 
   @@index([imageId])
   @@index([heroImageId])
@@ -628,6 +771,7 @@ model Product {
   defaultPlatingType PlatingType?
   brandId          String?               @db.Uuid
   countryId        String?               @db.Uuid
+  primaryCategoryId String?               @db.Uuid
   salePriceToman               Int?
   compareAtPriceToman          Int?
   createdAt        DateTime              @default(now()) @db.Timestamptz(3)
@@ -636,25 +780,46 @@ model Product {
   brand            Brand?                @relation(fields: [brandId], references: [id], onDelete: SetNull)
   seoOgMedia       Media?                @relation("ProductSeoOgImage", fields: [seoOgMediaId], references: [id], onDelete: SetNull)
   country          Country?              @relation(fields: [countryId], references: [id], onDelete: SetNull)
+  primaryCategory  Category?             @relation("ProductPrimaryCategory", fields: [primaryCategoryId], references: [id], onDelete: SetNull)
   categories       ProductCategory[]
   variants         ProductVariant[]
   media            ProductMedia[]
   attributes       ProductAttribute[]
+  typedAttributeValues CatalogProductAttributeValue[]
   suppliers        ProductSupplier[]
   priceHistory     ProductPriceHistory[]
   stockNotificationSubscriptions StockNotificationSubscription[]
   homepagePopularFeature HomepagePopularProduct?
+  catalogMerchandising CatalogMerchandisingEntry?
   relatedProductsAsSource ProductRelation[] @relation("ProductRelationSource")
   relatedProductsAsTarget ProductRelation[] @relation("ProductRelationTarget")
   guideArticles                  GuideArticleProduct[]
   supplierImportDraft SupplierProductImportDraft?
+  seoUrls          SeoUrlInventory[]
+  campaignQuotas CampaignQuota[]
 
   @@index([brandId])
   @@index([countryId])
+  @@index([primaryCategoryId])
   @@index([seoOgMediaId])
   @@index([status])
   @@index([deletedAt])
   @@map("products")
+}
+
+model CatalogMerchandisingEntry {
+  productId String    @id @db.Uuid
+  enabled   Boolean   @default(false)
+  pinned    Boolean   @default(false)
+  weight    Int       @default(0)
+  startsAt  DateTime? @db.Timestamptz(3)
+  endsAt    DateTime? @db.Timestamptz(3)
+  revision  Int       @default(1)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([enabled, endsAt])
+  @@map("catalog_merchandising_entries")
 }
 
 enum GuideArticleStatus {
@@ -758,6 +923,7 @@ model GuideArticle {
   products           GuideArticleProduct[]
   categories         GuideArticleCategory[]
   brands             GuideArticleBrand[]
+  seoUrls            SeoUrlInventory[]
 
   @@index([status, publishedAt])
   @@index([isFeatured, publishedAt])
@@ -864,6 +1030,86 @@ model ProductAttribute {
   @@map("product_attributes")
 }
 
+enum CatalogAttributeKind {
+  SELECT
+  NUMBER
+  RANGE
+  BOOLEAN
+  MULTI_SELECT
+}
+
+enum CatalogAttributeUnit {
+  NONE
+  GRAM
+  MILLIMETER
+  SIZE
+  PER_MILLE
+  BAR
+}
+
+enum CatalogAttributeSource {
+  MANUAL
+  VARIANT_SIZE
+  VARIANT_LENGTH
+  VARIANT_WEIGHT
+}
+
+model CatalogSearchDaily {
+  day           DateTime @db.Date
+  term          String   @db.VarChar(100)
+  searches      BigInt   @default(0)
+  withoutResult BigInt   @default(0)
+
+  @@id([day, term])
+  @@map("catalog_search_daily")
+}
+
+model CatalogAttributeDefinition {
+  code           String @id @db.VarChar(64)
+  currentVersion Int   @default(1)
+  versions       CatalogAttributeVersion[]
+
+  @@map("catalog_attribute_definitions")
+}
+
+model CatalogAttributeVersion {
+  attributeCode       String @db.VarChar(64)
+  version             Int
+  label               String @db.VarChar(100)
+  kind                CatalogAttributeKind
+  unit                CatalogAttributeUnit
+  source              CatalogAttributeSource
+  isActive            Boolean @default(true)
+  isRequired          Boolean @default(false)
+  sortOrder           Int @default(0)
+  categoryIds         String[] @default([]) @db.Uuid
+  excludedCategoryIds String[] @default([]) @db.Uuid
+  options             Json
+  legacyMappings      Json
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+  definition          CatalogAttributeDefinition @relation(fields: [attributeCode], references: [code], onDelete: Restrict)
+  productValues       CatalogProductAttributeValue[]
+
+  @@id([attributeCode, version])
+  @@map("catalog_attribute_versions")
+}
+
+model CatalogProductAttributeValue {
+  productId         String @db.Uuid
+  attributeCode     String @db.VarChar(64)
+  revision          Int
+  definitionVersion Int
+  value             Json?
+  legacyValue       String? @db.VarChar(500)
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  definition        CatalogAttributeVersion @relation(fields: [attributeCode, definitionVersion], references: [attributeCode, version], onDelete: Restrict, map: "catalog_product_values_definition_fkey")
+
+  @@id([productId, attributeCode, revision])
+  @@index([attributeCode, definitionVersion], map: "catalog_attribute_values_definition_idx")
+  @@map("catalog_product_attribute_values")
+}
+
 model HomepageHeroSlide {
   id          String                @id @default(uuid()) @db.Uuid
   placement   HomepageHeroPlacement
@@ -934,6 +1180,7 @@ model ProductVariant {
   sku                            String                          @unique @db.VarChar(100)
   name                           String?                         @db.VarChar(150)
   weightGrams                    Decimal?                        @db.Decimal(10, 3)
+  lengthMm                       Int?
   salePriceToman                 Int?
   compareAtPriceToman            Int?
   isActive                       Boolean                         @default(true)
@@ -1467,6 +1714,7 @@ model Order {
   merchandiseTotalToman Int
   platingTotalToman     Int                           @default(0)
   discountTotalToman    Int                           @default(0)
+  walletAppliedToman    Int                           @default(0)
   shippingTotalToman    Int                           @default(0)
   shippingCarrierIdSnapshot String?                   @db.Uuid
   shippingCarrierNameSnapshot String?                 @db.VarChar(200)
@@ -1497,6 +1745,22 @@ model Order {
   shipment              Shipment?
   supplierPayables      SupplierPayable[]
   financeSnapshot       OrderFinanceSnapshot?
+  attribution           OrderAttribution?
+  priceQuote            OrderPriceQuote?
+  recoveredCart         SavedCart?
+  walletRewardLots      WalletLot[]
+  walletReservations    WalletReservation[]
+  purchaseRewardBasis   Json?
+  purchaseRewardJob     PurchaseRewardJob?
+  firstReferralPurchase ReferralAttribution?
+  referralPurchaseEvidence ReferralAttribution[] @relation("ReferralReferrerPurchase")
+  referralCheckoutAttributionId String?             @db.Uuid
+  referralDiscountToman Int                         @default(0)
+  referralCheckoutRuleCode String?                   @db.VarChar(40)
+  referralCheckoutExpiresAt DateTime?                @db.Timestamptz(3)
+  referralCheckoutReleasedAt DateTime?               @db.Timestamptz(3)
+  referralCheckoutAttribution ReferralAttribution?   @relation("ReferralCheckoutOrders", fields: [referralCheckoutAttributionId], references: [id], onDelete: Restrict)
+  growthDevice          String?                       @db.VarChar(12)
   returns               OrderReturn[]
   supplierCredits       SupplierCredit[]
   costEntries           OrderCostEntry[]
@@ -1505,13 +1769,802 @@ model Order {
   operationalIncidents  OperationalIncident[]
   adminNotificationDeliveries AdminOrderNotificationDelivery[]
   shippingCarrierLogoSnapshot Media?                  @relation("OrderShippingCarrierLogoSnapshot", fields: [shippingCarrierLogoMediaIdSnapshot], references: [id], onDelete: SetNull)
+  campaignQuotaRestricted Boolean @default(false)
+  campaignQuotaAllocations CampaignQuotaAllocation[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
+  @@index([createdAt])
+  @@index([paidAt])
+  @@index([cancelledAt])
+  @@index([deliveredAt])
   @@index([reservationExpiresAt])
   @@index([returnAuthorizedByUserId])
   @@index([shippingCarrierLogoMediaIdSnapshot])
   @@map("orders")
+}
+
+enum AttributionModel {
+  FIRST_NON_DIRECT
+  LAST_NON_DIRECT
+}
+
+model CampaignLinkIdentity {
+  id        String   @id @db.VarChar(64)
+  campaign  String   @unique @db.VarChar(96)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  costs     GrowthCampaignCost[]
+  lifecycle Campaign?
+
+  @@map("campaign_link_identities")
+}
+
+enum CampaignStatus {
+  DRAFT
+  APPROVED
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+enum CampaignAudience {
+  ALL_CUSTOMERS
+  FIRST_PURCHASE
+  RETURNING
+}
+
+enum CampaignKind {
+  LEGACY
+  MARKETING
+  FESTIVAL
+}
+
+enum CampaignManagementPurpose {
+  SALES
+}
+
+model Campaign {
+  id                      String               @id @default(uuid()) @db.Uuid
+  slug                    String               @unique @db.VarChar(64)
+  name                    String               @db.VarChar(150)
+  goal                    String               @db.VarChar(500)
+  channel                 String               @db.VarChar(96)
+  ownerId                 String               @db.Uuid
+  trackingId              String               @unique @db.VarChar(64)
+  kind                    CampaignKind         @default(LEGACY)
+  managementPurpose       CampaignManagementPurpose?
+  status                  CampaignStatus       @default(DRAFT)
+  archivedAt              DateTime?            @db.Timestamptz(3)
+  allProducts             Boolean
+  productIds              String[]             @default([]) @db.Uuid
+  categoryIds             String[]             @default([]) @db.Uuid
+  startsAt                DateTime             @db.Timestamptz(3)
+  endsAt                  DateTime             @db.Timestamptz(3)
+  budgetToman             Int
+  plannedChannelCostToman Int?
+  marketingDestinationPath String? @db.VarChar(1000)
+  relatedFestivalId       String? @db.Uuid
+  relatedSalesCampaignId  String? @db.Uuid
+  audience                CampaignAudience     @default(ALL_CUSTOMERS)
+  message                 String               @db.VarChar(500)
+  bannerEnabled           Boolean              @default(false)
+  bannerPriority          Int                  @default(0)
+  mediaId                 String?              @db.Uuid
+  ctaPath                 String?              @db.VarChar(1000)
+  ctaLabel                String?              @db.VarChar(80)
+  revision                Int                  @default(1)
+  createdAt               DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime             @updatedAt @db.Timestamptz(3)
+  owner                   User                 @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  tracking                CampaignLinkIdentity @relation(fields: [trackingId], references: [id], onDelete: Restrict)
+  media                   Media?               @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  revisions               CampaignRevision[]
+  promotion               CampaignPromotion?
+  orderQuotes             OrderPriceQuote[]
+  landing                 CampaignLanding?
+  relatedFestival         Campaign? @relation("MarketingFestival", fields: [relatedFestivalId], references: [id], onDelete: SetNull)
+  festivalMarketing       Campaign[] @relation("MarketingFestival")
+  relatedSalesCampaign    Campaign? @relation("MarketingSales", fields: [relatedSalesCampaignId], references: [id], onDelete: SetNull)
+  salesMarketing          Campaign[] @relation("MarketingSales")
+  quotas CampaignQuota[]
+
+  @@index([status, startsAt])
+  @@index([status, endsAt])
+  @@index([relatedFestivalId])
+  @@index([relatedSalesCampaignId])
+  @@map("campaigns")
+}
+
+enum PromotionKind {
+  PERCENT
+  FIXED
+  THRESHOLD
+  BUNDLE
+  FREE_SHIPPING
+}
+
+enum CampaignLandingMode {
+  TEMPORARY
+  RECURRING
+}
+
+enum CampaignCollectionMode {
+  FILTERED
+  MANUAL
+}
+
+enum CampaignBannerSlot {
+  HOME
+  CATEGORY
+  PRODUCT
+  COUNTDOWN
+  NAVIGATION
+}
+
+enum CampaignNavigationEffect {
+  SOLID
+  GRADIENT
+  ANIMATED
+}
+
+model CampaignLanding {
+  campaignId       String                 @id @db.Uuid
+  slug             String                 @db.VarChar(64)
+  seoMode          CampaignLandingMode
+  title            String                 @db.VarChar(150)
+  story            String                 @db.VarChar(3000)
+  collectionMode   CampaignCollectionMode
+  filters          Json
+  manualProductIds String[]               @default([]) @db.Uuid
+  design           Json?
+  publication      Json?
+  updatedAt        DateTime               @updatedAt @db.Timestamptz(3)
+  campaign         Campaign               @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  placements       CampaignPlacement[]
+
+  @@index([slug, seoMode])
+  @@map("campaign_landings")
+}
+
+model FestivalDesignAsset {
+  campaignId String           @db.Uuid
+  version    Int
+  mediaId    String           @db.Uuid
+  revision   CampaignRevision @relation(fields: [campaignId, version], references: [campaignId, version], onDelete: Cascade)
+  media      Media            @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@id([campaignId, version, mediaId])
+  @@index([mediaId])
+  @@map("festival_design_assets")
+}
+
+model FestivalThemeTemplate {
+  name        String                 @id @db.VarChar(80)
+  description String?                @db.VarChar(240)
+  theme       Json
+  version     Int                    @default(1)
+  createdAt   DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime               @default(now()) @updatedAt @db.Timestamptz(3)
+  archivedAt  DateTime?              @db.Timestamptz(3)
+  versions    FestivalThemeVersion[]
+
+  @@index([archivedAt, name])
+  @@map("festival_theme_templates")
+}
+
+model FestivalThemeVersion {
+  templateName String                @db.VarChar(80)
+  version      Int
+  description  String?               @db.VarChar(240)
+  theme        Json
+  createdAt    DateTime              @default(now()) @db.Timestamptz(3)
+  actorId      String?               @db.Uuid
+  template     FestivalThemeTemplate @relation(fields: [templateName], references: [name], onDelete: Restrict)
+  actor        User?                 @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@id([templateName, version])
+  @@index([actorId])
+  @@map("festival_theme_versions")
+}
+
+model CampaignPlacement {
+  campaignId String             @db.Uuid
+  slot       CampaignBannerSlot
+  targetId   String?            @db.Uuid
+  priority   Int
+  startsAt   DateTime?          @db.Timestamptz(3)
+  endsAt     DateTime?          @db.Timestamptz(3)
+  landing    CampaignLanding    @relation(fields: [campaignId], references: [campaignId], onDelete: Cascade)
+
+  mediaId          String?                   @db.Uuid
+  mobileMediaId    String?                   @db.Uuid
+  stillMediaId     String?                   @db.Uuid
+  desktopHeight    Int?
+  mobileHeight     Int?
+  textColor        String?                   @db.VarChar(7)
+  navigationEffect CampaignNavigationEffect?
+  display          Json?
+  media            Media?                    @relation("CampaignPlacementMedia", fields: [mediaId], references: [id], onDelete: Restrict)
+  mobileMedia      Media?                    @relation("CampaignPlacementMobileMedia", fields: [mobileMediaId], references: [id], onDelete: Restrict)
+  stillMedia       Media?                    @relation("CampaignPlacementStillMedia", fields: [stillMediaId], references: [id], onDelete: Restrict)
+
+  @@id([campaignId, slot])
+  @@index([slot, targetId, priority])
+  @@map("campaign_placements")
+}
+
+model CampaignPromotion {
+  campaignId           String        @id @db.Uuid
+  kind                 PromotionKind
+  value                Int
+  percentageOverrides Json          @default("[]")
+  minSubtotalToman     Int
+  maxDiscountToman     Int
+  maxDiscountBps       Int
+  priority             Int
+  bundleProductIds     String[]      @default([]) @db.Uuid
+  couponCode           String?       @unique @db.VarChar(32)
+  maxUses              Int?
+  version              Int           @default(1)
+  actorUserId          String        @db.Uuid
+  updatedAt            DateTime      @updatedAt @db.Timestamptz(3)
+  campaign             Campaign      @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  actor                User          @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@map("campaign_promotions")
+}
+
+model SavedCart {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  activeUserId  String?  @unique @db.Uuid
+  orderId       String?  @unique @db.Uuid
+  revision      Int      @default(1)
+  items         Json
+  fingerprint   String   @db.Char(64)
+  savedAt       DateTime @default(now()) @db.Timestamptz(3)
+  eligibleAt    DateTime @db.Timestamptz(3)
+  expiresAt     DateTime @db.Timestamptz(3)
+  abandonedAt   DateTime? @db.Timestamptz(3)
+  restoredAt    DateTime? @db.Timestamptz(3)
+  hiddenAt      DateTime? @db.Timestamptz(3)
+  closedAt      DateTime? @db.Timestamptz(3)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order         Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([savedAt])
+  @@index([activeUserId, expiresAt])
+  @@index([expiresAt])
+  @@index([abandonedAt])
+  @@index([userId])
+  @@map("saved_carts")
+}
+
+model OrderPriceQuote {
+  orderId                 String    @id @db.Uuid
+  tokenHash               String    @db.Char(64)
+  campaignId              String?   @db.Uuid
+  merchandiseDiscountToman Int
+  shippingDiscountToman    Int
+  referralRewardToman      Int       @default(0)
+  snapshot                Json
+  order                   Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  campaign                Campaign? @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+
+  @@index([campaignId])
+  @@map("order_price_quotes")
+}
+
+enum CampaignQuotaAllocationState {
+  RESERVED
+  CAPTURED
+  RELEASED
+}
+
+model CampaignQuota {
+  id            String                    @id @default(uuid()) @db.Uuid
+  campaignId    String                    @db.Uuid
+  productId     String                    @db.Uuid
+  limit         Int
+  manualSold    Int                       @default(0)
+  revision      Int                       @default(1)
+  campaign      Campaign                  @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  product       Product                   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  allocations   CampaignQuotaAllocation[]
+  changes       CampaignQuotaChange[]
+
+  @@unique([campaignId, productId])
+  @@index([productId])
+  @@map("campaign_quotas")
+}
+
+model CampaignQuotaAllocation {
+  quotaId  String                        @db.Uuid
+  orderId  String                        @db.Uuid
+  quantity Int
+  state    CampaignQuotaAllocationState  @default(RESERVED)
+  quota    CampaignQuota                 @relation(fields: [quotaId], references: [id], onDelete: Restrict)
+  order    Order                         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@id([quotaId, orderId])
+  @@index([orderId])
+  @@index([quotaId, state])
+  @@map("campaign_quota_allocations")
+}
+
+model CampaignQuotaChange {
+  quotaId     String        @db.Uuid
+  revision    Int
+  limit       Int
+  manualSold  Int
+  actorUserId String        @db.Uuid
+  recordedAt  DateTime      @default(now()) @db.Timestamptz(3)
+  quota       CampaignQuota @relation(fields: [quotaId], references: [id], onDelete: Restrict)
+  actor       User          @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@id([quotaId, revision])
+  @@map("campaign_quota_changes")
+}
+
+model CampaignRevision {
+  campaignId  String   @db.Uuid
+  version     Int
+  action      String   @db.VarChar(24)
+  actorUserId String?  @db.Uuid
+  requestId   String?  @db.Uuid
+  snapshot    Json
+  recordedAt  DateTime @default(now()) @db.Timestamptz(3)
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  festivalAssets FestivalDesignAsset[]
+
+  @@id([campaignId, version])
+  @@unique([campaignId, requestId])
+  @@map("campaign_revisions")
+}
+
+model RewardPolicyVersion {
+  version              Int       @id @default(autoincrement())
+  requestId            String    @unique @db.Uuid
+  definition           Json
+  createdAt            DateTime  @default(now()) @db.Timestamptz(3)
+  createdById          String    @db.Uuid
+  requestedEffectiveAt DateTime? @db.Timestamptz(3)
+  publishedAt          DateTime? @db.Timestamptz(3)
+  publishedById        String?   @db.Uuid
+  effectiveAt          DateTime? @db.Timestamptz(3)
+  createdBy            User      @relation("RewardPolicyCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  publishedBy          User?     @relation("RewardPolicyPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
+  walletLots           WalletLot[]
+  purchaseRewardJobs   PurchaseRewardJob[]
+
+  @@index([effectiveAt, version])
+  @@map("reward_policy_versions")
+}
+
+model PolicySimulationReview {
+  id          String   @id @db.Uuid
+  actorUserId String   @db.Uuid
+  mode        String   @db.VarChar(10)
+  decision    String   @db.VarChar(12)
+  input       Json
+  result      Json
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  actor       User     @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([createdAt, id])
+  @@map("policy_simulation_reviews")
+}
+
+model GrowthCreditIssuanceControl {
+  id        Int      @id @default(1)
+  mode      String   @default("LIVE") @db.VarChar(8)
+  version   Int      @default(1)
+  changedAt DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+
+  @@map("growth_credit_issuance_control")
+}
+
+enum PurchaseRewardJobStatus {
+  PENDING
+  PROCESSING
+  WAITING
+  COMPLETED
+  SKIPPED
+  DEAD_LETTER
+}
+
+model PurchaseRewardJob {
+  orderId        String                  @id @db.Uuid
+  userId         String                  @db.Uuid
+  sequence       BigInt                  @unique @default(autoincrement())
+  paidAt         DateTime                @db.Timestamptz(3)
+  status         PurchaseRewardJobStatus @default(PENDING)
+  attempts       Int                     @default(0)
+  nextAttemptAt  DateTime                @db.Timestamptz(3)
+  leaseUntil     DateTime?               @db.Timestamptz(3)
+  leaseToken     String?                 @db.Uuid
+  resultCode     String?                 @db.VarChar(48)
+  reviewHeldAt   DateTime?               @db.Timestamptz(3)
+  policyVersion  Int?
+  calculation    Json?
+  finishedAt     DateTime?               @db.Timestamptz(3)
+  order          Order                   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  policy         RewardPolicyVersion?    @relation(fields: [policyVersion], references: [version], onDelete: Restrict)
+
+  @@index([status, nextAttemptAt, sequence])
+  @@index([status, leaseUntil])
+  @@index([userId, sequence])
+  @@map("purchase_reward_jobs")
+}
+
+model ReferralCode {
+  userId    String   @id @db.Uuid
+  code      String   @unique @db.VarChar(24)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("referral_codes")
+}
+
+model ReferralAttribution {
+  id                   String    @id @default(uuid()) @db.Uuid
+  referrerUserId       String    @db.Uuid
+  referrerPurchaseOrderId String? @db.Uuid
+  referredUserId       String    @unique @db.Uuid
+  policySnapshot       Json
+  claimedAt            DateTime  @db.Timestamptz(3)
+  expiresAt            DateTime  @db.Timestamptz(3)
+  firstOrderId         String?   @unique @db.Uuid
+  firstPaidAt          DateTime? @db.Timestamptz(3)
+  rewardPolicyVersion  Int?
+  referrer             User      @relation("ReferralReferrer", fields: [referrerUserId], references: [id], onDelete: Restrict)
+  referred             User      @relation("ReferralReferred", fields: [referredUserId], references: [id], onDelete: Restrict)
+  firstOrder           Order?    @relation(fields: [firstOrderId], references: [id], onDelete: Restrict)
+  referrerPurchaseOrder Order?   @relation("ReferralReferrerPurchase", fields: [referrerPurchaseOrderId], references: [id], onDelete: Restrict)
+  checkoutOrders       Order[]   @relation("ReferralCheckoutOrders")
+  rewardPolicy         ReferralRewardPolicyVersion? @relation(fields: [rewardPolicyVersion], references: [version], onDelete: Restrict)
+  riskAssessment       ReferralRiskAssessment?
+  grantJob             ReferralGrantJob?
+
+  @@index([referrerUserId, claimedAt, id], map: "referral_attributions_history_idx")
+  @@index([rewardPolicyVersion])
+  @@index([referrerPurchaseOrderId])
+  @@index([claimedAt, id])
+  @@map("referral_attributions")
+}
+
+enum ReferralRiskAction {
+  ALLOW
+  REVIEW
+  HOLD
+  REJECT
+}
+
+enum ReferralRiskConfidence {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model ReferralRiskPolicyVersion {
+  version       Int      @id @default(autoincrement())
+  requestId     String   @unique @db.Uuid
+  definition    Json
+  publishedAt   DateTime @default(now()) @db.Timestamptz(3)
+  publishedById String   @db.Uuid
+  publishedBy   User     @relation(fields: [publishedById], references: [id], onDelete: Restrict)
+  assessments   ReferralRiskAssessment[]
+
+  @@map("referral_risk_policy_versions")
+}
+
+model ReferralRiskObservation {
+  userId      String   @id @db.Uuid
+  deviceHash  String?  @db.Char(64)
+  networkHash String?  @db.Char(64)
+  recordedAt  DateTime @db.Timestamptz(3)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([recordedAt])
+  @@index([deviceHash, recordedAt])
+  @@index([networkHash, recordedAt])
+  @@map("referral_risk_observations")
+}
+
+model ReferralRiskAssessment {
+  attributionId String                 @id @db.Uuid
+  orderId       String                 @db.Uuid
+  policyVersion Int?
+  policySnapshot Json
+  autoAction    ReferralRiskAction
+  action        ReferralRiskAction
+  confidence    ReferralRiskConfidence
+  score         Int
+  revision      Int                    @default(1)
+  assessedAt    DateTime               @db.Timestamptz(3)
+  dueAt         DateTime?              @db.Timestamptz(3)
+  expiresAt     DateTime               @db.Timestamptz(3)
+  evidence      Json?
+  attribution   ReferralAttribution    @relation(fields: [attributionId], references: [id], onDelete: Restrict)
+  policy        ReferralRiskPolicyVersion? @relation(fields: [policyVersion], references: [version], onDelete: Restrict)
+  reviews       ReferralRiskReview[]
+
+  @@index([action, dueAt, assessedAt], map: "referral_risk_queue_idx")
+  @@index([expiresAt])
+  @@map("referral_risk_assessments")
+}
+
+model ReferralRiskReview {
+  attributionId String                  @db.Uuid
+  revision      Int
+  fromAction    ReferralRiskAction
+  action        ReferralRiskAction
+  reason        String                  @db.VarChar(250)
+  actorUserId   String                  @db.Uuid
+  recordedAt    DateTime                @default(now()) @db.Timestamptz(3)
+  assessment    ReferralRiskAssessment  @relation(fields: [attributionId], references: [attributionId], onDelete: Restrict)
+  actor         User                    @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@id([attributionId, revision])
+  @@map("referral_risk_reviews")
+}
+
+model ReferralRewardPolicyVersion {
+  version              Int      @id @default(autoincrement())
+  requestId            String   @unique @db.Uuid
+  definition           Json
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
+  createdById          String   @db.Uuid
+  requestedEffectiveAt DateTime? @db.Timestamptz(3)
+  publishedAt          DateTime? @db.Timestamptz(3)
+  publishedById        String?  @db.Uuid
+  effectiveAt          DateTime? @db.Timestamptz(3)
+  createdBy            User     @relation("ReferralRewardPolicyCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  publishedBy          User?    @relation("ReferralRewardPolicyPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
+  attributions         ReferralAttribution[]
+  walletLots           WalletLot[]
+
+  @@index([effectiveAt, version])
+  @@map("referral_reward_policy_versions")
+}
+
+model ReferralRequestLimit {
+  userId        String   @id @db.Uuid
+  windowStartAt DateTime @db.Timestamptz(3)
+  attempts      Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("referral_request_limits")
+}
+
+enum ReferralGrantStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+model ReferralGrantJob {
+  attributionId      String              @id @db.Uuid
+  status             ReferralGrantStatus @default(PENDING)
+  nextAttemptAt      DateTime?           @db.Timestamptz(3)
+  attempts           Int                 @default(0)
+  resultCode         String?             @db.VarChar(48)
+  processedAt        DateTime?           @db.Timestamptz(3)
+  budgetAt           DateTime?           @db.Timestamptz(3)
+  ruleCode           String?             @db.VarChar(40)
+  riskRevision       Int?
+  calculation        Json?
+  lotId              String?             @unique @db.Uuid
+  revocationToman    Int                 @default(0)
+  recoveryDueToman   Int                 @default(0)
+  attribution        ReferralAttribution @relation(fields: [attributionId], references: [id], onDelete: Restrict)
+  lot                WalletLot?          @relation(fields: [lotId], references: [id], onDelete: Restrict)
+
+  @@index([nextAttemptAt, attributionId])
+  @@index([budgetAt])
+  @@map("referral_grant_jobs")
+}
+
+enum WalletSource {
+  PURCHASE
+  REFERRAL
+}
+
+enum WalletBucket {
+  PENDING
+  AVAILABLE
+  RESERVED
+  CAPTURED
+  EXPIRED
+  REVOKED
+}
+
+enum WalletOperationKind {
+  GRANT
+  ACTIVATE
+  RESERVE
+  RELEASE
+  CAPTURE
+  EXPIRE
+  REVOKE_GRANT
+  REVERSE_CAPTURE
+}
+
+enum WalletReservationStatus {
+  RESERVED
+  CAPTURED
+  RELEASED
+}
+
+model WalletLot {
+  id            String              @id @default(uuid()) @db.Uuid
+  userId        String              @db.Uuid
+  orderId       String              @db.Uuid
+  policyVersion Int?
+  referralPolicyVersion Int?
+  source        WalletSource
+  sourceKey     String              @db.VarChar(128)
+  grantedToman  Int
+  pendingToman  Int
+  availableToman Int                @default(0)
+  reservedToman  Int                @default(0)
+  capturedToman  Int                @default(0)
+  expiredToman   Int                @default(0)
+  revokedToman   Int                @default(0)
+  expiresAt      DateTime           @db.Timestamptz(3)
+  activatedAt    DateTime?          @db.Timestamptz(3)
+  createdAt      DateTime           @default(now()) @db.Timestamptz(3)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order          Order              @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  policy         RewardPolicyVersion? @relation(fields: [policyVersion], references: [version], onDelete: Restrict)
+  referralPolicy ReferralRewardPolicyVersion? @relation(fields: [referralPolicyVersion], references: [version], onDelete: Restrict)
+  referralGrantJob ReferralGrantJob?
+  entries        WalletLedgerEntry[]
+
+  @@unique([source, sourceKey])
+  @@index([userId, expiresAt, id])
+  @@index([orderId])
+  @@index([referralPolicyVersion])
+  @@map("wallet_lots")
+}
+
+model WalletReservation {
+  id          String                  @id @default(uuid()) @db.Uuid
+  userId      String                  @db.Uuid
+  orderId     String                  @db.Uuid
+  amountToman Int
+  status      WalletReservationStatus @default(RESERVED)
+  createdAt   DateTime                @default(now()) @db.Timestamptz(3)
+  resolvedAt  DateTime?               @db.Timestamptz(3)
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order       Order                   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  entries     WalletLedgerEntry[]
+
+  @@index([userId, status])
+  @@index([orderId])
+  @@map("wallet_reservations")
+}
+
+model WalletOperation {
+  id             String              @id @default(uuid()) @db.Uuid
+  sequence       BigInt              @unique @default(autoincrement())
+  userId         String              @db.Uuid
+  idempotencyKey String              @db.VarChar(128)
+  fingerprint    String              @db.Char(64)
+  kind           WalletOperationKind
+  actorUserId    String?             @db.Uuid
+  reason         String?             @db.VarChar(250)
+  recordedAt     DateTime            @default(now()) @db.Timestamptz(3)
+  user           User                @relation("WalletOwner", fields: [userId], references: [id], onDelete: Restrict)
+  actor          User?               @relation("WalletActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  entries        WalletLedgerEntry[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, sequence])
+  @@map("wallet_operations")
+}
+
+model WalletLedgerEntry {
+  id            String             @id @default(uuid()) @db.Uuid
+  operationId   String             @db.Uuid
+  lotId         String             @db.Uuid
+  reservationId String?            @db.Uuid
+  amountToman   Int
+  fromBucket    WalletBucket?
+  toBucket      WalletBucket
+  operation     WalletOperation    @relation(fields: [operationId], references: [id], onDelete: Restrict)
+  lot           WalletLot          @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  reservation   WalletReservation? @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+
+  @@index([operationId])
+  @@index([lotId])
+  @@index([reservationId, fromBucket])
+  @@map("wallet_ledger_entries")
+}
+
+enum WalletReconciliationSubject {
+  LOT
+  RESERVATION
+}
+
+enum WalletReconciliationCode {
+  LEDGER_MISMATCH
+  RESERVATION_MISMATCH
+  SETTLEMENT_MISMATCH
+  RECEIPT_PENDING
+  PAYMENT_UNCERTAIN
+  RESERVATION_OVERDUE
+}
+
+model WalletReconciliationIssue {
+  subject    WalletReconciliationSubject
+  subjectId  String                     @db.Uuid
+  userId     String                     @db.Uuid
+  orderId    String                     @db.Uuid
+  code       WalletReconciliationCode
+  detectedAt DateTime                   @db.Timestamptz(3)
+  resolvedAt DateTime?                  @db.Timestamptz(3)
+
+  @@id([subject, subjectId])
+  @@index([resolvedAt, detectedAt, subject, subjectId], map: "wallet_reconciliation_issues_report_idx")
+  @@map("wallet_reconciliation_issues")
+}
+
+model GrowthCampaignCost {
+  id           String               @id @db.Uuid
+  campaignId   String               @db.VarChar(64)
+  source       String               @db.VarChar(96)
+  medium       String               @db.VarChar(96)
+  day          DateTime             @db.Date
+  amountToman  Int
+  note         String?              @db.VarChar(160)
+  recordedAt   DateTime             @default(now()) @db.Timestamptz(3)
+  campaign     CampaignLinkIdentity @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+
+  @@index([day])
+  @@index([campaignId, day])
+  @@map("growth_campaign_costs")
+}
+
+model GrowthFunnelEvent {
+  id           String   @id @db.Uuid
+  visitId      String   @db.Uuid
+  stage        String   @db.VarChar(24)
+  device       String   @db.VarChar(12)
+  source       String?  @db.VarChar(96)
+  medium       String?  @db.VarChar(96)
+  campaign     String?  @db.VarChar(96)
+  campaignId   String?  @db.VarChar(64)
+  productSlugs String[] @db.VarChar(180)
+  recordedAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([recordedAt])
+  @@map("growth_funnel_events")
+}
+
+model OrderAttribution {
+  orderId       String           @id @db.Uuid
+  policyVersion Int
+  model         AttributionModel
+  windowDays    Int
+  firstTouch    Json
+  lastTouch     Json
+  source        String           @db.VarChar(96)
+  medium        String           @db.VarChar(96)
+  campaign      String?          @db.VarChar(96)
+  content       String?          @db.VarChar(96)
+  campaignId    String?          @db.VarChar(64)
+  attributedAt  DateTime         @db.Timestamptz(3)
+  recordedAt    DateTime         @default(now()) @db.Timestamptz(3)
+  order         Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, recordedAt])
+  @@index([source, medium, recordedAt])
+  @@map("order_attributions")
 }
 
 model OrderAddress {
@@ -1533,6 +2586,8 @@ model OrderItem {
   variantId               String            @db.Uuid
   quantity                Int
   productNameSnapshot     String            @db.VarChar(200)
+  campaignIdSnapshot      String?           @db.Uuid
+  campaignNameSnapshot    String?           @db.VarChar(150)
   variantNameSnapshot     String?           @db.VarChar(150)
   skuSnapshot             String            @db.VarChar(100)
   sizeLabelSnapshot       String?           @db.VarChar(100)
@@ -1547,6 +2602,7 @@ model OrderItem {
   platingLeadTimeDays     Int?
   unitWeightGrams         Decimal?          @db.Decimal(10, 3)
   lineTotalToman          Int
+  walletAppliedToman      Int               @default(0)
   returnAllocatedQuantity Int               @default(0)
   returnedQuantity        Int               @default(0)
   createdAt               DateTime          @default(now()) @db.Timestamptz(3)
@@ -1573,6 +2629,7 @@ model OrderStatusHistory {
   actor       User?        @relation("OrderStatusHistoryActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([orderId, createdAt])
+  @@index([toStatus, createdAt])
   @@index([actorUserId])
   @@map("order_status_history")
 }
@@ -1622,6 +2679,7 @@ model OrderReturn {
 
   @@index([orderId, createdAt])
   @@index([status, createdAt])
+  @@index([receivedAt])
   @@index([requestedByUserId])
   @@index([receivedByUserId])
   @@index([cancelledByUserId])
@@ -1686,6 +2744,7 @@ enum NotificationOutboxEventType {
   ORDER_CANCELLED
   PAYMENT_RECONCILIATION_REQUIRED
   STOCK_AVAILABLE
+  WALLET_CREDIT_ACTIVATED
 }
 
 enum StockNotificationStatus {
@@ -1702,6 +2761,7 @@ enum NotificationOutboxStatus {
   SENT
   FAILED
   UNKNOWN
+  SKIPPED
 }
 
 enum AdminMessageChannel {
@@ -1839,6 +2899,7 @@ model PaymentAttempt {
   receiptOriginalName                String?                @db.VarChar(255)
   receiptSizeBytes                   Int?
   receiptUploadedAt                  DateTime?              @db.Timestamptz(3)
+  receiptRejectedAt                  DateTime?              @db.Timestamptz(3)
   receiptVerifiedAt                  DateTime?              @db.Timestamptz(3)
   receiptVerifiedByUserId            String?                @db.Uuid
   initiationRecoveryResolution       String?                @db.VarChar(32)
@@ -1856,6 +2917,7 @@ model PaymentAttempt {
   @@index([paymentId, createdAt])
   @@index([status, createdAt])
   @@index([receiptUploadedAt])
+  @@index([receiptRejectedAt])
   @@index([receiptVerifiedByUserId])
   @@index([initiationRecoveryResolvedByUserId])
   @@index([initiationRecoveryResolvedAt])
@@ -1892,6 +2954,7 @@ model PaymentReconciliation {
 
   @@index([status, createdAt])
   @@index([provider, createdAt])
+  @@index([createdAt])
   @@index([resolvedByUserId])
   @@map("payment_reconciliations")
 }
@@ -1938,6 +3001,7 @@ model OrderFinanceSnapshot {
   shippingChargedToman               Int
   taxToman                           Int
   customerTotalToman                 Int
+  walletAppliedToman                 Int      @default(0)
   supplierCostToman                  Int
   grossSalesToman                    Int
   netSalesToman                      Int
@@ -2051,6 +3115,31 @@ model SupplierSettlementItem {
   @@unique([settlementId, payableId])
   @@index([payableId])
   @@map("supplier_settlement_items")
+}
+
+model WalletNotificationSettings {
+  id                        Int       @id @default(1)
+  version                   Int       @default(1)
+  activationSmsEnabled      Boolean   @default(false)
+  activationConsentKey      String?   @db.Uuid
+  activationTemplateVersion String?   @db.VarChar(32)
+  activationIntervalMinutes Int       @default(15)
+  expiryInAppEnabled         Boolean   @default(true)
+  expiryNoticeDays           Int       @default(30)
+  expiryUrgentDays           Int       @default(7)
+
+  @@map("wallet_notification_settings")
+}
+
+model WalletNotificationPreference {
+  userId                 String    @id @db.Uuid
+  activationSmsEnabled   Boolean   @default(false)
+  activationConsentKey   String?   @db.Uuid
+  expiryInAppEnabled     Boolean   @default(true)
+  lastDispatchAt         DateTime? @db.Timestamptz(3)
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallet_notification_preferences")
 }
 
 model NotificationOutboxEvent {
@@ -2353,4 +3442,228 @@ model ShipmentStatusHistory {
   @@index([shipmentId, createdAt])
   @@index([actorUserId])
   @@map("shipment_status_history")
+}
+
+model SeoAuditRun {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  origin         String
+  ruleVersion    Int
+  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+  finishedAt     DateTime?       @db.Timestamptz(3)
+  leaseToken     String?         @db.Uuid
+  leaseUntil     DateTime?       @db.Timestamptz(3)
+  sitemapPaths   String[]        @default([])
+  pauseUntil     DateTime?       @db.Timestamptz(3)
+  sitemapChecked Boolean         @default(false)
+  checks         SeoAuditCheck[]
+
+  @@index([origin, createdAt])
+  @@map("seo_audit_runs")
+}
+
+model SeoAuditCheck {
+  runId             String      @db.Uuid
+  path              String
+  priority          Int
+  source            String
+  sourcePath        String?
+  expectedCanonical String?
+  productId         String?     @db.Uuid
+  attempts          Int         @default(0)
+  nextAttemptAt     DateTime    @default(now()) @db.Timestamptz(3)
+  checkedAt         DateTime?   @db.Timestamptz(3)
+  inSitemap         Boolean?
+  observation       Json?
+  issues            Json?
+  run               SeoAuditRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@id([runId, path])
+  @@index([runId, checkedAt, nextAttemptAt, priority])
+  @@index([path, checkedAt])
+  @@map("seo_audit_checks")
+}
+
+model SeoInspectionState {
+  property      String    @id @db.VarChar(128)
+  budgetDay     DateTime  @db.Date
+  used          Int       @default(0)
+  plannedDay    DateTime? @db.Date
+  leaseToken    String?   @db.Uuid
+  leaseUntil    DateTime? @db.Timestamptz(3)
+  pausedUntil   DateTime? @db.Timestamptz(3)
+  pauseReason   String?   @db.VarChar(50)
+
+  @@map("seo_inspection_states")
+}
+
+model SeoInspectionTarget {
+  property      String    @db.VarChar(128)
+  origin        String
+  path          String
+  priority      Int
+  source        String    @db.VarChar(30)
+  queued        Boolean   @default(true)
+  dueAt         DateTime  @db.Timestamptz(3)
+  attempts      Int       @default(0)
+  lastAttemptAt DateTime? @db.Timestamptz(3)
+  lastError     String?   @db.VarChar(50)
+  observedAt    DateTime? @db.Timestamptz(3)
+  observation   Json?
+
+  @@id([property, origin, path])
+  @@index([property, origin, queued, dueAt, priority], map: "seo_inspection_targets_queue_idx")
+  @@index([property, origin, observedAt], map: "seo_inspection_targets_observed_idx")
+  @@map("seo_inspection_targets")
+}
+
+model SeoCoverageImport {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  property   String   @db.VarChar(128)
+  origin     String
+  label      String   @db.VarChar(120)
+  reportDate DateTime @db.Date
+  importedAt DateTime @default(now()) @db.Timestamptz(3)
+  digest     String   @db.Char(64)
+  rowCount   Int
+  rows       Json
+
+  @@unique([property, origin, digest], map: "seo_coverage_imports_digest_key")
+  @@index([property, origin, importedAt], map: "seo_coverage_imports_recent_idx")
+  @@map("seo_coverage_imports")
+}
+
+enum SeoIssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum SeoIssueSeverity {
+  REVIEW
+  IMPORTANT
+  CRITICAL
+}
+
+model SeoIssue {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  issueKey        String           @unique @db.Char(64)
+  property        String           @db.VarChar(128)
+  origin          String
+  rule            String           @db.VarChar(80)
+  subject         String
+  severity        SeoIssueSeverity
+  status          SeoIssueStatus   @default(OPEN)
+  active          Boolean          @default(true)
+  ownerId         String?          @db.Uuid
+  revision        Int              @default(1)
+  observedAt      DateTime         @db.Timestamptz(3)
+  firstObservedAt DateTime         @db.Timestamptz(3)
+  lastQueuedAt    DateTime?        @db.Timestamptz(3)
+  evidence        Json
+  owner           User?            @relation("SeoIssueOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  events          SeoIssueEvent[]
+
+  @@index([property, origin, status, observedAt], map: "seo_issues_inbox_idx")
+  @@index([ownerId])
+  @@map("seo_issues")
+}
+
+model SeoIssueEvent {
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  issueId    String           @db.Uuid
+  actorId    String?          @db.Uuid
+  kind       String           @db.VarChar(32)
+  createdAt  DateTime         @default(now()) @db.Timestamptz(3)
+  note       String?          @db.VarChar(1000)
+  evidence   Json?
+  issue      SeoIssue         @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  actor      User?            @relation("SeoIssueActor", fields: [actorId], references: [id], onDelete: SetNull)
+  deliveries SeoIssueDelivery[]
+
+  @@index([issueId, createdAt])
+  @@index([actorId])
+  @@map("seo_issue_events")
+}
+
+model SeoIssueDelivery {
+  id          String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId     String                   @db.Uuid
+  recipientId String                   @db.Uuid
+  status      NotificationOutboxStatus @default(PENDING)
+  claimedAt   DateTime?                @db.Timestamptz(3)
+  finishedAt  DateTime?                @db.Timestamptz(3)
+  createdAt   DateTime                 @default(now()) @db.Timestamptz(3)
+  event       SeoIssueEvent            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  recipient   User                     @relation("SeoIssueRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, recipientId], map: "seo_issue_deliveries_event_recipient_key")
+  @@index([status, createdAt])
+  @@index([recipientId])
+  @@map("seo_issue_deliveries")
+}
+
+enum SeoOpportunityStatus {
+  PENDING
+  APPROVED
+  DEFERRED
+  TASK_CREATED
+  REJECTED
+}
+
+model SeoOpportunity {
+  id          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String               @unique @db.Char(64)
+  property    String               @db.VarChar(128)
+  origin      String
+  entityKind  String               @db.VarChar(16)
+  entityId    String               @db.Uuid
+  rule        String               @db.VarChar(40)
+  title       String
+  url         String
+  score       Int
+  scoreVersion Int
+  evidence    Json
+  status      SeoOpportunityStatus @default(PENDING)
+  active      Boolean              @default(true)
+  revision    Int                  @default(1)
+  refreshedAt DateTime             @db.Timestamptz(3)
+  deferredUntil DateTime?          @db.Date
+  task        SeoCorrectionTask?
+  events      SeoOpportunityEvent[]
+
+  @@index([property, origin, status, active, score], map: "seo_opportunities_queue_idx")
+  @@index([property, origin, entityKind, entityId], map: "seo_opportunities_entity_idx")
+  @@map("seo_opportunities")
+}
+
+model SeoCorrectionTask {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  opportunityId String         @unique @db.Uuid
+  instruction   String
+  url           String
+  createdAt     DateTime       @default(now()) @db.Timestamptz(3)
+  implementedOn DateTime?     @db.Date
+  windowDays    Int?
+  changeNote    String?        @db.VarChar(1000)
+  confounders   String?        @db.VarChar(1000)
+  impact        Json?
+  opportunity   SeoOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("seo_correction_tasks")
+}
+
+model SeoOpportunityEvent {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  opportunityId String         @db.Uuid
+  actorId       String?        @db.Uuid
+  action        String         @db.VarChar(24)
+  note          String?        @db.VarChar(1000)
+  recordedAt    DateTime       @default(now()) @db.Timestamptz(3)
+  snapshot      Json?
+  opportunity   SeoOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  actor         User?          @relation("SeoOpportunityActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([opportunityId, recordedAt], map: "seo_opportunity_events_recent_idx")
+  @@index([actorId])
+  @@map("seo_opportunity_events")
 }

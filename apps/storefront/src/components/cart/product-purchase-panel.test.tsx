@@ -143,6 +143,51 @@ describe('ProductPurchasePanel', () => {
     );
   });
 
+  it('shows only the selected variant campaign price and adds its regular price to the cart', () => {
+    const endsAt = new Date(Date.now() + 60_000).toISOString();
+    render(
+      <ProductPurchasePanel
+        product={{
+          ...product,
+          salePriceToman: 1_000_000,
+          variants: product.variants.map((variant) => {
+            const regularToman = variant.salePriceToman!;
+            const discountToman = regularToman / 10;
+            return {
+              ...variant,
+              isAvailable: true,
+              availableQuantity: 2,
+              campaignOffer: {
+                name: 'جشنواره',
+                endsAt,
+                conditions: [],
+                minimumToman: null,
+                price: {
+                  regularToman,
+                  discountToman,
+                  finalToman: regularToman - discountToman,
+                  discountPercent: 10,
+                },
+              },
+            };
+          }),
+        }}
+      />,
+    );
+    fireEvent.click(screen.getAllByRole('radio')[0]!);
+    expect(screen.getAllByText(formatTomanPrice(720_000)).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole('radio')[1]!);
+    expect(screen.queryByText(formatTomanPrice(720_000))).not.toBeInTheDocument();
+    expect(screen.getAllByText(formatTomanPrice(765_000)).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole('button', { name: 'افزودن به سبد خرید' })[0]!);
+    expect(cartStoreMock.addItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variantId: product.variants[1].id,
+        unitSalePriceToman: 850_000,
+      }),
+    );
+  });
+
   it('adds one selected item, then exposes cart-linked quantity controls and cart links', () => {
     const view = render(<ProductPurchasePanel product={product} />);
 

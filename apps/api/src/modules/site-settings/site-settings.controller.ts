@@ -83,6 +83,38 @@ export class SiteSettingsController {
     };
   }
 
+  @Post('campaign-media')
+  @RequirePermissions(PERMISSION_CODES.SETTINGS_WRITE)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MEDIA_UPLOAD_LIMIT_BYTES, files: 1 },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        altText: { type: 'string', minLength: 1, maxLength: 255 },
+      },
+    },
+  })
+  @ApiOkResponse({ type: AdminSiteMediaDto })
+  async uploadCampaignMedia(
+    @UploadedFile() file: CatalogUploadFile | undefined,
+    @Body() dto: UploadMediaDto,
+  ): Promise<AdminSiteMediaDto> {
+    const media = await this.catalogMediaService.upload(file, dto, true);
+    return {
+      id: media.id,
+      url: this.publicMediaUrlService.resolve(media.storageKey),
+      mimeType: media.mimeType,
+      altText: media.altText,
+    };
+  }
+
   @Post('pages/media')
   @RequirePermissions(PERMISSION_CODES.CMS_WRITE)
   @UseInterceptors(

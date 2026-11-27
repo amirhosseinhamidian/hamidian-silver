@@ -1,4 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
 import { calculatePlatingPriceToman } from '../../common/plating-price';
 import { Prisma } from '../../generated/prisma/client';
 import {
@@ -10,15 +18,48 @@ import {
   VariantInventoryMode,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { readPublicQuotas } from '../campaigns/campaign-quota';
+import {
+  selectCatalogPromotion,
+  type CatalogPromotionCandidate,
+} from '../promotions/promotion-presentation';
+import { PromotionsService } from '../promotions/promotions.service';
 import { recordSeoSlugChange } from '../seo/seo-redirects.service';
+import { readActiveCategoryProductCounts } from './catalog-category-counts';
+import {
+  buildPublicCatalogFacetsQuery,
+  type CampaignCollectionSelection,
+  type CatalogFacetPageRow,
+} from './catalog-facets-query';
+import { CATALOG_RANKING_VERSION, isCommercialCatalogSort } from './catalog-ranking';
+import { readRelatedProductPage } from './catalog-related-products';
+import { catalogHierarchyTransaction } from './catalog-hierarchy-transaction';
+import { CatalogAttributesService } from './catalog-attributes.service';
+import {
+  catalogProductStockSql,
+  catalogStockCte,
+  readMatchingCatalogVariants,
+  type MatchingCatalogVariants,
+} from './catalog-variant-filter';
+import {
+  availabilitySelect,
+  productAvailableQuantity,
+  publicCatalogProductWhere,
+  variantAvailableQuantity,
+} from './catalog-public-availability';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { AdminCatalogProductsQueryDto } from './dto/admin-catalog-products-query.dto';
 import { CreateCountryDto } from './dto/create-country.dto';
 import { CreateProductDto } from './dto/create-product.dto';
+import type {
+  PublicCatalogFacetsQueryDto,
+  PublicFacetedCatalogDto,
+} from './dto/public-catalog-facets.dto';
 import { PublicCatalogQueryDto, PublicCatalogSort } from './dto/public-catalog-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PublicMediaUrlService } from './public-media-url.service';
-import { normalizeCatalogSearch } from './catalog-search';
+import { catalogSearchMetricTerm, normalizeCatalogSearch } from './catalog-search';
+import { publicNamedSuggestionSql, publicSearchMatchesSql } from './catalog-search-query';
 
 type PublicProductSearchRow = {
   id: string;
@@ -36,11 +77,38 @@ type PublicNamedSuggestionRow = {
   slug: string;
 };
 
+type CatalogPricingReader = Pick<
+  PrismaService,
+  'product' | 'campaignPromotion' | 'orderPriceQuote' | 'campaignQuota' | 'campaignQuotaAllocation'
+>;
+
+export type CampaignCollectionPricing = {
+  campaignPromotions?: readonly CatalogPromotionCandidate[];
+  previewCampaignId?: string;
+};
+
+function promotionTarget(product: {
+  id: string;
+  categories: { category: { id: string; isActive: boolean; deletedAt: Date | null } }[];
+}) {
+  return {
+    productId: product.id,
+    categoryIds: product.categories
+      .filter(({ category }) => category.isActive && !category.deletedAt)
+      .map(({ category }) => category.id),
+  };
+}
+
 @Injectable()
 export class CatalogService {
+  private readonly logger = new Logger(CatalogService.name);
+  private inFlightSuggestions = 0;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly publicMediaUrl: PublicMediaUrlService,
+    @Optional() private readonly catalogAttributes?: CatalogAttributesService,
+    @Optional() private readonly promotions?: PromotionsService,
   ) {}
 
   async createBrand(dto: CreateBrandDto) {
@@ -91,7 +159,7 @@ export class CatalogService {
     this.validateProductShape(dto);
     const attributes = this.normalizeProductAttributes(dto.attributes);
 
-    return this.prisma.$transaction(async (transaction) => {
+    return catalogHierarchyTransaction(this.prisma, async (transaction) => {
       if (dto.supplierImportDraftId) {
         if (!actorUserId) {
           throw new BadRequestException('Import actor is required.');
@@ -145,6 +213,10 @@ export class CatalogService {
       }
 
       const categoryIds = dto.categoryIds ?? [];
+      const primaryCategoryId = dto.primaryCategoryId?.toLowerCase();
+      if (primaryCategoryId && !categoryIds.some((id) => id.toLowerCase() === primaryCategoryId)) {
+        throw new BadRequestException('Primary category must be an active assigned category.');
+      }
 
       if (categoryIds.length > 0) {
         const categories = await transaction.category.findMany({
@@ -253,6 +325,7 @@ export class CatalogService {
           defaultPlatingType: dto.defaultPlatingType,
           brandId: dto.brandId,
           countryId: dto.countryId,
+          primaryCategoryId,
         },
         select: {
           id: true,
@@ -275,6 +348,7 @@ export class CatalogService {
           sku: variant.sku,
           name: variant.name,
           weightGrams: variant.weightGrams,
+          lengthMm: variant.lengthMm,
           salePriceToman: variant.salePriceToman,
           compareAtPriceToman: variant.compareAtPriceToman,
           isActive: variant.isActive ?? true,
@@ -544,13 +618,14 @@ export class CatalogService {
   async updateProduct(productId: string, dto: UpdateProductDto) {
     const attributes =
       dto.attributes === undefined ? undefined : this.normalizeProductAttributes(dto.attributes);
-    const updated = await this.prisma.$transaction(async (transaction) => {
+    const updated = await catalogHierarchyTransaction(this.prisma, async (transaction) => {
       const current = await transaction.product.findFirst({
         where: { id: productId, deletedAt: null },
         select: {
           id: true,
           slug: true,
           purchaseMode: true,
+          primaryCategoryId: true,
           salePriceToman: true,
           compareAtPriceToman: true,
         },
@@ -585,6 +660,31 @@ export class CatalogService {
         if (categories.length !== dto.categoryIds.length) {
           throw new NotFoundException('One or more categories were not found.');
         }
+      }
+
+      let primaryCategoryId = dto.primaryCategoryId?.toLowerCase() ?? dto.primaryCategoryId;
+      if (primaryCategoryId) {
+        const requestedPrimaryId = primaryCategoryId;
+        const assigned = dto.categoryIds
+          ? dto.categoryIds.some((id) => id.toLowerCase() === requestedPrimaryId)
+          : await transaction.productCategory.findFirst({
+              where: {
+                productId,
+                categoryId: primaryCategoryId,
+                category: { isActive: true, deletedAt: null },
+              },
+              select: { categoryId: true },
+            });
+        if (!assigned) {
+          throw new BadRequestException('Primary category must be an active assigned category.');
+        }
+      } else if (
+        primaryCategoryId === undefined &&
+        current.primaryCategoryId &&
+        dto.categoryIds &&
+        !dto.categoryIds.some((id) => id.toLowerCase() === current.primaryCategoryId)
+      ) {
+        primaryCategoryId = null;
       }
 
       const salePriceToman =
@@ -633,6 +733,7 @@ export class CatalogService {
           seoOgMediaId: dto.seoOgMediaId,
           brandId: dto.brandId,
           countryId: dto.countryId,
+          primaryCategoryId,
           salePriceToman: dto.salePriceToman,
           compareAtPriceToman: dto.compareAtPriceToman,
           defaultPlatingType: dto.defaultPlatingType,
@@ -651,10 +752,16 @@ export class CatalogService {
       }
 
       if (dto.categoryIds) {
-        await transaction.productCategory.deleteMany({ where: { productId } });
+        await transaction.productCategory.deleteMany({
+          where: {
+            productId,
+            ...(dto.categoryIds.length ? { categoryId: { notIn: dto.categoryIds } } : {}),
+          },
+        });
         if (dto.categoryIds.length > 0) {
           await transaction.productCategory.createMany({
             data: dto.categoryIds.map((categoryId) => ({ productId, categoryId })),
+            skipDuplicates: true,
           });
         }
       }
@@ -710,6 +817,7 @@ export class CatalogService {
   }
 
   async listPublicCategories() {
+    const counts = await readActiveCategoryProductCounts(this.prisma);
     const categories = await this.prisma.category.findMany({
       where: {
         isActive: true,
@@ -728,18 +836,6 @@ export class CatalogService {
         updatedAt: true,
         parentId: true,
         sortOrder: true,
-        _count: {
-          select: {
-            products: {
-              where: {
-                product: {
-                  status: ProductStatus.ACTIVE,
-                  deletedAt: null,
-                },
-              },
-            },
-          },
-        },
         image: {
           select: {
             storageKey: true,
@@ -783,23 +879,6 @@ export class CatalogService {
       },
     });
 
-    const categoriesById = new Map(categories.map((category) => [category.id, category] as const));
-    const visibleCategoryIds = new Set(
-      categories.filter((category) => category._count.products > 0).map((category) => category.id),
-    );
-
-    for (const categoryId of visibleCategoryIds) {
-      let current = categoriesById.get(categoryId);
-      const visited = new Set<string>();
-      while (current?.parentId && !visited.has(current.parentId)) {
-        visited.add(current.parentId);
-        const parent = categoriesById.get(current.parentId);
-        if (!parent) break;
-        visibleCategoryIds.add(parent.id);
-        current = parent;
-      }
-    }
-
     return categories.map((category) => ({
       id: category.id,
       name: category.name,
@@ -812,7 +891,9 @@ export class CatalogService {
       ...(category.updatedAt ? { updatedAt: category.updatedAt.toISOString() } : {}),
       parentId: category.parentId,
       sortOrder: category.sortOrder,
-      hasProducts: visibleCategoryIds.has(category.id),
+      activeProductCount: counts.get(category.id)?.activeProductCount ?? 0,
+      activeSubtreeProductCount: counts.get(category.id)?.activeSubtreeProductCount ?? 0,
+      hasProducts: (counts.get(category.id)?.activeSubtreeProductCount ?? 0) > 0,
       image:
         category.image && !category.image.deletedAt
           ? {
@@ -887,12 +968,7 @@ export class CatalogService {
         },
         _count: {
           select: {
-            products: {
-              where: {
-                status: ProductStatus.ACTIVE,
-                deletedAt: null,
-              },
-            },
+            products: { where: publicCatalogProductWhere },
           },
         },
         image: {
@@ -1009,11 +1085,32 @@ export class CatalogService {
     const category = query.category?.trim();
     const brand = query.brand?.trim();
     const country = query.country?.trim();
+    if (isCommercialCatalogSort(sort)) {
+      const { items, total, totalPages, ranking } = await this.searchPublicCatalog({
+        sort,
+        page,
+        pageSize,
+        q: query.q,
+        scopeCategory: category || undefined,
+        scopeBrand: brand || undefined,
+        scopeCountry: country || undefined,
+        sizeIds: query.sizeId ? [query.sizeId] : undefined,
+        minLengthMm: query.minLengthMm,
+        maxLengthMm: query.maxLengthMm,
+      });
+      return { items, page, pageSize, total, totalPages, ranking };
+    }
+    const matches = await readMatchingCatalogVariants(this.prisma, query);
+    if (matches?.size === 0) {
+      if (search && page === 1) await this.recordCatalogSearch(search, true);
+      return { items: [], page, pageSize, total: 0, totalPages: 0 };
+    }
+    const matchingProductIds = matches ? [...matches.keys()] : undefined;
     const categoryIds = category ? await this.resolvePublicCategoryIds(category) : undefined;
 
     const where = {
-      status: ProductStatus.ACTIVE,
-      deletedAt: null,
+      ...publicCatalogProductWhere,
+      ...(matchingProductIds ? { id: { in: matchingProductIds } } : {}),
       ...(categoryIds
         ? {
             categories: {
@@ -1089,54 +1186,43 @@ export class CatalogService {
         categoryIds,
         brand,
         country,
+        matchingProductIds,
       });
       pageProductIds = searchRows.map(({ id }) => id);
       total = Number(searchRows[0]?.total ?? 0);
       for (const row of searchRows) {
         availabilityByProductId.set(row.id, Number(row.availableQuantity));
       }
+    } else if (matches) {
+      const [rows, count] = await Promise.all([
+        this.prisma.product.findMany({
+          where,
+          orderBy,
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          select: { id: true },
+        }),
+        this.prisma.product.count({ where }),
+      ]);
+      pageProductIds = rows.map(({ id }) => id);
+      total = count;
     } else {
       const orderedProducts = await this.prisma.product.findMany({
         where,
         orderBy,
         select: {
           id: true,
-          variants: {
-            where: {
-              isActive: true,
-              deletedAt: null,
-            },
-            select: {
-              inventories: {
-                select: {
-                  onHand: true,
-                  reserved: true,
-                  warehouse: {
-                    select: {
-                      isActive: true,
-                      deletedAt: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
+          purchaseMode: true,
+          sizeMode: true,
+          variants: { where: { isActive: true, deletedAt: null }, select: availabilitySelect },
         },
       });
       for (const product of orderedProducts) {
         availabilityByProductId.set(
           product.id,
-          product.variants.reduce(
-            (productTotal, variant) =>
-              productTotal +
-              variant.inventories.reduce((variantTotal, inventory) => {
-                if (!inventory.warehouse.isActive || inventory.warehouse.deletedAt) {
-                  return variantTotal;
-                }
-
-                return variantTotal + Math.max(0, inventory.onHand - inventory.reserved);
-              }, 0),
-            0,
+          productAvailableQuantity(
+            product.purchaseMode,
+            product.variants.map((variant) => variantAvailableQuantity(variant, product.sizeMode)),
           ),
         );
       }
@@ -1149,10 +1235,138 @@ export class CatalogService {
       total = prioritizedProductIds.length;
       pageProductIds = prioritizedProductIds.slice((page - 1) * pageSize, page * pageSize);
     }
+    const listing = await this.readPublicProductPage(
+      this.prisma,
+      pageProductIds,
+      page,
+      pageSize,
+      total,
+      availabilityByProductId,
+      matches,
+    );
+    if (search && page === 1) await this.recordCatalogSearch(search, listing.total === 0);
+    return listing;
+  }
+
+  async searchPublicCatalog(query: PublicCatalogFacetsQueryDto): Promise<PublicFacetedCatalogDto> {
+    const search = normalizeCatalogSearch(query.q ?? '');
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 24;
+    const statement = buildPublicCatalogFacetsQuery(
+      query,
+      search ? publicSearchMatchesSql(search) : undefined,
+    );
+    const listing = await this.prisma.$transaction(
+      async (reader) => {
+        const [result] = await reader.$queryRaw<CatalogFacetPageRow[]>(statement);
+        const products = await this.hydrateFacetPage(reader, result, page, pageSize);
+        const requestedSort = query.sort;
+        const ranking = isCommercialCatalogSort(requestedSort)
+          ? {
+              version: CATALOG_RANKING_VERSION,
+              requestedSort,
+              appliedSort:
+                requestedSort === PublicCatalogSort.BEST_SELLING && !result.qualifiedSales
+                  ? PublicCatalogSort.NEWEST
+                  : requestedSort,
+            }
+          : undefined;
+        return { ...products, facets: result.facets, ...(ranking ? { ranking } : {}) };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 10_000 },
+    );
+    if (search && page === 1) await this.recordCatalogSearch(search, listing.total === 0);
+    return listing;
+  }
+
+  async campaignCollectionPromotions(reader: CatalogPricingReader, previewCampaignId?: string) {
+    return (await this.promotions?.catalogPromotions(reader, undefined, previewCampaignId)) ?? [];
+  }
+
+  async readCampaignCollection(
+    reader: CatalogPricingReader & Pick<PrismaService, '$queryRaw'>,
+    query: PublicCatalogFacetsQueryDto,
+    selection: CampaignCollectionSelection,
+    page = 1,
+    pageSize = 24,
+    pricing?: CampaignCollectionPricing,
+  ) {
+    const [result] = await reader.$queryRaw<CatalogFacetPageRow[]>(
+      buildPublicCatalogFacetsQuery({ ...query, page, pageSize }, undefined, selection),
+    );
+    const products = await this.hydrateFacetPage(reader, result, page, pageSize || 1, pricing);
+    return { ...products, facets: result.facets };
+  }
+
+  private async hydrateFacetPage(
+    reader: CatalogPricingReader,
+    result: CatalogFacetPageRow,
+    page: number,
+    pageSize: number,
+    pricing?: CampaignCollectionPricing,
+  ) {
+    if (result.invalidAttributeFilter) {
+      throw new BadRequestException(
+        'A catalog attribute filter is not supported by the current definition.',
+      );
+    }
+    return this.readPublicProductPage(
+      reader,
+      result.items.map(({ id }) => id),
+      page,
+      pageSize,
+      Number(result.total),
+      new Map(result.items.map(({ id, availableQuantity }) => [id, availableQuantity])),
+      new Map(
+        result.items.flatMap(({ id, availableQuantity, variants }) =>
+          variants.length ? [[id, { availableQuantity, variants }] as const] : [],
+        ),
+      ),
+      new Map(result.items.map((item) => [item.id, item])),
+      pricing,
+    );
+  }
+
+  private async recordCatalogSearch(search: string, withoutResult: boolean): Promise<void> {
+    const term = catalogSearchMetricTerm(search);
+    try {
+      await this.prisma.$executeRaw`
+        INSERT INTO "catalog_search_daily" ("day", "term", "searches", "withoutResult")
+        VALUES ((CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date, ${term}, 1, ${withoutResult ? 1 : 0}::bigint)
+        ON CONFLICT ("day", "term") DO UPDATE SET
+          "searches" = "catalog_search_daily"."searches" + 1,
+          "withoutResult" = "catalog_search_daily"."withoutResult" + EXCLUDED."withoutResult"
+      `;
+    } catch {
+      this.logger.warn('Could not record aggregate catalog search metrics.');
+    }
+  }
+
+  private async readPublicProductPage(
+    reader: CatalogPricingReader,
+    pageProductIds: string[],
+    page: number,
+    pageSize: number,
+    total: number,
+    availabilityByProductId: ReadonlyMap<string, number>,
+    matches?: ReadonlyMap<string, MatchingCatalogVariants>,
+    facetPrices?: ReadonlyMap<
+      string,
+      Pick<CatalogFacetPageRow['items'][number], 'salePriceToman' | 'compareAtPriceToman'>
+    >,
+    pricing?: CampaignCollectionPricing,
+  ) {
+    const matchingVariantIds = facetPrices
+      ? []
+      : matches?.size
+        ? pageProductIds.flatMap(
+            (productId) => matches.get(productId)?.variants.map(({ id }) => id) ?? [],
+          )
+        : undefined;
     const products =
       pageProductIds.length === 0
         ? []
-        : await this.prisma.product.findMany({
+        : await reader.product.findMany({
             where: {
               id: {
                 in: pageProductIds,
@@ -1170,7 +1384,11 @@ export class CatalogService {
               compareAtPriceToman: true,
               sizeMode: true,
               variants: {
-                where: { isActive: true, deletedAt: null },
+                where: {
+                  isActive: true,
+                  deletedAt: null,
+                  ...(matchingVariantIds ? { id: { in: matchingVariantIds } } : {}),
+                },
                 select: {
                   salePriceToman: true,
                   compareAtPriceToman: true,
@@ -1269,10 +1487,27 @@ export class CatalogService {
 
       return product ? [product] : [];
     });
+    const [promotions, quotas] =
+      this.promotions && orderedPageProducts.length
+        ? await Promise.all([
+            pricing?.campaignPromotions ??
+              this.promotions.catalogPromotions(reader, undefined, pricing?.previewCampaignId),
+            readPublicQuotas(
+              reader,
+              orderedPageProducts.map(({ id }) => id),
+              undefined,
+              pricing?.previewCampaignId,
+            ),
+          ])
+        : [];
 
     return {
       items: orderedPageProducts.map((product) => {
-        const availableQuantity = availabilityByProductId.get(product.id) ?? 0;
+        const campaignQuota = quotas?.get(product.id);
+        const match = matches?.get(product.id);
+        const facetPrice = facetPrices?.get(product.id);
+        const availableQuantity =
+          match?.availableQuantity ?? availabilityByProductId.get(product.id) ?? 0;
         const lowestPricedVariant = (product.variants ?? [])
           .map((variant) => ({
             salePriceToman: variant.salePriceToman ?? product.salePriceToman,
@@ -1323,9 +1558,24 @@ export class CatalogService {
           seoCanonicalPath: product.seoCanonicalPath,
           seoNoIndex: product.seoNoIndex,
           ...(product.updatedAt ? { updatedAt: product.updatedAt.toISOString() } : {}),
-          salePriceToman: lowestPricedVariant?.salePriceToman ?? product.salePriceToman,
-          compareAtPriceToman:
-            lowestPricedVariant?.compareAtPriceToman ?? product.compareAtPriceToman,
+          salePriceToman: facetPrice
+            ? facetPrice.salePriceToman
+            : (lowestPricedVariant?.salePriceToman ?? product.salePriceToman),
+          compareAtPriceToman: facetPrice
+            ? facetPrice.compareAtPriceToman
+            : (lowestPricedVariant?.compareAtPriceToman ?? product.compareAtPriceToman),
+          defaultSalePriceToman: product.salePriceToman,
+          defaultCompareAtPriceToman: product.compareAtPriceToman,
+          ...(campaignQuota ? { campaignQuota } : {}),
+          campaignOffer:
+            availableQuantity > 0 && promotions
+              ? selectCatalogPromotion(
+                  promotions,
+                  promotionTarget(product),
+                  product.salePriceToman,
+                  campaignQuota?.remaining === 0 ? campaignQuota.campaignId : undefined,
+                )
+              : null,
           sizeMode: product.sizeMode,
           brand,
           categories: product.categories
@@ -1369,6 +1619,7 @@ export class CatalogService {
             : null,
           availableQuantity,
           isAvailable: availableQuantity > 0,
+          ...(match ? { matchingVariants: match.variants } : {}),
         };
       }),
       page,
@@ -1380,11 +1631,25 @@ export class CatalogService {
 
   async listPublicProductSuggestions(query: string, limit = 8) {
     const search = normalizeCatalogSearch(query);
-    if (search.length < 2) return { items: [], categories: [], brands: [] };
+    if (search.length < 2 || !/[\p{L}\p{N}]/u.test(search)) {
+      return { items: [], categories: [], brands: [] };
+    }
 
-    const [rows, categories, brands] = await Promise.all([
+    if (this.inFlightSuggestions >= 3) {
+      throw new HttpException('Search suggestions are busy.', HttpStatus.TOO_MANY_REQUESTS);
+    }
+    this.inFlightSuggestions++;
+    try {
+      return await this.readPublicProductSuggestions(search, limit);
+    } finally {
+      this.inFlightSuggestions--;
+    }
+  }
+
+  private async readPublicProductSuggestions(search: string, limit: number) {
+    const [productsResult, categoriesResult, brandsResult] = await Promise.allSettled([
       this.prisma.$queryRaw<PublicProductSuggestionRow[]>(Prisma.sql`
-        WITH ${this.publicSearchMatchesSql(search)},
+        WITH ${publicSearchMatchesSql(search)},
         ranked_search AS (
           SELECT "productId", MAX(score) AS score
           FROM search_matches
@@ -1398,56 +1663,17 @@ export class CatalogService {
         ORDER BY ranked_search.score DESC, product."createdAt" DESC, product.id ASC
         LIMIT ${Math.min(Math.max(limit, 1), 8)}
       `),
-      this.prisma.$queryRaw<PublicNamedSuggestionRow[]>(Prisma.sql`
-        WITH search_query AS (
-          SELECT normalize_fa_search(${search}) AS value
-        )
-        SELECT category.id, category.name, category.slug
-        FROM "categories" AS category
-        CROSS JOIN search_query
-        WHERE category."isActive" = TRUE
-          AND category."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(category.name) % search_query.value
-            OR normalize_fa_search(category.name) LIKE '%' || search_query.value || '%'
-          )
-        ORDER BY
-          CASE
-            WHEN normalize_fa_search(category.name) = search_query.value THEN 0
-            WHEN normalize_fa_search(category.name) LIKE search_query.value || '%' THEN 1
-            ELSE 2
-          END,
-          similarity(normalize_fa_search(category.name), search_query.value) DESC,
-          category."sortOrder" ASC,
-          category.name ASC,
-          category.id ASC
-        LIMIT 4
-      `),
-      this.prisma.$queryRaw<PublicNamedSuggestionRow[]>(Prisma.sql`
-        WITH search_query AS (
-          SELECT normalize_fa_search(${search}) AS value
-        )
-        SELECT brand.id, brand.name, brand.slug
-        FROM "brands" AS brand
-        CROSS JOIN search_query
-        WHERE brand."isActive" = TRUE
-          AND brand."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(brand.name) % search_query.value
-            OR normalize_fa_search(brand.name) LIKE '%' || search_query.value || '%'
-          )
-        ORDER BY
-          CASE
-            WHEN normalize_fa_search(brand.name) = search_query.value THEN 0
-            WHEN normalize_fa_search(brand.name) LIKE search_query.value || '%' THEN 1
-            ELSE 2
-          END,
-          similarity(normalize_fa_search(brand.name), search_query.value) DESC,
-          brand.name ASC,
-          brand.id ASC
-        LIMIT 4
-      `),
+      this.prisma.$queryRaw<PublicNamedSuggestionRow[]>(
+        publicNamedSuggestionSql(search, 'category'),
+      ),
+      this.prisma.$queryRaw<PublicNamedSuggestionRow[]>(publicNamedSuggestionSql(search, 'brand')),
     ]);
+    if (productsResult.status === 'rejected') throw productsResult.reason;
+    if (categoriesResult.status === 'rejected') throw categoriesResult.reason;
+    if (brandsResult.status === 'rejected') throw brandsResult.reason;
+    const { value: rows } = productsResult;
+    const { value: categories } = categoriesResult;
+    const { value: brands } = brandsResult;
     const productIds = rows.map(({ id }) => id);
 
     const products =
@@ -1464,6 +1690,9 @@ export class CatalogService {
               slug: true,
               salePriceToman: true,
               compareAtPriceToman: true,
+              categories: {
+                select: { category: { select: { id: true, isActive: true, deletedAt: true } } },
+              },
               media: {
                 orderBy: { sortOrder: 'asc' },
                 select: {
@@ -1486,6 +1715,53 @@ export class CatalogService {
         : [];
     const productById = new Map(products.map((product) => [product.id, product] as const));
 
+    const [promotions, quotas] =
+      this.promotions && productIds.length
+        ? await Promise.all([
+            this.promotions.catalogPromotions(this.prisma),
+            readPublicQuotas(this.prisma, productIds),
+          ])
+        : [];
+    const campaignOffers = new Map<
+      string,
+      NonNullable<ReturnType<typeof selectCatalogPromotion>>
+    >();
+    if (promotions?.length) {
+      for (const product of products) {
+        const quota = quotas?.get(product.id);
+        const offer = selectCatalogPromotion(
+          promotions,
+          promotionTarget(product),
+          product.salePriceToman,
+          quota?.remaining === 0 ? quota.campaignId : undefined,
+        );
+        if (offer) campaignOffers.set(product.id, offer);
+      }
+    }
+    const stockProducts = campaignOffers.size
+      ? await this.prisma.product.findMany({
+          where: { id: { in: [...campaignOffers.keys()] }, ...publicCatalogProductWhere },
+          select: {
+            id: true,
+            purchaseMode: true,
+            sizeMode: true,
+            variants: { where: { isActive: true, deletedAt: null }, select: availabilitySelect },
+          },
+        })
+      : [];
+    const availableProductIds = new Set(
+      stockProducts
+        .filter(
+          (product) =>
+            productAvailableQuantity(
+              product.purchaseMode,
+              product.variants.map((variant) =>
+                variantAvailableQuantity(variant, product.sizeMode),
+              ),
+            ) > 0,
+        )
+        .map(({ id }) => id),
+    );
     return {
       items: productIds.flatMap((productId) => {
         const product = productById.get(productId);
@@ -1494,6 +1770,10 @@ export class CatalogService {
           product.media.find((item) => item.isPrimary && !item.media.deletedAt) ??
           product.media.find((item) => !item.media.deletedAt);
 
+        const campaignQuota = quotas?.get(productId);
+        const campaignOffer = availableProductIds.has(productId)
+          ? campaignOffers.get(productId)
+          : undefined;
         return [
           {
             id: product.id,
@@ -1501,6 +1781,8 @@ export class CatalogService {
             slug: product.slug,
             salePriceToman: product.salePriceToman,
             compareAtPriceToman: product.compareAtPriceToman,
+            ...(campaignQuota ? { campaignQuota } : {}),
+            ...(campaignOffer ? { campaignOffer } : {}),
             primaryMedia: primaryMedia
               ? {
                   url: this.publicMediaUrl.resolve(primaryMedia.media.storageKey),
@@ -1530,6 +1812,7 @@ export class CatalogService {
         name: true,
         slug: true,
         shortDescription: true,
+        primaryCategoryId: true,
         description: true,
         seoTitle: true,
         seoDescription: true,
@@ -1640,6 +1923,7 @@ export class CatalogService {
             sku: true,
             name: true,
             weightGrams: true,
+            lengthMm: true,
             salePriceToman: true,
             compareAtPriceToman: true,
             inventoryMode: true,
@@ -1750,39 +2034,8 @@ export class CatalogService {
       throw new NotFoundException('Product was not found.');
     }
 
-    const ownAvailableQuantity = (
-      inventories: readonly {
-        onHand: number;
-        reserved: number;
-        warehouse: { isActive: boolean; deletedAt: Date | null };
-      }[],
-    ) =>
-      inventories.reduce((total, inventory) => {
-        if (!inventory.warehouse.isActive || inventory.warehouse.deletedAt) {
-          return total;
-        }
-
-        return total + Math.max(0, inventory.onHand - inventory.reserved);
-      }, 0);
-
     const variants = product.variants.map((variant) => {
-      const availableQuantity =
-        variant.inventoryMode === VariantInventoryMode.COMPONENTS
-          ? variant.bundleComponents.length === 0
-            ? 0
-            : Math.min(
-                ...variant.bundleComponents.map(({ componentVariant, quantity }) => {
-                  if (
-                    componentVariant.inventoryMode !== VariantInventoryMode.OWN ||
-                    !componentVariant.isActive ||
-                    componentVariant.deletedAt
-                  ) {
-                    return 0;
-                  }
-                  return Math.floor(ownAvailableQuantity(componentVariant.inventories) / quantity);
-                }),
-              )
-          : ownAvailableQuantity(variant.inventories);
+      const availableQuantity = variantAvailableQuantity(variant, product.sizeMode);
       const weightGrams = variant.weightGrams;
       const platingOptions =
         variant.platingEligible && weightGrams
@@ -1803,6 +2056,7 @@ export class CatalogService {
         sku: variant.sku,
         name: variant.name,
         weightGrams: variant.weightGrams === null ? null : Number(variant.weightGrams),
+        ...(variant.lengthMm !== undefined ? { lengthMm: variant.lengthMm } : {}),
         salePriceToman: variant.salePriceToman ?? product.salePriceToman,
         compareAtPriceToman: variant.compareAtPriceToman ?? product.compareAtPriceToman,
         size:
@@ -1829,10 +2083,10 @@ export class CatalogService {
         platingOptions,
       };
     });
-    const availableQuantity =
-      product.purchaseMode === ProductPurchaseMode.COMPOSITE
-        ? Math.max(0, ...variants.map((variant) => variant.availableQuantity))
-        : variants.reduce((total, variant) => total + variant.availableQuantity, 0);
+    const availableQuantity = productAvailableQuantity(
+      product.purchaseMode,
+      variants.map((variant) => variant.availableQuantity),
+    );
     const media = product.media
       .filter((item) => !item.media.deletedAt)
       .map((item) => ({
@@ -1845,6 +2099,19 @@ export class CatalogService {
     const primaryMediaItem =
       product.media.find((item) => item.isPrimary && !item.media.deletedAt) ??
       product.media.find((item) => !item.media.deletedAt);
+    const primaryCategoryId = product.categories.find(
+      ({ category }) =>
+        category.id === product.primaryCategoryId && category.isActive && !category.deletedAt,
+    )?.category.id;
+    const typedAttributes = await this.catalogAttributes?.listPublicValues(product.id);
+    const [promotions, quotas] = this.promotions
+      ? await Promise.all([
+          availableQuantity > 0 ? this.promotions.catalogPromotions(this.prisma) : undefined,
+          readPublicQuotas(this.prisma, [product.id]),
+        ])
+      : [];
+    const campaignQuota = quotas?.get(product.id);
+    const target = promotionTarget(product);
 
     return {
       id: product.id,
@@ -1852,6 +2119,7 @@ export class CatalogService {
       slug: product.slug,
       shortDescription: product.shortDescription,
       description: product.description,
+      ...(primaryCategoryId ? { primaryCategoryId } : {}),
       seoTitle: product.seoTitle,
       seoDescription: product.seoDescription,
       seoCanonicalPath: product.seoCanonicalPath,
@@ -1869,6 +2137,15 @@ export class CatalogService {
           : null,
       salePriceToman: product.salePriceToman,
       compareAtPriceToman: product.compareAtPriceToman,
+      ...(campaignQuota ? { campaignQuota } : {}),
+      campaignOffer: promotions
+        ? selectCatalogPromotion(
+            promotions,
+            target,
+            product.salePriceToman,
+            campaignQuota?.remaining === 0 ? campaignQuota.campaignId : undefined,
+          )
+        : null,
       purchaseMode: product.purchaseMode,
       sizeMode: product.sizeMode,
       defaultPlatingType: product.defaultPlatingType,
@@ -1950,9 +2227,21 @@ export class CatalogService {
               isoCode: product.country.isoCode,
             }
           : null,
-      variants,
+      variants: variants.map((variant) => ({
+        ...variant,
+        campaignOffer:
+          promotions && variant.isAvailable
+            ? selectCatalogPromotion(
+                promotions,
+                { ...target, variantId: variant.id },
+                variant.salePriceToman,
+                campaignQuota?.remaining === 0 ? campaignQuota.campaignId : undefined,
+              )
+            : null,
+      })),
       media,
       attributes: product.attributes,
+      ...(typedAttributes?.length ? { typedAttributes } : {}),
     };
   }
 
@@ -2011,49 +2300,23 @@ export class CatalogService {
         : 8;
     const product = await this.prisma.product.findFirst({
       where: { slug, status: ProductStatus.ACTIVE, deletedAt: null },
-      select: { id: true, categories: { select: { categoryId: true } } },
+      select: { id: true, salePriceToman: true },
     });
     if (!product) throw new NotFoundException('Product was not found.');
 
-    const relations = await this.prisma.productRelation.findMany({
-      where: { OR: [{ sourceProductId: product.id }, { targetProductId: product.id }] },
-      orderBy: { createdAt: 'asc' },
-      select: { sourceProductId: true, targetProductId: true },
-    });
-    const relationIds = relations.map((relation) =>
-      relation.sourceProductId === product.id ? relation.targetProductId : relation.sourceProductId,
-    );
-    const activeExplicitProducts = await this.prisma.product.findMany({
-      where: { id: { in: relationIds }, status: ProductStatus.ACTIVE, deletedAt: null },
-      select: { id: true },
-    });
-    const activeExplicitIdSet = new Set(activeExplicitProducts.map(({ id }) => id));
-    const explicitIds = relationIds.filter((id) => activeExplicitIdSet.has(id));
-    const categoryIds = product.categories.map(({ categoryId }) => categoryId);
-    const fallback =
-      categoryIds.length > 0
-        ? await this.prisma.product.findMany({
-            where: {
-              id: { notIn: [product.id, ...explicitIds] },
-              status: ProductStatus.ACTIVE,
-              deletedAt: null,
-              categories: { some: { categoryId: { in: categoryIds } } },
-            },
-            orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
-            select: { id: true },
-          })
-        : [];
-    const orderedIds = [...explicitIds, ...fallback.map(({ id }) => id)];
-    const pageIds = orderedIds.slice((page - 1) * pageSize, page * pageSize);
-    const summaries = await this.publicProductSummariesByIds(pageIds);
+    const { ids, total } = await readRelatedProductPage(this.prisma, product, page, pageSize);
+    const summaries = await this.publicProductSummariesByIds(ids);
     const byId = new Map(summaries.map((summary) => [summary.id, summary]));
 
     return {
-      items: pageIds.map((id) => byId.get(id)).filter(Boolean),
+      items: ids.flatMap((id) => {
+        const summary = byId.get(id);
+        return summary?.isAvailable ? [summary] : [];
+      }),
       page,
       pageSize,
-      total: orderedIds.length,
-      totalPages: Math.ceil(orderedIds.length / pageSize),
+      total,
+      totalPages: Math.ceil(total / pageSize),
     };
   }
 
@@ -2071,6 +2334,7 @@ export class CatalogService {
         updatedAt: true,
         salePriceToman: true,
         compareAtPriceToman: true,
+        purchaseMode: true,
         sizeMode: true,
         brand: {
           select: {
@@ -2103,13 +2367,7 @@ export class CatalogService {
           select: {
             salePriceToman: true,
             compareAtPriceToman: true,
-            inventories: {
-              select: {
-                onHand: true,
-                reserved: true,
-                warehouse: { select: { isActive: true, deletedAt: true } },
-              },
-            },
+            ...availabilitySelect,
           },
         },
         media: {
@@ -2132,18 +2390,21 @@ export class CatalogService {
       },
     });
 
+    const [promotions, quotas] =
+      this.promotions && products.length
+        ? await Promise.all([
+            this.promotions.catalogPromotions(this.prisma),
+            readPublicQuotas(
+              this.prisma,
+              products.map(({ id }) => id),
+            ),
+          ])
+        : [];
     return products.map((product) => {
-      const availableQuantity = product.variants.reduce(
-        (productTotal, variant) =>
-          productTotal +
-          variant.inventories.reduce(
-            (total, inventory) =>
-              inventory.warehouse.isActive && !inventory.warehouse.deletedAt
-                ? total + Math.max(0, inventory.onHand - inventory.reserved)
-                : total,
-            0,
-          ),
-        0,
+      const campaignQuota = quotas?.get(product.id);
+      const availableQuantity = productAvailableQuantity(
+        product.purchaseMode,
+        product.variants.map((variant) => variantAvailableQuantity(variant, product.sizeMode)),
       );
       const prices = product.variants
         .map((variant) => ({
@@ -2165,6 +2426,18 @@ export class CatalogService {
         ...(product.updatedAt ? { updatedAt: product.updatedAt.toISOString() } : {}),
         salePriceToman: prices[0]?.sale ?? product.salePriceToman,
         compareAtPriceToman: prices[0]?.compare ?? product.compareAtPriceToman,
+        defaultSalePriceToman: product.salePriceToman,
+        defaultCompareAtPriceToman: product.compareAtPriceToman,
+        ...(campaignQuota ? { campaignQuota } : {}),
+        campaignOffer:
+          availableQuantity > 0 && promotions
+            ? selectCatalogPromotion(
+                promotions,
+                promotionTarget(product),
+                product.salePriceToman,
+                campaignQuota?.remaining === 0 ? campaignQuota.campaignId : undefined,
+              )
+            : null,
         sizeMode: product.sizeMode,
         brand:
           product.brand?.isActive && !product.brand.deletedAt
@@ -2203,6 +2476,7 @@ export class CatalogService {
     categoryIds: string[] | undefined;
     brand: string | undefined;
     country: string | undefined;
+    matchingProductIds?: string[];
   }): Promise<PublicProductSearchRow[]> {
     const categoryFilter =
       input.categoryIds === undefined
@@ -2214,7 +2488,7 @@ export class CatalogService {
                 SELECT 1
                 FROM "product_categories" AS filter_category
                 WHERE filter_category."productId" = product.id
-                  AND filter_category."categoryId" IN (${Prisma.join(input.categoryIds)})
+                  AND filter_category."categoryId" IN (${Prisma.join(input.categoryIds.map((id) => Prisma.sql`${id}::uuid`))})
               )
             `;
     const brandFilter = input.brand
@@ -2249,9 +2523,12 @@ export class CatalogService {
           : input.sort === PublicCatalogSort.NAME_ASC
             ? Prisma.sql`name ASC, id ASC`
             : Prisma.sql`"createdAt" DESC, id DESC`;
+    const variantFilter = input.matchingProductIds?.length
+      ? Prisma.sql`AND product.id IN (${Prisma.join(input.matchingProductIds.map((id) => Prisma.sql`${id}::uuid`))})`
+      : Prisma.empty;
 
     return this.prisma.$queryRaw<PublicProductSearchRow[]>(Prisma.sql`
-      WITH ${this.publicSearchMatchesSql(input.search)},
+      WITH ${catalogStockCte}, ${publicSearchMatchesSql(input.search)},
       ranked_search AS (
         SELECT "productId", MAX(score) AS score
         FROM search_matches
@@ -2264,17 +2541,7 @@ export class CatalogService {
           product."salePriceToman",
           product."createdAt",
           ranked_search.score,
-          COALESCE((
-            SELECT SUM(GREATEST(inventory."onHand" - inventory."reserved", 0))
-            FROM "product_variants" AS variant
-            JOIN "inventory" AS inventory ON inventory."variantId" = variant.id
-            JOIN "warehouses" AS warehouse ON warehouse.id = inventory."warehouseId"
-            WHERE variant."productId" = product.id
-              AND variant."isActive" = true
-              AND variant."deletedAt" IS NULL
-              AND warehouse."isActive" = true
-              AND warehouse."deletedAt" IS NULL
-          ), 0)::bigint AS "availableQuantity"
+          ${input.matchingProductIds ? Prisma.sql`0::bigint` : catalogProductStockSql} AS "availableQuantity"
         FROM ranked_search
         JOIN "products" AS product ON product.id = ranked_search."productId"
         WHERE product."status" = 'ACTIVE'
@@ -2282,108 +2549,15 @@ export class CatalogService {
           ${categoryFilter}
           ${brandFilter}
           ${countryFilter}
+          ${variantFilter}
       )
       SELECT id, "availableQuantity", COUNT(*) OVER () AS total
       FROM filtered_search
-      ORDER BY ("availableQuantity" > 0) DESC, score DESC, ${secondaryOrder}
+      ORDER BY ${input.matchingProductIds ? Prisma.empty : Prisma.sql`("availableQuantity" > 0) DESC,`}
+        score DESC, ${secondaryOrder}
       LIMIT ${input.pageSize}
       OFFSET ${(input.page - 1) * input.pageSize}
     `);
-  }
-
-  private publicSearchMatchesSql(search: string): Prisma.Sql {
-    return Prisma.sql`
-      search_query AS (
-        SELECT normalize_fa_search(${search}) AS value
-      ),
-      search_matches AS (
-        SELECT
-          product.id AS "productId",
-          similarity(normalize_fa_search(product.name), search_query.value)
-            + CASE
-                WHEN normalize_fa_search(product.name) = search_query.value THEN 2
-                WHEN normalize_fa_search(product.name) LIKE search_query.value || '%' THEN 1
-                WHEN normalize_fa_search(product.name) LIKE '%' || search_query.value || '%' THEN 0.4
-                ELSE 0
-              END AS score
-        FROM "products" AS product
-        CROSS JOIN search_query
-        WHERE product."status" = 'ACTIVE'
-          AND product."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(product.name) % search_query.value
-            OR normalize_fa_search(product.name) LIKE '%' || search_query.value || '%'
-          )
-
-        UNION ALL
-
-        SELECT
-          product.id AS "productId",
-          similarity(normalize_fa_search(product."shortDescription"), search_query.value) * 0.25
-            AS score
-        FROM "products" AS product
-        CROSS JOIN search_query
-        WHERE product."status" = 'ACTIVE'
-          AND product."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(product."shortDescription") % search_query.value
-            OR normalize_fa_search(product."shortDescription") LIKE '%' || search_query.value || '%'
-          )
-
-        UNION ALL
-
-        SELECT
-          product.id AS "productId",
-          similarity(normalize_fa_search(brand.name), search_query.value) * 0.65 AS score
-        FROM "products" AS product
-        JOIN "brands" AS brand ON brand.id = product."brandId"
-        CROSS JOIN search_query
-        WHERE product."status" = 'ACTIVE'
-          AND product."deletedAt" IS NULL
-          AND brand."isActive" = true
-          AND brand."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(brand.name) % search_query.value
-            OR normalize_fa_search(brand.name) LIKE '%' || search_query.value || '%'
-          )
-
-        UNION ALL
-
-        SELECT
-          product.id AS "productId",
-          similarity(normalize_fa_search(category.name), search_query.value) * 0.55 AS score
-        FROM "products" AS product
-        JOIN "product_categories" AS product_category
-          ON product_category."productId" = product.id
-        JOIN "categories" AS category ON category.id = product_category."categoryId"
-        CROSS JOIN search_query
-        WHERE product."status" = 'ACTIVE'
-          AND product."deletedAt" IS NULL
-          AND category."isActive" = true
-          AND category."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(category.name) % search_query.value
-            OR normalize_fa_search(category.name) LIKE '%' || search_query.value || '%'
-          )
-
-        UNION ALL
-
-        SELECT
-          product.id AS "productId",
-          similarity(normalize_fa_search(variant.sku), search_query.value) * 0.4 AS score
-        FROM "products" AS product
-        JOIN "product_variants" AS variant ON variant."productId" = product.id
-        CROSS JOIN search_query
-        WHERE product."status" = 'ACTIVE'
-          AND product."deletedAt" IS NULL
-          AND variant."isActive" = true
-          AND variant."deletedAt" IS NULL
-          AND (
-            normalize_fa_search(variant.sku) % search_query.value
-            OR normalize_fa_search(variant.sku) LIKE '%' || search_query.value || '%'
-          )
-      )
-    `;
   }
 
   private async resolvePublicCategoryIds(slug: string): Promise<string[]> {

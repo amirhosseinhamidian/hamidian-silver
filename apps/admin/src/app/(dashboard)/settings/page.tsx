@@ -1,4 +1,5 @@
 import { SiteSettingsView } from '@/components/site-settings/site-settings-view';
+import { CampaignLinkBuilder } from '@/components/site-settings/campaign-link-builder';
 import { Badge } from '@/components/ui/badge';
 import { requireAdminSession } from '@/lib/auth/session';
 import { formatAdminInteger } from '@/lib/presentation/formatters';
@@ -24,6 +25,11 @@ export default async function SiteSettingsPage() {
       </header>
       <div className="pt-6">
         <SiteSettingsView data={data} canWrite={user.permissions.includes('settings.write')} />
+        {user.permissions.includes('settings.write') ? (
+          <div id="campaign-links" className="scroll-mt-24">
+            <CampaignLinkBuilder canReadReports={user.permissions.includes('finance.read')} />
+          </div>
+        ) : null}
       </div>
     </main>
   );

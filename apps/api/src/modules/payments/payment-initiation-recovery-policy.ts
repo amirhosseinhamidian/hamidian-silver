@@ -2,11 +2,26 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DomainException } from '../../common/errors/domain-exception';
 import { ErrorCode } from '../../common/errors/error-codes';
+import type { Prisma } from '../../generated/prisma/client';
 import {
   PAYMENT_GATEWAY_CODES,
   isPaymentGatewayCode,
   type PaymentGatewayCode,
 } from './payment-gateway.constants';
+
+export function expiredWalletRedirect(now: Date): Prisma.PaymentAttemptWhereInput {
+  return {
+    status: 'REDIRECTED',
+    payment: {
+      status: 'PENDING',
+      order: {
+        status: 'PENDING_PAYMENT',
+        walletAppliedToman: { gt: 0 },
+        reservationExpiresAt: { lte: now },
+      },
+    },
+  };
+}
 
 type RecoveryRedirectInput = {
   provider: string;

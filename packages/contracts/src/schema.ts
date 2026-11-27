@@ -100,6 +100,390 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaigns/public/banner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignsController_publicBanner_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/public/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignsController_publicActivity_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignsController_list_v1"];
+        put?: never;
+        post: operations["CampaignsController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/product-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignsController_selectProducts_v1"];
+        put?: never;
+        post: operations["CampaignsController_hydrateProducts_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/selection-taxonomy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignsController_selectionTaxonomy_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/collection-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignsController_selectCollections_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignsController_detail_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CampaignsController_update_v1"];
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/simulation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CampaignsController_simulate_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CampaignsController_transition_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/public/landing/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignLandingsController_readLanding_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/public/placement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignLandingsController_placement_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/public/sitemap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignLandingsController_sitemap_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/landing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignLandingsController_edit_v1"];
+        put: operations["CampaignLandingsController_save_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/landing/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CampaignLandingsController_preview_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/landing/restore-publication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CampaignLandingsController_restorePublication_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/quota": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignQuotasController_get_v1"];
+        put: operations["CampaignQuotasController_save_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/design": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FestivalDesignController_edit_v1"];
+        put: operations["FestivalDesignController_save_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/design/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FestivalDesignController_restore_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/design/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FestivalDesignController_preview_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/festival-themes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FestivalThemeLibraryController_list_v1"];
+        put?: never;
+        post: operations["FestivalThemeLibraryController_save_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/festival-themes/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FestivalThemeLibraryController_history_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/festival-themes/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FestivalThemeLibraryController_archive_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CampaignOperationsCenterController_read_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{id}/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FestivalAnalyticsController_read_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/public/categories": {
         parameters: {
             query?: never;
@@ -142,6 +526,22 @@ export interface paths {
         get: operations["CatalogController_listPublicProducts_v1"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/public/search/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_searchPublicCatalog_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -290,6 +690,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["CatalogController_updateCategory_v1"];
+        trace?: never;
+    };
+    "/api/v1/catalog/categories/{categoryId}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_mergeCategory_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/catalog/brands": {
@@ -626,6 +1042,134 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["CatalogController_updateProductMedia_v1"];
+        trace?: never;
+    };
+    "/api/v1/catalog/attribute-definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogAttributesController_listDefinitions_v1"];
+        put?: never;
+        post: operations["CatalogAttributesController_createDefinition_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/attribute-definitions/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogAttributesController_updateDefinition_v1"];
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/typed-attributes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogAttributesController_listProductValues_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/typed-attributes/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogAttributesController_setProductValue_v1"];
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/merchandising": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogMerchandisingController_read_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogMerchandisingController_update_v1"];
+        trace?: never;
+    };
+    "/api/v1/promotions/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PromotionsController_listPublic_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/promotions/{campaignId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PromotionsController_read_v1"];
+        put: operations["PromotionsController_save_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/promotions/{campaignId}/product-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PromotionsController_previewProduct_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/finance/supplier-payables": {
@@ -1092,6 +1636,326 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletController_balance_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletController_customerHistory_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletController_adminBalance_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/{userId}/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletController_history_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/{userId}/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["WalletController_correct_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/purchase-reward-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PurchaseRewardJobsController_metrics_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/purchase-reward-jobs/customers/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PurchaseRewardJobsController_customerJobs_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/purchase-reward-jobs/{orderId}/review-hold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PurchaseRewardJobsController_reviewHold_v1"];
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/purchase-reward-jobs/{orderId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PurchaseRewardJobsController_retry_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/maintenance/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletMaintenanceController_report_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/admin/credit-issuance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GrowthCreditIssuanceController_status_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["GrowthCreditIssuanceController_update_v1"];
+        trace?: never;
+    };
+    "/api/v1/reward-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RewardPoliciesController_list_v1"];
+        put?: never;
+        post: operations["RewardPoliciesController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RewardPoliciesController_active_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/activation-timing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RewardPoliciesController_activationTiming_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["RewardPoliciesController_updateActivationTiming_v1"];
+        trace?: never;
+    };
+    "/api/v1/reward-policies/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RewardPoliciesController_read_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/simulation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RewardPoliciesController_simulate_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/{version}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RewardPoliciesController_publish_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/policy-simulator/basket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PolicySimulationController_basket_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/policy-simulator/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PolicySimulationController_history_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/policy-simulator/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PolicySimulationController_reviews_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/guide/public/topics": {
         parameters: {
             query?: never;
@@ -1234,6 +2098,118 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["GuideController_updateArticleStatus_v1"];
+        trace?: never;
+    };
+    "/api/v1/growth-attribution/campaign-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GrowthAttributionController_createCampaignLink_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/growth-attribution/revenue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GrowthAttributionController_summary_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/growth-attribution/revenue/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GrowthAttributionController_events_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/growth-attribution/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GrowthAttributionController_readDashboard_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/growth-attribution/dashboard/campaigns/{campaignId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GrowthAttributionController_campaignPerformance_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/growth-attribution/dashboard/costs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GrowthAttributionController_readCosts_v1"];
+        put?: never;
+        post: operations["GrowthAttributionController_recordCost_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/growth-attribution/measurement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GrowthAttributionController_measure_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/health": {
@@ -1570,6 +2546,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletCreditNotificationsController_customer_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["WalletCreditNotificationsController_updatePreferences_v1"];
+        trace?: never;
+    };
+    "/api/v1/notifications/wallet/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["WalletCreditNotificationsController_settings_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["WalletCreditNotificationsController_updateSettings_v1"];
         trace?: never;
     };
     "/api/v1/pricing/suppliers": {
@@ -1956,6 +2964,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders/promotion-estimate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OrdersController_estimate_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/wallet-estimate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OrdersController_estimateWallet_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/price-quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OrdersController_quote_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orders/me": {
         parameters: {
             query?: never;
@@ -2050,6 +3106,118 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart-recovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CartRecoveryController_status_v1"];
+        put: operations["CartRecoveryController_save_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart-recovery/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CartRecoveryController_preview_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart-recovery/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CartRecoveryController_restore_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart-recovery/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CartRecoveryController_hide_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart-recovery/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CartRecoveryController_discard_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart-recovery/admin/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CartRecoveryController_report_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart-recovery/admin/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CartRecoveryController_policy_v1"];
         trace?: never;
     };
     "/api/v1/orders/{orderId}/return-authorization": {
@@ -2772,6 +3940,246 @@ export interface paths {
         patch: operations["ProfileController_setDefaultAddress_v1"];
         trace?: never;
     };
+    "/api/v1/referrals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralsController_overview_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referrals/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralsController_checkout_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referrals/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReferralsController_issueCode_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referrals/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReferralsController_claim_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-reward-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralRewardPoliciesController_list_v1"];
+        put?: never;
+        post: operations["ReferralRewardPoliciesController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-reward-policies/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralRewardPoliciesController_scopes_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-reward-policies/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralRewardPoliciesController_read_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-reward-policies/simulation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReferralRewardPoliciesController_simulate_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-reward-policies/{version}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReferralRewardPoliciesController_publish_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-risk/policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralRiskController_policiesPage_v1"];
+        put?: never;
+        post: operations["ReferralRiskController_publish_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-risk/simulation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReferralRiskController_simulate_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-risk/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralRiskController_queue_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-risk/cases/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralRiskController_detail_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-risk/cases/{id}/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReferralRiskController_review_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReferralGrantController_report_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/shipping/pricing/public": {
         parameters: {
             query?: never;
@@ -3028,6 +4436,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/site-settings/campaign-media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SiteSettingsController_uploadCampaignMedia_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/site-settings/pages/media": {
         parameters: {
             query?: never;
@@ -3186,6 +4610,294 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/search-console/connection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchConsoleController_connection_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/search-console/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SearchConsoleController_performance_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/search-console/brand-performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SearchConsoleController_brandPerformance_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/search-console/sitemaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchConsoleController_sitemaps_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/search-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchOverviewController_overview_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/search-overview/rows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchOverviewController_rows_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/search-entities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchEntityController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/search-entities/{kind}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchEntityController_detail_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/technical-audits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoAuditController_overview_v1"];
+        put?: never;
+        post: operations["SeoAuditController_start_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/index-monitoring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoIndexMonitoringController_overview_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/index-monitoring/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SeoIndexMonitoringController_queue_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/index-monitoring/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoIndexMonitoringController_coverage_v1"];
+        put?: never;
+        post: operations["SeoIndexMonitoringController_importCoverage_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoIssueController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/issues/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SeoIssueController_scan_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/issues/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoIssueController_detail_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SeoIssueController_update_v1"];
+        trace?: never;
+    };
+    "/api/v1/seo/opportunities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoOpportunityController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/opportunities/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SeoOpportunityController_refresh_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seo/opportunities/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SeoOpportunityController_detail_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SeoOpportunityController_update_v1"];
         trace?: never;
     };
     "/api/v1/supplier-imports/sources": {
@@ -3681,6 +5393,373 @@ export interface components {
             /** Format: date-time */
             generatedAt: string;
         };
+        CampaignMediaDto: {
+            url: string | null;
+            altText: string | null;
+            id: string;
+            mimeType: string;
+        };
+        CampaignPlacementDisplayDto: {
+            /** @enum {string} */
+            icon?: "STAR" | "TAG";
+            /** @enum {string} */
+            motion?: "NONE" | "SUBTLE" | "EMPHASIS";
+            /** @enum {string} */
+            mediaFit?: "COVER" | "CONTAIN";
+            /** @enum {string} */
+            overlay?: "NONE" | "SOFT" | "STRONG";
+            /** @enum {string} */
+            ctaStyle?: "LINK" | "SOLID" | "OUTLINE";
+            useTheme?: boolean;
+            title?: string;
+            message?: string;
+            backgroundColor?: string;
+            gradientColor?: string;
+            borderColor?: string;
+            ctaPath?: string;
+            ctaLabel?: string;
+            showCountdown?: boolean;
+        };
+        CampaignBannerDto: {
+            /** Format: uuid */
+            campaignId?: string;
+            publicationVersion?: number;
+            /** Format: date-time */
+            endsAt: string;
+            ctaPath: string | null;
+            ctaLabel: string | null;
+            media: components["schemas"]["CampaignMediaDto"] | null;
+            mobileMedia?: components["schemas"]["CampaignMediaDto"] | null;
+            stillMedia?: components["schemas"]["CampaignMediaDto"] | null;
+            desktopHeight?: number | null;
+            mobileHeight?: number | null;
+            textColor?: string | null;
+            /** @enum {string|null} */
+            navigationEffect?: "SOLID" | "GRADIENT" | "ANIMATED" | null;
+            display?: components["schemas"]["CampaignPlacementDisplayDto"];
+            /** Format: date-time */
+            countdownEndsAt?: string;
+            name: string;
+            message: string;
+        };
+        PublicCampaignDto: {
+            banner: components["schemas"]["CampaignBannerDto"] | null;
+        };
+        PublicCampaignActivityDto: {
+            activeIds: string[];
+            festivalVersions?: {
+                [key: string]: number;
+            };
+        };
+        SalesCampaignListDetailsDto: {
+            allProducts: boolean;
+            selectedProducts: number;
+            selectedCategories: number;
+            discountBudgetToman: number;
+            quotaProducts: number;
+        };
+        CampaignSummaryDto: {
+            /** @enum {string} */
+            kind: "LEGACY" | "MARKETING" | "FESTIVAL";
+            /** @enum {string} */
+            managementPurpose?: "SALES";
+            salesDetails?: components["schemas"]["SalesCampaignListDetailsDto"];
+            /** @enum {string} */
+            status: "DRAFT" | "APPROVED" | "SCHEDULED" | "ACTIVE" | "PAUSED" | "ENDED";
+            /** Format: date-time */
+            archivedAt: string | null;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            id: string;
+            slug: string;
+            name: string;
+            ownerId: string;
+            startsTehran: string;
+            endsTehran: string;
+            revision: number;
+        };
+        CampaignListDto: {
+            items: components["schemas"]["CampaignSummaryDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        CampaignProductOptionDto: {
+            defaultPriceToman: number | null;
+            festivalPriceToman: number | null;
+            quotaRemaining: number | null;
+            categories: string[];
+            imageUrl: string | null;
+            imageAlt: string | null;
+            availableQuantity: number;
+            id: string;
+            slug: string;
+            name: string;
+        };
+        CampaignProductOptionsDto: {
+            items: components["schemas"]["CampaignProductOptionDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        CampaignProductQueryDto: {
+            q?: string;
+            page?: number;
+            category?: string;
+            brand?: string;
+            /** @enum {string} */
+            stock?: "in-stock" | "out-of-stock";
+            /** Format: uuid */
+            campaignId?: string;
+            /** @enum {string} */
+            scope?: "campaign";
+            selected?: string[];
+            /** @enum {string} */
+            categoryMode?: "direct" | "tree";
+        };
+        CampaignCategoryOptionDto: {
+            parentId: string | null;
+            directProductCount: number;
+            subtreeProductCount: number;
+            id: string;
+            slug: string;
+            name: string;
+        };
+        CampaignNamedOptionDto: {
+            id: string;
+            slug: string;
+            name: string;
+        };
+        CampaignTaxonomyOptionsDto: {
+            categories: components["schemas"]["CampaignCategoryOptionDto"][];
+            brands: components["schemas"]["CampaignNamedOptionDto"][];
+        };
+        CampaignCollectionOptionsDto: {
+            items: components["schemas"]["CampaignNamedOptionDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        CampaignMarketingSettingsDto: {
+            destinationPath: string;
+            /** Format: uuid */
+            relatedFestivalId?: string | null;
+            /** Format: uuid */
+            relatedSalesCampaignId?: string | null;
+        };
+        CampaignBudgetDto: {
+            committedReferralRewardToman?: number;
+            remainingUses: number | null;
+            blockers: string[];
+            warnings: string[];
+            discountBudgetToman: number;
+            committedDiscountToman: number;
+            remainingDiscountToman: number;
+            usedOrders: number;
+        };
+        CampaignRevisionDto: {
+            actorUserId: string | null;
+            /** Format: date-time */
+            recordedAt: string;
+            snapshot: {
+                [key: string]: unknown;
+            };
+            version: number;
+            action: string;
+        };
+        CampaignDetailDto: {
+            /** @enum {string} */
+            kind: "LEGACY" | "MARKETING" | "FESTIVAL";
+            /** @enum {string} */
+            managementPurpose?: "SALES";
+            salesDetails?: components["schemas"]["SalesCampaignListDetailsDto"];
+            /** @enum {string} */
+            status: "DRAFT" | "APPROVED" | "SCHEDULED" | "ACTIVE" | "PAUSED" | "ENDED";
+            /** Format: date-time */
+            archivedAt: string | null;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            marketing?: components["schemas"]["CampaignMarketingSettingsDto"];
+            productSlugs: string[];
+            categorySlugs: string[];
+            plannedChannelCostToman: number | null;
+            /** @enum {string} */
+            audience: "ALL_CUSTOMERS" | "FIRST_PURCHASE" | "RETURNING";
+            budget: components["schemas"]["CampaignBudgetDto"];
+            ctaPath: string | null;
+            ctaLabel: string | null;
+            media: components["schemas"]["CampaignMediaDto"] | null;
+            history: components["schemas"]["CampaignRevisionDto"][];
+            goal: string;
+            channel: string;
+            trackingId: string;
+            trackingLabel: string;
+            allProducts: boolean;
+            budgetToman: number;
+            message: string;
+            bannerEnabled: boolean;
+            bannerPriority: number;
+            historyPage: number;
+            hasMoreHistory: boolean;
+            id: string;
+            slug: string;
+            name: string;
+            ownerId: string;
+            startsTehran: string;
+            endsTehran: string;
+            revision: number;
+        };
+        CreateCampaignDto: {
+            marketing?: components["schemas"]["CampaignMarketingSettingsDto"];
+            channel?: string;
+            productSlugs: string[];
+            categorySlugs: string[];
+            plannedChannelCostToman?: number | null;
+            /** @enum {string} */
+            audience?: "ALL_CUSTOMERS" | "FIRST_PURCHASE" | "RETURNING";
+            /** Format: uuid */
+            mediaId?: string | null;
+            ctaPath?: string | null;
+            ctaLabel?: string | null;
+            /** @enum {string} */
+            kind?: "MARKETING" | "FESTIVAL";
+            /** @enum {string} */
+            managementPurpose?: "SALES";
+            trackingId?: string;
+            trackingLabel?: string;
+            slug: string;
+            name: string;
+            goal: string;
+            allProducts: boolean;
+            startsTehran: string;
+            endsTehran: string;
+            budgetToman: number;
+            message: string;
+            bannerEnabled: boolean;
+            bannerPriority: number;
+        };
+        UpdateCampaignDto: {
+            marketing?: components["schemas"]["CampaignMarketingSettingsDto"];
+            channel?: string;
+            productSlugs: string[];
+            categorySlugs: string[];
+            plannedChannelCostToman?: number | null;
+            /** @enum {string} */
+            audience?: "ALL_CUSTOMERS" | "FIRST_PURCHASE" | "RETURNING";
+            /** Format: uuid */
+            mediaId?: string | null;
+            ctaPath?: string | null;
+            ctaLabel?: string | null;
+            /** @enum {string} */
+            kind?: "FESTIVAL";
+            expectedRevision: number;
+            name: string;
+            goal: string;
+            allProducts: boolean;
+            startsTehran: string;
+            endsTehran: string;
+            budgetToman: number;
+            message: string;
+            bannerEnabled: boolean;
+            bannerPriority: number;
+        };
+        CampaignBasketLineDto: {
+            slug: string;
+            quantity: number;
+            unitSalePriceToman: number;
+        };
+        CampaignSimulationInputDto: {
+            items: components["schemas"]["CampaignBasketLineDto"][];
+            expectedRevision: number;
+            shippingToman: number;
+            hasPaidOrder: boolean;
+        };
+        CampaignSimulationDto: {
+            reason: string | null;
+            merchandiseToman: number;
+            eligibleSubtotalToman: number;
+            shippingToman: number;
+            merchandiseDiscountToman: number;
+            shippingDiscountToman: number;
+            payableToman: number;
+        };
+        CampaignTransitionDto: {
+            /** @enum {string} */
+            action: "APPROVE" | "SCHEDULE" | "PUBLISH_NOW" | "PAUSE" | "RESUME" | "REOPEN" | "END" | "ARCHIVE";
+            expectedRevision: number;
+            /** Format: uuid */
+            requestId: string;
+        };
+        PublicCatalogFacetOptionDto: {
+            value: string;
+            label: string;
+            count: number;
+        };
+        FestivalCardThemeDto: {
+            /** @enum {string} */
+            density?: "STANDARD" | "COMPACT";
+            /** @enum {string} */
+            shadow?: "NONE" | "SOFT";
+            surface?: string;
+            border?: string;
+            discount?: string;
+            tag?: string;
+            price?: string;
+            quota?: string;
+            action?: string;
+            hoverEmphasis?: boolean;
+            showDescription?: boolean;
+        };
+        FestivalThemeDto: {
+            /** @enum {string} */
+            decoration: "NONE" | "DOTS" | "LINES";
+            /** @enum {string} */
+            motion: "STILL" | "SOFT";
+            card?: components["schemas"]["FestivalCardThemeDto"];
+            background: string;
+            surface: string;
+            foreground: string;
+            accent: string;
+            gradient?: string;
+        };
+        PublicFestivalArtworkDto: {
+            media: components["schemas"]["CampaignMediaDto"] | null;
+            mobileMedia: components["schemas"]["CampaignMediaDto"] | null;
+            stillMedia: components["schemas"]["CampaignMediaDto"] | null;
+        };
+        PublicCatalogMatchingVariantDto: {
+            sizeId: string | null;
+            lengthMm: number | null;
+            id: string;
+            availableQuantity: number;
+        };
+        CampaignUnitPriceDto: {
+            regularToman: number;
+            discountToman: number;
+            discountPercent: number;
+            finalToman: number;
+        };
+        CatalogCampaignOfferDto: {
+            /** Format: uuid */
+            campaignId?: string;
+            /** Format: date-time */
+            endsAt: string;
+            conditions: ("COUPON" | "CUSTOMER" | "MINIMUM" | "ORDER_AMOUNT" | "BUNDLE" | "SHIPPING")[];
+            minimumToman: number | null;
+            price: components["schemas"]["CampaignUnitPriceDto"] | null;
+            name: string;
+        };
+        PublicCampaignQuotaDto: {
+            /** Format: uuid */
+            campaignId: string;
+            name: string;
+            /** Format: date-time */
+            endsAt: string;
+            limit: number;
+            sold: number;
+            remaining: number;
+        };
         PublicCatalogMediaDto: {
             /** Format: uri */
             url: string | null;
@@ -3689,48 +5768,11 @@ export interface components {
             height: number | null;
             mimeType: string;
         };
-        PublicCatalogCategoryPageDto: {
-            description: string | null;
-            parentId: string | null;
-            hasProducts?: boolean;
-            image: components["schemas"]["PublicCatalogMediaDto"] | null;
-            featuredImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
-            heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
-            seoTitle?: string | null;
-            seoDescription?: string | null;
-            seoCanonicalPath?: string | null;
-            seoNoIndex?: boolean;
-            seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
-            /** Format: date-time */
-            updatedAt?: string;
-            id: string;
-            name: string;
-            slug: string;
-            sortOrder: number;
-        };
         PublicCatalogCountryDto: {
             id: string;
             name: string;
             slug: string;
             isoCode: string;
-        };
-        PublicCatalogBrandPageDto: {
-            description: string | null;
-            hasProducts?: boolean;
-            image: components["schemas"]["PublicCatalogMediaDto"] | null;
-            heroImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
-            heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
-            originCountry: components["schemas"]["PublicCatalogCountryDto"] | null;
-            seoTitle?: string | null;
-            seoDescription?: string | null;
-            seoCanonicalPath?: string | null;
-            seoNoIndex?: boolean;
-            seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
-            /** Format: date-time */
-            updatedAt?: string;
-            id: string;
-            name: string;
-            slug: string;
         };
         PublicCatalogBrandDto: {
             description: string | null;
@@ -3755,12 +5797,17 @@ export interface components {
             sortOrder: number;
         };
         PublicCatalogProductSummaryDto: {
+            matchingVariants?: components["schemas"]["PublicCatalogMatchingVariantDto"][];
             shortDescription: string | null;
             seoCanonicalPath?: string | null;
             seoNoIndex?: boolean;
             /** Format: date-time */
             updatedAt?: string;
             salePriceToman: number | null;
+            defaultSalePriceToman?: number | null;
+            defaultCompareAtPriceToman?: number | null;
+            campaignOffer?: components["schemas"]["CatalogCampaignOfferDto"] | null;
+            campaignQuota?: components["schemas"]["PublicCampaignQuotaDto"];
             compareAtPriceToman: number | null;
             /** @enum {string} */
             sizeMode: "NONE" | "FREE_SIZE" | "SIZED";
@@ -3773,14 +5820,597 @@ export interface components {
             availableQuantity: number;
             isAvailable: boolean;
         };
+        FestivalEntryDto: {
+            title: string;
+            body?: string;
+            maxPriceToman?: number;
+            actionPath?: string;
+        };
+        PublicFestivalHeroSlideDto: {
+            media: components["schemas"]["CampaignMediaDto"] | null;
+            mobileMedia: components["schemas"]["CampaignMediaDto"] | null;
+            stillMedia: components["schemas"]["CampaignMediaDto"] | null;
+            title: string;
+            subtitle?: string;
+            actionLabel?: string;
+            actionPath?: string;
+        };
+        PublicFestivalCategoryDto: {
+            media: components["schemas"]["CampaignMediaDto"] | null;
+            slug: string;
+            name: string;
+        };
+        PublicFestivalSectionDto: {
+            /** @enum {string} */
+            kind: "HERO" | "COUNTDOWN" | "INTRO" | "HIGHLIGHTS" | "CATEGORIES" | "DISCOUNTS" | "PICKS" | "LOW_QUOTA" | "BUDGET" | "OFFERS" | "PRODUCTS" | "FAQ";
+            artwork?: components["schemas"]["PublicFestivalArtworkDto"];
+            /** @enum {string} */
+            layout: "GRID" | "STRIP";
+            products?: components["schemas"]["PublicCatalogProductSummaryDto"][];
+            entries?: components["schemas"]["FestivalEntryDto"][];
+            slides?: components["schemas"]["PublicFestivalHeroSlideDto"][];
+            categories?: components["schemas"]["PublicFestivalCategoryDto"][];
+            title: string;
+            description?: string;
+            highlighted?: boolean;
+        };
+        PublicFestivalDesignDto: {
+            /** Format: date-time */
+            refreshAt?: string;
+            filterCategories: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            filterBrands: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            theme: components["schemas"]["FestivalThemeDto"];
+            sections: components["schemas"]["PublicFestivalSectionDto"][];
+        };
+        PublicCatalogRankingDto: {
+            /** @example 1 */
+            version: number;
+            /** @enum {string} */
+            requestedSort: "newest" | "price-asc" | "price-desc" | "name-asc" | "availability" | "best-selling" | "featured";
+            /** @enum {string} */
+            appliedSort: "newest" | "price-asc" | "price-desc" | "name-asc" | "availability" | "best-selling" | "featured";
+        };
         PublicCatalogProductListDto: {
             items: components["schemas"]["PublicCatalogProductSummaryDto"][];
+            ranking?: components["schemas"]["PublicCatalogRankingDto"];
+            page: number;
+            pageSize: number;
+            total: number;
+            totalPages: number;
+        };
+        PublicCampaignLandingDto: {
+            isFestival?: boolean;
+            /** @enum {string} */
+            seoMode: "TEMPORARY" | "RECURRING";
+            /** Format: uuid */
+            campaignId?: string;
+            publicationVersion?: number;
+            /** Format: date-time */
+            endsAt?: string;
+            design?: components["schemas"]["PublicFestivalDesignDto"];
+            media: components["schemas"]["CampaignMediaDto"] | null;
+            products: components["schemas"]["PublicCatalogProductListDto"];
+            slug: string;
+            title: string;
+            story: string;
+            active: boolean;
+            ctaPath: string;
+            ctaLabel: string;
+        };
+        CampaignSitemapEntryDto: {
+            /** Format: date-time */
+            updatedAt: string;
+            slug: string;
+        };
+        CampaignSitemapDto: {
+            entries: components["schemas"]["CampaignSitemapEntryDto"][];
+        };
+        PublicCatalogFacetFilterDto: {
+            code: string;
+            values?: string[];
+            min?: number;
+            max?: number;
+        };
+        CampaignCollectionFiltersDto: {
+            categories?: string[];
+            brands?: string[];
+            minPriceToman?: number;
+            maxPriceToman?: number;
+            attributes?: components["schemas"]["PublicCatalogFacetFilterDto"][];
+            /** @enum {string} */
+            sort?: "newest" | "price-asc" | "price-desc" | "name-asc" | "availability" | "best-selling" | "featured";
+            minimumQuantity?: number;
+        };
+        CampaignPlacementAppearanceDto: {
+            /** Format: uuid */
+            mediaId?: string | null;
+            /** Format: uuid */
+            mobileMediaId?: string | null;
+            /** Format: uuid */
+            stillMediaId?: string | null;
+            desktopHeight?: number | null;
+            mobileHeight?: number | null;
+            textColor?: string | null;
+            /** @enum {string|null} */
+            navigationEffect?: "SOLID" | "GRADIENT" | "ANIMATED" | null;
+            display?: components["schemas"]["CampaignPlacementDisplayDto"];
+        };
+        CampaignPlacementDraftDto: {
+            /** @enum {string} */
+            slot: "HOME" | "CATEGORY" | "PRODUCT" | "COUNTDOWN" | "NAVIGATION";
+            targetSlug?: string | null;
+            startsTehran?: string | null;
+            endsTehran?: string | null;
+            appearance?: components["schemas"]["CampaignPlacementAppearanceDto"];
+            priority: number;
+        };
+        CampaignLandingDraftDto: {
+            /** @enum {string} */
+            seoMode: "TEMPORARY" | "RECURRING";
+            /** @enum {string} */
+            collectionMode: "FILTERED" | "MANUAL";
+            filters: components["schemas"]["CampaignCollectionFiltersDto"];
+            manualProductSlugs: string[];
+            placements: components["schemas"]["CampaignPlacementDraftDto"][];
+            slug: string;
+            title: string;
+            story: string;
+        };
+        CampaignPlacementMediaDto: {
+            /** @enum {string} */
+            slot: "HOME" | "CATEGORY" | "PRODUCT" | "COUNTDOWN" | "NAVIGATION";
+            media: components["schemas"]["CampaignMediaDto"] | null;
+            mobileMedia: components["schemas"]["CampaignMediaDto"] | null;
+            stillMedia: components["schemas"]["CampaignMediaDto"] | null;
+        };
+        FestivalPublishedVersionDto: {
+            version: number;
+            recordedAt: string;
+        };
+        CampaignLandingEditorDto: {
+            landing: components["schemas"]["CampaignLandingDraftDto"] | null;
+            placementMedia?: components["schemas"]["CampaignPlacementMediaDto"][];
+            publishedVersions?: components["schemas"]["FestivalPublishedVersionDto"][];
+            revision: number;
+        };
+        SaveCampaignLandingDto: {
+            /** @enum {string} */
+            seoMode: "TEMPORARY" | "RECURRING";
+            /** @enum {string} */
+            collectionMode: "FILTERED" | "MANUAL";
+            filters: components["schemas"]["CampaignCollectionFiltersDto"];
+            manualProductSlugs: string[];
+            placements: components["schemas"]["CampaignPlacementDraftDto"][];
+            slug: string;
+            title: string;
+            story: string;
+            expectedRevision: number;
+        };
+        CampaignLandingPreviewDto: {
+            total: number;
+        };
+        RestoreFestivalPublicationDto: {
+            expectedRevision: number;
+            version: number;
+        };
+        CampaignQuotaAdminDto: {
+            slug: string;
+            name: string;
+            limit: number;
+            manualSold: number;
+            revision: number;
+            siteSold: number;
+            reserved: number;
+            remaining: number;
+            sellableStock: number;
+        };
+        SaveCampaignQuotaDto: {
+            slug: string;
+            limit: number;
+            manualSold: number;
+            expectedRevision: number;
+        };
+        FestivalThemeSourceDto: {
+            name: string;
+            version: number;
+        };
+        FestivalArtworkDto: {
+            /** Format: uuid */
+            mediaId?: string;
+            /** Format: uuid */
+            mobileMediaId?: string;
+            /** Format: uuid */
+            stillMediaId?: string;
+        };
+        FestivalHeroSlideDto: {
+            /** Format: uuid */
+            mediaId: string;
+            /** Format: uuid */
+            mobileMediaId?: string;
+            /** Format: uuid */
+            stillMediaId?: string;
+            title: string;
+            subtitle?: string;
+            actionLabel?: string;
+            actionPath?: string;
+        };
+        FestivalSectionDto: {
+            /** @enum {string} */
+            kind: "HERO" | "COUNTDOWN" | "INTRO" | "HIGHLIGHTS" | "CATEGORIES" | "DISCOUNTS" | "PICKS" | "LOW_QUOTA" | "BUDGET" | "OFFERS" | "PRODUCTS" | "FAQ";
+            artwork?: components["schemas"]["FestivalArtworkDto"];
+            /** @enum {string} */
+            layout: "GRID" | "STRIP";
+            slugs?: string[];
+            entries?: components["schemas"]["FestivalEntryDto"][];
+            slides?: components["schemas"]["FestivalHeroSlideDto"][];
+            enabled: boolean;
+            title: string;
+            description?: string;
+            itemLimit?: number;
+            highlighted?: boolean;
+            startsTehran?: string;
+            endsTehran?: string;
+            threshold?: number;
+        };
+        FestivalDesignDto: {
+            theme: components["schemas"]["FestivalThemeDto"];
+            themeSource?: components["schemas"]["FestivalThemeSourceDto"];
+            sections: components["schemas"]["FestivalSectionDto"][];
+            /** @enum {number} */
+            schemaVersion: 1;
+        };
+        FestivalThemePresetDto: {
+            theme: components["schemas"]["FestivalThemeDto"];
+            name: string;
+        };
+        FestivalDesignRevisionDto: {
+            revision: number;
+            recordedAt: string;
+        };
+        FestivalDesignEditorDto: {
+            design: components["schemas"]["FestivalDesignDto"] | null;
+            presets: components["schemas"]["FestivalThemePresetDto"][];
+            history: components["schemas"]["FestivalDesignRevisionDto"][];
+            media: components["schemas"]["CampaignMediaDto"][];
+            revision: number;
+        };
+        SaveFestivalDesignDto: {
+            theme: components["schemas"]["FestivalThemeDto"];
+            themeSource?: components["schemas"]["FestivalThemeSourceDto"];
+            sections: components["schemas"]["FestivalSectionDto"][];
+            /** @enum {number} */
+            schemaVersion: 1;
+            expectedRevision: number;
+            saveThemeAs?: string;
+        };
+        RestoreFestivalDesignDto: {
+            expectedRevision: number;
+            revision: number;
+        };
+        FestivalPreviewDraftDto: {
+            theme: components["schemas"]["FestivalThemeDto"];
+            themeSource?: components["schemas"]["FestivalThemeSourceDto"];
+            sections: components["schemas"]["FestivalSectionDto"][];
+            landing?: components["schemas"]["CampaignLandingDraftDto"];
+            /** @enum {number} */
+            schemaVersion: 1;
+        };
+        FestivalPreviewDto: {
+            navigation?: components["schemas"]["CampaignBannerDto"];
+            announcement?: components["schemas"]["CampaignBannerDto"];
+            design: components["schemas"]["PublicFestivalDesignDto"];
+            products: components["schemas"]["PublicCatalogProductListDto"];
+            title: string;
+            story: string;
+            slug: string;
+            campaignId: string;
+            endsAt: string;
+        };
+        FestivalLibraryThemeDto: {
+            theme: components["schemas"]["FestivalThemeDto"];
+            description: string | null;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            archivedAt: string | null;
+            version: number;
+            name: string;
+        };
+        FestivalThemeLibraryListDto: {
+            presets: components["schemas"]["FestivalThemePresetDto"][];
+            items: components["schemas"]["FestivalLibraryThemeDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        FestivalLibraryVersionDto: {
+            theme: components["schemas"]["FestivalThemeDto"];
+            description: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            name: string;
+            version: number;
+        };
+        FestivalThemeLibraryHistoryDto: {
+            template: components["schemas"]["FestivalLibraryThemeDto"];
+            items: components["schemas"]["FestivalLibraryVersionDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        SaveFestivalThemeDto: {
+            description?: string | null;
+            theme: components["schemas"]["FestivalThemeDto"];
+            expectedVersion?: number;
+            name: string;
+        };
+        ArchiveFestivalThemeDto: {
+            name: string;
+            expectedVersion: number;
+        };
+        CampaignOrderCountsDto: {
+            registered: number;
+            confirmed: number;
+            awaitingReceipt: number;
+            rejectedReceipt: number;
+            pending: number;
+            paymentFailed: number;
+            reconciliation: number;
+            cancelled: number;
+            expired: number;
+            overdueReservations: number;
+        };
+        CampaignOrderOperationDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** @enum {string} */
+            state: "PENDING" | "CONFIRMED" | "RECEIPT_REVIEW" | "RECEIPT_REJECTED" | "PAYMENT_FAILED" | "RECONCILIATION" | "CANCELLED" | "EXPIRED";
+            number: string;
+            discountApplied: boolean;
+        };
+        CampaignQuotaTotalsDto: {
+            products: number;
+            limit: number;
+            siteSold: number;
+            reserved: number;
+            manualSold: number;
+            remaining: number;
+        };
+        CampaignQuotaVariantDto: {
+            name: string | null;
+            priceToman: number | null;
+            sku: string;
+        };
+        CampaignQuotaOperationDto: {
+            slug: string;
+            name: string;
+            limit: number;
+            manualSold: number;
+            revision: number;
+            siteSold: number;
+            reserved: number;
+            remaining: number;
+            sellableStock: number;
+            /** Format: uuid */
+            productId: string;
+            /** @enum {string} */
+            productStatus: "ACTIVE" | "DRAFT" | "ARCHIVED" | "DELETED";
+            defaultPriceToman: number | null;
+            imageUrl: string | null;
+            variants: components["schemas"]["CampaignQuotaVariantDto"][];
+            stockShortfall: number;
+            hasMoreVariants: boolean;
+        };
+        CampaignOperationsFinanceDto: {
+            confirmedMerchandiseDiscountToman: number;
+            confirmedShippingDiscountToman: number;
+        };
+        FestivalOperationsStatusDto: {
+            version: number | null;
+            publicationError: string | null;
+            navigation: boolean;
+            announcement: boolean;
+            stockShortfallProducts: number;
+            missingDefaultPriceProducts: number;
+        };
+        CampaignOperationsCenterDto: {
+            orders: components["schemas"]["CampaignOrderCountsDto"];
+            orderItems: components["schemas"]["CampaignOrderOperationDto"][];
+            quota: components["schemas"]["CampaignQuotaTotalsDto"];
+            quotaItems: components["schemas"]["CampaignQuotaOperationDto"][];
+            finance: components["schemas"]["CampaignOperationsFinanceDto"] | null;
+            salesRuleConfigured: boolean;
+            landingSlug: string | null;
+            /** @enum {string} */
+            publication: "NO_LANDING" | "INACTIVE" | "EMPTY" | "LIVE" | "UNKNOWN" | "HISTORICAL";
+            festival: components["schemas"]["FestivalOperationsStatusDto"] | null;
+            /** Format: date-time */
+            checkedAt: string;
+            orderPage: number;
+            hasMoreOrders: boolean;
+            quotaPage: number;
+            hasMoreQuotas: boolean;
+        };
+        GrowthRevenuePeriodDto: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** @enum {string} */
+            timezone: "Asia/Tehran";
+        };
+        FestivalSalesTotalsDto: {
+            averageOrderToman: number | null;
+            orderConfirmationPercent: number | null;
+            orders: number;
+            confirmedOrders: number;
+            units: number;
+            collectedToman: number;
+            discountToman: number;
+        };
+        FestivalDailySalesDto: {
+            /** Format: date */
+            day: string;
+            confirmedOrders: number;
+            collectedToman: number;
+        };
+        FestivalSalesGroupDto: {
+            slug: string | null;
+            units: number | null;
+            key: string;
+            label: string;
+            orders: number;
+            amountToman: number;
+        };
+        FestivalMeasuredFunnelDto: {
+            visits: number;
+            listVisits: number;
+            itemVisits: number;
+            cartVisits: number;
+            checkoutVisits: number;
+        };
+        FestivalOrderStatusCountDto: {
+            /** @enum {string} */
+            state: "PENDING" | "CONFIRMED" | "RECEIPT_REVIEW" | "RECEIPT_REJECTED" | "PAYMENT_FAILED" | "RECONCILIATION" | "CANCELLED" | "EXPIRED";
+            orders: number;
+        };
+        FestivalReportOrderDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            occurredAt: string;
+            /** @enum {string} */
+            state: "PENDING" | "CONFIRMED" | "RECEIPT_REVIEW" | "RECEIPT_REJECTED" | "PAYMENT_FAILED" | "RECONCILIATION" | "CANCELLED" | "EXPIRED";
+            collectedToman: number | null;
+            number: string;
+        };
+        FestivalAnalyticsDto: {
+            /** Format: uuid */
+            campaignId: string;
+            /** Format: date-time */
+            checkedAt: string;
+            period: components["schemas"]["GrowthRevenuePeriodDto"];
+            totals: components["schemas"]["FestivalSalesTotalsDto"];
+            daily: components["schemas"]["FestivalDailySalesDto"][];
+            topProducts: components["schemas"]["FestivalSalesGroupDto"][];
+            topCategories: components["schemas"]["FestivalSalesGroupDto"][];
+            topSources: components["schemas"]["FestivalSalesGroupDto"][];
+            funnel: components["schemas"]["FestivalMeasuredFunnelDto"] | null;
+            states: components["schemas"]["FestivalOrderStatusCountDto"][];
+            budget: components["schemas"]["CampaignBudgetDto"];
+            quota: components["schemas"]["CampaignQuotaTotalsDto"];
+            groups: components["schemas"]["FestivalSalesGroupDto"][];
+            orders: components["schemas"]["FestivalReportOrderDto"][];
+            quotaItems: components["schemas"]["CampaignQuotaOperationDto"][];
+            name: string;
+            page: number;
+            hasMore: boolean;
+        };
+        PublicCatalogCategoryPageDto: {
+            description: string | null;
+            parentId: string | null;
+            hasProducts?: boolean;
+            image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            featuredImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            activeProductCount?: number;
+            activeSubtreeProductCount?: number;
+            heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            /** Format: date-time */
+            updatedAt?: string;
+            id: string;
+            name: string;
+            slug: string;
+            sortOrder: number;
+        };
+        PublicCatalogBrandPageDto: {
+            description: string | null;
+            hasProducts?: boolean;
+            image: components["schemas"]["PublicCatalogMediaDto"] | null;
+            heroImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            heroMobileImage?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            originCountry: components["schemas"]["PublicCatalogCountryDto"] | null;
+            seoTitle?: string | null;
+            seoDescription?: string | null;
+            seoCanonicalPath?: string | null;
+            seoNoIndex?: boolean;
+            seoOgMedia?: components["schemas"]["PublicCatalogMediaDto"] | null;
+            /** Format: date-time */
+            updatedAt?: string;
+            id: string;
+            name: string;
+            slug: string;
+        };
+        PublicCatalogFacetsQueryDto: {
+            /** @description Use the checkout warehouse and published bundle components. */
+            checkoutStockOnly?: boolean;
+            /** @default 1 */
+            page: number;
+            /** @default 24 */
+            pageSize: number;
+            q?: string;
+            scopeCategory?: string;
+            scopeBrand?: string;
+            scopeCountry?: string;
+            categories?: string[];
+            brands?: string[];
+            /** @enum {string} */
+            availability?: "in-stock" | "out-of-stock";
+            sizeIds?: string[];
+            minPriceToman?: number;
+            maxPriceToman?: number;
+            minWeightGrams?: number;
+            maxWeightGrams?: number;
+            minLengthMm?: number;
+            maxLengthMm?: number;
+            attributes?: components["schemas"]["PublicCatalogFacetFilterDto"][];
+            /**
+             * @default newest
+             * @enum {string}
+             */
+            sort: "newest" | "price-asc" | "price-desc" | "name-asc" | "availability" | "best-selling" | "featured";
+        };
+        PublicCatalogFacetRangeDto: {
+            min: number;
+            max: number;
+            count: number;
+        };
+        PublicCatalogAttributeFacetDto: {
+            code: string;
+            label: string;
+            /** @enum {string} */
+            kind: "SELECT" | "NUMBER" | "RANGE" | "BOOLEAN" | "MULTI_SELECT";
+            /** @enum {string} */
+            unit: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
+            options: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            range: components["schemas"]["PublicCatalogFacetRangeDto"] | null;
+        };
+        PublicCatalogFacetsDto: {
+            categories: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            brands: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            availability: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            sizes: components["schemas"]["PublicCatalogFacetOptionDto"][];
+            priceToman: components["schemas"]["PublicCatalogFacetRangeDto"] | null;
+            weightGrams: components["schemas"]["PublicCatalogFacetRangeDto"] | null;
+            lengthMm: components["schemas"]["PublicCatalogFacetRangeDto"] | null;
+            attributes: components["schemas"]["PublicCatalogAttributeFacetDto"][];
+        };
+        PublicFacetedCatalogDto: {
+            items: components["schemas"]["PublicCatalogProductSummaryDto"][];
+            ranking?: components["schemas"]["PublicCatalogRankingDto"];
+            facets: components["schemas"]["PublicCatalogFacetsDto"];
             page: number;
             pageSize: number;
             total: number;
             totalPages: number;
         };
         PublicCatalogProductSuggestionDto: {
+            campaignOffer?: components["schemas"]["CatalogCampaignOfferDto"] | null;
+            campaignQuota?: components["schemas"]["PublicCampaignQuotaDto"];
             salePriceToman: number | null;
             compareAtPriceToman: number | null;
             primaryMedia: components["schemas"]["PublicCatalogMediaDto"] | null;
@@ -3820,8 +6450,10 @@ export interface components {
         PublicCatalogVariantDto: {
             name: string | null;
             weightGrams: number | null;
+            lengthMm?: number | null;
             salePriceToman: number | null;
             compareAtPriceToman: number | null;
+            campaignOffer?: components["schemas"]["CatalogCampaignOfferDto"] | null;
             size: components["schemas"]["PublicCatalogSizeDto"] | null;
             /** @enum {string} */
             inventoryMode: "OWN" | "COMPONENTS";
@@ -3836,19 +6468,50 @@ export interface components {
             value: string;
             sortOrder: number;
         };
+        CatalogAttributeOptionDto: {
+            code: string;
+            label: string;
+        };
+        CatalogAttributeValueDto: {
+            /** @enum {string} */
+            unit?: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
+            optionCode?: string;
+            optionCodes?: string[];
+            number?: number;
+            min?: number;
+            max?: number;
+            boolean?: boolean;
+        };
+        PublicTypedCatalogAttributeDto: {
+            /** @enum {string} */
+            kind: "SELECT" | "NUMBER" | "RANGE" | "BOOLEAN" | "MULTI_SELECT";
+            /** @enum {string} */
+            unit: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
+            options: components["schemas"]["CatalogAttributeOptionDto"][];
+            value: components["schemas"]["CatalogAttributeValueDto"];
+            code: string;
+            label: string;
+            definitionVersion: number;
+        };
         PublicCatalogProductDetailDto: {
+            matchingVariants?: components["schemas"]["PublicCatalogMatchingVariantDto"][];
             shortDescription: string | null;
             seoCanonicalPath?: string | null;
             seoNoIndex?: boolean;
             /** Format: date-time */
             updatedAt?: string;
             salePriceToman: number | null;
+            defaultSalePriceToman?: number | null;
+            defaultCompareAtPriceToman?: number | null;
+            campaignOffer?: components["schemas"]["CatalogCampaignOfferDto"] | null;
+            campaignQuota?: components["schemas"]["PublicCampaignQuotaDto"];
             compareAtPriceToman: number | null;
             /** @enum {string} */
             sizeMode: "NONE" | "FREE_SIZE" | "SIZED";
             brand: components["schemas"]["PublicCatalogBrandDto"] | null;
             categories: components["schemas"]["PublicCatalogCategoryDto"][];
             primaryMedia: components["schemas"]["PublicCatalogMediaDto"] | null;
+            primaryCategoryId?: string;
             /** @enum {string} */
             purchaseMode: "SIMPLE" | "COMPOSITE";
             /** @enum {string|null} */
@@ -3861,6 +6524,7 @@ export interface components {
             variants: components["schemas"]["PublicCatalogVariantDto"][];
             media: components["schemas"]["PublicCatalogMediaDto"][];
             attributes: components["schemas"]["PublicCatalogProductAttributeDto"][];
+            typedAttributes?: components["schemas"]["PublicTypedCatalogAttributeDto"][];
             id: string;
             name: string;
             slug: string;
@@ -3908,6 +6572,21 @@ export interface components {
             imageId?: string | null;
             sortOrder?: number;
             isActive?: boolean;
+        };
+        MergeCategoryDto: {
+            /** Format: uuid */
+            targetCategoryId: string;
+            /** @default true */
+            dryRun: boolean;
+        };
+        CategoryMergeResultDto: {
+            merged: boolean;
+            childCount: number;
+            sourceProductCount: number;
+            targetProductCount: number;
+            sharedProductCount: number;
+            sourcePath: string;
+            targetPath: string;
         };
         CreateBrandDto: {
             name: string;
@@ -3999,6 +6678,7 @@ export interface components {
             /** Format: uuid */
             sizeId?: string;
             weightGrams?: number;
+            lengthMm?: number;
             salePriceToman?: number;
             compareAtPriceToman?: number;
             isActive?: boolean;
@@ -4047,6 +6727,8 @@ export interface components {
             salePriceToman?: number;
             compareAtPriceToman?: number;
             categoryIds?: string[];
+            /** Format: uuid */
+            primaryCategoryId?: string;
             variants: components["schemas"]["CreateProductVariantDto"][];
             media?: components["schemas"]["CreateProductMediaDto"][];
             attributes?: components["schemas"]["ProductAttributeInputDto"][];
@@ -4060,6 +6742,7 @@ export interface components {
             /** Format: uuid */
             sizeId?: string | null;
             weightGrams?: number | null;
+            lengthMm?: number | null;
             salePriceToman?: number | null;
             compareAtPriceToman?: number | null;
             isActive?: boolean;
@@ -4090,6 +6773,8 @@ export interface components {
             salePriceToman?: number | null;
             compareAtPriceToman?: number | null;
             categoryIds?: string[];
+            /** Format: uuid */
+            primaryCategoryId?: string | null;
             attributes?: components["schemas"]["ProductAttributeInputDto"][];
         };
         UpdateProductStatusDto: {
@@ -4103,6 +6788,157 @@ export interface components {
             altText?: string | null;
             isPrimary?: boolean;
             sortOrder?: number;
+        };
+        CatalogAttributeLegacyMappingDto: {
+            value: components["schemas"]["CatalogAttributeValueDto"];
+            legacyValue: string;
+        };
+        CatalogAttributeDefinitionDto: {
+            /** @enum {string} */
+            kind: "SELECT" | "NUMBER" | "RANGE" | "BOOLEAN" | "MULTI_SELECT";
+            /** @enum {string} */
+            unit: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
+            /** @enum {string} */
+            source: "MANUAL" | "VARIANT_SIZE" | "VARIANT_LENGTH" | "VARIANT_WEIGHT";
+            isRequired?: boolean;
+            options: components["schemas"]["CatalogAttributeOptionDto"][];
+            legacyMappings: components["schemas"]["CatalogAttributeLegacyMappingDto"][];
+            code: string;
+            version: number;
+            label: string;
+            isActive: boolean;
+            sortOrder: number;
+            categoryIds: string[];
+            excludedCategoryIds: string[];
+        };
+        CreateCatalogAttributeDto: {
+            /** @enum {string} */
+            kind: "SELECT" | "NUMBER" | "RANGE" | "BOOLEAN" | "MULTI_SELECT";
+            /** @enum {string} */
+            unit: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
+            /** @enum {string} */
+            source: "MANUAL" | "VARIANT_SIZE" | "VARIANT_LENGTH" | "VARIANT_WEIGHT";
+            isRequired?: boolean;
+            options: components["schemas"]["CatalogAttributeOptionDto"][];
+            legacyMappings: components["schemas"]["CatalogAttributeLegacyMappingDto"][];
+            code: string;
+            label: string;
+            isActive: boolean;
+            sortOrder: number;
+            categoryIds: string[];
+            excludedCategoryIds: string[];
+        };
+        UpdateCatalogAttributeDto: {
+            /** @enum {string} */
+            kind: "SELECT" | "NUMBER" | "RANGE" | "BOOLEAN" | "MULTI_SELECT";
+            /** @enum {string} */
+            unit: "NONE" | "GRAM" | "MILLIMETER" | "SIZE" | "PER_MILLE" | "BAR";
+            /** @enum {string} */
+            source: "MANUAL" | "VARIANT_SIZE" | "VARIANT_LENGTH" | "VARIANT_WEIGHT";
+            isRequired?: boolean;
+            options: components["schemas"]["CatalogAttributeOptionDto"][];
+            legacyMappings: components["schemas"]["CatalogAttributeLegacyMappingDto"][];
+            expectedVersion: number;
+            label: string;
+            isActive: boolean;
+            sortOrder: number;
+            categoryIds: string[];
+            excludedCategoryIds: string[];
+        };
+        CatalogProductAttributeDto: {
+            definition: components["schemas"]["CatalogAttributeDefinitionDto"];
+            value: components["schemas"]["CatalogAttributeValueDto"] | null;
+            needsCompletion?: boolean;
+            definitionVersion: number | null;
+            legacyValue: string | null;
+            revision: number;
+        };
+        SetCatalogProductAttributeDto: {
+            definitionVersion: number;
+            expectedRevision: number;
+            value?: components["schemas"]["CatalogAttributeValueDto"];
+            legacyValue?: string;
+            clear?: boolean;
+        };
+        CatalogMerchandisingDto: {
+            enabled: boolean;
+            pinned: boolean;
+            weight: number;
+            /** Format: date-time */
+            startsAt: string | null;
+            /** Format: date-time */
+            endsAt: string | null;
+            revision: number;
+        };
+        UpdateCatalogMerchandisingDto: {
+            enabled: boolean;
+            pinned: boolean;
+            weight: number;
+            /** Format: date-time */
+            startsAt?: string | null;
+            /** Format: date-time */
+            endsAt?: string | null;
+            expectedRevision: number;
+        };
+        PublicPromotionDto: {
+            /** @enum {string} */
+            kind: "PERCENT" | "FIXED" | "THRESHOLD" | "BUNDLE" | "FREE_SHIPPING";
+            productIds: string[];
+            categoryIds: string[];
+            /** Format: date-time */
+            endsAt: string;
+            name: string;
+            allProducts: boolean;
+        };
+        PublicPromotionsDto: {
+            items: components["schemas"]["PublicPromotionDto"][];
+            available: boolean;
+        };
+        PromotionPercentageOverrideDto: {
+            /** Format: uuid */
+            productId: string;
+            /** Format: uuid */
+            variantId?: string | null;
+            rateBps: number;
+        };
+        SavePromotionDto: {
+            /** @enum {string} */
+            kind: "PERCENT" | "FIXED" | "THRESHOLD" | "BUNDLE" | "FREE_SHIPPING";
+            percentageOverrides?: components["schemas"]["PromotionPercentageOverrideDto"][];
+            bundleProductSlugs: string[];
+            couponCode?: string | null;
+            maxUses?: number | null;
+            value: number;
+            minSubtotalToman: number;
+            maxDiscountToman: number;
+            maxDiscountBps: number;
+            priority: number;
+            expectedVersion: number;
+        };
+        PromotionRateTargetDto: {
+            /** Format: uuid */
+            productId: string;
+            /** Format: uuid */
+            variantId: string | null;
+            variantLabel: string | null;
+            productName: string;
+        };
+        AdminPromotionDto: {
+            rule: components["schemas"]["SavePromotionDto"] | null;
+            rateTargets?: components["schemas"]["PromotionRateTargetDto"][];
+        };
+        CampaignProductPriceRowDto: {
+            variantId: string | null;
+            regularToman: number | null;
+            offer: components["schemas"]["CatalogCampaignOfferDto"] | null;
+            label: string;
+            active: boolean;
+        };
+        CampaignProductPricePreviewDto: {
+            /** Format: uuid */
+            productId?: string;
+            prices: components["schemas"]["CampaignProductPriceRowDto"][];
+            name: string;
         };
         MarkSupplierPayablePaidDto: {
             paymentReference?: string;
@@ -4159,6 +6995,504 @@ export interface components {
         };
         ReverseOrderCostDto: {
             reason?: string;
+        };
+        WalletSourceBalanceDto: {
+            /** @enum {string} */
+            source: "PURCHASE" | "REFERRAL";
+            availableToman: number;
+            pendingToman: number;
+            reservedToman: number;
+            expiredToman: number;
+        };
+        WalletBalanceDto: {
+            /** Format: date-time */
+            nextExpiryAt: string | null;
+            nextExpiryToman?: number;
+            sourceBalances?: components["schemas"]["WalletSourceBalanceDto"][];
+            pendingToman: number;
+            availableToman: number;
+            reservedToman: number;
+        };
+        CustomerWalletMovementDto: {
+            /** Format: uuid */
+            lotId: string;
+            /** @enum {string} */
+            source: "PURCHASE" | "REFERRAL";
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            reservationOrderId: string | null;
+            /** @enum {string|null} */
+            fromBucket: "PENDING" | "AVAILABLE" | "RESERVED" | "CAPTURED" | "EXPIRED" | "REVOKED" | null;
+            /** @enum {string} */
+            toBucket: "PENDING" | "AVAILABLE" | "RESERVED" | "CAPTURED" | "EXPIRED" | "REVOKED";
+            amountToman: number;
+            /** Format: uuid */
+            originOrderId: string | null;
+        };
+        CustomerWalletOperationDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "GRANT" | "ACTIVATE" | "RESERVE" | "RELEASE" | "CAPTURE" | "EXPIRE" | "REVOKE_GRANT" | "REVERSE_CAPTURE";
+            /** Format: date-time */
+            recordedAt: string;
+            movements: components["schemas"]["CustomerWalletMovementDto"][];
+        };
+        CustomerWalletLedgerDto: {
+            items: components["schemas"]["CustomerWalletOperationDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        WalletMovementDto: {
+            /** Format: uuid */
+            lotId: string;
+            /** Format: uuid */
+            originOrderId: string;
+            /** @enum {string} */
+            source: "PURCHASE" | "REFERRAL";
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            reservationId: string | null;
+            /** Format: uuid */
+            reservationOrderId: string | null;
+            /** @enum {string|null} */
+            fromBucket: "PENDING" | "AVAILABLE" | "RESERVED" | "CAPTURED" | "EXPIRED" | "REVOKED" | null;
+            /** @enum {string} */
+            toBucket: "PENDING" | "AVAILABLE" | "RESERVED" | "CAPTURED" | "EXPIRED" | "REVOKED";
+            sourceKey: string;
+            policyVersion: number;
+            amountToman: number;
+        };
+        WalletOperationDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "GRANT" | "ACTIVATE" | "RESERVE" | "RELEASE" | "CAPTURE" | "EXPIRE" | "REVOKE_GRANT" | "REVERSE_CAPTURE";
+            /** Format: date-time */
+            recordedAt: string;
+            /** Format: uuid */
+            actorUserId: string | null;
+            reason: string | null;
+            movements: components["schemas"]["WalletMovementDto"][];
+        };
+        WalletLedgerPageDto: {
+            items: components["schemas"]["WalletOperationDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        WalletCorrectionDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** @enum {string} */
+            kind: "REVOKE_GRANT" | "REVERSE_CAPTURE";
+            /**
+             * Format: uuid
+             * @description Lot ID for REVOKE_GRANT or reservation ID for REVERSE_CAPTURE.
+             */
+            targetId: string;
+            amountToman: number;
+            reason: string;
+        };
+        PurchaseRewardJobCountDto: {
+            /** @enum {string} */
+            status: "PENDING" | "PROCESSING" | "WAITING" | "COMPLETED" | "SKIPPED" | "DEAD_LETTER";
+            count: number;
+        };
+        DeadLetterPurchaseRewardJobDto: {
+            /** Format: uuid */
+            orderId: string;
+            attempts: number;
+            resultCode: string | null;
+        };
+        PurchaseRewardMetricsDto: {
+            statuses: components["schemas"]["PurchaseRewardJobCountDto"][];
+            due: number;
+            /** Format: date-time */
+            oldestDueAt: string | null;
+            enabled: boolean;
+            deadLetters: components["schemas"]["DeadLetterPurchaseRewardJobDto"][];
+        };
+        CustomerRewardJobDto: {
+            /** Format: uuid */
+            orderId: string;
+            attempts: number;
+            resultCode: string | null;
+            /** @enum {string} */
+            status: "PENDING" | "PROCESSING" | "WAITING" | "COMPLETED" | "SKIPPED" | "DEAD_LETTER";
+            /** Format: date-time */
+            nextAttemptAt: string;
+            /** Format: date-time */
+            reviewHeldAt: string | null;
+        };
+        CustomerRewardJobsPageDto: {
+            items: components["schemas"]["CustomerRewardJobDto"][];
+        };
+        RewardReviewHoldDto: Record<string, never>;
+        RetriedPurchaseRewardJobDto: {
+            /** Format: uuid */
+            orderId: string;
+        };
+        WalletCommitmentTotalsDto: {
+            availableToman: number;
+            pendingToman: number;
+            reservedToman: number;
+            expiredToman: number;
+            capturedToman: number;
+            revokedToman: number;
+            awaitingExpiryToman: number;
+        };
+        WalletReconciliationIssueDto: {
+            /** @enum {string} */
+            subject: "LOT" | "RESERVATION";
+            /** Format: uuid */
+            subjectId: string;
+            /** Format: uuid */
+            userId: string;
+            /** Format: uuid */
+            orderId: string;
+            orderNumber: string | null;
+            /** @enum {string} */
+            code: "LEDGER_MISMATCH" | "RESERVATION_MISMATCH" | "SETTLEMENT_MISMATCH" | "RECEIPT_PENDING" | "PAYMENT_UNCERTAIN" | "RESERVATION_OVERDUE";
+            /** Format: date-time */
+            detectedAt: string;
+            /** Format: date-time */
+            resolvedAt: string | null;
+        };
+        WalletMaintenanceReportDto: {
+            /** Format: date-time */
+            asOf: string;
+            totals: components["schemas"]["WalletCommitmentTotalsDto"];
+            issues: components["schemas"]["WalletReconciliationIssueDto"][];
+            enabled: boolean;
+            page: number;
+            hasMore: boolean;
+        };
+        GrowthCreditRolloutStatusDto: {
+            /** @enum {string} */
+            mode: "LIVE" | "SHADOW" | "PAUSED";
+            /** Format: date-time */
+            changedAt: string;
+        };
+        UpdateGrowthCreditModeDto: {
+            /** @enum {string} */
+            mode: "LIVE" | "SHADOW" | "PAUSED";
+            expectedVersion: number;
+        };
+        GrowthCreditModeDto: {
+            /** @enum {string} */
+            mode: "LIVE" | "SHADOW" | "PAUSED";
+            /** Format: date-time */
+            changedAt: string;
+        };
+        RewardPolicyVersionDto: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            requestedEffectiveAt: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            publishedById: string | null;
+            /** Format: date-time */
+            effectiveAt: string | null;
+            version: number;
+            enabled: boolean;
+            createdById: string;
+        };
+        RewardPolicyListDto: {
+            items: components["schemas"]["RewardPolicyVersionDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        RewardEligibilityDto: {
+            allowCoupon: boolean;
+            allowedCategoryIds: string[];
+            excludedCategoryIds: string[];
+            excludedProductIds: string[];
+        };
+        RewardBudgetDto: {
+            rewardPerOrderToman: number;
+            rewardPerCustomerPeriodToman: number;
+            rewardPerPeriodToman: number;
+            incentivesPerOrderToman: number;
+            incentivesPerCustomerPeriodToman: number;
+            incentivesPerPeriodToman: number;
+        };
+        RewardGrantRuleDto: {
+            code: string;
+            enabled: boolean;
+            priority: number;
+            minimumToman: number;
+            maximumExclusiveToman?: number | null;
+            capToman: number;
+            /** @enum {string} */
+            purchaseRank: "ANY" | "FIRST" | "SECOND" | "THIRD_OR_LATER";
+            /** @enum {string} */
+            method: "PERCENT" | "FIXED";
+            value: number;
+        };
+        RewardRedemptionBandDto: {
+            code: string;
+            enabled: boolean;
+            priority: number;
+            minimumToman: number;
+            maximumExclusiveToman?: number | null;
+            capToman: number;
+            rateBps: number;
+        };
+        RewardPolicyDefinitionDto: {
+            enabled: boolean;
+            expiryDays: number;
+            /**
+             * @description Days after delivery. Zero activates at the next worker run.
+             * @default 7
+             */
+            activationDelayDays: number;
+            grantEligibility: components["schemas"]["RewardEligibilityDto"];
+            redemptionEligibility: components["schemas"]["RewardEligibilityDto"];
+            budget: components["schemas"]["RewardBudgetDto"];
+            grantRules: components["schemas"]["RewardGrantRuleDto"][];
+            redemptionBands: components["schemas"]["RewardRedemptionBandDto"][];
+        };
+        RewardPolicyDetailDto: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            requestedEffectiveAt: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            publishedById: string | null;
+            /** Format: date-time */
+            effectiveAt: string | null;
+            definition: components["schemas"]["RewardPolicyDefinitionDto"];
+            version: number;
+            enabled: boolean;
+            createdById: string;
+        };
+        ActiveRewardPolicyDto: {
+            policy: components["schemas"]["RewardPolicyDetailDto"] | null;
+        };
+        RewardActivationTimingDto: {
+            policyVersion: number | null;
+            activationDelayDays: number;
+            expiryDays: number;
+        };
+        UpdateRewardActivationTimingDto: {
+            /** Format: uuid */
+            requestId: string;
+            expectedPolicyVersion: number | null;
+            activationDelayDays: number;
+            expiryDays?: number;
+        };
+        CreateRewardPolicyDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** Format: date-time */
+            requestedEffectiveAt?: string | null;
+            definition: components["schemas"]["RewardPolicyDefinitionDto"];
+        };
+        RewardSampleLineDto: {
+            /** Format: uuid */
+            productId: string;
+            categoryIds: string[];
+            merchandiseToman: number;
+            directDiscountToman: number;
+            settledCreditToman: number;
+            refundedCashToman: number;
+        };
+        RewardPeriodUsageDto: {
+            customerRewardsToman: number;
+            periodRewardsToman: number;
+            customerIncentivesToman: number;
+            periodIncentivesToman: number;
+        };
+        RewardPolicySimulationRequestDto: {
+            lines: components["schemas"]["RewardSampleLineDto"][];
+            /** @enum {string} */
+            outcome: "UNPAID" | "PAID" | "CANCELLED" | "FULLY_RETURNED";
+            previousCompletedPurchases: number;
+            couponApplied: boolean;
+            shippingDiscountToman: number;
+            otherOrderIncentivesToman: number;
+            availableCreditToman: number;
+            campaignRedemptionCapToman?: number | null;
+            usage: components["schemas"]["RewardPeriodUsageDto"];
+            version: number;
+        };
+        RewardSimulationDto: {
+            /** @enum {string} */
+            purchaseRank: "FIRST" | "SECOND" | "THIRD_OR_LATER";
+            grantRuleCode: string | null;
+            redemptionBandCode: string | null;
+            version: number;
+            enabled: boolean;
+            rewardBaseToman: number;
+            redemptionBaseToman: number;
+            calculatedRewardToman: number;
+            estimatedRewardToman: number;
+            maxRedemptionToman: number;
+            existingOrderIncentivesToman: number;
+            remainingRewardBudgetToman: number;
+            existingIncentivesExceedLimit: boolean;
+            expiryDays: number;
+        };
+        PolicySimulationDecisionDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** @enum {string} */
+            decision: "RECOMMEND" | "HOLD" | "REJECT";
+        };
+        PolicyBasketLineDto: {
+            productSlug: string;
+            variantSku?: string;
+            quantity: number;
+        };
+        ReferralRewardUseDto: {
+            recipientUses: number;
+            committedToman: number;
+            ruleCode: string;
+        };
+        ReferralRiskMetricDto: {
+            /** @enum {string} */
+            code: "SELF_REFERRAL" | "SHARED_DEVICE" | "SHARED_NETWORK" | "SHARED_ADDRESS" | "SHARED_RECIPIENT" | "VERIFIED_PAYMENT_REUSE" | "REFERRAL_FREQUENCY" | "CANCELLED_ORDERS" | "FAST_PAYMENT";
+            value: number;
+        };
+        PolicyReferralScenarioDto: {
+            version: number;
+            riskVersion?: number;
+            referrerHasPurchased: boolean;
+            delivered: boolean;
+            returnPending: boolean;
+            referrerIncentivesToman: number;
+            claimAgeDays: number;
+            programCommittedToman: number;
+            usage: components["schemas"]["ReferralRewardUseDto"][];
+            metrics: components["schemas"]["ReferralRiskMetricDto"][];
+        };
+        PolicyBasketScenarioDto: {
+            version: number;
+            review?: components["schemas"]["PolicySimulationDecisionDto"];
+            items: components["schemas"]["PolicyBasketLineDto"][];
+            /** Format: date-time */
+            occurredAt: string;
+            /** @enum {string} */
+            outcome: "PAID" | "UNPAID" | "CANCELLED" | "FULLY_RETURNED";
+            previousCompletedPurchases: number;
+            shippingToman: number;
+            availableCreditToman: number;
+            /** Format: uuid */
+            campaignId?: string;
+            couponApplied: boolean;
+            hadPriorPaidOrder?: boolean;
+            promotionPreviouslyRedeemed?: boolean;
+            usage: components["schemas"]["RewardPeriodUsageDto"];
+            referral?: components["schemas"]["PolicyReferralScenarioDto"];
+        };
+        PolicyBasketResultLineDto: {
+            productSlug: string;
+            variantSku?: string;
+            quantity: number;
+            defaultPriceToman: number | null;
+            unitPriceToman: number;
+            merchandiseDiscountToman: number;
+            referralDiscountToman: number;
+            walletToman: number;
+        };
+        ReferralRewardPreviewLineDto: {
+            /** @enum {string} */
+            recipient: "REFERRER" | "REFERRED";
+            ruleCode: string | null;
+            /** @enum {string} */
+            reason: "AWARDED" | "PROGRAM_DISABLED" | "UNCONFIRMED" | "NO_MATCH" | "USE_LIMIT" | "BUDGET_LIMIT" | "VALUE_LIMIT";
+            expiryDays: number | null;
+            eligibleToman: number;
+            amountToman: number;
+        };
+        ReferralRewardPreviewDto: {
+            recipients: components["schemas"]["ReferralRewardPreviewLineDto"][];
+            totalToman: number;
+        };
+        ReferralRiskEvidenceDto: {
+            /** @enum {string} */
+            code: "SELF_REFERRAL" | "SHARED_DEVICE" | "SHARED_NETWORK" | "SHARED_ADDRESS" | "SHARED_RECIPIENT" | "VERIFIED_PAYMENT_REUSE" | "REFERRAL_FREQUENCY" | "CANCELLED_ORDERS" | "FAST_PAYMENT";
+            value: number;
+            weight: number;
+        };
+        ReferralRiskPreviewDto: {
+            /** @enum {string} */
+            action: "ALLOW" | "REVIEW" | "HOLD" | "REJECT";
+            /** @enum {string} */
+            confidence: "LOW" | "MEDIUM" | "HIGH";
+            evidence: components["schemas"]["ReferralRiskEvidenceDto"][];
+            score: number;
+        };
+        PolicyBasketResultDto: {
+            items: components["schemas"]["PolicyBasketResultLineDto"][];
+            campaignRevision: number | null;
+            promotionVersion: number | null;
+            remainingCampaignBudgetToman: number | null;
+            reward: components["schemas"]["RewardSimulationDto"];
+            referral: components["schemas"]["ReferralRewardPreviewDto"] | null;
+            risk: components["schemas"]["ReferralRiskPreviewDto"] | null;
+            resolvedRiskVersion: number | null;
+            warnings: string[];
+            /** Format: uuid */
+            reviewId: string | null;
+            merchandiseToman: number;
+            merchandiseDiscountToman: number;
+            shippingToman: number;
+            shippingDiscountToman: number;
+            referralDiscountToman: number;
+            walletToman: number;
+            payableToman: number;
+            activationDelayDays: number;
+        };
+        PolicyHistoryScenarioDto: {
+            version: number;
+            review?: components["schemas"]["PolicySimulationDecisionDto"];
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            pendingOnly?: boolean;
+        };
+        PolicyHistoryResultDto: {
+            /** Format: uuid */
+            reviewId: string | null;
+            version: number;
+            pendingOnly: boolean;
+            scannedOrders: number;
+            evaluatedOrders: number;
+            withoutEvidence: number;
+            truncated: boolean;
+            recordedRewardToman: number;
+            estimatedRewardToman: number;
+            limitedOrders: number;
+            fingerprint: string;
+        };
+        PolicyReviewDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            actorUserId: string;
+            /** @enum {string} */
+            mode: "BASKET" | "HISTORY";
+            /** @enum {string} */
+            decision: "RECOMMEND" | "HOLD" | "REJECT";
+            /** Format: date-time */
+            createdAt: string;
+            input: {
+                [key: string]: unknown;
+            };
+            result: {
+                [key: string]: unknown;
+            };
+        };
+        PolicyReviewListDto: {
+            items: components["schemas"]["PolicyReviewDto"][];
+            page: number;
+            hasMore: boolean;
         };
         GuideMediaDto: {
             id: string;
@@ -4391,6 +7725,286 @@ export interface components {
             status: "DRAFT" | "ARCHIVED" | "PUBLISHED";
             expectedVersion: number;
         };
+        CreateCampaignLinkDto: {
+            content?: string;
+            destination: string;
+            campaign: string;
+            campaignId: string;
+            source: string;
+            medium: string;
+        };
+        CampaignLinkDto: {
+            /** Format: uri */
+            url: string;
+            campaignId: string;
+            campaign: string;
+        };
+        GrowthRevenueSummaryDto: {
+            period: components["schemas"]["GrowthRevenuePeriodDto"];
+            /** @enum {string} */
+            currency: "TOMAN";
+            paymentChannelFeeToman: number | null;
+            shippingProviderCostToman: number | null;
+            campaignDiscountToman: number | null;
+            walletAppliedToman: number | null;
+            marketingChannelCostToman: number | null;
+            submittedOrderCount: number;
+            paidOrderCount: number;
+            attributedPaidOrderCount: number;
+            paidOrderWithoutFinanceSnapshotCount: number;
+            deliveredPaidOrderCount: number;
+            cancelledOrderCount: number;
+            expiredOrderCount: number;
+            receiptSubmittedCount: number;
+            awaitingReceiptReviewOrderCount: number;
+            receiptRejectedCount: number;
+            paymentReconciliationCount: number;
+            receivedReturnCount: number;
+            confirmedRefundCount: number;
+            merchandiseToman: number;
+            platingToman: number;
+            orderDiscountToman: number;
+            shippingChargedToman: number;
+            taxToman: number;
+            collectedToman: number;
+            refundedToman: number;
+            netCollectedToman: number;
+        };
+        GrowthRevenueEventDto: {
+            /** Format: uuid */
+            orderId: string;
+            /** @enum {string} */
+            kind: "order_submitted" | "payment_receipt_submitted" | "payment_receipt_rejected" | "payment_reconciliation_required" | "purchase_confirmed" | "order_delivered" | "cancellation" | "order_expired" | "return_received" | "refund_adjustment" | "payment_channel_fee" | "shipping_provider_cost";
+            /** Format: date-time */
+            occurredAt: string;
+            amountToman: number | null;
+            provider: string | null;
+            source: string | null;
+            medium: string | null;
+            campaign: string | null;
+            campaignId: string | null;
+            eventId: string;
+        };
+        GrowthRevenueEventsDto: {
+            period: components["schemas"]["GrowthRevenuePeriodDto"];
+            items: components["schemas"]["GrowthRevenueEventDto"][];
+            page: number;
+            limit: number;
+            total: number;
+        };
+        GrowthDashboardMetricsDto: {
+            walletAppliedToman: number | null;
+            conversionPercent: number | null;
+            averageOrderToman: number | null;
+            recordedSpendToman: number | null;
+            recordedSpendPerConfirmedOrderToman: number | null;
+            measuredVisits: number | null;
+            itemListViews: number | null;
+            itemSelections: number | null;
+            itemViews: number | null;
+            cartAdds: number | null;
+            checkouts: number | null;
+            confirmedCustomers: number;
+            newCustomers: number;
+            returningCustomers: number;
+            submittedOrders: number;
+            confirmedOrders: number;
+            campaignAttributedOrders: number;
+            confirmedSubmissions: number;
+            collectedToman: number;
+            refundedToman: number;
+            netCollectedToman: number;
+            orderDiscountToman: number;
+        };
+        GrowthDashboardGroupDto: {
+            walletAppliedToman: number | null;
+            conversionPercent: number | null;
+            averageOrderToman: number | null;
+            recordedSpendToman: number | null;
+            recordedSpendPerConfirmedOrderToman: number | null;
+            measuredVisits: number | null;
+            itemListViews: number | null;
+            itemSelections: number | null;
+            itemViews: number | null;
+            cartAdds: number | null;
+            checkouts: number | null;
+            source: string | null;
+            medium: string | null;
+            campaign: string | null;
+            campaignId: string | null;
+            confirmedCustomers: number;
+            newCustomers: number;
+            returningCustomers: number;
+            submittedOrders: number;
+            confirmedOrders: number;
+            campaignAttributedOrders: number;
+            confirmedSubmissions: number;
+            collectedToman: number;
+            refundedToman: number;
+            netCollectedToman: number;
+            orderDiscountToman: number;
+        };
+        GrowthDashboardDayDto: {
+            /** Format: date */
+            day: string;
+            walletAppliedToman: number | null;
+            collectedToman: number;
+            netCollectedToman: number;
+            confirmedOrders: number;
+            campaignAttributedOrders: number;
+            newCustomers: number;
+            orderDiscountToman: number;
+        };
+        GrowthDashboardVisitStagesDto: {
+            itemList: number;
+            item: number;
+            cart: number;
+            checkout: number;
+        };
+        GrowthDashboardCampaignLeaderDto: {
+            campaignId: string;
+            campaign: string;
+            confirmedOrders: number;
+        };
+        GrowthDashboardChannelLeaderDto: {
+            medium: string;
+            submittedOrders: number;
+            confirmedSubmissions: number;
+        };
+        GrowthDashboardDto: {
+            period: components["schemas"]["GrowthRevenuePeriodDto"];
+            totals: components["schemas"]["GrowthDashboardMetricsDto"];
+            items: components["schemas"]["GrowthDashboardGroupDto"][];
+            daily: components["schemas"]["GrowthDashboardDayDto"][];
+            visitStages: components["schemas"]["GrowthDashboardVisitStagesDto"] | null;
+            leadingCampaign: components["schemas"]["GrowthDashboardCampaignLeaderDto"] | null;
+            leadingChannel: components["schemas"]["GrowthDashboardChannelLeaderDto"] | null;
+            /** Format: date-time */
+            generatedAt: string;
+            minimumChannelOrders: number;
+            page: number;
+            limit: number;
+            total: number;
+        };
+        GrowthCampaignOfferPerformanceDto: {
+            conversionPercent: number | null;
+            quota: components["schemas"]["CampaignQuotaTotalsDto"];
+            submittedOrders: number;
+            confirmedOrders: number;
+            collectedToman: number;
+            refundedToman: number;
+            netCollectedToman: number;
+        };
+        GrowthCampaignTrackingContentDto: {
+            source: string;
+            medium: string;
+            content: string;
+            submittedOrders: number;
+            confirmedOrders: number;
+            netCollectedToman: number;
+        };
+        GrowthCampaignBudgetDto: {
+            plannedChannelCostToman: number | null;
+            lifetimeMediaSpendToman: number | null;
+            lifetimeCommittedReferralRewardToman?: number;
+            mediaVarianceToman: number | null;
+            budgetVarianceToman: number | null;
+            budgetToman: number;
+            lifetimeCommittedDiscountToman: number;
+            unpaidDiscountCommitmentToman: number;
+            remainingDiscountToman: number;
+        };
+        GrowthCampaignHistoryItemDto: {
+            /** @enum {string} */
+            kind: "attribution" | "cancellation";
+            /** Format: uuid */
+            orderId: string;
+            /** Format: date-time */
+            occurredAt: string;
+            model: string | null;
+            policyVersion: number | null;
+            firstCampaignId: string | null;
+            lastCampaignId: string | null;
+            selectedCampaignId: string | null;
+        };
+        GrowthCampaignPerformanceDto: {
+            /** Format: uuid */
+            managedCampaignId: string | null;
+            /** @enum {string} */
+            campaignType: "SALES" | "MARKETING" | "FESTIVAL" | "LEGACY" | "TRACKING_ONLY";
+            period: components["schemas"]["GrowthRevenuePeriodDto"];
+            /** Format: date-time */
+            generatedAt: string;
+            totals: components["schemas"]["GrowthDashboardMetricsDto"];
+            /** @enum {string} */
+            spendCoverage: "MATCHED" | "NO_COST" | "NON_POSITIVE_COST" | "NO_CONFIRMED_ORDERS" | "INCOMPLETE_COST";
+            offer: components["schemas"]["GrowthCampaignOfferPerformanceDto"] | null;
+            channels: components["schemas"]["GrowthDashboardGroupDto"][];
+            trackingContents: components["schemas"]["GrowthCampaignTrackingContentDto"][];
+            cacToman: number | null;
+            roas: number | null;
+            merchandiseDiscountToman: number | null;
+            shippingDiscountToman: number | null;
+            consumedCreditToman: number | null;
+            issuedRewardToman: number | null;
+            outstandingRewardCommitmentToman: number | null;
+            budget: components["schemas"]["GrowthCampaignBudgetDto"] | null;
+            history: components["schemas"]["GrowthCampaignHistoryItemDto"][];
+            campaignId: string;
+            campaign: string;
+            channelCount: number;
+            contentPage: number;
+            hasMoreTrackingContents: boolean;
+            newCustomers: number;
+            page: number;
+            hasMoreHistory: boolean;
+        };
+        GrowthCostDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            day: string;
+            note: string | null;
+            /** Format: date-time */
+            recordedAt: string;
+            campaignId: string;
+            campaign: string;
+            source: string;
+            medium: string;
+            amountToman: number;
+        };
+        GrowthCostsDto: {
+            items: components["schemas"]["GrowthCostDto"][];
+            page: number;
+            limit: number;
+            total: number;
+        };
+        RecordGrowthCostDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            day: string;
+            amountToman: number;
+            note?: string;
+            campaignId: string;
+            source: string;
+            medium: string;
+        };
+        GrowthMeasurementDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            visitId: string;
+            /** @enum {string} */
+            stage: "view_item_list" | "select_item" | "view_item" | "add_to_cart" | "begin_checkout";
+            /** @enum {string} */
+            device: "desktop" | "mobile" | "tablet";
+            productSlugs: string[];
+            source?: string;
+            medium?: string;
+            campaign?: string;
+            campaignId?: string;
+        };
         CreateWarehouseDto: {
             code: string;
             name: string;
@@ -4476,7 +8090,7 @@ export interface components {
             priority: string | null;
             level: string | null;
             /** @enum {string} */
-            status: "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT" | "FAILED" | "UNKNOWN";
+            status: "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT" | "FAILED" | "UNKNOWN" | "SKIPPED";
             /** Format: date-time */
             nextAttemptAt: string;
             /** Format: date-time */
@@ -4494,6 +8108,7 @@ export interface components {
             attempts: number;
         };
         NotificationOutboxSummaryDto: {
+            skipped?: number;
             total: number;
             pending: number;
             processing: number;
@@ -4518,6 +8133,40 @@ export interface components {
             /** @enum {string} */
             target: "PRODUCT" | "VARIANT";
             subscribed: boolean;
+        };
+        WalletExpiryReminderDto: {
+            /** Format: date-time */
+            expiresAt: string;
+            urgent: boolean;
+            amountToman: number;
+        };
+        WalletCustomerNotificationsDto: {
+            expiryReminder: components["schemas"]["WalletExpiryReminderDto"] | null;
+            smsAvailable: boolean;
+            expiryReminderAvailable: boolean;
+            activationSmsEnabled: boolean;
+            expiryInAppEnabled: boolean;
+        };
+        WalletNotificationPreferencesDto: {
+            activationSmsEnabled: boolean;
+            expiryInAppEnabled: boolean;
+        };
+        WalletNotificationSettingsDto: {
+            activationSmsEnabled: boolean;
+            expiryInAppEnabled: boolean;
+            version: number;
+            activationIntervalMinutes: number;
+            expiryNoticeDays: number;
+            expiryUrgentDays: number;
+            activationSmsPreview: string;
+        };
+        UpdateWalletNotificationSettingsDto: {
+            activationSmsEnabled: boolean;
+            expiryInAppEnabled: boolean;
+            expectedVersion: number;
+            activationIntervalMinutes: number;
+            expiryNoticeDays: number;
+            expiryUrgentDays: number;
         };
         CreateSupplierDto: {
             code: string;
@@ -4589,6 +8238,20 @@ export interface components {
         CancelPlatingFulfillmentDto: {
             reason: string;
         };
+        AttributionTouchDto: {
+            /** Format: date-time */
+            occurredAt: string;
+            source: string;
+            medium: string;
+            campaign?: string;
+            content?: string;
+            campaignId?: string;
+        };
+        SessionAttributionDto: {
+            /** @enum {number} */
+            version: 1;
+            touches: components["schemas"]["AttributionTouchDto"][];
+        };
         CreateOrderAddressDto: {
             recipientName: string;
             phone: string;
@@ -4605,9 +8268,21 @@ export interface components {
             platingType?: "GOLD" | "ROSE_GOLD" | "RHODIUM";
         };
         CreateOrderDto: {
+            /** @description Apply the maximum eligible wallet credit. */
+            useWalletCredit?: boolean;
+            /** @description Apply the eligible introductory referral credit. */
+            useReferralCredit?: boolean;
+            attribution?: components["schemas"]["SessionAttributionDto"];
+            /** @enum {string} */
+            growthDevice?: "desktop" | "mobile" | "tablet";
+            /** Format: uuid */
+            savedCartId?: string;
+            couponCode?: string;
+            quoteToken?: string;
             customerNote?: string;
             /** Format: uuid */
             shippingCarrierId?: string;
+            savedCartRevision?: number;
             /** Format: uuid */
             userAddressId?: string;
             shippingAddress?: components["schemas"]["CreateOrderAddressDto"];
@@ -4616,6 +8291,7 @@ export interface components {
         CustomerOrderPaymentDto: {
             /** @enum {string} */
             status: "PENDING" | "AWAITING_REVIEW" | "PAID" | "PARTIALLY_REFUNDED" | "CANCELLED" | "RECONCILIATION_REQUIRED" | "REFUNDED";
+            latestAttemptFailed?: boolean;
             /** @enum {string|null} */
             method: "CARD_TO_CARD" | "PAYMENT_GATEWAY" | null;
             receiptOriginalName: string | null;
@@ -4633,6 +8309,9 @@ export interface components {
             mimeType: string;
         };
         CustomerOrderItemDto: {
+            /** Format: uuid */
+            campaignIdSnapshot?: string | null;
+            campaignNameSnapshot?: string | null;
             primaryMedia: components["schemas"]["CustomerOrderMediaDto"] | null;
             variantNameSnapshot: string | null;
             sizeLabelSnapshot: string | null;
@@ -4671,9 +8350,19 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        CustomerOrderConfirmedRefundDto: {
+            id: string;
+            amountToman: number;
+            /** Format: date-time */
+            confirmedAt: string;
+        };
         CustomerOrderDetailDto: {
             /** @enum {string} */
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
+            /** @description Wallet credit included in the order snapshot. */
+            walletAppliedToman?: number;
+            /** @description Introductory referral credit included in discountTotalToman. */
+            referralDiscountToman?: number;
             payment: components["schemas"]["CustomerOrderPaymentDto"] | null;
             trackingCode: string | null;
             shippingMethodName: string | null;
@@ -4694,6 +8383,7 @@ export interface components {
             shippingAddress: components["schemas"]["CustomerOrderShippingAddressDto"];
             statusHistory: components["schemas"]["CustomerOrderStatusHistoryDto"][];
             cancellationReason: string | null;
+            confirmedRefunds?: components["schemas"]["CustomerOrderConfirmedRefundDto"][];
             id: string;
             orderNumber: string;
             merchandiseTotalToman: number;
@@ -4711,9 +8401,48 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        PromotionEstimateRequestDto: {
+            items: components["schemas"]["CreateOrderItemDto"][];
+        };
+        PromotionEstimateDto: {
+            campaignName: string | null;
+            merchandiseTotalToman: number;
+            platingTotalToman: number;
+            discountTotalToman: number;
+            shippingTotalToman: number;
+            shippingDiscountToman: number;
+            walletAppliedToman: number;
+            payableToman: number;
+        };
+        WalletPreviewDto: {
+            /** @enum {string|null} */
+            walletUnavailableReason: "MINIMUM_CASH" | "POLICY_DISABLED" | "NO_AVAILABLE_CREDIT" | "COUPON_EXCLUDED" | "NO_ELIGIBLE_ITEMS" | "POLICY_LIMIT" | null;
+            walletAppliedToman: number;
+        };
+        CheckoutPriceQuoteDto: {
+            campaignName: string | null;
+            /** @description Introductory referral credit included in discountTotalToman. */
+            referralDiscountToman?: number;
+            /** @enum {string|null} */
+            walletUnavailableReason?: "MINIMUM_CASH" | "POLICY_DISABLED" | "NO_AVAILABLE_CREDIT" | "COUPON_EXCLUDED" | "NO_ELIGIBLE_ITEMS" | "POLICY_LIMIT" | null;
+            /** Format: date-time */
+            expiresAt: string;
+            quoteToken: string;
+            merchandiseTotalToman: number;
+            platingTotalToman: number;
+            discountTotalToman: number;
+            shippingTotalToman: number;
+            shippingDiscountToman: number;
+            walletAppliedToman: number;
+            payableToman: number;
+        };
         CustomerOrderSummaryDto: {
             /** @enum {string} */
             status: "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "EXPIRED";
+            /** @description Wallet credit included in the order snapshot. */
+            walletAppliedToman?: number;
+            /** @description Introductory referral credit included in discountTotalToman. */
+            referralDiscountToman?: number;
             payment: components["schemas"]["CustomerOrderPaymentDto"] | null;
             trackingCode: string | null;
             shippingMethodName: string | null;
@@ -4758,6 +8487,65 @@ export interface components {
             status: "CANCELLED" | "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "EXPIRED";
             reason?: string;
             sendCustomerSms?: boolean;
+        };
+        SavedCartVersionDto: {
+            /** Format: uuid */
+            cartId: string;
+            revision: number;
+        };
+        SavedCartStatusDto: {
+            current: components["schemas"]["SavedCartVersionDto"] | null;
+            /** Format: date-time */
+            expiresAt: string | null;
+            itemCount: number;
+            showReminder: boolean;
+        };
+        SaveCartDto: {
+            current?: components["schemas"]["SavedCartVersionDto"];
+            items: components["schemas"]["CreateOrderItemDto"][];
+        };
+        RecoveredCartItemDto: {
+            /** @enum {string|null} */
+            platingType: "GOLD" | "ROSE_GOLD" | "RHODIUM" | null;
+            variantId: string;
+            productSlug: string;
+            productName: string;
+            variantLabel: string;
+            unitSalePriceToman: number;
+            unitPlatingPriceToman: number;
+            platingLeadTimeDays: number;
+            quantity: number;
+            maxQuantity: number;
+        };
+        SavedCartReviewLineDto: {
+            item: components["schemas"]["RecoveredCartItemDto"] | null;
+            productName: string;
+            previousQuantity: number;
+            previousUnitToman: number;
+        };
+        SavedCartReviewDto: {
+            lines: components["schemas"]["SavedCartReviewLineDto"][];
+            reviewKey: string;
+            applied: boolean;
+        };
+        RestoreCartDto: {
+            /** Format: uuid */
+            cartId: string;
+            revision: number;
+            reviewKey: string;
+        };
+        SavedCartPolicyDto: {
+            remindersEnabled: boolean;
+            idleHours: number;
+            retentionDays: number;
+        };
+        SavedCartReportDto: {
+            policy: components["schemas"]["SavedCartPolicyDto"];
+            saved: number;
+            abandoned: number;
+            restored: number;
+            ordered: number;
+            paid: number;
         };
         AuthorizeOrderReturnDto: {
             reason: string;
@@ -4954,6 +8742,308 @@ export interface components {
             /** Format: date-time */
             deletedAt: string;
         };
+        ReceivedReferralDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "PENDING" | "FIRST_PURCHASE_CONFIRMED" | "EXPIRED";
+            /** Format: date-time */
+            claimedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            firstPaidAt: string | null;
+            /**
+             * @description Referrer reward status for an outgoing referral.
+             * @enum {string}
+             */
+            rewardStatus?: "AWAITING_PURCHASE" | "PENDING" | "IN_REVIEW" | "ISSUED" | "INELIGIBLE" | "EXPIRED";
+            /** Format: uuid */
+            firstOrderId: string | null;
+        };
+        ReferralHistoryItemDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "PENDING" | "FIRST_PURCHASE_CONFIRMED" | "EXPIRED";
+            /** Format: date-time */
+            claimedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            firstPaidAt: string | null;
+            /**
+             * @description Referrer reward status for an outgoing referral.
+             * @enum {string}
+             */
+            rewardStatus?: "AWAITING_PURCHASE" | "PENDING" | "IN_REVIEW" | "ISSUED" | "INELIGIBLE" | "EXPIRED";
+        };
+        OutgoingReferralPageDto: {
+            items: components["schemas"]["ReferralHistoryItemDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        ReferralOverviewDto: {
+            code: string | null;
+            incoming: components["schemas"]["ReceivedReferralDto"] | null;
+            outgoing: components["schemas"]["OutgoingReferralPageDto"];
+            enabled: boolean;
+            referrerEligible: boolean;
+            attributionDays: number;
+        };
+        ReferralCheckoutAvailabilityDto: {
+            available: boolean;
+        };
+        IssuedReferralCodeDto: {
+            code: string;
+        };
+        ReferralClaimDto: {
+            code: string;
+        };
+        ReferralPolicyVersionDto: {
+            /** Format: uuid */
+            createdById: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            requestedEffectiveAt: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            /** Format: date-time */
+            effectiveAt: string | null;
+            /** Format: uuid */
+            publishedById: string | null;
+            version: number;
+            enabled: boolean;
+        };
+        ReferralRewardRuleDto: {
+            code: string;
+            enabled: boolean;
+            priority: number;
+            minimumToman: number;
+            maximumExclusiveToman?: number | null;
+            capToman: number;
+            /** @enum {string} */
+            purchaseRank: "ANY" | "FIRST" | "SECOND" | "THIRD_OR_LATER";
+            /** @enum {string} */
+            method: "PERCENT" | "FIXED";
+            value: number;
+            /** @enum {string} */
+            recipient: "REFERRER" | "REFERRED";
+            /** Format: date-time */
+            startsAt?: string | null;
+            /** Format: date-time */
+            endsAt?: string | null;
+            expiryDays: number;
+            maxUsesPerRecipient: number;
+            periodBudgetToman: number;
+            campaignIds: string[];
+            allowedCategoryIds: string[];
+            allowCampaign: boolean;
+            allowCoupon: boolean;
+            allowPurchaseReward: boolean;
+        };
+        ReferralRewardDefinitionDto: {
+            enabled: boolean;
+            periodBudgetToman: number;
+            rules: components["schemas"]["ReferralRewardRuleDto"][];
+        };
+        ReferralPolicyDetailDto: {
+            /** Format: uuid */
+            createdById: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            requestedEffectiveAt: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            /** Format: date-time */
+            effectiveAt: string | null;
+            /** Format: uuid */
+            publishedById: string | null;
+            definition: components["schemas"]["ReferralRewardDefinitionDto"];
+            version: number;
+            enabled: boolean;
+        };
+        ReferralPolicyListDto: {
+            items: components["schemas"]["ReferralPolicyVersionDto"][];
+            active: components["schemas"]["ReferralPolicyDetailDto"] | null;
+            page: number;
+            hasMore: boolean;
+        };
+        ReferralScopeDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        CreateReferralRewardDraftDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** Format: date-time */
+            requestedEffectiveAt?: string | null;
+            definition: components["schemas"]["ReferralRewardDefinitionDto"];
+        };
+        ReferralRewardLineDto: {
+            eligibleToman: number;
+            categoryIds: string[];
+        };
+        ReferralRewardSampleDto: {
+            /** Format: date-time */
+            occurredAt: string;
+            purchaseRank: number;
+            confirmed: boolean;
+            couponApplied: boolean;
+            purchaseRewardApplied: boolean;
+            /** Format: uuid */
+            campaignId: string | null;
+            lines: components["schemas"]["ReferralRewardLineDto"][];
+            usage: components["schemas"]["ReferralRewardUseDto"][];
+            programCommittedToman: number;
+            remainingIncentiveToman: number;
+        };
+        SimulateReferralRewardPolicyDto: {
+            definition: components["schemas"]["ReferralRewardDefinitionDto"];
+            sample: components["schemas"]["ReferralRewardSampleDto"];
+        };
+        ReferralRiskSignalDto: {
+            /** @enum {string} */
+            code: "SELF_REFERRAL" | "SHARED_DEVICE" | "SHARED_NETWORK" | "SHARED_ADDRESS" | "SHARED_RECIPIENT" | "VERIFIED_PAYMENT_REUSE" | "REFERRAL_FREQUENCY" | "CANCELLED_ORDERS" | "FAST_PAYMENT";
+            enabled: boolean;
+            windowDays: number;
+            weight: number;
+            threshold: number;
+        };
+        ReferralRiskExceptionDto: {
+            /** Format: uuid */
+            attributionId: string;
+            codes: ("SELF_REFERRAL" | "SHARED_DEVICE" | "SHARED_NETWORK" | "SHARED_ADDRESS" | "SHARED_RECIPIENT" | "VERIFIED_PAYMENT_REUSE" | "REFERRAL_FREQUENCY" | "CANCELLED_ORDERS" | "FAST_PAYMENT")[];
+            /** Format: date-time */
+            until: string;
+            reason: string;
+        };
+        ReferralRiskPolicyDto: {
+            minSignals: number;
+            reviewAt: number;
+            holdAt: number;
+            rejectAt: number;
+            reviewHours: number;
+            retentionDays: number;
+            signals: components["schemas"]["ReferralRiskSignalDto"][];
+            exceptions: components["schemas"]["ReferralRiskExceptionDto"][];
+        };
+        ReferralRiskPolicyRecordDto: {
+            version: number | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            /** Format: uuid */
+            publishedById: string | null;
+            definition: components["schemas"]["ReferralRiskPolicyDto"];
+        };
+        ReferralRiskPolicyOverviewDto: {
+            active: components["schemas"]["ReferralRiskPolicyRecordDto"];
+            history: components["schemas"]["ReferralRiskPolicyRecordDto"][];
+            hasMore: boolean;
+            page: number;
+        };
+        PublishReferralRiskPolicyDto: {
+            /** Format: uuid */
+            requestId: string;
+            expectedVersion: number | null;
+            definition: components["schemas"]["ReferralRiskPolicyDto"];
+        };
+        SimulateReferralRiskDto: {
+            definition: components["schemas"]["ReferralRiskPolicyDto"];
+            /** Format: uuid */
+            attributionId?: string;
+            metrics: components["schemas"]["ReferralRiskMetricDto"][];
+        };
+        ReferralRiskReviewDto: {
+            /** @enum {string} */
+            fromAction: "ALLOW" | "REVIEW" | "HOLD" | "REJECT";
+            /** @enum {string} */
+            action: "ALLOW" | "REVIEW" | "HOLD" | "REJECT";
+            /** Format: uuid */
+            actorUserId: string;
+            /** Format: date-time */
+            recordedAt: string;
+            revision: number;
+            reason: string;
+        };
+        ReferralRiskCaseDto: {
+            /** Format: uuid */
+            attributionId: string;
+            policyVersion: number | null;
+            /** Format: uuid */
+            orderId: string;
+            /** @enum {string} */
+            autoAction: "ALLOW" | "REVIEW" | "HOLD" | "REJECT";
+            /** @enum {string} */
+            action: "ALLOW" | "REVIEW" | "HOLD" | "REJECT";
+            /** @enum {string} */
+            confidence: "LOW" | "MEDIUM" | "HIGH";
+            /** Format: date-time */
+            assessedAt: string;
+            /** Format: date-time */
+            dueAt: string | null;
+            /** Format: date-time */
+            expiresAt: string;
+            evidence: components["schemas"]["ReferralRiskEvidenceDto"][] | null;
+            reviews: components["schemas"]["ReferralRiskReviewDto"][];
+            score: number;
+            revision: number;
+            overdue: boolean;
+        };
+        ReferralRiskQueueDto: {
+            items: components["schemas"]["ReferralRiskCaseDto"][];
+            page: number;
+            hasMore: boolean;
+        };
+        ReviewReferralRiskDto: {
+            expectedRevision: number;
+            /** @enum {string} */
+            action: "ALLOW" | "HOLD" | "REJECT";
+            reason: string;
+        };
+        ReferralGrantTotalsDto: {
+            registered: number;
+            converted: number;
+            pending: number;
+            approved: number;
+            rejected: number;
+            expired: number;
+            flagged: number;
+            grantedToman: number;
+            buyerDiscountToman: number;
+            revokedToman: number;
+            recoveryDueToman: number;
+        };
+        ReferralGrantRowDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string | null;
+            /** Format: date-time */
+            claimedAt: string;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
+            /** @enum {string|null} */
+            riskAction: "ALLOW" | "REVIEW" | "HOLD" | "REJECT" | null;
+            policyVersion: number | null;
+            ruleCode: string | null;
+            resultCode: string | null;
+            /** Format: date-time */
+            creditExpiresAt: string | null;
+            grantedToman: number;
+            buyerDiscountToman: number;
+            revokedToman: number;
+            recoveryDueToman: number;
+        };
+        ReferralGrantReportDto: {
+            totals: components["schemas"]["ReferralGrantTotalsDto"];
+            items: components["schemas"]["ReferralGrantRowDto"][];
+            page: number;
+            hasMore: boolean;
+        };
         ShippingPricingSettingsDto: {
             /** @enum {string} */
             mode: "FREE" | "FIXED";
@@ -5110,7 +9200,7 @@ export interface components {
         };
         UpdateShipmentStatusDto: {
             /** @enum {string} */
-            status: "FAILED" | "CANCELLED" | "PENDING" | "DELIVERED" | "READY" | "HANDED_OVER" | "IN_TRANSIT";
+            status: "PENDING" | "FAILED" | "CANCELLED" | "DELIVERED" | "READY" | "HANDED_OVER" | "IN_TRANSIT";
             trackingCode?: string;
             providerShipmentId?: string;
             reason?: string;
@@ -5490,6 +9580,521 @@ export interface components {
             destinationPath: string;
             permanent: boolean;
         };
+        SearchConsoleConnectionDto: {
+            /** @enum {string} */
+            status: "connected" | "unavailable";
+            /** @enum {string} */
+            reason?: "not_configured" | "invalid_credentials" | "authentication_failed" | "access_denied" | "property_not_found" | "quota_exceeded" | "rate_limited" | "busy" | "invalid_query" | "timeout" | "upstream_unavailable" | "invalid_response";
+            message?: string;
+            property: string;
+        };
+        SearchConsoleFilterDto: {
+            /** @enum {string} */
+            dimension: "query" | "page" | "device";
+            /** @enum {string} */
+            operator: "equals" | "notEquals" | "contains" | "notContains";
+            expression: string;
+        };
+        SearchConsolePerformanceQueryDto: {
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            dimensions?: ("date" | "query" | "page" | "device")[];
+            /** @enum {string} */
+            searchType?: "web" | "image" | "video" | "news" | "discover" | "googleNews" | "webMultimodal";
+            /** @enum {string} */
+            aggregation?: "auto" | "byPage" | "byProperty";
+            filters?: components["schemas"]["SearchConsoleFilterDto"][];
+            rowLimit?: number;
+            startRow?: number;
+        };
+        SearchConsoleRowDto: {
+            averagePosition: number | null;
+            keys: string[];
+            clicks: number;
+            impressions: number;
+            ctr: number;
+        };
+        SearchConsolePerformanceDto: {
+            rows: components["schemas"]["SearchConsoleRowDto"][];
+            dimensions: ("date" | "query" | "page" | "device")[];
+            /** @enum {string} */
+            searchType: "web" | "image" | "video" | "news" | "discover" | "googleNews" | "webMultimodal";
+            /** @enum {string|null} */
+            aggregation: "auto" | "byPage" | "byProperty" | null;
+            /** @enum {string} */
+            scope: "property_total" | "page_total" | "filtered_total" | "grouped_rows";
+            nextStartRow: number | null;
+            property: string;
+        };
+        SearchConsolePeriodDto: {
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+        };
+        SearchConsoleMetricsDto: {
+            averagePosition: number | null;
+            clicks: number;
+            impressions: number;
+            ctr: number;
+        };
+        SearchConsoleBrandPerformanceDto: {
+            /** @enum {string} */
+            classification: "google" | "estimated";
+            branded: components["schemas"]["SearchConsoleMetricsDto"] | null;
+            nonBranded: components["schemas"]["SearchConsoleMetricsDto"] | null;
+            property: string;
+        };
+        SearchConsoleSitemapContentDto: {
+            submitted: number | null;
+            type: string;
+        };
+        SearchConsoleSitemapDto: {
+            /** Format: date-time */
+            lastSubmitted: string | null;
+            /** Format: date-time */
+            lastDownloaded: string | null;
+            isPending: boolean | null;
+            isSitemapIndex: boolean | null;
+            warnings: number | null;
+            errors: number | null;
+            contents: components["schemas"]["SearchConsoleSitemapContentDto"][];
+            path: string;
+        };
+        SearchConsoleSitemapsDto: {
+            items: components["schemas"]["SearchConsoleSitemapDto"][];
+            property: string;
+        };
+        SearchOverviewSyncDto: {
+            /** Format: date-time */
+            lastSuccessAt: string | null;
+            /** Format: date */
+            latestSyncedDate: string | null;
+            /** Format: date-time */
+            pausedUntil: string | null;
+            /** @enum {string|null} */
+            lastRunStatus: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | null;
+            lastErrorCode: string | null;
+            enabled: boolean;
+            scheduledForType: boolean;
+        };
+        SearchOverviewMetricsDto: {
+            ctr: number | null;
+            averagePosition: number | null;
+            clicks: number;
+            impressions: number;
+        };
+        SearchOverviewPeriodDto: {
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            metrics: components["schemas"]["SearchOverviewMetricsDto"] | null;
+            days: number;
+            syncedDays: number;
+            dataDays: number;
+        };
+        SearchOverviewDto: {
+            property: string | null;
+            /** @enum {string} */
+            searchType: "web" | "image" | "video" | "news";
+            /** @enum {string} */
+            scope: "property" | "device" | "brand";
+            /** @enum {string} */
+            timeZone: "America/Los_Angeles";
+            sync: components["schemas"]["SearchOverviewSyncDto"];
+            current: components["schemas"]["SearchOverviewPeriodDto"];
+            previous: components["schemas"]["SearchOverviewPeriodDto"];
+            change: components["schemas"]["SearchOverviewMetricsDto"] | null;
+            daily: components["schemas"]["SearchOverviewPeriodDto"][];
+            weekly: components["schemas"]["SearchOverviewPeriodDto"][];
+        };
+        SearchOverviewRowDto: {
+            ctr: number | null;
+            averagePosition: number | null;
+            clicks: number;
+            impressions: number;
+            label: string;
+        };
+        SearchOverviewRowsDto: {
+            /** @enum {string} */
+            kind: "query" | "page";
+            /** @enum {string} */
+            aggregation: "byProperty" | "byPage";
+            items: components["schemas"]["SearchOverviewRowDto"][];
+            available: boolean;
+            syncedDays: number;
+            cappedDays: number;
+            page: number;
+            limit: number;
+            total: number;
+        };
+        SearchEntityListItemDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "product" | "category" | "brand" | "article";
+            /** Format: uri */
+            canonicalUrl: string;
+            clicks: number | null;
+            impressions: number | null;
+            ctr: number | null;
+            clickChangePercent: number | null;
+            opportunities: ("low-ctr" | "decline" | "growth")[];
+            sufficient: boolean;
+            name: string;
+            seoNoIndex: boolean;
+        };
+        SearchEntityListDto: {
+            items: components["schemas"]["SearchEntityListItemDto"][];
+            page: number;
+            limit: number;
+            total: number;
+        };
+        SearchEntityIdentityDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "product" | "category" | "brand" | "article";
+            /** Format: uri */
+            canonicalUrl: string;
+            name: string;
+            seoNoIndex: boolean;
+        };
+        SearchEntityUrlDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uri */
+            reportedUrl: string;
+            reportedSearch: string | null;
+            recordedCanonicalPath: string | null;
+            /** @enum {string|null} */
+            matchedBy: "direct" | "redirect" | null;
+            isCanonical: boolean;
+        };
+        SearchEntityDetailDto: {
+            entity: components["schemas"]["SearchEntityIdentityDto"];
+            selectedUrl: components["schemas"]["SearchEntityUrlDto"] | null;
+            urls: components["schemas"]["SearchEntityUrlDto"][];
+            current: components["schemas"]["SearchOverviewPeriodDto"];
+            previous: components["schemas"]["SearchOverviewPeriodDto"];
+            change: components["schemas"]["SearchOverviewMetricsDto"] | null;
+            daily: components["schemas"]["SearchOverviewPeriodDto"][];
+            topQueries: components["schemas"]["SearchOverviewRowDto"][];
+            devices: components["schemas"]["SearchOverviewRowDto"][];
+            urlPage: number;
+            urlLimit: number;
+            urlTotal: number;
+            cappedQueryDays: number;
+            sufficient: boolean;
+        };
+        SeoAuditRunDto: {
+            /** Format: uuid */
+            id: string;
+            ruleVersion: number;
+            createdAt: string;
+            finishedAt: string | null;
+            sitemapChecked: boolean;
+        };
+        SeoAuditRedirectDto: {
+            status: number;
+            to: string | null;
+        };
+        SeoAuditObservationDto: {
+            status: number | null;
+            finalPath: string;
+            redirects: components["schemas"]["SeoAuditRedirectDto"][];
+            failure: string | null;
+            title: string | null;
+            description: string | null;
+            canonicals: string[];
+            robots: string[];
+            schema: string[];
+        };
+        SeoAuditIssueDto: {
+            code: string;
+            /** @enum {string} */
+            severity: "ERROR" | "REVIEW";
+            /** @enum {string} */
+            state: "NEW" | "EXISTING";
+            evidence: string[];
+        };
+        SeoAuditCheckDto: {
+            path: string;
+            source: string;
+            inSitemap: boolean | null;
+            sourcePath: string | null;
+            checkedAt: string | null;
+            observation: components["schemas"]["SeoAuditObservationDto"] | null;
+            issues: components["schemas"]["SeoAuditIssueDto"][];
+        };
+        SeoAuditOverviewDto: {
+            configured: boolean;
+            history: components["schemas"]["SeoAuditRunDto"][];
+            run: components["schemas"]["SeoAuditRunDto"] | null;
+            checks: components["schemas"]["SeoAuditCheckDto"][];
+        };
+        SeoAuditQueuedDto: {
+            /** Format: uuid */
+            id: string;
+        };
+        SeoGoogleIndexDto: {
+            observedAt: string;
+            stale: boolean;
+            incomplete: boolean;
+            verdict: string | null;
+            coverageState: string | null;
+            indexingState: string | null;
+            pageFetchState: string | null;
+            googleCanonical: string | null;
+            userCanonical: string | null;
+            lastCrawlAt: string | null;
+        };
+        SeoIndexTechnicalDto: {
+            observedAt: string;
+            finalPath: string;
+            stale: boolean;
+            status: number | null;
+            canonical: string | null;
+            noindex: boolean | null;
+            failure: string | null;
+        };
+        SeoIndexSitemapDto: {
+            observedAt: string;
+            present: boolean;
+            stale: boolean;
+        };
+        SeoIndexItemDto: {
+            url: string;
+            path: string;
+            prioritySource: string;
+            queued: boolean;
+            lastAttemptAt: string | null;
+            lastError: string | null;
+            google: components["schemas"]["SeoGoogleIndexDto"] | null;
+            technical: components["schemas"]["SeoIndexTechnicalDto"] | null;
+            sitemap: components["schemas"]["SeoIndexSitemapDto"] | null;
+            differences: string[];
+        };
+        SeoIndexOverviewDto: {
+            configured: boolean;
+            property: string | null;
+            origin: string | null;
+            automatic: boolean;
+            limit: number;
+            used: number;
+            pending: number;
+            budgetResetsAt: string;
+            pausedUntil: string | null;
+            pauseReason: string | null;
+            page: number;
+            pageSize: number;
+            total: number;
+            items: components["schemas"]["SeoIndexItemDto"][];
+        };
+        SeoInspectionQueuedDto: {
+            queued: number;
+        };
+        SeoCoverageReportDto: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            reportDate: string;
+            importedAt: string;
+            rowCount: number;
+        };
+        SeoCoverageRowDto: {
+            reason: string | null;
+            url: string | null;
+            lastCrawled: string | null;
+            pages: number | null;
+            validation: string | null;
+        };
+        SeoCoverageOverviewDto: {
+            history: components["schemas"]["SeoCoverageReportDto"][];
+            report: components["schemas"]["SeoCoverageReportDto"] | null;
+            reasons: string[];
+            page: number;
+            pageSize: number;
+            total: number;
+            rows: components["schemas"]["SeoCoverageRowDto"][];
+        };
+        SeoCoverageStoredDto: {
+            /** Format: uuid */
+            id: string;
+        };
+        SeoIssuePersonDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        SeoIssueEvidenceDto: {
+            sourceHref: string;
+            url: string | null;
+            facts: string[];
+            /** @enum {string} */
+            severity: "REVIEW" | "IMPORTANT" | "CRITICAL";
+        };
+        SeoIssueItemDto: {
+            /** Format: uuid */
+            id: string;
+            rule: string;
+            subject: string;
+            /** @enum {string} */
+            severity: "REVIEW" | "IMPORTANT" | "CRITICAL";
+            /** @enum {string} */
+            status: "OPEN" | "IN_PROGRESS" | "RESOLVED";
+            active: boolean;
+            revision: number;
+            firstObservedAt: string;
+            observedAt: string;
+            owner: components["schemas"]["SeoIssuePersonDto"] | null;
+            evidence: components["schemas"]["SeoIssueEvidenceDto"];
+        };
+        SeoIssueListDto: {
+            configured: boolean;
+            page: number;
+            pageSize: number;
+            total: number;
+            items: components["schemas"]["SeoIssueItemDto"][];
+        };
+        SeoIssueScanDto: {
+            changed: number;
+        };
+        SeoIssueEventDto: {
+            id: string;
+            kind: string;
+            at: string;
+            note: string | null;
+            actor: components["schemas"]["SeoIssuePersonDto"] | null;
+            evidence: components["schemas"]["SeoIssueEvidenceDto"] | null;
+            deliveryStates: string[];
+        };
+        SeoIssueDetailDto: {
+            issue: components["schemas"]["SeoIssueItemDto"];
+            owners: components["schemas"]["SeoIssuePersonDto"][];
+            events: components["schemas"]["SeoIssueEventDto"][];
+            page: number;
+            pageSize: number;
+            eventCount: number;
+        };
+        SeoIssueUpdateDto: {
+            revision: number;
+            /** @enum {string} */
+            status?: "OPEN" | "IN_PROGRESS" | "RESOLVED";
+            /** Format: uuid */
+            ownerId?: string | null;
+            note?: string;
+        };
+        SeoOpportunityMetricsDto: {
+            start: string;
+            end: string;
+            days: number;
+            observedDays: number;
+            cappedDays: number;
+            clicks: number | null;
+            impressions: number | null;
+            ctr: number | null;
+            position: number | null;
+        };
+        SeoOpportunityComponentsDto: {
+            signal: number;
+            demand: number;
+            quality: number;
+            commercial: number;
+            stock: number;
+        };
+        SeoOpportunityEvidenceDto: {
+            reason: string;
+            recommendation: string;
+            facts: string[];
+            limitations: string[];
+            reportHref: string;
+            current: components["schemas"]["SeoOpportunityMetricsDto"];
+            previous: components["schemas"]["SeoOpportunityMetricsDto"];
+            stock: string;
+            components: components["schemas"]["SeoOpportunityComponentsDto"];
+        };
+        SeoOpportunityItemDto: {
+            /** Format: uuid */
+            id: string;
+            entityKind: string;
+            /** Format: uuid */
+            entityId: string;
+            rule: string;
+            url: string;
+            title: string;
+            score: number;
+            scoreVersion: number;
+            active: boolean;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "DEFERRED" | "TASK_CREATED" | "REJECTED";
+            revision: number;
+            refreshedAt: string;
+            deferredUntil: string | null;
+            evidence: components["schemas"]["SeoOpportunityEvidenceDto"];
+        };
+        SeoOpportunityListDto: {
+            configured: boolean;
+            page: number;
+            pageSize: number;
+            total: number;
+            items: components["schemas"]["SeoOpportunityItemDto"][];
+        };
+        SeoOpportunityRefreshDto: {
+            changed: number;
+            hasSource: boolean;
+        };
+        SeoOpportunityImpactDto: {
+            /** @enum {string} */
+            status: "READY" | "WAITING_FOR_DATA";
+            before: components["schemas"]["SeoOpportunityMetricsDto"];
+            after: components["schemas"]["SeoOpportunityMetricsDto"];
+            clickDifference: number | null;
+            impressionDifference: number | null;
+            ctrPointDifference: number | null;
+        };
+        SeoCorrectionTaskDto: {
+            /** Format: uuid */
+            id: string;
+            instruction: string;
+            url: string;
+            createdAt: string;
+            implementedOn: string | null;
+            windowDays: number | null;
+            changeNote: string | null;
+            confounders: string | null;
+            impact: components["schemas"]["SeoOpportunityImpactDto"] | null;
+        };
+        SeoOpportunityEventDto: {
+            /** Format: uuid */
+            id: string;
+            action: string;
+            at: string;
+            note: string | null;
+            actor: string | null;
+        };
+        SeoOpportunityDetailDto: {
+            item: components["schemas"]["SeoOpportunityItemDto"];
+            task: components["schemas"]["SeoCorrectionTaskDto"] | null;
+            page: number;
+            pageSize: number;
+            eventCount: number;
+            history: components["schemas"]["SeoOpportunityEventDto"][];
+        };
+        SeoOpportunityUpdateDto: {
+            revision: number;
+            /** @enum {string} */
+            action: "APPROVE" | "REJECT" | "DEFER" | "CREATE_TASK" | "REOPEN" | "IMPLEMENT" | "MEASURE";
+            note?: string;
+            /** Format: date */
+            date?: string;
+            /** @enum {number} */
+            windowDays?: 7 | 14 | 28;
+            confounders?: string;
+        };
         Object: Record<string, never>;
         UpdateSupplierCategoryMappingDto: {
             /** Format: uuid */
@@ -5752,6 +10357,746 @@ export interface operations {
             };
         };
     };
+    CampaignsController_publicBanner_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCampaignDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_publicActivity_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCampaignActivityDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                view?: "festivals" | "sales" | "marketing";
+                q?: string;
+                status?: "DRAFT" | "APPROVED" | "SCHEDULED" | "ACTIVE" | "PAUSED" | "ENDED";
+                fromTehran?: string;
+                toTehran?: string;
+                sort?: "newest" | "oldest";
+                salesKind?: "offers" | "existing";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignListDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCampaignDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignSummaryDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_selectProducts_v1: {
+        parameters: {
+            query?: {
+                q?: string;
+                page?: number;
+                category?: string;
+                brand?: string;
+                stock?: "in-stock" | "out-of-stock";
+                campaignId?: string;
+                scope?: "campaign";
+                selected?: string[];
+                categoryMode?: "direct" | "tree";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignProductOptionsDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_hydrateProducts_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignProductQueryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignProductOptionsDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_selectionTaxonomy_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignTaxonomyOptionsDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_selectCollections_v1: {
+        parameters: {
+            query?: {
+                q?: string;
+                page?: number;
+                visibility?: "live";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignCollectionOptionsDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_detail_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignDetailDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCampaignDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignSummaryDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_simulate_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignSimulationInputDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignSimulationDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_transition_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignTransitionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignSummaryDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_readLanding_v1: {
+        parameters: {
+            query?: {
+                scopeCategory?: string;
+                scopeBrand?: string;
+                sort?: "newest" | "price-asc" | "price-desc" | "name-asc" | "availability" | "best-selling" | "featured";
+                page?: number;
+                minPriceToman?: number;
+                maxPriceToman?: number;
+                productsOnly?: "1";
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCampaignLandingDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_placement_v1: {
+        parameters: {
+            query: {
+                slot: "HOME" | "CATEGORY" | "PRODUCT" | "COUNTDOWN" | "NAVIGATION";
+                slug?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCampaignDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_sitemap_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignSitemapDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_edit_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignLandingEditorDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveCampaignLandingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignLandingEditorDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_preview_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignLandingDraftDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignLandingPreviewDto"];
+                };
+            };
+        };
+    };
+    CampaignLandingsController_restorePublication_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreFestivalPublicationDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignLandingEditorDto"];
+                };
+            };
+        };
+    };
+    CampaignQuotasController_get_v1: {
+        parameters: {
+            query: {
+                slug: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignQuotaAdminDto"];
+                };
+            };
+        };
+    };
+    CampaignQuotasController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveCampaignQuotaDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignQuotaAdminDto"];
+                };
+            };
+        };
+    };
+    FestivalDesignController_edit_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalDesignEditorDto"];
+                };
+            };
+        };
+    };
+    FestivalDesignController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveFestivalDesignDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalDesignEditorDto"];
+                };
+            };
+        };
+    };
+    FestivalDesignController_restore_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreFestivalDesignDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalDesignEditorDto"];
+                };
+            };
+        };
+    };
+    FestivalDesignController_preview_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FestivalPreviewDraftDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalPreviewDto"];
+                };
+            };
+        };
+    };
+    FestivalThemeLibraryController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                q?: string;
+                status?: "active" | "archived";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalThemeLibraryListDto"];
+                };
+            };
+        };
+    };
+    FestivalThemeLibraryController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveFestivalThemeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalLibraryThemeDto"];
+                };
+            };
+        };
+    };
+    FestivalThemeLibraryController_history_v1: {
+        parameters: {
+            query: {
+                page?: number;
+                name: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalThemeLibraryHistoryDto"];
+                };
+            };
+        };
+    };
+    FestivalThemeLibraryController_archive_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArchiveFestivalThemeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalLibraryThemeDto"];
+                };
+            };
+        };
+    };
+    CampaignOperationsCenterController_read_v1: {
+        parameters: {
+            query?: {
+                orderPage?: number;
+                quotaPage?: number;
+                orderState?: "PENDING" | "CONFIRMED" | "RECEIPT_REVIEW" | "RECEIPT_REJECTED" | "PAYMENT_FAILED" | "RECONCILIATION" | "CANCELLED" | "EXPIRED" | "OVERDUE_RESERVATION";
+                orderSort?: "newest" | "oldest";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOperationsCenterDto"];
+                };
+            };
+        };
+    };
+    FestivalAnalyticsController_read_v1: {
+        parameters: {
+            query: {
+                /** @description First included calendar day in Asia/Tehran. */
+                from: string;
+                /** @description Last included calendar day in Asia/Tehran. */
+                to: string;
+                product?: string;
+                category?: string;
+                orderState?: "PENDING" | "CONFIRMED" | "RECEIPT_REVIEW" | "RECEIPT_REJECTED" | "PAYMENT_FAILED" | "RECONCILIATION" | "CANCELLED" | "EXPIRED";
+                section?: "products" | "categories" | "brands" | "offers" | "sources" | "orders" | "quotas";
+                sort?: "desc" | "asc";
+                page?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FestivalAnalyticsDto"];
+                };
+            };
+        };
+    };
     CatalogController_listPublicCategories_v1: {
         parameters: {
             query?: never;
@@ -5799,7 +11144,10 @@ export interface operations {
                 category?: string;
                 brand?: string;
                 country?: string;
-                sort?: "newest" | "price-asc" | "price-desc" | "name-asc";
+                sizeId?: string;
+                minLengthMm?: number;
+                maxLengthMm?: number;
+                sort?: "newest" | "price-asc" | "price-desc" | "name-asc" | "availability" | "best-selling" | "featured";
             };
             header?: never;
             path?: never;
@@ -5814,6 +11162,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PublicCatalogProductListDto"];
                 };
+            };
+        };
+    };
+    CatalogController_searchPublicCatalog_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicCatalogFacetsQueryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFacetedCatalogDto"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5836,6 +11213,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PublicCatalogProductSuggestionsDto"];
                 };
+            };
+            /** @description Search suggestions are busy. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -6137,6 +11521,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    CatalogController_mergeCategory_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeCategoryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryMergeResultDto"];
                 };
             };
         };
@@ -6930,6 +12339,254 @@ export interface operations {
             };
         };
     };
+    CatalogAttributesController_listDefinitions_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogAttributeDefinitionDto"][];
+                };
+            };
+        };
+    };
+    CatalogAttributesController_createDefinition_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCatalogAttributeDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogAttributeDefinitionDto"];
+                };
+            };
+        };
+    };
+    CatalogAttributesController_updateDefinition_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCatalogAttributeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogAttributeDefinitionDto"];
+                };
+            };
+        };
+    };
+    CatalogAttributesController_listProductValues_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogProductAttributeDto"][];
+                };
+            };
+        };
+    };
+    CatalogAttributesController_setProductValue_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetCatalogProductAttributeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogProductAttributeDto"];
+                };
+            };
+        };
+    };
+    CatalogMerchandisingController_read_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogMerchandisingDto"];
+                };
+            };
+        };
+    };
+    CatalogMerchandisingController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCatalogMerchandisingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogMerchandisingDto"];
+                };
+            };
+        };
+    };
+    PromotionsController_listPublic_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPromotionsDto"];
+                };
+            };
+        };
+    };
+    PromotionsController_read_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPromotionDto"];
+                };
+            };
+        };
+    };
+    PromotionsController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavePromotionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPromotionDto"];
+                };
+            };
+        };
+    };
+    PromotionsController_previewProduct_v1: {
+        parameters: {
+            query: {
+                slug: string;
+            };
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignProductPricePreviewDto"];
+                };
+            };
+        };
+    };
     SupplierPayablesController_list_v1: {
         parameters: {
             query?: {
@@ -7243,7 +12900,7 @@ export interface operations {
     PaymentRefundsController_list_v1: {
         parameters: {
             query?: {
-                status?: "FAILED" | "CANCELLED" | "PENDING" | "CONFIRMED";
+                status?: "PENDING" | "FAILED" | "CANCELLED" | "CONFIRMED";
                 orderId?: string;
                 from?: string;
                 to?: string;
@@ -7632,6 +13289,504 @@ export interface operations {
             };
         };
     };
+    WalletController_balance_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletBalanceDto"];
+                };
+            };
+        };
+    };
+    WalletController_customerHistory_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerWalletLedgerDto"];
+                };
+            };
+        };
+    };
+    WalletController_adminBalance_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletBalanceDto"];
+                };
+            };
+        };
+    };
+    WalletController_history_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletLedgerPageDto"];
+                };
+            };
+        };
+    };
+    WalletController_correct_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WalletCorrectionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletOperationDto"];
+                };
+            };
+        };
+    };
+    PurchaseRewardJobsController_metrics_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseRewardMetricsDto"];
+                };
+            };
+        };
+    };
+    PurchaseRewardJobsController_customerJobs_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerRewardJobsPageDto"];
+                };
+            };
+        };
+    };
+    PurchaseRewardJobsController_reviewHold_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RewardReviewHoldDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetriedPurchaseRewardJobDto"];
+                };
+            };
+        };
+    };
+    PurchaseRewardJobsController_retry_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetriedPurchaseRewardJobDto"];
+                };
+            };
+        };
+    };
+    WalletMaintenanceController_report_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                status?: "open" | "resolved";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletMaintenanceReportDto"];
+                };
+            };
+        };
+    };
+    GrowthCreditIssuanceController_status_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthCreditRolloutStatusDto"];
+                };
+            };
+        };
+    };
+    GrowthCreditIssuanceController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGrowthCreditModeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthCreditModeDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPolicyListDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRewardPolicyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_active_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveRewardPolicyDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_activationTiming_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardActivationTimingDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_updateActivationTiming_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRewardActivationTimingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardActivationTimingDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_read_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_simulate_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RewardPolicySimulationRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardSimulationDto"];
+                };
+            };
+        };
+    };
+    RewardPoliciesController_publish_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    PolicySimulationController_basket_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyBasketScenarioDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyBasketResultDto"];
+                };
+            };
+        };
+    };
+    PolicySimulationController_history_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyHistoryScenarioDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyHistoryResultDto"];
+                };
+            };
+        };
+    };
+    PolicySimulationController_reviews_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyReviewListDto"];
+                };
+            };
+        };
+    };
     GuideController_listPublicTopics_v1: {
         parameters: {
             query?: never;
@@ -7947,6 +14102,254 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GuideArticleDto"];
                 };
+            };
+        };
+    };
+    GrowthAttributionController_createCampaignLink_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCampaignLinkDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignLinkDto"];
+                };
+            };
+            /** @description Invalid destination or campaign labels. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tracking parameters or a campaign identity conflict. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthAttributionController_summary_v1: {
+        parameters: {
+            query: {
+                /** @description First included calendar day in Asia/Tehran. */
+                from: string;
+                /** @description Last included calendar day in Asia/Tehran. */
+                to: string;
+                source?: string;
+                medium?: string;
+                campaignId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthRevenueSummaryDto"];
+                };
+            };
+            /** @description Invalid reporting period or filters. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthAttributionController_events_v1: {
+        parameters: {
+            query: {
+                /** @description First included calendar day in Asia/Tehran. */
+                from: string;
+                /** @description Last included calendar day in Asia/Tehran. */
+                to: string;
+                kind?: "order_submitted" | "payment_receipt_submitted" | "payment_receipt_rejected" | "payment_reconciliation_required" | "purchase_confirmed" | "order_delivered" | "cancellation" | "order_expired" | "return_received" | "refund_adjustment" | "payment_channel_fee" | "shipping_provider_cost";
+                page?: number;
+                limit?: number;
+                source?: string;
+                medium?: string;
+                campaignId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthRevenueEventsDto"];
+                };
+            };
+            /** @description Invalid reporting period, filters or pagination. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthAttributionController_readDashboard_v1: {
+        parameters: {
+            query: {
+                /** @description First included calendar day in Asia/Tehran. */
+                from: string;
+                /** @description Last included calendar day in Asia/Tehran. */
+                to: string;
+                category?: string;
+                product?: string;
+                brand?: string;
+                sort?: "purchases" | "net" | "spend";
+                device?: "desktop" | "mobile" | "tablet" | "unknown";
+                page?: number;
+                limit?: number;
+                source?: string;
+                medium?: string;
+                campaignId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthDashboardDto"];
+                };
+            };
+        };
+    };
+    GrowthAttributionController_campaignPerformance_v1: {
+        parameters: {
+            query: {
+                /** @description First included calendar day in Asia/Tehran. */
+                from: string;
+                /** @description Last included calendar day in Asia/Tehran. */
+                to: string;
+                page?: number;
+                contentPage?: number;
+            };
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthCampaignPerformanceDto"];
+                };
+            };
+        };
+    };
+    GrowthAttributionController_readCosts_v1: {
+        parameters: {
+            query: {
+                /** @description First included calendar day in Asia/Tehran. */
+                from: string;
+                /** @description Last included calendar day in Asia/Tehran. */
+                to: string;
+                category?: string;
+                product?: string;
+                brand?: string;
+                sort?: "purchases" | "net" | "spend";
+                device?: "desktop" | "mobile" | "tablet" | "unknown";
+                page?: number;
+                limit?: number;
+                source?: string;
+                medium?: string;
+                campaignId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthCostsDto"];
+                };
+            };
+        };
+    };
+    GrowthAttributionController_recordCost_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordGrowthCostDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthCostDto"];
+                };
+            };
+        };
+    };
+    GrowthAttributionController_measure_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrowthMeasurementDto"];
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -8348,7 +14751,7 @@ export interface operations {
     NotificationOutboxRecoveryController_list_v1: {
         parameters: {
             query?: {
-                status?: "FAILED" | "UNKNOWN" | "PENDING" | "PROCESSING" | "DISPATCHING" | "SENT";
+                status?: "PENDING" | "FAILED" | "UNKNOWN" | "PROCESSING" | "SKIPPED" | "DISPATCHING" | "SENT";
                 source?: "CUSTOMER" | "OPERATIONAL";
                 limit?: number;
             };
@@ -8405,6 +14808,90 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    WalletCreditNotificationsController_customer_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletCustomerNotificationsDto"];
+                };
+            };
+        };
+    };
+    WalletCreditNotificationsController_updatePreferences_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WalletNotificationPreferencesDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletCustomerNotificationsDto"];
+                };
+            };
+        };
+    };
+    WalletCreditNotificationsController_settings_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletNotificationSettingsDto"];
+                };
+            };
+        };
+    };
+    WalletCreditNotificationsController_updateSettings_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWalletNotificationSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletNotificationSettingsDto"];
+                };
             };
         };
     };
@@ -8839,7 +15326,7 @@ export interface operations {
     PlatingFulfillmentController_list_v1: {
         parameters: {
             query?: {
-                status?: "CANCELLED" | "PENDING" | "IN_PROGRESS" | "COMPLETED";
+                status?: "PENDING" | "CANCELLED" | "IN_PROGRESS" | "COMPLETED";
                 limit?: number;
             };
             header?: never;
@@ -8949,6 +15436,7 @@ export interface operations {
     OrdersController_listOrders_v1: {
         parameters: {
             query?: {
+                orderId?: string;
                 status?: "CANCELLED" | "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "EXPIRED";
                 limit?: number;
             };
@@ -8985,6 +15473,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerOrderDetailDto"];
+                };
+            };
+        };
+    };
+    OrdersController_estimate_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionEstimateRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionEstimateDto"];
+                };
+            };
+        };
+    };
+    OrdersController_estimateWallet_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionEstimateRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletPreviewDto"];
+                };
+            };
+        };
+    };
+    OrdersController_quote_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrderDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckoutPriceQuoteDto"];
                 };
             };
         };
@@ -9119,6 +15676,182 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    CartRecoveryController_status_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartStatusDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveCartDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartStatusDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_preview_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedCartVersionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartReviewDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_restore_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreCartDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartReviewDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_hide_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedCartVersionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartStatusDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_discard_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedCartVersionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartStatusDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_report_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartReportDto"];
+                };
+            };
+        };
+    };
+    CartRecoveryController_policy_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedCartPolicyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCartPolicyDto"];
+                };
             };
         };
     };
@@ -10264,6 +16997,377 @@ export interface operations {
             };
         };
     };
+    ReferralsController_overview_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralOverviewDto"];
+                };
+            };
+        };
+    };
+    ReferralsController_checkout_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralCheckoutAvailabilityDto"];
+                };
+            };
+        };
+    };
+    ReferralsController_issueCode_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedReferralCodeDto"];
+                };
+            };
+        };
+    };
+    ReferralsController_claim_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReferralClaimDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivedReferralDto"];
+                };
+            };
+        };
+    };
+    ReferralRewardPoliciesController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralPolicyListDto"];
+                };
+            };
+        };
+    };
+    ReferralRewardPoliciesController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateReferralRewardDraftDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    ReferralRewardPoliciesController_scopes_v1: {
+        parameters: {
+            query: {
+                kind: "category" | "campaign";
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralScopeDto"][];
+                };
+            };
+        };
+    };
+    ReferralRewardPoliciesController_read_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    ReferralRewardPoliciesController_simulate_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulateReferralRewardPolicyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRewardPreviewDto"];
+                };
+            };
+        };
+    };
+    ReferralRewardPoliciesController_publish_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralPolicyDetailDto"];
+                };
+            };
+        };
+    };
+    ReferralRiskController_policiesPage_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRiskPolicyOverviewDto"];
+                };
+            };
+        };
+    };
+    ReferralRiskController_publish_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishReferralRiskPolicyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRiskPolicyRecordDto"];
+                };
+            };
+        };
+    };
+    ReferralRiskController_simulate_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulateReferralRiskDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRiskPreviewDto"];
+                };
+            };
+        };
+    };
+    ReferralRiskController_queue_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                queue?: "open" | "resolved" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRiskQueueDto"];
+                };
+            };
+        };
+    };
+    ReferralRiskController_detail_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRiskCaseDto"];
+                };
+            };
+        };
+    };
+    ReferralRiskController_review_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewReferralRiskDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralRiskCaseDto"];
+                };
+            };
+        };
+    };
+    ReferralGrantController_report_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                days?: 30 | 90 | 365;
+                status?: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralGrantReportDto"];
+                };
+            };
+        };
+    };
     ShippingController_getPublicPricing_v1: {
         parameters: {
             query?: never;
@@ -10650,6 +17754,33 @@ export interface operations {
             };
         };
     };
+    SiteSettingsController_uploadCampaignMedia_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    altText?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSiteMediaDto"];
+                };
+            };
+        };
+    };
     SiteSettingsController_uploadContentPageMedia_v1: {
         parameters: {
             query?: never;
@@ -10907,6 +18038,517 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    SearchConsoleController_connection_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchConsoleConnectionDto"];
+                };
+            };
+        };
+    };
+    SearchConsoleController_performance_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchConsolePerformanceQueryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchConsolePerformanceDto"];
+                };
+            };
+        };
+    };
+    SearchConsoleController_brandPerformance_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchConsolePeriodDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchConsoleBrandPerformanceDto"];
+                };
+            };
+        };
+    };
+    SearchConsoleController_sitemaps_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchConsoleSitemapsDto"];
+                };
+            };
+        };
+    };
+    SearchOverviewController_overview_v1: {
+        parameters: {
+            query: {
+                startDate: string;
+                endDate: string;
+                searchType?: "web" | "image" | "video" | "news";
+                device?: "DESKTOP" | "MOBILE" | "TABLET";
+                brand?: "BRANDED" | "NON_BRANDED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchOverviewDto"];
+                };
+            };
+        };
+    };
+    SearchOverviewController_rows_v1: {
+        parameters: {
+            query: {
+                startDate: string;
+                endDate: string;
+                searchType?: "web" | "image" | "video" | "news";
+                device?: "DESKTOP" | "MOBILE" | "TABLET";
+                brand?: "BRANDED" | "NON_BRANDED";
+                kind: "query" | "page";
+                q?: string;
+                sort?: "clicks" | "impressions" | "ctr" | "position" | "label";
+                direction?: "asc" | "desc";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchOverviewRowsDto"];
+                };
+            };
+        };
+    };
+    SearchEntityController_list_v1: {
+        parameters: {
+            query: {
+                startDate: string;
+                endDate: string;
+                searchType?: "web" | "image" | "video" | "news";
+                minimumImpressions?: number;
+                kind: "product" | "category" | "brand" | "article";
+                opportunity?: "low-ctr" | "decline" | "growth";
+                q?: string;
+                maximumCtrPercent?: number;
+                minimumChangePercent?: number;
+                minimumPreviousClicks?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchEntityListDto"];
+                };
+            };
+        };
+    };
+    SearchEntityController_detail_v1: {
+        parameters: {
+            query: {
+                startDate: string;
+                endDate: string;
+                searchType?: "web" | "image" | "video" | "news";
+                minimumImpressions?: number;
+                urlId?: string;
+                urlPage?: number;
+            };
+            header?: never;
+            path: {
+                kind: "product" | "category" | "brand" | "article";
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchEntityDetailDto"];
+                };
+            };
+        };
+    };
+    SeoAuditController_overview_v1: {
+        parameters: {
+            query?: {
+                runId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoAuditOverviewDto"];
+                };
+            };
+        };
+    };
+    SeoAuditController_start_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoAuditQueuedDto"];
+                };
+            };
+        };
+    };
+    SeoIndexMonitoringController_overview_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoIndexOverviewDto"];
+                };
+            };
+        };
+    };
+    SeoIndexMonitoringController_queue_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoInspectionQueuedDto"];
+                };
+            };
+        };
+    };
+    SeoIndexMonitoringController_coverage_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                id?: string;
+                reason?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoCoverageOverviewDto"];
+                };
+            };
+        };
+    };
+    SeoIndexMonitoringController_importCoverage_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    label: string;
+                    /** Format: date */
+                    reportDate: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoCoverageStoredDto"];
+                };
+            };
+        };
+    };
+    SeoIssueController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                status?: "OPEN" | "IN_PROGRESS" | "RESOLVED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoIssueListDto"];
+                };
+            };
+        };
+    };
+    SeoIssueController_scan_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoIssueScanDto"];
+                };
+            };
+        };
+    };
+    SeoIssueController_detail_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoIssueDetailDto"];
+                };
+            };
+        };
+    };
+    SeoIssueController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeoIssueUpdateDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoIssueDetailDto"];
+                };
+            };
+        };
+    };
+    SeoOpportunityController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                status?: "PENDING" | "APPROVED" | "DEFERRED" | "TASK_CREATED" | "REJECTED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoOpportunityListDto"];
+                };
+            };
+        };
+    };
+    SeoOpportunityController_refresh_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoOpportunityRefreshDto"];
+                };
+            };
+        };
+    };
+    SeoOpportunityController_detail_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoOpportunityDetailDto"];
+                };
+            };
+        };
+    };
+    SeoOpportunityController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeoOpportunityUpdateDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoOpportunityDetailDto"];
+                };
             };
         };
     };

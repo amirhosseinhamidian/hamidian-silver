@@ -1,5 +1,6 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 import { OrderStatus } from '../../../generated/prisma/enums';
 
 export class ListOrdersQueryDto {
@@ -13,4 +14,11 @@ export class ListOrdersQueryDto {
   @Min(1)
   @Max(100)
   limit?: number;
+}
+
+export class AdminListOrdersQueryDto extends ListOrdersQueryDto {
+  @ApiPropertyOptional({ type: String, format: 'uuid' })
+  @IsOptional()
+  @IsUUID('4')
+  orderId?: string;
 }

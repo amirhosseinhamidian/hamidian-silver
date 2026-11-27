@@ -46,6 +46,27 @@ function jsonResponse(body: unknown): Response {
 }
 
 describe('CategoryManagementView', () => {
+  it('opens the referenced category editor only for authorized users', async () => {
+    const { rerender } = render(
+      <CategoryManagementView
+        categories={categories}
+        failed={false}
+        canWrite={false}
+        initialEditId="category-1"
+      />,
+    );
+    expect(screen.queryByRole('dialog', { name: 'ویرایش انگشتر' })).not.toBeInTheDocument();
+    rerender(
+      <CategoryManagementView
+        categories={categories}
+        failed={false}
+        canWrite
+        initialEditId="category-1"
+      />,
+    );
+    expect(await screen.findByRole('dialog', { name: 'ویرایش انگشتر' })).toBeVisible();
+  });
+
   it('uses mobile cards and normalizes Persian order input when editing', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: 'category-1' }));
     vi.stubGlobal('fetch', fetchMock);
@@ -115,5 +136,32 @@ describe('CategoryManagementView', () => {
     render(<CategoryManagementView categories={categories} failed={false} canWrite={false} />);
     expect(screen.queryByRole('button', { name: 'افزودن دسته' })).not.toBeInTheDocument();
     expect(screen.getByText('فقط مشاهده')).toBeInTheDocument();
+  });
+
+  it('shows a descendant path and active subtree count in the mobile hierarchy', () => {
+    const [root] = categories;
+    const child = {
+      ...root,
+      id: 'category-2',
+      name: 'انگشتر زنانه',
+      slug: 'women-rings',
+      parentId: root.id,
+      parent: { id: root.id, name: root.name },
+    };
+    const leaf = {
+      ...child,
+      id: 'category-3',
+      name: 'انگشتر ظریف',
+      slug: 'delicate-rings',
+      parentId: child.id,
+      parent: { id: child.id, name: child.name },
+      activeSubtreeProductCount: 4,
+    };
+    render(
+      <CategoryManagementView categories={[leaf, child, root]} failed={false} canWrite={false} />,
+    );
+    const mobile = within(screen.getByRole('region', { name: 'کارت‌های دسته‌بندی' }));
+    expect(mobile.getByText('انگشتر / انگشتر زنانه')).toBeInTheDocument();
+    expect(mobile.getByText('۴', { exact: true })).toBeInTheDocument();
   });
 });

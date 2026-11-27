@@ -7,10 +7,12 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthenticationGuard } from './modules/auth/authentication.guard';
 import { PermissionsGuard } from './modules/authorization/permissions.guard';
+import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { HealthModule } from './modules/health/health.module';
 import { GuideModule } from './modules/guide/guide.module';
+import { GrowthAttributionModule } from './modules/growth-attribution/growth-attribution.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PricingModule } from './modules/pricing/pricing.module';
@@ -18,11 +20,14 @@ import { PlatingModule } from './modules/plating/plating.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ProfileModule } from './modules/profile/profile.module';
+import { ReferralsModule } from './modules/referrals/referrals.module';
+import { RewardPoliciesModule } from './modules/reward-policies/reward-policies.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
 import { SiteSettingsModule } from './modules/site-settings/site-settings.module';
 import { SeoModule } from './modules/seo/seo.module';
 import { SupplierImportsModule } from './modules/supplier-imports/supplier-imports.module';
 import { UserManagementModule } from './modules/user-management/user-management.module';
+import { WalletModule } from './modules/wallet/wallet.module';
 
 @Module({
   imports: [
@@ -40,9 +45,11 @@ import { UserManagementModule } from './modules/user-management/user-management.
     ScheduleModule.forRoot(),
     AuthModule,
     AuditModule,
+    CampaignsModule,
     CatalogModule,
     FinanceModule,
     GuideModule,
+    GrowthAttributionModule,
     HealthModule,
     InventoryModule,
     NotificationsModule,
@@ -51,11 +58,14 @@ import { UserManagementModule } from './modules/user-management/user-management.
     OrdersModule,
     PaymentsModule,
     ProfileModule,
+    ReferralsModule,
+    RewardPoliciesModule,
     ShippingModule,
     SiteSettingsModule,
     SeoModule,
     SupplierImportsModule,
     UserManagementModule,
+    WalletModule,
   ],
   providers: [
     {

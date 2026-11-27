@@ -101,6 +101,10 @@ export class UpdateProductDto {
   categoryIds?: string[];
 
   @IsOptional()
+  @IsUUID('4')
+  primaryCategoryId?: string | null;
+
+  @IsOptional()
   @IsArray()
   @ArrayMaxSize(30)
   @ValidateNested({ each: true })

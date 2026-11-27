@@ -51,6 +51,21 @@ export async function createCheckoutOrder(request: Request): Promise<Response> {
   return responseFromApi(response, data ?? error);
 }
 
+export async function quoteCheckoutOrder(request: Request): Promise<Response> {
+  const accessToken = await getSessionToken();
+  if (!accessToken) return authenticationRequired();
+  try {
+    const body = (await request.json()) as CreateOrderBody;
+    const { data, error, response } = await createApiClient(accessToken).POST(
+      '/api/v1/orders/price-quote',
+      { body },
+    );
+    return responseFromApi(response, data ?? error);
+  } catch {
+    return Response.json({ message: 'Checkout quote is unavailable.' }, { status: 502 });
+  }
+}
+
 export async function initiateCheckoutPayment(request: Request): Promise<Response> {
   const accessToken = await getSessionToken();
 
@@ -120,6 +135,52 @@ async function forwardAuthenticatedResponse(
       'Cache-Control': 'no-store',
     },
   });
+}
+
+export async function forwardWalletRequest(
+  request: Request,
+  resource: 'balance' | 'ledger' | 'estimate' | 'notifications',
+) {
+  const accessToken = await getSessionToken();
+  if (!accessToken) {
+    return Response.json(null, { status: 401, headers: { 'Cache-Control': 'no-store' } });
+  }
+  const page = new URL(request.url).searchParams.get('page') ?? '1';
+  const path =
+    resource === 'estimate'
+      ? '/api/v1/orders/wallet-estimate'
+      : resource === 'ledger'
+        ? `/api/v1/wallet/ledger?page=${encodeURIComponent(page)}`
+        : resource === 'notifications'
+          ? '/api/v1/notifications/wallet'
+          : '/api/v1/wallet';
+  try {
+    const method =
+      resource === 'estimate'
+        ? 'POST'
+        : resource === 'notifications' && request.method === 'PATCH'
+          ? 'PATCH'
+          : null;
+    if (
+      method === 'PATCH' &&
+      !request.headers.get('content-type')?.startsWith('application/json')
+    ) {
+      return Response.json(null, { status: 415, headers: { 'Cache-Control': 'no-store' } });
+    }
+    const init = method
+      ? {
+          method,
+          body: await request.text(),
+          headers: { 'Content-Type': 'application/json' },
+        }
+      : {};
+    return await forwardAuthenticatedResponse(path, accessToken, {
+      ...init,
+      signal: request.signal,
+    });
+  } catch {
+    return Response.json(null, { status: 502, headers: { 'Cache-Control': 'no-store' } });
+  }
 }
 
 export async function getCardToCardSettings(): Promise<Response> {

@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderStatus, PaymentStatus, PlatingType } from '../../../generated/prisma/enums';
 
 export enum CustomerPaymentMethod {
@@ -9,6 +9,9 @@ export enum CustomerPaymentMethod {
 export class CustomerOrderPaymentDto {
   @ApiProperty({ enum: PaymentStatus })
   status!: PaymentStatus;
+
+  @ApiPropertyOptional()
+  latestAttemptFailed?: boolean;
 
   @ApiProperty({ enum: CustomerPaymentMethod, nullable: true })
   method!: CustomerPaymentMethod | null;
@@ -46,6 +49,12 @@ export class CustomerOrderItemDto {
   variantId!: string;
   quantity!: number;
   productNameSnapshot!: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' })
+  campaignIdSnapshot?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  campaignNameSnapshot?: string | null;
   productSlug!: string;
 
   @ApiProperty({ type: () => CustomerOrderMediaDto, nullable: true })
@@ -93,6 +102,14 @@ export class CustomerOrderSummaryDto {
   merchandiseTotalToman!: number;
   platingTotalToman!: number;
   discountTotalToman!: number;
+
+  @ApiPropertyOptional({ description: 'Wallet credit included in the order snapshot.' })
+  walletAppliedToman?: number;
+
+  @ApiPropertyOptional({
+    description: 'Introductory referral credit included in discountTotalToman.',
+  })
+  referralDiscountToman?: number;
   shippingTotalToman!: number;
   taxTotalToman!: number;
   grandTotalToman!: number;
@@ -158,6 +175,12 @@ export class CustomerOrderStatusHistoryDto {
   createdAt!: Date;
 }
 
+export class CustomerOrderConfirmedRefundDto {
+  id!: string;
+  amountToman!: number;
+  confirmedAt!: Date;
+}
+
 export class CustomerOrderDetailDto extends CustomerOrderSummaryDto {
   @ApiProperty({ type: String, nullable: true })
   customerNote!: string | null;
@@ -170,4 +193,7 @@ export class CustomerOrderDetailDto extends CustomerOrderSummaryDto {
 
   @ApiProperty({ type: String, nullable: true })
   cancellationReason!: string | null;
+
+  @ApiPropertyOptional({ type: () => CustomerOrderConfirmedRefundDto, isArray: true })
+  confirmedRefunds?: CustomerOrderConfirmedRefundDto[];
 }

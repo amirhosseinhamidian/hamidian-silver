@@ -16,10 +16,12 @@ import { readResponseError, toPersianDigits } from '@/components/account/account
 import { CancelPendingOrder } from '@/components/account/cancel-pending-order';
 import { CustomerOrderReturns } from '@/components/account/customer-order-returns';
 import { RetryOrderPaymentButton } from '@/components/account/retry-order-payment-button';
+import { OrderFunnelAnalytics } from '@/components/analytics/conversion-trackers';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { verifiedOrderFunnel } from '@/lib/analytics/order-funnel';
 import { AUTHENTICATION_SUCCEEDED_EVENT, openAuthModal } from '@/lib/auth/events';
 import { formatShippingToman, formatTomanPrice } from '@/lib/catalog/presentation';
 
@@ -250,6 +252,7 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
 
   return (
     <main id="main-content" className="sf-container pb-[var(--sf-section-space)] pt-8 sm:pt-10">
+      <OrderFunnelAnalytics records={verifiedOrderFunnel(order)} />
       <nav aria-label="مسیر صفحه" className="text-xs text-[var(--sf-color-muted)]">
         <Link href="/account">حساب من</Link>
         <span aria-hidden="true" className="mx-2">
@@ -401,7 +404,12 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
         </div>
 
         <aside className="space-y-6 lg:sticky lg:top-24">
-          {order.status === 'PENDING_PAYMENT' && order.payment?.status !== 'AWAITING_REVIEW' ? (
+          {order.payment?.status === 'RECONCILIATION_REQUIRED' ? (
+            <OrderReasonNotice
+              title="پرداخت در حال بررسی"
+              reason="تا مشخص شدن نتیجهٔ نهایی، پرداخت این سفارش را تکرار نکنید."
+            />
+          ) : order.status === 'PENDING_PAYMENT' && order.payment?.status !== 'AWAITING_REVIEW' ? (
             <section
               aria-labelledby="order-payment-heading"
               className="border border-[var(--sf-color-ink)] p-5"
@@ -439,8 +447,22 @@ export function CustomerOrderDetailView({ orderId }: Readonly<{ orderId: string 
               {order.platingTotalToman > 0 ? (
                 <TotalRow label="هزینه آبکاری" value={order.platingTotalToman} />
               ) : null}
-              {order.discountTotalToman > 0 ? (
-                <TotalRow label="تخفیف" value={order.discountTotalToman} negative />
+              {order.discountTotalToman > (order.referralDiscountToman ?? 0) ? (
+                <TotalRow
+                  label="تخفیف"
+                  value={order.discountTotalToman - (order.referralDiscountToman ?? 0)}
+                  negative
+                />
+              ) : null}
+              {Boolean(order.referralDiscountToman) && (
+                <TotalRow
+                  label="اعتبار معرفی خرید اول"
+                  value={order.referralDiscountToman ?? 0}
+                  negative
+                />
+              )}
+              {order.walletAppliedToman ? (
+                <TotalRow label="اعتبار کیف پول" value={order.walletAppliedToman} negative />
               ) : null}
               <ShippingTotalRow
                 value={order.shippingTotalToman}

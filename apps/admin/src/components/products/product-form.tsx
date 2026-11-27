@@ -19,6 +19,7 @@ import { FormField } from '@/components/ui/form-field';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Select } from '@/components/ui/select';
 import type { ProductFormData } from '@/lib/catalog/catalog-data';
+import type { AttributeDefinition } from '@/lib/catalog/catalog-attribute-model';
 import type {
   ProductPurchaseMode,
   ProductSizeMode,
@@ -36,6 +37,7 @@ type ProductFormProps = Readonly<{
   data: ProductFormData;
   mode: 'create' | 'edit';
   importDraft?: AdminSupplierImportDraft | null;
+  attributeDefinitions?: readonly AttributeDefinition[];
 }>;
 
 type EditableProductAttribute = Readonly<{
@@ -50,6 +52,7 @@ type EditableProductVariant = Readonly<{
   name: string;
   sizeId: string;
   weightGrams: string;
+  lengthMm: string;
   salePriceToman: string;
   compareAtPriceToman: string;
   inventoryMode: VariantInventoryMode;
@@ -76,6 +79,7 @@ function createVariant(importDraft?: AdminSupplierImportDraft | null): EditableP
     name: '',
     sizeId: 'none',
     weightGrams: importDraft?.weightGrams === null ? '' : String(importDraft?.weightGrams ?? ''),
+    lengthMm: '',
     salePriceToman: '',
     compareAtPriceToman: '',
     inventoryMode: 'OWN',
@@ -178,14 +182,54 @@ async function uploadProductImages(files: readonly File[], altText: string) {
   return uploaded;
 }
 
-export function ProductForm({ data, mode, importDraft = null }: ProductFormProps) {
+export function ProductForm({
+  data,
+  mode,
+  importDraft = null,
+  attributeDefinitions = [],
+}: ProductFormProps) {
   const router = useRouter();
   const productImagesInputId = useId();
   const product = data.product;
+  const [assignedCategoryIds, setAssignedCategoryIds] = useState(() =>
+    data.categories
+      .filter(
+        (category) =>
+          product?.categories.some(({ id }) => id === category.id) ||
+          (mode === 'create' && importDraft?.catalogCategoryId === category.id),
+      )
+      .map(({ id }) => id),
+  );
+  const [preferredCategoryId, setPreferredCategoryId] = useState(
+    product?.primaryCategoryId ?? 'auto',
+  );
+  const primaryCategoryId = assignedCategoryIds.includes(preferredCategoryId)
+    ? preferredCategoryId
+    : 'auto';
   const [purchaseMode, setPurchaseMode] = useState<ProductPurchaseMode>(
     product?.purchaseMode ?? 'SIMPLE',
   );
   const [sizeMode, setSizeMode] = useState<ProductSizeMode>(product?.sizeMode ?? 'NONE');
+  const activeCategories = new Map(
+    data.categories.filter(({ active }) => active).map((category) => [category.id, category]),
+  );
+  const requiredFeatures = attributeDefinitions.filter(
+    (definition) =>
+      definition.isActive &&
+      definition.isRequired &&
+      (definition.source !== 'VARIANT_SIZE' || sizeMode === 'SIZED') &&
+      assignedCategoryIds.some((id) => {
+        const visited = new Set<string>();
+        let category = activeCategories.get(id);
+        while (category && !visited.has(category.id)) {
+          if (definition.excludedCategoryIds.includes(category.id)) return false;
+          if (definition.categoryIds.includes(category.id)) return true;
+          visited.add(category.id);
+          category = category.parentId ? activeCategories.get(category.parentId) : undefined;
+        }
+        return false;
+      }),
+  );
   const [sizeGroupId, setSizeGroupId] = useState(product?.sizeGroup?.id ?? 'none');
   const [seo, setSeo] = useState(() => createSeoEditorValue(product));
   const [attributes, setAttributes] = useState<EditableProductAttribute[]>(() =>
@@ -362,6 +406,11 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
       salePriceToman: salePriceToman ?? null,
       compareAtPriceToman: compareAtPriceToman ?? null,
       categoryIds: formData.getAll('categoryIds').map(String),
+      ...(primaryCategoryId !== 'auto'
+        ? { primaryCategoryId }
+        : product?.primaryCategoryId
+          ? { primaryCategoryId: null }
+          : {}),
       attributes: normalizedAttributes,
       defaultPlatingType: defaultPlatingType === 'none' ? null : defaultPlatingType,
       platingTypes,
@@ -376,6 +425,7 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
         name: variant.name.trim(),
         sizeId: variant.sizeId,
         weightGrams: optionalNumberValue(variant.weightGrams),
+        lengthMm: optionalNumberValue(variant.lengthMm),
         salePriceToman: optionalNumberValue(variant.salePriceToman),
         compareAtPriceToman: optionalNumberValue(variant.compareAtPriceToman),
         inventoryMode: variant.inventoryMode,
@@ -393,6 +443,16 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
         normalizedVariants.some((variant) => Number.isNaN(variant.weightGrams))
       ) {
         setError('وزن تنوع‌ها باید فقط شامل عدد و حداکثر سه رقم اعشار باشد.');
+        return;
+      }
+      if (
+        normalizedVariants.some(
+          ({ lengthMm }) =>
+            lengthMm !== undefined &&
+            (!Number.isInteger(lengthMm) || lengthMm < 1 || lengthMm > 100000),
+        )
+      ) {
+        setError('طول تنوع باید عدد صحیح مثبت به میلی‌متر باشد.');
         return;
       }
       if (
@@ -480,6 +540,7 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
         sku: variant.sku,
         ...(variant.name ? { name: variant.name } : {}),
         ...(variant.weightGrams !== undefined ? { weightGrams: variant.weightGrams } : {}),
+        ...(variant.lengthMm !== undefined ? { lengthMm: variant.lengthMm } : {}),
         ...(variant.salePriceToman !== undefined ? { salePriceToman: variant.salePriceToman } : {}),
         ...(variant.compareAtPriceToman !== undefined
           ? { compareAtPriceToman: variant.compareAtPriceToman }
@@ -808,20 +869,55 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
 
       <Card title="دسته‌بندی‌ها" description="محصول می‌تواند در چند دسته نمایش داده شود">
         {data.categories.length ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {data.categories.map((category) => (
-              <Checkbox
-                key={category.id}
-                id={`category-${category.id}`}
-                name="categoryIds"
-                value={category.id}
-                label={category.name}
-                defaultChecked={
-                  product?.categories.some(({ id }) => id === category.id) ||
-                  (mode === 'create' && importDraft?.catalogCategoryId === category.id)
-                }
-              />
-            ))}
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {data.categories.map((category) => (
+                <Checkbox
+                  key={category.id}
+                  id={`category-${category.id}`}
+                  name="categoryIds"
+                  value={category.id}
+                  label={category.name}
+                  checked={assignedCategoryIds.includes(category.id)}
+                  onChange={(event) => {
+                    const checked = event.currentTarget.checked;
+                    setAssignedCategoryIds((current) =>
+                      checked
+                        ? [...current, category.id]
+                        : current.filter((id) => id !== category.id),
+                    );
+                    if (!checked && preferredCategoryId === category.id)
+                      setPreferredCategoryId('auto');
+                  }}
+                />
+              ))}
+            </div>
+            <FormField
+              id="product-primary-category"
+              label="دستهٔ اصلی برای مسیر راهنما"
+              hint="از دسته‌های انتخاب‌شده یک مورد را تعیین کنید یا انتخاب خودکار فروشگاه را نگه دارید."
+            >
+              {(props) => (
+                <Select
+                  {...props}
+                  value={primaryCategoryId}
+                  onValueChange={setPreferredCategoryId}
+                  options={[
+                    { value: 'auto', label: 'انتخاب خودکار' },
+                    ...data.categories
+                      .filter(({ id }) => assignedCategoryIds.includes(id))
+                      .map(({ id, name }) => ({ value: id, label: name })),
+                  ]}
+                />
+              )}
+            </FormField>
+            {requiredFeatures.length > 0 ? (
+              <Alert tone="info">
+                ویژگی‌های لازم برای دسته‌های انتخاب‌شده{' '}
+                {requiredFeatures.map(({ label }) => label).join('، ')}. پس از ذخیره، بخش ویژگی‌های
+                ساختاریافته را در صفحهٔ تنوع‌ها بررسی کنید.
+              </Alert>
+            ) : null}
           </div>
         ) : (
           <p className="text-sm text-[var(--admin-color-muted)]">
@@ -832,7 +928,7 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
 
       <Card
         title="محصولات مرتبط"
-        description="با جست‌وجوی نام، اسلاگ یا SKU محصول موردنظر را پیدا کنید. ارتباط‌ها دوطرفه هستند و در صفحه هر دو محصول اعمال می‌شوند."
+        description="برای اولویت دادن به یک پیشنهاد مکمل، محصول را با نام، اسلاگ یا SKU پیدا کنید. ارتباط دوطرفه است و پیشنهاد در صورت امکان خرید نمایش داده می‌شود."
       >
         {(data.products ?? []).length ? (
           <RelatedProductPicker
@@ -1436,6 +1532,25 @@ export function ProductForm({ data, mode, importDraft = null }: ProductFormProps
                           onChange={(event) =>
                             updateVariant({
                               weightGrams: toPersianDigits(toAsciiDigits(event.target.value)),
+                            })
+                          }
+                        />
+                      )}
+                    </FormField>
+                    <FormField
+                      id={`product-variant-${variant.id}-length`}
+                      label={`طول تنوع ${number} به میلی‌متر`}
+                    >
+                      {(props) => (
+                        <Input
+                          {...props}
+                          value={variant.lengthMm}
+                          inputMode="numeric"
+                          placeholder="مثلاً ۲۳۰"
+                          disabled={pending}
+                          onChange={(event) =>
+                            updateVariant({
+                              lengthMm: toPersianDigits(toAsciiDigits(event.target.value)),
                             })
                           }
                         />

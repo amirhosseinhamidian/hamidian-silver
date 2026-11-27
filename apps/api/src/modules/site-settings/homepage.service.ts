@@ -368,6 +368,10 @@ export class HomepageService {
       shortDescription: product.shortDescription,
       salePriceToman: product.salePriceToman,
       compareAtPriceToman: product.compareAtPriceToman,
+      campaignOffer: product.campaignOffer,
+      ...('campaignQuota' in product && product.campaignQuota
+        ? { campaignQuota: product.campaignQuota }
+        : {}),
       sizeMode: product.sizeMode,
       brand: product.brand,
       categories: product.categories,

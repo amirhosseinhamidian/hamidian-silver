@@ -1,0 +1,467 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform, Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+import {
+  CampaignAudience,
+  CampaignKind,
+  CampaignManagementPurpose,
+  CampaignNavigationEffect,
+  CampaignStatus,
+} from '../../../generated/prisma/enums';
+import { CampaignAction } from '../campaign-lifecycle';
+import { CampaignBudgetDto } from './campaign-operations.dto';
+import { CampaignPlacementDisplayDto } from './campaign-placement-display.dto';
+
+function Trimmed() {
+  return Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  );
+}
+
+export class CampaignMarketingSettingsDto {
+  @ApiProperty({ type: String, maxLength: 1000 })
+  @Trimmed()
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 1000)
+  destinationPath!: string;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true })
+  @IsOptional()
+  @IsUUID('4')
+  relatedFestivalId?: string | null;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true })
+  @IsOptional()
+  @IsUUID('4')
+  relatedSalesCampaignId?: string | null;
+}
+
+export class CampaignDraftDto {
+  @ApiPropertyOptional({ type: () => CampaignMarketingSettingsDto })
+  @IsOptional()
+  @Type(() => CampaignMarketingSettingsDto)
+  @IsObject()
+  @ValidateNested()
+  marketing?: CampaignMarketingSettingsDto;
+
+  @Trimmed()
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 150)
+  name!: string;
+
+  @Trimmed()
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 500)
+  goal!: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @Trimmed()
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 96)
+  channel?: string;
+
+  @Type(() => Object)
+  @IsBoolean()
+  allProducts!: boolean;
+
+  @ApiProperty({ type: String, isArray: true })
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  @Length(1, 220, { each: true })
+  productSlugs!: string[];
+
+  @ApiProperty({ type: String, isArray: true })
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  @Length(1, 180, { each: true })
+  categorySlugs!: string[];
+
+  @Type(() => Object)
+  @IsString()
+  @Length(16, 24)
+  startsTehran!: string;
+
+  @Type(() => Object)
+  @IsString()
+  @Length(16, 24)
+  endsTehran!: string;
+
+  @Type(() => Object)
+  @IsInt()
+  @Min(0)
+  @Max(2_147_483_647)
+  budgetToman!: number;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 0, maximum: 2_147_483_647 })
+  @IsOptional()
+  @Type(() => Object)
+  @IsInt()
+  @Min(0)
+  @Max(2_147_483_647)
+  plannedChannelCostToman?: number | null;
+
+  @ApiPropertyOptional({ enum: CampaignAudience })
+  @IsOptional()
+  @IsEnum(CampaignAudience)
+  audience?: CampaignAudience;
+
+  @Trimmed()
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 500)
+  message!: string;
+
+  @Type(() => Object)
+  @IsBoolean()
+  bannerEnabled!: boolean;
+
+  @Type(() => Object)
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  bannerPriority!: number;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true })
+  @IsOptional()
+  @Type(() => Object)
+  @IsUUID()
+  mediaId?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @Trimmed()
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 1000)
+  ctaPath?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @Trimmed()
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 80)
+  ctaLabel?: string | null;
+}
+
+export class CreateCampaignDto extends CampaignDraftDto {
+  @ApiPropertyOptional({ enum: [CampaignKind.MARKETING, CampaignKind.FESTIVAL] })
+  @IsOptional()
+  @Type(() => Object)
+  @IsIn([CampaignKind.MARKETING, CampaignKind.FESTIVAL])
+  kind?: 'MARKETING' | 'FESTIVAL';
+
+  @ApiPropertyOptional({ enum: CampaignManagementPurpose })
+  @IsOptional()
+  @IsEnum(CampaignManagementPurpose)
+  managementPurpose?: CampaignManagementPurpose;
+
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 64)
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  slug!: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @Trimmed()
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 64)
+  trackingId?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @Trimmed()
+  @Type(() => Object)
+  @IsString()
+  @Length(1, 96)
+  trackingLabel?: string;
+}
+
+export class UpdateCampaignDto extends CampaignDraftDto {
+  @ApiPropertyOptional({ enum: [CampaignKind.FESTIVAL] })
+  @IsOptional()
+  @Type(() => Object)
+  @IsIn([CampaignKind.FESTIVAL])
+  kind?: 'FESTIVAL';
+
+  @Type(() => Object)
+  @IsInt()
+  @Min(1)
+  expectedRevision!: number;
+}
+
+export class CampaignTransitionDto {
+  @ApiProperty({ enum: CampaignAction })
+  @Type(() => Object)
+  @IsEnum(CampaignAction)
+  action!: CampaignAction;
+
+  @Type(() => Object)
+  @IsInt()
+  @Min(1)
+  expectedRevision!: number;
+
+  @Type(() => Object)
+  @IsUUID('4')
+  requestId!: string;
+}
+
+export class CampaignPageQueryDto {
+  @ApiPropertyOptional({ minimum: 1, maximum: 10_000, default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10_000)
+  page?: number;
+}
+
+const campaignListViews = ['festivals', 'sales', 'marketing'] as const;
+export type CampaignListView = (typeof campaignListViews)[number];
+const campaignListSorts = ['newest', 'oldest'] as const;
+const salesListKinds = ['offers', 'existing'] as const;
+
+export class CampaignListQueryDto extends CampaignPageQueryDto {
+  @ApiPropertyOptional({ enum: [...campaignListViews] })
+  @IsOptional()
+  @IsIn(campaignListViews)
+  view?: CampaignListView;
+
+  @ApiPropertyOptional({ maxLength: 150 })
+  @IsOptional()
+  @Trimmed()
+  @IsString()
+  @MaxLength(150)
+  q?: string;
+
+  @ApiPropertyOptional({ enum: CampaignStatus })
+  @IsOptional()
+  @IsEnum(CampaignStatus)
+  status?: CampaignStatus;
+
+  @ApiPropertyOptional({ minLength: 16, maxLength: 24 })
+  @IsOptional()
+  @Length(16, 24)
+  fromTehran?: string;
+
+  @ApiPropertyOptional({ minLength: 16, maxLength: 24 })
+  @IsOptional()
+  @Length(16, 24)
+  toTehran?: string;
+
+  @ApiPropertyOptional({ enum: [...campaignListSorts] })
+  @IsOptional()
+  @IsIn(campaignListSorts)
+  sort?: (typeof campaignListSorts)[number];
+
+  @ApiPropertyOptional({ enum: [...salesListKinds] })
+  @IsOptional()
+  @IsIn(salesListKinds)
+  salesKind?: (typeof salesListKinds)[number];
+}
+
+export class CampaignMediaDto {
+  id!: string;
+  mimeType!: string;
+
+  @ApiProperty({ type: String, nullable: true })
+  url!: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  altText!: string | null;
+}
+
+export class SalesCampaignListDetailsDto {
+  allProducts!: boolean;
+  selectedProducts!: number;
+  selectedCategories!: number;
+  discountBudgetToman!: number;
+  quotaProducts!: number;
+}
+
+export class CampaignSummaryDto {
+  id!: string;
+  slug!: string;
+  name!: string;
+  ownerId!: string;
+
+  @ApiProperty({ enum: CampaignKind })
+  kind!: CampaignKind;
+
+  @ApiPropertyOptional({ enum: CampaignManagementPurpose })
+  managementPurpose?: CampaignManagementPurpose;
+
+  @ApiPropertyOptional({ type: () => SalesCampaignListDetailsDto })
+  salesDetails?: SalesCampaignListDetailsDto;
+
+  @ApiProperty({ enum: CampaignStatus })
+  status!: CampaignStatus;
+
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  archivedAt!: string | null;
+
+  @ApiProperty({ format: 'date-time' })
+  startsAt!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  endsAt!: string;
+
+  startsTehran!: string;
+  endsTehran!: string;
+  revision!: number;
+}
+
+export class CampaignRevisionDto {
+  version!: number;
+  action!: string;
+
+  @ApiProperty({ type: String, nullable: true })
+  actorUserId!: string | null;
+
+  @ApiProperty({ format: 'date-time' })
+  recordedAt!: string;
+
+  @ApiProperty({ type: 'object', additionalProperties: true })
+  snapshot!: object;
+}
+
+export class CampaignListDto {
+  @ApiProperty({ type: () => CampaignSummaryDto, isArray: true })
+  items!: CampaignSummaryDto[];
+
+  page!: number;
+  hasMore!: boolean;
+}
+
+export class CampaignDetailDto extends CampaignSummaryDto {
+  @ApiPropertyOptional({ type: () => CampaignMarketingSettingsDto })
+  marketing?: CampaignMarketingSettingsDto;
+
+  goal!: string;
+  channel!: string;
+  trackingId!: string;
+  trackingLabel!: string;
+  allProducts!: boolean;
+
+  @ApiProperty({ type: String, isArray: true })
+  productSlugs!: string[];
+
+  @ApiProperty({ type: String, isArray: true })
+  categorySlugs!: string[];
+
+  budgetToman!: number;
+
+  @ApiProperty({ type: Number, nullable: true })
+  plannedChannelCostToman!: number | null;
+
+  @ApiProperty({ enum: CampaignAudience })
+  audience!: CampaignAudience;
+
+  @ApiProperty({ type: () => CampaignBudgetDto })
+  budget!: CampaignBudgetDto;
+
+  message!: string;
+  bannerEnabled!: boolean;
+  bannerPriority!: number;
+
+  @ApiProperty({ type: String, nullable: true })
+  ctaPath!: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  ctaLabel!: string | null;
+
+  @ApiProperty({ type: () => CampaignMediaDto, nullable: true })
+  media!: CampaignMediaDto | null;
+
+  @ApiProperty({ type: () => CampaignRevisionDto, isArray: true })
+  history!: CampaignRevisionDto[];
+
+  historyPage!: number;
+  hasMoreHistory!: boolean;
+}
+
+export class CampaignBannerDto {
+  @ApiPropertyOptional({ type: String, format: 'uuid' })
+  campaignId?: string;
+
+  @ApiPropertyOptional({ type: Number })
+  publicationVersion?: number;
+
+  name!: string;
+  message!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  endsAt!: string;
+
+  @ApiProperty({ type: String, nullable: true })
+  ctaPath!: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  ctaLabel!: string | null;
+
+  @ApiProperty({ type: () => CampaignMediaDto, nullable: true })
+  media!: CampaignMediaDto | null;
+
+  @ApiPropertyOptional({ type: () => CampaignMediaDto, nullable: true })
+  mobileMedia?: CampaignMediaDto | null;
+
+  @ApiPropertyOptional({ type: () => CampaignMediaDto, nullable: true })
+  stillMedia?: CampaignMediaDto | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  desktopHeight?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  mobileHeight?: number | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  textColor?: string | null;
+
+  @ApiPropertyOptional({ enum: CampaignNavigationEffect, nullable: true })
+  navigationEffect?: CampaignNavigationEffect | null;
+
+  @ApiPropertyOptional({ type: () => CampaignPlacementDisplayDto })
+  display?: CampaignPlacementDisplayDto;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time' })
+  countdownEndsAt?: string;
+}
+
+export class PublicCampaignDto {
+  @ApiProperty({ type: () => CampaignBannerDto, nullable: true })
+  banner!: CampaignBannerDto | null;
+}
+
+export class PublicCampaignActivityDto {
+  @ApiProperty({ type: String, isArray: true })
+  activeIds!: string[];
+
+  @ApiPropertyOptional({ type: 'object', additionalProperties: { type: 'integer' } })
+  festivalVersions?: Record<string, number>;
+}

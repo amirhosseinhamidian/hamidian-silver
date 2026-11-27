@@ -3,7 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { MEDIA_UPLOAD_LIMIT_BYTES, resolveMediaStorageRoot } from '../../config/media-storage';
+import {
+  CAMPAIGN_GIF_LIMIT_BYTES,
+  MEDIA_UPLOAD_LIMIT_BYTES,
+  resolveMediaStorageRoot,
+} from '../../config/media-storage';
+import { isCampaignGif } from './campaign-gif';
 
 export type CatalogUploadFile = Readonly<{
   buffer: Buffer;
@@ -19,8 +24,8 @@ type StoredCatalogImage = Readonly<{
 }>;
 
 type DetectedImageType = Readonly<{
-  mimeType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/avif';
-  extension: 'jpg' | 'png' | 'webp' | 'avif';
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/avif' | 'image/gif';
+  extension: 'jpg' | 'png' | 'webp' | 'avif' | 'gif';
 }>;
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -78,6 +83,7 @@ export class LocalMediaStorageService {
   async storeImage(
     file: CatalogUploadFile,
     preferredName?: string | null,
+    allowCampaignGif = false,
   ): Promise<StoredCatalogImage> {
     const sizeBytes = file.buffer.byteLength;
 
@@ -89,7 +95,13 @@ export class LocalMediaStorageService {
       throw new BadRequestException('Uploaded image exceeds the 10 MB limit.');
     }
 
-    const detectedType = detectImageType(file.buffer);
+    let detectedType = detectImageType(file.buffer);
+    if (allowCampaignGif && file.mimetype.trim().toLowerCase() === 'image/gif') {
+      if (sizeBytes > CAMPAIGN_GIF_LIMIT_BYTES || !isCampaignGif(file.buffer)) {
+        throw new BadRequestException('Use a valid campaign GIF no larger than 4 MB.');
+      }
+      detectedType = { mimeType: 'image/gif', extension: 'gif' };
+    }
 
     if (!detectedType) {
       throw new BadRequestException('Only JPEG, PNG, WebP, and AVIF images are supported.');

@@ -49,6 +49,23 @@ export type DataTableProps<Row> = Readonly<{
   getRowClassName?: (row: Row) => string | undefined;
 }>;
 
+export function TableScrollRegion({
+  label,
+  className,
+  children,
+}: Readonly<{ label: string; className?: string; children: ReactNode }>) {
+  return (
+    <div
+      role="region"
+      aria-label={label}
+      tabIndex={0}
+      className={cn('min-w-0 overflow-x-auto focus-visible:outline-offset-[-2px]', className)}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function DataTable<Row>({
   caption,
   columns,
@@ -67,12 +84,7 @@ export function DataTable<Row>({
 }: DataTableProps<Row>) {
   return (
     <div className="overflow-hidden rounded-[var(--admin-radius-lg)] border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] shadow-[var(--admin-shadow-sm)]">
-      <div
-        role="region"
-        aria-label={`${caption}؛ جدول قابل پیمایش افقی`}
-        tabIndex={0}
-        className="overflow-x-auto outline-none"
-      >
+      <TableScrollRegion label={`${caption}؛ جدول قابل پیمایش افقی`}>
         <table className="w-full min-w-[48rem] border-collapse text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead
@@ -144,7 +156,7 @@ export function DataTable<Row>({
                   ))}
           </tbody>
         </table>
-      </div>
+      </TableScrollRegion>
 
       {loading ? (
         <p role="status" className="sr-only">

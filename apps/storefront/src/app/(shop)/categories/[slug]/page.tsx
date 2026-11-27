@@ -2,13 +2,18 @@ import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 
 import { CatalogCollectionPage } from '@/components/catalog/catalog-collection-page';
+import { getPublicCampaignPlacement } from '@/lib/campaigns/public-campaigns';
+import {
+  hasCatalogFacetFilters,
+  isCatalogPageOutOfRange,
+  parseCatalogFacetFilters,
+  type CatalogSearchParams,
+} from '@/lib/catalog/catalog-filter-state';
+import { maxCatalogFacetPage } from '@/lib/catalog/catalog-pagination';
 import {
   buildCategoryBreadcrumbItems,
   getPublicCatalogCategories,
-  getPublicCatalogProducts,
-  parseCatalogSearchParams,
-  type CatalogFilters,
-  type CatalogSearchParams,
+  getPublicFacetedCatalog,
 } from '@/lib/catalog/public-catalog';
 import { getPublicRelatedGuideArticles } from '@/lib/guide/public-guide';
 import { categorySeoDescription, categorySeoTitle } from '@/lib/seo/content-copy';
@@ -31,26 +36,23 @@ export async function generateMetadata({
     getPublicCatalogCategories(),
     getPublicSiteSettings(),
   ]);
-  const parsedFilters = parseCatalogSearchParams(rawSearchParams);
+  const parsedFilters = parseCatalogFacetFilters(rawSearchParams);
   const category = categories.find((candidate) => candidate.slug === slug);
 
-  if (!category) {
+  if (!category || parsedFilters.page > maxCatalogFacetPage) {
     return {
       title: 'دسته‌بندی یافت نشد',
       robots: { index: false, follow: false },
     };
   }
 
-  const shouldCheckEmpty = parsedFilters.page === 1 && parsedFilters.sort === 'newest';
-  const products = shouldCheckEmpty
-    ? await getPublicCatalogProducts({
-        page: 1,
-        pageSize: parsedFilters.pageSize,
-        sort: 'newest',
-        category: category.slug,
-      })
-    : null;
-  const emptyCollection = Boolean(shouldCheckEmpty && products?.total === 0);
+  const products =
+    parsedFilters.sort === 'newest' && !hasCatalogFacetFilters(parsedFilters)
+      ? await getPublicFacetedCatalog(parsedFilters, { category: category.slug })
+      : null;
+  if (products && isCatalogPageOutOfRange(parsedFilters, products)) {
+    return { title: 'صفحه دسته‌بندی یافت نشد', robots: { index: false, follow: false } };
+  }
 
   return buildStorefrontPageMetadata(settings, {
     pathname: `/categories/${category.slug}`,
@@ -60,29 +62,20 @@ export async function generateMetadata({
     seoTitle: category.seoTitle,
     seoDescription: category.seoDescription,
     seoCanonicalPath: category.seoCanonicalPath,
-    seoNoIndex: Boolean(category.seoNoIndex || emptyCollection),
+    seoNoIndex: Boolean(category.seoNoIndex || products?.total === 0),
     seoOgMedia: category.seoOgMedia,
     fallbackMedia: category.image,
   });
 }
 
 export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
-  const [{ slug }, parsedFilters] = await Promise.all([
+  const [{ slug }, filters] = await Promise.all([
     params,
-    searchParams.then(parseCatalogSearchParams),
+    searchParams.then(parseCatalogFacetFilters),
   ]);
-  const filters: CatalogFilters = {
-    page: parsedFilters.page,
-    pageSize: parsedFilters.pageSize,
-    sort: parsedFilters.sort,
-    category: slug,
-  };
+  const scope = { category: slug };
 
-  const [categories, products, knowledgeArticles] = await Promise.all([
-    getPublicCatalogCategories(),
-    getPublicCatalogProducts(filters),
-    getPublicRelatedGuideArticles({ categories: [slug], limit: 3 }),
-  ]);
+  const categories = await getPublicCatalogCategories();
   const category = categories.find((candidate) => candidate.slug === slug);
 
   if (!category) {
@@ -90,8 +83,15 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     if (destinationPath) permanentRedirect(destinationPath);
     notFound();
   }
+  if (filters.page > maxCatalogFacetPage) notFound();
 
-  if (filters.sort === 'newest' && filters.page > 1 && filters.page > products.totalPages) {
+  const [products, knowledgeArticles, campaignBanner] = await Promise.all([
+    getPublicFacetedCatalog(filters, scope),
+    getPublicRelatedGuideArticles({ categories: [slug], limit: 3 }),
+    getPublicCampaignPlacement('CATEGORY', category.slug),
+  ]);
+
+  if (!hasCatalogFacetFilters(filters) && isCatalogPageOutOfRange(filters, products)) {
     notFound();
   }
 
@@ -104,7 +104,9 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       image={category.image}
       mobileImage={category.heroMobileImage ?? null}
       filters={filters}
+      scope={scope}
       products={products}
+      campaignBanner={campaignBanner}
       knowledgeArticles={knowledgeArticles}
       breadcrumbs={buildCategoryBreadcrumbItems(categories, category)}
       collectionLinks={categories
@@ -112,6 +114,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         .map((candidate) => ({
           label: candidate.name,
           href: `/categories/${candidate.slug}`,
+          activeSubtreeProductCount: candidate.activeSubtreeProductCount,
         }))}
       contextLinkGroups={[
         {

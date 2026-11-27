@@ -40,15 +40,46 @@ describe('resolveStorefrontSeoRoutePolicy', () => {
     ).toMatchObject({ canonicalPath: '/guide', index: false, follow: true });
   });
 
-  it('keeps paginated catalog pages crawlable with a self canonical', () => {
+  it('indexes the clean campaign URL and limits pagination and filter variants', () => {
+    const path = '/campaigns/nowruz';
     expect(
-      resolveStorefrontSeoRoutePolicy('/products', new URLSearchParams({ page: '3' })),
-    ).toMatchObject({
-      canonicalPath: '/products?page=3',
-      index: true,
+      resolveStorefrontSeoRoutePolicy(path, new URLSearchParams('utm_source=email')),
+    ).toMatchObject({ canonicalPath: path, index: true, follow: true });
+    expect(resolveStorefrontSeoRoutePolicy(path, new URLSearchParams('page=2'))).toMatchObject({
+      canonicalPath: `${path}?page=2`,
+      index: false,
+      follow: true,
+    });
+    expect(resolveStorefrontSeoRoutePolicy(path, new URLSearchParams('size=7'))).toMatchObject({
+      canonicalPath: path,
+      index: false,
       follow: true,
     });
   });
+
+  it.each(['/products', '/categories/rings', '/brands/cartier', '/guide'])(
+    'keeps valid pagination on %s crawlable with a self canonical',
+    (pathname) => {
+      expect(
+        resolveStorefrontSeoRoutePolicy(pathname, new URLSearchParams({ page: '3' })),
+      ).toMatchObject({
+        canonicalPath: `${pathname}?page=3`,
+        index: true,
+        follow: true,
+      });
+    },
+  );
+
+  it.each(['/products/ring', '/guide/silver-care'])(
+    'keeps fake detail pagination on %s out of the index',
+    (pathname) => {
+      for (const page of ['1', '2', 'abc']) {
+        expect(
+          resolveStorefrontSeoRoutePolicy(pathname, new URLSearchParams({ page })),
+        ).toMatchObject({ canonicalPath: pathname, index: false, follow: true });
+      }
+    },
+  );
 
   it('does not index malformed pagination variants', () => {
     expect(
@@ -59,6 +90,40 @@ describe('resolveStorefrontSeoRoutePolicy', () => {
       follow: true,
       reason: 'catalog-variant',
     });
+  });
+
+  it.each([
+    'page=',
+    'page=1',
+    'page=02',
+    'page=2e0',
+    'page=2&page=2',
+    'page=1001',
+    'page=2&availability=',
+    'page=2&unknown=',
+  ])('keeps the noncanonical catalog request %s out of the index', (query) => {
+    expect(
+      resolveStorefrontSeoRoutePolicy('/categories/rings', new URLSearchParams(query)),
+    ).toMatchObject({ canonicalPath: '/categories/rings', index: false, follow: true });
+  });
+
+  it('preserves the untracked canonical for campaign links including pagination and filtered listings', () => {
+    for (const [path, query] of [
+      ['/products', 'page=3'],
+      ['/products', 'category=rings&page=3'],
+      ['/products/silver-ring', ''],
+      ['/guide', 'page=2'],
+    ]) {
+      const untracked = new URLSearchParams(query);
+      const tracked = new URLSearchParams(untracked);
+      tracked.set('utm_source', 'newsletter');
+      tracked.set('utm_id', 'nowruz-1406');
+      expect(resolveStorefrontSeoRoutePolicy(path, tracked)).toMatchObject({
+        canonicalPath: resolveStorefrontSeoRoutePolicy(path, untracked).canonicalPath,
+        index: false,
+        follow: true,
+      });
+    }
   });
 
   it.each([

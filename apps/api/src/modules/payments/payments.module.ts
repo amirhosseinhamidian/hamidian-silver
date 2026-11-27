@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
+import { WalletModule } from '../wallet/wallet.module';
 import { MellatPaymentGateway } from './adapters/mellat-payment.gateway';
 import { ZarinpalPaymentGateway } from './adapters/zarinpal-payment.gateway';
 import { ZibalPaymentGateway } from './adapters/zibal-payment.gateway';
@@ -25,7 +26,7 @@ import { PaymentsService } from './payments.service';
 import { CardToCardAccountsService } from './card-to-card-accounts.service';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, WalletModule],
   controllers: [
     PaymentsController,
     PaymentGatewaySettingsController,

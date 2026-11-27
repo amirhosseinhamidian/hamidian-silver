@@ -37,6 +37,7 @@ export default defineConfig({
         HAMIDIAN_API_ORIGIN: mockApiOrigin,
         MEDIA_PUBLIC_BASE_URL: `${mockApiOrigin}/media`,
         STOREFRONT_PUBLIC_ORIGIN: storefrontOrigin,
+        ADMIN_APP_ORIGIN: mockApiOrigin,
         STOREFRONT_E2E: 'true',
         STOREFRONT_E2E_ALLOW_LOCAL_MEDIA: 'true',
         NEXT_PUBLIC_GA_MEASUREMENT_ID: '',

@@ -1,12 +1,14 @@
 import Link from 'next/link';
 
 import { CatalogMedia } from '@/components/catalog/catalog-media';
-import { DiscountBadge } from '@/components/catalog/discount-badge';
+import { CampaignQuotaProgress } from '@/components/catalog/campaign-quota-progress';
+import { CatalogPrice } from '@/components/catalog/catalog-price';
 import { ButtonLink } from '@/components/ui/button';
 import { CatalogWishlistButton } from '@/components/wishlist/catalog-wishlist-button';
-import type { PublicCatalogProductSummary } from '@/lib/catalog/public-catalog';
 import { formatTomanPrice } from '@/lib/catalog/presentation';
-import { getDiscountPercent } from '@/lib/catalog/pricing';
+import type { PublicCatalogProductSummary } from '@/lib/catalog/public-catalog';
+
+export type CatalogProductCardVariant = 'default' | 'festival';
 
 type CatalogProductCardProps = Readonly<{
   product: PublicCatalogProductSummary;
@@ -14,6 +16,11 @@ type CatalogProductCardProps = Readonly<{
   badge?: string | null;
   imageSizes?: string;
   preloadImage?: boolean;
+  onSelect?: () => void;
+  recommendationId?: string;
+  showBudgetMatch?: boolean;
+  variant?: CatalogProductCardVariant;
+  preview?: boolean;
 }>;
 
 export function CatalogProductCard({
@@ -22,22 +29,41 @@ export function CatalogProductCard({
   badge = null,
   imageSizes = '(min-width: 1024px) 25vw, 50vw',
   preloadImage = false,
+  onSelect,
+  recommendationId,
+  showBudgetMatch = false,
+  variant = 'default',
+  preview = false,
 }: CatalogProductCardProps) {
+  const sale =
+    product.defaultSalePriceToman === undefined
+      ? product.salePriceToman
+      : product.defaultSalePriceToman;
+  const compare =
+    product.defaultCompareAtPriceToman === undefined
+      ? product.compareAtPriceToman
+      : product.defaultCompareAtPriceToman;
   const wishlistItem = {
     productId: product.id,
     slug: product.slug,
     name: product.name,
     brandName: product.brand?.name ?? null,
     media: product.primaryMedia,
-    salePriceToman: product.salePriceToman,
-    compareAtPriceToman: product.compareAtPriceToman,
+    salePriceToman: sale,
+    compareAtPriceToman: compare,
   };
 
   return (
-    <li className="sf-catalog-card group flex min-w-0 flex-col p-1 sm:p-2">
+    <li
+      className="sf-catalog-card group flex min-w-0 flex-col p-1 sm:p-2"
+      data-festival-card={variant === 'festival' ? '' : undefined}
+      data-recommendation={recommendationId}
+    >
       <div className="relative">
         <Link
           href={`/products/${product.slug}`}
+          prefetch={preview ? false : undefined}
+          onClick={onSelect}
           className="
             sf-catalog-card__media relative block aspect-square overflow-hidden
             rounded-[var(--sf-radius-md)] bg-[var(--sf-color-surface)]
@@ -69,15 +95,20 @@ export function CatalogProductCard({
           ) : null}
         </Link>
 
-        <CatalogWishlistButton item={wishlistItem} />
+        <CatalogWishlistButton item={wishlistItem} preview={preview} />
       </div>
 
-      <div className="flex flex-1 flex-col pt-3 text-center sm:pt-4">
+      <div className="sf-catalog-card__body flex flex-1 flex-col pt-3 text-center sm:pt-4">
         {product.brand ? (
           <p className="text-[0.7rem] text-[var(--sf-color-subtle)]">{product.brand.name}</p>
         ) : null}
 
-        <Link href={`/products/${product.slug}`} className="mt-2 block">
+        <Link
+          href={`/products/${product.slug}`}
+          prefetch={preview ? false : undefined}
+          className="mt-2 block"
+          onClick={onSelect}
+        >
           <h2 className="text-xs font-medium leading-5 sm:text-base sm:leading-6">
             {product.name}
           </h2>
@@ -86,7 +117,7 @@ export function CatalogProductCard({
         {product.shortDescription ? (
           <p
             className="
-              mx-auto mt-2 line-clamp-2 max-w-sm text-[0.6875rem] leading-5
+              sf-catalog-card__description mx-auto mt-2 line-clamp-2 max-w-sm text-[0.6875rem] leading-5
               text-[var(--sf-color-muted)] sm:text-sm sm:leading-6
             "
           >
@@ -95,26 +126,35 @@ export function CatalogProductCard({
         ) : null}
 
         <div className="mt-3 flex flex-col items-center gap-1">
-          {product.compareAtPriceToman &&
-          product.salePriceToman &&
-          product.compareAtPriceToman > product.salePriceToman ? (
-            <div className="flex items-center gap-2 text-xs text-[var(--sf-color-muted)]">
-              <span className="line-through">{formatTomanPrice(product.compareAtPriceToman)}</span>
-
-              <DiscountBadge
-                percent={getDiscountPercent(product.compareAtPriceToman, product.salePriceToman)!}
-              />
-            </div>
-          ) : null}
-
-          <p className="text-xs font-medium sm:text-base">
-            {formatTomanPrice(product.salePriceToman)}
-          </p>
+          {(product.isAvailable || sale !== null) && (
+            <CatalogPrice
+              sale={sale}
+              compare={compare}
+              offer={product.campaignOffer}
+              preview={preview}
+              priceClassName="text-xs font-medium sm:text-base"
+            />
+          )}
         </div>
 
+        {showBudgetMatch && product.salePriceToman !== null && (
+          <p className="mt-2 text-xs leading-5 text-[var(--sf-color-muted)]">
+            واریانت موجود در بودجه از {formatTomanPrice(product.salePriceToman)}
+          </p>
+        )}
+
+        {product.campaignQuota && (
+          <CampaignQuotaProgress
+            quota={product.campaignQuota}
+            preview={preview}
+            showName={product.campaignQuota.campaignId !== product.campaignOffer?.campaignId}
+          />
+        )}
         <div className="sf-catalog-card__action mt-auto pt-3 sm:pt-4">
           <ButtonLink
             href={`/products/${product.slug}`}
+            prefetch={preview ? false : undefined}
+            onClick={onSelect}
             variant="solid"
             size="sm"
             className="w-full sm:min-h-11 sm:px-5 sm:text-sm"

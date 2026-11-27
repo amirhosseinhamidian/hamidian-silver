@@ -41,6 +41,7 @@ export type AdminOrderItemMedia = Readonly<{
 export type AdminOrderItem = Readonly<{
   id: string;
   productName: string;
+  campaignName?: string | null;
   productSlug: string | null;
   primaryMedia: AdminOrderItemMedia | null;
   variantName: string | null;
@@ -291,6 +292,7 @@ function parseItem(value: unknown): AdminOrderItem | null {
   return {
     id,
     productName,
+    campaignName: text(item.campaignNameSnapshot),
     productSlug: text(item.productSlug),
     primaryMedia: parseItemMedia(item.primaryMedia),
     variantName: text(item.variantNameSnapshot),

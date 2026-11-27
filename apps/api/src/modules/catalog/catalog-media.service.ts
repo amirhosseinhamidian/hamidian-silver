@@ -24,12 +24,14 @@ export class CatalogMediaService {
     private readonly publicMediaUrl: PublicMediaUrlService,
   ) {}
 
-  async upload(file: CatalogUploadFile | undefined, dto: UploadMediaDto) {
+  async upload(file: CatalogUploadFile | undefined, dto: UploadMediaDto, allowCampaignGif = false) {
     if (!file) {
       throw new BadRequestException('Image file is required.');
     }
 
-    const stored = await this.localMediaStorage.storeImage(file, dto.altText);
+    const stored = allowCampaignGif
+      ? await this.localMediaStorage.storeImage(file, dto.altText, true)
+      : await this.localMediaStorage.storeImage(file, dto.altText);
 
     try {
       return await this.prisma.media.create({
@@ -761,6 +763,11 @@ export class CatalogMediaService {
               homepageHeroMobileSlides: true,
               storefrontContentHeroes: true,
               storefrontContentMobileHeroes: true,
+              campaignBanners: true,
+              campaignPlacementImages: true,
+              campaignPlacementMobileImages: true,
+              campaignPlacementStillImages: true,
+              festivalDesignAssets: true,
             },
           },
         },
@@ -835,6 +842,11 @@ export class CatalogMediaService {
             homepageHeroMobileSlides: true,
             storefrontContentHeroes: true,
             storefrontContentMobileHeroes: true,
+            campaignBanners: true,
+            campaignPlacementImages: true,
+            campaignPlacementMobileImages: true,
+            campaignPlacementStillImages: true,
+            festivalDesignAssets: true,
           },
         },
       },

@@ -3,14 +3,18 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
+import { lockOrderRowForUpdate } from '../../common/order-row-lock';
 import type { Prisma } from '../../generated/prisma/client';
 import {
+  OrderStatus,
   PaymentAttemptStatus,
   PaymentRefundStatus,
   PaymentStatus,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { WalletCheckoutService } from '../wallet/wallet-checkout.service';
 import { CancelPaymentRefundDto } from './dto/cancel-payment-refund.dto';
 import { ConfirmPaymentRefundDto } from './dto/confirm-payment-refund.dto';
 import { CreatePaymentRefundDto } from './dto/create-payment-refund.dto';
@@ -18,7 +22,10 @@ import { ListPaymentRefundsQueryDto } from './dto/list-payment-refunds-query.dto
 
 @Injectable()
 export class PaymentRefundsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly walletCheckout?: WalletCheckoutService,
+  ) {}
 
   list(query: ListPaymentRefundsQueryDto) {
     const createdAt = this.buildDateRange(query.from, query.to);
@@ -222,6 +229,7 @@ export class PaymentRefundsService {
               amountToman: true,
               refundedAmountToman: true,
               refundAllocatedToman: true,
+              orderId: true,
             },
           },
         },
@@ -267,6 +275,9 @@ export class PaymentRefundsService {
           ? PaymentStatus.REFUNDED
           : PaymentStatus.PARTIALLY_REFUNDED;
       const confirmedAt = new Date();
+      if (this.walletCheckout) {
+        await lockOrderRowForUpdate(transaction, refund.payment.orderId);
+      }
       let claimed: { count: number };
 
       try {
@@ -332,6 +343,32 @@ export class PaymentRefundsService {
 
       if (paymentClaimed.count !== 1) {
         throw new ConflictException('Payment refund totals changed; reload and retry.');
+      }
+
+      if (this.walletCheckout) {
+        const order = await transaction.order.findUniqueOrThrow({
+          where: { id: refund.payment.orderId },
+          select: { id: true, userId: true, walletAppliedToman: true, status: true },
+        });
+        if (
+          nextPaymentStatus === PaymentStatus.REFUNDED &&
+          (order.status === OrderStatus.PAID ||
+            order.status === OrderStatus.PROCESSING ||
+            order.status === OrderStatus.CANCELLED)
+        ) {
+          await this.walletCheckout.restore(
+            transaction,
+            order,
+            order.walletAppliedToman,
+            `checkout:full-refund:${refund.id}`,
+          );
+        }
+        await this.walletCheckout.adjustPurchaseReward(
+          transaction,
+          order,
+          `checkout:reward-refund:${refund.id}`,
+          nextPaymentStatus === PaymentStatus.REFUNDED,
+        );
       }
 
       return transaction.paymentRefund.findUniqueOrThrow({

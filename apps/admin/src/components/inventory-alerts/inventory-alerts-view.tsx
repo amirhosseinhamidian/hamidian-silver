@@ -33,6 +33,7 @@ type InventoryAlertsViewProps = Readonly<{
   inventoryFailed: boolean;
   notifications: AdminStockNotificationSummary | null;
   notificationsFailed: boolean;
+  canEditCatalog: boolean;
 }>;
 
 function variantLabel(item: AdminInventoryItem): string {
@@ -71,7 +72,11 @@ function demandBadge(target: AdminStockNotificationTarget) {
         در صف ارسال
       </Badge>
     );
-  return <Badge tone="success">اطلاع‌رسانی‌شده</Badge>;
+  return target.notifiedCount > 0 ? (
+    <Badge tone="success">اطلاع‌رسانی‌شده</Badge>
+  ) : (
+    <Badge tone="neutral">بدون درخواست فعال</Badge>
+  );
 }
 
 function InventoryAlertDetails({
@@ -104,7 +109,13 @@ function InventoryAlertDetails({
   );
 }
 
-function DemandDetails({ target }: Readonly<{ target: AdminStockNotificationTarget }>) {
+function DemandDetails({
+  target,
+  canEditCatalog,
+}: Readonly<{
+  target: AdminStockNotificationTarget;
+  canEditCatalog: boolean;
+}>) {
   return (
     <div className="space-y-4">
       <dl className="divide-y divide-[var(--admin-color-border)]">
@@ -131,9 +142,15 @@ function DemandDetails({ target }: Readonly<{ target: AdminStockNotificationTarg
           </div>
         ))}
       </dl>
-      <ButtonLink href={`/products/${target.productId}/edit`} variant="outline" className="w-full">
-        مشاهده محصول
-      </ButtonLink>
+      {canEditCatalog && (
+        <ButtonLink
+          href={`/products/${target.productId}/edit`}
+          variant="outline"
+          className="w-full"
+        >
+          مشاهده محصول
+        </ButtonLink>
+      )}
     </div>
   );
 }
@@ -142,16 +159,22 @@ function Kpi({
   label,
   value,
   tone,
-}: Readonly<{ label: string; value: number; tone?: 'danger' | 'warning' | 'info' }>) {
+}: Readonly<{ label: string; value: number | null; tone?: 'danger' | 'warning' | 'info' }>) {
   const color = {
     danger: 'text-[var(--admin-color-danger)]',
     warning: 'text-[var(--admin-color-warning)]',
     info: 'text-[var(--admin-color-info)]',
   }[tone ?? 'info'];
   return (
-    <Card className={tone === 'danger' && value > 0 ? 'border-red-200' : undefined}>
+    <Card
+      className={tone === 'danger' && value !== null && value > 0 ? 'border-red-200' : undefined}
+    >
       <p className="text-xs text-[var(--admin-color-muted)]">{label}</p>
-      <p className={`mt-2 text-2xl font-black ${color}`}>{formatAdminInteger(value)}</p>
+      {value === null ? (
+        <p className="mt-2 text-sm text-[var(--admin-color-muted)]">داده در دسترس نیست</p>
+      ) : (
+        <p className={`mt-2 text-2xl font-black ${color}`}>{formatAdminInteger(value)}</p>
+      )}
     </Card>
   );
 }
@@ -164,6 +187,7 @@ export function InventoryAlertsView({
   inventoryFailed,
   notifications,
   notificationsFailed,
+  canEditCatalog,
 }: InventoryAlertsViewProps) {
   const router = useRouter();
   const [inventoryQuery, setInventoryQuery] = useState('');
@@ -171,6 +195,13 @@ export function InventoryAlertsView({
   const [demandQuery, setDemandQuery] = useState('');
   const [demandStatus, setDemandStatus] = useState('waiting');
   const selectedWarehouse = warehouses.find((warehouse) => warehouse.id === selectedWarehouseId);
+  const inventoryError = warehousesFailed
+    ? 'فهرست انبارها از سرور دریافت نشد.'
+    : inventoryFailed
+      ? 'اطلاعات موجودی این انبار دریافت نشد.'
+      : null;
+  const inventoryAvailable = !inventoryError && Boolean(selectedWarehouse);
+  const notificationTotals = notificationsFailed ? null : notifications?.totals;
   const monitoredInventory = useMemo(
     () => inventory.filter((item) => item.variantActive && item.productStatus === 'ACTIVE'),
     [inventory],
@@ -261,7 +292,7 @@ export function InventoryAlertsView({
       align: 'end',
     },
   ];
-  const demandColumns: readonly DataTableColumn<AdminStockNotificationTarget>[] = [
+  const demandColumns: DataTableColumn<AdminStockNotificationTarget>[] = [
     {
       id: 'target',
       header: 'محصول و هدف درخواست',
@@ -294,7 +325,9 @@ export function InventoryAlertsView({
       align: 'center',
     },
     { id: 'status', header: 'وضعیت', cell: demandBadge },
-    {
+  ];
+  if (canEditCatalog) {
+    demandColumns.push({
       id: 'action',
       header: 'عملیات',
       cell: (target) => (
@@ -303,46 +336,40 @@ export function InventoryAlertsView({
         </ButtonLink>
       ),
       align: 'end',
-    },
-  ];
-
-  if (warehousesFailed) {
-    return (
-      <div className="mt-6">
-        <Alert tone="danger" title="دریافت هشدارها ناموفق بود">
-          فهرست انبارها از سرور دریافت نشد. صفحه را دوباره بارگذاری کنید.
-        </Alert>
-      </div>
-    );
+    });
   }
 
   return (
     <div className="mt-6 space-y-6">
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.5fr)]">
         <Card title="سلامت موجودی" description="تنوع‌های فعال محصول منتشرشده در انبار انتخاب‌شده">
-          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0 flex-1 sm:max-w-sm">
-              <Select
-                value={selectedWarehouseId ?? undefined}
-                onValueChange={(value) =>
-                  router.push(`/inventory-alerts?warehouse=${encodeURIComponent(value)}`)
-                }
-                aria-label="انتخاب انبار هشدارها"
-                options={warehouses.map((warehouse) => ({
-                  value: warehouse.id,
-                  label: `${warehouse.name}${warehouse.isDefault ? ' — پیش‌فرض' : ''}`,
-                }))}
-                placeholder="انبار را انتخاب کنید"
-              />
+          {warehouses.length > 0 && (
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 flex-1 sm:max-w-sm">
+                <Select
+                  value={selectedWarehouseId ?? undefined}
+                  onValueChange={(value) =>
+                    router.push(`/inventory-alerts?warehouse=${encodeURIComponent(value)}`)
+                  }
+                  aria-label="انتخاب انبار هشدارها"
+                  options={warehouses.map((warehouse) => ({
+                    value: warehouse.id,
+                    label: `${warehouse.name}${warehouse.isDefault ? ' — پیش‌فرض' : ''}`,
+                  }))}
+                  placeholder="انبار را انتخاب کنید"
+                />
+              </div>
+              {selectedWarehouse ? (
+                <Badge tone={selectedWarehouse.isActive ? 'success' : 'neutral'} dot>
+                  {selectedWarehouse.isActive ? 'انبار فعال' : 'انبار غیرفعال'}
+                </Badge>
+              ) : null}
             </div>
-            {selectedWarehouse ? (
-              <Badge tone={selectedWarehouse.isActive ? 'success' : 'neutral'} dot>
-                {selectedWarehouse.isActive ? 'انبار فعال' : 'انبار غیرفعال'}
-              </Badge>
-            ) : null}
-          </div>
-          {inventoryFailed ? (
-            <Alert tone="danger">اطلاعات موجودی این انبار دریافت نشد.</Alert>
+          )}
+          {inventoryError ? (
+            <Alert tone="danger">{inventoryError}</Alert>
+          ) : !inventoryAvailable ? (
+            <p className="text-sm">انباری برای گزارش موجودی ثبت نشده است.</p>
           ) : (
             <DonutChart
               title="توزیع سلامت موجودی"
@@ -356,10 +383,18 @@ export function InventoryAlertsView({
           )}
         </Card>
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-1">
-          <Kpi label="ناموجود" value={outOfStock.length} tone="danger" />
-          <Kpi label="کم‌موجود" value={lowStock.length} tone="warning" />
-          <Kpi label="درخواست منتظر" value={notifications?.totals.active ?? 0} tone="warning" />
-          <Kpi label="در صف اطلاع‌رسانی" value={notifications?.totals.queued ?? 0} tone="info" />
+          <Kpi
+            label="ناموجود"
+            value={inventoryAvailable ? outOfStock.length : null}
+            tone="danger"
+          />
+          <Kpi
+            label="کم‌موجود"
+            value={inventoryAvailable ? lowStock.length : null}
+            tone="warning"
+          />
+          <Kpi label="درخواست منتظر" value={notificationTotals?.active ?? null} tone="warning" />
+          <Kpi label="در صف اطلاع‌رسانی" value={notificationTotals?.queued ?? null} tone="info" />
         </div>
       </div>
 
@@ -436,10 +471,24 @@ export function InventoryAlertsView({
           rows={inventoryAlerts}
           getRowKey={(item) => item.variantId}
           error={
-            inventoryFailed ? { description: 'دریافت هشدارهای موجودی ناموفق بود.' } : undefined
+            inventoryError ? { description: 'فهرست کالاهای دارای هشدار در دسترس نیست.' } : undefined
           }
-          emptyTitle="هشدار موجودی ندارید"
-          emptyDescription="تمام تنوع‌های فعال این انبار موجودی مناسبی دارند."
+          emptyTitle={
+            !inventoryAvailable
+              ? 'انباری برای بررسی وجود ندارد'
+              : monitoredInventory.length === 0
+                ? 'تنوع فعالی برای بررسی وجود ندارد'
+                : outOfStock.length + lowStock.length > 0
+                  ? 'هشداری با این فیلترها پیدا نشد'
+                  : 'هشدار موجودی ندارید'
+          }
+          emptyDescription={
+            inventoryAvailable &&
+            monitoredInventory.length > 0 &&
+            outOfStock.length + lowStock.length === 0
+              ? 'تنوع‌های فعالِ بررسی‌شده موجودی بالاتر از نقطهٔ هشدار دارند.'
+              : undefined
+          }
           compact
         />
       </section>
@@ -450,7 +499,7 @@ export function InventoryAlertsView({
             درخواست‌های اطلاع‌رسانی مشتریان
           </h2>
           <p className="mt-1 text-xs text-[var(--admin-color-muted)]">
-            آمار تجمیعی تقاضا بدون نمایش اطلاعات شخصی مشتریان
+            آمار تجمیعی کل فروشگاه است و با تغییر انبار تغییر نمی‌کند.
           </p>
         </div>
         <FilterBar
@@ -506,7 +555,7 @@ export function InventoryAlertsView({
               ]}
               detailsTitle={target.productName}
               detailsDescription="جزئیات تجمیعی درخواست‌های اطلاع‌رسانی"
-              details={<DemandDetails target={target} />}
+              details={<DemandDetails target={target} canEditCatalog={canEditCatalog} />}
             />
           )}
           caption="درخواست‌های اطلاع‌رسانی موجودی"

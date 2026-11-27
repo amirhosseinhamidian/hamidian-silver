@@ -1,6 +1,7 @@
 'use client';
 
 /* eslint-disable @next/next/no-img-element -- media host is configured at runtime on the API/VPS. */
+import type { components } from '@hamidian/contracts';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, type InputEvent, useId, useMemo, useState } from 'react';
 
@@ -33,8 +34,10 @@ import {
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+type CategoryMergeResult = components['schemas']['CategoryMergeResultDto'];
 
 type CategoryManagementViewProps = Readonly<{
+  initialEditId?: string;
   categories: readonly AdminCategory[];
   failed: boolean;
   canWrite: boolean;
@@ -54,6 +57,14 @@ function responseError(payload: unknown): string {
       'دسته‌ای که به محصول متصل است قابل آرشیو نیست.',
     'Parent category was not found or is inactive.': 'دسته والد پیدا نشد یا غیرفعال است.',
     'Category was not found.': 'دسته‌بندی پیدا نشد.',
+    'A category cannot be merged into itself.': 'یک دسته نمی‌تواند با خودش ادغام شود.',
+    'Merge target was not found or is inactive.': 'دستهٔ مقصد پیدا نشد یا غیرفعال است.',
+    'The catalog changed during this operation. Reload and retry.':
+      'دسته‌ها هم‌زمان تغییر کردند. صفحه را تازه کنید و دوباره تلاش کنید.',
+    'Merging this category requires guide editing permission.':
+      'انتقال پیوندهای دانستنی به مجوز ویرایش محتوا نیاز دارد.',
+    'Merging this category requires site settings permission.':
+      'انتقال جایگاه این دسته در منو یا صفحهٔ اصلی به مجوز تنظیمات سایت نیاز دارد.',
   };
   if (typeof payload === 'object' && payload !== null) {
     const value = payload as Record<string, unknown>;
@@ -84,11 +95,17 @@ function categoryStatus(category: AdminCategory) {
   );
 }
 
-function CategoryIdentity({ category }: Readonly<{ category: AdminCategory }>) {
+function CategoryIdentity({
+  category,
+  depth,
+}: Readonly<{ category: AdminCategory; depth: number }>) {
   const thumbnail = category.featuredImage ?? category.image;
 
   return (
-    <div className="flex min-w-0 items-center gap-3">
+    <div
+      className="flex min-w-0 items-center gap-3"
+      style={{ paddingInlineStart: `${Math.min(depth, 6) * 0.75}rem` }}
+    >
       <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-[var(--admin-radius-md)] bg-[var(--admin-color-primary-soft)] font-black text-[var(--admin-color-primary)]">
         {thumbnail ? (
           <img src={thumbnail.url} alt="" className="h-full w-full object-cover" loading="lazy" />
@@ -103,6 +120,57 @@ function CategoryIdentity({ category }: Readonly<{ category: AdminCategory }>) {
         </span>
       </span>
     </div>
+  );
+}
+
+function categoryHierarchy(categories: readonly AdminCategory[]) {
+  const ids = new Set(categories.map(({ id }) => id));
+  const childrenByParent = new Map<string | null, AdminCategory[]>();
+  const sorted = [...categories].sort(
+    (left, right) =>
+      left.sortOrder - right.sortOrder ||
+      left.name.localeCompare(right.name, 'fa') ||
+      left.id.localeCompare(right.id),
+  );
+  for (const category of sorted) {
+    const parent = category.parentId && ids.has(category.parentId) ? category.parentId : null;
+    const children = childrenByParent.get(parent) ?? [];
+    children.push(category);
+    childrenByParent.set(parent, children);
+  }
+
+  const paths = new Map<string, readonly string[]>();
+  const rows: AdminCategory[] = [];
+  function visit(category: AdminCategory, ancestors: readonly string[]) {
+    if (paths.has(category.id)) return;
+    paths.set(category.id, ancestors);
+    rows.push(category);
+    for (const child of childrenByParent.get(category.id) ?? []) {
+      visit(child, [...ancestors, category.name]);
+    }
+  }
+  for (const root of childrenByParent.get(null) ?? []) visit(root, []);
+  for (const category of sorted) visit(category, []);
+  return { rows, paths };
+}
+
+function activeProductsLabel(value?: number) {
+  return value === undefined ? '—' : formatAdminInteger(value);
+}
+
+function isCategoryMergeResult(value: unknown): value is CategoryMergeResult {
+  if (typeof value !== 'object' || value === null) return false;
+  const preview = value as Partial<CategoryMergeResult>;
+  return (
+    typeof preview.merged === 'boolean' &&
+    typeof preview.sourcePath === 'string' &&
+    typeof preview.targetPath === 'string' &&
+    [
+      preview.childCount,
+      preview.sourceProductCount,
+      preview.targetProductCount,
+      preview.sharedProductCount,
+    ].every((count) => typeof count === 'number' && Number.isSafeInteger(count) && count >= 0)
   );
 }
 
@@ -149,6 +217,9 @@ function CategoryForm({
   const [seo, setSeo] = useState(() => createSeoEditorValue(category));
   const [error, setError] = useState<string | null>(null);
   const [archiveConfirmation, setArchiveConfirmation] = useState(false);
+  const [mergeTargetId, setMergeTargetId] = useState('none');
+  const [mergePreview, setMergePreview] = useState<CategoryMergeResult | null>(null);
+  const [mergePending, setMergePending] = useState(false);
   const blockedParents = category ? descendantIds(categories, category.id) : new Set<string>();
   if (category) blockedParents.add(category.id);
   const parentOptions = categories
@@ -165,6 +236,7 @@ function CategoryForm({
   const archiveBlocked = Boolean(
     category && (category.childCount > 0 || category.productCount > 0),
   );
+  const mergeTargets = parentOptions.filter(({ disabled }) => !disabled);
 
   async function requestJson(path: string, method: 'POST' | 'PATCH' | 'DELETE', body?: unknown) {
     const response = await fetch(path, {
@@ -308,6 +380,33 @@ function CategoryForm({
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : responseError(null));
     } finally {
+      onPendingChange(false);
+    }
+  }
+
+  async function merge(dryRun: boolean) {
+    if (!category || mergeTargetId === 'none' || mergePending || (!dryRun && !mergePreview)) return;
+    setError(null);
+    setMergePending(true);
+    onPendingChange(true);
+    try {
+      const result = await requestJson(`/api/catalog/categories/${category.id}/merge`, 'POST', {
+        targetCategoryId: mergeTargetId,
+        dryRun,
+      });
+      if (!isCategoryMergeResult(result) || result.merged === dryRun) {
+        throw new Error('پاسخ عملیات ادغام معتبر نبود.');
+      }
+      if (dryRun) {
+        setMergePreview(result);
+      } else {
+        onSaved();
+        router.refresh();
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : responseError(null));
+    } finally {
+      setMergePending(false);
       onPendingChange(false);
     }
   }
@@ -580,7 +679,59 @@ function CategoryForm({
       />
 
       {category ? (
-        <section className="border-t border-[var(--admin-color-border)] pt-4">
+        <section className="space-y-4 border-t border-[var(--admin-color-border)] pt-4">
+          {mergeTargets.length > 0 ? (
+            <>
+              <FormField id={`${formId}-merge-target`} label="ادغام در دستهٔ دیگر">
+                {(props) => (
+                  <Select
+                    {...props}
+                    value={mergeTargetId}
+                    disabled={mergePending}
+                    onValueChange={(value) => {
+                      setMergeTargetId(value);
+                      setMergePreview(null);
+                    }}
+                    options={[{ value: 'none', label: 'انتخاب دستهٔ مقصد' }, ...mergeTargets]}
+                  />
+                )}
+              </FormField>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={mergeTargetId === 'none' || mergePending}
+                onClick={() => void merge(true)}
+              >
+                پیش‌نمایش ادغام
+              </Button>
+              {mergePreview ? (
+                <Alert tone="warning" title="انتقال دسته به مقصد و آرشیو مبدأ">
+                  <p>
+                    {formatAdminInteger(mergePreview.childCount)} زیردسته منتقل می‌شود. تعداد
+                    عضویت‌های یکتای مستقیم مقصد از{' '}
+                    {formatAdminInteger(mergePreview.targetProductCount)} به{' '}
+                    {formatAdminInteger(
+                      mergePreview.targetProductCount +
+                        mergePreview.sourceProductCount -
+                        mergePreview.sharedProductCount,
+                    )}{' '}
+                    می‌رسد.
+                  </p>
+                  <p dir="ltr" className="my-2 break-all text-left text-xs">
+                    {mergePreview.sourcePath} → {mergePreview.targetPath}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    loading={mergePending}
+                    onClick={() => void merge(false)}
+                  >
+                    تأیید ادغام
+                  </Button>
+                </Alert>
+              ) : null}
+            </>
+          ) : null}
           {archiveBlocked ? (
             <Alert tone="warning">
               برای آرشیو، ابتدا {category.childCount > 0 ? 'زیرمجموعه‌ها' : 'محصولات متصل'} را منتقل
@@ -613,13 +764,15 @@ function CategorySheet({
   category,
   categories,
   triggerLabel,
+  initiallyOpen = false,
 }: Readonly<{
   category?: AdminCategory;
   categories: readonly AdminCategory[];
   triggerLabel: string;
+  initiallyOpen?: boolean;
 }>) {
   const formId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
   const [pending, setPending] = useState(false);
   return (
     <BottomSheet open={open} onOpenChange={setOpen}>
@@ -666,6 +819,8 @@ function ReadonlyCategoryDetails({ category }: Readonly<{ category: AdminCategor
         ['ترتیب', formatAdminInteger(category.sortOrder)],
         ['زیرمجموعه', formatAdminInteger(category.childCount)],
         ['محصول', formatAdminInteger(category.productCount)],
+        ['محصول فعال مستقیم', activeProductsLabel(category.activeProductCount)],
+        ['محصول فعال با زیردسته‌ها', activeProductsLabel(category.activeSubtreeProductCount)],
         ['توضیحات', category.description ?? 'ثبت نشده'],
         ['تصویر شاخص', category.featuredImage ? 'ثبت شده' : 'ثبت نشده'],
         ['Hero دسکتاپ', category.image ? 'ثبت شده' : 'ثبت نشده'],
@@ -685,21 +840,26 @@ function CategoryMobileCard({
   category,
   categories,
   canWrite,
+  parentPath,
 }: Readonly<{
   category: AdminCategory;
   categories: readonly AdminCategory[];
   canWrite: boolean;
+  parentPath: string;
 }>) {
   const formId = useId();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   return (
     <MobileDataCard
-      eyebrow={category.parent?.name ?? 'دسته اصلی'}
+      eyebrow={parentPath}
       title={category.name}
       status={categoryStatus(category)}
       items={[
-        { label: 'محصول', value: formatAdminInteger(category.productCount) },
+        {
+          label: 'محصول فعال با زیردسته‌ها',
+          value: activeProductsLabel(category.activeSubtreeProductCount),
+        },
         { label: 'زیرمجموعه', value: formatAdminInteger(category.childCount) },
         { label: 'ترتیب', value: formatAdminInteger(category.sortOrder) },
       ]}
@@ -735,14 +895,18 @@ export function CategoryManagementView({
   categories,
   failed,
   canWrite,
+  initialEditId,
 }: CategoryManagementViewProps) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('all');
   const [parent, setParent] = useState('all');
+  const initialEdit =
+    canWrite && initialEditId ? categories.find(({ id }) => id === initialEditId) : null;
+  const hierarchy = useMemo(() => categoryHierarchy(categories), [categories]);
   const normalizedQuery = query.trim().toLocaleLowerCase('fa');
   const filtered = useMemo(
     () =>
-      categories.filter((category) => {
+      hierarchy.rows.filter((category) => {
         const matchesQuery =
           !normalizedQuery ||
           category.name.toLocaleLowerCase('fa').includes(normalizedQuery) ||
@@ -754,7 +918,7 @@ export function CategoryManagementView({
           (parent === 'root' ? category.parentId === null : category.parentId === parent);
         return matchesQuery && matchesStatus && matchesParent;
       }),
-    [categories, normalizedQuery, parent, status],
+    [hierarchy, normalizedQuery, parent, status],
   );
   const activeFilterCount = [
     normalizedQuery,
@@ -765,13 +929,22 @@ export function CategoryManagementView({
     {
       id: 'category',
       header: 'دسته‌بندی',
-      cell: (category) => <CategoryIdentity category={category} />,
+      cell: (category) => (
+        <CategoryIdentity
+          category={category}
+          depth={hierarchy.paths.get(category.id)?.length ?? 0}
+        />
+      ),
     },
-    { id: 'parent', header: 'والد', cell: (category) => category.parent?.name ?? 'دسته اصلی' },
+    {
+      id: 'parent',
+      header: 'مسیر والد',
+      cell: (category) => hierarchy.paths.get(category.id)?.join(' / ') || 'دسته اصلی',
+    },
     {
       id: 'products',
-      header: 'محصول',
-      cell: (category) => formatAdminInteger(category.productCount),
+      header: 'محصول فعال با زیردسته‌ها',
+      cell: (category) => activeProductsLabel(category.activeSubtreeProductCount),
       align: 'center',
     },
     {
@@ -802,6 +975,15 @@ export function CategoryManagementView({
 
   return (
     <div className="mt-6 space-y-4">
+      {initialEdit ? (
+        <CategorySheet
+          key={initialEdit.id}
+          category={initialEdit}
+          categories={categories}
+          triggerLabel={`ویرایش ${initialEdit.name}`}
+          initiallyOpen
+        />
+      ) : null}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           ['کل دسته‌ها', categories.length],
@@ -870,7 +1052,12 @@ export function CategoryManagementView({
       <ResponsiveDataView
         mobileLabel="کارت‌های دسته‌بندی"
         renderMobileCard={(category) => (
-          <CategoryMobileCard category={category} categories={categories} canWrite={canWrite} />
+          <CategoryMobileCard
+            category={category}
+            categories={categories}
+            canWrite={canWrite}
+            parentPath={hierarchy.paths.get(category.id)?.join(' / ') || 'دسته اصلی'}
+          />
         )}
         caption="جدول دسته‌بندی‌های فروشگاه"
         columns={columns}

@@ -9,13 +9,20 @@ import { buttonClassName } from '@/components/ui/button';
 type CatalogFilterSheetProps = Readonly<{
   children: ReactNode;
   activeCount: number;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }>;
 
 const persianNumber = new Intl.NumberFormat('fa-IR');
 
-export function CatalogFilterSheet({ children, activeCount }: CatalogFilterSheetProps) {
+export function CatalogFilterSheet({
+  children,
+  activeCount,
+  open,
+  onOpenChange,
+}: CatalogFilterSheetProps) {
   return (
-    <DialogPrimitive.Root>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Trigger asChild>
         <button type="button" className={buttonClassName({ variant: 'outline', size: 'md' })}>
           <FiSliders aria-hidden="true" size={16} />
@@ -66,7 +73,7 @@ export function CatalogFilterSheet({ children, activeCount }: CatalogFilterSheet
           </div>
 
           <DialogPrimitive.Description className="sr-only">
-            فیلترهای جستجو، دسته‌بندی و برند محصولات.
+            گزینه‌ها را انتخاب کنید و برای به‌روزرسانی فهرست، فیلترها را اعمال کنید.
           </DialogPrimitive.Description>
 
           <div className="min-h-0 flex-1 overflow-hidden px-5 pb-6">{children}</div>

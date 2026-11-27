@@ -1,4 +1,6 @@
+import { getPublicPromotions } from '@/lib/promotions/public-promotions';
 import { CheckoutFlow } from '@/components/checkout/checkout-flow';
+import { getReferralCheckoutAvailability } from '@/lib/referrals/bff';
 import {
   getPublicShippingOptions,
   getPublicShippingPricing,
@@ -7,7 +9,11 @@ import {
 export const dynamic = 'force-dynamic';
 
 export default async function CheckoutPage() {
-  const shippingOptions = await getPublicShippingOptions();
+  const [shippingOptions, promotions, referralAvailable] = await Promise.all([
+    getPublicShippingOptions(),
+    getPublicPromotions(),
+    getReferralCheckoutAvailability(),
+  ]);
   const e2eShippingPricing =
     process.env.STOREFRONT_E2E === 'true' ? await getPublicShippingPricing() : null;
   return (
@@ -17,7 +23,12 @@ export default async function CheckoutPage() {
         <h1 className="mt-3 text-4xl font-normal sm:text-5xl">ثبت سفارش و پرداخت</h1>
       </header>
 
-      <CheckoutFlow shippingOptions={shippingOptions} shippingPricing={e2eShippingPricing} />
+      <CheckoutFlow
+        shippingOptions={shippingOptions}
+        shippingPricing={e2eShippingPricing}
+        promotionsAvailable={promotions.available}
+        referralAvailable={referralAvailable}
+      />
     </main>
   );
 }

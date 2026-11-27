@@ -1,4 +1,6 @@
 import { IS_PUBLIC_KEY } from '../auth/public.decorator';
+import { PERMISSIONS_KEY } from '../authorization/permissions.decorator';
+import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CatalogController } from './catalog.controller';
 
 describe('CatalogController', () => {
@@ -8,6 +10,7 @@ describe('CatalogController', () => {
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.listPublicCategories)).toBe(true);
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.listPublicBrands)).toBe(true);
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.listPublicProducts)).toBe(true);
+    expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.searchPublicCatalog)).toBe(true);
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.listPublicProductSuggestions)).toBe(true);
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.getPublicProduct)).toBe(true);
 
@@ -25,6 +28,10 @@ describe('CatalogController', () => {
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.updateSize)).toBeUndefined();
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.updateCategory)).toBeUndefined();
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.archiveCategory)).toBeUndefined();
+    expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.mergeCategory)).toBeUndefined();
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, prototype.mergeCategory)).toEqual([
+      PERMISSION_CODES.CATALOG_WRITE,
+    ]);
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.uploadCategoryImage)).toBeUndefined();
     expect(Reflect.getMetadata(IS_PUBLIC_KEY, prototype.removeCategoryImage)).toBeUndefined();
     expect(

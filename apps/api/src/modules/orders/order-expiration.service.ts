@@ -1,8 +1,14 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, Optional } from '@nestjs/common';
+import { lockOrderRowForUpdate } from '../../common/order-row-lock';
 import type { Prisma } from '../../generated/prisma/client';
 import { InventoryMovementType, OrderStatus, PaymentStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { releaseCampaignQuota } from '../campaigns/campaign-quota';
 import { resolveVariantInventoryRequirements } from '../inventory/variant-inventory-requirements';
+import {
+  openWalletAttemptStatuses,
+  WalletCheckoutService,
+} from '../wallet/wallet-checkout.service';
 
 const DEFAULT_BATCH_SIZE = 100;
 const MAX_BATCH_SIZE = 500;
@@ -15,7 +21,10 @@ export type ExpireDueOrdersResult = {
 
 @Injectable()
 export class OrderExpirationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly walletCheckout?: WalletCheckoutService,
+  ) {}
 
   async expireDueOrders(
     now = new Date(),
@@ -28,6 +37,32 @@ export class OrderExpirationService {
         reservationExpiresAt: {
           lte: now,
         },
+        ...(this.walletCheckout
+          ? {
+              NOT: {
+                OR: [
+                  { walletAppliedToman: { gt: 0 } },
+                  { referralCheckoutAttributionId: { not: null } },
+                ],
+                payment: {
+                  is: {
+                    OR: [
+                      {
+                        status: {
+                          notIn: [
+                            PaymentStatus.PENDING,
+                            PaymentStatus.CANCELLED,
+                            PaymentStatus.REFUNDED,
+                          ],
+                        },
+                      },
+                      { attempts: { some: { status: { in: [...openWalletAttemptStatuses] } } } },
+                    ],
+                  },
+                },
+              },
+            }
+          : {}),
       },
       orderBy: {
         reservationExpiresAt: 'asc',
@@ -64,9 +99,13 @@ export class OrderExpirationService {
         },
         select: {
           id: true,
+          userId: true,
+          walletAppliedToman: true,
+          referralCheckoutAttributionId: true,
           warehouseId: true,
           status: true,
           reservationExpiresAt: true,
+          campaignQuotaRestricted: true,
           payment: {
             select: {
               status: true,
@@ -92,9 +131,21 @@ export class OrderExpirationService {
       if (
         order.payment &&
         order.payment.status !== PaymentStatus.PENDING &&
-        order.payment.status !== PaymentStatus.CANCELLED
+        order.payment.status !== PaymentStatus.CANCELLED &&
+        !(
+          (order.walletAppliedToman || order.referralCheckoutAttributionId) &&
+          order.payment.status === PaymentStatus.REFUNDED
+        )
       ) {
         return false;
+      }
+
+      if (
+        (order.walletAppliedToman || order.referralCheckoutAttributionId) &&
+        this.walletCheckout
+      ) {
+        await lockOrderRowForUpdate(transaction, order.id);
+        if (await this.walletCheckout.hasOpenPayment(transaction, order.id)) return false;
       }
 
       const claimed = await transaction.order.updateMany({
@@ -123,6 +174,8 @@ export class OrderExpirationService {
         return false;
       }
 
+      if (order.campaignQuotaRestricted) await releaseCampaignQuota(transaction, order.id);
+      await this.walletCheckout?.release(transaction, order);
       await this.releaseReservedInventory(transaction, order.warehouseId, order.id, order.items);
 
       const paymentCancelled = await transaction.payment.updateMany({

@@ -1,12 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
-  googleAnalyticsBootstrap,
+  initializeGoogleAnalytics,
+  setGoogleAnalyticsEnabled,
   validGoogleMeasurementId,
   webVitalAnalyticsParameters,
 } from '@/lib/analytics/google-analytics';
 
 describe('Google Analytics configuration', () => {
+  afterEach(() => {
+    delete window.gtag;
+    delete window.dataLayer;
+    Reflect.deleteProperty(window, 'ga-disable-G-ABC123');
+  });
+
   it('accepts only GA4 measurement IDs', () => {
     expect(validGoogleMeasurementId(' G-ABC123 ')).toBe('G-ABC123');
     expect(validGoogleMeasurementId('UA-12345-1')).toBeNull();
@@ -34,11 +41,21 @@ describe('Google Analytics configuration', () => {
   });
 
   it('disables automatic page views so App Router navigation can track them once', () => {
-    expect(googleAnalyticsBootstrap('G-ABC123')).toContain("window.gtag('config', 'G-ABC123'");
-    expect(googleAnalyticsBootstrap('G-ABC123')).toContain('send_page_view: false');
-    expect(googleAnalyticsBootstrap('G-ABC123')).toContain(
-      "page_location: window.location.origin + '/'",
-    );
-    expect(googleAnalyticsBootstrap('G-ABC123')).toContain("page_title: 'گالری حمیدیان'");
+    initializeGoogleAnalytics('G-ABC123');
+    const commands = window.dataLayer?.map((command) => Array.from(command as ArrayLike<unknown>));
+    expect(commands?.[1]).toEqual([
+      'config',
+      'G-ABC123',
+      {
+        send_page_view: false,
+        allow_google_signals: false,
+        allow_ad_personalization_signals: false,
+        page_location: `${window.location.origin}/`,
+        page_title: 'گالری حمیدیان',
+        page_referrer: '',
+      },
+    ]);
+    setGoogleAnalyticsEnabled('G-ABC123', false);
+    expect(Reflect.get(window, 'ga-disable-G-ABC123')).toBe(true);
   });
 });

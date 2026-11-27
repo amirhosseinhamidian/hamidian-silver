@@ -4,7 +4,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { DataTableColumn } from '@/components/ui/data-table';
@@ -35,6 +35,7 @@ type Props = Readonly<{
   failed: boolean;
   currentUserId: string;
   canWrite: boolean;
+  canReadWallet?: boolean;
 }>;
 type StatusFilter = 'all' | 'active' | 'inactive';
 type RoleFilter = 'all' | AdminRole;
@@ -196,7 +197,26 @@ function errorMessage(status: number): string {
   return 'عملیات مدیریت کاربر انجام نشد. دوباره تلاش کنید.';
 }
 
-export function UserManagementView({ snapshot, failed, currentUserId, canWrite }: Props) {
+function WalletLink({ userId }: Readonly<{ userId: string }>) {
+  return (
+    <ButtonLink
+      href={`/reward-policies/wallet-operations?userId=${encodeURIComponent(userId)}`}
+      size="sm"
+      variant="outline"
+      className="mt-3"
+    >
+      کیف پول مشتری
+    </ButtonLink>
+  );
+}
+
+export function UserManagementView({
+  snapshot,
+  failed,
+  currentUserId,
+  canWrite,
+  canReadWallet,
+}: Props) {
   const [users, setUsers] = useState(snapshot.users);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
@@ -510,7 +530,12 @@ export function UserManagementView({ snapshot, failed, currentUserId, canWrite }
             ]}
             detailsTitle={userName(user)}
             detailsDescription={formatAdminPhone(user.phone)}
-            details={<UserDetails user={user} />}
+            details={
+              <>
+                <UserDetails user={user} />
+                {canReadWallet && <WalletLink userId={user.id} />}
+              </>
+            }
             detailsFooter={detailFooter}
           />
         )}
@@ -553,6 +578,7 @@ export function UserManagementView({ snapshot, failed, currentUserId, canWrite }
             footer={detailFooter}
           >
             <UserDetails user={selected} />
+            {canReadWallet && <WalletLink userId={selected.id} />}
           </DialogContent>
         ) : null}
       </Dialog>

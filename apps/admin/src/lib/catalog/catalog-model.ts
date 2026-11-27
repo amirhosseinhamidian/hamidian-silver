@@ -40,6 +40,8 @@ export type AdminCategory = Readonly<{
   seoOgMedia: AdminCategoryImage | null;
   childCount: number;
   productCount: number;
+  activeProductCount?: number;
+  activeSubtreeProductCount?: number;
 }>;
 
 export type AdminBrand = Readonly<{
@@ -106,6 +108,7 @@ export type AdminProductVariant = Readonly<{
   sku: string;
   name: string | null;
   weightGrams: number | null;
+  lengthMm?: number | null;
   salePriceToman: number | null;
   compareAtPriceToman: number | null;
   active: boolean;
@@ -165,6 +168,7 @@ export type AdminProduct = Readonly<{
   brand: CatalogLookup | null;
   country: CatalogLookup | null;
   categories: readonly CatalogLookup[];
+  primaryCategoryId?: string | null;
   variants: readonly AdminProductVariant[];
   media: readonly AdminProductMedia[];
   attributes: readonly AdminProductAttribute[];
@@ -254,6 +258,7 @@ function parseVariant(value: unknown): AdminProductVariant | null {
     sku,
     name: text(item?.name),
     weightGrams: number(item?.weightGrams),
+    lengthMm: number(item?.lengthMm),
     salePriceToman: number(item?.salePriceToman),
     compareAtPriceToman: number(item?.compareAtPriceToman),
     active: item?.isActive !== false,
@@ -400,6 +405,7 @@ export function parseAdminProduct(value: unknown): AdminProduct | null {
     brand: lookup(item?.brand),
     country: lookup(item?.country),
     categories,
+    primaryCategoryId: text(item?.primaryCategoryId),
     variants,
     media,
     attributes,
@@ -482,6 +488,8 @@ function parseCategory(value: unknown): AdminCategory | null {
     seoOgMedia: parseReferenceImage(item?.seoOgMedia),
     childCount: number(item?.childCount) ?? 0,
     productCount: number(item?.productCount) ?? 0,
+    activeProductCount: number(item?.activeProductCount) ?? undefined,
+    activeSubtreeProductCount: number(item?.activeSubtreeProductCount) ?? undefined,
   };
 }
 

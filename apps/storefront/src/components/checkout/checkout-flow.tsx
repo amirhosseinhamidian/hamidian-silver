@@ -14,11 +14,18 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
 import { Select } from '@/components/ui/select';
+import { useWalletBalance } from '@/components/wallet/use-wallet-balance';
+import { WalletBalanceView } from '@/components/wallet/wallet-balance';
 import { trackBeginCheckout } from '@/lib/analytics/commerce-events';
+import { trackFunnelEvent } from '@/lib/analytics/funnel-tracker';
+import { growthDevice } from '@/lib/analytics/growth-measurement';
+import { submittedOrderEvent } from '@/lib/analytics/order-funnel';
+import { attributionForOrder } from '@/lib/analytics/session-attribution';
 import { AUTHENTICATION_SUCCEEDED_EVENT, openAuthModal } from '@/lib/auth/events';
 import { formatShippingToman, formatTomanPrice } from '@/lib/catalog/presentation';
 import { useCart } from '@/lib/cart/cart-store';
 import { buildCreateOrderBody } from '@/lib/checkout/checkout-payload';
+import { walletReason, type WalletPreview } from '@/lib/wallet/wallet-presentation';
 import { cityOptionsFor, PROVINCE_OPTIONS } from '@/lib/checkout/iran-locations';
 import {
   calculateShippingOptionCost,
@@ -28,8 +35,12 @@ import {
   type PublicShippingPricing,
 } from '@/lib/shipping/public-shipping-pricing';
 
+type CheckoutPriceQuote = components['schemas']['CheckoutPriceQuoteDto'] &
+  Partial<Pick<WalletPreview, 'walletUnavailableReason'>> & { referralDiscountToman?: number };
 type CurrentUser = components['schemas']['CurrentUserResponseDto'];
-type CustomerOrderDetail = components['schemas']['CustomerOrderDetailDto'];
+type CustomerOrderDetail = components['schemas']['CustomerOrderDetailDto'] & {
+  referralDiscountToman?: number;
+};
 type PaymentInitiationResponse = components['schemas']['PaymentInitiationResponseDto'];
 type AuthState =
   | { status: 'checking' }
@@ -142,13 +153,18 @@ async function readError(response: Response): Promise<{ message: string; code: s
 export function CheckoutFlow({
   shippingPricing = null,
   shippingOptions = [],
+  promotionsAvailable = false,
+  referralAvailable = false,
 }: Readonly<{
   shippingPricing?: PublicShippingPricing | null;
   shippingOptions?: readonly PublicShippingOption[];
+  promotionsAvailable?: boolean;
+  referralAvailable?: boolean;
 }>) {
   const router = useRouter();
-  const { items, itemCount, subtotalToman, clearCart } = useCart();
+  const { items, itemCount, subtotalToman, clearCart, recoveredCart } = useCart();
   const [auth, setAuth] = useState<AuthState>({ status: 'checking' });
+  const wallet = useWalletBalance(auth.status === 'authenticated');
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [addressesLoading, setAddressesLoading] = useState(true);
   const [addressError, setAddressError] = useState<string | null>(null);
@@ -160,9 +176,11 @@ export function CheckoutFlow({
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [pendingOrderTotalToman, setPendingOrderTotalToman] = useState<number | null>(null);
   const [pendingOrderShippingToman, setPendingOrderShippingToman] = useState<number | null>(null);
+  const [pendingReferralDiscountToman, setPendingReferralDiscountToman] = useState(0);
   const [priceChange, setPriceChange] = useState<CheckoutPriceChange | null>(null);
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
   const [staleCart, setStaleCart] = useState(false);
+  const [quotaUnavailable, setQuotaUnavailable] = useState(false);
   const [uncertainCheckout, setUncertainCheckout] = useState<'order' | 'payment' | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('gateway');
   const [shippingCarrierId, setShippingCarrierId] = useState(shippingOptions[0]?.id ?? '');
@@ -175,8 +193,10 @@ export function CheckoutFlow({
   } | null>(null);
   const [cardToCardModalOpen, setCardToCardModalOpen] = useState(false);
   const [customerNote, setCustomerNote] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [useWalletCredit, setUseWalletCredit] = useState(false);
+  const [quote, setQuote] = useState<{ key: string; quote: CheckoutPriceQuote } | null>(null);
   const paymentIdempotencyKey = useRef<string | null>(null);
-  const checkoutTracked = useRef(false);
 
   const selectedAddress = useMemo(
     () => addresses.find(({ id }) => id === selectedAddressId) ?? null,
@@ -217,20 +237,29 @@ export function CheckoutFlow({
   const estimatedTotalToman = subtotalToman + (estimatedShippingToman ?? 0);
 
   useEffect(() => {
-    if (checkoutTracked.current || items.length === 0) {
-      return;
-    }
-
-    checkoutTracked.current = true;
-    trackBeginCheckout(
-      subtotalToman,
-      items.map((item) => ({
-        itemId: item.productSlug,
-        itemName: item.productName,
-        variant: [item.variantLabel, item.platingType].filter(Boolean).join(' / '),
-        priceToman: item.unitSalePriceToman + item.unitPlatingPriceToman,
-        quantity: item.quantity,
-      })),
+    if (items.length === 0) return;
+    void trackFunnelEvent(
+      {
+        name: 'begin_checkout',
+        items: items.map((item) => ({
+          productId: item.productSlug,
+          variantId: item.variantId,
+          quantity: item.quantity,
+        })),
+      },
+      {
+        publish: () =>
+          trackBeginCheckout(
+            subtotalToman,
+            items.map((item) => ({
+              itemId: item.productSlug,
+              itemName: item.productName,
+              variant: [item.variantLabel, item.platingType].filter(Boolean).join(' / '),
+              priceToman: item.unitSalePriceToman + item.unitPlatingPriceToman,
+              quantity: item.quantity,
+            })),
+          ),
+      },
     );
   }, [items, subtotalToman]);
 
@@ -377,6 +406,33 @@ export function CheckoutFlow({
     return payload;
   }
 
+  function orderDraft(addressId: string | undefined) {
+    const carrierId = selectedShippingOption?.id;
+    const address = addressId
+      ? { userAddressId: addressId }
+      : {
+          shippingAddress: {
+            recipientName: addressFields.recipientName.trim(),
+            phone: toAsciiDigits(addressFields.phone),
+            province: addressFields.province,
+            city: addressFields.city,
+            addressLine: addressFields.addressLine.trim(),
+            postalCode: digitsOnly(addressFields.postalCode, 10),
+          },
+        };
+    const base = buildCreateOrderBody(items, address, carrierId, customerNote);
+    const coupon = couponCode.trim();
+    return {
+      ...base,
+      ...(promotionsAvailable && coupon ? { couponCode: coupon } : {}),
+      ...(useWalletCredit ? { useWalletCredit: true } : {}),
+      ...(referralAvailable ? { useReferralCredit: true } : {}),
+      ...(recoveredCart
+        ? { savedCartId: recoveredCart.cartId, savedCartRevision: recoveredCart.revision }
+        : {}),
+    };
+  }
+
   async function submitCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!bankGateway && paymentMethod === 'gateway') return;
@@ -389,16 +445,18 @@ export function CheckoutFlow({
       items.length === 0 ||
       checkoutLoading ||
       uncertainCheckout ||
+      quotaUnavailable ||
       staleCart
     )
       return;
     setCheckoutLoading(true);
     setCheckoutError(null);
 
-    let phase: 'order' | 'payment' = 'order';
+    let phase: 'quote' | 'order' | 'payment' = 'order';
     try {
       let orderId = pendingOrderId;
       let orderNumber = completedOrderNumber;
+      let amountDueToman = pendingOrderTotalToman;
       if (!orderId) {
         let userAddressId = selectedAddress?.id;
         if (!userAddressId && saveAddress) {
@@ -410,31 +468,70 @@ export function CheckoutFlow({
           if (!userAddressId) return;
         }
 
-        const orderBody = userAddressId
-          ? buildCreateOrderBody(items, { userAddressId }, selectedShippingOption?.id, customerNote)
-          : buildCreateOrderBody(
-              items,
-              {
-                shippingAddress: {
-                  recipientName: addressFields.recipientName.trim(),
-                  phone: toAsciiDigits(addressFields.phone),
-                  province: addressFields.province,
-                  city: addressFields.city,
-                  addressLine: addressFields.addressLine.trim(),
-                  postalCode: digitsOnly(addressFields.postalCode, 10),
-                },
-              },
-              selectedShippingOption?.id,
-              customerNote,
+        const orderBody = orderDraft(userAddressId);
+        const quoteKey = JSON.stringify(orderBody);
+        const agreedQuote = quote?.key === quoteKey ? quote.quote : null;
+        if (
+          (promotionsAvailable || useWalletCredit || referralAvailable || recoveredCart) &&
+          (!agreedQuote || Date.parse(agreedQuote.expiresAt) <= Date.now())
+        ) {
+          phase = 'quote';
+          setQuote(null);
+          const quoteResponse = await fetch('/api/checkout/price-quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: quoteKey,
+          });
+          if (!quoteResponse.ok) {
+            if (quoteResponse.status === 401) setAuth({ status: 'anonymous', expired: true });
+            if (recoveredCart && quoteResponse.status === 409) {
+              setStaleCart(true);
+              setCheckoutError('موجودی سبد بازیابی‌شده تغییر کرده است. دوباره سبد را بررسی کنید.');
+              return;
+            }
+            setCheckoutError(
+              quoteResponse.status === 400 && orderBody.couponCode
+                ? 'کد تخفیف برای این سبد قابل استفاده نیست.'
+                : 'قیمت پیشنهادی آماده نشد. سبد و روش ارسال را بررسی کنید.',
             );
+            return;
+          }
+          const newQuote = (await quoteResponse.json()) as CheckoutPriceQuote;
+          if (!newQuote.quoteToken || !Number.isSafeInteger(newQuote.payableToman)) {
+            setCheckoutError('مبلغ پیشنهادی معتبری دریافت نشد.');
+            return;
+          }
+          setQuote({ key: quoteKey, quote: newQuote });
+          return;
+        }
+        const attribution = attributionForOrder();
+        const device = growthDevice();
         const orderResponse = await fetch('/api/checkout/order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderBody),
+          body: JSON.stringify({
+            ...orderBody,
+            ...(agreedQuote ? { quoteToken: agreedQuote.quoteToken } : {}),
+            ...(attribution ? { attribution } : {}),
+            ...(device ? { growthDevice: device } : {}),
+          }),
         });
         if (!orderResponse.ok) {
           if (orderResponse.status === 401) setAuth({ status: 'anonymous', expired: true });
           const orderError = await readError(orderResponse);
+          if (
+            orderError.code === 'ORDER_PRICE_QUOTE_CHANGED' ||
+            orderError.code === 'WALLET_CREDIT_UNAVAILABLE'
+          ) {
+            setQuote(null);
+            wallet.refresh();
+            setCheckoutError(
+              useWalletCredit
+                ? 'قیمت، تخفیف یا اعتبار تغییر کرده است. مبلغ را دوباره بررسی کنید.'
+                : 'قیمت یا شرایط تخفیف تغییر کرده است. مبلغ را دوباره بررسی کنید.',
+            );
+            return;
+          }
           if (
             orderResponse.status === 404 ||
             (orderResponse.status === 409 &&
@@ -464,14 +561,19 @@ export function CheckoutFlow({
         }
         orderId = order.id;
         orderNumber = order.orderNumber;
+        amountDueToman = order.grandTotalToman;
+        void trackFunnelEvent(submittedOrderEvent(order));
         setPendingOrderId(order.id);
+        if (useWalletCredit) wallet.refresh();
         setPendingOrderTotalToman(order.grandTotalToman);
         setPendingOrderShippingToman(order.shippingTotalToman);
+        setPendingReferralDiscountToman(order.referralDiscountToman ?? 0);
         setCompletedOrderNumber(order.orderNumber);
         if (
           (!selectedShippingOption && !shippingPricing) ||
-          order.shippingTotalToman !== estimatedShippingToman ||
-          order.grandTotalToman !== estimatedTotalToman
+          order.shippingTotalToman !==
+            (agreedQuote?.shippingTotalToman ?? estimatedShippingToman) ||
+          order.grandTotalToman !== (agreedQuote?.payableToman ?? estimatedTotalToman)
         ) {
           setPriceChange({
             previousTotalToman: estimatedTotalToman,
@@ -492,7 +594,7 @@ export function CheckoutFlow({
         setCardToCardOrder({
           id: orderId,
           number: orderNumber ?? '',
-          amountToman: pendingOrderTotalToman ?? estimatedTotalToman,
+          amountToman: amountDueToman ?? estimatedTotalToman,
         });
         setCardToCardModalOpen(true);
         return;
@@ -510,13 +612,24 @@ export function CheckoutFlow({
         }),
       });
       if (!paymentResponse.ok) {
+        if (useWalletCredit) wallet.refresh();
+        const paymentError = await readError(paymentResponse);
+        if (
+          paymentError.code === 'CAMPAIGN_QUOTA_UNAVAILABLE' ||
+          paymentError.code === 'WALLET_CREDIT_UNAVAILABLE' ||
+          paymentError.code === 'REFERRAL_CHECKOUT_UNAVAILABLE'
+        ) {
+          setQuotaUnavailable(true);
+          setCheckoutError(paymentError.message);
+          return;
+        }
         if (paymentResponse.status === 401) setAuth({ status: 'anonymous', expired: true });
         if (paymentResponse.status >= 500 || paymentResponse.status === 409)
           setUncertainCheckout('payment');
         setCheckoutError(
           paymentResponse.status >= 500 || paymentResponse.status === 409
             ? 'وضعیت آغاز پرداخت مشخص نیست. پیش از هر اقدام دوباره، سفارش را در حساب کاربری بررسی کنید.'
-            : `${(await readError(paymentResponse)).message} سفارش ${toPersianDigits(orderNumber ?? '')} ثبت شده است.`,
+            : `${paymentError.message} سفارش ${toPersianDigits(orderNumber ?? '')} ثبت شده است.`,
         );
         return;
       }
@@ -526,6 +639,7 @@ export function CheckoutFlow({
         setPendingOrderId(null);
         setPendingOrderTotalToman(null);
         setPendingOrderShippingToman(null);
+        setPendingReferralDiscountToman(0);
         setCompletedOrderNumber(orderNumber);
         return;
       }
@@ -549,12 +663,15 @@ export function CheckoutFlow({
       setPendingOrderId(null);
       setPendingOrderTotalToman(null);
       setPendingOrderShippingToman(null);
+      setPendingReferralDiscountToman(0);
     } catch {
-      setUncertainCheckout(phase);
+      if (phase !== 'quote') setUncertainCheckout(phase);
       setCheckoutError(
-        phase === 'payment'
-          ? 'وضعیت آغاز پرداخت مشخص نیست. پرداخت را تکرار نکنید؛ ابتدا سفارش را در حساب کاربری بررسی کنید.'
-          : 'پاسخ ثبت سفارش دریافت نشد. پیش از تلاش دوباره، سفارش‌های خود را در حساب کاربری بررسی کنید.',
+        phase === 'quote'
+          ? 'ارتباط برای دریافت قیمت پیشنهادی برقرار نشد. دوباره تلاش کنید.'
+          : phase === 'payment'
+            ? 'وضعیت آغاز پرداخت مشخص نیست. پرداخت را تکرار نکنید؛ ابتدا سفارش را در حساب کاربری بررسی کنید.'
+            : 'پاسخ ثبت سفارش دریافت نشد. پیش از تلاش دوباره، سفارش‌های خود را در حساب کاربری بررسی کنید.',
       );
     } finally {
       setCheckoutLoading(false);
@@ -622,9 +739,18 @@ export function CheckoutFlow({
     })),
     { value: NEW_ADDRESS_VALUE, label: 'افزودن آدرس جدید' },
   ];
-  const payableAmount = pendingOrderTotalToman ?? estimatedTotalToman;
-  const displayedShippingToman = pendingOrderShippingToman ?? estimatedShippingToman;
+  const currentQuote =
+    quote?.key === JSON.stringify(orderDraft(selectedAddress?.id)) ? quote.quote : null;
+  const payableAmount = pendingOrderTotalToman ?? currentQuote?.payableToman ?? estimatedTotalToman;
+  const displayedShippingToman =
+    pendingOrderShippingToman ?? currentQuote?.shippingTotalToman ?? estimatedShippingToman;
   const shippingIsCollect = selectedShippingOption?.pricingMode === 'COLLECT';
+  const referralDiscountToman = pendingOrderId
+    ? pendingReferralDiscountToman
+    : (currentQuote?.referralDiscountToman ?? 0);
+  const campaignDiscountToman = currentQuote
+    ? currentQuote.discountTotalToman - (currentQuote.referralDiscountToman ?? 0)
+    : 0;
 
   return (
     <form
@@ -983,6 +1109,72 @@ export function CheckoutFlow({
             </label>
           </div>
         </fieldset>
+        {promotionsAvailable && !pendingOrderId && (
+          <FormField id="checkout-coupon" label="کد تخفیف">
+            {(control) => (
+              <Input
+                {...control}
+                dir="ltr"
+                maxLength={32}
+                autoComplete="off"
+                value={couponCode}
+                onChange={(event) => {
+                  setCouponCode(event.currentTarget.value);
+                  setQuote(null);
+                }}
+              />
+            )}
+          </FormField>
+        )}
+        <div className="mt-4 space-y-3" aria-label="اعتبار کیف پول">
+          {referralAvailable && !pendingOrderId && (
+            <p className="text-sm">
+              {currentQuote && !referralDiscountToman
+                ? 'شرایط اعمال اعتبار معرفی برای این سفارش برقرار نیست.'
+                : 'مبلغ اعتبار معرفی خرید اول در پیش‌نمایش پرداخت مشخص می‌شود.'}
+            </p>
+          )}
+          {wallet.state.status === 'ready' && <WalletBalanceView balance={wallet.state.balance} />}
+          {wallet.state.status === 'loading' && (
+            <p role="status" className="text-sm">
+              در حال دریافت ماندهٔ کیف پول…
+            </p>
+          )}
+          {wallet.state.status === 'error' && (
+            <p role="status" className="text-sm">
+              دریافت ماندهٔ کیف پول انجام نشد.{' '}
+              <Button type="button" variant="text" onClick={wallet.refresh}>
+                تلاش دوباره
+              </Button>
+            </p>
+          )}
+          {!pendingOrderId && (
+            <>
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={useWalletCredit}
+                  disabled={checkoutLoading}
+                  onChange={(event) => {
+                    setUseWalletCredit(event.currentTarget.checked);
+                    setQuote(null);
+                  }}
+                />
+                استفاده از اعتبار کیف پول
+              </label>
+              {useWalletCredit && !currentQuote && (
+                <p className="text-xs">
+                  مبلغ قابل مصرف را پس از تکمیل اطلاعات ارسال، در پیش‌نمایش پرداخت ببینید.
+                </p>
+              )}
+              {useWalletCredit && currentQuote && currentQuote.walletAppliedToman === 0 && (
+                <p role="status" className="text-sm">
+                  {walletReason(currentQuote.walletUnavailableReason)}
+                </p>
+              )}
+            </>
+          )}
+        </div>
       </section>
 
       <aside className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--sf-color-border)] bg-[var(--sf-color-canvas)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-12px_36px_rgb(17_17_17/0.1)] lg:sticky lg:inset-auto lg:top-20 lg:z-auto lg:h-fit lg:border lg:p-5 lg:shadow-none">
@@ -992,10 +1184,42 @@ export function CheckoutFlow({
             <span className="text-[var(--sf-color-muted)]">
               جمع سبد ({new Intl.NumberFormat('fa-IR').format(itemCount)} کالا)
             </span>
-            <span>{formatTomanPrice(subtotalToman)}</span>
+            <span>
+              {formatTomanPrice(
+                currentQuote
+                  ? currentQuote.merchandiseTotalToman + currentQuote.platingTotalToman
+                  : subtotalToman,
+              )}
+            </span>
           </div>
+          {currentQuote && campaignDiscountToman > 0 && (
+            <div className="flex items-center justify-between gap-4">
+              <span>تخفیف {currentQuote.campaignName}</span>
+              <span>{formatTomanPrice(campaignDiscountToman)}</span>
+            </div>
+          )}
+          {referralDiscountToman > 0 && (
+            <div className="flex items-center justify-between gap-4" role="status">
+              <span>اعتبار معرفی خرید اول</span>
+              <span>{formatTomanPrice(referralDiscountToman)}</span>
+            </div>
+          )}
+          {useWalletCredit && currentQuote && (
+            <div className="flex items-center justify-between gap-4" role="status">
+              <span>اعتبار کیف پول</span>
+              <span>
+                {currentQuote.walletAppliedToman > 0
+                  ? formatTomanPrice(currentQuote.walletAppliedToman)
+                  : 'قابل استفاده نیست'}
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-4">
-            <span className="text-[var(--sf-color-muted)]">هزینه ارسال</span>
+            <span className="text-[var(--sf-color-muted)]">
+              {currentQuote && currentQuote.shippingDiscountToman > 0
+                ? 'ارسال با تخفیف کمپین'
+                : 'هزینه ارسال'}
+            </span>
             <span>
               {shippingIsCollect
                 ? 'پس‌کرایه'
@@ -1031,7 +1255,7 @@ export function CheckoutFlow({
               {formatTomanPrice(priceChange?.orderTotalToman ?? payableAmount)}
             </strong>
           </div>
-          {uncertainCheckout || staleCart ? (
+          {uncertainCheckout || staleCart || quotaUnavailable ? (
             <ButtonLink
               href={
                 staleCart
@@ -1052,13 +1276,17 @@ export function CheckoutFlow({
             >
               {priceChange
                 ? 'تأیید مبلغ جدید و پرداخت'
-                : paymentMethod === 'card_to_card'
-                  ? pendingOrderId
-                    ? 'ادامه پرداخت کارت‌به‌کارت'
-                    : 'ثبت سفارش و پرداخت کارت‌به‌کارت'
-                  : pendingOrderId
-                    ? 'تلاش مجدد برای پرداخت'
-                    : 'ثبت سفارش و پرداخت'}
+                : (promotionsAvailable || useWalletCredit || referralAvailable || recoveredCart) &&
+                    !pendingOrderId &&
+                    !currentQuote
+                  ? 'بررسی مبلغ نهایی'
+                  : paymentMethod === 'card_to_card'
+                    ? pendingOrderId
+                      ? 'ادامه پرداخت کارت‌به‌کارت'
+                      : 'ثبت سفارش و پرداخت کارت‌به‌کارت'
+                    : pendingOrderId
+                      ? 'تلاش مجدد برای پرداخت'
+                      : 'ثبت سفارش و پرداخت'}
             </Button>
           )}
         </div>

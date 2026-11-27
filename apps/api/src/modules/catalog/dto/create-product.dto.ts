@@ -7,6 +7,7 @@ import {
   IsBoolean,
   IsEnum,
   IsInt,
+  Max,
   IsNumber,
   IsOptional,
   IsString,
@@ -54,6 +55,12 @@ export class CreateProductVariantDto {
   @IsNumber({ maxDecimalPlaces: 3 })
   @Min(0)
   weightGrams?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  lengthMm?: number;
 
   @IsOptional()
   @IsNumber()
@@ -204,6 +211,10 @@ export class CreateProductDto {
   @ArrayUnique()
   @IsUUID('4', { each: true })
   categoryIds?: string[];
+
+  @IsOptional()
+  @IsUUID('4')
+  primaryCategoryId?: string;
 
   @IsArray()
   @ArrayMinSize(1)

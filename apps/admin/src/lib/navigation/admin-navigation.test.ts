@@ -31,6 +31,7 @@ describe('admin navigation', () => {
       'product-imports',
       'variants',
       'categories',
+      'catalog-attributes',
       'brands',
       'inventory',
       'inventory-alerts',
@@ -62,12 +63,30 @@ describe('admin navigation', () => {
       'supplier-payables',
       'supplier-settlements',
       'finance',
+      'reward-policies',
+      'campaigns',
+      'growth',
       'users',
       'roles',
       'shipping-settings',
       'settings',
+      'seo',
       'audit',
     ]);
+  });
+
+  it('keeps the marketing workspace and growth reporting independently permissioned', () => {
+    const settingsNavigation = getAdminNavigation(user({ permissions: ['settings.read'] }));
+    const financeNavigation = getAdminNavigation(user({ permissions: ['finance.read'] }));
+
+    expect(
+      settingsNavigation.find(({ id }) => id === 'marketing')?.items.map(({ href }) => href),
+    ).toEqual(['/campaigns']);
+    expect(
+      financeNavigation.find(({ id }) => id === 'marketing')?.items.map(({ href }) => href),
+    ).toEqual(['/growth']);
+    expect(findAdminNavigationItem('/campaigns/themes', settingsNavigation)?.id).toBe('campaigns');
+    expect(findAdminNavigationItem('/growth/festivals/123', financeNavigation)?.id).toBe('growth');
   });
 
   it('exposes plating, pricing and supplier settings to pricing readers', () => {
@@ -89,6 +108,7 @@ describe('admin navigation', () => {
     expect(getAdminSection('products')?.permissions).toEqual(['catalog.read']);
     expect(getAdminSection('product-imports')?.permissions).toEqual(['catalog.read']);
     expect(getAdminSection('variants')?.permissions).toEqual(['catalog.read']);
+    expect(getAdminSection('catalog-attributes')?.permissions).toEqual(['catalog.read']);
     expect(getAdminSection('payment-gateways')?.permissions).toEqual(['settings.read']);
     expect(getAdminSection('shipping-settings')?.permissions).toEqual(['settings.read']);
     expect(getAdminSection('transactions')?.permissions).toEqual(['finance.read']);
@@ -101,6 +121,9 @@ describe('admin navigation', () => {
     expect(getAdminSection('unknown')).toBeUndefined();
     expect(findAdminNavigationItem('/orders/HS-1042', navigation)?.id).toBe('orders');
     expect(findAdminNavigationItem('/variants/product-1', navigation)?.id).toBe('variants');
+    expect(findAdminNavigationItem('/catalog-attributes', navigation)?.id).toBe(
+      'catalog-attributes',
+    );
     expect(findAdminNavigationItem('/unknown', navigation)).toBeUndefined();
     expect(isAdminNavigationItemActive('/orders/HS-1042', '/orders')).toBe(true);
     expect(isAdminNavigationItemActive('/orders', '/')).toBe(false);

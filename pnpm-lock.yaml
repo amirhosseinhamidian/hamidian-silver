@@ -123,6 +123,9 @@ importers:
       joi:
         specifier: ^18.2.5
         version: 18.2.5
+      parse5:
+        specifier: 7.3.0
+        version: 7.3.0
       pg:
         specifier: ^8.23.0
         version: 8.23.0

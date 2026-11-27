@@ -7,9 +7,48 @@ test.beforeEach(async ({ request }) => {
   expect(response.ok()).toBeTruthy();
 });
 
-test('OTP → product → cart → checkout → card-to-card receipt', async ({ page }) => {
+test('OTP → product → cart → checkout → card-to-card receipt', async ({ page, request }) => {
+  const funnelNames = () =>
+    page.evaluate(() => {
+      const session = JSON.parse(
+        window.sessionStorage.getItem('hamidian-funnel-session-v1') ?? '{}',
+      );
+      const orders = JSON.parse(window.localStorage.getItem('hamidian-funnel-orders-v1') ?? '[]');
+      return [...(session.events ?? []), ...orders].map((event) => event.name) as string[];
+    });
+
+  await test.step('opt in and select a product from the catalog', async () => {
+    await page.goto('/privacy');
+    await waitForClientHydration(page);
+    const consent = page.getByRole('checkbox', { name: 'اجازهٔ ثبت آمار بازدید و خرید' });
+    await expect(consent).not.toBeChecked();
+    await consent.check();
+    await page.goto('/products?utm_source=newsletter&utm_medium=email&utm_campaign=winter-sale');
+    await waitForClientHydration(page);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/products$/);
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('hamidian-attribution-v1')))
+      .toContain('newsletter');
+    await page
+      .locator('a[href="/products/silver-ring"]')
+      .filter({
+        has: page.getByRole('heading', { name: 'انگشتر نقره حمیدیان', level: 2, exact: true }),
+      })
+      .click();
+    await expect(page).toHaveURL(/\/products\/silver-ring$/);
+    await expect
+      .poll(funnelNames)
+      .toEqual(expect.arrayContaining(['view_item_list', 'select_item', 'view_item']));
+    await expect
+      .poll(async () => {
+        const response = await request.get('http://127.0.0.1:4311/__e2e/measurement-stages');
+        expect(response.ok()).toBeTruthy();
+        return response.json();
+      })
+      .toContain('view_item');
+  });
+
   await test.step('sign in with OTP', async () => {
-    await page.goto('/products/silver-ring');
     await expect(page.getByRole('heading', { name: 'انگشتر نقره حمیدیان' })).toBeVisible();
     await waitForClientHydration(page);
     await expectNoHorizontalOverflow(page);
@@ -45,7 +84,18 @@ test('OTP → product → cart → checkout → card-to-card receipt', async ({ 
     const cardToCardMethod = page.getByRole('radio', { name: /پرداخت کارت‌به‌کارت/ });
     await expect(cardToCardMethod).toBeEnabled();
     await cardToCardMethod.check();
+    const orderRequest = page.waitForRequest(
+      (outgoing) =>
+        new URL(outgoing.url()).pathname === '/api/checkout/order' && outgoing.method() === 'POST',
+    );
     await page.getByRole('button', { name: 'ثبت سفارش و پرداخت کارت‌به‌کارت' }).click();
+    expect((await orderRequest).postDataJSON()).toMatchObject({
+      growthDevice: expect.stringMatching(/^(desktop|mobile|tablet)$/),
+      attribution: {
+        version: 1,
+        touches: [{ source: 'newsletter', medium: 'email', campaign: 'winter-sale' }],
+      },
+    });
     const cardDialog = page.getByRole('dialog', { name: 'اطلاعات کارت مقصد' });
     await expect(cardDialog).toBeVisible();
     await cardDialog.getByRole('button', { name: 'پرداخت انجام شد؛ ثبت رسید' }).click();
@@ -71,5 +121,39 @@ test('OTP → product → cart → checkout → card-to-card receipt', async ({ 
     await expectNoHorizontalOverflow(page);
     await expect(page.getByText('در انتظار بررسی رسید').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'روند سفارش' })).toBeVisible();
+  });
+
+  await test.step('count only verified purchases across refresh and repeat confirmation', async () => {
+    await expect
+      .poll(funnelNames)
+      .toEqual(expect.arrayContaining(['add_to_cart', 'begin_checkout', 'order_submitted']));
+    expect(await funnelNames()).not.toContain('purchase_confirmed');
+
+    const approveReceipt = async () => {
+      const response = await request.post('http://127.0.0.1:4311/__e2e/approve-receipt');
+      expect(response.ok()).toBeTruthy();
+    };
+    const purchaseCount = async () =>
+      (await funnelNames()).filter((name) => name === 'purchase_confirmed').length;
+    await approveReceipt();
+    await page.reload();
+    await expect.poll(purchaseCount).toBe(1);
+
+    await approveReceipt();
+    await page.goto('/payment/result?orderId=30000000-0000-4000-8000-000000000001');
+    await expect(page.getByRole('heading', { name: 'خرید شما با موفقیت تکمیل شد' })).toBeVisible();
+    await waitForClientHydration(page);
+    await expect.poll(purchaseCount).toBe(1);
+  });
+
+  await test.step('remove measurement data when consent is withdrawn', async () => {
+    await page.goto('/privacy');
+    const consent = page.getByRole('checkbox', { name: 'اجازهٔ ثبت آمار بازدید و خرید' });
+    await expect(consent).toBeChecked();
+    await consent.uncheck();
+    await expect.poll(funnelNames).toEqual([]);
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('hamidian-attribution-v1')))
+      .toBeNull();
   });
 });

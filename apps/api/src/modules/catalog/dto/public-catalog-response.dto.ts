@@ -5,6 +5,10 @@ import {
   SizeMode,
   VariantInventoryMode,
 } from '../../../generated/prisma/enums';
+import { PublicCampaignQuotaDto } from '../../campaigns/dto/campaign-quota.dto';
+import { CatalogCampaignOfferDto } from '../../promotions/dto/promotion.dto';
+import { PublicTypedCatalogAttributeDto } from './catalog-attribute.dto';
+import { PublicCatalogSort } from './public-catalog-query.dto';
 
 export class PublicCatalogMediaDto {
   @ApiProperty({ type: String, nullable: true, format: 'uri' })
@@ -46,6 +50,12 @@ export class PublicCatalogCategoryDto {
 }
 
 export class PublicCatalogCategoryPageDto extends PublicCatalogCategoryDto {
+  @ApiPropertyOptional()
+  activeProductCount?: number;
+
+  @ApiPropertyOptional()
+  activeSubtreeProductCount?: number;
+
   @ApiPropertyOptional({ type: () => PublicCatalogMediaDto, nullable: true })
   heroMobileImage?: PublicCatalogMediaDto | null;
 
@@ -154,11 +164,17 @@ export class PublicCatalogVariantDto {
   @ApiProperty({ type: Number, nullable: true })
   weightGrams!: number | null;
 
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  lengthMm?: number | null;
+
   @ApiProperty({ type: Number, nullable: true })
   salePriceToman!: number | null;
 
   @ApiProperty({ type: Number, nullable: true })
   compareAtPriceToman!: number | null;
+
+  @ApiPropertyOptional({ type: () => CatalogCampaignOfferDto, nullable: true })
+  campaignOffer?: CatalogCampaignOfferDto | null;
 
   @ApiProperty({ type: () => PublicCatalogSizeDto, nullable: true })
   size!: PublicCatalogSizeDto | null;
@@ -173,7 +189,18 @@ export class PublicCatalogVariantDto {
   platingOptions!: PublicCatalogPlatingOptionDto[];
 }
 
+export class PublicCatalogMatchingVariantDto {
+  id!: string;
+  @ApiProperty({ type: String, nullable: true })
+  sizeId!: string | null;
+  @ApiProperty({ type: Number, nullable: true })
+  lengthMm!: number | null;
+  availableQuantity!: number;
+}
+
 export class PublicCatalogProductSummaryDto {
+  @ApiPropertyOptional({ type: () => PublicCatalogMatchingVariantDto, isArray: true })
+  matchingVariants?: PublicCatalogMatchingVariantDto[];
   id!: string;
   name!: string;
   slug!: string;
@@ -192,6 +219,18 @@ export class PublicCatalogProductSummaryDto {
 
   @ApiProperty({ type: Number, nullable: true })
   salePriceToman!: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  defaultSalePriceToman?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  defaultCompareAtPriceToman?: number | null;
+
+  @ApiPropertyOptional({ type: () => CatalogCampaignOfferDto, nullable: true })
+  campaignOffer?: CatalogCampaignOfferDto | null;
+
+  @ApiPropertyOptional({ type: () => PublicCampaignQuotaDto })
+  campaignQuota?: PublicCampaignQuotaDto;
 
   @ApiProperty({ nullable: true })
   compareAtPriceToman!: number | null;
@@ -219,6 +258,9 @@ export class PublicCatalogProductAttributeDto {
 }
 
 export class PublicCatalogProductDetailDto extends PublicCatalogProductSummaryDto {
+  @ApiPropertyOptional({ type: String })
+  primaryCategoryId?: string;
+
   @ApiProperty({ enum: ProductPurchaseMode })
   purchaseMode!: ProductPurchaseMode;
 
@@ -248,6 +290,20 @@ export class PublicCatalogProductDetailDto extends PublicCatalogProductSummaryDt
 
   @ApiProperty({ type: () => PublicCatalogProductAttributeDto, isArray: true })
   attributes!: PublicCatalogProductAttributeDto[];
+
+  @ApiPropertyOptional({ type: () => PublicTypedCatalogAttributeDto, isArray: true })
+  typedAttributes?: PublicTypedCatalogAttributeDto[];
+}
+
+export class PublicCatalogRankingDto {
+  @ApiProperty({ type: Number, example: 1 })
+  version!: number;
+
+  @ApiProperty({ enum: PublicCatalogSort })
+  requestedSort!: PublicCatalogSort;
+
+  @ApiProperty({ enum: PublicCatalogSort })
+  appliedSort!: PublicCatalogSort;
 }
 
 export class PublicCatalogProductListDto {
@@ -258,12 +314,21 @@ export class PublicCatalogProductListDto {
   pageSize!: number;
   total!: number;
   totalPages!: number;
+
+  @ApiPropertyOptional({ type: () => PublicCatalogRankingDto })
+  ranking?: PublicCatalogRankingDto;
 }
 
 export class PublicCatalogProductSuggestionDto {
   id!: string;
   name!: string;
   slug!: string;
+
+  @ApiPropertyOptional({ type: () => CatalogCampaignOfferDto, nullable: true })
+  campaignOffer?: CatalogCampaignOfferDto | null;
+
+  @ApiPropertyOptional({ type: () => PublicCampaignQuotaDto })
+  campaignQuota?: PublicCampaignQuotaDto;
 
   @ApiProperty({ type: Number, nullable: true })
   salePriceToman!: number | null;

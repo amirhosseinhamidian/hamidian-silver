@@ -43,11 +43,38 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   experimental: { globalNotFound: true },
   poweredByHeader: false,
+  async redirects() {
+    // Exact legacy URLs observed in Search Console. Keep unrelated missing URLs as 404s.
+    return [
+      {
+        source: '/products/products/athena-gold-silver-chain-45cm-model-2',
+        destination: '/products/athena-gold-silver-chain-45cm-model-2',
+        permanent: true,
+      },
+      {
+        source: `/guide\\:${encodeURIComponent('دانستنی‌ها')}`,
+        destination: '/guide',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
         source: '/:path*',
         headers: [...SECURITY_HEADERS],
+      },
+      {
+        source: '/campaign-preview',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+        ],
+      },
+      {
+        source: '/campaigns/:slug',
+        headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
       },
     ];
   },

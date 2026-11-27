@@ -25,6 +25,7 @@ const storefrontLinks = [
   { label: 'برندها', href: '/brands' },
   { label: 'جدیدترین‌ها', href: '/products?sort=newest' },
   { label: 'دانستنی‌ها', href: '/guide' },
+  { label: 'راهنمای انتخاب هدیه', href: '/gift-finder' },
 ] as const;
 
 const informationLinks = [
@@ -61,7 +62,11 @@ export function StorefrontFooter({ content }: StorefrontFooterProps) {
   const hasContactDetails = Boolean(address || phoneNumbers.length || email);
 
   return (
-    <footer className="border-t border-[var(--sf-color-border)] bg-[var(--sf-color-surface)]">
+    <footer
+      id="storefront-footer"
+      tabIndex={-1}
+      className="border-t border-[var(--sf-color-border)] bg-[var(--sf-color-surface)]"
+    >
       <div
         className="
           sf-container grid gap-10 py-12

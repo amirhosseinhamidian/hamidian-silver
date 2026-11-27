@@ -41,6 +41,38 @@ describe('OrdersService customer projection security', () => {
     expect(itemSelect).not.toHaveProperty('supplierNameSnapshot');
     expect(query.select.payment.select.attempts.select).not.toHaveProperty('receiptData');
     expect(query.select.payment.select.attempts.select).not.toHaveProperty('failureMessage');
+    expect(query.select.payment.select).not.toHaveProperty('refunds');
+  });
+
+  it('exposes only confirmed refund milestones and drops internal references', async () => {
+    const confirmedAt = new Date('2026-09-06T13:00:00.000Z');
+    prisma.order.findFirst.mockResolvedValue({
+      id: orderId,
+      statusHistory: [],
+      payment: {
+        status: 'PARTIALLY_REFUNDED',
+        attempts: [],
+        refunds: [
+          {
+            id: 'confirmed-refund',
+            amountToman: 20_000,
+            confirmedAt,
+            externalReference: 'private',
+          },
+          { id: 'pending-refund', amountToman: 10_000, confirmedAt: null },
+        ],
+      },
+    });
+
+    const order = await service.getMyOrder(userId, orderId);
+
+    expect(prisma.order.findFirst.mock.calls[0]?.[0].select.payment.select.refunds).toMatchObject({
+      where: { status: 'CONFIRMED', confirmedAt: { not: null } },
+      select: { id: true, amountToman: true, confirmedAt: true },
+    });
+    expect(order.confirmedRefunds).toEqual([
+      { id: 'confirmed-refund', amountToman: 20_000, confirmedAt },
+    ]);
   });
 
   it('scopes customer order detail and hides staff audit metadata', async () => {

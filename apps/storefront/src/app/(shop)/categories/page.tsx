@@ -8,6 +8,7 @@ import { buildStorefrontPageMetadata } from '@/lib/seo/metadata';
 import { getPublicSiteSettings } from '@/lib/site-settings/public-site-settings';
 
 export const revalidate = 60;
+const persianNumber = new Intl.NumberFormat('fa-IR');
 
 export async function generateMetadata(): Promise<Metadata> {
   const [settings, categories] = await Promise.all([
@@ -80,6 +81,11 @@ export default async function CategoriesPage() {
                 ) : null}
                 <div className="p-6">
                   <h2 className="text-2xl font-normal">{category.name}</h2>
+                  {category.activeSubtreeProductCount === undefined ? null : (
+                    <p className="mt-2 text-sm text-[var(--sf-color-muted)]">
+                      {persianNumber.format(category.activeSubtreeProductCount)} محصول
+                    </p>
+                  )}
                   {category.description ? (
                     <p className="mt-3 line-clamp-3 text-sm leading-7 text-[var(--sf-color-muted)]">
                       {category.description}
@@ -101,6 +107,9 @@ export default async function CategoriesPage() {
                           className="text-sm text-[var(--sf-color-muted)] underline-offset-4 hover:underline"
                         >
                           {child.name}
+                          {child.activeSubtreeProductCount === undefined
+                            ? null
+                            : ` · ${persianNumber.format(child.activeSubtreeProductCount)} محصول`}
                         </Link>
                       </li>
                     ))}

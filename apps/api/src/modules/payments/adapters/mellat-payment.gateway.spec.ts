@@ -76,43 +76,60 @@ describe('MellatPaymentGateway', () => {
     );
   });
 
-  it('verifies and settles a successful Mellat callback', async () => {
-    const gateway = createGateway();
+  it.each(['0', '48'] as const)(
+    'handles a Mellat verification result of %s',
+    async (verifyCode) => {
+      const gateway = createGateway();
 
-    fetchSpy.mockResolvedValueOnce(soapResponse('0,REF1'));
-    const initiated = await gateway.initiate({
-      attemptId,
-      orderNumber: 'HS-TEST',
-      amountRial: '12000000',
-      callbackUrl: `https://api.example.com/api/v1/payments/callback/${attemptId}`,
-    });
-    const requestBody = String(fetchSpy.mock.calls[0][1]?.body);
-    const saleOrderId = requestBody.match(/<orderId>(\d+)<\/orderId>/)?.[1];
-
-    expect(saleOrderId).toBeDefined();
-
-    fetchSpy.mockClear();
-    fetchSpy.mockResolvedValueOnce(soapResponse('0')).mockResolvedValueOnce(soapResponse('0'));
-
-    await expect(
-      gateway.verify({
-        authority: initiated.authority,
+      fetchSpy.mockResolvedValueOnce(soapResponse('0,REF1'));
+      const initiated = await gateway.initiate({
+        attemptId,
+        orderNumber: 'HS-TEST',
         amountRial: '12000000',
-        callbackData: {
-          attemptId,
-          resCode: '0',
-          saleOrderId,
-          saleReferenceId: '987654321',
-        },
-      } as never),
-    ).resolves.toEqual({
-      success: true,
-      referenceId: '987654321',
-    });
+        callbackUrl: `https://api.example.com/api/v1/payments/callback/${attemptId}`,
+      });
+      const requestBody = String(fetchSpy.mock.calls[0][1]?.body);
+      const saleOrderId = requestBody.match(/<orderId>(\d+)<\/orderId>/)?.[1];
 
-    expect(String(fetchSpy.mock.calls[0][1]?.body)).toContain('<int:bpVerifyRequest>');
-    expect(String(fetchSpy.mock.calls[1][1]?.body)).toContain('<int:bpSettleRequest>');
-  });
+      expect(saleOrderId).toBeDefined();
+
+      fetchSpy.mockClear();
+      fetchSpy.mockResolvedValueOnce(soapResponse(verifyCode));
+      if (verifyCode === '0') fetchSpy.mockResolvedValueOnce(soapResponse('0'));
+
+      await expect(
+        gateway.verify({
+          authority: initiated.authority,
+          amountRial: '12000000',
+          callbackData: {
+            attemptId,
+            resCode: '0',
+            saleOrderId,
+            saleReferenceId: '987654321',
+          },
+        } as never),
+      ).resolves.toEqual(
+        verifyCode === '0'
+          ? {
+              success: true,
+              referenceId: '987654321',
+            }
+          : {
+              success: false,
+              code: '48',
+              definitiveFailure: true,
+              message: 'Mellat verification failed with code 48.',
+            },
+      );
+
+      expect(String(fetchSpy.mock.calls[0][1]?.body)).toContain('<int:bpVerifyRequest>');
+      if (verifyCode === '0') {
+        expect(String(fetchSpy.mock.calls[1][1]?.body)).toContain('<int:bpSettleRequest>');
+      } else {
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+      }
+    },
+  );
 
   it('accepts already-settled response code 45 as idempotent success', async () => {
     const gateway = createGateway();

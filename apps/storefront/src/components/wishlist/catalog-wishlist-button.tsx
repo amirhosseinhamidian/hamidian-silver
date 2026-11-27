@@ -7,12 +7,16 @@ import { useWishlist } from '@/lib/wishlist/wishlist-store';
 
 type CatalogWishlistButtonProps = Readonly<{
   item: WishlistItem;
+  preview?: boolean;
 }>;
 
-export function CatalogWishlistButton({ item }: CatalogWishlistButtonProps) {
+export function CatalogWishlistButton({ item, preview = false }: CatalogWishlistButtonProps) {
+  return preview ? <WishlistControl active={false} /> : <InteractiveWishlistButton item={item} />;
+}
+
+function InteractiveWishlistButton({ item }: Pick<CatalogWishlistButtonProps, 'item'>) {
   const { hasItem, toggleItem } = useWishlist();
   const active = hasItem(item.productId);
-  const label = active ? 'حذف از علاقه‌مندی‌ها' : 'افزودن به علاقه‌مندی‌ها';
 
   function handleToggle() {
     toggleItem(item);
@@ -28,13 +32,20 @@ export function CatalogWishlistButton({ item }: CatalogWishlistButtonProps) {
     );
   }
 
+  return <WishlistControl active={active} onClick={handleToggle} />;
+}
+
+function WishlistControl({ active, onClick }: { active: boolean; onClick?: () => void }) {
+  const label = active ? 'حذف از علاقه‌مندی‌ها' : 'افزودن به علاقه‌مندی‌ها';
+
   return (
     <button
       type="button"
       aria-label={label}
       aria-pressed={active}
       title={label}
-      onClick={handleToggle}
+      onClick={onClick}
+      disabled={!onClick}
       className="
         sf-catalog-card__wishlist absolute right-2 top-2 z-20 inline-flex
         size-8 items-center justify-center rounded-full border border-transparent

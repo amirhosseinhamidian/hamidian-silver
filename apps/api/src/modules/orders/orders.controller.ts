@@ -1,17 +1,31 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
+import { Public } from '../auth/public.decorator';
 import type { AuthenticatedPrincipal } from '../authorization/authorization.types';
 import { RequirePermissions } from '../authorization/permissions.decorator';
 import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import { CancelOrderDto } from './dto/cancel-order.dto';
-import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateOrderDto, PromotionEstimateRequestDto } from './dto/create-order.dto';
+import { CheckoutPriceQuoteDto, PromotionEstimateDto } from '../promotions/dto/promotion.dto';
+import { WalletPreviewDto } from '../wallet/dto/customer-wallet.dto';
 import {
   CustomerOrderCountDto,
   CustomerOrderDetailDto,
   CustomerOrderSummaryDto,
 } from './dto/customer-order-response.dto';
-import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import { AdminListOrdersQueryDto, ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrdersService } from './orders.service';
 
@@ -23,6 +37,37 @@ export class OrdersController {
   @ApiCreatedResponse({ type: CustomerOrderDetailDto })
   createOrder(@CurrentPrincipal() principal: AuthenticatedPrincipal, @Body() dto: CreateOrderDto) {
     return this.ordersService.createOrder(principal.userId, dto);
+  }
+
+  @Post('promotion-estimate')
+  @Public()
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  @ApiOkResponse({ type: PromotionEstimateDto })
+  estimate(@Body() dto: PromotionEstimateRequestDto): Promise<PromotionEstimateDto> {
+    return this.ordersService.estimatePromotions(dto.items);
+  }
+
+  @Post('wallet-estimate')
+  @HttpCode(200)
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOkResponse({ type: WalletPreviewDto })
+  estimateWallet(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Body() dto: PromotionEstimateRequestDto,
+  ): Promise<WalletPreviewDto> {
+    return this.ordersService.estimateWallet(principal.userId, dto.items);
+  }
+
+  @Post('price-quote')
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  @ApiOkResponse({ type: CheckoutPriceQuoteDto })
+  quote(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Body() dto: CreateOrderDto,
+  ): Promise<CheckoutPriceQuoteDto> {
+    return this.ordersService.quotePrice(principal.userId, dto);
   }
 
   @Get('me')
@@ -61,7 +106,7 @@ export class OrdersController {
 
   @Get()
   @RequirePermissions(PERMISSION_CODES.ORDERS_READ)
-  listOrders(@Query() query: ListOrdersQueryDto) {
+  listOrders(@Query() query: AdminListOrdersQueryDto) {
     return this.ordersService.listOrders(query);
   }
 

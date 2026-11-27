@@ -1,5 +1,6 @@
 import type { CustomerOrderItem } from '@/components/account/account-types';
 import { toPersianDigits } from '@/components/account/account-types';
+import { CampaignTag } from '@/components/catalog/campaign-tag';
 import { PlatingTypeIndicator } from '@/components/plating/plating-type-indicator';
 
 type CustomerOrderItemDetailsProps = Readonly<{
@@ -22,6 +23,11 @@ export function CustomerOrderItemDetails({ item, className }: CustomerOrderItemD
         </>
       ) : null}
       تعداد {item.quantity.toLocaleString('fa-IR')}
+      {item.campaignNameSnapshot && (
+        <span className="ms-2">
+          <CampaignTag name={item.campaignNameSnapshot} />
+        </span>
+      )}
     </p>
   );
 }

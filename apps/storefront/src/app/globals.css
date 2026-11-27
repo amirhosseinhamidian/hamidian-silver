@@ -377,6 +377,114 @@ a {
   }
 }
 
+[data-festival-card] {
+  --sf-color-surface: var(--festival-card-surface);
+  background-color: var(--sf-color-surface);
+  border-color: var(--festival-card-border);
+  transition: none;
+}
+
+[data-festival-card-shadow='soft'] [data-festival-card] {
+  box-shadow: 0 4px 14px rgb(0 0 0 / 16%);
+}
+
+[data-festival-card-density='compact']
+  [data-festival-card]
+  :is(.sf-catalog-card__body, .sf-catalog-card__action) {
+  padding-block-start: 0.5rem;
+}
+
+[data-festival-card-description='hidden'] [data-festival-card] .sf-catalog-card__description {
+  display: none;
+}
+
+[data-festival-card] .sf-catalog-price__discount-badge {
+  color: var(--sf-color-surface);
+  background-color: var(--festival-card-discount, var(--sf-color-ink));
+}
+
+[data-festival-card] .sf-catalog-price__campaign-tag {
+  color: var(--sf-color-surface);
+  background-color: var(--festival-card-tag, var(--sf-color-ink));
+}
+
+[data-festival-card] .sf-catalog-price__reduced {
+  color: var(--festival-card-price, var(--sf-color-ink));
+}
+
+[data-festival-card] .sf-catalog-card__action a {
+  color: var(--sf-color-surface);
+  background-color: var(--festival-card-action, var(--sf-color-ink));
+  border-color: var(--festival-card-action, var(--sf-color-ink));
+  transition: none;
+}
+
+[data-festival-card] .sf-catalog-card__action a:hover {
+  opacity: 1;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+[data-festival-card] .sf-catalog-card__wishlist {
+  color: var(--festival-card-action, var(--sf-color-ink));
+  background-color: var(--sf-color-surface);
+  border-color: currentColor;
+  transition: none;
+}
+
+[data-festival-card] .sf-catalog-card__wishlist:focus-visible {
+  outline: 2px solid var(--sf-color-ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--sf-color-surface);
+}
+
+[data-festival-card] progress {
+  --festival-quota-color: var(--festival-card-quota, var(--sf-color-ink));
+  appearance: none;
+  height: 0.375rem;
+  overflow: hidden;
+  border: 1px solid var(--festival-quota-color);
+  border-radius: 9999px;
+  background: var(--sf-color-surface);
+}
+
+[data-festival-card] progress::-webkit-progress-bar {
+  background: var(--sf-color-surface);
+}
+
+[data-festival-card] progress::-webkit-progress-value {
+  background: var(--festival-quota-color);
+}
+
+[data-festival-card] progress::-moz-progress-bar {
+  background: var(--festival-quota-color);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-festival-card]:is(:hover, :focus-within) {
+    border-color: var(--festival-card-border);
+  }
+
+  [data-festival-card-hover='emphasis'] [data-festival-card]:hover {
+    border-color: var(--festival-card-action, var(--sf-color-ink));
+  }
+
+  .sf-catalog-card[data-festival-card] .sf-catalog-card__media img,
+  [data-festival-card] .sf-catalog-card__action,
+  [data-festival-card] .sf-catalog-card__wishlist:not(.sf-catalog-card__remove) {
+    transform: none;
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  [data-festival-card] progress {
+    --festival-quota-color: Highlight;
+    forced-color-adjust: none;
+    --sf-color-surface: Canvas;
+  }
+}
+
 @keyframes sf-select-open {
   from {
     opacity: 0;
@@ -532,5 +640,15 @@ a {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes sf-campaign-link {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow: 0 0 0 var(--sf-campaign-pulse-width, 3px) #6c414a55;
   }
 }

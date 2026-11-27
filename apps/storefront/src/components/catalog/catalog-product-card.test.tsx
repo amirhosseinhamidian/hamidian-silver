@@ -59,6 +59,60 @@ describe('CatalogProductCard', () => {
     expect(screen.getAllByText(formatTomanPrice(800_000))).toHaveLength(1);
   });
 
+  it('shows the campaign price based on the default instead of the matched variant or compare price', () => {
+    render(
+      <CatalogProductCard
+        product={{
+          ...product,
+          defaultSalePriceToman: 1_100_000,
+          defaultCompareAtPriceToman: 1_500_000,
+          campaignOffer: {
+            name: 'جشنواره',
+            endsAt: new Date(Date.now() + 60_000).toISOString(),
+            conditions: [],
+            minimumToman: null,
+            price: {
+              regularToman: 1_100_000,
+              discountToman: 110_000,
+              finalToman: 990_000,
+              discountPercent: 10,
+            },
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText(formatTomanPrice(1_100_000))).toHaveClass('line-through');
+    expect(screen.getByText(formatTomanPrice(990_000))).toBeInTheDocument();
+    expect(screen.queryByText(formatTomanPrice(800_000))).not.toBeInTheDocument();
+    expect(screen.queryByText(formatTomanPrice(1_500_000))).not.toBeInTheDocument();
+  });
+
+  it('keeps ordinary purchase available when the campaign quota is full', () => {
+    render(
+      <CatalogProductCard
+        product={{
+          ...product,
+          campaignQuota: {
+            campaignId: '10000000-0000-4000-8000-000000000011',
+            name: 'جشنواره',
+            endsAt: new Date(Date.now() + 60_000).toISOString(),
+            limit: 3,
+            sold: 2,
+            remaining: 0,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('progressbar', { name: 'فروش سهمیهٔ جشنواره' })).toHaveAttribute(
+      'value',
+      '2',
+    );
+    expect(screen.getByText('سهمیهٔ کمپین در دسترس نیست')).toBeInTheDocument();
+    expect(screen.getByText(formatTomanPrice(800_000))).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'مشاهده و خرید' })).toBeInTheDocument();
+  });
+
   it('labels an unavailable product without presenting a purchase action', () => {
     render(
       <CatalogProductCard

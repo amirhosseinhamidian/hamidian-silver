@@ -1,11 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsOptional, IsString, Length, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
 
 export enum PublicCatalogSort {
   NEWEST = 'newest',
   PRICE_ASC = 'price-asc',
   PRICE_DESC = 'price-desc',
   NAME_ASC = 'name-asc',
+  AVAILABILITY = 'availability',
+  BEST_SELLING = 'best-selling',
+  FEATURED = 'featured',
 }
 
 export class PublicCatalogQueryDto {
@@ -45,6 +48,25 @@ export class PublicCatalogQueryDto {
   @IsString()
   @Length(1, 160)
   country?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID('4')
+  sizeId?: string;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 100000 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  minLengthMm?: number;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 100000 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  maxLengthMm?: number;
 
   @ApiPropertyOptional({ enum: PublicCatalogSort, default: PublicCatalogSort.NEWEST })
   @IsOptional()

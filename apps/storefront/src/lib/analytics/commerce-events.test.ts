@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { tomanToIrr } from '@/lib/analytics/analytics';
+import { setAnalyticsConsent } from '@/lib/analytics/analytics-consent';
 import {
   toAnalyticsItem,
   trackAddToCart,
@@ -12,7 +13,14 @@ import {
 } from '@/lib/analytics/commerce-events';
 
 describe('storefront analytics events', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_GA_MEASUREMENT_ID', '');
+    setAnalyticsConsent(true);
+  });
+
   afterEach(() => {
+    setAnalyticsConsent(false);
+    vi.unstubAllEnvs();
     delete window.gtag;
   });
 

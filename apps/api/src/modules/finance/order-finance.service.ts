@@ -25,6 +25,7 @@ type FinanceSnapshotOrderInput = {
   shippingTotalToman: number;
   taxTotalToman: number;
   grandTotalToman: number;
+  walletAppliedToman?: number;
   items: Array<{
     quantity: number;
     unitSupplierPriceToman: number | null | undefined;
@@ -260,6 +261,7 @@ export class OrderFinanceService {
             shippingTotalToman: order.shippingTotalToman,
             taxTotalToman: order.taxTotalToman,
             grandTotalToman: order.grandTotalToman,
+            ...(order.walletAppliedToman ? { walletAppliedToman: order.walletAppliedToman } : {}),
             items: order.items,
           });
 
@@ -288,6 +290,7 @@ export class OrderFinanceService {
   }
 
   private calculateSnapshot(input: FinanceSnapshotOrderInput) {
+    const walletAppliedToman = input.walletAppliedToman ?? 0;
     const amounts = [
       input.merchandiseTotalToman,
       input.platingTotalToman,
@@ -295,6 +298,7 @@ export class OrderFinanceService {
       input.shippingTotalToman,
       input.taxTotalToman,
       input.grandTotalToman,
+      walletAppliedToman,
     ];
 
     if (amounts.some((amount) => !isNonNegativeTomanInt(amount))) {
@@ -348,7 +352,7 @@ export class OrderFinanceService {
     const grossSalesToman = input.merchandiseTotalToman + input.platingTotalToman;
     const netSalesToman = grossSalesToman - input.discountTotalToman;
     const expectedCustomerTotalToman =
-      netSalesToman + input.shippingTotalToman + input.taxTotalToman;
+      netSalesToman + input.shippingTotalToman + input.taxTotalToman - walletAppliedToman;
 
     if (
       !isNonNegativeTomanInt(grossSalesToman) ||
@@ -372,6 +376,7 @@ export class OrderFinanceService {
       shippingChargedToman: input.shippingTotalToman,
       taxToman: input.taxTotalToman,
       customerTotalToman: input.grandTotalToman,
+      ...(walletAppliedToman ? { walletAppliedToman } : {}),
       supplierCostToman,
       grossSalesToman,
       netSalesToman,

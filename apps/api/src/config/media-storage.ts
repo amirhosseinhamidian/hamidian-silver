@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 export const MEDIA_PUBLIC_ROUTE_PREFIX = '/media/';
 export const MEDIA_UPLOAD_LIMIT_BYTES = 10 * 1024 * 1024;
+export const CAMPAIGN_GIF_LIMIT_BYTES = 4 * 1024 * 1024;
 export const PRODUCT_MEDIA_LIMIT = 12;
 
 export function resolveMediaStorageRoot(config: ConfigService): string {

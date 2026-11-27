@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 import { FinancialReportsView } from '@/components/financial-reports/financial-reports-view';
 import type { AdminFinancialReportsData } from '@/lib/financial-reports/financial-reports-data';
+import { formatAdminToman } from '@/lib/presentation/formatters';
+
+const orderId = '00000000-0000-4000-8000-000000000001';
 
 const data: AdminFinancialReportsData = {
   generatedAt: new Date('2026-09-08T12:00:00.000Z'),
@@ -105,7 +108,7 @@ const data: AdminFinancialReportsData = {
       count: 1,
       orders: [
         {
-          orderId: 'order-1',
+          orderId,
           orderNumber: 'HS-1405-120',
           orderStatus: 'PROCESSING',
           paidAt: '2026-09-08T10:00:00.000Z',
@@ -119,7 +122,7 @@ const data: AdminFinancialReportsData = {
 
 describe('FinancialReportsView', () => {
   it('renders finance KPIs, cashflow, contribution and responsive drill-downs', () => {
-    render(<FinancialReportsView data={data} />);
+    render(<FinancialReportsView data={data} canReadOrders />);
 
     expect(screen.getByRole('heading', { name: 'گزارش‌های مالی' })).toBeInTheDocument();
     expect(screen.getByText('دریافت خالص مشتری')).toBeInTheDocument();
@@ -133,16 +136,56 @@ describe('FinancialReportsView', () => {
     );
     expect(screen.getAllByText('نقره‌سازی پارس').length).toBeGreaterThan(1);
     expect(screen.getAllByText('هزینه ارسال').length).toBeGreaterThan(1);
-    expect(
-      screen.getAllByRole('link', { name: /رفتن به سفارش‌ها|بررسی سفارش‌ها/ })[0],
-    ).toHaveAttribute('href', '/orders');
+    expect(screen.getAllByRole('link', { name: 'بررسی سفارش HS-1405-120' })).toHaveLength(2);
+    for (const link of screen.getAllByRole('link', { name: 'بررسی سفارش HS-1405-120' })) {
+      expect(link).toHaveAttribute('href', `/orders?orderId=${orderId}`);
+    }
+    expect(screen.getByText('۱ سفارش در فهرست بررسی')).toBeInTheDocument();
   });
 
   it('keeps available sections visible when one financial source fails', () => {
-    render(<FinancialReportsView data={{ ...data, cashflow: { data: null, failed: true } }} />);
+    render(
+      <FinancialReportsView
+        data={{ ...data, cashflow: { data: null, failed: true } }}
+        canReadOrders
+      />,
+    );
 
     expect(screen.getByText('گزارش با داده ناقص نمایش داده شده است')).toBeInTheDocument();
     expect(screen.getByText('داده جریان نقدی از سرویس مالی دریافت نشد.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'وضعیت مالی تأمین‌کنندگان' })).toBeInTheDocument();
+  });
+
+  it('shows signed cost adjustments and keeps the order link hidden without orders permission', () => {
+    const contribution = {
+      ...data.contribution.data!,
+      manualCostAdjustmentToman: -60_000,
+      operatingServiceCostToman: 740_000,
+    };
+    render(
+      <FinancialReportsView
+        data={{ ...data, contribution: { data: contribution, failed: false } }}
+        canReadOrders={false}
+      />,
+    );
+    expect(screen.queryByRole('img', { name: /ترکیب هزینه‌های عملیاتی سفارش/ })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'خالص هزینه‌ها پس از اصلاحیه' })).toBeVisible();
+    expect(screen.getByText('اصلاح دستی').parentElement).toHaveTextContent(
+      formatAdminToman(-60_000),
+    );
+    expect(screen.queryByRole('link', { name: 'بررسی سفارش HS-1405-120' })).toBeNull();
+    expect(screen.getAllByText('HS-1405-120')).toHaveLength(2);
+  });
+
+  it('scopes an empty reconciliation result to orders with a finance snapshot', () => {
+    render(
+      <FinancialReportsView
+        data={{ ...data, reconciliation: { data: { count: 0, orders: [] }, failed: false } }}
+        canReadOrders
+      />,
+    );
+    expect(screen.getByText('۰ سفارش در فهرست بررسی')).toBeVisible();
+    expect(screen.getAllByText('مغایرتی در این گزارش پیدا نشد').length).toBeGreaterThan(0);
+    expect(screen.queryByText('هزینه‌های سفارش‌ها کامل است')).toBeNull();
   });
 });
