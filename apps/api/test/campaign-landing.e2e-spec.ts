@@ -1,7 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 
-import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { formatTehranDate } from '../src/modules/campaigns/campaign-calendar';
 import { CampaignLandingsService } from '../src/modules/campaigns/campaign-landings.service';
 import { CampaignOperationsCenterService } from '../src/modules/campaigns/campaign-operations-center.service';
@@ -12,16 +11,10 @@ import type { CampaignLandingDraftDto } from '../src/modules/campaigns/dto/campa
 import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
 import { PromotionsService } from '../src/modules/promotions/promotions.service';
+import { createIsolatedTestDatabase } from './support/isolated-test-database';
 
 it('publishes only qualifying products, limits banner placements and archives a recurring campaign', async () => {
-  const config = new ConfigService();
-  const db = new PrismaService(config);
-  const media = new PublicMediaUrlService(config);
-  const catalog = new CatalogService(db, media, undefined, new PromotionsService(db));
-  const festivals = new FestivalDesignService(db, catalog, media);
-  const landings = new CampaignLandingsService(db, catalog, media, festivals);
-  const operations = new CampaignOperationsCenterService(db, catalog, landings, media);
-  const campaigns = new CampaignsService(db, media, landings);
+  const { db, close } = await createIsolatedTestDatabase();
   const slug = `landing-${randomUUID()}`;
   const secondarySlug = `${slug}-secondary`;
   const phone = `+0${BigInt(`0x${randomUUID().replaceAll('-', '').slice(0, 12)}`)}`;
@@ -29,15 +22,17 @@ it('publishes only qualifying products, limits banner placements and archives a 
   const end = new Date(now.valueOf() + 10 * 60_000);
   const bannerEnd = new Date(now.valueOf() + 5 * 60_000);
   try {
+    const config = new ConfigService();
+    const media = new PublicMediaUrlService(config);
+    const catalog = new CatalogService(db, media, undefined, new PromotionsService(db));
+    const festivals = new FestivalDesignService(db, catalog, media);
+    const landings = new CampaignLandingsService(db, catalog, media, festivals);
+    const operations = new CampaignOperationsCenterService(db, catalog, landings, media);
+    const campaigns = new CampaignsService(db, media, landings);
     const owner = await db.user.create({ data: { phone } });
-    const primary =
-      (await db.warehouse.findFirst({
-        where: { isDefault: true, isActive: true, deletedAt: null },
-        select: { id: true },
-      })) ??
-      (await db.warehouse.create({
-        data: { code: slug, name: 'Landing checkout fixture', isDefault: true },
-      }));
+    const primary = await db.warehouse.create({
+      data: { code: slug, name: 'Landing checkout fixture', isDefault: true },
+    });
     const backup = await db.warehouse.create({
       data: { code: `${slug}-backup`, name: 'Remote inventory fixture' },
     });
@@ -614,35 +609,6 @@ it('publishes only qualifying products, limits banner placements and archives a 
     expect(secondPage.items).toHaveLength(1);
     expect(firstPage.items.map(({ id }) => id)).not.toContain(secondPage.items[0].id);
   } finally {
-    try {
-      await db.$transaction([
-        db.campaignQuota.deleteMany({ where: { campaign: { trackingId: slug } } }),
-        db.campaignPromotion.deleteMany({ where: { campaign: { trackingId: slug } } }),
-        db.campaignPlacement.deleteMany({
-          where: { landing: { slug: { in: [slug, secondarySlug] } } },
-        }),
-        db.campaignLanding.deleteMany({ where: { slug: { in: [slug, secondarySlug] } } }),
-        db.campaignRevision.deleteMany({
-          where: { campaign: { trackingId: { in: [slug, secondarySlug] } } },
-        }),
-        db.media.deleteMany({ where: { storageKey: { startsWith: `catalog/${slug}-` } } }),
-        db.campaign.deleteMany({ where: { trackingId: { in: [slug, secondarySlug] } } }),
-        db.campaignLinkIdentity.deleteMany({ where: { id: { in: [slug, secondarySlug] } } }),
-        db.catalogProductAttributeValue.deleteMany({ where: { attributeCode: `${slug}-style` } }),
-        db.catalogAttributeVersion.deleteMany({ where: { attributeCode: `${slug}-style` } }),
-        db.catalogAttributeDefinition.deleteMany({ where: { code: `${slug}-style` } }),
-        db.inventory.deleteMany({ where: { variant: { sku: { startsWith: `${slug}-` } } } }),
-        db.productVariant.deleteMany({ where: { sku: { startsWith: `${slug}-` } } }),
-        db.productCategory.deleteMany({ where: { product: { slug: { startsWith: `${slug}-` } } } }),
-        db.product.deleteMany({ where: { slug: { startsWith: `${slug}-` } } }),
-        db.warehouse.deleteMany({ where: { code: { in: [slug, `${slug}-backup`] } } }),
-        db.category.deleteMany({ where: { slug: `${slug}-rings` } }),
-        db.category.deleteMany({ where: { slug } }),
-        db.brand.deleteMany({ where: { slug } }),
-        db.user.deleteMany({ where: { phone } }),
-      ]);
-    } finally {
-      await db.$disconnect();
-    }
+    await close();
   }
-}, 30_000);
+}, 120_000);
