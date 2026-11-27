@@ -9,7 +9,7 @@ import {
 } from '../src/generated/prisma/enums';
 import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
-import type { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
+import { PublicMediaUrlService } from '../src/modules/catalog/public-media-url.service';
 
 it('ranks bilingual catalog matches and records only bounded aggregate terms', async () => {
   const prisma = new PrismaService(new ConfigService());
@@ -39,6 +39,14 @@ it('ranks bilingual catalog matches and records only bounded aggregate terms', a
             },
           });
         const ring = await product('انگشتر نقره ۹۲۵', `ruby-model-${suffix}`);
+        const mediaBaseUrl = 'https://media.example.test/media';
+        const storageKey = `catalog/search-${suffix}.webp`;
+        const media = await db.media.create({
+          data: { storageKey, mimeType: 'image/webp', sizeBytes: 128 },
+        });
+        await db.productMedia.create({
+          data: { productId: ring.id, mediaId: media.id, isPrimary: true },
+        });
         const material = await product('زیور مخمل', `velvet-fixture-${suffix}`);
         const cleared = await product('قطعه صدف', `shell-fixture-${suffix}`);
         await product('Silver ring 925', `draft-silver-${suffix}`, ProductStatus.DRAFT);
@@ -80,7 +88,7 @@ it('ranks bilingual catalog matches and records only bounded aggregate terms', a
             $executeRaw: db.$executeRaw.bind(db),
             product: db.product,
           } as unknown as PrismaService,
-          {} as PublicMediaUrlService,
+          new PublicMediaUrlService(new ConfigService({ MEDIA_PUBLIC_BASE_URL: mediaBaseUrl })),
         );
         const search = (q: string, page?: number) =>
           service.searchPublicCatalog({ scopeCategory: root.slug, q, page });
@@ -105,6 +113,11 @@ it('ranks bilingual catalog matches and records only bounded aggregate terms', a
         expect((await service.listPublicProductSuggestions(root.slug)).categories[0]?.id).toBe(
           root.id,
         );
+        const suggestions = await service.listPublicProductSuggestions(ring.slug);
+        expect(suggestions.items.find(({ id }) => id === ring.id)?.primaryMedia).toMatchObject({
+          url: `${mediaBaseUrl}/${storageKey}`,
+          mimeType: 'image/webp',
+        });
 
         await search('Silver ring 925', 2);
         await service.listPublicProductSuggestions('Silver ring 925');
