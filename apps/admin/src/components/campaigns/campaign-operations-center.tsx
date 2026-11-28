@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TableScrollRegion } from '@/components/ui/data-table';
+import { Select } from '@/components/ui/select';
 import { campaignMessage } from '@/lib/campaigns/campaign-api-errors';
 import {
   discountCommitmentSignal,
@@ -521,29 +522,32 @@ export function CampaignOperationsCenter({
           {data.quotaPage > 1 && <input type="hidden" name="quotaPage" value={data.quotaPage} />}
           <label className="grid gap-1 text-sm">
             وضعیت سفارش یا مهلت رزرو
-            <select
+            <Select
               name="orderState"
               defaultValue={orderState ?? ''}
               className="min-h-9 rounded-md border border-[var(--admin-color-border)] px-2"
-            >
-              <option value="">همهٔ وضعیت‌ها</option>
-              {Object.entries(campaignOperationsOrderLabels).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
+              aria-label="وضعیت سفارش یا مهلت رزرو"
+              options={[
+                { value: '', label: 'همهٔ وضعیت‌ها' },
+                ...Object.entries(campaignOperationsOrderLabels).map(([key, label]) => ({
+                  value: key,
+                  label,
+                })),
+              ]}
+            />
           </label>
           <label className="grid gap-1 text-sm">
             ترتیب ثبت
-            <select
+            <Select
               name="orderSort"
               defaultValue={orderSort}
               className="min-h-9 rounded-md border border-[var(--admin-color-border)] px-2"
-            >
-              <option value="newest">جدیدترین</option>
-              <option value="oldest">قدیمی‌ترین</option>
-            </select>
+              aria-label="ترتیب ثبت"
+              options={[
+                { value: 'newest', label: 'جدیدترین' },
+                { value: 'oldest', label: 'قدیمی‌ترین' },
+              ]}
+            />
           </label>
           <button
             type="submit"

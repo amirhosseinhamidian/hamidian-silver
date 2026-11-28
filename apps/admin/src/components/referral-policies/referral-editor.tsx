@@ -139,6 +139,7 @@ export function ReferralEditor({
                 name="program-budget"
                 label="بودجهٔ ماهانهٔ مجموع پاداش معرفی به تومان"
                 value={policy.periodBudgetToman}
+                money
               />
               {canWrite && (
                 <DateField

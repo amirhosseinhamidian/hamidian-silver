@@ -39,7 +39,8 @@ it('adds, reorders and removes sections while preserving the complete product li
     />,
   );
 
-  fireEvent.change(screen.getByLabelText('نوع بخش تازه'), { target: { value: 'HIGHLIGHTS' } });
+  fireEvent.click(screen.getByRole('combobox', { name: 'نوع بخش تازه' }));
+  fireEvent.click(screen.getByRole('option', { name: 'مزیت‌های جشنواره' }));
   fireEvent.click(screen.getByRole('button', { name: 'افزودن بخش' }));
   const sections = within(screen.getByRole('list', { name: 'ترتیب بخش‌های جشنواره' }));
   const highlights = within(sections.getAllByRole('listitem').at(-1)!);

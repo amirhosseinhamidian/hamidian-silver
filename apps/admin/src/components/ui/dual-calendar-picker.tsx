@@ -4,6 +4,7 @@ import { useId, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Select } from '@/components/ui/select';
 import {
   calendarDay,
   calendarDayMilliseconds,
@@ -212,47 +213,44 @@ export function DualCalendarPicker({
               <div className="grid grid-cols-3 gap-2">
                 <label className="min-w-0 space-y-1 text-xs">
                   تقویم
-                  <select
+                  <Select
                     className={selectStyle}
                     value={calendar}
-                    onChange={(event) => {
-                      setCalendar(event.currentTarget.value === 'gregory' ? 'gregory' : 'persian');
+                    onValueChange={(value) => {
+                      setCalendar(value === 'gregory' ? 'gregory' : 'persian');
                       if (selectedDay !== null) setAnchor(selectedDay);
                     }}
-                  >
-                    <option value="persian">شمسی</option>
-                    <option value="gregory">میلادی</option>
-                  </select>
+                    aria-label="تقویم"
+                    options={[
+                      { value: 'persian', label: 'شمسی' },
+                      { value: 'gregory', label: 'میلادی' },
+                    ]}
+                  />
                 </label>
                 <label className="min-w-0 space-y-1 text-xs">
                   سال
-                  <select
+                  <Select
                     className={selectStyle}
-                    value={view.year}
-                    onChange={(event) => showMonth(Number(event.currentTarget.value), view.month)}
-                  >
-                    {Array.from({ length: 21 }, (_, index) => view.year + index - 10).map(
-                      (year) => (
-                        <option key={year} value={year}>
-                          {toPersianDigits(year)}
-                        </option>
-                      ),
+                    value={String(view.year)}
+                    onValueChange={(value) => showMonth(Number(value), view.month)}
+                    aria-label="سال"
+                    options={Array.from({ length: 21 }, (_, index) => view.year + index - 10).map(
+                      (year) => ({ value: String(year), label: toPersianDigits(year) }),
                     )}
-                  </select>
+                  />
                 </label>
                 <label className="min-w-0 space-y-1 text-xs">
                   ماه
-                  <select
+                  <Select
                     className={selectStyle}
-                    value={view.month}
-                    onChange={(event) => showMonth(view.year, Number(event.currentTarget.value))}
-                  >
-                    {months[calendar].map((name, index) => (
-                      <option key={name} value={index + 1}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
+                    value={String(view.month)}
+                    onValueChange={(value) => showMonth(view.year, Number(value))}
+                    aria-label="ماه"
+                    options={months[calendar].map((name, index) => ({
+                      value: String(index + 1),
+                      label: name,
+                    }))}
+                  />
                 </label>
               </div>
               <div className="grid grid-cols-7 gap-1" role="group" aria-label="روزهای ماه">
@@ -302,31 +300,29 @@ export function DualCalendarPicker({
                 <div className="grid grid-cols-2 gap-2">
                   <label className="min-w-0 space-y-1 text-xs">
                     ساعت
-                    <select
+                    <Select
                       className={selectStyle}
                       value={hour}
-                      onChange={(event) => setTime(`${event.currentTarget.value}:${minute}`)}
-                    >
-                      {hours.map((number) => (
-                        <option key={number} value={number}>
-                          {toPersianDigits(number)}
-                        </option>
-                      ))}
-                    </select>
+                      onValueChange={(value) => setTime(`${value}:${minute}`)}
+                      aria-label="ساعت"
+                      options={hours.map((number) => ({
+                        value: number,
+                        label: toPersianDigits(number),
+                      }))}
+                    />
                   </label>
                   <label className="min-w-0 space-y-1 text-xs">
                     دقیقه
-                    <select
+                    <Select
                       className={selectStyle}
                       value={minute}
-                      onChange={(event) => setTime(`${hour}:${event.currentTarget.value}`)}
-                    >
-                      {minutes.map((number) => (
-                        <option key={number} value={number}>
-                          {toPersianDigits(number)}
-                        </option>
-                      ))}
-                    </select>
+                      onValueChange={(value) => setTime(`${hour}:${value}`)}
+                      aria-label="دقیقه"
+                      options={minutes.map((number) => ({
+                        value: number,
+                        label: toPersianDigits(number),
+                      }))}
+                    />
                   </label>
                 </div>
               )}

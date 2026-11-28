@@ -1,9 +1,12 @@
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import type { NextFunction, Request, Response } from 'express';
 import { randomUUID } from 'node:crypto';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { configureApiRouting } from '../src/app.setup';
@@ -13,11 +16,7 @@ import type { RequestWithAuth } from '../src/modules/authorization/authorization
 import { PermissionsGuard } from '../src/modules/authorization/permissions.guard';
 import { PERMISSION_CODES } from '../src/modules/authorization/rbac.constants';
 import type { RewardPolicyDefinitionDto } from '../src/modules/reward-policies/dto/reward-policy.dto';
-import { PolicySimulationController } from '../src/modules/reward-policies/policy-simulation.controller';
-import { PolicySimulationService } from '../src/modules/reward-policies/policy-simulation.service';
-import { RewardPoliciesService } from '../src/modules/reward-policies/reward-policies.service';
-import { GrowthCreditIssuanceController } from '../src/modules/wallet/growth-credit-issuance.controller';
-import { GrowthCreditIssuanceService } from '../src/modules/wallet/growth-credit-issuance.service';
+import { WalletModule } from '../src/modules/wallet/wallet.module';
 import { createIsolatedTestDatabase } from './support/isolated-test-database';
 
 const usage = {
@@ -54,18 +53,26 @@ const definition = {
 it('quotes current prices, checks quota and caps, saves only an authorized decision and replays anonymous history', async () => {
   const { db, close } = await createIsolatedTestDatabase();
   let app: INestApplication<App> | undefined;
+  let mediaDirectory: string | undefined;
   try {
-    const actor = await db.user.create({ data: { phone: '+01000000001' } });
+    const mediaRoot = await mkdtemp(join(tmpdir(), 'hamidian-policy-simulation-media-'));
+    mediaDirectory = mediaRoot;
+    const actor = await db.user.create({
+      data: { phone: '+01000000001', firstName: 'عضو', lastName: 'نمونه' },
+    });
     const fixture = await Test.createTestingModule({
-      controllers: [PolicySimulationController, GrowthCreditIssuanceController],
-      providers: [
-        PolicySimulationService,
-        RewardPoliciesService,
-        GrowthCreditIssuanceService,
-        { provide: ConfigService, useValue: new ConfigService() },
-        { provide: PrismaService, useValue: db },
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          ignoreEnvFile: true,
+          load: [() => ({ MEDIA_STORAGE_ROOT: mediaRoot })],
+        }),
+        WalletModule,
       ],
-    }).compile();
+    })
+      .overrideProvider(PrismaService)
+      .useValue(db)
+      .compile();
     app = fixture.createNestApplication<INestApplication<App>>();
     configureApiRouting(app);
     app.use((req: Request & RequestWithAuth, _res: Response, next: NextFunction) => {
@@ -100,6 +107,20 @@ it('quotes current prices, checks quota and caps, saves only an authorized decis
     await api.get(issuancePath).expect(401);
     const control = await api.get(issuancePath).set('x-test-role', 'reader').expect(200);
     expect(control.body).toMatchObject({ mode: 'LIVE', version: 1 });
+    const jobsPath = '/api/v1/wallet/admin/purchase-reward-jobs';
+    await api.get(jobsPath).expect(401);
+    await api.get(jobsPath).set('x-test-role', 'reader').expect(200);
+    await api.get(`/api/v1/wallet/admin/${actor.id}`).set('x-test-role', 'reader').expect(200);
+    const customersPath = '/api/v1/wallet/admin/customers/search';
+    await api.post(customersPath).send({ q: 'عضو نمونه' }).expect(401);
+    const customers = await api
+      .post(customersPath)
+      .set('x-test-role', 'reader')
+      .send({ q: 'عضو نمونه' })
+      .expect(200);
+    expect(customers.body).toEqual([
+      { id: actor.id, firstName: 'عضو', lastName: 'نمونه', phone: actor.phone },
+    ]);
     const transition = { mode: 'SHADOW', expectedVersion: 1 };
     await api.patch(issuancePath).set('x-test-role', 'reader').send(transition).expect(403);
     const shadow = await api
@@ -124,6 +145,19 @@ it('quotes current prices, checks quota and caps, saves only an authorized decis
       include: { variants: true },
     });
     const variant = product.variants[0];
+    await api.get(`${root}/product-options`).expect(401);
+    const options = await api
+      .get(`${root}/product-options?q=Ring`)
+      .set('x-test-role', 'reader')
+      .expect(200);
+    expect(options.body.items).toEqual([
+      expect.objectContaining({ slug: product.slug, defaultPriceToman: 100_000 }),
+    ]);
+    const variants = await api
+      .get(`${root}/product-options/${product.slug}/variants`)
+      .set('x-test-role', 'reader')
+      .expect(200);
+    expect(variants.body).toEqual([{ sku: variant.sku, name: null, salePriceToman: 120_000 }]);
     const at = new Date('2026-11-27T13:00:00Z');
     await db.campaignLinkIdentity.create({ data: { id: 'simulation', campaign: 'simulation' } });
     const campaign = await db.campaign.create({
@@ -450,7 +484,10 @@ it('quotes current prices, checks quota and caps, saves only an authorized decis
     });
     await expect(db.walletLot.count()).resolves.toBe(0);
   } finally {
-    await app?.close();
-    await close();
+    try {
+      await app?.close();
+    } finally {
+      await Promise.all([close(), mediaDirectory && rm(mediaDirectory, { recursive: true })]);
+    }
   }
 }, 120_000);

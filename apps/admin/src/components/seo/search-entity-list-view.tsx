@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/form-control';
+import { Select } from '@/components/ui/select';
 import { formatAdminInteger } from '@/lib/presentation/formatters';
 import {
   entityDetailHref,
@@ -52,13 +53,13 @@ export function SearchEntityListView({
           <EntityPeriodFields filters={filters.detail} />
           <label className="grid gap-1 text-sm">
             نوع صفحه
-            <select name="kind" defaultValue={query.kind} className={entitySelect}>
-              {entityKinds.map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            <Select
+              name="kind"
+              defaultValue={query.kind}
+              className={entitySelect}
+              aria-label="نوع صفحه"
+              options={entityKinds.map(([key, label]) => ({ value: key, label }))}
+            />
           </label>
           <label className="grid gap-1 text-sm">
             نام یا اسلاگ
@@ -66,18 +67,16 @@ export function SearchEntityListView({
           </label>
           <label className="grid gap-1 text-sm">
             فرصت
-            <select
+            <Select
               name="opportunity"
               defaultValue={query.opportunity ?? ''}
               className={entitySelect}
-            >
-              <option value="">همهٔ صفحات</option>
-              {opportunities.map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
+              aria-label="فرصت"
+              options={[
+                { value: '', label: 'همهٔ صفحات' },
+                ...opportunities.map(([key, label]) => ({ value: key, label })),
+              ]}
+            />
           </label>
           <label className="grid gap-1 text-sm">
             سقف نرخ کلیک (درصد)

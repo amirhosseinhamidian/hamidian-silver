@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Header, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { attachHumanAuditEvent } from '../audit/audit-event';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
@@ -8,6 +18,8 @@ import { PERMISSION_CODES } from '../authorization/rbac.constants';
 import {
   WalletBalanceDto,
   WalletCorrectionDto,
+  WalletCustomerOptionDto,
+  WalletCustomerSearchQueryDto,
   WalletLedgerPageDto,
   WalletLedgerQueryDto,
   WalletOperationDto,
@@ -63,6 +75,15 @@ export class WalletController {
         ),
       })),
     };
+  }
+
+  @Post('admin/customers/search')
+  @HttpCode(200)
+  @Header('Cache-Control', 'private, no-store')
+  @RequirePermissions(PERMISSION_CODES.FINANCE_READ)
+  @ApiOkResponse({ type: WalletCustomerOptionDto, isArray: true })
+  customers(@Body() query: WalletCustomerSearchQueryDto) {
+    return this.wallet.findCustomers(query.q);
   }
 
   @Get('admin/:userId')

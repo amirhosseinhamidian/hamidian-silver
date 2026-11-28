@@ -6,6 +6,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { Select } from '@/components/ui/select';
 import { referralPolicyResponse } from '@/lib/reward-policies/referral-reward-policy';
 import { actionLabels, type RiskCase } from '@/lib/reward-policies/referral-risk';
 
@@ -51,22 +52,20 @@ export function ReferralRiskReviewForm({
       <fieldset disabled={busy || saved} className="space-y-3">
         <FormField id="risk-review-action" label="تصمیم بررسی" required>
           {(props) => (
-            <select
+            <Select
               {...props}
               name="action"
               defaultValue=""
               required
               className="min-h-10 w-full rounded border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] px-3 text-sm"
-            >
-              <option value="" disabled>
-                انتخاب تصمیم
-              </option>
-              {(['ALLOW', 'HOLD', 'REJECT'] as const).map((action) => (
-                <option key={action} value={action}>
-                  {actionLabels[action]}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'انتخاب تصمیم', disabled: true },
+                ...(['ALLOW', 'HOLD', 'REJECT'] as const).map((action) => ({
+                  value: action,
+                  label: actionLabels[action],
+                })),
+              ]}
+            />
           )}
         </FormField>
         <FormField id="risk-review-reason" label="دلیل تصمیم برای حسابرسی" required>

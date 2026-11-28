@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input, Textarea } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { Select, type SelectOption } from '@/components/ui/select';
 import { formatAdminInteger } from '@/lib/presentation/formatters';
 import {
   readReferralNumber,
@@ -41,12 +42,13 @@ const policyFields = [
 
 function readException(form: FormData, id: number): RiskException {
   const prefix = `exception-${id}-`;
-  const attributionId = readReferralText(form, `${prefix}attribution`);
+  const attributionId =
+    readReferralText(form, `${prefix}manual`) || readReferralText(form, `${prefix}attribution`);
   const reason = readReferralText(form, `${prefix}reason`);
   const until = referralInstant(readReferralText(form, `${prefix}until`));
   const codes = signalCodes.filter((code) => form.has(`${prefix}${code}`));
   if (!caseUuid.test(attributionId) || !until || reason.length < 3 || !codes.length)
-    throw new Error('شناسهٔ معرفی، پایان، دلیل و سیگنال‌های هر استثنا را کامل کنید.');
+    throw new Error('پروندهٔ معرفی، زمان پایان، دلیل و سیگنال‌های هر استثنا را کامل کنید.');
   return { attributionId, reason, until, codes };
 }
 
@@ -54,10 +56,14 @@ export function ReferralRiskPolicyForm({
   policy,
   expectedVersion,
   canPublish,
+  caseOptions,
+  selectedCase,
 }: Readonly<{
   policy: RiskPolicy;
   expectedVersion: number | null;
   canPublish: boolean;
+  caseOptions: readonly SelectOption[];
+  selectedCase: string | null;
 }>) {
   const router = useRouter();
   const [exceptions, setExceptions] = useState<Array<{ id: number; value?: RiskException }>>(() =>
@@ -117,7 +123,9 @@ export function ReferralRiskPolicyForm({
         }
         body = { definition, expectedVersion, requestId: requestKey.current.id };
       } else {
-        const attributionId = readReferralText(form, 'preview-attribution');
+        const attributionId =
+          readReferralText(form, 'preview-attribution-manual') ||
+          readReferralText(form, 'preview-attribution');
         if (attributionId && !caseUuid.test(attributionId))
           throw new Error('شناسهٔ معرفی نمونه معتبر نیست.');
         const metrics = signalCodes.flatMap((code) =>
@@ -230,18 +238,43 @@ export function ReferralRiskPolicyForm({
                 className="space-y-3 rounded border border-[var(--admin-color-border)] p-3"
               >
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <FormField id={`exception-${id}-attribution`} label="شناسهٔ معرفی" required>
+                  <FormField id={`exception-${id}-attribution`} label="پروندهٔ معرفی">
                     {(props) => (
-                      <Input
+                      <Select
                         {...props}
                         name={`exception-${id}-attribution`}
-                        dir="ltr"
-                        maxLength={36}
-                        defaultValue={value?.attributionId}
-                        required
+                        defaultValue={value?.attributionId ?? selectedCase ?? ''}
+                        placeholder="انتخاب پرونده"
+                        options={
+                          value &&
+                          !caseOptions.some(({ value: option }) => option === value.attributionId)
+                            ? [
+                                {
+                                  value: value.attributionId,
+                                  label: 'پروندهٔ ثبت‌شده در این استثنا',
+                                },
+                                ...caseOptions,
+                              ]
+                            : caseOptions
+                        }
                       />
                     )}
                   </FormField>
+                  <details>
+                    <summary className="cursor-pointer text-sm">
+                      معرفی خارج از فهرست (پیشرفته)
+                    </summary>
+                    <FormField id={`exception-${id}-manual`} label="شناسهٔ معرفی">
+                      {(props) => (
+                        <Input
+                          {...props}
+                          name={`exception-${id}-manual`}
+                          dir="ltr"
+                          maxLength={36}
+                        />
+                      )}
+                    </FormField>
+                  </details>
                   <DateField
                     name={`exception-${id}-until`}
                     label="زمان پایان استثنا"
@@ -291,9 +324,24 @@ export function ReferralRiskPolicyForm({
             </Button>
           </div>
           <div className="space-y-3 border-t border-[var(--admin-color-border)] pt-3">
-            <FormField id="preview-attribution" label="شناسهٔ معرفی نمونه برای اعمال استثنا">
-              {(props) => <Input {...props} name="preview-attribution" maxLength={36} dir="ltr" />}
+            <FormField id="preview-attribution" label="پروندهٔ نمونه برای اعمال استثنا">
+              {(props) => (
+                <Select
+                  {...props}
+                  name="preview-attribution"
+                  defaultValue={selectedCase ?? ''}
+                  options={[{ value: '', label: 'بدون پروندهٔ نمونه' }, ...caseOptions]}
+                />
+              )}
             </FormField>
+            <details>
+              <summary className="cursor-pointer text-sm">نمونه خارج از فهرست (پیشرفته)</summary>
+              <FormField id="preview-attribution-manual" label="شناسهٔ معرفی نمونه">
+                {(props) => (
+                  <Input {...props} name="preview-attribution-manual" dir="ltr" maxLength={36} />
+                )}
+              </FormField>
+            </details>
             <Button type="submit" value="preview" variant="outline" loading={busy === 'simulation'}>
               محاسبهٔ آزمایشی
             </Button>

@@ -3,6 +3,7 @@
 import type { components } from '@hamidian/contracts';
 import Link from 'next/link';
 import { useState } from 'react';
+import { Select } from '@/components/ui/select';
 import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
 import { CatalogProductGrid } from '@/components/catalog/catalog-product-grid';
 import {
@@ -68,25 +69,29 @@ export function FestivalProducts({
       >
         <label className="grid gap-1">
           دسته
-          <select name="category" defaultValue={filters.scopeCategory ?? ''} className={inputStyle}>
-            <option value="">همهٔ دسته‌ها</option>
-            {[...categories].map(([slug, name]) => (
-              <option value={slug} key={slug}>
-                {name}
-              </option>
-            ))}
-          </select>
+          <Select
+            name="category"
+            defaultValue={filters.scopeCategory ?? ''}
+            className={inputStyle}
+            aria-label="دسته"
+            options={[
+              { value: '', label: 'همهٔ دسته‌ها' },
+              ...[...categories].map(([slug, name]) => ({ value: slug, label: name })),
+            ]}
+          />
         </label>
         <label className="grid gap-1">
           برند
-          <select name="brand" defaultValue={filters.scopeBrand ?? ''} className={inputStyle}>
-            <option value="">همهٔ برندها</option>
-            {[...brands].map(([slug, name]) => (
-              <option value={slug} key={slug}>
-                {name}
-              </option>
-            ))}
-          </select>
+          <Select
+            name="brand"
+            defaultValue={filters.scopeBrand ?? ''}
+            className={inputStyle}
+            aria-label="برند"
+            options={[
+              { value: '', label: 'همهٔ برندها' },
+              ...[...brands].map(([slug, name]) => ({ value: slug, label: name })),
+            ]}
+          />
         </label>
         <label className="grid gap-1">
           کمترین قیمت (تومان)
@@ -114,14 +119,16 @@ export function FestivalProducts({
         </label>
         <label className="grid gap-1">
           ترتیب نمایش
-          <select name="sort" defaultValue={filters.sort ?? ''} className={inputStyle}>
-            <option value="">ترتیب مجموعه</option>
-            {campaignSorts.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+          <Select
+            name="sort"
+            defaultValue={filters.sort ?? ''}
+            className={inputStyle}
+            aria-label="ترتیب نمایش"
+            options={[
+              { value: '', label: 'ترتیب مجموعه' },
+              ...campaignSorts.map(([value, label]) => ({ value, label })),
+            ]}
+          />
         </label>
         <button
           className="self-end rounded-md border border-current px-3 py-2 font-semibold"

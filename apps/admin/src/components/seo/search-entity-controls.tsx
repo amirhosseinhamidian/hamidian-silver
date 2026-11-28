@@ -1,5 +1,6 @@
 import { ButtonLink } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-control';
+import { Select } from '@/components/ui/select';
 import { formatAdminInteger } from '@/lib/presentation/formatters';
 import type { readEntityFilters } from '@/lib/seo/search-entity-model';
 import { searchTypes } from '@/lib/seo/search-overview-model';
@@ -22,13 +23,13 @@ export function EntityPeriodFields({ filters }: Readonly<{ filters: EntityFilter
       </label>
       <label className="grid gap-1 text-sm">
         نوع جست‌وجو
-        <select name="searchType" defaultValue={filters.searchType} className={entitySelect}>
-          {searchTypes.map(([type, name]) => (
-            <option key={type} value={type}>
-              {name}
-            </option>
-          ))}
-        </select>
+        <Select
+          name="searchType"
+          defaultValue={filters.searchType}
+          className={entitySelect}
+          aria-label="نوع جست‌وجو"
+          options={searchTypes.map(([type, name]) => ({ value: type, label: name }))}
+        />
       </label>
       <label className="grid gap-1 text-sm">
         حداقل نمایش

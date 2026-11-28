@@ -92,11 +92,15 @@ export class ReferralRewardPoliciesService {
   }
 
   scopes(query: ReferralScopeQueryDto) {
-    const input = query.q.trim();
-    if (!input) return [];
-    const name = { contains: input, mode: 'insensitive' } as const;
+    const input = query.q?.trim();
+    const ids = query.ids?.split(',');
+    if ((query.q === undefined) === (ids === undefined))
+      throw new BadRequestException('Provide either a search term or selected identifiers.');
+    if (!input && !ids) return [];
+    const name = { contains: input?.replace(/[\\%_]/g, '\\$&'), mode: 'insensitive' } as const;
+    const match = ids ? { id: { in: ids } } : { OR: [{ name }, { slug: name }] };
     const base = {
-      take: 20,
+      take: ids ? 50 : 20,
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
       select: { id: true, name: true },
     } as const;
@@ -104,13 +108,13 @@ export class ReferralRewardPoliciesService {
       return this.db.category.findMany({
         ...base,
         orderBy: [...base.orderBy],
-        where: { isActive: true, deletedAt: null, OR: [{ name }, { slug: name }] },
+        where: { ...match, ...(ids ? {} : { isActive: true, deletedAt: null }) },
       });
     }
     return this.db.campaign.findMany({
       ...base,
       orderBy: [...base.orderBy],
-      where: { OR: [{ name }, { slug: name }] },
+      where: match,
     });
   }
 

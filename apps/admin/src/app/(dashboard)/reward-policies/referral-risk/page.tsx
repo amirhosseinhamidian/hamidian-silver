@@ -53,9 +53,18 @@ export default async function ReferralRiskPage({
 
   const [policies, cases, detail] = await Promise.all([
     view === 'policy' ? read<RiskPolicyOverview>(`policies?page=${page}`) : null,
-    view === 'cases' ? read<RiskQueue>(`cases?page=${page}&queue=${queue}`) : null,
-    view === 'cases' && id ? read<RiskCase>(`cases/${id}`) : null,
+    read<RiskQueue>(
+      view === 'cases' ? `cases?page=${page}&queue=${queue}` : 'cases?page=1&queue=all',
+    ),
+    id ? read<RiskCase>(`cases/${id}`) : null,
   ]);
+  const policyCases = [...(detail ? [detail] : []), ...(cases?.items ?? [])];
+  const policyCaseOptions = [
+    ...new Map(policyCases.map((row) => [row.attributionId, row])).values(),
+  ].map((row, index) => ({
+    value: row.attributionId,
+    label: `پروندهٔ ${formatAdminInteger(index + 1)} · ${formatAdminDateTime(row.assessedAt)} · ${actionLabels[row.action]}`,
+  }));
   const policy =
     policies?.history.find((row) => String(row.version) === query.version) ?? policies?.active;
   const hasMore = view === 'policy' ? policies?.hasMore : cases?.hasMore;
@@ -125,6 +134,8 @@ export default async function ReferralRiskPage({
               policy={policy}
               expectedVersion={policies.active.version}
               canPublish={canWrite}
+              caseOptions={policyCaseOptions}
+              selectedCase={detail?.attributionId ?? null}
             />
           </>
         ) : (
@@ -192,6 +203,13 @@ export default async function ReferralRiskPage({
             ) : (
               <Card id="risk-case" title="جزئیات و سابقهٔ پرونده">
                 <div className="space-y-4">
+                  <ButtonLink
+                    href={`${referralRiskPath}?view=policy&case=${detail.attributionId}`}
+                    size="sm"
+                    variant="outline"
+                  >
+                    استفاده از پرونده در تنظیمات ریسک
+                  </ButtonLink>
                   <dl className="grid gap-2 text-sm sm:grid-cols-2">
                     <dt>شناسهٔ معرفی</dt>
                     <dd>

@@ -26,20 +26,6 @@ export function Input({ invalid = false, className, ...props }: InputProps) {
   );
 }
 
-type SelectProps = ComponentPropsWithoutRef<'select'> & {
-  invalid?: boolean;
-};
-
-export function Select({ invalid = false, className, ...props }: SelectProps) {
-  return (
-    <select
-      aria-invalid={invalid || undefined}
-      className={cn(controlClassName, className)}
-      {...props}
-    />
-  );
-}
-
 type TextareaProps = ComponentPropsWithoutRef<'textarea'> & {
   invalid?: boolean;
 };

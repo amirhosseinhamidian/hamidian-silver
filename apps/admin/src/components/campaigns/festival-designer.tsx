@@ -8,6 +8,7 @@ import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/form-control';
+import { Select } from '@/components/ui/select';
 import { campaignError } from '@/lib/campaigns/campaign-api-errors';
 import { useCampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
 import { toAsciiDigits } from '@/lib/presentation/formatters';
@@ -254,18 +255,19 @@ export function FestivalDesigner({
                 <div className="flex flex-wrap items-end gap-2">
                   <label className="grid gap-1 text-sm">
                     نوع بخش تازه
-                    <select
+                    <Select
                       className={selectStyle}
                       value={sectionToAdd}
-                      onChange={(event) => setSectionToAdd(event.currentTarget.value as Kind | '')}
-                    >
-                      <option value="">انتخاب نوع بخش</option>
-                      {availableSections.map((kind) => (
-                        <option key={kind} value={kind}>
-                          {sectionLabels[kind]}
-                        </option>
-                      ))}
-                    </select>
+                      onValueChange={(value) => setSectionToAdd(value as Kind | '')}
+                      aria-label="نوع بخش تازه"
+                      options={[
+                        { value: '', label: 'انتخاب نوع بخش' },
+                        ...availableSections.map((kind) => ({
+                          value: kind,
+                          label: sectionLabels[kind],
+                        })),
+                      ]}
+                    />
                   </label>
                   <Button
                     variant="outline"
@@ -387,19 +389,19 @@ export function FestivalDesigner({
           <div className="flex flex-wrap items-end gap-2">
             <label className="grid gap-1 text-sm">
               نسخه برای بازگردانی
-              <select
+              <Select
                 className={selectStyle}
                 value={revisionToRestore}
-                onChange={(e) => setRevisionToRestore(e.currentTarget.value)}
-              >
-                <option value="">انتخاب نسخه</option>
-                {editor.history.slice(1).map(({ revision, recordedAt }) => (
-                  <option key={revision} value={revision}>
-                    نسخهٔ {revision.toLocaleString('fa-IR')} ·{' '}
-                    {new Date(recordedAt).toLocaleString('fa-IR', { timeZone: 'Asia/Tehran' })}
-                  </option>
-                ))}
-              </select>
+                onValueChange={setRevisionToRestore}
+                aria-label="نسخه برای بازگردانی"
+                options={[
+                  { value: '', label: 'انتخاب نسخه' },
+                  ...editor.history.slice(1).map(({ revision, recordedAt }) => ({
+                    value: String(revision),
+                    label: `نسخهٔ ${revision.toLocaleString('fa-IR')} · ${new Date(recordedAt).toLocaleString('fa-IR', { timeZone: 'Asia/Tehran' })}`,
+                  })),
+                ]}
+              />
             </label>
             <Button
               variant="outline"

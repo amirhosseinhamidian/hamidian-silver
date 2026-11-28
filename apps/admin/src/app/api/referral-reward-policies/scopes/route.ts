@@ -14,10 +14,17 @@ export async function GET(request: Request) {
   const query = new URL(request.url).searchParams;
   const kind = query.get('kind');
   const q = query.get('q')?.trim();
-  if ((kind !== 'category' && kind !== 'campaign') || !q || q.length > 80) {
+  const ids = query.get('ids');
+  if (
+    (kind !== 'category' && kind !== 'campaign') ||
+    (!q && !ids) ||
+    (q && ids) ||
+    (q && q.length > 80) ||
+    (ids && ids.length > 1849)
+  ) {
     return Response.json(null, { status: 400, headers });
   }
-  const params = new URLSearchParams({ kind, q });
+  const params = new URLSearchParams({ kind, ...(ids ? { ids } : { q: q ?? '' }) });
   try {
     const response = await requestAdminCatalog(
       `/api/v1/referral-reward-policies/scopes?${params}`,

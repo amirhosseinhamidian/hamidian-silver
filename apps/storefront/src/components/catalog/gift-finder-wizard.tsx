@@ -5,6 +5,7 @@ import { CatalogProductCard } from '@/components/catalog/catalog-product-card';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { Select } from '@/components/ui/select';
 import {
   readGiftBudget,
   type GiftFinderChoices,
@@ -104,23 +105,19 @@ export function GiftFinderWizard({ options }: Readonly<{ options: GiftFinderOpti
         }
       >
         {(props) => (
-          <select
+          <Select
             {...props}
             className="min-h-11 w-full rounded-[var(--sf-radius-md)] border border-[var(--sf-color-border-strong)] bg-[var(--sf-color-canvas)] px-3 text-sm"
             disabled={!available.length}
             value={choices[field] ?? ''}
-            onChange={(event) => {
-              const value = event.target.value;
+            onValueChange={(value) => {
               setChoices((previous) => ({ ...previous, [field]: value || undefined }));
             }}
-          >
-            <option value="">تفاوتی ندارد</option>
-            {available.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: '', label: 'تفاوتی ندارد' },
+              ...available.map(({ value, label }) => ({ value, label })),
+            ]}
+          />
         )}
       </FormField>
     );

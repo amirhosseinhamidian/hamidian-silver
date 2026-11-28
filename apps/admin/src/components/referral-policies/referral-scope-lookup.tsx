@@ -5,6 +5,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { Select } from '@/components/ui/select';
 
 type Scope = { id: string; name: string };
 
@@ -55,14 +56,16 @@ export function ReferralScopeLookup() {
       <form onSubmit={(event) => void lookup(event)} className="flex flex-wrap items-end gap-3">
         <FormField id="referral-scope-kind" label="نوع">
           {(props) => (
-            <select
+            <Select
               {...props}
               name="kind"
               className="min-h-10 rounded border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] px-3 text-sm"
-            >
-              <option value="category">دسته</option>
-              <option value="campaign">کمپین</option>
-            </select>
+              defaultValue="category"
+              options={[
+                { value: 'category', label: 'دسته' },
+                { value: 'campaign', label: 'کمپین' },
+              ]}
+            />
           )}
         </FormField>
         <FormField id="referral-scope-query" label="نام یا نامک" required>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { TableScrollRegion } from '@/components/ui/data-table';
+import { Select } from '@/components/ui/select';
 import { growthTrendPoints, type GrowthDashboardDay } from '@/lib/growth/growth-report';
 import {
   formatAdminInteger,
@@ -41,31 +42,23 @@ export function GrowthDashboardTrend({ daily }: { daily: readonly GrowthDashboar
       <div className="flex flex-wrap gap-3 text-sm">
         <label className="grid gap-1">
           فاصلهٔ زمانی
-          <select
+          <Select
             className={selectClass}
             value={interval}
-            onChange={(event) => setInterval(event.target.value as keyof typeof intervals)}
-          >
-            {Object.entries(intervals).map(([key, name]) => (
-              <option key={key} value={key}>
-                {name}
-              </option>
-            ))}
-          </select>
+            onValueChange={(value) => setInterval(value as keyof typeof intervals)}
+            aria-label="فاصلهٔ زمانی"
+            options={Object.entries(intervals).map(([key, name]) => ({ value: key, label: name }))}
+          />
         </label>
         <label className="grid gap-1">
           شاخص روند
-          <select
+          <Select
             className={selectClass}
             value={metric}
-            onChange={(event) => setMetric(event.target.value as keyof typeof trends)}
-          >
-            {Object.entries(trends).map(([key, name]) => (
-              <option key={key} value={key}>
-                {name}
-              </option>
-            ))}
-          </select>
+            onValueChange={(value) => setMetric(value as keyof typeof trends)}
+            aria-label="شاخص روند"
+            options={Object.entries(trends).map(([key, name]) => ({ value: key, label: name }))}
+          />
         </label>
       </div>
       {points.some(({ value }) => value !== null && value !== 0) ? (

@@ -7,6 +7,7 @@ import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TableScrollRegion } from '@/components/ui/data-table';
 import { DonutChart } from '@/components/ui/donut-chart';
+import { Select } from '@/components/ui/select';
 import { CampaignReportCatalogFilters } from '@/components/growth/campaign-report-catalog-filters';
 import { campaignOrderLabels } from '@/lib/campaigns/campaign-model';
 import {
@@ -444,18 +445,19 @@ export function FestivalAnalyticsView({
             />
             <label className="grid gap-1 text-sm">
               وضعیت سفارش
-              <select
+              <Select
                 name="orderState"
                 defaultValue={filters.orderState ?? ''}
                 className="admin-form-control min-h-10 rounded border px-3"
-              >
-                <option value="">همهٔ وضعیت‌ها</option>
-                {Object.entries(campaignOrderLabels).map(([key, label]) => (
-                  <option value={key} key={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+                aria-label="وضعیت سفارش"
+                options={[
+                  { value: '', label: 'همهٔ وضعیت‌ها' },
+                  ...Object.entries(campaignOrderLabels).map(([key, label]) => ({
+                    value: key,
+                    label,
+                  })),
+                ]}
+              />
             </label>
           </div>
           {(filters.product || filters.category || filters.orderState) && (

@@ -26,6 +26,15 @@ import {
 } from './dto/reward-policy.dto';
 import { calculateRedemption, calculateRewardPolicy } from './reward-policy-engine';
 
+export const policyBasketVariantScope = {
+  isActive: true,
+  deletedAt: null,
+  OR: [
+    { sizeId: null },
+    { size: { isActive: true, deletedAt: null, group: { isActive: true, deletedAt: null } } },
+  ],
+} satisfies Prisma.ProductVariantWhereInput;
+
 async function readBasket(tx: Prisma.TransactionClient, items: PolicyBasketScenarioDto['items']) {
   const products = await tx.product.findMany({
     where: {
@@ -44,14 +53,7 @@ async function readBasket(tx: Prisma.TransactionClient, items: PolicyBasketScena
       variants: {
         where: {
           sku: { in: items.flatMap(({ variantSku }) => (variantSku ? [variantSku] : [])) },
-          isActive: true,
-          deletedAt: null,
-          OR: [
-            { sizeId: null },
-            {
-              size: { isActive: true, deletedAt: null, group: { isActive: true, deletedAt: null } },
-            },
-          ],
+          ...policyBasketVariantScope,
         },
         select: { id: true, sku: true, salePriceToman: true },
       },

@@ -5300,6 +5300,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/wallet/admin/customers/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["WalletController_customers_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/policy-simulator/product-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PolicyProductOptionsController_search_v1"];
+        put?: never;
+        post: operations["PolicyProductOptionsController_hydrate_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-policies/policy-simulator/product-options/{slug}/variants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PolicyProductOptionsController_variants_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -10220,6 +10268,24 @@ export interface components {
         };
         UpdateAdminRolePermissionsDto: {
             permissionCodes: ("catalog.read" | "catalog.write" | "inventory.read" | "inventory.write" | "orders.read" | "orders.status.write" | "orders.tracking.write" | "orders.cancel" | "cms.read" | "cms.write" | "pricing.read" | "pricing.write" | "finance.read" | "finance.write" | "settings.read" | "settings.write" | "users.read" | "users.write" | "audit.read")[];
+        };
+        WalletCustomerSearchQueryDto: {
+            q: string;
+        };
+        WalletCustomerOptionDto: {
+            /** Format: uuid */
+            id: string;
+            firstName: string | null;
+            lastName: string | null;
+            phone: string;
+        };
+        PolicyVariantOptionDto: {
+            sku: string;
+            name: string | null;
+            salePriceToman: number | null;
+        };
+        PolicySelectedProductsDto: {
+            selected?: string[];
         };
     };
     responses: never;
@@ -17127,7 +17193,9 @@ export interface operations {
         parameters: {
             query: {
                 kind: "category" | "campaign";
-                q: string;
+                q?: string;
+                /** @description Comma-separated UUIDs for existing selections */
+                ids?: string;
             };
             header?: never;
             path?: never;
@@ -19100,6 +19168,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminRoleManagementSnapshotDto"];
+                };
+            };
+        };
+    };
+    WalletController_customers_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WalletCustomerSearchQueryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletCustomerOptionDto"][];
+                };
+            };
+        };
+    };
+    PolicyProductOptionsController_search_v1: {
+        parameters: {
+            query?: {
+                q?: string;
+                page?: number;
+                category?: string;
+                brand?: string;
+                stock?: "in-stock" | "out-of-stock";
+                categoryMode?: "direct" | "tree";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignProductOptionsDto"];
+                };
+            };
+        };
+    };
+    PolicyProductOptionsController_hydrate_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicySelectedProductsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignProductOptionsDto"];
+                };
+            };
+        };
+    };
+    PolicyProductOptionsController_variants_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyVariantOptionDto"][];
                 };
             };
         };

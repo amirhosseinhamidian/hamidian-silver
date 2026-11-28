@@ -6,6 +6,7 @@ import { SiteMediaField } from '@/components/site-settings/site-media-field';
 import { Button } from '@/components/ui/button';
 import { DualCalendarPicker } from '@/components/ui/dual-calendar-picker';
 import { Input, Textarea } from '@/components/ui/form-control';
+import { Select } from '@/components/ui/select';
 import { addCampaignSelection, type CampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
 import { CampaignProductSearch } from './campaign-product-search';
 import { CampaignTaxonomyPicker } from './campaign-taxonomy-picker';
@@ -212,19 +213,21 @@ export function FestivalSectionEditor({
               section.kind !== 'INTRO' && (
                 <label className="grid gap-1 text-sm">
                   چیدمان
-                  <select
+                  <Select
                     className="min-h-10 rounded-md border border-[var(--admin-color-border)] px-2"
-                    value={section.layout}
-                    onChange={(e) =>
+                    value={section.layout ?? 'GRID'}
+                    onValueChange={(value) =>
                       update({
                         ...section,
-                        layout: e.currentTarget.value === 'STRIP' ? 'STRIP' : 'GRID',
+                        layout: value === 'STRIP' ? 'STRIP' : 'GRID',
                       })
                     }
-                  >
-                    <option value="GRID">شبکه‌ای</option>
-                    <option value="STRIP">ردیفی</option>
-                  </select>
+                    aria-label="چیدمان"
+                    options={[
+                      { value: 'GRID', label: 'شبکه‌ای' },
+                      { value: 'STRIP', label: 'ردیفی' },
+                    ]}
+                  />
                 </label>
               )}
             {(['startsTehran', 'endsTehran'] as const).map((key) => (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Select } from '@/components/ui/select';
 import type { OverviewMetrics, OverviewPeriod } from '@/lib/seo/search-overview-model';
 import { displaySearchMetric, overviewMetrics } from '@/lib/seo/search-overview-model';
 import { toPersianDigits } from '@/lib/presentation/formatters';
@@ -27,31 +28,27 @@ export function SearchOverviewTrend({
         {weekly ? (
           <label className="grid gap-1">
             فاصلهٔ نمودار
-            <select
+            <Select
               value={interval}
-              onChange={(event) =>
-                setInterval(event.target.value === 'weekly' ? 'weekly' : 'daily')
-              }
+              onValueChange={(value) => setInterval(value === 'weekly' ? 'weekly' : 'daily')}
               className="rounded border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] p-2"
-            >
-              <option value="daily">روزانه</option>
-              <option value="weekly">هفتگی</option>
-            </select>
+              aria-label="فاصلهٔ نمودار"
+              options={[
+                { value: 'daily', label: 'روزانه' },
+                { value: 'weekly', label: 'هفتگی' },
+              ]}
+            />
           </label>
         ) : null}
         <label className="grid gap-1">
           شاخص نمودار
-          <select
+          <Select
             value={metric}
-            onChange={(event) => setMetric(event.target.value as keyof OverviewMetrics)}
+            onValueChange={(value) => setMetric(value as keyof OverviewMetrics)}
             className="rounded border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] p-2"
-          >
-            {overviewMetrics.map(([key, name]) => (
-              <option value={key} key={key}>
-                {name}
-              </option>
-            ))}
-          </select>
+            aria-label="شاخص نمودار"
+            options={overviewMetrics.map(([key, name]) => ({ value: key, label: name }))}
+          />
         </label>
       </div>
       <div className="overflow-x-auto" aria-hidden="true">

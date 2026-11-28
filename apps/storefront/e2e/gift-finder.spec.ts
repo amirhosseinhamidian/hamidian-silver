@@ -16,16 +16,24 @@ test('finds available gifts within budget and preserves preferences when editing
     'href',
     '/campaigns/nowruz',
   );
-  await page.getByLabel('مناسبت', { exact: true }).selectOption('birthday');
-  await page.getByLabel('هدیه برای چه کسی است؟').selectOption('women');
+  const occasion = page.getByRole('combobox', { name: 'مناسبت', exact: true });
+  const recipient = page.getByRole('combobox', { name: 'هدیه برای چه کسی است؟', exact: true });
+  const style = page.getByRole('combobox', { name: 'سبک', exact: true });
+  const category = page.getByRole('combobox', { name: 'نوع محصول', exact: true });
+  await occasion.click();
+  await page.getByRole('option', { name: 'تولد', exact: true }).click();
+  await recipient.click();
+  await page.getByRole('option', { name: 'بانوان', exact: true }).click();
   await page.getByRole('button', { name: 'ادامه' }).click();
   await expect(page.getByRole('heading', { name: 'بودجه', exact: true })).toBeFocused();
   await page.getByRole('button', { name: 'ادامه' }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'بودجه را به تومان' })).toBeVisible();
   await page.getByLabel(/حداکثر بودجه/).fill('۶۰۰٬۰۰۰');
   await page.getByRole('button', { name: 'ادامه' }).click();
-  await page.getByLabel('سبک', { exact: true }).selectOption('minimal');
-  await page.getByLabel('نوع محصول', { exact: true }).selectOption('rings');
+  await style.click();
+  await page.getByRole('option', { name: 'مینیمال', exact: true }).click();
+  await category.click();
+  await page.getByRole('option', { name: 'انگشتر', exact: true }).click();
   await page.getByRole('button', { name: 'دیدن پیشنهادها' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'کمترین قیمتِ موجود' })).toContainText(
     /۸۰۰.۰۰۰ تومان/,
@@ -33,8 +41,8 @@ test('finds available gifts within budget and preserves preferences when editing
   await page.getByRole('button', { name: 'افزایش بودجه' }).click();
   await expect(page.getByLabel(/حداکثر بودجه/)).toHaveValue('800000');
   await page.getByRole('button', { name: 'ادامه' }).click();
-  await expect(page.getByLabel('سبک', { exact: true })).toHaveValue('minimal');
-  await expect(page.getByLabel('نوع محصول', { exact: true })).toHaveValue('rings');
+  await expect(style).toHaveText('مینیمال');
+  await expect(category).toHaveText('انگشتر');
   await page.getByRole('button', { name: 'دیدن پیشنهادها' }).click();
   const products = page.getByRole('list', { name: 'محصولات پیشنهادی' });
   await expect(products.getByRole('listitem')).toHaveCount(1);
@@ -45,8 +53,8 @@ test('finds available gifts within budget and preserves preferences when editing
   );
   await expectNoHorizontalOverflow(page);
   await page.getByRole('button', { name: 'تغییر ترجیحات' }).click();
-  await expect(page.getByLabel('مناسبت', { exact: true })).toHaveValue('birthday');
-  await expect(page.getByLabel('هدیه برای چه کسی است؟')).toHaveValue('women');
+  await expect(occasion).toHaveText('تولد');
+  await expect(recipient).toHaveText('بانوان');
   await expect(products).toHaveCount(0);
 });
 

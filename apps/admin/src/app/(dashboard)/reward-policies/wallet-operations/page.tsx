@@ -1,9 +1,9 @@
 import { cookies } from 'next/headers';
 import { WalletActionForm } from '@/components/reward-policies/wallet-action-form';
+import { WalletCustomerSearch } from '@/components/reward-policies/wallet-customer-search';
 import { Alert } from '@/components/ui/alert';
 import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/form-control';
 import { requireAdminSession } from '@/lib/auth/session';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session-cookie';
 import { readJsonResponse, requestAdminCatalog } from '@/lib/catalog/catalog-api';
@@ -124,28 +124,7 @@ export default async function WalletOperationsPage({
         </ButtonLink>
       </header>
       <Card title="انتخاب حساب">
-        <form action={walletOperationsPath} className="flex flex-wrap items-end gap-3">
-          <div className="w-full max-w-sm space-y-1">
-            <label htmlFor="wallet-customer" className="text-sm font-semibold">
-              شناسهٔ مشتری
-            </label>
-            <Input
-              key={input}
-              id="wallet-customer"
-              name="userId"
-              defaultValue={input}
-              maxLength={36}
-              dir="ltr"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="min-h-10 rounded px-4 text-sm font-bold text-white bg-[var(--admin-color-primary)]"
-          >
-            نمایش کیف پول
-          </button>
-        </form>
+        <WalletCustomerSearch />
         {input && !userId && (
           <p role="alert" className="mt-3 text-sm">
             شناسهٔ مشتری معتبر نیست.

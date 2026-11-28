@@ -15,15 +15,14 @@ describe('DualCalendarPicker', () => {
       'aria-pressed',
       'true',
     );
-    fireEvent.change(screen.getByRole('combobox', { name: 'تقویم' }), {
-      target: { value: 'gregory' },
-    });
+    fireEvent.click(screen.getByRole('combobox', { name: 'تقویم' }));
+    fireEvent.click(screen.getByRole('option', { name: 'میلادی' }));
     const selected = screen.getByRole('button', { name: '۲۰ مارس' });
     expect(selected).toHaveAttribute('aria-pressed', 'true');
     fireEvent.keyDown(selected, { key: 'ArrowRight' });
     expect(screen.getByRole('button', { name: '۱۹ مارس' })).toHaveFocus();
-    expect(screen.getByRole('combobox', { name: 'ساعت' })).toHaveValue('00');
-    expect(screen.getByRole('combobox', { name: 'دقیقه' })).toHaveValue('15');
+    expect(screen.getByRole('combobox', { name: 'ساعت' })).toHaveTextContent('۰۰');
+    expect(screen.getByRole('combobox', { name: 'دقیقه' })).toHaveTextContent('۱۵');
     fireEvent.click(screen.getByRole('button', { name: 'تأیید انتخاب' }));
     expect(new FormData(container.querySelector('form')!).get('startsTehran')).toBe(
       '1403/01/01 00:15',
@@ -39,9 +38,8 @@ describe('DualCalendarPicker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'روز پایان' }));
     expect(screen.queryByRole('combobox', { name: 'ساعت' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '۲ فروردین' }));
-    fireEvent.change(screen.getByRole('combobox', { name: 'تقویم' }), {
-      target: { value: 'gregory' },
-    });
+    fireEvent.click(screen.getByRole('combobox', { name: 'تقویم' }));
+    fireEvent.click(screen.getByRole('option', { name: 'میلادی' }));
     expect(screen.getByRole('button', { name: '۲۱ مارس' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'تأیید انتخاب' }));
     const form = container.querySelector('form')!;

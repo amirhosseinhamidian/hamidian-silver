@@ -4,6 +4,21 @@ import { IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'cla
 import { TOMAN_INT_MAX } from '../../../common/toman';
 import { WalletBucket, WalletOperationKind, WalletSource } from '../../../generated/prisma/enums';
 
+export class WalletCustomerSearchQueryDto {
+  @ApiProperty({ minLength: 2, maxLength: 80 })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @Length(2, 80)
+  q!: string;
+}
+
+export class WalletCustomerOptionDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({ type: String, nullable: true }) firstName!: string | null;
+  @ApiProperty({ type: String, nullable: true }) lastName!: string | null;
+  @ApiProperty() phone!: string;
+}
+
 export class WalletSourceBalanceDto {
   @ApiProperty({ enum: WalletSource })
   source!: WalletSource;

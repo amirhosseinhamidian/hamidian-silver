@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Select } from '@/components/ui/select';
 import { campaignError } from '@/lib/campaigns/campaign-api-errors';
 import { formatAdminDateTime, formatAdminInteger } from '@/lib/presentation/formatters';
 
@@ -61,19 +62,20 @@ export function FestivalPublicationRestore({
         <div className="flex flex-wrap items-end gap-2">
           <label className="grid min-w-0 gap-1 text-sm">
             نسخهٔ انتشار
-            <select
+            <Select
               value={version}
               disabled={busy}
-              onChange={(event) => setVersion(event.currentTarget.value)}
+              onValueChange={setVersion}
               className="min-h-10 rounded-md border border-[var(--admin-color-border)] px-2"
-            >
-              <option value="">انتخاب نسخه</option>
-              {versions.map((item) => (
-                <option key={item.version} value={item.version}>
-                  نسخهٔ {formatAdminInteger(item.version)} · {formatAdminDateTime(item.recordedAt)}
-                </option>
-              ))}
-            </select>
+              aria-label="نسخهٔ انتشار"
+              options={[
+                { value: '', label: 'انتخاب نسخه' },
+                ...versions.map((item) => ({
+                  value: String(item.version),
+                  label: `نسخهٔ ${formatAdminInteger(item.version)} · ${formatAdminDateTime(item.recordedAt)}`,
+                })),
+              ]}
+            />
           </label>
           {editable && (
             <Button disabled={!version} loading={busy} onClick={() => void restore()}>

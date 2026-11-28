@@ -3,6 +3,7 @@
 import type { components } from '@hamidian/contracts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-control';
+import { Select } from '@/components/ui/select';
 
 export type FestivalTheme = components['schemas']['FestivalThemeDto'];
 type CardTheme = NonNullable<FestivalTheme['card']>;
@@ -66,29 +67,31 @@ function FestivalCardThemeFields({
         ))}
         <label className="grid min-w-0 gap-1 text-sm">
           فاصله‌گذاری محتوا
-          <select
+          <Select
             className={selectClass}
             value={card.density ?? 'STANDARD'}
-            onChange={(event) =>
-              change({ density: event.currentTarget.value === 'COMPACT' ? 'COMPACT' : 'STANDARD' })
+            onValueChange={(value) =>
+              change({ density: value === 'COMPACT' ? 'COMPACT' : 'STANDARD' })
             }
-          >
-            <option value="STANDARD">معمولی</option>
-            <option value="COMPACT">فشرده</option>
-          </select>
+            aria-label="فاصله‌گذاری محتوا"
+            options={[
+              { value: 'STANDARD', label: 'معمولی' },
+              { value: 'COMPACT', label: 'فشرده' },
+            ]}
+          />
         </label>
         <label className="grid min-w-0 gap-1 text-sm">
           سایهٔ کارت
-          <select
+          <Select
             className={selectClass}
             value={card.shadow ?? 'NONE'}
-            onChange={(event) =>
-              change({ shadow: event.currentTarget.value === 'SOFT' ? 'SOFT' : 'NONE' })
-            }
-          >
-            <option value="NONE">بدون سایه</option>
-            <option value="SOFT">ملایم</option>
-          </select>
+            onValueChange={(value) => change({ shadow: value === 'SOFT' ? 'SOFT' : 'NONE' })}
+            aria-label="سایهٔ کارت"
+            options={[
+              { value: 'NONE', label: 'بدون سایه' },
+              { value: 'SOFT', label: 'ملایم' },
+            ]}
+          />
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -142,33 +145,37 @@ export function FestivalThemeFields({
       ))}
       <label className="grid min-w-0 gap-1 text-sm">
         نقش پس‌زمینه
-        <select
+        <Select
           className={selectClass}
           value={theme.decoration}
-          onChange={(event) =>
+          onValueChange={(value) =>
             onChange({
               ...theme,
-              decoration: event.currentTarget.value as FestivalTheme['decoration'],
+              decoration: value as FestivalTheme['decoration'],
             })
           }
-        >
-          <option value="NONE">ساده</option>
-          <option value="DOTS">نقطه‌ای</option>
-          <option value="LINES">خطی</option>
-        </select>
+          aria-label="نقش پس‌زمینه"
+          options={[
+            { value: 'NONE', label: 'ساده' },
+            { value: 'DOTS', label: 'نقطه‌ای' },
+            { value: 'LINES', label: 'خطی' },
+          ]}
+        />
       </label>
       <label className="grid min-w-0 gap-1 text-sm">
         حرکت اسلایدها
-        <select
+        <Select
           className={selectClass}
           value={theme.motion}
-          onChange={(event) =>
-            onChange({ ...theme, motion: event.currentTarget.value as FestivalTheme['motion'] })
+          onValueChange={(value) =>
+            onChange({ ...theme, motion: value as FestivalTheme['motion'] })
           }
-        >
-          <option value="STILL">با کنترل دستی</option>
-          <option value="SOFT">چرخش خودکار</option>
-        </select>
+          aria-label="حرکت اسلایدها"
+          options={[
+            { value: 'STILL', label: 'با کنترل دستی' },
+            { value: 'SOFT', label: 'چرخش خودکار' },
+          ]}
+        />
       </label>
       {theme.gradient && (
         <Button

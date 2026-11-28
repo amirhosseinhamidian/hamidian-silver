@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { Select } from '@/components/ui/select';
 import {
   useCampaignSelection,
   type CampaignProductOption,
@@ -15,7 +16,6 @@ import {
 } from '@/lib/campaigns/campaign-selection';
 import { formatAdminInteger, formatAdminToman } from '@/lib/presentation/formatters';
 
-const endpoint = '/api/campaigns/product-options';
 const selectClass =
   'min-h-10 w-full min-w-0 rounded-md border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] px-2 text-sm';
 
@@ -68,6 +68,7 @@ function ProductOption({
 }
 
 type Props = Readonly<{
+  endpoint?: string;
   selected?: readonly string[];
   onSelect?: (slug: string) => void;
   onRemove?: (slug: string) => void;
@@ -82,6 +83,7 @@ type Props = Readonly<{
 }>;
 
 export function CampaignProductSearch({
+  endpoint = '/api/campaigns/product-options',
   selected = [],
   onSelect,
   onRemove,
@@ -207,60 +209,58 @@ export function CampaignProductSearch({
             {!fixedCategory && taxonomy && (
               <label className="grid gap-1 text-xs">
                 دسته
-                <select
+                <Select
                   className={selectClass}
                   value={category}
                   disabled={disabled}
-                  onChange={(event) => {
-                    setCategory(event.currentTarget.value);
+                  onValueChange={(value) => {
+                    setCategory(value);
                     setPage(1);
                   }}
-                >
-                  <option value="">همهٔ دسته‌ها</option>
-                  {taxonomy.categories.map((item) => (
-                    <option key={item.id} value={item.slug}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
+                  aria-label="دسته"
+                  options={[
+                    { value: '', label: 'همهٔ دسته‌ها' },
+                    ...taxonomy.categories.map((item) => ({ value: item.slug, label: item.name })),
+                  ]}
+                />
               </label>
             )}
             {!fixedBrand && taxonomy && (
               <label className="grid gap-1 text-xs">
                 برند
-                <select
+                <Select
                   className={selectClass}
                   value={brand}
                   disabled={disabled}
-                  onChange={(event) => {
-                    setBrand(event.currentTarget.value);
+                  onValueChange={(value) => {
+                    setBrand(value);
                     setPage(1);
                   }}
-                >
-                  <option value="">همهٔ برندها</option>
-                  {taxonomy.brands.map((item) => (
-                    <option key={item.id} value={item.slug}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
+                  aria-label="برند"
+                  options={[
+                    { value: '', label: 'همهٔ برندها' },
+                    ...taxonomy.brands.map((item) => ({ value: item.slug, label: item.name })),
+                  ]}
+                />
               </label>
             )}
             <label className="grid gap-1 text-xs">
               موجودی
-              <select
+              <Select
                 className={selectClass}
                 value={stock}
                 disabled={disabled}
-                onChange={(event) => {
-                  setStock(event.currentTarget.value);
+                onValueChange={(value) => {
+                  setStock(value);
                   setPage(1);
                 }}
-              >
-                <option value="">همهٔ وضعیت‌ها</option>
-                <option value="in-stock">موجود</option>
-                <option value="out-of-stock">ناموجود</option>
-              </select>
+                aria-label="موجودی"
+                options={[
+                  { value: '', label: 'همهٔ وضعیت‌ها' },
+                  { value: 'in-stock', label: 'موجود' },
+                  { value: 'out-of-stock', label: 'ناموجود' },
+                ]}
+              />
             </label>
           </div>
           {term.length === 1 && (

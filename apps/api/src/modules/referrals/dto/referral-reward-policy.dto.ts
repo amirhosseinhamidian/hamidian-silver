@@ -169,11 +169,23 @@ export class ReferralScopeQueryDto {
   @IsIn(['category', 'campaign'])
   kind!: 'category' | 'campaign';
 
-  @ApiProperty({ minLength: 1, maxLength: 80 })
+  @ApiPropertyOptional({ minLength: 1, maxLength: 80 })
+  @IsOptional()
   @IsString()
   @Length(1, 80)
   @Type(() => Object)
-  q!: string;
+  q?: string;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated UUIDs for existing selections',
+    maxLength: 1849,
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(
+    /^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}(?:,[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}){0,49}$/i,
+  )
+  ids?: string;
 }
 
 export class ReferralScopeDto {

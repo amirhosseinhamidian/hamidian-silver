@@ -190,8 +190,11 @@ test('renders a designed festival, pages with filters, restores results and reac
   const products = page.locator('#campaign-products');
   const category = products.getByRole('combobox', { name: 'دسته', exact: true });
   const sort = products.getByRole('combobox', { name: 'ترتیب نمایش', exact: true });
-  await category.selectOption('rings');
-  await sort.selectOption('price-asc');
+  await waitForClientHydration(page);
+  await category.click();
+  await page.getByRole('option', { name: 'انگشتر', exact: true }).click();
+  await sort.click();
+  await page.getByRole('option', { name: 'کمترین قیمت', exact: true }).click();
   await page.getByRole('button', { name: 'اعمال فیلتر' }).click();
   await expect(page).toHaveURL(/category=rings.*sort=price-asc.*#campaign-products$/);
   await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute(
@@ -229,8 +232,8 @@ test('renders a designed festival, pages with filters, restores results and reac
   await expect(page).toHaveURL(/\/products\/athena-gold-silver-chain-45cm-model-2$/);
   await page.goBack();
   await expect(appended).toBeInViewport();
-  await expect(category).toHaveValue('rings');
-  await expect(sort).toHaveValue('price-asc');
+  await expect(category).toHaveText('انگشتر');
+  await expect(sort).toHaveText('کمترین قیمت');
   await page.getByRole('link', { name: 'رفتن به پاورقی فروشگاه' }).click();
   await expect(page).toHaveURL(/#storefront-footer$/);
   await expect(page.locator('#storefront-footer')).toBeInViewport();

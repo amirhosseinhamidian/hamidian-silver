@@ -16,10 +16,11 @@ import { WalletMaintenanceService } from './wallet-maintenance.service';
 @Module({
   imports: [DatabaseModule, RewardPoliciesModule],
   controllers: [
-    WalletController,
     PurchaseRewardJobsController,
     WalletMaintenanceController,
     GrowthCreditIssuanceController,
+    // Register the fixed admin paths before WalletController's admin/:userId route.
+    WalletController,
   ],
   providers: [
     WalletLedgerService,

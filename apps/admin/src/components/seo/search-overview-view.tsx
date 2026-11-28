@@ -4,6 +4,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/form-control';
+import { Select } from '@/components/ui/select';
 import {
   formatAdminDateTime,
   formatAdminInteger,
@@ -132,20 +133,26 @@ function Tables({
           </label>
           <label className="grid gap-1 text-sm">
             مرتب‌سازی
-            <select name="sort" defaultValue={sort} className={select}>
-              {searchSorts.map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            <Select
+              name="sort"
+              defaultValue={sort}
+              className={select}
+              aria-label="مرتب‌سازی"
+              options={searchSorts.map(([key, label]) => ({ value: key, label }))}
+            />
           </label>
           <label className="grid gap-1 text-sm">
             ترتیب
-            <select name="direction" defaultValue={direction} className={select}>
-              <option value="desc">نزولی</option>
-              <option value="asc">صعودی</option>
-            </select>
+            <Select
+              name="direction"
+              defaultValue={direction}
+              className={select}
+              aria-label="ترتیب"
+              options={[
+                { value: 'desc', label: 'نزولی' },
+                { value: 'asc', label: 'صعودی' },
+              ]}
+            />
           </label>
           <Button type="submit" variant="outline">
             اعمال در جدول
@@ -303,23 +310,23 @@ export function SearchOverviewView({
           </label>
           <label className="grid gap-1 text-sm">
             نوع جست‌وجو
-            <select name="searchType" defaultValue={filters.base.searchType} className={select}>
-              {searchTypes.map(([key, label]) => (
-                <option value={key} key={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            <Select
+              name="searchType"
+              defaultValue={filters.base.searchType}
+              className={select}
+              aria-label="نوع جست‌وجو"
+              options={searchTypes.map(([key, label]) => ({ value: key, label }))}
+            />
           </label>
           <label className="grid gap-1 text-sm">
             گروه
-            <select name="segment" defaultValue={filters.segment} className={select}>
-              {searchSegments.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            <Select
+              name="segment"
+              defaultValue={filters.segment}
+              className={select}
+              aria-label="گروه"
+              options={searchSegments.map(([value, label]) => ({ value, label }))}
+            />
           </label>
           <Button type="submit">نمایش گزارش</Button>
         </Form>

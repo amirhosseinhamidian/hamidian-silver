@@ -63,7 +63,16 @@ describe('admin navigation', () => {
       'supplier-payables',
       'supplier-settlements',
       'finance',
+      'wallet-reconciliation',
+      'customer-club',
       'reward-policies',
+      'club-referrals',
+      'club-wallet',
+      'club-policy-history',
+      'club-operations',
+      'club-referral-risk',
+      'club-reports',
+      'club-simulator',
       'campaigns',
       'growth',
       'users',
@@ -73,6 +82,17 @@ describe('admin navigation', () => {
       'seo',
       'audit',
     ]);
+  });
+
+  it('resolves the club page or financial report under the appropriate link', () => {
+    const navigation = getAdminNavigation(user({ permissions: ['finance.read'] }));
+    expect(findAdminNavigationItem('/reward-policies/wallet-operations', navigation)?.id).toBe(
+      'club-wallet',
+    );
+    expect(findAdminNavigationItem('/reward-policies/maintenance', navigation)?.id).toBe(
+      'wallet-reconciliation',
+    );
+    expect(getAdminSection('customer-club')?.permissions).toEqual(['finance.read']);
   });
 
   it('keeps the marketing workspace and growth reporting independently permissioned', () => {

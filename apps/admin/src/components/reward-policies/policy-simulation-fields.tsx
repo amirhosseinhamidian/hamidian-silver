@@ -1,19 +1,24 @@
 'use client';
 
+import type { components } from '@hamidian/contracts';
 import { useRef, useState } from 'react';
+import { CampaignProductSearch } from '@/components/campaigns/campaign-product-search';
 import { Button } from '@/components/ui/button';
 import { DualCalendarPicker } from '@/components/ui/dual-calendar-picker';
 import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Select } from '@/components/ui/select';
+import { useCampaignSelection } from '@/lib/campaigns/campaign-selection';
 import { formatCalendarDay, readCalendarValue } from '@/lib/presentation/dual-calendar';
 import {
   formatAdminInteger,
+  formatAdminToman,
   parseAdminWholeToman,
   toAsciiDigits,
 } from '@/lib/presentation/formatters';
 import { readReferralText, referralInstant } from '@/lib/reward-policies/referral-reward-policy';
+import { ReferralScopeField } from '@/components/referral-policies/referral-scope-field';
 
 const usages = {
   customerRewardsToman: 'پاداش قبلی مشتری در دوره',
@@ -41,7 +46,8 @@ export function ScenarioInput({
   defaultValue,
   optional = false,
   maximum,
-  list,
+  value,
+  onValueChange,
 }: {
   name: string;
   label: string;
@@ -49,7 +55,8 @@ export function ScenarioInput({
   defaultValue?: string | number;
   optional?: boolean;
   maximum?: number;
-  list?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
 }) {
   return (
     <FormField id={name} label={label} required={!optional}>
@@ -70,7 +77,10 @@ export function ScenarioInput({
             defaultValue={defaultValue}
             required={!optional}
             maxLength={maximum}
-            list={list}
+            value={value}
+            onChange={
+              onValueChange ? (event) => onValueChange(event.currentTarget.value) : undefined
+            }
           />
         )
       }
@@ -109,10 +119,13 @@ export function readBasketScenario(data: FormData) {
   const riskVersion = readReferralText(data, 'riskVersion');
   return {
     occurredAt,
-    items: rows.map((row) => {
+    items: rows.map((row, index) => {
+      const productSlug = readReferralText(data, `product-${row}`);
+      if (!productSlug)
+        throw new Error(`کالای ردیف ${formatAdminInteger(index + 1)} را انتخاب کنید.`);
       const variantSku = readReferralText(data, `sku-${row}`);
       return {
-        productSlug: readReferralText(data, `product-${row}`),
+        productSlug,
         ...(variantSku ? { variantSku } : {}),
         quantity: readCount(data, `quantity-${row}`, 'تعداد کالا', 100),
       };
@@ -177,6 +190,61 @@ export function readBasketScenario(data: FormData) {
   };
 }
 
+const productOptions = '/api/reward-policies/product-options';
+
+function BasketProductField({ row }: Readonly<{ row: number }>) {
+  const [slug, setSlug] = useState('');
+  const variants = useCampaignSelection<components['schemas']['PolicyVariantOptionDto'][]>(
+    slug ? `${productOptions}/${encodeURIComponent(slug)}/variants` : null,
+  );
+  return (
+    <div className="space-y-3">
+      <input type="hidden" name={`product-${row}`} value={slug} />
+      <CampaignProductSearch
+        endpoint={productOptions}
+        selected={slug ? [slug] : []}
+        max={1}
+        onSelect={setSlug}
+        onRemove={() => setSlug('')}
+      />
+      {slug && (
+        <>
+          <FormField id={`sku-${row}`} label="مدل کالا">
+            {(props) => (
+              <Select
+                key={slug}
+                {...props}
+                name={`sku-${row}`}
+                defaultValue=""
+                options={[
+                  { value: '', label: 'قیمت پیش‌فرض کالا' },
+                  ...(variants.data ?? []).map(({ sku, name, salePriceToman }, index) => ({
+                    value: sku,
+                    label: `${name || `مدل ${formatAdminInteger(index + 1)}`} · ${salePriceToman === null ? 'قیمت پیش‌فرض' : formatAdminToman(salePriceToman)}`,
+                  })),
+                ]}
+              />
+            )}
+          </FormField>
+          {variants.loading && (
+            <p role="status" className="text-sm">
+              در حال دریافت مدل‌ها…
+            </p>
+          )}
+          {variants.failed && (
+            <p role="alert" className="text-sm">
+              دریافت مدل‌ها انجام نشد.{' '}
+              <Button type="button" variant="outline" onClick={variants.retry}>
+                تلاش دوباره
+              </Button>
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function BasketScenarioFields() {
   const [items, setItems] = useState([0]);
   const [rules, setRules] = useState<number[]>([]);
@@ -211,23 +279,15 @@ export function BasketScenarioFields() {
       </div>
       <fieldset className="space-y-3">
         <legend className="mb-2 font-bold">اقلام سبد</legend>
-        <p className="text-sm text-[var(--admin-color-muted)]">
-          اسلاگ کالا را از انتهای نشانی آن بردارید. با خالی گذاشتن SKU، قیمت پیش‌فرض کالا محاسبه
-          می‌شود.
-        </p>
         {items.map((row, index) => (
           <div
             key={row}
             className="space-y-2 rounded-lg border border-[var(--admin-color-border)] p-3"
           >
             <input type="hidden" name="basketRow" value={row} />
+            <h3 className="font-semibold">کالای {formatAdminInteger(index + 1)}</h3>
+            <BasketProductField row={row} />
             <div className={grid}>
-              <ScenarioInput
-                name={`product-${row}`}
-                label={`اسلاگ کالای ${formatAdminInteger(index + 1)}`}
-                maximum={220}
-              />
-              <ScenarioInput name={`sku-${row}`} label="SKU واریانت" maximum={100} optional />
               <ScenarioInput name={`quantity-${row}`} label="تعداد" defaultValue="۱" maximum={3} />
             </div>
             {items.length > 1 && (
@@ -258,7 +318,7 @@ export function BasketScenarioFields() {
       <div className={grid}>
         <ScenarioInput name="shipping" label="هزینهٔ ارسال (تومان)" money defaultValue="۰" />
         <ScenarioInput name="credit" label="ماندهٔ قابل مصرف (تومان)" money defaultValue="۰" />
-        <ScenarioInput name="campaignId" label="شناسهٔ کمپین" maximum={36} optional />
+        <ReferralScopeField name="campaignId" label="کمپین نمونه" kind="campaign" max={1} />
         <label className="flex items-center gap-2 text-sm">
           <input name="couponApplied" type="checkbox" /> سناریوی استفاده از کوپن کمپین
         </label>

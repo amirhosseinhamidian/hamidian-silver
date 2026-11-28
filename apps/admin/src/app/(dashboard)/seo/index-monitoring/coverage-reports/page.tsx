@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/form-control';
+import { Select } from '@/components/ui/select';
 import { hasAllAdminPermissions } from '@/lib/auth/access-control';
 import { createAdminApiClient } from '@/lib/auth/server-api';
 import { requireAdminSession } from '@/lib/auth/session';
@@ -105,18 +106,16 @@ export default async function CoveragePage({
             <input type="hidden" name="id" value={data.report.id} />
             <label className="grid gap-1 text-sm">
               دلیل گزارش
-              <select
+              <Select
                 name="reason"
                 defaultValue={reason}
                 className="h-10 rounded border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] px-2"
-              >
-                <option value="">همهٔ دلایل</option>
-                {data.reasons.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
+                aria-label="دلیل گزارش"
+                options={[
+                  { value: '', label: 'همهٔ دلایل' },
+                  ...data.reasons.map((reason) => ({ value: reason, label: reason })),
+                ]}
+              />
             </label>
             <Button variant="outline" type="submit">
               اعمال فیلتر

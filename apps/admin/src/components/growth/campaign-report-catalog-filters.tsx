@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { Select } from '@/components/ui/select';
 import { useCampaignTaxonomy } from '@/lib/campaigns/campaign-selection';
 
 type CatalogFilter = {
@@ -66,7 +67,6 @@ export function CampaignReportCatalogFilters({
           {(field) => (
             <Input
               {...field}
-              list={`${fieldId}-options`}
               value={candidate}
               pattern={canPickCatalog ? undefined : pattern}
               maxLength={pattern ? 180 : 220}
@@ -84,13 +84,18 @@ export function CampaignReportCatalogFilters({
             />
           )}
         </FormField>
-        <datalist id={`${fieldId}-options`}>
-          {suggestions?.map(({ slug, label }) => (
-            <option key={slug} value={slug}>
-              {label}
-            </option>
-          ))}
-        </datalist>
+        {Boolean(suggestions?.length) && (
+          <Select
+            aria-label={`نشانی‌های پیشنهادی ${label}`}
+            placeholder="انتخاب نشانی پیشنهادی"
+            value=""
+            options={(suggestions ?? []).map(({ slug, label }) => ({ value: slug, label }))}
+            onValueChange={(slug) => {
+              if (canPickCatalog) setManualPaths((current) => ({ ...current, [name]: slug }));
+              else select(name, slug);
+            }}
+          />
+        )}
         {canPickCatalog && (
           <Button
             size="sm"

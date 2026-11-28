@@ -2,7 +2,7 @@
 
 import * as SelectPrimitive from '@radix-ui/react-select';
 
-import type { ComponentPropsWithoutRef } from 'react';
+import { useId, useState, type ComponentPropsWithoutRef } from 'react';
 
 import { FiCheck, FiChevronDown } from 'react-icons/fi';
 
@@ -47,13 +47,29 @@ export function Select({
   'aria-describedby': ariaDescribedBy,
   'aria-invalid': ariaInvalid,
 }: SelectProps) {
+  const emptyOption = options.find((option) => option.value === '');
+  const emptyItemValue = useId();
+  const selectEmpty = Boolean(emptyOption && !emptyOption.disabled && !required);
+  const [formValue, setFormValue] = useState(defaultValue ?? '');
+  const emptyFormName = selectEmpty ? name : undefined;
+  const toItemValue = (fieldValue: string | undefined) =>
+    selectEmpty && fieldValue === '' ? emptyItemValue : fieldValue;
+
   return (
     <SelectPrimitive.Root
       dir="rtl"
-      name={name}
-      value={value}
-      defaultValue={defaultValue}
-      onValueChange={onValueChange}
+      name={emptyFormName ? undefined : name}
+      value={toItemValue(value)}
+      defaultValue={toItemValue(defaultValue)}
+      onValueChange={
+        emptyOption
+          ? (next) => {
+              const fieldValue = next === emptyItemValue ? '' : next;
+              if (emptyFormName) setFormValue(fieldValue);
+              onValueChange?.(fieldValue);
+            }
+          : onValueChange
+      }
       disabled={disabled}
       required={required}
     >
@@ -108,7 +124,7 @@ export function Select({
           className,
         )}
       >
-        <SelectPrimitive.Value placeholder={placeholder} />
+        <SelectPrimitive.Value placeholder={emptyOption?.label ?? placeholder} />
 
         <SelectPrimitive.Icon asChild>
           <FiChevronDown
@@ -158,8 +174,8 @@ export function Select({
             {options.map((option) => (
               <SelectPrimitive.Item
                 key={option.value}
-                value={option.value}
-                disabled={option.disabled}
+                value={option.value || emptyItemValue}
+                disabled={option.disabled || (required && option.value === '')}
                 className="
                   relative
 
@@ -215,6 +231,10 @@ export function Select({
           </SelectPrimitive.Viewport>
         </SelectPrimitive.Content>
       </SelectPrimitive.Portal>
+      {/* Radix reserves the empty string. Keep it intact in submitted filter values. */}
+      {emptyFormName && (
+        <input type="hidden" name={emptyFormName} value={value ?? formValue} disabled={disabled} />
+      )}
     </SelectPrimitive.Root>
   );
 }

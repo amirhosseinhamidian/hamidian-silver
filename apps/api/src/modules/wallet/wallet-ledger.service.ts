@@ -16,6 +16,7 @@ import {
   type WalletOperationKind,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { normalizeCatalogSearch } from '../catalog/catalog-search';
 import { enqueueWalletCreditActivation } from '../notifications/wallet-credit-notifications.service';
 import type { WalletBalanceDto, WalletLedgerPageDto, WalletOperationDto } from './dto/wallet.dto';
 import {
@@ -115,6 +116,32 @@ export class WalletLedgerService {
 
   async lockAccount(tx: Prisma.TransactionClient, userId: string) {
     await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended('wallet:' || ${userId}::uuid::text, 0))`;
+  }
+
+  findCustomers(query: string) {
+    const escape = (term: string) => term.replace(/[\\%_]/g, '\\$&');
+    const normalized = normalizeCatalogSearch(query).replace(/[\s()+-]/g, '');
+    const localNumber = normalized.replace(/^(?:0098|98|0)(?=9)/, '');
+    const phone = /^\d{4,}$/.test(localNumber) ? localNumber : null;
+    if (!phone && !/\p{L}/u.test(query)) return [];
+    return this.db.user.findMany({
+      where: {
+        deletedAt: null,
+        ...(phone
+          ? { phone: { contains: phone } }
+          : {
+              AND: query.split(/\s+/).map((term) => ({
+                OR: [
+                  { firstName: { contains: escape(term), mode: 'insensitive' as const } },
+                  { lastName: { contains: escape(term), mode: 'insensitive' as const } },
+                ],
+              })),
+            }),
+      },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }, { id: 'asc' }],
+      take: 12,
+      select: { id: true, firstName: true, lastName: true, phone: true },
+    });
   }
 
   async balance(userId: string): Promise<WalletBalanceDto> {

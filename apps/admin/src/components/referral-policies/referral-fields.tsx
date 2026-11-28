@@ -1,41 +1,58 @@
 import { useState } from 'react';
-import { Input, Textarea } from '@/components/ui/form-control';
+import { DualCalendarPicker } from '@/components/ui/dual-calendar-picker';
+import { Input } from '@/components/ui/form-control';
 import { FormField } from '@/components/ui/form-field';
+import { MoneyInput } from '@/components/ui/money-input';
+import { Select } from '@/components/ui/select';
 import {
   purchaseRanks,
   referralRecipients,
   rewardMethods,
   readReferralIds,
   readReferralNumber,
+  readReferralPercent,
   readReferralText,
   referralInstant,
-  referralLocalDate,
+  referralCalendarValue,
   type ReferralRule,
 } from '@/lib/reward-policies/referral-reward-policy';
+import { ReferralScopeField } from './referral-scope-field';
 
 export function NumberField({
   name,
   label,
   value,
   optional = false,
+  money = false,
 }: Readonly<{
   name: string;
   label: string;
   value: number | null | undefined;
   optional?: boolean;
+  money?: boolean;
 }>) {
   return (
     <FormField id={name} label={label} required={!optional}>
-      {(props) => (
-        <Input
-          {...props}
-          name={name}
-          defaultValue={value ?? ''}
-          inputMode="numeric"
-          dir="ltr"
-          required={!optional}
-        />
-      )}
+      {(props) =>
+        money ? (
+          <MoneyInput
+            {...props}
+            name={name}
+            defaultValue={value ?? ''}
+            wholeToman
+            required={!optional}
+          />
+        ) : (
+          <Input
+            {...props}
+            name={name}
+            defaultValue={value ?? ''}
+            inputMode="numeric"
+            dir="ltr"
+            required={!optional}
+          />
+        )
+      }
     </FormField>
   );
 }
@@ -50,17 +67,7 @@ export function DateField({
   value?: string | null;
 }>) {
   return (
-    <FormField id={name} label={label} hint="ساعت تهران">
-      {(props) => (
-        <Input
-          {...props}
-          name={name}
-          defaultValue={referralLocalDate(value)}
-          type="datetime-local"
-          dir="ltr"
-        />
-      )}
-    </FormField>
+    <DualCalendarPicker name={name} label={label} defaultValue={referralCalendarValue(value)} />
   );
 }
 
@@ -97,34 +104,15 @@ function SelectField({
   return (
     <FormField id={name} label={label} required>
       {(props) => (
-        <select
+        <Select
           {...props}
           name={name}
           defaultValue={value}
-          onChange={onValueChange ? (event) => onValueChange(event.target.value) : undefined}
+          onValueChange={onValueChange}
           required
           className="min-h-10 rounded border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] px-3 text-sm"
-        >
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      )}
-    </FormField>
-  );
-}
-
-export function IdsField({
-  name,
-  label,
-  values = [],
-}: Readonly<{ name: string; label: string; values?: string[] }>) {
-  return (
-    <FormField id={name} label={label} hint="شناسه‌ها را با فاصله یا کاما جدا کنید.">
-      {(props) => (
-        <Textarea {...props} name={name} defaultValue={values.join('\n')} dir="ltr" rows={2} />
+          options={options}
+        />
       )}
     </FormField>
   );
@@ -135,6 +123,7 @@ export function ReferralRuleFields({
   rule,
 }: Readonly<{ index: number; rule: ReferralRule }>) {
   const [recipient, setRecipient] = useState<string>(rule.recipient);
+  const [method, setMethod] = useState<string>(rule.method);
   const key = `rule-${index}-`;
   return (
     <div className="space-y-4">
@@ -170,25 +159,48 @@ export function ReferralRuleFields({
           label="نوع پاداش"
           value={rule.method}
           options={rewardMethods}
+          onValueChange={setMethod}
         />
-        <NumberField
-          name={`${key}value`}
-          label="مبلغ ثابت یا نرخ در ده‌هزار (۱۰۰۰ = ۱۰٪)"
-          value={rule.value}
-        />
+        {method === 'PERCENT' ? (
+          <FormField id={`${key}percent`} label="نرخ پاداش (درصد)" hint="برای نمونه ۲٫۵" required>
+            {(props) => (
+              <Input
+                {...props}
+                name={`${key}value`}
+                inputMode="decimal"
+                defaultValue={rule.method === 'PERCENT' ? rule.value / 100 : ''}
+                required
+              />
+            )}
+          </FormField>
+        ) : (
+          <NumberField
+            name={`${key}value`}
+            label="مبلغ ثابت پاداش (تومان)"
+            value={rule.method === 'FIXED' ? rule.value : null}
+            money
+          />
+        )}
         <NumberField name={`${key}priority`} label="اولویت (۰ تا ۱۰۰)" value={rule.priority} />
         <NumberField
           name={`${key}minimum`}
           label="حداقل مبلغ مشمول به تومان"
           value={rule.minimumToman}
+          money
         />
         <NumberField
           name={`${key}maximum`}
-          label="مرز بالای پلکان به تومان (انحصاری)"
+          label="سقف بازه (تومان، خودِ سقف مشمول نیست)"
           value={rule.maximumExclusiveToman}
           optional
+          money
         />
-        <NumberField name={`${key}cap`} label="سقف پاداش هر خرید به تومان" value={rule.capToman} />
+        <NumberField
+          name={`${key}cap`}
+          label="سقف پاداش هر خرید به تومان"
+          value={rule.capToman}
+          money
+        />
         <NumberField
           name={`${key}uses`}
           label="حداکثر استفادهٔ هر دریافت‌کننده در ماه"
@@ -207,6 +219,7 @@ export function ReferralRuleFields({
           name={`${key}budget`}
           label="بودجهٔ ماهانهٔ قانون به تومان"
           value={rule.periodBudgetToman}
+          money
         />
         <DateField name={`${key}starts`} label="شروع اثر قانون" value={rule.startsAt} />
         <DateField name={`${key}ends`} label="پایان اثر قانون" value={rule.endsAt} />
@@ -217,14 +230,16 @@ export function ReferralRuleFields({
           : 'پاداش معرف پس از تحویل خرید اول دوست و تأیید شرایط آن قابل صدور است.'}
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
-        <IdsField
+        <ReferralScopeField
           name={`${key}categories`}
           label="دسته‌های مجاز (خالی یعنی همه)"
+          kind="category"
           values={rule.allowedCategoryIds}
         />
-        <IdsField
+        <ReferralScopeField
           name={`${key}campaigns`}
-          label="کمپین‌های مجاز (خالی یعنی بدون محدودیت شناسه)"
+          label="کمپین‌های مجاز (خالی یعنی بدون محدودیت)"
+          kind="campaign"
           values={rule.campaignIds}
         />
       </div>
@@ -268,7 +283,10 @@ export function readReferralRule(data: FormData, index: number): ReferralRule {
     purchaseRank,
     method,
     enabled: set('enabled'),
-    value: amount('value', 'مقدار پاداش', method === 'PERCENT' ? 10_000 : undefined),
+    value:
+      method === 'PERCENT'
+        ? readReferralPercent(data, `${key}value`)
+        : amount('value', 'مبلغ پاداش'),
     priority: amount('priority', 'اولویت', 100),
     minimumToman: amount('minimum', 'حداقل خرید'),
     maximumExclusiveToman: text('maximum') ? amount('maximum', 'مرز بالای پلکان') : null,

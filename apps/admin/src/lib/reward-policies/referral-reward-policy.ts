@@ -1,4 +1,9 @@
-import { toAsciiDigits } from '@/lib/presentation/formatters';
+import {
+  calendarDay,
+  formatCalendarDay,
+  readCalendarValue,
+} from '@/lib/presentation/dual-calendar';
+import { parseAdminWholeToman, toAsciiDigits } from '@/lib/presentation/formatters';
 
 export const referralPolicyPath = '/reward-policies/referrals';
 export const referralRecipients = [
@@ -93,10 +98,21 @@ export function referralLocalDate(value: string | null | undefined) {
 
 export function referralInstant(value: string) {
   if (!value) return null;
-  const wallTime = Date.parse(`${value}Z`);
+  const calendar = readCalendarValue(value, 'date-time');
+  const local = calendar ? `${formatCalendarDay(calendar.day, 'gregory')}T${calendar.time}` : value;
+  const wallTime = Date.parse(`${local}Z`);
   if (!Number.isFinite(wallTime)) throw new Error('تاریخ و ساعت معتبر وارد کنید.');
   const tehranProjected = Date.parse(`${referralLocalDate(new Date(wallTime).toISOString())}Z`);
   return new Date(wallTime - (tehranProjected - wallTime)).toISOString();
+}
+
+export function referralCalendarValue(value: string | null | undefined) {
+  const local = referralLocalDate(value);
+  if (!local) return '';
+  const [date, time] = local.split('T');
+  const [year, month, day] = date.split('-').map(Number);
+  const serial = calendarDay('gregory', year, month, day);
+  return serial === null ? '' : `${formatCalendarDay(serial, 'persian')} ${time}`;
 }
 
 export function readReferralText(data: FormData, name: string) {
@@ -109,10 +125,20 @@ export function readReferralNumber(
   label: string,
   max = 2_147_483_647,
 ) {
-  const raw = toAsciiDigits(readReferralText(data, name));
-  if (!/^\d+$/.test(raw) || Number(raw) > max)
+  const amount = parseAdminWholeToman(readReferralText(data, name));
+  if (amount === null || !Number.isSafeInteger(amount) || amount > max)
     throw new Error(`${label} را با عدد صحیح معتبر وارد کنید.`);
-  return Number(raw);
+  return amount;
+}
+
+export function readReferralPercent(data: FormData, name: string) {
+  const raw = toAsciiDigits(readReferralText(data, name)).replace('٫', '.');
+  if (!/^\d{1,3}(?:\.\d{1,2})?$/.test(raw))
+    throw new Error('نرخ پاداش را به درصد و حداکثر با دو رقم اعشار وارد کنید.');
+  const [whole, decimal = ''] = raw.split('.');
+  const rate = Number(whole) * 100 + Number(decimal.padEnd(2, '0'));
+  if (rate > 10_000) throw new Error('نرخ پاداش نمی‌تواند بیش از ۱۰۰٪ باشد.');
+  return rate;
 }
 
 export function readReferralIds(data: FormData, name: string) {

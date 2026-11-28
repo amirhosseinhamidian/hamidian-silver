@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 import { AdminIcon } from '@/components/layout/admin-icon';
 import {
-  isAdminNavigationItemActive,
+  findAdminNavigationItem,
   type AdminNavigationGroup,
 } from '@/lib/navigation/admin-navigation';
 import { cn } from '@/lib/ui/cn';
@@ -21,6 +21,7 @@ export function AdminNavigationList({
   onNavigate,
 }: AdminNavigationListProps) {
   const dark = appearance === 'dark';
+  const current = findAdminNavigationItem(pathname, groups);
 
   return (
     <nav aria-label="ناوبری اصلی پنل" className="space-y-5">
@@ -37,7 +38,7 @@ export function AdminNavigationList({
           </h2>
           <ul className="space-y-1">
             {group.items.map((item) => {
-              const active = isAdminNavigationItemActive(pathname, item.href);
+              const active = item.href === current?.href;
 
               return (
                 <li key={item.id}>

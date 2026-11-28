@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input, Textarea } from '@/components/ui/form-control';
+import { Select } from '@/components/ui/select';
 import { hasAllAdminPermissions } from '@/lib/auth/access-control';
 import { createAdminApiClient } from '@/lib/auth/server-api';
 import { requireAdminSession } from '@/lib/auth/session';
@@ -231,17 +232,16 @@ export default async function SeoOpportunityPage({
                       </label>
                       <label className="grid gap-1">
                         طول هر بازه
-                        <select
+                        <Select
                           name="windowDays"
                           defaultValue={String(task.windowDays ?? 14)}
                           className="h-10 rounded-md border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] px-2"
-                        >
-                          {[7, 14, 28].map((count) => (
-                            <option key={count} value={count}>
-                              {formatAdminInteger(count)} روز
-                            </option>
-                          ))}
-                        </select>
+                          aria-label="طول هر بازه"
+                          options={[7, 14, 28].map((count) => ({
+                            value: String(count),
+                            label: `${formatAdminInteger(count)} روز`,
+                          }))}
+                        />
                       </label>
                       <label className="grid gap-1 sm:col-span-2">
                         تغییر انجام‌شده{' '}

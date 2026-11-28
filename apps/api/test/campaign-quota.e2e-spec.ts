@@ -1,6 +1,5 @@
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
-import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { CampaignLandingsService } from '../src/modules/campaigns/campaign-landings.service';
 import { CampaignOperationsCenterService } from '../src/modules/campaigns/campaign-operations-center.service';
 import { CampaignQuotasService } from '../src/modules/campaigns/campaign-quotas.service';
@@ -17,6 +16,7 @@ import { PaymentsService } from '../src/modules/payments/payments.service';
 import type { SavePromotionDto } from '../src/modules/promotions/dto/promotion.dto';
 import { PromotionsService } from '../src/modules/promotions/promotions.service';
 import { createFestivalDraft, publishFestival } from './support/festival-purchase';
+import { createIsolatedTestDatabase } from './support/isolated-test-database';
 
 it('reconciles published festival prices with Checkout and protects quota across payments and returns', async () => {
   const config = new ConfigService({
@@ -24,49 +24,47 @@ it('reconciles published festival prices with Checkout and protects quota across
     MANUAL_SHIPPING_COST_TOMAN: 700,
     SHIPPING_PROVIDER: 'disabled',
   });
-  const db = new PrismaService(config);
-  const promotions = new PromotionsService(db);
-  const quotas = new CampaignQuotasService(db, promotions);
-  const media = new PublicMediaUrlService(config);
-  const catalog = new CatalogService(db, media, undefined, promotions);
-  const landings = new CampaignLandingsService(db, catalog, media);
-  const campaigns = new CampaignsService(db, media, landings);
-  const operations = new CampaignOperationsCenterService(db, catalog, landings, media);
-  const analytics = new FestivalAnalyticsService(db, operations);
-  const orders = new OrdersService(
-    db,
-    undefined,
-    config,
-    undefined,
-    undefined,
-    undefined,
-    promotions,
-  );
-  const returns = new OrderReturnsService(db);
-  const expiration = new OrderExpirationService(db);
-  let failureCode: string | null = 'INVALID_RESPONSE';
-  const gateway: PaymentGateway = {
-    providerCode: 'test',
-    async initiate({ attemptId }) {
-      return { authority: attemptId, paymentUrl: 'https://payments.example.test/pay' };
-    },
-    async verify({ authority }) {
-      return failureCode
-        ? { success: false, code: failureCode }
-        : { success: true, referenceId: authority };
-    },
-  };
-  const payments = new PaymentsService(db, config, gateway);
-  const slug = `quota-${randomUUID()}`;
-  const anotherSlug = `${slug}-other`;
-  const healthProductScope = { slug: { startsWith: `${slug}-health-` } };
-  const campaignFilter = { slug: { in: [slug, anotherSlug] } };
-  const phoneSuffix = BigInt(`0x${slug.slice(5).replaceAll('-', '').slice(0, 12)}`).toString();
-  const phones = [`+0${phoneSuffix}1`, `+0${phoneSuffix}2`];
-  const orderFilter = { user: { phone: { in: phones } } };
-  const receipt = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  const receiptCardNumber = phoneSuffix.padStart(16, '0');
+  const { db, close } = await createIsolatedTestDatabase();
   try {
+    const promotions = new PromotionsService(db);
+    const quotas = new CampaignQuotasService(db, promotions);
+    const media = new PublicMediaUrlService(config);
+    const catalog = new CatalogService(db, media, undefined, promotions);
+    const landings = new CampaignLandingsService(db, catalog, media);
+    const campaigns = new CampaignsService(db, media, landings);
+    const operations = new CampaignOperationsCenterService(db, catalog, landings, media);
+    const analytics = new FestivalAnalyticsService(db, operations);
+    const orders = new OrdersService(
+      db,
+      undefined,
+      config,
+      undefined,
+      undefined,
+      undefined,
+      promotions,
+    );
+    const returns = new OrderReturnsService(db);
+    const expiration = new OrderExpirationService(db);
+    let failureCode: string | null = 'INVALID_RESPONSE';
+    const gateway: PaymentGateway = {
+      providerCode: 'test',
+      async initiate({ attemptId }) {
+        return { authority: attemptId, paymentUrl: 'https://payments.example.test/pay' };
+      },
+      async verify({ authority }) {
+        return failureCode
+          ? { success: false, code: failureCode }
+          : { success: true, referenceId: authority };
+      },
+    };
+    const payments = new PaymentsService(db, config, gateway);
+    const slug = `quota-${randomUUID()}`;
+    const anotherSlug = `${slug}-other`;
+    const phoneSuffix = BigInt(`0x${slug.slice(5).replaceAll('-', '').slice(0, 12)}`).toString();
+    const phones = [`+0${phoneSuffix}1`, `+0${phoneSuffix}2`];
+    const orderFilter = { user: { phone: { in: phones } } };
+    const receipt = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const receiptCardNumber = phoneSuffix.padStart(16, '0');
     const buyers = await Promise.all(phones.map((phone) => db.user.create({ data: { phone } })));
     const manager = buyers[0].id;
     const warehouse =
@@ -660,50 +658,6 @@ it('reconciles published festival prices with Checkout and protects quota across
       quotaItems: expect.arrayContaining([expect.objectContaining({ productId: shortageId })]),
     });
   } finally {
-    try {
-      const identities = await db.campaign.findMany({
-        where: campaignFilter,
-        select: { trackingId: true },
-      });
-      await db.$transaction([
-        db.inventoryMovement.deleteMany({
-          where: { inventory: { variant: { product: { slug } } } },
-        }),
-        db.orderReturnItem.deleteMany({ where: { orderReturn: { order: orderFilter } } }),
-        db.orderReturn.deleteMany({ where: { order: orderFilter } }),
-        db.paymentAttempt.deleteMany({ where: { payment: { order: orderFilter } } }),
-        db.payment.deleteMany({ where: { order: orderFilter } }),
-        db.campaignQuotaAllocation.deleteMany({ where: { order: orderFilter } }),
-        db.campaignQuotaChange.deleteMany({ where: { quota: { campaign: campaignFilter } } }),
-        db.campaignQuota.deleteMany({ where: { campaign: campaignFilter } }),
-        db.orderPriceQuote.deleteMany({ where: { order: orderFilter } }),
-        db.orderStatusHistory.deleteMany({ where: { order: orderFilter } }),
-        db.orderAddress.deleteMany({ where: { order: orderFilter } }),
-        db.orderItem.deleteMany({ where: { order: orderFilter } }),
-        db.purchaseRewardJob.deleteMany({ where: { order: orderFilter } }),
-        db.order.deleteMany({ where: orderFilter }),
-        db.inventory.deleteMany({ where: { variant: { product: { slug } } } }),
-        db.productVariant.deleteMany({ where: { product: { slug } } }),
-        db.product.deleteMany({ where: { slug } }),
-        db.product.deleteMany({ where: healthProductScope }),
-        db.category.deleteMany({ where: { slug } }),
-        db.brand.deleteMany({ where: { slug } }),
-        db.campaignPromotion.deleteMany({ where: { campaign: campaignFilter } }),
-        db.campaignLanding.deleteMany({ where: { campaign: campaignFilter } }),
-        db.campaignRevision.deleteMany({ where: { campaign: campaignFilter } }),
-        db.campaign.deleteMany({ where: campaignFilter }),
-        db.growthFunnelEvent.deleteMany({
-          where: { campaignId: { in: identities.map(({ trackingId }) => trackingId) } },
-        }),
-        db.campaignLinkIdentity.deleteMany({
-          where: { id: { in: [...identities.map(({ trackingId }) => trackingId), anotherSlug] } },
-        }),
-        db.cardToCardAccount.deleteMany({ where: { cardNumber: receiptCardNumber } }),
-        db.warehouse.deleteMany({ where: { code: slug } }),
-        db.user.deleteMany({ where: { phone: { in: phones } } }),
-      ]);
-    } finally {
-      await db.$disconnect();
-    }
+    await close();
   }
-}, 30_000);
+}, 120_000);

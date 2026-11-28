@@ -47,6 +47,7 @@ export function PolicySimulator({
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>('basket');
+  const [versionInput, setVersionInput] = useState(() => String(activeVersion ?? ''));
   const [result, setResult] = useState<Result | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -133,7 +134,11 @@ export function PolicySimulator({
   return (
     <div className="space-y-5">
       <Card title="ورودی شبیه‌سازی">
-        <form onSubmit={submit} className="space-y-5">
+        <form
+          onSubmit={submit}
+          onReset={() => setVersionInput(String(activeVersion ?? ''))}
+          className="space-y-5"
+        >
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField id="policy-simulation-mode" label="نوع شبیه‌سازی">
               {(props) => (
@@ -158,15 +163,22 @@ export function PolicySimulator({
             <ScenarioInput
               name="version"
               label="نسخهٔ سیاست پاداش خرید"
-              defaultValue={activeVersion ?? ''}
+              value={versionInput}
+              onValueChange={setVersionInput}
               maximum={10}
-              list="reward-policy-versions"
             />
-            <datalist id="reward-policy-versions">
-              {versions.map((version) => (
-                <option key={version} value={version} />
-              ))}
-            </datalist>
+            {versions.length > 0 && (
+              <Select
+                aria-label="نسخه‌های موجود سیاست پاداش خرید"
+                placeholder="انتخاب از نسخه‌های موجود"
+                value=""
+                options={versions.map((version) => ({
+                  value: String(version),
+                  label: String(version),
+                }))}
+                onValueChange={setVersionInput}
+              />
+            )}
           </div>
           {mode === 'basket' ? (
             <BasketScenarioFields />

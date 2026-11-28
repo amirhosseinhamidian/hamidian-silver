@@ -11096,11 +11096,22 @@
           },
           {
             "name": "q",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "minLength": 1,
               "maxLength": 80,
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated UUIDs for existing selections",
+            "schema": {
+              "maxLength": 1849,
+              "pattern": "^[\\da-f]{8}-(?:[\\da-f]{4}-){3}[\\da-f]{12}(?:,[\\da-f]{8}-(?:[\\da-f]{4}-){3}[\\da-f]{12}){0,49}$",
               "type": "string"
             }
           }
@@ -14366,6 +14377,190 @@
         },
         "tags": [
           "AdminRoleManagement"
+        ]
+      }
+    },
+    "/api/v1/wallet/admin/customers/search": {
+      "post": {
+        "operationId": "WalletController_customers_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalletCustomerSearchQueryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WalletCustomerOptionDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/reward-policies/policy-simulator/product-options": {
+      "get": {
+        "operationId": "PolicyProductOptionsController_search_v1",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 2,
+              "maxLength": 96,
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 180,
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 180,
+              "type": "string"
+            }
+          },
+          {
+            "name": "stock",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "in-stock",
+                "out-of-stock"
+              ]
+            }
+          },
+          {
+            "name": "categoryMode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "direct",
+                "tree"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignProductOptionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PolicyProductOptions"
+        ]
+      },
+      "post": {
+        "operationId": "PolicyProductOptionsController_hydrate_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicySelectedProductsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignProductOptionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PolicyProductOptions"
+        ]
+      }
+    },
+    "/api/v1/reward-policies/policy-simulator/product-options/{slug}/variants": {
+      "get": {
+        "operationId": "PolicyProductOptionsController_variants_v1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 220,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PolicyVariantOptionDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PolicyProductOptions"
         ]
       }
     }
@@ -35486,6 +35681,80 @@
         "required": [
           "permissionCodes"
         ]
+      },
+      "WalletCustomerSearchQueryDto": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "q"
+        ]
+      },
+      "WalletCustomerOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "phone"
+        ]
+      },
+      "PolicyVariantOptionDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "salePriceToman": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "sku",
+          "name",
+          "salePriceToman"
+        ]
+      },
+      "PolicySelectedProductsDto": {
+        "type": "object",
+        "properties": {
+          "selected": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 220,
+              "minLength": 1
+            }
+          }
+        }
       }
     }
   }

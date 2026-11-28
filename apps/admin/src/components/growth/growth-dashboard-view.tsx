@@ -9,6 +9,7 @@ import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TableScrollRegion } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/form-control';
+import { Select } from '@/components/ui/select';
 import {
   growthMetricFields,
   growthDashboardHref,
@@ -155,17 +156,19 @@ export function GrowthDashboardView({
             ))}
             <label className="text-sm">
               دستگاه
-              <select
+              <Select
                 name="device"
                 defaultValue={filters.device ?? ''}
-                className="mt-1 block h-10 w-full rounded-md border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] px-3"
-              >
-                <option value="">همه</option>
-                <option value="desktop">رایانه</option>
-                <option value="mobile">موبایل</option>
-                <option value="tablet">تبلت</option>
-                <option value="unknown">ثبت نشده</option>
-              </select>
+                className="mt-1 h-10 w-full rounded-md border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] px-3"
+                aria-label="دستگاه"
+                options={[
+                  { value: '', label: 'همه' },
+                  { value: 'desktop', label: 'رایانه' },
+                  { value: 'mobile', label: 'موبایل' },
+                  { value: 'tablet', label: 'تبلت' },
+                  { value: 'unknown', label: 'ثبت نشده' },
+                ]}
+              />
             </label>
             <label className="text-sm">
               بخش پایانی نشانی برند
@@ -178,17 +181,16 @@ export function GrowthDashboardView({
             </label>
             <label className="text-sm">
               مرتب‌سازی جدول کانال‌ها و کمپین‌ها
-              <select
+              <Select
                 name="sort"
                 defaultValue={filters.sort}
-                className="mt-1 block min-h-10 w-full rounded-md border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] px-3"
-              >
-                {Object.entries(growthSortOptions).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+                className="mt-1 min-h-10 w-full rounded-md border border-[var(--admin-color-border)] bg-[var(--admin-color-surface)] px-3"
+                aria-label="مرتب‌سازی جدول کانال‌ها و کمپین‌ها"
+                options={Object.entries(growthSortOptions).map(([value, label]) => ({
+                  value,
+                  label,
+                }))}
+              />
             </label>
           </div>
           <CampaignReportCatalogFilters

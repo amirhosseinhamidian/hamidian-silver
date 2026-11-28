@@ -119,6 +119,9 @@ export function AdminShell({ children, account, navigation, profile }: AdminShel
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
   const [logoutError, setLogoutError] = useState('');
   const currentItem = findAdminNavigationItem(pathname, navigation);
+  const inClub = navigation
+    .find(({ id }) => id === 'customer-club')
+    ?.items.some(({ id }) => id === currentItem?.id && id !== 'customer-club');
   const mobileQuickLinks = getMobileQuickLinks(navigation);
 
   async function logout() {
@@ -205,7 +208,21 @@ export function AdminShell({ children, account, navigation, profile }: AdminShel
                     پنل مدیریت
                   </Link>
                   <AdminIcon name="chevron-left" className="size-4 text-slate-400" />
-                  <span className="truncate text-sm font-bold text-[var(--admin-color-ink)]">
+                  {inClub && (
+                    <>
+                      <Link
+                        href="/customer-club"
+                        className="shrink-0 text-sm text-[var(--admin-color-muted)] hover:underline"
+                      >
+                        باشگاه مشتریان
+                      </Link>
+                      <AdminIcon name="chevron-left" className="size-4 shrink-0 text-slate-400" />
+                    </>
+                  )}
+                  <span
+                    aria-current="page"
+                    className="truncate text-sm font-bold text-[var(--admin-color-ink)]"
+                  >
                     {currentItem?.label ?? 'بخش مدیریت'}
                   </span>
                 </>
@@ -263,6 +280,23 @@ export function AdminShell({ children, account, navigation, profile }: AdminShel
           tabIndex={-1}
           className="min-w-0 flex-1 scroll-mt-20 pb-[calc(5.25rem+env(safe-area-inset-bottom))] outline-none lg:pb-0"
         >
+          {inClub && (
+            <nav
+              aria-label="مسیر صفحه"
+              className="admin-container flex items-center gap-2 pt-4 text-xs lg:hidden"
+            >
+              <Link
+                href="/customer-club"
+                className="text-[var(--admin-color-muted)] hover:underline"
+              >
+                باشگاه مشتریان
+              </Link>
+              <AdminIcon name="chevron-left" className="size-4 text-[var(--admin-color-muted)]" />
+              <span aria-current="page" className="font-semibold">
+                {currentItem?.label}
+              </span>
+            </nav>
+          )}
           {children}
         </div>
       </div>

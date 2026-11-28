@@ -4,8 +4,6 @@ import { useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/form-control';
-import { FormField } from '@/components/ui/form-field';
 import { formatAdminInteger, formatAdminToman } from '@/lib/presentation/formatters';
 import {
   referralInstant,
@@ -17,7 +15,8 @@ import {
   type ReferralDefinition,
   type ReferralRewardPreview,
 } from '@/lib/reward-policies/referral-reward-policy';
-import { DateField, IdsField, NumberField, Toggle } from './referral-fields';
+import { DateField, NumberField, Toggle } from './referral-fields';
+import { ReferralScopeField } from './referral-scope-field';
 
 const reasonLabels: Record<string, string> = {
   AWARDED: 'شرایط قانون برقرار است',
@@ -110,18 +109,23 @@ export function ReferralSimulation({
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <DateField name="simulation-at" label="زمان پرداخت نمونه (خالی یعنی اکنون)" />
             <NumberField name="simulation-rank" label="شمارهٔ خرید نمونه" value={1} />
-            <FormField id="simulation-campaign" label="شناسهٔ کمپین نمونه">
-              {(props) => <Input {...props} name="simulation-campaign" dir="ltr" maxLength={36} />}
-            </FormField>
+            <ReferralScopeField
+              name="simulation-campaign"
+              label="کمپین نمونه"
+              kind="campaign"
+              max={1}
+            />
             <NumberField
               name="simulation-incentives"
               label="سقف باقیماندهٔ کل مشوق به تومان"
               value={2_147_483_647}
+              money
             />
             <NumberField
               name="simulation-committed"
               label="تعهد قبلی برنامه در ماه به تومان"
               value={0}
+              money
             />
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-1">
@@ -151,8 +155,13 @@ export function ReferralSimulation({
                   name={`simulation-line-${line}`}
                   label="مبلغ خالص کالا پس از تخفیف، اعتبار و مرجوعی به تومان"
                   value={0}
+                  money
                 />
-                <IdsField name={`simulation-categories-${line}`} label="دسته‌های کالا" />
+                <ReferralScopeField
+                  name={`simulation-categories-${line}`}
+                  label="دسته‌های کالا"
+                  kind="category"
+                />
               </div>
             </div>
           ))}

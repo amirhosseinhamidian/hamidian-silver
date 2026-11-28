@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/form-control';
+import { Select } from '@/components/ui/select';
 import { hasAllAdminPermissions } from '@/lib/auth/access-control';
 import { createAdminApiClient } from '@/lib/auth/server-api';
 import { requireAdminSession } from '@/lib/auth/session';
@@ -119,31 +120,32 @@ export default async function SeoIssuePage({
                 <input type="hidden" name="revision" value={issue.revision} />
                 <label className="grid gap-1">
                   وضعیت
-                  <select name="status" className={selectClass} defaultValue={issue.status}>
-                    {Object.entries(issueStatusLabels).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    name="status"
+                    className={selectClass}
+                    defaultValue={issue.status}
+                    aria-label="وضعیت"
+                    options={Object.entries(issueStatusLabels).map(([value, label]) => ({
+                      value,
+                      label,
+                    }))}
+                  />
                 </label>
                 <label className="grid gap-1">
                   مسئول
-                  <select
+                  <Select
                     name="ownerId"
                     className={selectClass}
                     defaultValue={issue.owner?.id ?? ''}
-                  >
-                    <option value="">بدون مسئول</option>
-                    {issue.owner && !data.owners.some(({ id }) => id === issue.owner?.id) && (
-                      <option value={issue.owner.id}>{issue.owner.name}</option>
-                    )}
-                    {data.owners.map(({ id, name }) => (
-                      <option key={id} value={id}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
+                    aria-label="مسئول"
+                    options={[
+                      { value: '', label: 'بدون مسئول' },
+                      ...(issue.owner && !data.owners.some(({ id }) => id === issue.owner?.id)
+                        ? [{ value: issue.owner.id, label: issue.owner.name }]
+                        : []),
+                      ...data.owners.map(({ id, name }) => ({ value: id, label: name })),
+                    ]}
+                  />
                 </label>
                 <label className="grid gap-1 sm:col-span-2">
                   یادداشت یا شاهد رسیدگی <Textarea name="note" maxLength={1000} />

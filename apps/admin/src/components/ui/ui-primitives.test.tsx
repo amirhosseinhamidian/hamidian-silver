@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Alert } from './alert';
@@ -48,6 +48,36 @@ describe('admin UI primitives', () => {
       />,
     );
     expect(screen.getByRole('combobox', { name: 'وضعیت' })).toHaveTextContent('فعال');
+  });
+
+  it('submits the empty option and restores the default on form reset', () => {
+    const { container } = render(
+      <form>
+        <Select
+          name="status"
+          aria-label="فیلتر وضعیت"
+          defaultValue="active"
+          options={[
+            { value: '', label: 'همه' },
+            { value: 'active', label: 'فعال' },
+            { value: 'blocked', label: 'مسدود', disabled: true },
+          ]}
+        />
+      </form>,
+    );
+    const form = container.querySelector('form')!;
+    const trigger = screen.getByRole('combobox', { name: 'فیلتر وضعیت' });
+    expect(trigger).toHaveTextContent('فعال');
+    expect(new FormData(form).getAll('status')).toEqual(['active']);
+
+    fireEvent.click(trigger);
+    expect(screen.getByRole('option', { name: 'مسدود' })).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(screen.getByRole('option', { name: 'همه' }));
+    expect(new FormData(form).getAll('status')).toEqual(['']);
+
+    act(() => form.reset());
+    expect(trigger).toHaveTextContent('فعال');
+    expect(new FormData(form).getAll('status')).toEqual(['active']);
   });
 
   it('keeps select content above bottom-sheet layers', () => {

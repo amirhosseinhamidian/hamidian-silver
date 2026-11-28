@@ -5,6 +5,7 @@ import { useId, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-control';
+import { Select } from '@/components/ui/select';
 import { useCampaignSelection } from '@/lib/campaigns/campaign-selection';
 import { formatAdminDateTime, formatAdminInteger } from '@/lib/presentation/formatters';
 import { FestivalThemePreview, type FestivalTheme } from './festival-theme-fields';
@@ -118,18 +119,20 @@ export function FestivalThemeBrowser({
         {manage && (
           <label className="grid gap-1 text-xs">
             وضعیت تم
-            <select
+            <Select
               className="min-h-10 rounded-md border px-2"
               value={status}
-              onChange={(event) => {
-                setStatus(event.currentTarget.value === 'archived' ? 'archived' : 'active');
+              onValueChange={(value) => {
+                setStatus(value === 'archived' ? 'archived' : 'active');
                 setPage(1);
                 changeHistory('');
               }}
-            >
-              <option value="active">قابل استفاده</option>
-              <option value="archived">بایگانی‌شده</option>
-            </select>
+              aria-label="وضعیت تم"
+              options={[
+                { value: 'active', label: 'قابل استفاده' },
+                { value: 'archived', label: 'بایگانی‌شده' },
+              ]}
+            />
           </label>
         )}
       </div>
